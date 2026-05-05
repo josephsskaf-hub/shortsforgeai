@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env.local
+.vercel/
+RODAR-DEPLOY.bat
+CORRIGIR-E-PUSH.bat
+RODAR-DEPLOY.bat
+CORRIGIR-E-PUSH.bat
