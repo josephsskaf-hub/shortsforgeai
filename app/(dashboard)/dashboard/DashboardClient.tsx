@@ -4,12 +4,14 @@ import { useState } from 'react'
 import NicheCard from '@/components/NicheCard'
 import ResultCard from '@/components/ResultCard'
 import UpgradeModal from '@/components/UpgradeModal'
+import AuthModal from '@/components/AuthModal'
 import { ShortVideo } from '@/lib/openai'
 
 interface DashboardClientProps {
   isPro: boolean
   generationsUsed: number
   totalGenerations: number
+  isLoggedIn: boolean
 }
 
 const NICHES = [
@@ -59,11 +61,13 @@ export default function DashboardClient({
   isPro,
   generationsUsed: initialUsed,
   totalGenerations,
+  isLoggedIn,
 }: DashboardClientProps) {
   const [loadingNiche, setLoadingNiche] = useState<string | null>(null)
   const [results, setResults] = useState<ShortVideo[] | null>(null)
   const [activeNiche, setActiveNiche] = useState<string | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [generationsUsed, setGenerationsUsed] = useState(initialUsed)
   const [error, setError] = useState<string | null>(null)
 
@@ -71,6 +75,12 @@ export default function DashboardClient({
   const canGenerate = isPro || generationsUsed < FREE_LIMIT
 
   async function handleGenerate(nicheId: string) {
+    // If user is not logged in, show auth modal instead of generating
+    if (!isLoggedIn) {
+      setShowAuthModal(true)
+      return
+    }
+
     if (!canGenerate) {
       setShowUpgradeModal(true)
       return
@@ -477,6 +487,14 @@ export default function DashboardClient({
         <UpgradeModal
           onClose={() => setShowUpgradeModal(false)}
           generationsUsed={generationsUsed}
+        />
+      )}
+
+      {/* Auth modal — shown when unauthenticated user tries to generate */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          defaultTab="signup"
         />
       )}
     </div>

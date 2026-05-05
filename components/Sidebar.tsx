@@ -3,11 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import AuthModal from '@/components/AuthModal'
 
 interface SidebarProps {
   userEmail: string
   isPro: boolean
   generationsUsed: number
+  isLoggedIn: boolean
   isOpen?: boolean
   onClose?: () => void
 }
@@ -22,19 +25,21 @@ export default function Sidebar({
   userEmail,
   isPro,
   generationsUsed,
+  isLoggedIn,
   isOpen = true,
   onClose,
 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
-  const initial = (userEmail?.[0] ?? 'U').toUpperCase()
+  const initial = (userEmail?.[0] ?? 'G').toUpperCase()
   const freeRemaining = Math.max(0, 5 - generationsUsed)
 
   async function handleSignOut() {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/dashboard')
     router.refresh()
   }
 
@@ -171,31 +176,81 @@ export default function Sidebar({
             Account
           </div>
 
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-xs font-medium transition-all w-full text-left"
-            style={{
-              background: 'transparent',
-              color: 'var(--muted2)',
-              border: '1px solid transparent',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'
-              ;(e.currentTarget as HTMLElement).style.color = 'var(--text2)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-              ;(e.currentTarget as HTMLElement).style.color = 'var(--muted2)'
-            }}
-          >
-            <span className="text-sm">🚪</span>
-            Sign Out
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-xs font-medium transition-all w-full text-left"
+              style={{
+                background: 'transparent',
+                color: 'var(--muted2)',
+                border: '1px solid transparent',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--text2)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--muted2)'
+              }}
+            >
+              <span className="text-sm">🚪</span>
+              Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-xs font-medium transition-all w-full text-left"
+              style={{
+                background: 'rgba(99,102,241,.07)',
+                color: 'var(--indigo-light)',
+                border: '1px solid rgba(99,102,241,.15)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,.14)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,.07)'
+              }}
+            >
+              <span className="text-sm">🔑</span>
+              Sign In / Sign Up
+            </button>
+          )}
         </nav>
 
-        {/* Upgrade card (free users only) */}
-        {!isPro && (
+        {/* Bottom CTA — changes based on auth state */}
+        {!isLoggedIn ? (
+          <div className="px-3 pb-3 flex-shrink-0">
+            <div
+              className="rounded-xl p-3"
+              style={{
+                background: 'linear-gradient(135deg, rgba(99,102,241,.12), rgba(124,58,237,.08))',
+                border: '1px solid rgba(99,102,241,.22)',
+              }}
+            >
+              <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>
+                ⚡ 5 free scripts included
+              </p>
+              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>
+                Create a free account to start generating viral shorts now.
+              </p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ⚡ Get Started Free →
+              </button>
+            </div>
+          </div>
+        ) : !isPro ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div
               className="rounded-xl p-3"
@@ -225,7 +280,7 @@ export default function Sidebar({
               </Link>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* User card */}
         <div
@@ -239,38 +294,55 @@ export default function Sidebar({
             <div
               className="w-8 h-8 rounded-[9px] flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+                background: isLoggedIn
+                  ? 'linear-gradient(135deg, var(--indigo), var(--purple))'
+                  : 'rgba(255,255,255,.06)',
+                border: isLoggedIn ? 'none' : '1px solid var(--border)',
               }}
             >
-              {initial}
+              {isLoggedIn ? initial : '👤'}
             </div>
             <div className="flex-1 min-w-0">
               <div
                 className="text-xs font-semibold truncate"
                 style={{ color: 'var(--text)' }}
               >
-                {userEmail}
+                {isLoggedIn ? userEmail : 'Guest User'}
               </div>
               <div
                 className="flex items-center gap-1 mt-0.5"
-                style={{ color: isPro ? '#34d399' : 'var(--muted)', fontSize: '0.62rem' }}
+                style={{
+                  color: isLoggedIn
+                    ? isPro ? '#34d399' : 'var(--muted)'
+                    : 'var(--muted)',
+                  fontSize: '0.62rem',
+                }}
               >
-                {isPro ? (
-                  <>
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: '#10b981' }}
-                    />
-                    Pro Plan
-                  </>
+                {isLoggedIn ? (
+                  isPro ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />
+                      Pro Plan
+                    </>
+                  ) : (
+                    'Free Plan'
+                  )
                 ) : (
-                  'Free Plan'
+                  'Not signed in'
                 )}
               </div>
             </div>
           </div>
         </div>
       </aside>
+
+      {/* Auth modal triggered from sidebar */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          defaultTab="signup"
+        />
+      )}
     </>
   )
 }

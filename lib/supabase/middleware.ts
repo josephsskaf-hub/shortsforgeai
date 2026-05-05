@@ -31,7 +31,8 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const protectedPaths = ['/dashboard', '/history', '/pricing']
+  // /dashboard is now public — auth is enforced at the action level (generate button)
+  const protectedPaths = ['/history', '/pricing']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
 
   if (isProtected && !user) {

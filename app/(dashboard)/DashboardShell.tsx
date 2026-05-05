@@ -10,6 +10,7 @@ interface DashboardShellProps {
   userEmail: string
   isPro: boolean
   generationsUsed: number
+  isLoggedIn: boolean
 }
 
 const pageTitles: Record<string, string> = {
@@ -23,6 +24,7 @@ export default function DashboardShell({
   userEmail,
   isPro,
   generationsUsed,
+  isLoggedIn,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
@@ -64,6 +66,7 @@ export default function DashboardShell({
         userEmail={userEmail}
         isPro={isPro}
         generationsUsed={generationsUsed}
+        isLoggedIn={isLoggedIn}
         isOpen={true}
         onClose={() => setSidebarOpen(false)}
       />
@@ -74,6 +77,7 @@ export default function DashboardShell({
           userEmail={userEmail}
           isPro={isPro}
           generationsUsed={generationsUsed}
+          isLoggedIn={isLoggedIn}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />

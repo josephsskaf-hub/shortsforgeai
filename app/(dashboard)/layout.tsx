@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import DashboardShell from './DashboardShell'
 
 export default async function DashboardLayout({
@@ -13,21 +12,23 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
+  // No redirect — dashboard is public. Auth is enforced at the generate action.
+  let profile = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_pro, generations_used, email')
+      .eq('id', user.id)
+      .single()
+    profile = data
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_pro, generations_used, email')
-    .eq('id', user.id)
-    .single()
 
   return (
     <DashboardShell
-      userEmail={profile?.email ?? user.email ?? ''}
+      userEmail={profile?.email ?? user?.email ?? ''}
       isPro={profile?.is_pro ?? false}
       generationsUsed={profile?.generations_used ?? 0}
+      isLoggedIn={!!user}
     >
       {children}
     </DashboardShell>
