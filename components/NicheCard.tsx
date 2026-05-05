@@ -25,7 +25,7 @@ export default function NicheCard({
 }: NicheCardProps) {
   return (
     <div
-      className="rounded-2xl p-5 cursor-pointer transition-all relative overflow-hidden group"
+      className="rounded-2xl p-5 cursor-pointer transition-all duration-300 relative overflow-hidden group"
       style={{
         background: 'rgba(15,15,30,0.6)',
         backdropFilter: 'blur(16px) saturate(140%)',
@@ -34,14 +34,14 @@ export default function NicheCard({
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,.5)'
-        el.style.transform = 'translateY(-4px)'
-        el.style.boxShadow = '0 14px 40px rgba(99,102,241,.18)'
+        el.style.borderColor = 'rgba(99,102,241,.55)'
+        el.style.transform = 'scale(1.025) translateY(-3px)'
+        el.style.boxShadow = '0 16px 48px rgba(99,102,241,.22), 0 0 0 1px rgba(99,102,241,.2) inset'
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement
         el.style.borderColor = 'rgba(255,255,255,0.08)'
-        el.style.transform = 'translateY(0)'
+        el.style.transform = 'scale(1) translateY(0)'
         el.style.boxShadow = 'none'
       }}
     >
@@ -49,14 +49,14 @@ export default function NicheCard({
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl"
         style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,.07), transparent)',
+          background: 'linear-gradient(135deg, rgba(99,102,241,.09), transparent 70%)',
         }}
       />
 
       {/* Top row */}
       <div className="flex items-start justify-between mb-3 relative z-10">
         <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-all duration-300 group-hover:scale-110"
           style={{
             background: 'linear-gradient(135deg, rgba(99,102,241,.14), rgba(124,58,237,.09))',
             border: '1px solid rgba(99,102,241,.18)',
@@ -111,7 +111,7 @@ export default function NicheCard({
       </div>
 
       {/* Pills */}
-      <div className="flex flex-wrap gap-1 mb-3 relative z-10">
+      <div className="flex flex-wrap gap-1 mb-4 relative z-10">
         {pills.map((pill) => (
           <span
             key={pill}
@@ -128,11 +128,18 @@ export default function NicheCard({
         ))}
       </div>
 
+      {/* Trust micro-signal */}
+      <div className="flex items-center gap-1 mb-3 relative z-10">
+        <span className="text-xs" style={{ color: 'var(--muted)', fontSize: '0.62rem' }}>
+          👥 1,200+ creators · YouTube · TikTok · Reels
+        </span>
+      </div>
+
       {/* Generate button */}
       <button
-        onClick={() => !loading && onGenerate(id)}
-        disabled={loading}
-        className="w-full rounded-[13px] px-4 py-3.5 text-sm font-black text-white relative z-10 flex items-center justify-center gap-2 transition-all"
+        onClick={() => !loading && !disabled && onGenerate(id)}
+        disabled={loading || disabled}
+        className="w-full rounded-[13px] px-4 py-3.5 text-sm font-black text-white relative z-10 flex items-center justify-center gap-2 transition-all duration-200 active:scale-95"
         style={{
           background:
             disabled || loading
@@ -142,6 +149,7 @@ export default function NicheCard({
           animation: disabled || loading ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
           cursor: disabled || loading ? 'not-allowed' : 'pointer',
           letterSpacing: '-0.01em',
+          border: 'none',
         }}
       >
         {loading ? (
@@ -152,6 +160,8 @@ export default function NicheCard({
             />
             Generating...
           </>
+        ) : disabled ? (
+          <>🔒 Upgrade to Generate</>
         ) : (
           <>⚡ Generate 5 Viral Shorts Now</>
         )}

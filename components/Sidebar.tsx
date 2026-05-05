@@ -252,8 +252,21 @@ export default function Sidebar({
           </div>
         ) : null}
 
+        {/* Trust signal footer */}
+        <div
+          className="px-4 py-2.5 flex-shrink-0 text-center"
+          style={{ borderTop: '1px solid var(--border)' }}
+        >
+          <span
+            className="text-xs font-semibold"
+            style={{ color: 'var(--muted)', fontSize: '0.65rem' }}
+          >
+            🔥 1,200+ active creators
+          </span>
+        </div>
+
         {/* User card */}
-        <div className="px-3 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="px-3 pb-3 flex-shrink-0">
           <div className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5">
             <div
               className="w-8 h-8 rounded-[9px] flex items-center justify-center text-sm font-bold text-white flex-shrink-0"

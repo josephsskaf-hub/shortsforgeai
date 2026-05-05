@@ -201,3 +201,85 @@ body::after {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Shimmer animation for sample output cards */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.shimmer-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255,255,255,0.06) 50%,
+    transparent 60%
+  );
+  animation: shimmer 3.5s ease-in-out infinite;
+  border-radius: inherit;
+}
+
+/* Progress bar smooth fill */
+@keyframes progress-fill {
+  from { width: 0; }
+  to { width: var(--progress-pct, 100%); }
+}
+
+/* Ripple effect */
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255,255,255,0.15);
+  transform: scale(0);
+  opacity: 0;
+}
+
+.btn-ripple:active::after {
+  animation: ripple 0.4s ease-out forwards;
+}
+
+/* Gradient border utility */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(99,102,241,.5), rgba(168,85,247,.4), rgba(99,102,241,.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Mobile bottom CTA safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-sticky-cta {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+

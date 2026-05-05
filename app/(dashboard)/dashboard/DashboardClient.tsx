@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import NicheCard from '@/components/NicheCard'
 import ResultCard from '@/components/ResultCard'
 import UpgradeModal from '@/components/UpgradeModal'
 import AuthModal from '@/components/AuthModal'
+import PreviewModal from '@/components/PreviewModal'
+import FullscreenLoader from '@/components/FullscreenLoader'
 import { ShortVideo } from '@/lib/openai'
 
 interface DashboardClientProps {
@@ -57,6 +59,30 @@ const NICHES = [
   },
 ]
 
+const SAMPLE_OUTPUTS = [
+  {
+    niche: 'Money',
+    emoji: '💰',
+    hook: '"This one fact changed how I see money forever..."',
+    title: 'The Hidden Truth About Wealth Nobody Tells You',
+    hashtags: ['#money', '#wealth', '#mindset'],
+  },
+  {
+    niche: 'Motivation',
+    emoji: '🏋',
+    hook: '"He failed 27 times before becoming a billionaire..."',
+    title: 'Why Failure Is the Only Path to Success',
+    hashtags: ['#motivation', '#success', '#mindset'],
+  },
+  {
+    niche: 'Dark Mysteries',
+    emoji: '😱',
+    hook: '"This secret was buried for 100 years..."',
+    title: "The Mystery That Governments Don't Want You to Know",
+    hashtags: ['#mystery', '#facts', '#viral'],
+  },
+]
+
 export default function DashboardClient({
   isPro,
   generationsUsed: initialUsed,
@@ -68,24 +94,41 @@ export default function DashboardClient({
   const [activeNiche, setActiveNiche] = useState<string | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [previewNiche, setPreviewNiche] = useState<(typeof NICHES)[0] | null>(null)
   const [generationsUsed, setGenerationsUsed] = useState(initialUsed)
   const [error, setError] = useState<string | null>(null)
+  const nichesSectionRef = useRef<HTMLDivElement>(null)
 
   const FREE_LIMIT = 5
   const canGenerate = isPro || generationsUsed < FREE_LIMIT
+  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
 
-  async function handleGenerate(nicheId: string) {
-    // If user is not logged in, show auth modal instead of generating
+  // Scroll to niches section
+  function scrollToNiches() {
+    nichesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // NicheCard click → open preview modal (or auth/upgrade gates first)
+  function handleNicheClick(nicheId: string) {
     if (!isLoggedIn) {
       setShowAuthModal(true)
       return
     }
-
     if (!canGenerate) {
       setShowUpgradeModal(true)
       return
     }
+    const niche = NICHES.find((n) => n.id === nicheId)
+    if (niche) {
+      setPreviewNiche(niche)
+      setShowPreviewModal(true)
+    }
+  }
 
+  // Confirmed from preview modal → actually generate
+  async function handleGenerate(nicheId: string) {
+    setShowPreviewModal(false)
     setLoadingNiche(nicheId)
     setError(null)
     setResults(null)
@@ -102,6 +145,7 @@ export default function DashboardClient({
       if (!res.ok) {
         if (res.status === 402) {
           setShowUpgradeModal(true)
+          setLoadingNiche(null)
           return
         }
         throw new Error(data.error || 'Generation failed')
@@ -111,7 +155,6 @@ export default function DashboardClient({
       setActiveNiche(nicheId)
       if (!isPro) {
         setGenerationsUsed((prev) => prev + 1)
-        // Notify Sidebar to update its counter in real-time
         window.dispatchEvent(new CustomEvent('generationComplete'))
       }
     } catch (err) {
@@ -127,127 +170,295 @@ export default function DashboardClient({
   }
 
   const activeNicheData = NICHES.find((n) => n.id === activeNiche)
-  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
 
   return (
-    <div className="px-6 py-7 pb-20">
-      {/* Page Header */}
-      <div className="flex items-start justify-between mb-6 flex-wrap gap-4 relative">
+    <div className="px-6 py-7 pb-28 md:pb-20">
+      {/* ─── Urgency banner (free users) ─── */}
+      {!isPro && isLoggedIn && (
         <div
-          className="absolute pointer-events-none"
+          className="flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 mb-5 flex-wrap"
           style={{
-            width: 700,
-            height: 500,
-            background: 'radial-gradient(ellipse at 30% 50%, rgba(99,102,241,0.15) 0%, rgba(124,58,237,0.08) 40%, transparent 70%)',
-            top: -150,
-            left: -150,
-            borderRadius: '50%',
-          }}
-        />
-        <div className="relative z-10">
-          <h1
-            className="font-black tracking-tight mb-1.5"
-            style={{ fontSize: '1.45rem', color: 'var(--text)', lineHeight: 1.15 }}
-          >
-            Create <span className="grad-text">5 Viral Shorts</span>
-            <br />
-            in 30 Seconds
-          </h1>
-          <p style={{ color: 'var(--muted)', fontSize: '0.77rem', maxWidth: 480, lineHeight: 1.5 }}>
-            Pick a viral topic. Get scripts, titles, hashtags, and video prompts ready to use.
-          </p>
-          <div className="mt-2">
-            <p className="text-sm font-bold" style={{ color: '#94a3b8' }}>
-              Stop thinking. Start posting.
-            </p>
-            <p className="text-xs" style={{ color: '#64748b', lineHeight: 1.5 }}>
-              Ready-to-use viral content for YouTube Shorts, TikTok and Reels.
-            </p>
-          </div>
-        </div>
-        <div
-          className="relative z-10 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0"
-          style={{
-            background: 'rgba(16,185,129,.08)',
-            border: '1px solid rgba(16,185,129,.18)',
-            color: '#34d399',
+            background: 'linear-gradient(90deg, rgba(99,102,241,.1), rgba(124,58,237,.07))',
+            border: '1px solid rgba(99,102,241,.22)',
           }}
         >
-          <span
-            className="w-1.5 h-1.5 rounded-full animate-pulse-dot"
-            style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }}
-          />
-          Live · Ready to Generate
-        </div>
-      </div>
-
-      {/* Stats Row */}
-      <div
-        className="grid gap-2.5 mb-5"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
-      >
-        {[
-          { icon: '🎬', val: totalGenerations, label: 'Scripts Generated', style: 'si-purple', trend: '↑ All time' },
-          { icon: '🎯', val: 5, label: 'Viral Topics', style: 'si-violet', trend: null },
-          { icon: '⚡', val: '~30s', label: 'Avg. Generate Time', style: 'si-cyan', trend: null },
-          {
-            icon: isPro ? '⭐' : '💚',
-            val: isPro ? 'Unlimited' : `${freeRemaining} left`,
-            label: isPro ? 'Pro Plan' : 'Free Generations',
-            style: 'si-green',
-            trend: isPro ? 'Pro' : 'Free',
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all relative overflow-hidden"
+          <span className="text-xs font-semibold" style={{ color: 'var(--muted2)' }}>
+            ⚡ You have{' '}
+            <strong style={{ color: freeRemaining === 0 ? '#f87171' : '#818cf8' }}>
+              {freeRemaining} free generation{freeRemaining !== 1 ? 's' : ''}
+            </strong>{' '}
+            left — Upgrade for unlimited
+          </span>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all"
             style={{
-              background: 'var(--card)',
-              border: '1px solid var(--border)',
+              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              boxShadow: '0 2px 12px rgba(99,102,241,.35)',
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
+            Upgrade Now →
+          </button>
+        </div>
+      )}
+
+      {/* ─── HERO SECTION ─── */}
+      {!results && !loadingNiche && (
+        <div
+          className="relative rounded-[24px] overflow-hidden mb-8 px-8 py-10 text-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(124,58,237,.07) 50%, rgba(168,85,247,.06) 100%)',
+            border: '1px solid rgba(99,102,241,.18)',
+            boxShadow: '0 0 80px rgba(99,102,241,.08)',
+          }}
+        >
+          {/* Background glow blobs */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              width: 500,
+              height: 400,
+              background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)',
+              top: -100,
+              left: '50%',
+              transform: 'translateX(-50%)',
+            }}
+          />
+
+          {/* Live badge */}
+          <div className="flex justify-center mb-4">
             <div
-              className="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg flex-shrink-0"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(99,102,241,.1)',
-                border: '1px solid rgba(99,102,241,.18)',
+                background: 'rgba(16,185,129,.1)',
+                border: '1px solid rgba(16,185,129,.22)',
+                color: '#34d399',
               }}
             >
-              {stat.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div
-                className="font-black tracking-tight"
-                style={{ fontSize: '1.2rem', color: 'var(--text)', lineHeight: 1 }}
-              >
-                {stat.val}
-              </div>
-              <div style={{ fontSize: '0.63rem', color: 'var(--muted)' }}>{stat.label}</div>
-            </div>
-            {stat.trend && (
               <span
-                className="text-xs font-bold px-1.5 py-0.5 rounded ml-auto flex-shrink-0"
+                className="w-1.5 h-1.5 rounded-full animate-pulse-dot"
+                style={{ background: '#10b981', boxShadow: '0 0 6px rgba(52,211,153,.6)' }}
+              />
+              Live · AI Ready
+            </div>
+          </div>
+
+          {/* Headline */}
+          <h1
+            className="font-black tracking-tight mb-3 relative z-10"
+            style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', color: 'var(--text)', lineHeight: 1.1 }}
+          >
+            Your Next Viral Short{' '}
+            <span className="grad-text">Starts Here</span>
+          </h1>
+
+          {/* Subheadline */}
+          <p
+            className="relative z-10 mb-6 mx-auto"
+            style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 480, lineHeight: 1.55 }}
+          >
+            Pick a niche and generate{' '}
+            <strong style={{ color: 'var(--text)' }}>5 viral-ready shorts</strong> in seconds.
+          </p>
+
+          {/* Trust signals */}
+          <div className="flex items-center justify-center gap-4 flex-wrap mb-7 relative z-10">
+            {[
+              { icon: '👥', text: '1,200+ creators' },
+              { icon: '📱', text: 'YouTube · TikTok · Reels' },
+              { icon: '⚡', text: 'Avg generation: <10 seconds' },
+            ].map((t) => (
+              <div
+                key={t.text}
+                className="flex items-center gap-1.5 text-xs font-medium"
+                style={{ color: 'var(--muted2)' }}
+              >
+                <span>{t.icon}</span>
+                <span>{t.text}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA button */}
+          <button
+            onClick={scrollToNiches}
+            className="relative z-10 inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-white transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+              boxShadow: '0 6px 32px rgba(99,102,241,.5)',
+              animation: 'btn-pulse 2.8s ease-in-out infinite',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Generate Now ⚡
+          </button>
+        </div>
+      )}
+
+      {/* ─── SAMPLE OUTPUTS ─── */}
+      {!results && !loadingNiche && (
+        <div className="mb-8">
+          <div className="text-center mb-4">
+            <span
+              className="text-xs font-black uppercase tracking-widest"
+              style={{ color: 'var(--indigo-light)' }}
+            >
+              Example Output
+            </span>
+            <p className="text-sm font-semibold mt-1" style={{ color: 'var(--muted2)' }}>
+              See what you&apos;ll get — instantly
+            </p>
+          </div>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+          >
+            {SAMPLE_OUTPUTS.map((sample, i) => (
+              <div
+                key={i}
+                className="relative rounded-2xl p-5 overflow-hidden"
                 style={{
-                  background: stat.trend === 'Free' || stat.trend === 'Pro'
-                    ? 'rgba(99,102,241,.1)'
-                    : 'rgba(16,185,129,.1)',
-                  border: stat.trend === 'Free' || stat.trend === 'Pro'
-                    ? '1px solid rgba(99,102,241,.15)'
-                    : '1px solid rgba(16,185,129,.15)',
-                  color: stat.trend === 'Free' || stat.trend === 'Pro'
-                    ? 'var(--indigo-light)'
-                    : '#34d399',
-                  fontSize: '0.62rem',
+                  background: 'rgba(13,13,28,0.8)',
+                  border: '1px solid transparent',
+                  backgroundClip: 'padding-box',
+                  boxShadow: 'inset 0 0 0 1px rgba(99,102,241,.25), 0 4px 24px rgba(99,102,241,.08)',
                 }}
               >
-                {stat.trend}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+                {/* Shimmer overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-2xl shimmer-overlay"
+                  style={{ zIndex: 0 }}
+                />
 
-      {/* Error */}
+                {/* EXAMPLE OUTPUT badge */}
+                <div className="relative z-10 flex items-center justify-between mb-3">
+                  <span
+                    className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded-md"
+                    style={{
+                      background: 'rgba(99,102,241,.15)',
+                      border: '1px solid rgba(99,102,241,.3)',
+                      color: 'var(--indigo-light)',
+                      fontSize: '0.58rem',
+                    }}
+                  >
+                    Example Output
+                  </span>
+                  <span className="text-lg">{sample.emoji}</span>
+                </div>
+
+                <div className="relative z-10">
+                  {/* Hook */}
+                  <p
+                    className="font-bold text-sm mb-2 leading-snug"
+                    style={{
+                      color: 'var(--text)',
+                      fontStyle: 'italic',
+                      borderLeft: '2px solid var(--indigo-light)',
+                      paddingLeft: 10,
+                    }}
+                  >
+                    {sample.hook}
+                  </p>
+
+                  {/* Title */}
+                  <p
+                    className="text-xs font-semibold mb-3 leading-snug"
+                    style={{ color: 'var(--muted2)' }}
+                  >
+                    {sample.title}
+                  </p>
+
+                  {/* Hashtags */}
+                  <div className="flex flex-wrap gap-1">
+                    {sample.hashtags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 rounded-md text-xs font-medium"
+                        style={{
+                          background: 'rgba(124,58,237,.1)',
+                          border: '1px solid rgba(124,58,237,.2)',
+                          color: 'var(--purple-light)',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── STATS ROW ─── */}
+      {!results && !loadingNiche && (
+        <div
+          className="grid gap-2.5 mb-5"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
+        >
+          {[
+            { icon: '🎬', val: totalGenerations, label: 'Scripts Generated', trend: '↑ All time' },
+            { icon: '🎯', val: 5, label: 'Viral Topics', trend: null },
+            { icon: '⚡', val: '~10s', label: 'Avg. Generate Time', trend: null },
+            {
+              icon: isPro ? '⭐' : '💚',
+              val: isPro ? 'Unlimited' : `${freeRemaining} left`,
+              label: isPro ? 'Pro Plan' : 'Free Generations',
+              trend: isPro ? 'Pro' : 'Free',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg flex-shrink-0"
+                style={{
+                  background: 'rgba(99,102,241,.1)',
+                  border: '1px solid rgba(99,102,241,.18)',
+                }}
+              >
+                {stat.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-black tracking-tight"
+                  style={{ fontSize: '1.2rem', color: 'var(--text)', lineHeight: 1 }}
+                >
+                  {stat.val}
+                </div>
+                <div style={{ fontSize: '0.63rem', color: 'var(--muted)' }}>{stat.label}</div>
+              </div>
+              {stat.trend && (
+                <span
+                  className="text-xs font-bold px-1.5 py-0.5 rounded ml-auto flex-shrink-0"
+                  style={{
+                    background: stat.trend === 'Free' || stat.trend === 'Pro'
+                      ? 'rgba(99,102,241,.1)' : 'rgba(16,185,129,.1)',
+                    border: stat.trend === 'Free' || stat.trend === 'Pro'
+                      ? '1px solid rgba(99,102,241,.15)' : '1px solid rgba(16,185,129,.15)',
+                    color: stat.trend === 'Free' || stat.trend === 'Pro'
+                      ? 'var(--indigo-light)' : '#34d399',
+                    fontSize: '0.62rem',
+                  }}
+                >
+                  {stat.trend}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── ERROR ─── */}
       {error && (
         <div
           className="rounded-xl px-4 py-3 text-sm mb-5 flex items-center gap-3"
@@ -269,52 +480,27 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* Loading overlay */}
-      {loadingNiche && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(8,8,15,.92)', backdropFilter: 'blur(20px)' }}
-        >
-          <div
-            className="rounded-[22px] p-12 text-center"
-            style={{
-              background: 'var(--card2)',
-              border: '1px solid rgba(99,102,241,.2)',
-              boxShadow: '0 0 80px rgba(99,102,241,.14)',
-            }}
-          >
-            <div className="relative w-16 h-16 mx-auto mb-5">
-              <div className="spinner" />
-              <div className="spinner-inner" />
-              <div className="absolute inset-0 flex items-center justify-center text-2xl">⚡</div>
-            </div>
-            <div
-              className="font-bold mb-1"
-              style={{ fontSize: '0.94rem', color: 'var(--text)' }}
-            >
-              Forging viral shorts...
-            </div>
-            <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
-              Building hooks, titles and prompts... ✨
-            </div>
-            <div
-              className="w-44 h-0.5 rounded-full mx-auto mt-4 overflow-hidden"
-              style={{ background: 'rgba(255,255,255,.05)' }}
-            >
-              <div
-                className="h-full rounded-full animate-progress"
-                style={{
-                  background: 'linear-gradient(90deg, var(--indigo), var(--purple))',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─── FULLSCREEN LOADER ─── */}
+      {loadingNiche && <FullscreenLoader />}
 
-      {/* Results section */}
+      {/* ─── RESULTS ─── */}
       {results && !loadingNiche ? (
         <div className="animate-results-reveal">
+          {/* Success banner */}
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3 mb-5 text-sm"
+            style={{
+              background: 'linear-gradient(90deg, rgba(16,185,129,.08), rgba(16,185,129,.04))',
+              border: '1px solid rgba(16,185,129,.2)',
+              color: 'var(--muted2)',
+            }}
+          >
+            <span className="text-lg">✅</span>
+            <span>
+              <strong style={{ color: 'var(--text)' }}>Generated in seconds — ready to post.</strong>
+            </span>
+          </div>
+
           {/* Results topbar */}
           <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
             <div>
@@ -328,8 +514,8 @@ export default function DashboardClient({
                 className="font-black tracking-tight mb-1"
                 style={{ fontSize: '1.4rem', color: 'var(--text)', lineHeight: 1.15 }}
               >
-                Your Viral Shorts Pack is{' '}
-                <span className="grad-text">Ready</span>
+                Your Viral Shorts Package is{' '}
+                <span className="grad-text">Ready 🎉</span>
               </h2>
               <p style={{ fontSize: '0.76rem', color: '#94a3b8', marginBottom: 8 }}>
                 Copy everything and paste into your favorite video tool.
@@ -361,28 +547,51 @@ export default function DashboardClient({
             </button>
           </div>
 
-          {/* Success bar */}
-          <div
-            className="flex items-center gap-3 rounded-xl px-4 py-3 mb-5 text-sm"
-            style={{
-              background: 'rgba(16,185,129,.06)',
-              border: '1px solid rgba(16,185,129,.14)',
-              color: 'var(--muted2)',
-            }}
-          >
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+          {/* Global action bar */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => {
+                const allText = results
+                  .map((v, i) =>
+                    `SHORT #${i + 1}\nTitle: ${v.title}\nScript: ${v.script}\nHashtags: ${v.hashtags.join(' ')}\nVideo Prompt: ${v.videoPrompt}\n`
+                  )
+                  .join('\n---\n\n')
+                navigator.clipboard.writeText(allText)
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
               style={{
-                background: 'rgba(16,185,129,.12)',
-                border: '1px solid rgba(16,185,129,.22)',
+                background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+                boxShadow: '0 4px 18px rgba(99,102,241,.35)',
+                border: 'none',
+                cursor: 'pointer',
               }}
             >
-              ✅
-            </div>
-            <span>
-              <strong style={{ color: 'var(--text)' }}>5 viral scripts generated!</strong>{' '}
-              Copy each script and post today.
-            </span>
+              📋 Copy All Scripts
+            </button>
+            <button
+              onClick={() => handleGenerate(activeNiche!)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: 'rgba(99,102,241,.1)',
+                border: '1px solid rgba(99,102,241,.2)',
+                color: 'var(--indigo-light)',
+                cursor: 'pointer',
+              }}
+            >
+              🔄 Regenerate
+            </button>
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: 'rgba(255,255,255,.04)',
+                border: '1px solid var(--border)',
+                color: 'var(--muted2)',
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Generate Another Niche
+            </button>
           </div>
 
           {/* Result cards */}
@@ -392,7 +601,7 @@ export default function DashboardClient({
             ))}
           </div>
 
-          {/* Generate again */}
+          {/* Bottom generate again */}
           <div className="mt-8 flex justify-center">
             <button
               onClick={handleBack}
@@ -400,6 +609,8 @@ export default function DashboardClient({
               style={{
                 background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
                 boxShadow: '0 4px 22px rgba(99,102,241,.3)',
+                border: 'none',
+                cursor: 'pointer',
               }}
             >
               ⚡ Generate Another Niche
@@ -408,8 +619,8 @@ export default function DashboardClient({
         </div>
       ) : !loadingNiche ? (
         <>
-          {/* Niche cards */}
-          <div className="mb-4">
+          {/* ─── NICHE CARDS ─── */}
+          <div className="mb-4" ref={nichesSectionRef}>
             <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
               <div>
                 <div
@@ -422,31 +633,34 @@ export default function DashboardClient({
                   Choose your viral topic
                 </div>
                 <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>
-                  Click any card to instantly generate 5 viral scripts, titles, hashtags and video prompts.
+                  Click any card to generate 5 viral scripts, titles, hashtags and video prompts instantly.
                 </p>
               </div>
-              <div
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0"
-                style={{
-                  background: 'rgba(99,102,241,.07)',
-                  border: '1px solid rgba(99,102,241,.13)',
-                  color: 'var(--indigo-light)',
-                }}
-              >
-                ⚡ 5 ready-to-post viral videos in seconds
+              <div className="flex flex-col items-end gap-1">
+                <div
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0"
+                  style={{
+                    background: 'rgba(99,102,241,.07)',
+                    border: '1px solid rgba(99,102,241,.13)',
+                    color: 'var(--indigo-light)',
+                  }}
+                >
+                  ⚡ 5 ready-to-post viral videos in seconds
+                </div>
+                <span className="text-xs" style={{ color: 'var(--muted)', fontSize: '0.68rem' }}>
+                  👥 1,200+ active creators
+                </span>
               </div>
             </div>
 
-            <div
-              className="grid gap-3.5"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
-            >
+            {/* Responsive grid: 1-col mobile, 2-col tablet, 3-col desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {NICHES.map((niche) => (
                 <NicheCard
                   key={niche.id}
                   {...niche}
-                  onGenerate={handleGenerate}
-                  loading={loadingNiche === niche.id}
+                  onGenerate={handleNicheClick}
+                  loading={false}
                   disabled={!canGenerate}
                 />
               ))}
@@ -474,6 +688,8 @@ export default function DashboardClient({
                   style={{
                     background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
                     boxShadow: '0 4px 22px rgba(99,102,241,.3)',
+                    border: 'none',
+                    cursor: 'pointer',
                   }}
                 >
                   ⭐ Upgrade to Pro
@@ -484,7 +700,41 @@ export default function DashboardClient({
         </>
       ) : null}
 
-      {/* Upgrade modal */}
+      {/* ─── MOBILE STICKY CTA ─── */}
+      {!results && !loadingNiche && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 p-4 md:hidden"
+          style={{
+            background: 'rgba(8,8,15,.95)',
+            backdropFilter: 'blur(20px)',
+            borderTop: '1px solid var(--border)',
+          }}
+        >
+          <button
+            onClick={scrollToNiches}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+              boxShadow: '0 4px 28px rgba(99,102,241,.5)',
+              animation: 'btn-pulse 2.8s ease-in-out infinite',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            ⚡ Generate Now
+          </button>
+        </div>
+      )}
+
+      {/* ─── MODALS ─── */}
+      {showPreviewModal && previewNiche && (
+        <PreviewModal
+          niche={previewNiche}
+          onConfirm={() => handleGenerate(previewNiche.id)}
+          onClose={() => setShowPreviewModal(false)}
+        />
+      )}
+
       {showUpgradeModal && (
         <UpgradeModal
           onClose={() => setShowUpgradeModal(false)}
@@ -492,7 +742,6 @@ export default function DashboardClient({
         />
       )}
 
-      {/* Auth modal — shown when unauthenticated user tries to generate */}
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
