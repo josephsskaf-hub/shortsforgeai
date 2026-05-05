@@ -14,9 +14,13 @@ interface DashboardShellProps {
 }
 
 const pageTitles: Record<string, string> = {
+  '/': 'Home',
   '/dashboard': 'Dashboard',
+  '/generate': 'Generate',
   '/history': 'History',
   '/pricing': 'Pricing',
+  '/templates': 'Templates',
+  '/account': 'Account',
 }
 
 export default function DashboardShell({
@@ -35,55 +39,41 @@ export default function DashboardShell({
       {/* Glow orbs */}
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{
-          width: 600,
-          height: 600,
-          background: 'var(--indigo)',
-          top: -200,
-          right: -150,
-          opacity: 0.04,
-          filter: 'blur(90px)',
-          zIndex: 0,
-        }}
+        style={{ width: 600, height: 600, background: 'var(--indigo)', top: -200, right: -150, opacity: 0.04, filter: 'blur(90px)', zIndex: 0 }}
       />
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{
-          width: 500,
-          height: 500,
-          background: 'var(--purple)',
-          bottom: -150,
-          left: 300,
-          opacity: 0.035,
-          filter: 'blur(90px)',
-          zIndex: 0,
-        }}
+        style={{ width: 500, height: 500, background: 'var(--purple)', bottom: -150, left: 300, opacity: 0.035, filter: 'blur(90px)', zIndex: 0 }}
       />
 
-      {/* Sidebar — always visible on md+, toggle on mobile */}
+      {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 240 }} />
+
+      {/* Desktop sidebar (always open) */}
       <Sidebar
         userEmail={userEmail}
         isPro={isPro}
         generationsUsed={generationsUsed}
         isLoggedIn={isLoggedIn}
         isOpen={true}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() => {}}
       />
 
-      {/* Mobile sidebar */}
-      <div className="md:hidden">
-        <Sidebar
-          userEmail={userEmail}
-          isPro={isPro}
-          generationsUsed={generationsUsed}
-          isLoggedIn={isLoggedIn}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-      </div>
+      {/* Mobile sidebar overlay (toggle) */}
+      {sidebarOpen && (
+        <div className="md:hidden">
+          <Sidebar
+            userEmail={userEmail}
+            isPro={isPro}
+            generationsUsed={generationsUsed}
+            isLoggedIn={isLoggedIn}
+            isOpen={true}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </div>
+      )}
 
-      {/* Main */}
+      {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10 min-w-0">
         <TopBar
           title={title}

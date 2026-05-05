@@ -40,8 +40,14 @@ export default function PricingClient({
     try {
       const res = await fetch('/api/stripe/checkout', { method: 'POST' })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch {
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('Stripe checkout error:', data.error)
+        setCheckoutLoading(false)
+      }
+    } catch (err) {
+      console.error('Stripe checkout fetch error:', err)
       setCheckoutLoading(false)
     }
   }

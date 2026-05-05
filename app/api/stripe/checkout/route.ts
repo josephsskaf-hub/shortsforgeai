@@ -8,60 +8,86 @@ export async function POST(req: NextRequest) {
 
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (authError) {
+      console.error('[stripe/checkout] Auth error:', authError.message)
+      return NextResponse.json({ error: 'Authentication failed. Please sign in again.' }, { status: 401 })
     }
 
-    const { data: profile } = await supabase
+    if (!user) {
+      return NextResponse.json({ error: 'You must be signed in to upgrade.' }, { status: 401 })
+    }
+
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('email, stripe_customer_id, is_pro')
       .eq('id', user.id)
       .single()
 
-    if (profile?.is_pro) {
-      return NextResponse.json({ error: 'Already subscribed' }, { status: 400 })
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('[stripe/checkout] Profile fetch error:', profileError.message, profileError.code)
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    if (profile?.is_pro) {
+      return NextResponse.json({ error: 'You already have an active Pro subscription.' }, { status: 400 })
+    }
 
-    // Get or create Stripe customer
+    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID
+    if (!priceId) {
+      console.error('[stripe/checkout] NEXT_PUBLIC_STRIPE_PRICE_ID is not configured')
+      return NextResponse.json({ error: 'Payment configuration error. Please contact support.' }, { status: 500 })
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.vercel.app'
+
     let customerId = profile?.stripe_customer_id
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: profile?.email ?? user.email ?? '',
-        metadata: { supabase_user_id: user.id },
-      })
-      customerId = customer.id
+      try {
+        const customer = await stripe.customers.create({
+          email: profile?.email ?? user.email ?? '',
+          metadata: { supabase_user_id: user.id },
+        })
+        customerId = customer.id
 
-      await supabase
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('[stripe/checkout] Failed to persist customer ID:', updateError.message)
+        }
+      } catch (customerErr: any) {
+        console.error('[stripe/checkout] Failed to create Stripe customer:', customerErr?.message ?? customerErr)
+        return NextResponse.json({ error: 'Failed to set up payment. Please try again.' }, { status: 500 })
+      }
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID!,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${appUrl}/dashboard?upgraded=true`,
-      cancel_url: `${appUrl}/pricing?cancelled=true`,
-      metadata: {
-        supabase_user_id: user.id,
-      },
-    })
+    let session
+    try {
+      session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: `${appUrl}/dashboard?upgraded=true`,
+        cancel_url: `${appUrl}/pricing?cancelled=true`,
+        metadata: { supabase_user_id: user.id },
+      })
+    } catch (sessionErr: any) {
+      console.error('[stripe/checkout] Session creation error:', sessionErr?.message ?? sessionErr)
+      return NextResponse.json(
+        { error: `Payment session failed: ${sessionErr?.message ?? 'Please try again'}` },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ url: session.url })
-  } catch (error) {
-    console.error('Checkout error:', error)
-    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[stripe/checkout] Unexpected error:', error?.message ?? error)
+    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 })
   }
 }

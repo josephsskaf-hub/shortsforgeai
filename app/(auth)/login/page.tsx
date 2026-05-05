@@ -65,7 +65,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <Link href="/" className="flex items-center justify-center gap-3 mb-8" style={{ textDecoration: 'none' }}>
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
             style={{
@@ -98,7 +98,7 @@ export default function LoginPage() {
               AI
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Card */}
         <div
@@ -152,12 +152,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label
-                className="block text-xs font-700 mb-2 uppercase tracking-wider"
-                style={{ color: 'var(--muted2)' }}
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-700 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
+                  Password
+                </label>
+                <Link href="/forgot-password" className="text-xs font-semibold" style={{ color: 'var(--indigo-light)', textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 value={password}

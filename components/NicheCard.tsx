@@ -130,8 +130,8 @@ export default function NicheCard({
 
       {/* Generate button */}
       <button
-        onClick={() => !disabled && !loading && onGenerate(id)}
-        disabled={disabled || loading}
+        onClick={() => !loading && onGenerate(id)}
+        disabled={loading}
         className="w-full rounded-[13px] px-4 py-3.5 text-sm font-black text-white relative z-10 flex items-center justify-center gap-2 transition-all"
         style={{
           background:

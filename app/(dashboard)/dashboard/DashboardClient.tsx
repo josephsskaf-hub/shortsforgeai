@@ -111,6 +111,8 @@ export default function DashboardClient({
       setActiveNiche(nicheId)
       if (!isPro) {
         setGenerationsUsed((prev) => prev + 1)
+        // Notify Sidebar to update its counter in real-time
+        window.dispatchEvent(new CustomEvent('generationComplete'))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')

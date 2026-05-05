@@ -19,8 +19,12 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
       const data = await res.json()
       if (data.url) {
         window.location.href = data.url
+      } else {
+        console.error('Stripe checkout error:', data.error)
+        setLoading(false)
       }
-    } catch {
+    } catch (err) {
+      console.error('Stripe checkout fetch error:', err)
       setLoading(false)
     }
   }
