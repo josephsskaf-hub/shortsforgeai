@@ -32,6 +32,13 @@ export default function SignupPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      // Fire welcome email (non-blocking — never fails signup)
+      fetch('/api/send-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {/* ignore email errors */})
+
       // Try to sign in immediately (if email confirmation is off)
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,

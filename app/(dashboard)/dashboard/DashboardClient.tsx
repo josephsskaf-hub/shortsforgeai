@@ -354,6 +354,40 @@ export default function DashboardClient({
 
   const activeNicheData = NICHES.find((n) => n.id === activeNiche)
 
+  function handleDownloadAll() {
+    if (!results || !activeNiche) return
+    const nicheData = NICHES.find((n) => n.id === activeNiche)
+    const nicheName = nicheData?.name ?? activeNiche
+    const dateStr = new Date().toISOString().slice(0, 10)
+
+    const content = results
+      .map((v, i) => {
+        const hookMatch = v.script.match(/🎯\s*HOOK[:\s]+([^\n]+(?:\n(?!📝|🔗)[^\n]+)*)/i)
+        const hook = hookMatch ? hookMatch[1].trim() : v.script.split('\n')[0]
+        return [
+          `===== SCRIPT ${i + 1} OF ${results.length} =====`,
+          `HOOK: ${hook}`,
+          `TITLE: ${v.title}`,
+          `SCRIPT:\n${v.script}`,
+          `HASHTAGS: ${v.hashtags.join(' ')}`,
+          `VIDEO PROMPT: ${v.videoPrompt}`,
+          `YOUTUBE DESCRIPTION: ${v.youtubeDescription}`,
+        ].join('\n\n')
+      })
+      .join('\n\n' + '─'.repeat(50) + '\n\n')
+
+    const header = `SHORTS SCRIPTS PACKAGE\nNiche: ${nicheData?.emoji ?? ''} ${nicheName}\nGenerated: ${dateStr} | ShortsForgeAI\n\n${'═'.repeat(50)}\n\n`
+    const blob = new Blob([header + content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `shorts-scripts-${activeNiche}-${dateStr}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="px-4 md:px-6 py-7 pb-28 md:pb-20">
       {/* ─── Urgency banner (free users) ─── */}
@@ -514,18 +548,25 @@ export default function DashboardClient({
               📋 Copy All
             </button>
             <button
-              onClick={handleCopyPackage}
+              onClick={handleDownloadAll}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: 'rgba(16,185,129,.08)', border: '1px solid rgba(16,185,129,.22)', color: '#34d399', cursor: 'pointer' }}
             >
-              📦 Copy Complete Package
+              ⬇️ Download All (.txt)
+            </button>
+            <button
+              onClick={handleCopyPackage}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.18)', color: 'var(--indigo-light)', cursor: 'pointer' }}
+            >
+              📦 Copy Package
             </button>
             <button
               onClick={() => setShowVideoBetaModal(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.3)', color: '#c084fc', cursor: 'pointer' }}
             >
-              🎬 Generate Full AI Video
+              🎬 AI Video
               <span
                 className="text-xs font-black px-1.5 py-0.5 rounded-full"
                 style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', fontSize: '0.55rem' }}
@@ -545,25 +586,42 @@ export default function DashboardClient({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--border)', color: 'var(--muted2)', cursor: 'pointer' }}
             >
-              ← Back to Dashboard
+              ← Back
             </button>
           </div>
 
           {/* Result cards */}
           <div className="flex flex-col gap-4">
             {results.map((video, i) => (
-              <ResultCard key={i} video={video} index={i} />
+              <ResultCard key={i} video={video} index={i} total={results.length} />
             ))}
           </div>
 
-          {/* Bottom generate again */}
-          <div className="mt-8 flex justify-center">
+          {/* Bottom — Generate Again + Download */}
+          <div className="mt-8 flex flex-wrap gap-3 justify-center">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 4px 22px rgba(99,102,241,.3)', border: 'none', cursor: 'pointer' }}
+              className="flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white transition-all"
+              style={{
+                background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+                boxShadow: '0 4px 28px rgba(99,102,241,.4)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
-              ⚡ Generate Another Niche
+              ⚡ Generate Again — Pick a New Niche
+            </button>
+            <button
+              onClick={handleDownloadAll}
+              className="flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold transition-all"
+              style={{
+                background: 'rgba(16,185,129,.08)',
+                border: '1px solid rgba(16,185,129,.25)',
+                color: '#34d399',
+                cursor: 'pointer',
+              }}
+            >
+              ⬇️ Download All Scripts
             </button>
           </div>
         </div>

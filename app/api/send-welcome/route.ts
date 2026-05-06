@@ -1,0 +1,176 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shortsforgeai.vercel.app'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.vercel.app>'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { email, name } = await request.json()
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    }
+
+    // If no Resend key is configured, silently skip (don't break signup)
+    if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here') {
+      console.warn('[send-welcome] RESEND_API_KEY not configured — skipping welcome email')
+      return NextResponse.json({ skipped: true })
+    }
+
+    const greeting = name ? `Hey ${name},` : 'Hey Creator,'
+    const dashboardUrl = `${APP_URL}/dashboard`
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to ShortsForgeAI</title>
+</head>
+<body style="margin:0;padding:0;background:#0d0d14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d14;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:32px;">
+              <div style="display:inline-flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#7c3aed);display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:40px;text-align:center;">⚡</div>
+                <span style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;">ShortsForgeAI</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#13131f;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px;">
+
+              <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 8px;">${greeting}</p>
+              <p style="color:#94a3b8;font-size:15px;margin:0 0 28px;line-height:1.6;">Welcome to <strong style="color:#c7d2fe;">ShortsForgeAI</strong> 🎬</p>
+
+              <!-- Free generations badge -->
+              <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+                <p style="color:#818cf8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free scripts are waiting</p>
+                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free generations</p>
+                <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Each gives you <strong style="color:#94a3b8;">5 complete Shorts packages</strong> with hooks, titles, full scripts, hashtags &amp; descriptions.</p>
+              </div>
+
+              <!-- Features list -->
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;width:100%;">
+                <tr>
+                  <td style="padding:6px 0;">
+                    <span style="color:#34d399;margin-right:8px;">✓</span>
+                    <span style="color:#94a3b8;font-size:14px;">Hooks that stop the scroll</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;">
+                    <span style="color:#34d399;margin-right:8px;">✓</span>
+                    <span style="color:#94a3b8;font-size:14px;">Titles optimized for YouTube</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;">
+                    <span style="color:#34d399;margin-right:8px;">✓</span>
+                    <span style="color:#94a3b8;font-size:14px;">Full scripts ready to film</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;">
+                    <span style="color:#34d399;margin-right:8px;">✓</span>
+                    <span style="color:#94a3b8;font-size:14px;">Hashtags + descriptions included</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${dashboardUrl}"
+                       style="display:inline-block;background:linear-gradient(135deg,#6366f1,#7c3aed);color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:16px 40px;border-radius:12px;letter-spacing:0.01em;box-shadow:0 4px 22px rgba(99,102,241,0.4);">
+                      👉 Start generating now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Upgrade note -->
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
+                <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
+                  After your free generations, upgrade to <strong style="color:#818cf8;">Pro for $5/month</strong> and generate up to <strong style="color:#818cf8;">1,000 Shorts scripts/month</strong>.
+                </p>
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <p style="color:#334155;font-size:12px;margin:0;">
+                — The ShortsForgeAI Team<br />
+                <a href="${APP_URL}" style="color:#4f46e5;text-decoration:none;">www.shortsforgeai.vercel.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+    const text = `${greeting}
+
+Welcome to ShortsForgeAI! 🎬
+
+You have 2 free script generations waiting for you.
+Each generation gives you 5 complete Shorts packages with:
+- Hooks that stop the scroll
+- Titles optimized for YouTube
+- Full scripts ready to film
+- Hashtags + descriptions included
+
+👉 Start generating now:
+${dashboardUrl}
+
+After your free generations, upgrade to Pro for $5/month and generate up to 1,000 Shorts scripts/month.
+
+— The ShortsForgeAI Team
+www.shortsforgeai.vercel.app`
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [email],
+        subject: '⚡ Your 2 free Shorts scripts are ready',
+        html,
+        text,
+      }),
+    })
+
+    if (!response.ok) {
+      const body = await response.text()
+      console.error('[send-welcome] Resend error:', response.status, body)
+      // Return success anyway so signup doesn't appear to fail
+      return NextResponse.json({ sent: false, error: body })
+    }
+
+    const data = await response.json()
+    return NextResponse.json({ sent: true, id: data.id })
+  } catch (err) {
+    console.error('[send-welcome] Unexpected error:', err)
+    // Never fail the signup — log and return 200
+    return NextResponse.json({ sent: false, error: String(err) })
+  }
+}

@@ -7,6 +7,7 @@ import CopyButton from './CopyButton'
 interface ResultCardProps {
   video: ShortVideo
   index: number
+  total?: number
 }
 
 // Extract hook text from "🎯 HOOK: ..." section of script
@@ -18,32 +19,56 @@ function extractHook(script: string): string | null {
   return firstLine || null
 }
 
-export default function ResultCard({ video, index }: ResultCardProps) {
+export default function ResultCard({ video, index, total = 5 }: ResultCardProps) {
   const [scriptExpanded, setScriptExpanded] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const hook = extractHook(video.script)
-  const allContent = `TITLE:\n${video.title}\n\nSCRIPT:\n${video.script}\n\nVIDEO PROMPT:\n${video.videoPrompt}\n\nHASHTAGS:\n${video.hashtags.join(' ')}\n\nYOUTUBE DESCRIPTION:\n${video.youtubeDescription}`
+
+  // Clean copy format
+  const copyText = [
+    `HOOK: ${hook ?? ''}`,
+    `TITLE: ${video.title}`,
+    `SCRIPT:\n${video.script}`,
+    `HASHTAGS: ${video.hashtags.join(' ')}`,
+  ].join('\n\n')
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(copyText)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = copyText
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div
       className="rounded-[20px] overflow-hidden transition-all duration-300"
       style={{
-        background: 'rgba(15,15,30,0.8)',
+        background: 'rgba(15,15,30,0.85)',
         backdropFilter: 'blur(16px) saturate(140%)',
         WebkitBackdropFilter: 'blur(16px) saturate(140%)',
-        border: '1px solid rgba(99,102,241,0.14)',
+        border: '1px solid rgba(99,102,241,0.16)',
+        boxShadow: '0 4px 24px rgba(0,0,0,.25)',
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,.35)'
-        el.style.boxShadow = '0 12px 48px rgba(99,102,241,.12)'
+        el.style.borderColor = 'rgba(99,102,241,.38)'
+        el.style.boxShadow = '0 12px 48px rgba(99,102,241,.13)'
         el.style.transform = 'translateY(-2px)'
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,0.14)'
-        el.style.boxShadow = 'none'
+        el.style.borderColor = 'rgba(99,102,241,0.16)'
+        el.style.boxShadow = '0 4px 24px rgba(0,0,0,.25)'
         el.style.transform = 'translateY(0)'
       }}
     >
@@ -51,18 +76,19 @@ export default function ResultCard({ video, index }: ResultCardProps) {
       <div
         className="px-5 py-4 flex items-center justify-between flex-wrap gap-3"
         style={{
-          background: 'linear-gradient(90deg, rgba(99,102,241,.07), rgba(124,58,237,.04))',
-          borderBottom: '1px solid rgba(99,102,241,0.12)',
+          background: 'linear-gradient(90deg, rgba(99,102,241,.09), rgba(124,58,237,.05))',
+          borderBottom: '1px solid rgba(99,102,241,0.14)',
         }}
       >
         <div className="flex items-center gap-3">
+          {/* Number badge */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center font-black"
+            className="w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,.25), rgba(124,58,237,.18))',
-              border: '1px solid rgba(99,102,241,.3)',
+              background: 'linear-gradient(135deg, rgba(99,102,241,.3), rgba(124,58,237,.2))',
+              border: '1px solid rgba(99,102,241,.35)',
               color: 'var(--indigo-light)',
-              fontSize: '0.9rem',
+              fontSize: '1rem',
             }}
           >
             {index + 1}
@@ -70,9 +96,9 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           <div>
             <div
               className="font-black tracking-tight"
-              style={{ color: 'var(--text)', fontSize: '0.92rem' }}
+              style={{ color: 'var(--text)', fontSize: '0.95rem' }}
             >
-              Short #{index + 1}
+              Script {index + 1} of {total}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
@@ -85,13 +111,26 @@ export default function ResultCard({ video, index }: ResultCardProps) {
             </div>
           </div>
         </div>
-        <CopyButton text={allContent} label="Copy All" variant="default" />
+
+        {/* Per-card Copy button */}
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all"
+          style={{
+            background: copied ? 'rgba(16,185,129,.1)' : 'rgba(99,102,241,.1)',
+            border: copied ? '1px solid rgba(16,185,129,.28)' : '1px solid rgba(99,102,241,.25)',
+            color: copied ? '#34d399' : 'var(--indigo-light)',
+            cursor: 'pointer',
+          }}
+        >
+          {copied ? '✓ Copied!' : '📋 Copy'}
+        </button>
       </div>
 
       {/* ─── Body ─── */}
       <div className="p-5 flex flex-col gap-5">
 
-        {/* Hook — large, italic, bold highlighted */}
+        {/* 🪝 Hook */}
         {hook && (
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -99,25 +138,21 @@ export default function ResultCard({ video, index }: ResultCardProps) {
                 className="text-xs font-black uppercase tracking-widest"
                 style={{ color: 'var(--indigo-light)' }}
               >
-                🎣 Hook
+                🪝 Hook
               </span>
               <CopyButton text={hook} variant="small" />
             </div>
             <div
               className="rounded-[12px] px-4 py-3.5"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,.08), rgba(124,58,237,.05))',
-                border: '1px solid rgba(99,102,241,.18)',
+                background: 'linear-gradient(135deg, rgba(99,102,241,.09), rgba(124,58,237,.05))',
+                border: '1px solid rgba(99,102,241,.2)',
                 borderLeft: '3px solid var(--indigo-light)',
               }}
             >
               <p
                 className="font-black leading-snug"
-                style={{
-                  color: 'var(--text)',
-                  fontSize: '1rem',
-                  fontStyle: 'italic',
-                }}
+                style={{ color: 'var(--text)', fontSize: '1rem', fontStyle: 'italic' }}
               >
                 {hook}
               </p>
@@ -125,31 +160,31 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           </div>
         )}
 
-        {/* Title */}
+        <div style={{ height: 1, background: 'rgba(99,102,241,.08)', borderRadius: 1 }} />
+
+        {/* 📌 Title */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
-              🎬 Title
+              📌 Title
             </span>
             <CopyButton text={video.title} variant="small" />
           </div>
           <div
             className="rounded-[10px] px-4 py-3 text-sm font-bold leading-snug"
-            style={{
-              background: 'rgba(0,0,0,.22)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-            }}
+            style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)', color: 'var(--text)' }}
           >
             {video.title}
           </div>
         </div>
 
-        {/* Script — expandable */}
+        <div style={{ height: 1, background: 'rgba(99,102,241,.08)', borderRadius: 1 }} />
+
+        {/* 📝 Script — expandable */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
-              📝 30-Second Script
+              📝 Script
             </span>
             <div className="flex items-center gap-2">
               <CopyButton text={video.script} variant="small" />
@@ -191,11 +226,13 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           )}
         </div>
 
-        {/* Hashtags — chips */}
+        <div style={{ height: 1, background: 'rgba(99,102,241,.08)', borderRadius: 1 }} />
+
+        {/* #️⃣ Hashtags — chips */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
-              # Hashtags
+              #️⃣ Hashtags
             </span>
             <CopyButton text={video.hashtags.join(' ')} variant="small" />
           </div>
@@ -216,7 +253,9 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           </div>
         </div>
 
-        {/* Video Prompt */}
+        <div style={{ height: 1, background: 'rgba(99,102,241,.08)', borderRadius: 1 }} />
+
+        {/* 🎥 Video Prompt */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
@@ -226,17 +265,13 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           </div>
           <div
             className="rounded-[10px] px-4 py-3 text-sm leading-relaxed"
-            style={{
-              background: 'rgba(0,0,0,.22)',
-              border: '1px solid var(--border)',
-              color: 'var(--muted2)',
-            }}
+            style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)', color: 'var(--muted2)' }}
           >
             {video.videoPrompt}
           </div>
         </div>
 
-        {/* YouTube Description — expandable */}
+        {/* 📺 YouTube Description — expandable */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
@@ -282,8 +317,8 @@ export default function ResultCard({ video, index }: ResultCardProps) {
           )}
         </div>
 
-        {/* Copy All — primary */}
-        <CopyButton text={allContent} label="Copy Complete Script Package" variant="primary" />
+        {/* Bottom primary CTA */}
+        <CopyButton text={copyText} label="Copy Complete Script Package" variant="primary" />
       </div>
     </div>
   )

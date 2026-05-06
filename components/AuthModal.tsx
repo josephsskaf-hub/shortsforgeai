@@ -83,6 +83,13 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
       return
     }
 
+    // Fire welcome email (non-blocking — never fails signup)
+    fetch('/api/send-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {/* ignore email errors */})
+
     // Try immediate sign-in (if email confirmation is disabled)
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (!signInError) {

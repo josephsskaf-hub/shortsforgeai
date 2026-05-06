@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NicheCard from '@/components/NicheCard'
+import LiveScriptPreview from '@/components/LiveScriptPreview'
 
 // ─── Niche data (mirrors dashboard IDs exactly) ───────────────────────────────
 const DEFAULT_PILLS = ['🎬 YouTube Shorts', '🔥 High Engagement', '📋 Ready to Copy']
@@ -427,6 +428,9 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* ─── Live Script Typewriter Preview ─── */}
+      <LiveScriptPreview />
 
       {/* ─── Value Section ─── */}
       <section style={{ position: 'relative', zIndex: 10, padding: '0 24px 72px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
