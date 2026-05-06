@@ -82,7 +82,11 @@ export default function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
-  const freeRemaining = Math.max(0, 1 - generationsUsed)
+  const FREE_LIMIT = 2
+  const PRO_LIMIT = 200
+  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
+  const freeUsedPct = Math.min(100, (generationsUsed / FREE_LIMIT) * 100)
+  const proUsedPct = Math.min(100, (generationsUsed / PRO_LIMIT) * 100)
 
   // Listen for generation events from DashboardClient
   useEffect(() => {
@@ -241,16 +245,68 @@ export default function Sidebar({
         ) : !isPro ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '1px solid rgba(99,102,241,.18)' }}>
-              <p className="text-xs mb-1" style={{ color: 'var(--muted2)', lineHeight: 1.45 }}>
-                <strong style={{ color: 'var(--text)' }}>{freeRemaining} free generation{freeRemaining !== 1 ? 's' : ''} left</strong>
-              </p>
-              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Upgrade for unlimited access — just $5/mo</p>
+              {/* Usage label */}
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Free generations</span>
+                <span className="text-xs font-black" style={{ color: freeRemaining === 0 ? '#f87171' : 'var(--indigo-light)', fontSize: '0.68rem' }}>
+                  {generationsUsed} / {FREE_LIMIT} used
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="rounded-full overflow-hidden mb-2" style={{ height: 5, background: 'rgba(255,255,255,.07)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${freeUsedPct}%`,
+                    background: freeRemaining === 0
+                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                      : 'linear-gradient(90deg, #6366f1, #a855f7)',
+                  }}
+                />
+              </div>
+              {freeRemaining === 0 ? (
+                <p className="text-xs mb-2" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.68rem' }}>
+                  You&apos;ve used all free generations. Upgrade to continue.
+                </p>
+              ) : (
+                <p className="text-xs mb-2" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
+                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — upgrade for 200/month
+                </p>
+              )}
               <Link href="/pricing" className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }} onClick={onClose}>
-                ⭐ Upgrade to Pro →
+                ⭐ Upgrade to Pro — $5/mo →
               </Link>
             </div>
           </div>
-        ) : null}
+        ) : (
+          /* Pro user usage display */
+          <div className="px-3 pb-3 flex-shrink-0">
+            <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,.05)', border: '1px solid rgba(16,185,129,.15)' }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Pro generations</span>
+                <span className="text-xs font-black" style={{ color: generationsUsed >= PRO_LIMIT ? '#f87171' : '#34d399', fontSize: '0.68rem' }}>
+                  {generationsUsed} / {PRO_LIMIT}
+                </span>
+              </div>
+              <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,.07)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${proUsedPct}%`,
+                    background: generationsUsed >= PRO_LIMIT
+                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                      : 'linear-gradient(90deg, #10b981, #34d399)',
+                  }}
+                />
+              </div>
+              {generationsUsed >= PRO_LIMIT && (
+                <p className="text-xs mt-1.5" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.65rem' }}>
+                  Monthly limit reached. Resets next billing cycle.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Trust signal footer */}
         <div

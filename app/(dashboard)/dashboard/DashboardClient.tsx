@@ -255,7 +255,7 @@ export default function DashboardClient({
   const [copyAllToast, setCopyAllToast] = useState(false)
   const nichesSectionRef = useRef<HTMLDivElement>(null)
 
-  const FREE_LIMIT = 1
+  const FREE_LIMIT = 2
   const canGenerate = isPro || generationsUsed < FREE_LIMIT
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
 
@@ -366,11 +366,11 @@ export default function DashboardClient({
           }}
         >
           <span className="text-xs font-semibold" style={{ color: 'var(--muted2)' }}>
-            ⚡ You have{' '}
+            ⚡{' '}
             <strong style={{ color: freeRemaining === 0 ? '#f87171' : '#818cf8' }}>
-              {freeRemaining} free generation{freeRemaining !== 1 ? 's' : ''}
+              {generationsUsed} / {FREE_LIMIT} free generation{FREE_LIMIT !== 1 ? 's' : ''} used
             </strong>{' '}
-            left — Upgrade for unlimited
+            — Upgrade for 200/month
           </span>
           <button
             onClick={() => setShowUpgradeModal(true)}
@@ -666,7 +666,7 @@ export default function DashboardClient({
                     🔒 You&apos;ve used all {FREE_LIMIT} free generations
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                    Upgrade to Pro for unlimited viral scripts — just $5/month
+                    Upgrade to continue generating — 200 generations/month for just $5
                   </p>
                 </div>
                 <button

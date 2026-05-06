@@ -11,6 +11,7 @@ interface NicheCardProps {
   loading: boolean
   disabled?: boolean
   selected?: boolean
+  badge?: string
 }
 
 export default function NicheCard({
@@ -23,6 +24,7 @@ export default function NicheCard({
   loading,
   disabled = false,
   selected = false,
+  badge,
 }: NicheCardProps) {
   return (
     <div
@@ -84,6 +86,13 @@ export default function NicheCard({
             style={{ background: 'rgba(99,102,241,.18)', border: '1px solid rgba(99,102,241,.35)' }}
           >
             <span className="text-xs font-black" style={{ color: 'var(--indigo-light)', fontSize: '0.6rem' }}>✓ Selected</span>
+          </div>
+        ) : badge && badge !== 'Live' ? (
+          <div
+            className="flex items-center px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)' }}
+          >
+            <span className="text-xs font-black uppercase tracking-wide" style={{ color: '#818cf8', fontSize: '0.55rem' }}>{badge}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
