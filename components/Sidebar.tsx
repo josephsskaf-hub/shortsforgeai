@@ -82,7 +82,7 @@ export default function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
-  const freeRemaining = Math.max(0, 5 - generationsUsed)
+  const freeRemaining = Math.max(0, 1 - generationsUsed)
 
   // Listen for generation events from DashboardClient
   useEffect(() => {
