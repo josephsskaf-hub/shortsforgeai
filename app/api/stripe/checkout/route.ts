@@ -4,6 +4,15 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
   try {
+    // Guard: fail fast if Stripe is not configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('[stripe/checkout] STRIPE_SECRET_KEY is not set in environment variables')
+      return NextResponse.json(
+        { error: 'Payment service is not configured. Please contact support.' },
+        { status: 500 }
+      )
+    }
+
     const supabase = createClient()
 
     const {

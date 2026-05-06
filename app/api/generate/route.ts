@@ -159,13 +159,42 @@ export async function POST(req: NextRequest) {
 
     // ── 7. Parse JSON response ───────────────────────────────────────────────
     let videos: ShortVideo[]
-    try {
-      const cleaned = rawContent
+
+    // Robust two-pass parser:
+    //  Pass 1 — strip code fences, extract the JSON array, direct parse
+    //  Pass 2 — sanitize literal (unescaped) newlines/tabs inside string values
+    const sanitizeAndParse = (raw: string): ShortVideo[] => {
+      // 1) Strip markdown code fences (```json…``` or ```…```)
+      let cleaned = raw
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/\s*```$/i, '')
         .trim()
-      videos = JSON.parse(cleaned)
+
+      // 2) If there's surrounding text, extract the first top-level JSON array
+      const arrayMatch = cleaned.match(/\[[\s\S]*\]/)
+      if (arrayMatch) cleaned = arrayMatch[0]
+
+      // 3) First attempt — direct parse (works when GPT is well-behaved)
+      try {
+        return JSON.parse(cleaned) as ShortVideo[]
+      } catch {
+        // 4) Fallback: GPT sometimes puts literal newlines/tabs inside string
+        //    values, which is invalid JSON.  Re-escape them and retry.
+        const sanitized = cleaned.replace(
+          /"(?:[^"\\]|\\.)*"/g,
+          (str) =>
+            str
+              .replace(/\n/g, '\\n')
+              .replace(/\r/g, '\\r')
+              .replace(/\t/g, '\\t')
+        )
+        return JSON.parse(sanitized) as ShortVideo[]
+      }
+    }
+
+    try {
+      videos = sanitizeAndParse(rawContent)
     } catch (parseError) {
       console.error('[generate] JSON parse failed. Raw OpenAI response:', rawContent)
       console.error('[generate] Parse error:', parseError)
