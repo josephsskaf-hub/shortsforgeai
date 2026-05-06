@@ -244,6 +244,7 @@ export default function DashboardClient({
   const [loadingNiche, setLoadingNiche] = useState<string | null>(null)
   const [results, setResults] = useState<ShortVideo[] | null>(null)
   const [activeNiche, setActiveNiche] = useState<string | null>(null)
+  const [selectedNiche, setSelectedNiche] = useState<string | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
@@ -265,6 +266,7 @@ export default function DashboardClient({
 
   // NicheCard click → open preview modal (or auth/upgrade gates first)
   function handleNicheClick(nicheId: string) {
+    setSelectedNiche(nicheId)
     if (!isLoggedIn) {
       setShowAuthModal(true)
       return
@@ -388,23 +390,23 @@ export default function DashboardClient({
       {/* ─── HERO SECTION ─── */}
       {!results && !loadingNiche && (
         <div
-          className="relative rounded-[24px] overflow-hidden mb-8 px-6 md:px-8 py-10 text-center"
+          className="relative rounded-[20px] overflow-hidden mb-4 px-6 md:px-8 py-6 text-center"
           style={{
             background: 'linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(124,58,237,.07) 50%, rgba(168,85,247,.06) 100%)',
             border: '1px solid rgba(99,102,241,.18)',
-            boxShadow: '0 0 80px rgba(99,102,241,.08)',
+            boxShadow: '0 0 60px rgba(99,102,241,.07)',
           }}
         >
           <div
             className="absolute pointer-events-none"
             style={{
-              width: 500, height: 400,
-              background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)',
-              top: -100, left: '50%', transform: 'translateX(-50%)',
+              width: 400, height: 300,
+              background: 'radial-gradient(ellipse, rgba(99,102,241,.15) 0%, transparent 70%)',
+              top: -80, left: '50%', transform: 'translateX(-50%)',
             }}
           />
 
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-3">
             <div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
               style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.22)', color: '#34d399' }}
@@ -415,141 +417,25 @@ export default function DashboardClient({
           </div>
 
           <h1
-            className="font-black tracking-tight mb-3 relative z-10"
-            style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', color: 'var(--text)', lineHeight: 1.1 }}
+            className="font-black tracking-tight mb-2 relative z-10"
+            style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
           >
-            Your Next Viral Short{' '}
-            <span className="grad-text">Starts Here</span>
+            Pick a Niche →{' '}
+            <span className="grad-text">Generate 5 Viral Shorts</span>
           </h1>
 
           <p
-            className="relative z-10 mb-5 mx-auto"
-            style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 480, lineHeight: 1.55 }}
+            className="relative z-10 mx-auto"
+            style={{ fontSize: '0.9rem', color: 'var(--muted2)', maxWidth: 420, lineHeight: 1.5 }}
           >
-            Pick a niche and generate{' '}
-            <strong style={{ color: 'var(--text)' }}>5 viral-ready shorts</strong> in seconds.
+            {!isLoggedIn
+              ? '🔑 Create a free account to generate your first Shorts package.'
+              : 'Choose a niche below and get 5 ready-to-post scripts, titles & hashtags in seconds.'}
           </p>
-
-          {/* Auth gate hint for non-logged-in users */}
-          {!isLoggedIn && (
-            <p className="relative z-10 mb-5 text-xs" style={{ color: 'var(--indigo-light)', fontWeight: 600 }}>
-              🔑 Create a free account to generate your first Shorts package.
-            </p>
-          )}
-
-          <div className="flex items-center justify-center gap-4 flex-wrap mb-6 relative z-10">
-            {[
-              { icon: '👥', text: '1,200+ creators' },
-              { icon: '📱', text: 'YouTube · TikTok · Reels' },
-              { icon: '⚡', text: 'Avg generation: ~30 seconds' },
-            ].map((t) => (
-              <div key={t.text} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--muted2)' }}>
-                <span>{t.icon}</span>
-                <span>{t.text}</span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={scrollToNiches}
-            className="relative z-10 inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl text-base font-black text-white transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 6px 32px rgba(99,102,241,.5)',
-              animation: 'btn-pulse 2.8s ease-in-out infinite',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Generate Now ⚡
-          </button>
         </div>
       )}
 
-      {/* ─── STATS CARDS ─── */}
-      {!results && !loadingNiche && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          {[
-            { icon: '⚡', val: '~30s', label: 'Avg Generation Time', sub: 'Lightning fast' },
-            { icon: '🔥', val: '15+', label: 'Viral Niches', sub: 'All categories' },
-            { icon: '📦', val: '5 Scripts', label: 'Per Package', sub: 'Every generation' },
-            { icon: '🌍', val: '1,200+', label: 'Active Creators', sub: 'Growing daily' },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl p-4 flex flex-col gap-1.5 transition-all"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                boxShadow: '0 0 30px rgba(139,92,246,.1)',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,.3)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 30px rgba(99,102,241,.18)' }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 30px rgba(139,92,246,.1)' }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.15), rgba(124,58,237,.1))', border: '1px solid rgba(99,102,241,.2)' }}
-              >
-                {stat.icon}
-              </div>
-              <div className="font-black tracking-tight" style={{ fontSize: '1.4rem', color: 'var(--text)', lineHeight: 1.1 }}>
-                {stat.val}
-              </div>
-              <div className="font-bold text-xs" style={{ color: 'var(--text2)' }}>{stat.label}</div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>{stat.sub}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* ─── SAMPLE OUTPUTS ─── */}
-      {!results && !loadingNiche && (
-        <div className="mb-8">
-          <div className="text-center mb-4">
-            <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)' }}>
-              Example Output
-            </span>
-            <p className="text-sm font-semibold mt-1" style={{ color: 'var(--muted2)' }}>
-              See what you&apos;ll get — instantly
-            </p>
-          </div>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
-            {SAMPLE_OUTPUTS.map((sample, i) => (
-              <div
-                key={i}
-                className="relative rounded-2xl p-5 overflow-hidden"
-                style={{
-                  background: 'rgba(13,13,28,0.8)',
-                  boxShadow: 'inset 0 0 0 1px rgba(99,102,241,.25), 0 4px 24px rgba(99,102,241,.08)',
-                }}
-              >
-                <div className="absolute inset-0 pointer-events-none rounded-2xl shimmer-overlay" style={{ zIndex: 0 }} />
-                <div className="relative z-10 flex items-center justify-between mb-3">
-                  <span className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded-md" style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)', color: 'var(--indigo-light)', fontSize: '0.58rem' }}>
-                    Example Output
-                  </span>
-                  <span className="text-lg">{sample.emoji}</span>
-                </div>
-                <div className="relative z-10">
-                  <p className="font-bold text-sm mb-2 leading-snug" style={{ color: 'var(--text)', fontStyle: 'italic', borderLeft: '2px solid var(--indigo-light)', paddingLeft: 10 }}>
-                    {sample.hook}
-                  </p>
-                  <p className="text-xs font-semibold mb-3 leading-snug" style={{ color: 'var(--muted2)' }}>
-                    {sample.title}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {sample.hashtags.map((tag) => (
-                      <span key={tag} className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.2)', color: 'var(--purple-light)' }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ─── ERROR ─── */}
       {error && (
@@ -685,28 +571,20 @@ export default function DashboardClient({
         <>
           {/* ─── NICHE CARDS ─── */}
           <div className="mb-4" ref={nichesSectionRef}>
-            <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
-                <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
+                <div className="font-black uppercase tracking-widest mb-0.5" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
                   Step 1 — Pick a niche
                 </div>
                 <div className="font-bold" style={{ fontSize: '1rem', color: 'var(--text)' }}>
-                  Choose your viral topic
+                  Choose your niche → click Generate
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
-                  Click any card to generate 5 viral scripts, titles, hashtags and video prompts instantly.
-                </p>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <div
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0"
-                  style={{ background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', color: 'var(--indigo-light)' }}
-                >
-                  ⚡ 5 ready-to-post viral videos in seconds
-                </div>
-                <span className="text-xs" style={{ color: 'var(--muted)', fontSize: '0.68rem' }}>
-                  👥 1,200+ active creators
-                </span>
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
+                style={{ background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', color: 'var(--indigo-light)' }}
+              >
+                ⚡ 5 scripts per package
               </div>
             </div>
 
@@ -722,6 +600,7 @@ export default function DashboardClient({
                       onGenerate={handleNicheClick}
                       loading={false}
                       disabled={!canGenerate}
+                      selected={selectedNiche === niche.id}
                     />
                   ))}
                   {/* Locked niches */}
@@ -771,6 +650,7 @@ export default function DashboardClient({
                     onGenerate={handleNicheClick}
                     loading={false}
                     disabled={false}
+                    selected={selectedNiche === niche.id}
                   />
                 ))
               )}

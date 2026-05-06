@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 interface TopBarProps {
   title: string
   subtitle?: string
@@ -35,9 +37,24 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         ☰
       </button>
 
+      {/* Mobile logo link */}
+      <Link
+        href="/"
+        className="md:hidden flex items-center justify-center flex-shrink-0"
+        style={{
+          width: 32, height: 32, borderRadius: 10, textDecoration: 'none',
+          background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+          boxShadow: '0 0 16px rgba(99,102,241,.4)',
+          fontSize: '1rem',
+        }}
+        aria-label="Home"
+      >
+        ⚡
+      </Link>
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
-        <span>ShortsForge</span>
+        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>ShortsForge</Link>
         <span style={{ opacity: 0.3 }}>›</span>
         <span className="font-semibold" style={{ color: 'var(--text)' }}>
           {title}
