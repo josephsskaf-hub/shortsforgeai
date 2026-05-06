@@ -100,9 +100,11 @@ export default function DashboardClient({
   const [error, setError] = useState<string | null>(null)
   const nichesSectionRef = useRef<HTMLDivElement>(null)
 
-  const FREE_LIMIT = 5
+  const FREE_LIMIT = 1
   const canGenerate = isPro || generationsUsed < FREE_LIMIT
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
+  // Free users only see 1 niche (Money Facts); Pro unlocks all
+  const visibleNiches = isPro ? NICHES : NICHES.filter((n) => n.id === 'money')
 
   // Scroll to niches section
   function scrollToNiches() {
@@ -655,7 +657,7 @@ export default function DashboardClient({
 
             {/* Responsive grid: 1-col mobile, 2-col tablet, 3-col desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {NICHES.map((niche) => (
+              {visibleNiches.map((niche) => (
                 <NicheCard
                   key={niche.id}
                   {...niche}
@@ -663,6 +665,19 @@ export default function DashboardClient({
                   loading={false}
                   disabled={!canGenerate}
                 />
+              ))}
+              {/* Locked niches for free users */}
+              {!isPro && NICHES.filter((n) => n.id !== 'money').map((niche) => (
+                <div
+                  key={niche.id}
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="relative rounded-2xl border border-white/10 bg-white/5 p-5 cursor-pointer opacity-60 hover:opacity-80 transition-all"
+                >
+                  <div className="absolute top-3 right-3 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded-full">🔒 Pro</div>
+                  <div className="text-2xl mb-2">{niche.emoji}</div>
+                  <div className="font-semibold text-white/80">{niche.name}</div>
+                  <div className="text-xs text-white/40 mt-1">{niche.description}</div>
+                </div>
               ))}
             </div>
 

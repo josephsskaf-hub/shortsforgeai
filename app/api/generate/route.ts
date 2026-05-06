@@ -5,7 +5,7 @@ import { openai, buildGenerationPrompt, ShortVideo } from '@/lib/openai'
 // Increase Vercel function timeout to 60s (hobby plan max)
 export const maxDuration = 60
 
-const FREE_LIMIT = 5
+const FREE_LIMIT = 1
 
 export async function POST(req: NextRequest) {
   try {
