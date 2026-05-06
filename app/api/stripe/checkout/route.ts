@@ -43,12 +43,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You already have an active Pro subscription.' }, { status: 400 })
     }
 
-    const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID
-    if (!priceId) {
-      console.error('[stripe/checkout] NEXT_PUBLIC_STRIPE_PRICE_ID is not configured')
-      return NextResponse.json({ error: 'Payment configuration error. Please contact support.' }, { status: 500 })
-    }
-
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.vercel.app'
 
     let customerId = profile?.stripe_customer_id
@@ -80,7 +74,22 @@ export async function POST(req: NextRequest) {
       session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'ShortsForgeAI — Creator Pro',
+                description: 'Unlimited script packages · 15 viral niches · AI Video Generator beta',
+              },
+              unit_amount: 500, // $5.00
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
         mode: 'subscription',
         success_url: `${appUrl}/dashboard?upgraded=true`,
         cancel_url: `${appUrl}/pricing?cancelled=true`,
