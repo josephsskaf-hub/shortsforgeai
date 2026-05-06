@@ -32,20 +32,28 @@ export default function PricingClient({
 }: PricingClientProps) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   async function handleCheckout() {
     setCheckoutLoading(true)
+    setCheckoutError(null)
     try {
       const res = await fetch('/api/stripe/checkout', { method: 'POST' })
       const data = await res.json()
       if (data.url) {
-        window.location.href = data.url
+        // Open in new tab as fallback in case location.href is blocked
+        window.open(data.url, '_blank') || (window.location.href = data.url)
+        // Reset button after 5s in case navigation doesn't happen
+        setTimeout(() => setCheckoutLoading(false), 5000)
       } else {
-        console.error('Stripe checkout error:', data.error)
+        const msg = data.error ?? 'Payment failed. Please try again.'
+        console.error('Stripe checkout error:', msg)
+        setCheckoutError(msg)
         setCheckoutLoading(false)
       }
     } catch (err) {
       console.error('Stripe checkout fetch error:', err)
+      setCheckoutError('Network error. Please check your connection and try again.')
       setCheckoutLoading(false)
     }
   }
@@ -222,9 +230,15 @@ export default function PricingClient({
               >
                 {checkoutLoading ? 'Redirecting...' : '⭐ Start for $5'}
               </button>
-              <p className="text-center text-xs mt-2.5" style={{ color: 'var(--muted)' }}>
-                Cancel anytime. No hidden fees.
-              </p>
+              {checkoutError ? (
+                <p className="text-center text-xs mt-2.5 font-semibold" style={{ color: '#f87171' }}>
+                  ⚠️ {checkoutError}
+                </p>
+              ) : (
+                <p className="text-center text-xs mt-2.5" style={{ color: 'var(--muted)' }}>
+                  Cancel anytime. No hidden fees.
+                </p>
+              )}
             </>
           )}
         </div>
