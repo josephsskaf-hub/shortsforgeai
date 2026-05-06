@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai, buildGenerationPrompt, ShortVideo } from '@/lib/openai'
 
+// Increase Vercel function timeout to 60s (hobby plan max)
+export const maxDuration = 60
+
 const FREE_LIMIT = 5
 
 export async function POST(req: NextRequest) {
@@ -102,22 +105,25 @@ export async function POST(req: NextRequest) {
 
     let completion
     try {
-      completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert viral content creator. You always respond with valid JSON only — no markdown, no code blocks, no extra text. Just the raw JSON array.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.9,
-        max_tokens: 4000,
-      })
+      completion = await openai.chat.completions.create(
+        {
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an expert viral content creator. You always respond with valid JSON only — no markdown, no code blocks, no extra text. Just the raw JSON array.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.9,
+          max_tokens: 4000,
+        },
+        { timeout: 25000 } // 25s timeout — well within the 60s maxDuration
+      )
     } catch (openaiError: unknown) {
       const msg = openaiError instanceof Error ? openaiError.message : String(openaiError)
       console.error('[generate] OpenAI API error:', msg)
