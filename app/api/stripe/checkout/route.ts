@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 
+type Tier = 'creator' | 'pro'
+
+const TIERS: Record<Tier, { name: string; description: string; amount: number }> = {
+  creator: {
+    name: 'ShortsForgeAI — Creator',
+    description: '100 generations/month · all 26 niches · Hook Engine',
+    amount: 900, // $9.00
+  },
+  pro: {
+    name: 'ShortsForgeAI — Pro',
+    description: 'Unlimited generations · Thumbnail Generator · Priority support',
+    amount: 1900, // $19.00
+  },
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Guard: fail fast if Stripe is not configured
@@ -12,6 +27,17 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       )
     }
+
+    let tier: Tier = 'creator'
+    try {
+      const body = await req.json().catch(() => null)
+      if (body && (body.tier === 'creator' || body.tier === 'pro')) {
+        tier = body.tier
+      }
+    } catch {
+      // ignore body parse errors and use default tier
+    }
+    const plan = TIERS[tier]
 
     const supabase = createClient()
 
@@ -79,10 +105,10 @@ export async function POST(req: NextRequest) {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'ShortsForgeAI — Creator Pro',
-                description: 'Unlimited script packages · 15 viral niches · AI Video Generator beta',
+                name: plan.name,
+                description: plan.description,
               },
-              unit_amount: 500, // $5.00
+              unit_amount: plan.amount,
               recurring: {
                 interval: 'month',
               },
@@ -93,7 +119,10 @@ export async function POST(req: NextRequest) {
         mode: 'subscription',
         success_url: `${appUrl}/dashboard?upgraded=true`,
         cancel_url: `${appUrl}/pricing?cancelled=true`,
-        metadata: { supabase_user_id: user.id },
+        metadata: { supabase_user_id: user.id, tier },
+        subscription_data: {
+          metadata: { supabase_user_id: user.id, tier },
+        },
       })
     } catch (sessionErr: any) {
       console.error('[stripe/checkout] Session creation error:', sessionErr?.message ?? sessionErr)

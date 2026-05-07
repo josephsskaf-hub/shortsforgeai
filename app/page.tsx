@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NicheCard from '@/components/NicheCard'
 import LiveScriptPreview from '@/components/LiveScriptPreview'
+import TrendingSection from '@/components/TrendingSection'
+import ViralHookEngine from '@/components/ViralHookEngine'
+import SocialProof from '@/components/SocialProof'
 
 // ─── Niche data (mirrors dashboard IDs exactly) ───────────────────────────────
 const DEFAULT_PILLS = ['🎬 YouTube Shorts', '🔥 High Engagement', '📋 Ready to Copy']
@@ -141,6 +144,90 @@ const NICHES_HOME = [
     description: 'Jaw-dropping discoveries and mind-bending science',
     tags: ['Science', 'Education', 'Viral'],
     pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'conspiracies',
+    emoji: '🕵️',
+    name: 'Conspiracies & Cover-ups',
+    description: 'Hidden agendas, secret operations & untold truths',
+    tags: ['Mystery', 'High Retention', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Viral',
+  },
+  {
+    id: 'horror',
+    emoji: '👻',
+    name: 'Horror & Paranormal',
+    description: 'Hauntings, ghost stories & unexplained phenomena',
+    tags: ['Horror', 'Suspense', 'High Retention'],
+    pills: DEFAULT_PILLS,
+    badge: 'High Retention',
+  },
+  {
+    id: 'military',
+    emoji: '🎖️',
+    name: 'Military Secrets',
+    description: 'Classified operations, weapons & wartime mysteries',
+    tags: ['History', 'Mystery', 'Viral'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'truecrime2',
+    emoji: '💀',
+    name: 'True Crime',
+    description: 'Cold cases, killers & unsolved disappearances',
+    tags: ['True Crime', 'Suspense', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Popular',
+  },
+  {
+    id: 'psychtricks',
+    emoji: '🧠',
+    name: 'Psychology Tricks',
+    description: 'Persuasion, biases & mind hacks people fall for daily',
+    tags: ['Psychology', 'Saves', 'Shareable'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'cosmos',
+    emoji: '🌌',
+    name: 'Space & Universe',
+    description: 'Cosmic horror, black holes & the edge of reality',
+    tags: ['Science', 'Curiosity', 'Viral'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'experiments',
+    emoji: '⚗️',
+    name: 'Science Experiments',
+    description: 'Wild, controversial & jaw-dropping science tests',
+    tags: ['Science', 'Curiosity', 'Educational'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'sportslegends',
+    emoji: '🏆',
+    name: 'Sports Legends',
+    description: 'Untold stories of GOATs, scandals & iconic moments',
+    tags: ['Sports', 'Stories', 'Viral'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'fitness',
+    emoji: '💪',
+    name: 'Fitness Hacks',
+    description: 'Science-backed shortcuts for muscle, fat loss & energy',
+    tags: ['Health', 'Saves', 'Daily Content'],
+    pills: DEFAULT_PILLS,
+  },
+  {
+    id: 'gaming',
+    emoji: '🎮',
+    name: 'Gaming Facts',
+    description: 'Easter eggs, dev secrets & legendary gaming moments',
+    tags: ['Gaming', 'Trending', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Viral',
   },
 ]
 
@@ -338,7 +425,7 @@ export default function HomePage() {
       <section style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '72px 24px 40px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 999, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.25)', marginBottom: 28 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px rgba(52,211,153,.6)', display: 'inline-block' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>16 Niches · Generate up to 1,000 Shorts/month · Built for serious creators</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>26 Niches · Generate up to 1,000 Shorts/month · Built for serious creators</span>
         </div>
 
         <h1 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.4rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-0.03em', margin: '0 auto 18px', maxWidth: 780 }}>
@@ -370,6 +457,9 @@ export default function HomePage() {
           Money Facts is free &nbsp;•&nbsp; No credit card required
         </p>
       </section>
+
+      {/* ─── Trending This Week (Phase 8) ─── */}
+      <TrendingSection />
 
       {/* ─── Niche Grid ─── */}
       <section
@@ -419,10 +509,10 @@ export default function HomePage() {
           <div style={{ marginTop: 24, borderRadius: 16, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.18)' }}>
             <div>
               <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                🔒 Unlock all 16 niches for just $5/month
+                🔒 Unlock all 26 niches from just $9/month
               </p>
               <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-                Generate unlimited scripts across every niche — cancel anytime.
+                Hook Engine + 100 generations/month — cancel anytime.
               </p>
             </div>
             <Link href="/pricing" style={{ padding: '10px 24px', borderRadius: 12, fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', flexShrink: 0 }}>
@@ -431,6 +521,12 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* ─── Viral Hook Engine (Phase 5) ─── */}
+      <ViralHookEngine />
+
+      {/* ─── Social Proof Counters (Phase 10) ─── */}
+      <SocialProof />
 
       {/* ─── Live Script Typewriter Preview ─── */}
       <LiveScriptPreview />
@@ -459,9 +555,9 @@ export default function HomePage() {
             ))}
           </div>
           <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 32px rgba(99,102,241,.45)' }}>
-            Unlock Full Access — $5/month →
+            Unlock Full Access — from $9/month →
           </Link>
-          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Generate up to 1,000 Shorts scripts per month. Cancel anytime.</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Creator at $9/mo for 100 generations or Pro at $19/mo for unlimited.</p>
         </div>
       </section>
 
@@ -513,7 +609,7 @@ export default function HomePage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           {[
-            { step: '01', icon: '🎯', title: 'Choose Your Niche', desc: 'Pick from 16 proven viral niches: History, Finance, True Crime, AI, Luxury, and many more.' },
+            { step: '01', icon: '🎯', title: 'Choose Your Niche', desc: 'Pick from 26 proven viral niches: Finance, Conspiracies, True Crime, Horror, AI, Luxury, and many more.' },
             { step: '02', icon: '🤖', title: 'AI Generates', desc: 'GPT-4o crafts 5 unique scripts with hooks, titles, hashtags, and video prompts in under 30 seconds.' },
             { step: '03', icon: '🚀', title: 'Post & Go Viral', desc: 'Copy your scripts and paste directly into your video tool. Start posting and watch the views roll in.' },
           ].map((s) => (
@@ -551,31 +647,31 @@ export default function HomePage() {
               Start For Free
             </Link>
           </div>
-          {/* Creator Pro */}
+          {/* Creator */}
           <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '2px solid rgba(99,102,241,.35)', borderRadius: 20, padding: '30px 28px 34px', position: 'relative', overflow: 'hidden', boxShadow: '0 0 60px rgba(99,102,241,.15)' }}>
             <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #6366f1, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Creator Pro</div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Creator</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-              <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$5</span>
+              <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9</span>
               <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Cancel anytime. No hidden fees.</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>For creators posting consistently.</p>
             {[
-              '200 generations per month',
-              'Up to 1,000 Shorts scripts/month',
+              '100 generations per month',
+              'All 26 viral niches unlocked',
+              '⚡ Viral Hook Engine',
               'Hooks, titles, scripts & hashtags',
               'Descriptions & video prompts',
-              '16 viral niches unlocked',
-              'Beta access: AI Video Generator',
+              'Cancel anytime',
             ].map((f) => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
                 <span style={{ color: '#34d399' }}>✓</span> {f}
               </div>
             ))}
             <Link href="/pricing" style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}>
-              Unlock Creator Pro →
+              Get Creator — $9/mo →
             </Link>
-            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--muted)', marginTop: 10 }}>Cancel anytime. No hidden fees.</p>
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--muted)', marginTop: 10 }}>Pro at $19/mo unlocks unlimited.</p>
           </div>
         </div>
       </section>

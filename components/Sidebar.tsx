@@ -83,7 +83,7 @@ export default function Sidebar({
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
   const FREE_LIMIT = 2
-  const PRO_LIMIT = 200
+  const PRO_LIMIT = 100
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
   const freeUsedPct = Math.min(100, (generationsUsed / FREE_LIMIT) * 100)
   const proUsedPct = Math.min(100, (generationsUsed / PRO_LIMIT) * 100)
@@ -270,11 +270,11 @@ export default function Sidebar({
                 </p>
               ) : (
                 <p className="text-xs mb-2" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — upgrade for 200/month
+                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — upgrade for 100/month
                 </p>
               )}
               <Link href="/pricing" className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }} onClick={onClose}>
-                ⭐ Upgrade to Pro — $5/mo →
+                ⭐ Upgrade — from $9/mo →
               </Link>
             </div>
           </div>
