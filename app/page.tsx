@@ -8,6 +8,9 @@ import NicheCard from '@/components/NicheCard'
 import LiveScriptPreview from '@/components/LiveScriptPreview'
 import TrendingSection from '@/components/TrendingSection'
 import ViralHookEngine from '@/components/ViralHookEngine'
+import ThumbnailGenerator from '@/components/ThumbnailGenerator'
+import RetentionMap from '@/components/RetentionMap'
+import CloneViral from '@/components/CloneViral'
 import SocialProof from '@/components/SocialProof'
 
 // ─── Niche data (mirrors dashboard IDs exactly) ───────────────────────────────
@@ -524,6 +527,15 @@ export default function HomePage() {
 
       {/* ─── Viral Hook Engine (Phase 5) ─── */}
       <ViralHookEngine />
+
+      {/* ─── Thumbnail Text Generator (Phase 6) ─── */}
+      <ThumbnailGenerator />
+
+      {/* ─── Retention Map (Phase 7) ─── */}
+      <RetentionMap />
+
+      {/* ─── Clone Viral Video (Phase 17) ─── */}
+      <CloneViral />
 
       {/* ─── Social Proof Counters (Phase 10) ─── */}
       <SocialProof />
