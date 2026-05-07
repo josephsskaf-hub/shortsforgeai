@@ -77,7 +77,7 @@ export default function TemplatesClient() {
         <div>
           <p className="text-xs font-bold" style={{ color: '#fbbf24' }}>Tools coming soon</p>
           <p className="text-xs" style={{ color: 'var(--muted)', marginTop: 2 }}>
-            These tools are under development. The main <strong style={{ color: 'var(--text2)' }}>Short Generator</strong> on Dashboard is fully live today.
+            These tools are under development. The main <strong style={{ color: 'var(--text2)' }}>Viral Script Generator</strong> on Creator Hub is fully live today.
           </p>
         </div>
       </div>

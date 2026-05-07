@@ -113,10 +113,10 @@ export default function LoginPage() {
             className="text-2xl font-black mb-1 tracking-tight"
             style={{ color: 'var(--text)' }}
           >
-            Welcome back
+            Welcome Back, Creator
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-            Sign in to your ShortsForgeAI account
+            Continue building your viral Shorts empire.
           </p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">

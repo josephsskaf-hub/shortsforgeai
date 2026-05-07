@@ -156,10 +156,10 @@ export default function SignupPage() {
                 className="text-2xl font-black mb-1 tracking-tight"
                 style={{ color: 'var(--text)' }}
               >
-                Create your account
+                Join The Next Generation Of Creators
               </h1>
               <p className="text-sm mb-2" style={{ color: 'var(--muted)' }}>
-                Start with 5 free generations — no credit card required
+                Generate viral-ready Shorts scripts in seconds. Start free.
               </p>
               <div
                 className="flex items-center gap-2 mb-7 px-3 py-2 rounded-lg text-xs font-semibold"

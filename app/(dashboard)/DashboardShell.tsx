@@ -15,11 +15,11 @@ interface DashboardShellProps {
 
 const pageTitles: Record<string, string> = {
   '/': 'Home',
-  '/dashboard': 'Dashboard',
-  '/generate': 'Generate',
-  '/history': 'History',
+  '/dashboard': 'Creator Hub',
+  '/generate': 'Generate New Short',
+  '/history': 'Viral History',
   '/pricing': 'Pricing',
-  '/templates': 'Templates',
+  '/templates': 'Viral Templates',
   '/account': 'Account',
 }
 

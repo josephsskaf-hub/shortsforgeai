@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 
 const STEPS = [
-  { pct: 20, label: 'Analyzing viral patterns...' },
-  { pct: 45, label: 'Crafting high-retention hooks...' },
-  { pct: 70, label: 'Building engaging scripts...' },
-  { pct: 90, label: 'Optimizing titles & hashtags...' },
-  { pct: 100, label: 'Finalizing your viral package...' },
+  { pct: 20, label: 'Analyzing Viral Patterns...' },
+  { pct: 45, label: 'Finding High CTR Hooks...' },
+  { pct: 65, label: 'Building Retention Structure...' },
+  { pct: 85, label: 'Optimizing For Shorts Algorithm...' },
+  { pct: 100, label: 'Creating Scroll-Stopping Ideas...' },
 ]
 
 const STEP_DURATIONS = [1000, 1400, 1400, 1200, 1200] // ms per step

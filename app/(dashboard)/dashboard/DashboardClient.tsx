@@ -402,9 +402,9 @@ export default function DashboardClient({
           <span className="text-xs font-semibold" style={{ color: 'var(--muted2)' }}>
             ⚡{' '}
             <strong style={{ color: freeRemaining === 0 ? '#f87171' : '#818cf8' }}>
-              {generationsUsed} / {FREE_LIMIT} free generation{FREE_LIMIT !== 1 ? 's' : ''} used
+              You have {freeRemaining} viral Short{freeRemaining !== 1 ? 's' : ''} left
             </strong>{' '}
-            — Upgrade for 200/month
+            — Upgrade for unlimited access
           </span>
           <button
             onClick={() => setShowUpgradeModal(true)}
@@ -446,7 +446,7 @@ export default function DashboardClient({
               style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.22)', color: '#34d399' }}
             >
               <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot" style={{ background: '#10b981', boxShadow: '0 0 6px rgba(52,211,153,.6)' }} />
-              Live · AI Ready
+              ⚡ Viral Engine Active
             </div>
           </div>
 
@@ -455,7 +455,7 @@ export default function DashboardClient({
             style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
           >
             Pick a Niche →{' '}
-            <span className="grad-text">Generate 5 Viral Shorts</span>
+            <span className="grad-text">Build Viral Shorts</span>
           </h1>
 
           <p
@@ -464,7 +464,7 @@ export default function DashboardClient({
           >
             {!isLoggedIn
               ? '🔑 Create a free account to generate your first Shorts package.'
-              : 'Choose a niche below and get 5 ready-to-post scripts, titles & hashtags in seconds.'}
+              : 'Choose your niche, enter a topic, and generate 5 retention-optimized Shorts scripts instantly.'}
           </p>
         </div>
       )}
@@ -632,10 +632,10 @@ export default function DashboardClient({
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
                 <div className="font-black uppercase tracking-widest mb-0.5" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
-                  Step 1 — Pick a niche
+                  STEP 1 — PICK YOUR NICHE
                 </div>
                 <div className="font-bold" style={{ fontSize: '1rem', color: 'var(--text)' }}>
-                  Choose your niche → click Generate
+                  Choose your niche → Generate viral content
                 </div>
               </div>
               <div
@@ -695,7 +695,7 @@ export default function DashboardClient({
                         className="w-full rounded-xl py-2.5 text-xs font-black text-center"
                         style={{ background: 'rgba(124,58,237,.15)', border: '1px solid rgba(124,58,237,.25)', color: '#c084fc' }}
                       >
-                        🔒 Unlock with Pro
+                        🔒 Unlock This Niche
                       </div>
                     </div>
                   ))}
@@ -721,10 +721,10 @@ export default function DashboardClient({
               >
                 <div>
                   <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>
-                    🔒 You&apos;ve used all {FREE_LIMIT} free generations
+                    🔒 You&apos;ve used all your free generations
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                    Upgrade to continue generating — 200 generations/month for just $5
+                    Upgrade to keep building viral Shorts.
                   </p>
                 </div>
                 <button
@@ -751,7 +751,7 @@ export default function DashboardClient({
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white"
             style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 28px rgba(99,102,241,.5)', animation: 'btn-pulse 2.8s ease-in-out infinite', border: 'none', cursor: 'pointer' }}
           >
-            ⚡ Generate Now
+            ⚡ Generate New Short
           </button>
         </div>
       )}

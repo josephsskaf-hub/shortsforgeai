@@ -17,9 +17,9 @@ interface SidebarProps {
 
 const mainNavItems = [
   { href: '/', icon: '🏠', label: 'Home', badge: null, exact: true },
-  { href: '/dashboard', icon: '⚡', label: 'Dashboard', badge: '5 Niches', exact: false },
-  { href: '/history', icon: '📋', label: 'History', badge: null, exact: false },
-  { href: '/templates', icon: '🧩', label: 'Templates', badge: 'New', exact: false },
+  { href: '/dashboard', icon: '⚡', label: 'Creator Hub', badge: '5 Niches', exact: false },
+  { href: '/history', icon: '📋', label: 'Viral History', badge: null, exact: false },
+  { href: '/templates', icon: '🧩', label: 'Viral Templates', badge: 'New', exact: false },
 ]
 
 const accountNavItems = [
@@ -231,8 +231,8 @@ export default function Sidebar({
         {!isLoggedIn ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.12), rgba(124,58,237,.08))', border: '1px solid rgba(99,102,241,.22)' }}>
-              <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>⚡ 5 free scripts included</p>
-              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Create a free account to start generating viral shorts now.</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>⚡ 5 viral scripts included</p>
+              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Create a free account to start generating viral Shorts now.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all"

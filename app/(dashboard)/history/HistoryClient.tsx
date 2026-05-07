@@ -64,10 +64,10 @@ export default function HistoryClient({ generations }: HistoryClientProps) {
         >
           <div className="text-5xl mb-4">📋</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            No generations yet
+            Your next viral Short starts here.
           </h2>
           <p className="text-sm" style={{ color: 'var(--muted)' }}>
-            Go to Dashboard and generate your first viral shorts pack!
+            Head to Creator Hub and generate your first viral Shorts pack!
           </p>
           <a
             href="/dashboard"
@@ -78,7 +78,7 @@ export default function HistoryClient({ generations }: HistoryClientProps) {
               textDecoration: 'none',
             }}
           >
-            ⚡ Generate Now
+            ⚡ Generate New Short
           </a>
         </div>
       </div>

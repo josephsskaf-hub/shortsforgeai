@@ -9,11 +9,11 @@ interface PricingClientProps {
 }
 
 const freeFeatures = [
-  '1 free generation',
-  '5 scripts per package',
-  'Viral hooks + titles',
-  'Hashtags included',
-  'Money Facts niche',
+  '2 free generations',
+  '5 retention-optimized scripts per pack',
+  'Scroll-stopping hooks & viral titles',
+  'Hashtags + YouTube descriptions',
+  'Money Facts niche unlocked',
 ]
 
 const proFeatures = [
@@ -133,12 +133,12 @@ export default function PricingClient({
           style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 0 30px rgba(139,92,246,.08)' }}
         >
           <div className="mb-6">
-            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Free</div>
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Starter</div>
             <div className="flex items-end gap-1 mb-1">
               <span className="font-black" style={{ fontSize: '2.5rem', color: 'var(--text)', lineHeight: 1 }}>$0</span>
               <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>/forever</span>
             </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>Perfect for trying it out</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>Perfect for testing viral ideas</p>
           </div>
 
           <div className="flex flex-col gap-2.5 mb-7">
@@ -158,7 +158,7 @@ export default function PricingClient({
               color: isPro ? 'var(--muted)' : 'var(--text2)',
             }}
           >
-            {isPro ? 'Previous plan' : freeRemaining > 0 ? `${freeRemaining} generation left` : 'Limit reached'}
+            {isPro ? 'Previous plan' : freeRemaining > 0 ? 'Start For Free' : 'Limit reached'}
           </div>
         </div>
 
@@ -188,7 +188,7 @@ export default function PricingClient({
               <span className="font-black" style={{ fontSize: '2.5rem', color: 'var(--text)', lineHeight: 1 }}>$5</span>
               <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>/month</span>
             </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>Cancel anytime. No hidden fees.</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>Built for serious faceless creators.</p>
           </div>
 
           <div className="flex flex-col gap-2.5 mb-7">
@@ -228,7 +228,7 @@ export default function PricingClient({
                   cursor: checkoutLoading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {checkoutLoading ? 'Redirecting...' : '⭐ Start for $5'}
+                {checkoutLoading ? 'Redirecting...' : 'Unlock Creator Pro →'}
               </button>
               {checkoutError ? (
                 <p className="text-center text-xs mt-2.5 font-semibold" style={{ color: '#f87171' }}>

@@ -82,11 +82,11 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
           className="text-2xl font-black mb-2 tracking-tight"
           style={{ color: 'var(--text)' }}
         >
-          You&apos;ve used all{' '}
-          <span className="grad-text">{generationsUsed} free</span> generations
+          You&apos;ve used all your{' '}
+          <span className="grad-text">free generations</span>
         </h2>
         <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-          Upgrade to Pro for unlimited viral scripts across all 5 niches — just $5/month.
+          Upgrade to keep building viral Shorts. Unlock all niches for just $5/month.
         </p>
 
         {/* Features */}
@@ -128,7 +128,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
-          {loading ? 'Redirecting...' : '⭐ Upgrade to Pro — $5/month'}
+          {loading ? 'Redirecting...' : 'Unlock Creator Pro — $5/month →'}
         </button>
 
         <button

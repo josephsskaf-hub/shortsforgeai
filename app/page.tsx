@@ -329,7 +329,7 @@ export default function HomePage() {
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: '0.79rem', fontWeight: 800, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}
         >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px rgba(52,211,153,.6)', display: 'inline-block', animation: 'pulse-dot-bar 1.4s ease-in-out infinite' }} />
-          ⚡ Generate Scripts →
+          ⚡ Build Your First Viral Short →
         </button>
         <style>{`@keyframes pulse-dot-bar { 0%,100%{opacity:1}50%{opacity:.4} }`}</style>
       </div>
@@ -342,14 +342,14 @@ export default function HomePage() {
         </div>
 
         <h1 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.4rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-0.03em', margin: '0 auto 18px', maxWidth: 780 }}>
-          Choose your niche →{' '}
+          The AI Growth Machine{' '}
           <span style={{ background: 'linear-gradient(135deg, #818cf8, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Generate 5 viral Shorts scripts
+            For Faceless Creators
           </span>
         </h1>
 
         <p style={{ fontSize: '1.05rem', color: 'var(--muted2)', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.65 }}>
-          Pick a niche and get hooks, titles, scripts, hashtags and descriptions ready to post.
+          Stop staring at blank pages. Generate hooks, scripts, thumbnail text and hashtags in seconds — optimized for retention and growth.
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
@@ -357,11 +357,14 @@ export default function HomePage() {
             onClick={scrollToGrid}
             style={{ padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 36px rgba(99,102,241,.5)', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
-            ⚡ Pick a Niche Free
+            Generate Viral Shorts →
           </button>
-          <Link href="/pricing" style={{ padding: '15px 28px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text2)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            See Pricing →
-          </Link>
+          <button
+            onClick={scrollToGrid}
+            style={{ padding: '15px 28px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text2)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+          >
+            Explore Trending Niches
+          </button>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--muted)', letterSpacing: '0.01em' }}>
           Money Facts is free &nbsp;•&nbsp; No credit card required
@@ -377,8 +380,8 @@ export default function HomePage() {
         {/* Section header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 4 }}>Step 1 — Pick a niche</div>
-            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>Choose your niche → click Generate</div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 4 }}>Trending Viral Niches</div>
+            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>Pick a niche and generate viral-ready content instantly. Built for faceless creators.</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--indigo-light)' }}>
             ⚡ 5 scripts per package
@@ -437,14 +440,14 @@ export default function HomePage() {
         <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.08), rgba(124,58,237,.05))', border: '1px solid rgba(99,102,241,.18)', borderRadius: 24, padding: '52px 40px', boxShadow: '0 0 60px rgba(99,102,241,.08)' }}>
           <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 14 }}>What You Get</div>
           <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 32 }}>
-            Start generating{' '}
-            <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>faster</span>
+            Stop Starting{' '}
+            <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>From Scratch</span>
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 36, textAlign: 'left' }}>
             {[
-              { icon: '📦', text: '5 scripts per package', sub: 'Every generation delivers 5 complete viral Shorts packages' },
-              { icon: '🪝', text: 'Hooks, titles, scripts & hashtags', sub: 'Everything included — copy and paste straight to your editor' },
-              { icon: '🎬', text: 'Built for Shorts, TikTok & Reels', sub: 'Optimized for YouTube Shorts, TikTok and Instagram Reels' },
+              { icon: '🪝', text: 'Scroll-stopping hooks', sub: 'Every script opens with a proven hook engineered to stop the scroll instantly' },
+              { icon: '📝', text: 'Retention-optimized scripts', sub: 'Full scripts built on high-retention structures that keep viewers watching' },
+              { icon: '🔥', text: 'Viral titles, hashtags & descriptions', sub: 'Everything you need to maximize reach — copy and paste straight to your editor' },
             ].map((item) => (
               <div key={item.text} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px' }}>
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{item.icon}</span>
@@ -456,9 +459,9 @@ export default function HomePage() {
             ))}
           </div>
           <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 32px rgba(99,102,241,.45)' }}>
-            ⭐ Start for $5 →
+            Unlock Full Access — $5/month →
           </Link>
-          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Cancel anytime · No hidden fees</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Generate up to 1,000 Shorts scripts per month. Cancel anytime.</p>
         </div>
       </section>
 
@@ -545,7 +548,7 @@ export default function HomePage() {
               </div>
             ))}
             <Link href="/dashboard" style={{ display: 'block', marginTop: 22, padding: '12px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text2)', textDecoration: 'none', background: 'rgba(255,255,255,.05)', border: '1px solid var(--border2)' }}>
-              Start Free
+              Start For Free
             </Link>
           </div>
           {/* Creator Pro */}
@@ -570,7 +573,7 @@ export default function HomePage() {
               </div>
             ))}
             <Link href="/pricing" style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}>
-              ⭐ Start for $5
+              Unlock Creator Pro →
             </Link>
             <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--muted)', marginTop: 10 }}>Cancel anytime. No hidden fees.</p>
           </div>
@@ -585,18 +588,21 @@ export default function HomePage() {
             <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>go viral</span>?
           </h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 30, lineHeight: 1.6 }}>
-            Join 1,200+ creators. Generate up to 1,000 Shorts scripts/month. Start generating in seconds.
+            12,000+ Viral Scripts Generated &nbsp;·&nbsp; 4,200+ Faceless Shorts Created &nbsp;·&nbsp; Trusted by growing creators
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={scrollToGrid}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 36px rgba(99,102,241,.5)', border: 'none', cursor: 'pointer' }}
             >
-              ⚡ Choose a Niche Free
+              Generate Viral Shorts →
             </button>
-            <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 28px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text2)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)' }}>
-              See Pricing →
-            </Link>
+            <button
+              onClick={scrollToGrid}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 28px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text2)', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', cursor: 'pointer' }}
+            >
+              Explore Trending Niches
+            </button>
           </div>
         </div>
       </section>
