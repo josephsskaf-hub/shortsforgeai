@@ -1,13 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ShortVideo } from '@/lib/openai'
 import CopyButton from './CopyButton'
+import { ViralScore } from './ViralScore'
 
 interface ResultCardProps {
   video: ShortVideo
   index: number
   total?: number
+  niche?: string
 }
 
 // Extract hook text from "🎯 HOOK: ..." section of script
@@ -19,12 +22,23 @@ function extractHook(script: string): string | null {
   return firstLine || null
 }
 
-export default function ResultCard({ video, index, total = 5 }: ResultCardProps) {
+export default function ResultCard({ video, index, total = 5, niche }: ResultCardProps) {
+  const router = useRouter()
   const [scriptExpanded, setScriptExpanded] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const hook = extractHook(video.script)
+
+  function handleCreateVideo() {
+    const params = new URLSearchParams({
+      hook: hook ?? '',
+      title: video.title,
+      script: video.script,
+      ...(niche ? { niche } : {}),
+    })
+    router.push(`/video?${params.toString()}`)
+  }
 
   // Clean copy format
   const copyText = [
@@ -178,6 +192,9 @@ export default function ResultCard({ video, index, total = 5 }: ResultCardProps)
           </div>
         </div>
 
+        {/* 📊 Viral Scores */}
+        <ViralScore hook={hook ?? ''} title={video.title} script={video.script} />
+
         <div style={{ height: 1, background: 'rgba(99,102,241,.08)', borderRadius: 1 }} />
 
         {/* 📝 Script — expandable */}
@@ -317,8 +334,38 @@ export default function ResultCard({ video, index, total = 5 }: ResultCardProps)
           )}
         </div>
 
-        {/* Bottom primary CTA */}
-        <CopyButton text={copyText} label="Copy Complete Script Package" variant="primary" />
+        {/* Bottom primary CTAs */}
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="flex-1">
+            <CopyButton text={copyText} label="Copy Complete Script Package" variant="primary" />
+          </div>
+          <button
+            onClick={handleCreateVideo}
+            className="flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-all sm:flex-1"
+            style={{
+              background: 'linear-gradient(135deg, rgba(168,85,247,.18), rgba(124,58,237,.10))',
+              border: '1px solid rgba(168,85,247,.45)',
+              color: '#c4b5fd',
+              minHeight: 44,
+              cursor: 'pointer',
+              boxShadow: '0 0 0 0 rgba(168,85,247,.35)',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = 'linear-gradient(135deg, rgba(168,85,247,.30), rgba(124,58,237,.18))'
+              el.style.borderColor = 'rgba(168,85,247,.7)'
+              el.style.boxShadow = '0 0 16px rgba(168,85,247,.35)'
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = 'linear-gradient(135deg, rgba(168,85,247,.18), rgba(124,58,237,.10))'
+              el.style.borderColor = 'rgba(168,85,247,.45)'
+              el.style.boxShadow = '0 0 0 0 rgba(168,85,247,.35)'
+            }}
+          >
+            🎬 Create Video →
+          </button>
+        </div>
       </div>
     </div>
   )

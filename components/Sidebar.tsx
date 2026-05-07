@@ -19,6 +19,7 @@ const mainNavItems = [
   { href: '/', icon: '🏠', label: 'Home', badge: null, exact: true },
   { href: '/dashboard', icon: '⚡', label: 'Creator Hub', badge: null, exact: false },
   { href: '/channel', icon: '📺', label: 'Channel Builder', badge: 'New', exact: false },
+  { href: '/video', icon: '🎬', label: 'Video Studio', badge: 'Beta', exact: false },
   { href: '/history', icon: '📋', label: 'Viral History', badge: null, exact: false },
   { href: '/templates', icon: '🧩', label: 'Viral Templates', badge: null, exact: false },
 ]

@@ -643,7 +643,7 @@ export default function DashboardClient({
           {/* Result cards */}
           <div className="flex flex-col gap-4">
             {results.map((video, i) => (
-              <ResultCard key={i} video={video} index={i} total={results.length} />
+              <ResultCard key={i} video={video} index={i} total={results.length} niche={selectedNiche ?? undefined} />
             ))}
           </div>
 

@@ -265,7 +265,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                   <div className="pt-4">
                     {(gen.content ?? []).map((video, i) => (
                       <div key={i} className="mb-4 last:mb-0">
-                        <ResultCard video={video} index={i} />
+                        <ResultCard video={video} index={i} niche={gen.niche} />
                       </div>
                     ))}
                   </div>
