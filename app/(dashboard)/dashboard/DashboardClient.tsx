@@ -437,6 +437,40 @@ export default function DashboardClient({
         </div>
       )}
 
+      {/* ─── CREATOR STATS BAR ─── */}
+      {isLoggedIn && !results && !loadingNiche && totalGenerations > 0 && (
+        <div
+          className="flex items-center gap-4 rounded-xl px-4 py-3 mb-4 flex-wrap"
+          style={{ background: 'rgba(255,255,255,.025)', border: '1px solid var(--border)' }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>🎬</span>
+            <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{totalGenerations * 5}</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>scripts created</span>
+          </div>
+          <div className="w-px h-3" style={{ background: 'var(--border)' }} />
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>⚡</span>
+            <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{totalGenerations}</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>packs generated</span>
+          </div>
+          <div className="w-px h-3" style={{ background: 'var(--border)' }} />
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: '0.7rem', color: '#34d399' }}>●</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Viral Engine Online</span>
+          </div>
+          <div className="ml-auto">
+            <a
+              href="/history"
+              className="text-xs font-bold"
+              style={{ color: 'var(--indigo-light)', textDecoration: 'none' }}
+            >
+              View history →
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ─── HERO SECTION ─── */}
       {!results && !loadingNiche && (
         <div

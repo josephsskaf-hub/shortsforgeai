@@ -17,9 +17,10 @@ interface SidebarProps {
 
 const mainNavItems = [
   { href: '/', icon: '🏠', label: 'Home', badge: null, exact: true },
-  { href: '/dashboard', icon: '⚡', label: 'Creator Hub', badge: '5 Niches', exact: false },
+  { href: '/dashboard', icon: '⚡', label: 'Creator Hub', badge: null, exact: false },
+  { href: '/channel', icon: '📺', label: 'Channel Builder', badge: 'New', exact: false },
   { href: '/history', icon: '📋', label: 'Viral History', badge: null, exact: false },
-  { href: '/templates', icon: '🧩', label: 'Viral Templates', badge: 'New', exact: false },
+  { href: '/templates', icon: '🧩', label: 'Viral Templates', badge: null, exact: false },
 ]
 
 const accountNavItems = [
