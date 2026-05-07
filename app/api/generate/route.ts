@@ -5,7 +5,7 @@ import { openai, buildGenerationPrompt, ShortVideo } from '@/lib/openai'
 // Increase Vercel function timeout to 60s (hobby plan max)
 export const maxDuration = 60
 
-const FREE_LIMIT = 1
+const FREE_LIMIT = 2
 
 export async function POST(req: NextRequest) {
   try {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     if (!isPro && generationsUsed >= FREE_LIMIT) {
       return NextResponse.json(
         {
-          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Pro for unlimited access.`,
+          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Creator for 100/month.`,
         },
         { status: 402 }
       )
