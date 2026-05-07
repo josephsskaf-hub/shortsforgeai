@@ -151,9 +151,9 @@ export default function Sidebar({
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        {/* Logo — clickable, goes to / */}
+        {/* Logo — clickable, goes to /dashboard if logged in, / if not */}
         <Link
-          href="/"
+          href={isLoggedIn ? '/dashboard' : '/'}
           onClick={onClose}
           className="flex items-center gap-3 px-5 flex-shrink-0"
           style={{ height: 72, borderBottom: '1px solid var(--border)', textDecoration: 'none' }}

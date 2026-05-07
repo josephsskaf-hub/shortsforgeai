@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import NicheCard from '@/components/NicheCard'
 import ResultCard from '@/components/ResultCard'
 import UpgradeModal from '@/components/UpgradeModal'
@@ -241,10 +242,18 @@ export default function DashboardClient({
   totalGenerations,
   isLoggedIn,
 }: DashboardClientProps) {
+  const searchParams = useSearchParams()
   const [loadingNiche, setLoadingNiche] = useState<string | null>(null)
   const [results, setResults] = useState<ShortVideo[] | null>(null)
   const [activeNiche, setActiveNiche] = useState<string | null>(null)
-  const [selectedNiche, setSelectedNiche] = useState<string | null>(null)
+  const [selectedNiche, setSelectedNiche] = useState<string | null>(() => {
+    // Pre-select niche from ?niche= query param (e.g. from "Generate Again" in history)
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('niche')
+      return param || null
+    }
+    return null
+  })
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
@@ -258,6 +267,13 @@ export default function DashboardClient({
   const FREE_LIMIT = 2
   const canGenerate = isPro || generationsUsed < FREE_LIMIT
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
+
+  // Auto-scroll to niche section when pre-selected via ?niche= param
+  useEffect(() => {
+    if (selectedNiche && nichesSectionRef.current) {
+      setTimeout(() => nichesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to niches section
   function scrollToNiches() {

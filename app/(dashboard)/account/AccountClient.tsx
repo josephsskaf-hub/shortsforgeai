@@ -24,7 +24,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
   const [portalLoading, setPortalLoading] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
 
-  const FREE_LIMIT = 5
+  const FREE_LIMIT = 2
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
   const initial = (email?.[0] ?? 'U').toUpperCase()
 
@@ -174,7 +174,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 <span className="text-2xl">⚡</span>
                 <div>
                   <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Free Plan</div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>5 total generations · Upgrade to go unlimited</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>2 total generations · Upgrade to go unlimited</div>
                 </div>
               </div>
               <Link
@@ -182,7 +182,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 className="block w-full text-center rounded-xl py-3 text-sm font-black text-white transition-all"
                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', textDecoration: 'none' }}
               >
-                ⭐ Upgrade to Pro — $5/month
+                ⭐ Upgrade to Creator — $9/month
               </Link>
             </div>
           )}

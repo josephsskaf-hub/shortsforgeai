@@ -1,14 +1,14 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import DashboardClient from './DashboardClient'
 
-export default async function DashboardPage() {
+async function DashboardContent() {
   const supabase = createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // No redirect — dashboard is now public. Auth is enforced at generate action.
   let profile = null
   let totalGenerations = 0
 
@@ -34,5 +34,13 @@ export default async function DashboardPage() {
       totalGenerations={totalGenerations}
       isLoggedIn={!!user}
     />
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
   )
 }
