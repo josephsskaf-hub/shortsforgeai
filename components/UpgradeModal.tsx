@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+const CREATOR_LINK = 'https://buy.stripe.com/7sYaEX8sR6jt2DVeNggjC0j'
 
 interface UpgradeModalProps {
   onClose: () => void
@@ -10,24 +11,6 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-
-  async function handleUpgrade() {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        console.error('Stripe checkout error:', data.error)
-        setLoading(false)
-      }
-    } catch (err) {
-      console.error('Stripe checkout fetch error:', err)
-      setLoading(false)
-    }
-  }
 
   return (
     <div
@@ -86,7 +69,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
           <span className="grad-text">free generations</span>
         </h2>
         <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-          Upgrade to keep building viral Shorts. Unlock all niches for just $5/month.
+          Upgrade to keep building viral Shorts. Unlock all 26 niches for just $9/month.
         </p>
 
         {/* Features */}
@@ -117,18 +100,16 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
         </div>
 
         <button
-          onClick={handleUpgrade}
-          disabled={loading}
+          onClick={() => window.open(CREATOR_LINK, '_blank')}
           className="w-full rounded-xl py-4 font-black text-base text-white mb-3 transition-all"
           style={{
             background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
             boxShadow: '0 4px 28px rgba(99,102,241,.45)',
-            animation: loading ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
-            opacity: loading ? 0.7 : 1,
-            cursor: loading ? 'not-allowed' : 'pointer',
+            animation: 'btn-pulse 2.8s ease-in-out infinite',
+            cursor: 'pointer',
           }}
         >
-          {loading ? 'Redirecting...' : 'Unlock Creator Pro — $5/month →'}
+          Unlock Creator — $9/month →
         </button>
 
         <button

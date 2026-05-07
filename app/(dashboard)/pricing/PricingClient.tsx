@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 
+const CREATOR_LINK = 'https://buy.stripe.com/7sYaEX8sR6jt2DVeNggjC0j'
+const PRO_LINK = 'https://buy.stripe.com/6oU14n8sR23dbar7kOgjC0k'
+
 interface PricingClientProps {
   isPro: boolean
   generationsUsed: number
   hasStripeCustomer: boolean
 }
-
-type Tier = 'creator' | 'pro'
 
 const starterFeatures = [
   '2 free generations total',
@@ -41,35 +42,7 @@ export default function PricingClient({
   generationsUsed,
   hasStripeCustomer,
 }: PricingClientProps) {
-  const [checkoutLoading, setCheckoutLoading] = useState<Tier | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
-  const [checkoutError, setCheckoutError] = useState<string | null>(null)
-
-  async function handleCheckout(tier: Tier) {
-    setCheckoutLoading(tier)
-    setCheckoutError(null)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.open(data.url, '_blank') || (window.location.href = data.url)
-        setTimeout(() => setCheckoutLoading(null), 5000)
-      } else {
-        const msg = data.error ?? 'Payment failed. Please try again.'
-        console.error('Stripe checkout error:', msg)
-        setCheckoutError(msg)
-        setCheckoutLoading(null)
-      }
-    } catch (err) {
-      console.error('Stripe checkout fetch error:', err)
-      setCheckoutError('Network error. Please check your connection and try again.')
-      setCheckoutLoading(null)
-    }
-  }
 
   async function handlePortal() {
     setPortalLoading(true)
@@ -227,18 +200,16 @@ export default function PricingClient({
             </button>
           ) : (
             <button
-              onClick={() => handleCheckout('creator')}
-              disabled={checkoutLoading !== null}
+              onClick={() => window.open(CREATOR_LINK, '_blank')}
               className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
               style={{
                 background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
                 boxShadow: '0 4px 28px rgba(99,102,241,.45)',
-                animation: checkoutLoading === 'creator' ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
-                opacity: checkoutLoading !== null && checkoutLoading !== 'creator' ? 0.5 : checkoutLoading === 'creator' ? 0.7 : 1,
-                cursor: checkoutLoading !== null ? 'not-allowed' : 'pointer',
+                animation: 'btn-pulse 2.8s ease-in-out infinite',
+                cursor: 'pointer',
               }}
             >
-              {checkoutLoading === 'creator' ? 'Redirecting...' : 'Get Creator — $9/mo →'}
+              Get Creator — $9/mo →
             </button>
           )}
         </div>
@@ -295,27 +266,20 @@ export default function PricingClient({
             </button>
           ) : (
             <button
-              onClick={() => handleCheckout('pro')}
-              disabled={checkoutLoading !== null}
+              onClick={() => window.open(PRO_LINK, '_blank')}
               className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
               style={{
                 background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 55%, #6366f1 100%)',
                 boxShadow: '0 4px 28px rgba(236,72,153,.4)',
-                opacity: checkoutLoading !== null && checkoutLoading !== 'pro' ? 0.5 : checkoutLoading === 'pro' ? 0.7 : 1,
-                cursor: checkoutLoading !== null ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
               }}
             >
-              {checkoutLoading === 'pro' ? 'Redirecting...' : 'Get Pro — $19/mo →'}
+              Get Pro — $19/mo →
             </button>
           )}
         </div>
       </div>
 
-      {checkoutError && (
-        <p className="max-w-3xl mx-auto text-center text-xs mt-4 font-semibold" style={{ color: '#f87171' }}>
-          ⚠️ {checkoutError}
-        </p>
-      )}
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
         Cancel anytime. No hidden fees.
       </p>
