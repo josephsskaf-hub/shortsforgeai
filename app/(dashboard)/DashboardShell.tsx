@@ -16,11 +16,14 @@ interface DashboardShellProps {
 const pageTitles: Record<string, string> = {
   '/': 'Home',
   '/dashboard': 'Creator Hub',
+  '/create': 'Criar Video',
   '/generate': 'Generate New Short',
   '/history': 'Viral History',
   '/pricing': 'Pricing',
   '/templates': 'Viral Templates',
   '/account': 'Account',
+  '/video': 'Video Studio',
+  '/channel': 'Channel Builder',
 }
 
 export default function DashboardShell({

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AuthModal from '@/components/AuthModal'
 
 interface SidebarProps {
@@ -15,24 +15,48 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-const mainNavItems = [
-  { href: '/', icon: '🏠', label: 'Home', badge: null, exact: true },
-  { href: '/dashboard', icon: '⚡', label: 'Creator Hub', badge: null, exact: false },
-  { href: '/channel', icon: '📺', label: 'Channel Builder', badge: 'New', exact: false },
-  { href: '/video', icon: '🎬', label: 'Video Studio', badge: 'Beta', exact: false },
-  { href: '/history', icon: '📋', label: 'Viral History', badge: null, exact: false },
-  { href: '/templates', icon: '🧩', label: 'Viral Templates', badge: null, exact: false },
+const quickCreateItems = [
+  { href: '/create', icon: '🎬', label: 'Criar Video', exact: false },
+  { href: '/create?niche=history', icon: '📖', label: 'História', exact: false },
+  { href: '/create?niche=mystery', icon: '🔮', label: 'Mistério', exact: false },
 ]
 
 const accountNavItems = [
-  { href: '/pricing', icon: '✨', label: 'Pricing', badge: null, exact: false },
-  { href: '/account', icon: '👤', label: 'Account', badge: null, exact: false },
+  { href: '/pricing', icon: '💳', label: 'Pricing', exact: false },
+  { href: '/account', icon: '👤', label: 'Account', exact: false },
 ]
 
-function NavLink({ href, icon, label, badge, exact, pathname, onClick }: {
-  href: string; icon: string; label: string; badge: string | null; exact: boolean; pathname: string; onClick?: () => void
+function NavLink({
+  href,
+  icon,
+  label,
+  badge,
+  exact,
+  pathname,
+  searchKey,
+  onClick,
+}: {
+  href: string
+  icon: string
+  label: string
+  badge?: string | null
+  exact: boolean
+  pathname: string
+  searchKey?: string
+  onClick?: () => void
 }) {
-  const active = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'))
+  // Strip query for path comparison (next/navigation pathname has no search)
+  const hrefPath = href.split('?')[0]
+  let active = exact
+    ? pathname === hrefPath
+    : pathname === hrefPath || pathname.startsWith(hrefPath + '/')
+
+  // For /create entries, match active by current ?niche= query as well
+  if (active && hrefPath === '/create' && typeof window !== 'undefined') {
+    const cur = new URLSearchParams(window.location.search).get('niche') ?? ''
+    const want = searchKey ?? ''
+    if (cur !== want) active = false
+  }
 
   return (
     <Link
@@ -69,7 +93,6 @@ function NavLink({ href, icon, label, badge, exact, pathname, onClick }: {
 export default function Sidebar({
   userEmail: initialEmail,
   isPro: initialIsPro,
-  generationsUsed: initialUsed,
   isLoggedIn: initialLoggedIn,
   isOpen = true,
   onClose,
@@ -78,28 +101,45 @@ export default function Sidebar({
   const router = useRouter()
   const supabase = createClient()
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [generationsUsed, setGenerationsUsed] = useState(initialUsed)
   const [isPro, setIsPro] = useState(initialIsPro)
   const [userEmail, setUserEmail] = useState(initialEmail)
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
+  const [credits, setCredits] = useState<number | null>(null)
+  const [creditsLoading, setCreditsLoading] = useState(true)
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
-  const FREE_LIMIT = 2
-  const PRO_LIMIT = 100
-  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
-  const freeUsedPct = Math.min(100, (generationsUsed / FREE_LIMIT) * 100)
-  const proUsedPct = Math.min(100, (generationsUsed / PRO_LIMIT) * 100)
 
-  // Listen for generation events from DashboardClient
-  useEffect(() => {
-    function handleGenerationComplete() {
-      if (!isPro) {
-        setGenerationsUsed((prev) => prev + 1)
-      }
+  const fetchCredits = useCallback(async () => {
+    if (!isLoggedIn) {
+      setCredits(null)
+      setCreditsLoading(false)
+      return
     }
-    window.addEventListener('generationComplete', handleGenerationComplete)
-    return () => window.removeEventListener('generationComplete', handleGenerationComplete)
-  }, [isPro])
+    setCreditsLoading(true)
+    try {
+      const res = await fetch('/api/credits', { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setCredits(typeof data.credits === 'number' ? data.credits : 0)
+      } else {
+        setCredits(0)
+      }
+    } catch {
+      setCredits(0)
+    } finally {
+      setCreditsLoading(false)
+    }
+  }, [isLoggedIn])
+
+  // Initial credit fetch + listen for credit-change events
+  useEffect(() => {
+    fetchCredits()
+    function refresh() {
+      fetchCredits()
+    }
+    window.addEventListener('creditsChanged', refresh)
+    return () => window.removeEventListener('creditsChanged', refresh)
+  }, [fetchCredits])
 
   // Subscribe to auth state changes
   useEffect(() => {
@@ -108,20 +148,17 @@ export default function Sidebar({
         setIsLoggedIn(false)
         setUserEmail('')
         setIsPro(false)
-        setGenerationsUsed(0)
+        setCredits(null)
       } else if (event === 'SIGNED_IN' && session?.user) {
         setIsLoggedIn(true)
         setUserEmail(session.user.email ?? '')
-        // Fetch fresh profile
         const { data } = await supabase
           .from('profiles')
-          .select('is_pro, generations_used')
+          .select('is_pro')
           .eq('id', session.user.id)
           .single()
-        if (data) {
-          setIsPro(data.is_pro ?? false)
-          setGenerationsUsed(data.generations_used ?? 0)
-        }
+        if (data) setIsPro(data.is_pro ?? false)
+        fetchCredits()
       }
     })
     return () => subscription.unsubscribe()
@@ -132,6 +169,9 @@ export default function Sidebar({
     router.push('/')
     router.refresh()
   }
+
+  const creditsZero = credits !== null && credits <= 0
+  const creditColor = creditsZero ? '#f87171' : '#34d399'
 
   return (
     <>
@@ -153,7 +193,7 @@ export default function Sidebar({
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        {/* Logo — clickable, goes to /dashboard if logged in, / if not */}
+        {/* Logo */}
         <Link
           href={isLoggedIn ? '/dashboard' : '/'}
           onClick={onClose}
@@ -182,16 +222,87 @@ export default function Sidebar({
           </div>
         </Link>
 
+        {/* Credit balance indicator */}
+        {isLoggedIn && (
+          <div className="px-3 pt-3 pb-2 flex-shrink-0">
+            <Link
+              href="/pricing"
+              onClick={onClose}
+              className="flex items-center justify-between rounded-[10px] px-3 py-2.5 transition-all"
+              style={{
+                background: creditsZero
+                  ? 'rgba(239,68,68,.08)'
+                  : 'rgba(16,185,129,.07)',
+                border: creditsZero
+                  ? '1px solid rgba(239,68,68,.25)'
+                  : '1px solid rgba(16,185,129,.18)',
+                textDecoration: 'none',
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: '0.95rem' }}>⚡</span>
+                {creditsLoading ? (
+                  <span
+                    className="rounded"
+                    style={{
+                      display: 'inline-block',
+                      width: 60,
+                      height: 12,
+                      background: 'rgba(255,255,255,.08)',
+                      animation: 'pulse 1.4s ease-in-out infinite',
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="text-xs font-black"
+                    style={{ color: creditColor, fontSize: '0.78rem' }}
+                  >
+                    {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
+                  </span>
+                )}
+              </div>
+              <span
+                className="text-xs font-bold"
+                style={{ color: creditsZero ? '#f87171' : 'var(--muted2)', fontSize: '0.62rem' }}
+              >
+                {creditsZero ? 'Buy' : '+'}
+              </span>
+            </Link>
+          </div>
+        )}
+
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto flex flex-col gap-px" style={{ padding: '10px 10px' }}>
-          {/* Main section */}
+        <nav className="flex-1 overflow-y-auto flex flex-col gap-px" style={{ padding: '6px 10px 10px' }}>
+          {/* Quick Create section */}
           <div className="px-2.5 pb-1.5 pt-2 font-bold uppercase tracking-widest" style={{ color: 'var(--muted)', fontSize: '0.58rem', letterSpacing: '0.14em' }}>
-            Main
+            Quick Create
           </div>
 
-          {mainNavItems.map((item) => (
-            <NavLink key={item.href} {...item} pathname={pathname} onClick={onClose} />
-          ))}
+          {quickCreateItems.map((item) => {
+            const url = new URL(item.href, 'http://x')
+            const niche = url.searchParams.get('niche') ?? undefined
+            return (
+              <NavLink
+                key={item.href}
+                {...item}
+                pathname={pathname}
+                searchKey={niche}
+                onClick={onClose}
+              />
+            )
+          })}
+
+          <div className="mx-2.5 my-1.5" style={{ height: 1, background: 'var(--border)' }} />
+
+          {/* Tools section — keep existing pages reachable */}
+          <div className="px-2.5 pb-1.5 pt-2 font-bold uppercase tracking-widest" style={{ color: 'var(--muted)', fontSize: '0.58rem', letterSpacing: '0.14em' }}>
+            Tools
+          </div>
+          <NavLink href="/dashboard" icon="⚡" label="Creator Hub" exact={false} pathname={pathname} onClick={onClose} />
+          <NavLink href="/video" icon="🎞️" label="Video Studio" badge="Beta" exact={false} pathname={pathname} onClick={onClose} />
+          <NavLink href="/channel" icon="📺" label="Channel Builder" exact={false} pathname={pathname} onClick={onClose} />
+          <NavLink href="/templates" icon="🧩" label="Templates" exact={false} pathname={pathname} onClick={onClose} />
+          <NavLink href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
 
           <div className="mx-2.5 my-1.5" style={{ height: 1, background: 'var(--border)' }} />
 
@@ -229,12 +340,12 @@ export default function Sidebar({
           )}
         </nav>
 
-        {/* Bottom CTA */}
+        {/* Bottom CTA — guest sign-up, or low-credit upsell */}
         {!isLoggedIn ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.12), rgba(124,58,237,.08))', border: '1px solid rgba(99,102,241,.22)' }}>
-              <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>⚡ 5 viral scripts included</p>
-              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Create a free account to start generating viral Shorts now.</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>⚡ 3 free video credits</p>
+              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Crie sua conta grátis e gere seu primeiro Short.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all"
@@ -244,87 +355,22 @@ export default function Sidebar({
               </button>
             </div>
           </div>
-        ) : !isPro ? (
+        ) : creditsZero ? (
           <div className="px-3 pb-3 flex-shrink-0">
-            <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '1px solid rgba(99,102,241,.18)' }}>
-              {/* Usage label */}
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Free generations</span>
-                <span className="text-xs font-black" style={{ color: freeRemaining === 0 ? '#f87171' : 'var(--indigo-light)', fontSize: '0.68rem' }}>
-                  {generationsUsed} / {FREE_LIMIT} used
-                </span>
-              </div>
-              {/* Progress bar */}
-              <div className="rounded-full overflow-hidden mb-2" style={{ height: 5, background: 'rgba(255,255,255,.07)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${freeUsedPct}%`,
-                    background: freeRemaining === 0
-                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                      : 'linear-gradient(90deg, #6366f1, #a855f7)',
-                  }}
-                />
-              </div>
-              {freeRemaining === 0 ? (
-                <p className="text-xs mb-2" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  You&apos;ve used all free generations. Upgrade to continue.
-                </p>
-              ) : (
-                <p className="text-xs mb-2" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — upgrade for 100/month
-                </p>
-              )}
-              <Link href="/pricing" className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }} onClick={onClose}>
-                ⭐ Upgrade — from $9/mo →
+            <div className="rounded-xl p-3" style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.22)' }}>
+              <p className="text-xs mb-1" style={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.7rem' }}>⚠️ Sem créditos</p>
+              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
+                Compre um pack pra continuar criando vídeos.
+              </p>
+              <Link href="/pricing" onClick={onClose} className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }}>
+                💳 Comprar Créditos →
               </Link>
             </div>
           </div>
-        ) : (
-          /* Pro user usage display */
-          <div className="px-3 pb-3 flex-shrink-0">
-            <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,.05)', border: '1px solid rgba(16,185,129,.15)' }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Pro generations</span>
-                <span className="text-xs font-black" style={{ color: generationsUsed >= PRO_LIMIT ? '#f87171' : '#34d399', fontSize: '0.68rem' }}>
-                  {generationsUsed} / {PRO_LIMIT}
-                </span>
-              </div>
-              <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,.07)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${proUsedPct}%`,
-                    background: generationsUsed >= PRO_LIMIT
-                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                      : 'linear-gradient(90deg, #10b981, #34d399)',
-                  }}
-                />
-              </div>
-              {generationsUsed >= PRO_LIMIT && (
-                <p className="text-xs mt-1.5" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.65rem' }}>
-                  Monthly limit reached. Resets next billing cycle.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Trust signal footer */}
-        <div
-          className="px-4 py-2.5 flex-shrink-0 text-center"
-          style={{ borderTop: '1px solid var(--border)' }}
-        >
-          <span
-            className="text-xs font-semibold"
-            style={{ color: 'var(--muted)', fontSize: '0.65rem' }}
-          >
-            🔥 1,200+ active creators
-          </span>
-        </div>
+        ) : null}
 
         {/* User card */}
-        <div className="px-3 pb-3 flex-shrink-0">
+        <div className="px-3 pb-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
           <div className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5">
             <div
               className="w-8 h-8 rounded-[9px] flex items-center justify-center text-sm font-bold text-white flex-shrink-0"

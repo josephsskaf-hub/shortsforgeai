@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openai, buildGenerationPrompt, ShortVideo } from '@/lib/openai'
+import { openai, buildGenerationPrompt, buildSingleVideoPrompt, ShortVideo } from '@/lib/openai'
 
 // Increase Vercel function timeout to 60s (hobby plan max)
 export const maxDuration = 60
@@ -37,15 +37,21 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 3. Parse body ────────────────────────────────────────────────────────
-    let body: { niche?: string }
+    let body: { niche?: string; topic?: string; tone?: string; duration?: number; mode?: string }
     try {
       body = await req.json()
     } catch {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
-    const { niche } = body
-    const validNiches = ['mideast', 'money', 'mind', 'dark', 'motivation']
+    const { niche, topic } = body
+    const tone = (body.tone || 'cinematic').toString().toLowerCase()
+    const duration = Math.max(15, Math.min(90, Number(body.duration) || 35))
+    const isTopicMode = typeof topic === 'string' && topic.trim().length > 0
+
+    const legacyNiches = ['mideast', 'money', 'mind', 'dark', 'motivation']
+    const newNiches = ['history', 'mystery', 'finance', 'science', 'technology', 'general']
+    const validNiches = [...legacyNiches, ...newNiches]
     if (!niche || !validNiches.includes(niche)) {
       return NextResponse.json({ error: 'Invalid niche selected.' }, { status: 400 })
     }
@@ -91,7 +97,8 @@ export async function POST(req: NextRequest) {
     const generationsUsed = profile?.generations_used ?? 0
 
     // ── 5. Check free tier limit ─────────────────────────────────────────────
-    if (!isPro && generationsUsed >= FREE_LIMIT) {
+    // Topic-mode (credit-paid) bypasses the legacy free-tier counter — credits are billed separately.
+    if (!isTopicMode && !isPro && generationsUsed >= FREE_LIMIT) {
       return NextResponse.json(
         {
           error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Creator for 100/month.`,
@@ -101,7 +108,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 6. Call OpenAI ───────────────────────────────────────────────────────
-    const prompt = buildGenerationPrompt(niche)
+    const prompt = isTopicMode
+      ? buildSingleVideoPrompt(niche, topic!, tone, duration)
+      : buildGenerationPrompt(niche)
 
     let completion
     try {
@@ -230,8 +239,8 @@ export async function POST(req: NextRequest) {
       console.error('[generate] Failed to save to generations table:', insertError.message, insertError.code)
     }
 
-    // ── 9. Increment usage counter for free users ────────────────────────────
-    if (!isPro) {
+    // ── 9. Increment usage counter for free users (legacy path only) ─────────
+    if (!isPro && !isTopicMode) {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ generations_used: generationsUsed + 1 })
