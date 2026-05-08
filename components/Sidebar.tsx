@@ -444,4 +444,53 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5">
             <div
               style={{
-                width
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                background: isLoggedIn ? 'linear-gradient(135deg, #6366f1, #7c3aed)' : 'rgba(255,255,255,0.06)',
+                border: isLoggedIn ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.85rem', fontWeight: 800, color: '#fff',
+              }}
+            >
+              {isLoggedIn ? (userEmail?.[0] ?? 'U').toUpperCase() : '👤'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {isLoggedIn ? userEmail : 'Guest User'}
+              </div>
+              <div style={{ fontSize: '0.62rem', color: isPro ? '#34d399' : 'var(--muted)', marginTop: 1 }}>
+                {isLoggedIn ? (isPro ? '✦ Pro Plan' : 'Free Plan') : 'Not signed in'}
+              </div>
+            </div>
+            {isLoggedIn ? (
+              <button
+                onClick={handleSignOut}
+                title="Sign out"
+                style={{
+                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 7px', fontSize: '0.75rem',
+                  flexShrink: 0, transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.4)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
+              >
+                🚪
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 8,
+                  color: '#818cf8', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                }}
+              >
+                Sign in
+              </button>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} defaultTab="signup" />}
+    </>
+  )
+}
