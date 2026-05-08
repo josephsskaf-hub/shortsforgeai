@@ -284,14 +284,14 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     className="rounded-xl px-4 py-3 text-xs"
                     style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: '#fbbf24' }}
                   >
-                    <span className="font-bold">Email já cadastrado.</span>{' '}
+                    <span className="font-bold">Email already registered.</span>{' '}
                     <button
                       type="button"
                       onClick={() => switchTab('login')}
                       className="font-bold underline"
                       style={{ color: '#fbbf24', background: 'none', border: 'none', cursor: 'pointer' }}
                     >
-                      Faça login →
+                      Sign in →
                     </button>
                   </div>
                 )}
