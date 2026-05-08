@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import MobileNav from '@/components/MobileNav'
 import { usePathname } from 'next/navigation'
 
 interface DashboardShellProps {
@@ -83,7 +84,8 @@ export default function DashboardShell({
           isPro={isPro}
           onMenuToggle={() => setSidebarOpen((v) => !v)}
         />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
+        <MobileNav />
       </div>
     </div>
   )

@@ -66,7 +66,7 @@ export default function DashboardClient({
   }
 
   return (
-    <div className="px-4 md:px-6 py-7 pb-20">
+    <div className="px-4 md:px-6 py-5 md:py-7 pb-28 md:pb-20">
 
       {/* ── Hero ── */}
       <div
@@ -153,7 +153,7 @@ export default function DashboardClient({
 
         <div
           className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}
         >
           {TOP_PICKS.map((niche) => (
             <TopPickCard
@@ -168,7 +168,7 @@ export default function DashboardClient({
       {/* ── Credit balance ── */}
       {isLoggedIn && (
         <div
-          className="rounded-[20px] px-6 py-5 mb-5 flex items-center justify-between flex-wrap gap-4"
+          className="rounded-[20px] px-5 py-4 mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
           style={{
             background: creditsZero ? 'rgba(239,68,68,.06)' : 'rgba(15,15,30,0.85)',
             border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(99,102,241,.22)',
@@ -221,7 +221,7 @@ export default function DashboardClient({
           </div>
           <Link
             href="/pricing"
-            className="rounded-xl px-5 py-2.5 text-sm font-black text-white transition-all"
+            className="block text-center rounded-xl px-5 py-2.5 text-sm font-black text-white transition-all md:inline-block"
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #ef4444, #f87171)'

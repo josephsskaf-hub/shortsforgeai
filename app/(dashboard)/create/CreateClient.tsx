@@ -500,7 +500,7 @@ export default function CreateClient() {
   const currentStage = stageId ? STAGE_MESSAGES.find((s) => s.id === stageId) : null
 
   return (
-    <div className="px-4 md:px-6 py-7 pb-20 max-w-4xl mx-auto">
+    <div className="px-4 md:px-6 py-5 md:py-7 pb-24 md:pb-20 max-w-4xl mx-auto">
       {/* Toast */}
       {copyToast && (
         <div
@@ -618,12 +618,15 @@ export default function CreateClient() {
             </div>
           </label>
 
-          {/* Niche pills */}
+          {/* Niche pills — horizontal scroll on mobile */}
           <div className="mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
               Niche
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div
+              className="flex gap-2 overflow-x-auto pb-1"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+            >
               {NICHE_PILLS.map((n) => (
                 <Pill
                   key={n.id}
@@ -631,6 +634,7 @@ export default function CreateClient() {
                   emoji={n.emoji}
                   label={n.label}
                   onClick={() => setNiche(n.id)}
+                  noShrink
                 />
               ))}
             </div>
@@ -715,6 +719,35 @@ export default function CreateClient() {
         </div>
       )}
 
+      {/* Mobile sticky Generate CTA — shows when form is visible and not running */}
+      {!running && !autoPicking && !final && (
+        <div
+          className="fixed bottom-14 left-0 right-0 px-4 pb-2 md:hidden z-40"
+          style={{
+            background: 'linear-gradient(to top, rgba(8,8,15,0.98) 60%, transparent)',
+            pointerEvents: 'none',
+          }}
+        >
+          <button
+            onClick={handleGenerateClick}
+            disabled={creditsLoading || suggestLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-base font-black text-white"
+            style={{
+              background: creditsZero
+                ? 'linear-gradient(135deg, #94a3b8, #64748b)'
+                : 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+              boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(99,102,241,.55)',
+              cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
+              border: 'none',
+              opacity: creditsLoading || suggestLoading ? 0.7 : 1,
+              pointerEvents: 'auto',
+            }}
+          >
+            ⚡ Generate — 1 credit
+          </button>
+        </div>
+      )}
+
       {/* Progress view */}
       {(running || autoPicking) && (
         <ProgressView
@@ -754,11 +787,13 @@ function Pill({
   emoji,
   label,
   onClick,
+  noShrink,
 }: {
   active: boolean
   emoji?: string
   label: string
   onClick: () => void
+  noShrink?: boolean
 }) {
   return (
     <button
@@ -773,6 +808,8 @@ function Pill({
         color: active ? 'var(--text)' : 'var(--muted2)',
         cursor: 'pointer',
         boxShadow: active ? '0 0 16px rgba(99,102,241,.2)' : 'none',
+        flexShrink: noShrink ? 0 : undefined,
+        whiteSpace: 'nowrap',
       }}
     >
       {emoji ? `${emoji} ` : ''}
