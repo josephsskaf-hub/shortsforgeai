@@ -163,9 +163,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Scenes are required.' }, { status: 400 })
     }
 
-    // Generate voiceover server-side
+    // Generate voiceover and upload to Supabase Storage (Creatomate needs a public URL, not base64)
     const ttsInput = script.length > 3800 ? script.slice(0, 3800) : script
-    let voiceoverDataUri: string
+    let voiceoverUrl: string | null = null
     try {
       const speech = await openai.audio.speech.create({
         model: 'tts-1',
@@ -173,14 +173,25 @@ export async function POST(req: NextRequest) {
         input: ttsInput,
       })
       const buffer = Buffer.from(await speech.arrayBuffer())
-      voiceoverDataUri = `data:audio/mpeg;base64,${buffer.toString('base64')}`
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (supabaseUrl && serviceKey) {
+        const fileName = 'render-' + user.id + '-' + Date.now() + '.mp3'
+        const uploadRes = await fetch(supabaseUrl + '/storage/v1/object/voiceovers/' + fileName, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'audio/mpeg' },
+          body: buffer,
+        })
+        if (uploadRes.ok) {
+          voiceoverUrl = supabaseUrl + '/storage/v1/object/public/voiceovers/' + fileName
+        } else {
+          console.warn('[render] voiceover upload failed:', uploadRes.status)
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error('[render] TTS error:', msg)
-      return NextResponse.json(
-        { error: 'Voiceover generation failed. Please try again.' },
-        { status: 500 }
-      )
+      console.error('[render] TTS/upload error:', msg)
+      // Non-fatal — continue without voiceover
     }
 
     // Build scene timings — distribute ~35s proportional to narration length
@@ -240,16 +251,18 @@ export async function POST(req: NextRequest) {
       cursor += dur
     })
 
-    // Voiceover audio (referenced by transcript)
-    elements.push({
-      type: 'audio',
-      id: 'voiceover',
-      track: 3,
-      time: 0,
-      duration: finalDuration,
-      source: voiceoverDataUri,
-      volume: '100%',
-    })
+    // Voiceover audio (only if upload succeeded)
+    if (voiceoverUrl) {
+      elements.push({
+        type: 'audio',
+        id: 'voiceover',
+        track: 3,
+        time: 0,
+        duration: finalDuration,
+        source: voiceoverUrl,
+        volume: '100%',
+      })
+    }
 
     // Background music
     elements.push({
@@ -258,12 +271,13 @@ export async function POST(req: NextRequest) {
       time: 0,
       duration: finalDuration,
       source: musicUrl,
-      volume: '12%',
+      volume: voiceoverUrl ? '12%' : '25%',
       audio_fade_in: 1,
       audio_fade_out: 2,
     })
 
-    // Animated transcript captions (centered, ~72% y)
+    // Animated transcript captions (only when voiceover is available)
+    if (voiceoverUrl) {
     elements.push({
       type: 'text',
       track: 5,
@@ -283,6 +297,7 @@ export async function POST(req: NextRequest) {
       stroke_color: 'black',
       stroke_width: '1.5 vmin',
     })
+    }
 
     // CTA pill at end (last 2 seconds)
     const ctaTime = Math.max(0, finalDuration - 2)
