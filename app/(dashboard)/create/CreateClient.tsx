@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Scene {
@@ -69,8 +69,10 @@ interface FinalAssets {
 }
 
 export default function CreateClient() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialNicheParam = searchParams.get('niche') || ''
+  const autostartParam = searchParams.get('autostart') === 'true'
 
   const initialNiche = useMemo(() => {
     return NICHE_PILLS.find((n) => n.id === initialNicheParam)?.id ?? 'general'
@@ -89,9 +91,14 @@ export default function CreateClient() {
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [showNoCreditsModal, setShowNoCreditsModal] = useState(false)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [autopickedTopic, setAutopickedTopic] = useState<string | null>(null)
 
   const [final, setFinal] = useState<FinalAssets | null>(null)
   const [copyToast, setCopyToast] = useState(false)
+  const [autoPicking, setAutoPicking] = useState(false)
+
+  const autostartedRef = useRef(false)
 
   // Load credits
   useEffect(() => {
@@ -118,7 +125,7 @@ export default function CreateClient() {
   // Sync niche from URL changes (sidebar quick-create links)
   useEffect(() => {
     const next = NICHE_PILLS.find((n) => n.id === initialNicheParam)?.id
-    if (next) setNiche(next)
+    setNiche(next ?? 'general')
   }, [initialNicheParam])
 
   // Cleanup voiceover blob on unmount
@@ -144,10 +151,12 @@ export default function CreateClient() {
     }
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(overrideTopic?: string, overrideNiche?: string) {
     if (running) return
 
-    if (!topic.trim()) {
+    const effectiveTopic = (overrideTopic ?? topic).trim()
+    const effectiveNiche = overrideNiche ?? niche
+    if (!effectiveTopic) {
       setError('Please add a topic for your video.')
       return
     }
@@ -169,7 +178,7 @@ export default function CreateClient() {
       const genRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, topic: topic.trim(), tone, duration }),
+        body: JSON.stringify({ niche: effectiveNiche, topic: effectiveTopic, tone, duration }),
       })
       if (!genRes.ok) {
         const err = await genRes.json().catch(() => ({}))
@@ -200,7 +209,7 @@ export default function CreateClient() {
       const scenesRes = await fetch('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: video.script, niche }),
+        body: JSON.stringify({ script: video.script, niche: effectiveNiche }),
       })
       let scenes: Scene[] = []
       if (scenesRes.ok) {
@@ -253,8 +262,8 @@ export default function CreateClient() {
             video,
             scenes,
             selectedClips,
-            niche,
-            topic: topic.trim(),
+            niche: effectiveNiche,
+            topic: effectiveTopic,
             tone,
             duration,
           }),
@@ -310,8 +319,8 @@ export default function CreateClient() {
         scenes,
         selectedClips,
         voiceoverUrl,
-        niche,
-        topic: topic.trim(),
+        niche: effectiveNiche,
+        topic: effectiveTopic,
         renderUrl,
       })
       setRunning(false)
@@ -335,6 +344,118 @@ export default function CreateClient() {
     setError(null)
     setProgress(0)
   }
+
+  function cleanAutostartUrl(currentNiche: string) {
+    // Strip ?autostart=true from the URL so a refresh doesn't re-trigger generation
+    const params = new URLSearchParams()
+    if (currentNiche && currentNiche !== 'general') params.set('niche', currentNiche)
+    const qs = params.toString()
+    router.replace(`/create${qs ? `?${qs}` : ''}`, { scroll: false })
+  }
+
+  async function fetchSuggestedTopic(forNiche: string): Promise<string> {
+    const res = await fetch('/api/topic-suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ niche: forNiche }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Could not pick a topic.')
+    }
+    const data = await res.json()
+    const t = (data?.topic || '').trim()
+    if (!t) throw new Error('AI returned an empty topic.')
+    return t
+  }
+
+  async function handleSurpriseMe() {
+    if (suggestLoading || running) return
+    setSuggestLoading(true)
+    setError(null)
+    try {
+      const t = await fetchSuggestedTopic(niche)
+      setTopic(t)
+      setAutopickedTopic(t)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not pick a topic. Try again.')
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  // Manual Generate click — if topic is blank, pick one with AI then run.
+  async function handleGenerateClick() {
+    if (running) return
+    const trimmed = topic.trim()
+    if (trimmed) {
+      await handleGenerate(trimmed)
+      return
+    }
+    if (credits !== null && credits <= 0) {
+      setShowNoCreditsModal(true)
+      return
+    }
+    try {
+      setAutoPicking(true)
+      setProgress(2)
+      const t = await fetchSuggestedTopic(niche)
+      setTopic(t)
+      setAutopickedTopic(t)
+      setAutoPicking(false)
+      await handleGenerate(t)
+    } catch (err) {
+      setAutoPicking(false)
+      setError(err instanceof Error ? err.message : 'Could not pick a topic. Try again.')
+    }
+  }
+
+  // Autostart: when ?autostart=true, AI picks a topic and runs the pipeline immediately.
+  useEffect(() => {
+    // Reset the autostart latch whenever the URL no longer has the flag.
+    // This makes a fresh ?autostart=true (e.g. clicking sidebar History again) re-trigger.
+    if (!autostartParam) {
+      autostartedRef.current = false
+      return
+    }
+    if (autostartedRef.current) return
+    if (creditsLoading) return // wait for credit balance
+    if (running || autoPicking) return // already in progress
+    autostartedRef.current = true
+
+    // Use the niche from the URL directly so we don't race the niche-sync effect.
+    const targetNiche = NICHE_PILLS.find((n) => n.id === initialNicheParam)?.id ?? 'general'
+
+    // Clear any prior result when starting a new autostart run
+    setFinal(null)
+    setError(null)
+    setNiche(targetNiche)
+
+    ;(async () => {
+      // Out of credits → don't burn an OpenAI call, just nudge to pricing
+      if (credits !== null && credits <= 0) {
+        setShowNoCreditsModal(true)
+        cleanAutostartUrl(targetNiche)
+        return
+      }
+
+      try {
+        setAutoPicking(true)
+        setProgress(2)
+        const t = await fetchSuggestedTopic(targetNiche)
+        setTopic(t)
+        setAutopickedTopic(t)
+        setAutoPicking(false)
+        cleanAutostartUrl(targetNiche)
+        await handleGenerate(t, targetNiche)
+      } catch (err) {
+        setAutoPicking(false)
+        setError(err instanceof Error ? err.message : 'Could not pick a topic. Try again.')
+        cleanAutostartUrl(targetNiche)
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autostartParam, creditsLoading, credits, initialNicheParam])
 
   const creditsZero = credits !== null && credits <= 0
   const currentStage = stageId ? STAGE_MESSAGES.find((s) => s.id === stageId) : null
@@ -368,8 +489,8 @@ export default function CreateClient() {
         </p>
       </div>
 
-      {/* Form (hidden during run + final) */}
-      {!running && !final && (
+      {/* Form (hidden during run + final + auto-pick) */}
+      {!running && !autoPicking && !final && (
         <div
           className="rounded-[20px] p-6 md:p-7 mb-5"
           style={{
@@ -378,15 +499,66 @@ export default function CreateClient() {
             boxShadow: '0 0 30px rgba(99,102,241,.08)',
           }}
         >
-          {/* Topic input */}
+          {/* Quick Surprise Me CTA */}
+          <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
+                Hands-off mode
+              </div>
+              <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+                Let AI pick a viral topic for you
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSurpriseMe}
+              disabled={suggestLoading}
+              className="rounded-xl px-4 py-2.5 text-xs font-black transition-all flex items-center gap-1.5"
+              style={{
+                background: suggestLoading
+                  ? 'rgba(255,255,255,.04)'
+                  : 'linear-gradient(135deg, rgba(168,85,247,.25), rgba(99,102,241,.18))',
+                border: '1px solid rgba(168,85,247,.45)',
+                color: suggestLoading ? 'var(--muted)' : '#c4b5fd',
+                cursor: suggestLoading ? 'wait' : 'pointer',
+                boxShadow: suggestLoading ? 'none' : '0 0 16px rgba(168,85,247,.18)',
+              }}
+            >
+              {suggestLoading ? '⏳ Picking...' : '✨ Surprise me'}
+            </button>
+          </div>
+
+          {/* Topic input — optional */}
           <label className="block mb-4">
-            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              What&apos;s your video about?
+            <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
+              {autopickedTopic ? (
+                <>
+                  <span style={{ color: 'var(--indigo-light)' }}>Or type your own topic</span>
+                  <span
+                    className="px-2 py-0.5 rounded-full"
+                    style={{
+                      background: 'rgba(168,85,247,.15)',
+                      color: '#c4b5fd',
+                      fontSize: '0.55rem',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    AI-picked
+                  </span>
+                </>
+              ) : (
+                'What’s your video about? (optional)'
+              )}
             </div>
             <input
               type="text"
               value={topic}
-              onChange={(e) => setTopic(e.target.value)}
+              onChange={(e) => {
+                setTopic(e.target.value)
+                if (autopickedTopic && e.target.value !== autopickedTopic) {
+                  setAutopickedTopic(null)
+                }
+              }}
               placeholder="e.g. 3 secrets about the Bermuda Triangle"
               className="w-full rounded-xl px-4 py-3.5 text-base outline-none transition-all"
               style={{
@@ -402,6 +574,9 @@ export default function CreateClient() {
                 ;(e.currentTarget as HTMLInputElement).style.borderColor = 'var(--border2)'
               }}
             />
+            <div className="text-xs mt-1.5" style={{ color: 'var(--muted)', fontSize: '0.65rem' }}>
+              Leave blank and click Generate — AI will pick a topic for you.
+            </div>
           </label>
 
           {/* Niche pills */}
@@ -474,17 +649,17 @@ export default function CreateClient() {
 
           {/* Generate button */}
           <button
-            onClick={handleGenerate}
-            disabled={creditsLoading}
+            onClick={handleGenerateClick}
+            disabled={creditsLoading || suggestLoading}
             className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-base font-black text-white transition-all"
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
                 : 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(99,102,241,.45)',
-              cursor: creditsLoading ? 'not-allowed' : 'pointer',
+              cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
-              opacity: creditsLoading ? 0.7 : 1,
+              opacity: creditsLoading || suggestLoading ? 0.7 : 1,
             }}
           >
             ⚡ Generate Video — 1 credit
@@ -502,8 +677,16 @@ export default function CreateClient() {
       )}
 
       {/* Progress view */}
-      {running && (
-        <ProgressView progress={progress} stageLabel={currentStage?.label ?? '⚡ Starting...'} />
+      {(running || autoPicking) && (
+        <ProgressView
+          progress={progress}
+          stageLabel={
+            autoPicking && !running
+              ? '🎯 Picking a viral topic...'
+              : currentStage?.label ?? '⚡ Starting...'
+          }
+          pickedTopic={running && autopickedTopic ? autopickedTopic : null}
+        />
       )}
 
       {/* Final / export view */}
@@ -559,7 +742,15 @@ function Pill({
   )
 }
 
-function ProgressView({ progress, stageLabel }: { progress: number; stageLabel: string }) {
+function ProgressView({
+  progress,
+  stageLabel,
+  pickedTopic,
+}: {
+  progress: number
+  stageLabel: string
+  pickedTopic?: string | null
+}) {
   return (
     <div
       className="rounded-[20px] p-7 md:p-9 mb-5 text-center"
@@ -595,9 +786,24 @@ function ProgressView({ progress, stageLabel }: { progress: number; stageLabel: 
       <div className="font-black text-base mb-2" style={{ color: 'var(--text)' }}>
         {stageLabel}
       </div>
-      <div className="text-xs mb-5" style={{ color: 'var(--muted)' }}>
+      <div className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
         Hang tight — we&apos;re building your Short from start to finish.
       </div>
+
+      {pickedTopic && (
+        <div
+          className="rounded-xl px-4 py-2.5 mb-4 mx-auto inline-block max-w-full"
+          style={{
+            background: 'rgba(168,85,247,.08)',
+            border: '1px solid rgba(168,85,247,.25)',
+            color: '#c4b5fd',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+          }}
+        >
+          🎯 Topic: <span style={{ color: 'var(--text)' }}>{pickedTopic}</span>
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="rounded-full overflow-hidden mb-3" style={{ height: 10, background: 'rgba(255,255,255,.05)' }}>

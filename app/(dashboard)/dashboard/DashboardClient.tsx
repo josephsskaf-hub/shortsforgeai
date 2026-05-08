@@ -21,15 +21,15 @@ interface QuickCard {
 
 const CARDS: QuickCard[] = [
   {
-    href: '/create',
+    href: '/create?autostart=true',
     emoji: '🎬',
     title: 'Create Video',
-    subtitle: 'Any topic, any niche',
+    subtitle: 'AI picks a viral topic and renders instantly',
     accent: 'rgba(99,102,241,.4)',
     glow: 'rgba(99,102,241,.18)',
   },
   {
-    href: '/create?niche=history',
+    href: '/create?niche=history&autostart=true',
     emoji: '📖',
     title: 'History Video',
     subtitle: 'Historical facts, civilizations, wars',
@@ -37,7 +37,7 @@ const CARDS: QuickCard[] = [
     glow: 'rgba(245,158,11,.16)',
   },
   {
-    href: '/create?niche=mystery',
+    href: '/create?niche=mystery&autostart=true',
     emoji: '🔮',
     title: 'Mystery Video',
     subtitle: 'Conspiracies, secrets, phenomena',
@@ -138,53 +138,62 @@ export default function DashboardClient({
         </p>
       </div>
 
-      {/* 3-card quick-create grid */}
+      {/* 3-card quick-create grid — whole card is clickable */}
       <div className="grid gap-4 mb-7" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
         {CARDS.map((card) => (
           <Link
             key={card.href}
             href={card.href}
-            className="group relative rounded-[20px] p-6 transition-all flex flex-col"
+            className="group relative rounded-[20px] p-6 transition-all flex flex-col cursor-pointer"
             style={{
               background: 'rgba(15,15,30,0.85)',
               border: `1px solid ${card.accent}`,
               boxShadow: `0 0 30px ${card.glow}`,
               textDecoration: 'none',
-              minHeight: 220,
+              minHeight: 200,
             }}
             onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-              ;(e.currentTarget as HTMLElement).style.boxShadow = `0 12px 40px ${card.glow}`
+              ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'
+              ;(e.currentTarget as HTMLElement).style.boxShadow = `0 14px 48px ${card.glow}`
+              ;(e.currentTarget as HTMLElement).style.borderColor = card.accent.replace('.4)', '.7)')
             }}
             onMouseLeave={(e) => {
               ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
               ;(e.currentTarget as HTMLElement).style.boxShadow = `0 0 30px ${card.glow}`
+              ;(e.currentTarget as HTMLElement).style.borderColor = card.accent
             }}
           >
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                background: `linear-gradient(135deg, ${card.accent}, ${card.glow})`,
-                border: `1px solid ${card.accent}`,
-                fontSize: '1.6rem',
-              }}
-            >
-              {card.emoji}
+            <div className="flex items-start justify-between mb-4">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${card.accent}, ${card.glow})`,
+                  border: `1px solid ${card.accent}`,
+                  fontSize: '1.6rem',
+                }}
+              >
+                {card.emoji}
+              </div>
+              <div
+                className="rounded-full w-8 h-8 flex items-center justify-center text-sm font-black transition-all"
+                style={{
+                  background: 'rgba(99,102,241,.12)',
+                  border: '1px solid rgba(99,102,241,.25)',
+                  color: 'var(--indigo-light)',
+                }}
+                aria-hidden
+              >
+                ⚡
+              </div>
             </div>
             <div className="font-black mb-1.5" style={{ fontSize: '1.15rem', color: 'var(--text)' }}>
               {card.title}
             </div>
-            <div className="text-sm mb-5 flex-1" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+            <div className="text-sm flex-1" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
               {card.subtitle}
             </div>
-            <div
-              className="self-start inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black text-white transition-all"
-              style={{
-                background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
-                boxShadow: '0 4px 18px rgba(99,102,241,.32)',
-              }}
-            >
-              Create Now →
+            <div className="mt-4 text-xs font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
+              Click to start <span aria-hidden>→</span>
             </div>
           </Link>
         ))}

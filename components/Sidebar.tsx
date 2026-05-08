@@ -16,9 +16,9 @@ interface SidebarProps {
 }
 
 const quickCreateItems = [
-  { href: '/create', icon: '🎬', label: 'Create Video', exact: false },
-  { href: '/create?niche=history', icon: '📖', label: 'History', exact: false },
-  { href: '/create?niche=mystery', icon: '🔮', label: 'Mystery', exact: false },
+  { href: '/create', icon: '⚡', label: 'Create Video', exact: false },
+  { href: '/create?niche=history&autostart=true', icon: '📖', label: 'History', exact: false },
+  { href: '/create?niche=mystery&autostart=true', icon: '🔮', label: 'Mystery', exact: false },
 ]
 
 const accountNavItems = [
