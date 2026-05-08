@@ -108,7 +108,15 @@ export default function VideoClient() {
   const [stockError, setStockError] = useState<string | null>(null)
   const [selectedClips, setSelectedClips] = useState<Record<number, StockClip>>({})
 
+  const [renderId, setRenderId] = useState<string | null>(null)
+  const [renderStatus, setRenderStatus] = useState<'idle' | 'starting' | 'rendering' | 'succeeded' | 'failed'>('idle')
+  const [renderProgress, setRenderProgress] = useState(0)
+  const [renderUrl, setRenderUrl] = useState<string | null>(null)
+  const [renderError, setRenderError] = useState<string | null>(null)
+  const [renderIsMock, setRenderIsMock] = useState(false)
+
   const stepRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const hasScript = !!script.trim()
 
@@ -228,6 +236,145 @@ export default function VideoClient() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
+
+  function deriveTone(): string {
+    const tones = scenes.map((s) => (s.emotionalTone || '').toLowerCase()).filter(Boolean)
+    if (tones.length === 0) return 'dark'
+    const tally: Record<string, number> = {}
+    for (const t of tones) tally[t] = (tally[t] || 0) + 1
+    return Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0]
+  }
+
+  async function startRender() {
+    if (Object.keys(selectedClips).length === 0) {
+      setRenderError('Select at least one stock clip first.')
+      setRenderStatus('failed')
+      return
+    }
+    setRenderError(null)
+    setRenderUrl(null)
+    setRenderProgress(0)
+    setRenderStatus('starting')
+    setRenderIsMock(false)
+    setRenderId(null)
+    try {
+      const stockClipsPayload = scenes
+        .map((s) => {
+          const clip = selectedClips[s.sceneNumber]
+          if (!clip) return null
+          return { sceneNumber: s.sceneNumber, videoUrl: clip.url }
+        })
+        .filter((c): c is { sceneNumber: number; videoUrl: string } => c !== null)
+
+      const res = await fetch('/api/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script,
+          scenes,
+          stockClips: stockClipsPayload,
+          title,
+          niche,
+          tone: deriveTone(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to start render')
+      setRenderId(data.renderId)
+      setRenderIsMock(!!data.isMock)
+      setRenderStatus('rendering')
+      setRenderProgress(8)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to start render'
+      setRenderError(msg)
+      setRenderStatus('failed')
+    }
+  }
+
+  function resetRender() {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    setRenderId(null)
+    setRenderStatus('idle')
+    setRenderProgress(0)
+    setRenderUrl(null)
+    setRenderError(null)
+    setRenderIsMock(false)
+  }
+
+  function regenerateAll() {
+    resetRender()
+    setStep(1)
+    setScenes([])
+    setScenesError(null)
+    if (voiceoverUrl) URL.revokeObjectURL(voiceoverUrl)
+    setVoiceoverUrl(null)
+    setVoiceoverError(null)
+    setStockClips({})
+    setStockError(null)
+    setSelectedClips({})
+  }
+
+  // Poll render status
+  useEffect(() => {
+    if (renderStatus !== 'rendering' || !renderId) return
+    let cancelled = false
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/render/${encodeURIComponent(renderId!)}`, {
+          cache: 'no-store',
+        })
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          setRenderError(data.error || 'Render lookup failed')
+          setRenderStatus('failed')
+          return
+        }
+        if (typeof data.progress === 'number') {
+          setRenderProgress((p) => Math.max(p, data.progress))
+        }
+        if (data.status === 'succeeded') {
+          setRenderProgress(100)
+          setRenderUrl(data.url ?? null)
+          if (data.isMock) setRenderIsMock(true)
+          setRenderStatus('succeeded')
+          return
+        }
+        if (data.status === 'failed') {
+          setRenderError(data.error || 'Render failed')
+          setRenderStatus('failed')
+          return
+        }
+        // Continue polling
+        pollTimerRef.current = setTimeout(poll, 3000)
+      } catch (err: unknown) {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : 'Render polling failed'
+        setRenderError(msg)
+        setRenderStatus('failed')
+      }
+    }
+
+    poll()
+    return () => {
+      cancelled = true
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [renderStatus, renderId])
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+    }
+  }, [])
 
   const totalDuration = useMemo(
     () => scenes.reduce((acc, s) => acc + (s.duration || 0), 0),
@@ -456,7 +603,25 @@ export default function VideoClient() {
                       done={isDone}
                     />
                   )}
-                  {s.id === 5 && <Step5Export />}
+                  {s.id === 5 && (
+                    <Step5Export
+                      title={title}
+                      script={script}
+                      niche={niche}
+                      selectedClipsCount={Object.keys(selectedClips).length}
+                      status={renderStatus}
+                      progress={renderProgress}
+                      url={renderUrl}
+                      isMock={renderIsMock}
+                      error={renderError}
+                      onStart={startRender}
+                      onRetry={() => {
+                        resetRender()
+                        startRender()
+                      }}
+                      onRegenerate={regenerateAll}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -890,60 +1055,391 @@ function Step4Stock({
   )
 }
 
-function Step5Export() {
+function nicheHashtags(niche: string): string[] {
+  const base = ['#shorts', '#viral', '#fyp']
+  const map: Record<string, string[]> = {
+    money: ['#money', '#finance', '#wealth', '#facts'],
+    mind: ['#mindblown', '#facts', '#science', '#didyouknow'],
+    dark: ['#mystery', '#dark', '#truecrime', '#unsolved'],
+    mideast: ['#middleeast', '#history', '#facts', '#geopolitics'],
+    motivation: ['#motivation', '#mindset', '#success', '#discipline'],
+  }
+  const extras = map[niche] ?? ['#facts', '#interesting']
+  return [...base, ...extras]
+}
+
+function buildDescription(title: string, script: string, hashtags: string[]): string {
+  const cleanScript = script
+    .replace(/🎯\s*HOOK:?/gi, '')
+    .replace(/📝\s*CONTENT:?/gi, '')
+    .replace(/🔗\s*ENDING:?/gi, '')
+    .replace(/\n{2,}/g, '\n\n')
+    .trim()
+  const hook = cleanScript.split('\n').find((l) => l.trim().length > 0) ?? title
+  return `${title}\n\n${hook}\n\n${hashtags.join(' ')}`
+}
+
+function ProgressBar({ progress }: { progress: number }) {
   return (
-    <div className="flex flex-col items-center text-center py-6 gap-4">
+    <div
+      className="w-full h-2 rounded-full overflow-hidden"
+      style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)' }}
+    >
+      <div
+        className="h-full transition-all"
+        style={{
+          width: `${Math.min(100, Math.max(0, progress))}%`,
+          background: 'linear-gradient(90deg, rgba(99,102,241,.85), rgba(168,85,247,1))',
+          boxShadow: '0 0 16px rgba(168,85,247,.55)',
+          transitionDuration: '600ms',
+        }}
+      />
+    </div>
+  )
+}
+
+function CopyChip({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = value
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
+  }
+  return (
+    <button
+      onClick={copy}
+      className="rounded-xl px-3.5 py-2 text-xs font-bold transition-all"
+      style={{
+        background: copied
+          ? 'linear-gradient(135deg, rgba(16,185,129,.25), rgba(52,211,153,.15))'
+          : 'rgba(99,102,241,.12)',
+        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(99,102,241,.3)',
+        color: copied ? '#34d399' : 'var(--indigo-light)',
+        cursor: 'pointer',
+      }}
+    >
+      {copied ? '✓ Copied' : label}
+    </button>
+  )
+}
+
+function Step5Export({
+  title,
+  script,
+  niche,
+  selectedClipsCount,
+  status,
+  progress,
+  url,
+  isMock,
+  error,
+  onStart,
+  onRetry,
+  onRegenerate,
+}: {
+  title: string
+  script: string
+  niche: string
+  selectedClipsCount: number
+  status: 'idle' | 'starting' | 'rendering' | 'succeeded' | 'failed'
+  progress: number
+  url: string | null
+  isMock: boolean
+  error: string | null
+  onStart: () => void
+  onRetry: () => void
+  onRegenerate: () => void
+}) {
+  const stages = [
+    { from: 0, to: 8, label: '✍️ Writing viral script...' },
+    { from: 8, to: 22, label: '🎙️ Generating AI narration...' },
+    { from: 22, to: 38, label: '🎬 Finding cinematic visuals...' },
+    { from: 38, to: 55, label: '📝 Building animated captions...' },
+    { from: 55, to: 72, label: '🎵 Adding cinematic soundtrack...' },
+    { from: 72, to: 100, label: '⚡ Rendering your Short...' },
+  ]
+  const currentStage =
+    stages.find((s) => progress >= s.from && progress < s.to) ?? stages[stages.length - 1]
+
+  // Idle — entry CTA
+  if (status === 'idle') {
+    return (
+      <div className="flex flex-col items-center text-center py-4 gap-5">
+        <div
+          className="w-20 h-20 rounded-3xl flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,.3), rgba(99,102,241,.18))',
+            border: '1px solid rgba(168,85,247,.45)',
+            boxShadow: '0 0 32px rgba(168,85,247,.35)',
+            fontSize: '2.4rem',
+          }}
+        >
+          🎬
+        </div>
+        <div>
+          <div className="font-black text-xl mb-1" style={{ color: 'var(--text)' }}>
+            Ready to render
+          </div>
+          <div className="text-sm max-w-sm" style={{ color: 'var(--muted2)' }}>
+            We'll auto-stitch your scenes, narration, captions, and soundtrack into a 1080×1920
+            MP4 — about 35 seconds, post-ready.
+          </div>
+        </div>
+        {selectedClipsCount === 0 && (
+          <div
+            className="rounded-xl px-4 py-2 text-xs font-semibold"
+            style={{
+              background: 'rgba(245,158,11,.08)',
+              border: '1px solid rgba(245,158,11,.3)',
+              color: '#fbbf24',
+            }}
+          >
+            ⚠ Select at least one stock clip in Step 4
+          </div>
+        )}
+        <button
+          onClick={onStart}
+          disabled={selectedClipsCount === 0}
+          className="rounded-xl px-6 py-3 text-sm font-black text-white transition-all"
+          style={{
+            background:
+              selectedClipsCount === 0
+                ? 'rgba(255,255,255,.04)'
+                : 'linear-gradient(135deg, var(--indigo), var(--purple))',
+            border: 'none',
+            boxShadow:
+              selectedClipsCount === 0 ? 'none' : '0 8px 28px rgba(168,85,247,.35)',
+            cursor: selectedClipsCount === 0 ? 'not-allowed' : 'pointer',
+            color: selectedClipsCount === 0 ? 'var(--muted)' : '#fff',
+          }}
+        >
+          🎬 Render My Short
+        </button>
+      </div>
+    )
+  }
+
+  // Rendering — animated pipeline
+  if (status === 'starting' || status === 'rendering') {
+    return (
+      <div className="flex flex-col items-center text-center py-4 gap-5">
+        <div
+          className="w-20 h-20 rounded-3xl flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,.3), rgba(99,102,241,.18))',
+            border: '1px solid rgba(168,85,247,.45)',
+            boxShadow: '0 0 32px rgba(168,85,247,.45)',
+            fontSize: '2.4rem',
+            animation: 'pulse 1.6s ease-in-out infinite',
+          }}
+        >
+          🎬
+        </div>
+        <div className="w-full max-w-md flex flex-col gap-3">
+          <div className="font-black text-lg" style={{ color: 'var(--text)' }}>
+            {currentStage.label}
+          </div>
+          <ProgressBar progress={progress} />
+          <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
+            {progress}%
+          </div>
+        </div>
+        <div className="text-xs max-w-sm" style={{ color: 'var(--muted2)' }}>
+          Hang tight — this typically takes 30–90 seconds. Your video is being assembled in the
+          cloud.
+        </div>
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 32px rgba(168,85,247,.45); }
+            50% { transform: scale(1.04); box-shadow: 0 0 48px rgba(168,85,247,.65); }
+          }
+        `}</style>
+      </div>
+    )
+  }
+
+  // Failed
+  if (status === 'failed') {
+    return (
+      <div className="flex flex-col items-center text-center py-4 gap-4">
+        <div
+          className="w-16 h-16 rounded-3xl flex items-center justify-center"
+          style={{
+            background: 'rgba(239,68,68,.15)',
+            border: '1px solid rgba(239,68,68,.4)',
+            fontSize: '2rem',
+          }}
+        >
+          ⚠️
+        </div>
+        <div>
+          <div className="font-black text-lg mb-1" style={{ color: 'var(--text)' }}>
+            Render failed
+          </div>
+          <div
+            className="rounded-xl px-4 py-2.5 text-sm max-w-md"
+            style={{
+              background: 'rgba(239,68,68,.07)',
+              border: '1px solid rgba(239,68,68,.25)',
+              color: '#f87171',
+            }}
+          >
+            {error ?? 'Something went wrong while rendering your video.'}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onRetry}
+            className="rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+            style={{
+              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            ↻ Retry
+          </button>
+          <button
+            onClick={onRegenerate}
+            className="rounded-xl px-5 py-2.5 text-sm font-bold"
+            style={{
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            🔄 Start Over
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Succeeded
+  const hashtags = nicheHashtags(niche)
+  const description = buildDescription(title || 'Viral Short', script, hashtags)
+
+  return (
+    <div className="flex flex-col items-center text-center py-2 gap-5">
       <div
         className="w-20 h-20 rounded-3xl flex items-center justify-center"
         style={{
-          background: 'linear-gradient(135deg, rgba(168,85,247,.3), rgba(99,102,241,.18))',
-          border: '1px solid rgba(168,85,247,.45)',
-          boxShadow: '0 0 32px rgba(168,85,247,.35)',
+          background: 'linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.18))',
+          border: '1px solid rgba(16,185,129,.5)',
+          boxShadow: '0 0 32px rgba(16,185,129,.35)',
           fontSize: '2.4rem',
         }}
       >
-        🎬
+        ✓
       </div>
       <div>
         <div className="font-black text-xl mb-1" style={{ color: 'var(--text)' }}>
-          Your video is ready!
+          Your Short is ready!
         </div>
         <div className="text-sm max-w-sm" style={{ color: 'var(--muted2)' }}>
-          All assets staged: scenes, voiceover, and stock clips. Final rendering is the last
-          step.
+          {isMock || !url
+            ? 'Mock render complete — see setup note below.'
+            : '1080×1920 MP4, post-ready. Download or copy your assets.'}
         </div>
       </div>
-      <div
-        className="rounded-2xl px-5 py-4 max-w-md w-full"
-        style={{
-          background: 'linear-gradient(135deg, rgba(168,85,247,.1), rgba(99,102,241,.06))',
-          border: '1px solid rgba(168,85,247,.3)',
-        }}
-      >
-        <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#c4b5fd' }}>
-          ⏳ Coming Soon
+
+      {url && !isMock ? (
+        <div
+          className="rounded-2xl overflow-hidden w-full max-w-[280px]"
+          style={{
+            border: '1px solid rgba(168,85,247,.35)',
+            boxShadow: '0 12px 48px rgba(168,85,247,.18)',
+            background: '#000',
+          }}
+        >
+          <video
+            src={url}
+            controls
+            playsInline
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+          />
         </div>
-        <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
-          Server-side video rendering
+      ) : (
+        <div
+          className="rounded-2xl px-5 py-4 max-w-md w-full text-left"
+          style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,.1), rgba(99,102,241,.06))',
+            border: '1px solid rgba(168,85,247,.3)',
+          }}
+        >
+          <div
+            className="text-xs font-black uppercase tracking-widest mb-1"
+            style={{ color: '#c4b5fd' }}
+          >
+            🛠 Setup required
+          </div>
+          <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+            Add CREATOMATE_API_KEY to enable real rendering
+          </div>
+          <div className="text-xs leading-relaxed" style={{ color: 'var(--muted2)' }}>
+            Your composition is fully built — voiceover, captions, transitions, soundtrack, and
+            CTA are wired up. Add a Creatomate API key in your env to produce the final MP4.
+          </div>
         </div>
-        <div className="text-xs leading-relaxed" style={{ color: 'var(--muted2)' }}>
-          Final MP4 export requires dedicated rendering infrastructure. We're spinning it up
-          — for now, you can download the voiceover MP3 and use the scene plan in your editor
-          of choice.
-        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {url && !isMock ? (
+          <a
+            href={url}
+            download={`${(title || 'shortsforge').replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}.mp4`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+            style={{
+              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              border: 'none',
+              cursor: 'pointer',
+              textDecoration: 'none',
+            }}
+          >
+            ⬇ Download MP4
+          </a>
+        ) : (
+          <button
+            disabled
+            className="rounded-xl px-5 py-2.5 text-sm font-bold"
+            style={{
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid var(--border)',
+              color: 'var(--muted)',
+              cursor: 'not-allowed',
+            }}
+          >
+            ⬇ Download MP4 (mock)
+          </button>
+        )}
+        <CopyChip label="📋 Copy Title" value={title || ''} />
+        <CopyChip label="#️⃣ Copy Hashtags" value={hashtags.join(' ')} />
+        <CopyChip label="📝 Copy Description" value={description} />
+        <button
+          onClick={onRegenerate}
+          className="rounded-xl px-4 py-2.5 text-sm font-bold"
+          style={{
+            background: 'rgba(255,255,255,.04)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            cursor: 'pointer',
+          }}
+        >
+          🔄 Regenerate
+        </button>
       </div>
-      <button
-        disabled
-        className="rounded-xl px-5 py-2.5 text-sm font-bold"
-        style={{
-          background: 'rgba(255,255,255,.04)',
-          border: '1px solid var(--border)',
-          color: 'var(--muted)',
-          cursor: 'not-allowed',
-        }}
-      >
-        ⬇ Download Final MP4 (soon)
-      </button>
     </div>
   )
 }
