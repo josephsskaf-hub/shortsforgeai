@@ -389,7 +389,7 @@ export default function HomePage() {
       {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
 
-      {/* Sidebar — always visible on desktop */}
+      {/* Sidebar */}
       <Sidebar
         userEmail={userEmail}
         isPro={isPro}
