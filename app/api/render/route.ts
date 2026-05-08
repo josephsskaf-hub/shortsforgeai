@@ -41,12 +41,31 @@ function distributeDurations(scenes: Scene[], totalSeconds: number): number[] {
   const lengths = scenes.map((s) => Math.max(1, (s.narration || '').length))
   const totalLen = lengths.reduce((a, b) => a + b, 0) || 1
   const raw = lengths.map((l) => (l / totalLen) * totalSeconds)
-  return raw.map((d) => Math.max(1.5, Math.round(d * 100) / 100))
+  return raw.map((d) => Math.max(2, Math.round(d * 100) / 100))
 }
 
 function findStockUrl(stockClips: StockClipInput[], sceneNumber: number): string | null {
   const hit = stockClips.find((c) => c.sceneNumber === sceneNumber)
-  return hit?.videoUrl ?? null
+  const url = hit?.videoUrl ?? null
+  // Filter out mock/placeholder URLs
+  if (!url || url.includes('placeholder')) return null
+  return url
+}
+
+function splitNarration(text: string, maxChars: number): string[] {
+  const words = text.trim().split(/\s+/)
+  const chunks: string[] = []
+  let current = ''
+  for (const word of words) {
+    if (current.length + word.length + 1 > maxChars && current) {
+      chunks.push(current.trim())
+      current = word
+    } else {
+      current += (current ? ' ' : '') + word
+    }
+  }
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.length > 0 ? chunks : [text.trim()]
 }
 
 async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string | null> {
@@ -61,7 +80,7 @@ async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string |
       body: buffer,
     })
     if (!res.ok) {
-      console.error('[render] upload failed:', res.status)
+      console.error('[render] upload failed:', res.status, await res.text().catch(() => ''))
       return null
     }
     return supabaseUrl + '/storage/v1/object/public/voiceovers/' + fileName
@@ -75,7 +94,9 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
+    if (!user) {
+      return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
+    }
 
     let body: RenderRequestBody
     try {
@@ -91,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (!script) return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     if (!scenes.length) return NextResponse.json({ error: 'Scenes are required.' }, { status: 400 })
 
-    // Voiceover (non-fatal)
+    // — Voiceover (non-fatal if it fails) —
     let voiceoverUrl: string | null = null
     if (process.env.OPENAI_API_KEY) {
       try {
@@ -99,67 +120,112 @@ export async function POST(req: NextRequest) {
         const speech = await openai.audio.speech.create({ model: 'tts-1', voice: 'onyx', input: ttsInput })
         const buf = Buffer.from(await speech.arrayBuffer())
         voiceoverUrl = await uploadVoiceover(user.id, buf)
-        console.log('[render] voiceover:', voiceoverUrl ? 'uploaded' : 'failed')
+        console.log('[render] voiceover url:', voiceoverUrl ? 'ok' : 'null')
       } catch (err) {
         console.error('[render] TTS error:', err)
       }
     }
 
-    // Timing
-    const totalDuration = Math.min(40, Math.max(20, scenes.reduce((a, s) => a + (s.duration || 0), 0) || 35))
+    // — Timing —
+    const totalDuration = Math.min(45, Math.max(20, scenes.reduce((a, s) => a + (s.duration || 0), 0) || 35))
     const durations = distributeDurations(scenes, totalDuration)
     const finalDur = durations.reduce((a, b) => a + b, 0)
 
-    // Build composition
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const elements: any[] = []
 
-    // Black background
-    elements.push({ type: 'shape', track: 1, time: 0, duration: finalDur,
-      fill_color: '#000000', x: '50%', y: '50%', width: '100%', height: '100%' })
+    // Dark gradient background
+    elements.push({
+      type: 'shape', track: 1, time: 0, duration: finalDur,
+      fill_color: '#0a0a0f', x: '50%', y: '50%', width: '100%', height: '100%',
+    })
 
-    // Video clips (simple, no animations)
+    // Video clips + narration text per scene
     let cursor = 0
     scenes.forEach((scene, i) => {
       const dur = durations[i]
       const url = findStockUrl(stockClips, scene.sceneNumber)
+
       if (url) {
-        elements.push({ type: 'video', track: 2, time: cursor, duration: dur,
-          source: url, fit: 'cover', x: '50%', y: '50%', width: '100%', height: '100%' })
+        elements.push({
+          type: 'video', track: 2, time: cursor, duration: dur,
+          source: url, fit: 'cover', x: '50%', y: '50%', width: '100%', height: '100%',
+          volume: '0%',
+        })
+        // Dark overlay on top of video for readability
+        elements.push({
+          type: 'shape', track: 3, time: cursor, duration: dur,
+          fill_color: 'rgba(0,0,0,0.45)', x: '50%', y: '50%', width: '100%', height: '100%',
+        })
       }
+
+      // Narration text — split into chunks so it fits on screen
+      const narration = (scene.narration || '').trim()
+      if (narration) {
+        const chunks = splitNarration(narration, 100)
+        const chunkDur = Math.max(1, dur / chunks.length)
+        chunks.forEach((chunk, ci) => {
+          elements.push({
+            type: 'text', track: 4,
+            time: cursor + ci * chunkDur,
+            duration: chunkDur,
+            text: chunk,
+            x: '50%', y: '72%',
+            width: '88%',
+            font_family: 'Montserrat',
+            font_weight: '700',
+            font_size: '52px',
+            fill_color: '#ffffff',
+            background_color: 'rgba(0,0,0,0.7)',
+            background_x_padding: '24px',
+            background_y_padding: '14px',
+            background_border_radius: '14px',
+          })
+        })
+      }
+
       cursor += dur
     })
 
-    // Voiceover audio
+    // Voiceover
     if (voiceoverUrl) {
-      elements.push({ type: 'audio', track: 3, time: 0, duration: finalDur,
-        source: voiceoverUrl, volume: '100%' })
+      elements.push({ type: 'audio', track: 5, time: 0, duration: finalDur, source: voiceoverUrl, volume: '100%' })
     }
 
     // Background music
-    elements.push({ type: 'audio', track: 4, time: 0, duration: finalDur,
-      source: pickMusic(), volume: voiceoverUrl ? '10%' : '30%',
-      audio_fade_in: 1, audio_fade_out: 2 })
+    elements.push({
+      type: 'audio', track: 6, time: 0, duration: finalDur,
+      source: pickMusic(), volume: voiceoverUrl ? '8%' : '25%',
+      audio_fade_in: 1, audio_fade_out: 2,
+    })
 
     // CTA at end
-    const ctaTime = Math.max(0, finalDur - 2)
-    elements.push({ type: 'text', track: 5, time: ctaTime, duration: Math.min(2, finalDur),
+    const ctaTime = Math.max(0, finalDur - 2.5)
+    elements.push({
+      type: 'text', track: 7, time: ctaTime, duration: Math.min(2.5, finalDur),
       text: 'www.shortsforge.com',
-      x: '50%', y: '88%', width: '80%',
-      font_family: 'Montserrat', font_weight: '700', font_size: '32px',
+      x: '50%', y: '90%', width: '80%',
+      font_family: 'Montserrat', font_weight: '700',
+      font_size: '30px',
       fill_color: '#ffffff',
-      background_color: 'rgba(0,0,0,0.6)',
-      background_x_padding: '20px', background_y_padding: '10px',
-      background_border_radius: '10px' })
+      background_color: 'rgba(99,102,241,0.85)',
+      background_x_padding: '22px', background_y_padding: '10px',
+      background_border_radius: '10px',
+    })
 
-    const source = { output_format: 'mp4', width: 1080, height: 1920, frame_rate: 30, duration: finalDur, elements }
+    const source = {
+      output_format: 'mp4',
+      width: 1080, height: 1920, frame_rate: 30,
+      duration: finalDur,
+      elements,
+    }
 
     const creatomateKey = process.env.CREATOMATE_API_KEY
     if (!creatomateKey) {
       return NextResponse.json({ renderId: 'mock-' + Date.now().toString(36), status: 'rendering', isMock: true })
     }
 
-    console.log('[render] sending to Creatomate, elements:', elements.length)
+    console.log('[render] sending to Creatomate, elements:', elements.length, 'dur:', finalDur)
 
     let creatomateRes: Response
     try {
@@ -184,7 +250,7 @@ export async function POST(req: NextRequest) {
     const renderId = first?.id
     if (!renderId) return NextResponse.json({ error: 'Render service returned no job id.' }, { status: 502 })
 
-    console.log('[render] started:', renderId)
+    console.log('[render] started, renderId:', renderId)
     return NextResponse.json({ renderId, status: 'planned' })
   } catch (err) {
     console.error('[render] unexpected error:', err)
