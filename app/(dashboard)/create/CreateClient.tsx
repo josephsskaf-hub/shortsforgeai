@@ -31,18 +31,40 @@ interface ShortVideoResult {
 }
 
 const NICHE_PILLS: { id: string; label: string; emoji: string }[] = [
-  { id: 'general', label: 'General', emoji: '🎬' },
-  { id: 'history', label: 'History', emoji: '📖' },
-  { id: 'mystery', label: 'Mystery', emoji: '🔮' },
-  { id: 'finance', label: 'Finance', emoji: '💰' },
-  { id: 'science', label: 'Science', emoji: '🧬' },
-  { id: 'technology', label: 'Technology', emoji: '🤖' },
+  // Core
+  { id: 'general',          label: 'General',          emoji: '🎬' },
+  { id: 'history',          label: 'History',          emoji: '📖' },
+  { id: 'mystery',          label: 'Mystery',          emoji: '🔮' },
+  { id: 'finance',          label: 'Finance',          emoji: '💰' },
+  { id: 'science',          label: 'Science',          emoji: '🧬' },
+  { id: 'technology',       label: 'Technology',       emoji: '🤖' },
+  // New viral niches
+  { id: 'strange-facts',    label: 'Strange Facts',    emoji: '🤯' },
+  { id: 'hidden-places',    label: 'Hidden Places',    emoji: '🗺️' },
+  { id: 'ancient-mysteries',label: 'Ancient Mysteries',emoji: '🏛️' },
+  { id: 'billionaire-secrets', label: 'Billionaire Secrets', emoji: '🤑' },
+  { id: 'ai-tools',         label: 'AI Tools',         emoji: '🤖' },
+  { id: 'money-hacks',      label: 'Money Hacks',      emoji: '💸' },
+  { id: 'psychology-facts', label: 'Psychology',       emoji: '🧠' },
+  { id: 'space-mysteries',  label: 'Space',            emoji: '🌌' },
+  { id: 'crime-stories',    label: 'Crime Stories',    emoji: '🔍' },
+  { id: 'war-secrets',      label: 'War Secrets',      emoji: '⚔️' },
+  { id: 'survival-tips',    label: 'Survival',         emoji: '🏕️' },
+  { id: 'conspiracy-files', label: 'Conspiracy',       emoji: '🕵️' },
+  { id: 'tech-breakthroughs', label: 'Tech Breakthroughs', emoji: '💡' },
+  { id: 'lost-civilizations', label: 'Lost Civilizations', emoji: '🗿' },
+  { id: 'animal-facts',     label: 'Animals',          emoji: '🦁' },
+  { id: 'health-facts',     label: 'Health',           emoji: '❤️' },
+  { id: 'celebrity-secrets',label: 'Celebrity Secrets',emoji: '⭐' },
+  { id: 'luxury-lifestyle', label: 'Luxury',           emoji: '💎' },
+  { id: 'future-predictions', label: 'Future',         emoji: '🔭' },
+  { id: 'dark-history',     label: 'Dark History',     emoji: '💀' },
 ]
 
 const TONE_PILLS: { id: string; label: string; emoji: string }[] = [
-  { id: 'dark', label: 'Dark', emoji: '🌑' },
-  { id: 'cinematic', label: 'Cinematic', emoji: '🎞️' },
-  { id: 'suspense', label: 'Suspense', emoji: '🕯️' },
+  { id: 'dark',        label: 'Dark',        emoji: '🌑' },
+  { id: 'cinematic',   label: 'Cinematic',   emoji: '🎞️' },
+  { id: 'suspense',    label: 'Suspense',    emoji: '🕯️' },
   { id: 'educational', label: 'Educational', emoji: '📚' },
 ]
 
@@ -50,12 +72,12 @@ const DURATION_OPTIONS = [30, 45, 60]
 const DEFAULT_DURATION = 30
 
 const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
-  { id: 'script', label: '✍️ Writing viral script...', weight: 18 },
-  { id: 'voice', label: '🎙️ Generating AI narration...', weight: 22 },
-  { id: 'visuals', label: '🎬 Finding cinematic visuals...', weight: 22 },
-  { id: 'captions', label: '📝 Building animated captions...', weight: 8 },
-  { id: 'music', label: '🎵 Adding cinematic soundtrack...', weight: 8 },
-  { id: 'render', label: '⚡ Rendering your Short...', weight: 22 },
+  { id: 'script',   label: '✍️ Writing viral script...',        weight: 18 },
+  { id: 'voice',    label: '🎙️ Generating AI narration...',     weight: 22 },
+  { id: 'visuals',  label: '🎬 Finding cinematic visuals...',   weight: 22 },
+  { id: 'captions', label: '📝 Building animated captions...',  weight: 8 },
+  { id: 'music',    label: '🎵 Adding cinematic soundtrack...', weight: 8 },
+  { id: 'render',   label: '⚡ Rendering your Short...',        weight: 22 },
 ]
 
 interface FinalAssets {
@@ -66,6 +88,7 @@ interface FinalAssets {
   niche: string
   topic: string
   renderUrl: string | null
+  renderError: string | null
 }
 
 export default function CreateClient() {
@@ -117,9 +140,7 @@ export default function CreateClient() {
       }
     }
     load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   // Sync niche from URL changes (sidebar quick-create links)
@@ -200,7 +221,6 @@ export default function CreateClient() {
         const blob = await voiceRes.blob()
         voiceoverUrl = URL.createObjectURL(blob)
       } else {
-        // non-fatal — continue without voiceover
         console.warn('[create] voiceover failed', await voiceRes.text().catch(() => ''))
       }
       setStage('visuals', 42)
@@ -251,11 +271,11 @@ export default function CreateClient() {
       setStage('music', 80)
       await wait(500)
 
-      // Step 5 — Render (best-effort: may not be available yet)
+      // Step 5 — Render
       setStage('render', 86)
       let renderUrl: string | null = null
+      let renderError: string | null = null
       try {
-        // Build stockClips in the format the render route expects
         const stockClipsPayload = Object.entries(selectedClips).map(([sceneNum, clip]) => ({
           sceneNumber: parseInt(sceneNum, 10),
           videoUrl: clip.url,
@@ -273,33 +293,54 @@ export default function CreateClient() {
             tone,
           }),
         })
-        if (renderRes.ok) {
+        if (!renderRes.ok) {
+          const errData = await renderRes.json().catch(() => ({}))
+          renderError = errData.error || `Render service error (${renderRes.status}).`
+          console.warn('[create] render route error:', renderError)
+        } else {
           const data = await renderRes.json()
           const renderId: string | undefined = data.renderId
-          if (renderId) {
-            // Poll
+          if (renderId && !data.isMock) {
+            // Poll until done (up to 3 minutes)
             for (let i = 0; i < 60; i++) {
               await wait(3000)
               try {
                 const pollRes = await fetch(`/api/render/${renderId}`, { cache: 'no-store' })
-                if (!pollRes.ok) break
+                if (!pollRes.ok) {
+                  renderError = `Render poll error (${pollRes.status}).`
+                  break
+                }
                 const pollData = await pollRes.json()
                 if (pollData.status === 'succeeded' && pollData.url) {
                   renderUrl = pollData.url as string
+                  renderError = null
                   break
                 }
-                if (pollData.status === 'failed') break
-              } catch {
+                if (pollData.status === 'failed') {
+                  renderError = pollData.error || 'Render failed — Creatomate rejected the job.'
+                  console.error('[create] render failed:', renderError)
+                  break
+                }
+              } catch (pollErr) {
+                renderError = pollErr instanceof Error ? pollErr.message : 'Render poll network error.'
                 break
               }
               setProgress((p) => Math.min(96, p + 1))
             }
+            // If we exited the loop with no url and no error set, it timed out
+            if (!renderUrl && !renderError) {
+              renderError = 'Render timed out — the MP4 may still be processing.'
+            }
           } else if (data.url) {
             renderUrl = data.url
+          } else if (data.isMock) {
+            // Mock render — no real URL
+            renderError = null
           }
         }
-      } catch {
-        // Render endpoint may not exist yet — fall through with staged assets only
+      } catch (renderCatchErr) {
+        renderError = renderCatchErr instanceof Error ? renderCatchErr.message : 'Render request failed.'
+        console.error('[create] render catch:', renderError)
       }
 
       setProgress(100)
@@ -327,6 +368,7 @@ export default function CreateClient() {
         niche: effectiveNiche,
         topic: effectiveTopic,
         renderUrl,
+        renderError,
       })
       setRunning(false)
       setStageId(null)
@@ -351,7 +393,6 @@ export default function CreateClient() {
   }
 
   function cleanAutostartUrl(currentNiche: string) {
-    // Strip ?autostart=true from the URL so a refresh doesn't re-trigger generation
     const params = new URLSearchParams()
     if (currentNiche && currentNiche !== 'general') params.set('niche', currentNiche)
     const qs = params.toString()
@@ -389,7 +430,6 @@ export default function CreateClient() {
     }
   }
 
-  // Manual Generate click — if topic is blank, pick one with AI then run.
   async function handleGenerateClick() {
     if (running) return
     const trimmed = topic.trim()
@@ -417,33 +457,27 @@ export default function CreateClient() {
 
   // Autostart: when ?autostart=true, AI picks a topic and runs the pipeline immediately.
   useEffect(() => {
-    // Reset the autostart latch whenever the URL no longer has the flag.
-    // This makes a fresh ?autostart=true (e.g. clicking sidebar History again) re-trigger.
     if (!autostartParam) {
       autostartedRef.current = false
       return
     }
     if (autostartedRef.current) return
-    if (creditsLoading) return // wait for credit balance
-    if (running || autoPicking) return // already in progress
+    if (creditsLoading) return
+    if (running || autoPicking) return
     autostartedRef.current = true
 
-    // Use the niche from the URL directly so we don't race the niche-sync effect.
     const targetNiche = NICHE_PILLS.find((n) => n.id === initialNicheParam)?.id ?? 'general'
 
-    // Clear any prior result when starting a new autostart run
     setFinal(null)
     setError(null)
     setNiche(targetNiche)
 
     ;(async () => {
-      // Out of credits → don't burn an OpenAI call, just nudge to pricing
       if (credits !== null && credits <= 0) {
         setShowNoCreditsModal(true)
         cleanAutostartUrl(targetNiche)
         return
       }
-
       try {
         setAutoPicking(true)
         setProgress(2)
@@ -487,7 +521,7 @@ export default function CreateClient() {
           ⚡ Autopilot
         </div>
         <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', color: 'var(--text)' }}>
-          Create a Short in <span className="grad-text">one click</span>
+          Generate a Short in <span className="grad-text">one click</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           AI writes the script, generates the narration, finds the visuals and renders everything automatically.
@@ -533,7 +567,7 @@ export default function CreateClient() {
             </button>
           </div>
 
-          {/* Topic input — optional */}
+          {/* Topic input */}
           <label className="block mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
               {autopickedTopic ? (
@@ -552,7 +586,7 @@ export default function CreateClient() {
                   </span>
                 </>
               ) : (
-                'What’s your video about? (optional)'
+                "What's your video about? (optional)"
               )}
             </div>
             <input
@@ -667,7 +701,7 @@ export default function CreateClient() {
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
             }}
           >
-            ⚡ Generate Video — 1 credit
+            ⚡ Generate — 1 credit
           </button>
 
           {/* Credits hint */}
@@ -816,8 +850,7 @@ function ProgressView({
           className="h-full transition-all"
           style={{
             width: `${Math.min(100, Math.max(2, progress))}%`,
-            background:
-              'linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #a855f7, #6366f1)',
+            background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #a855f7, #6366f1)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 2.4s linear infinite',
             transitionDuration: '600ms',
@@ -840,7 +873,7 @@ function FinalView({
   onCopy: (text: string) => void
   onRegenerate: () => void
 }) {
-  const { video, scenes, selectedClips, voiceoverUrl, renderUrl } = final
+  const { video, scenes, selectedClips, voiceoverUrl, renderUrl, renderError } = final
   const previewClip = scenes[0] ? selectedClips[scenes[0].sceneNumber] : null
 
   function downloadAll() {
@@ -882,9 +915,31 @@ function FinalView({
       >
         <span className="text-lg">✅</span>
         <span>
-          <strong style={{ color: 'var(--text)' }}>Done!</strong> Your Short is rendered and ready to post.
+          <strong style={{ color: 'var(--text)' }}>Script ready!</strong>{' '}
+          {renderUrl ? 'Your MP4 is rendered and ready to post.' : 'Script, voice and visuals are generated below.'}
         </span>
       </div>
+
+      {/* Render error notice (non-fatal) */}
+      {!renderUrl && renderError && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(245,158,11,.07)',
+            border: '1px solid rgba(245,158,11,.25)',
+            color: '#fbbf24',
+          }}
+        >
+          <span className="text-lg mt-0.5">⚠️</span>
+          <div>
+            <div className="font-bold mb-0.5" style={{ color: '#fde68a' }}>MP4 render issue</div>
+            <div className="text-xs" style={{ color: '#fbbf24', opacity: 0.85 }}>{renderError}</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+              Your script and voiceover are still available below. You can download the pack and create the video manually.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview */}
       <div
@@ -953,12 +1008,13 @@ function FinalView({
                 <div
                   className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold"
                   style={{
-                    background: 'rgba(245,158,11,.1)',
-                    border: '1px solid rgba(245,158,11,.3)',
-                    color: '#fbbf24',
+                    background: 'rgba(99,102,241,.07)',
+                    border: '1px solid rgba(99,102,241,.18)',
+                    color: 'var(--muted)',
+                    fontSize: '0.7rem',
                   }}
                 >
-                  ⏳ Final render queued
+                  📝 Script + Voice ready
                 </div>
               )}
               {voiceoverUrl && (

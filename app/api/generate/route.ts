@@ -49,9 +49,20 @@ export async function POST(req: NextRequest) {
     const duration = Math.max(15, Math.min(90, Number(body.duration) || 35))
     const isTopicMode = typeof topic === 'string' && topic.trim().length > 0
 
-    const legacyNiches = ['mideast', 'money', 'mind', 'dark', 'motivation']
-    const newNiches = ['history', 'mystery', 'finance', 'science', 'technology', 'general']
-    const validNiches = [...legacyNiches, ...newNiches]
+    // All valid niches — legacy + core + new viral niches
+    const validNiches = [
+      // Legacy
+      'mideast', 'money', 'mind', 'dark', 'motivation',
+      // Core
+      'history', 'mystery', 'finance', 'science', 'technology', 'general',
+      // New viral niches
+      'strange-facts', 'hidden-places', 'ancient-mysteries', 'billionaire-secrets',
+      'ai-tools', 'money-hacks', 'psychology-facts', 'space-mysteries',
+      'crime-stories', 'war-secrets', 'survival-tips', 'conspiracy-files',
+      'tech-breakthroughs', 'lost-civilizations', 'animal-facts', 'health-facts',
+      'celebrity-secrets', 'luxury-lifestyle', 'future-predictions', 'dark-history',
+    ]
+
     if (!niche || !validNiches.includes(niche)) {
       return NextResponse.json({ error: 'Invalid niche selected.' }, { status: 400 })
     }
@@ -66,7 +77,6 @@ export async function POST(req: NextRequest) {
     if (profileError) {
       console.error('[generate] Profile fetch error:', profileError.message, profileError.code)
 
-      // If profile doesn't exist, try to create it
       if (profileError.code === 'PGRST116') {
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
@@ -81,13 +91,11 @@ export async function POST(req: NextRequest) {
 
         if (createError) {
           console.error('[generate] Profile creation error:', createError.message)
-          // Continue with default values rather than blocking the user
           profile = { is_pro: false, generations_used: 0 }
         } else {
           profile = newProfile
         }
       } else {
-        // Unknown DB error — use safe defaults
         console.error('[generate] Unexpected profile error, using defaults')
         profile = { is_pro: false, generations_used: 0 }
       }
@@ -97,7 +105,6 @@ export async function POST(req: NextRequest) {
     const generationsUsed = profile?.generations_used ?? 0
 
     // ── 5. Check free tier limit ─────────────────────────────────────────────
-    // Topic-mode (credit-paid) bypasses the legacy free-tier counter — credits are billed separately.
     if (!isTopicMode && !isPro && generationsUsed >= FREE_LIMIT) {
       return NextResponse.json(
         {
@@ -131,7 +138,7 @@ export async function POST(req: NextRequest) {
           temperature: 0.9,
           max_tokens: 4000,
         },
-        { timeout: 25000 } // 25s timeout — well within the 60s maxDuration
+        { timeout: 25000 }
       )
     } catch (openaiError: unknown) {
       const msg = openaiError instanceof Error ? openaiError.message : String(openaiError)
@@ -175,27 +182,19 @@ export async function POST(req: NextRequest) {
     // ── 7. Parse JSON response ───────────────────────────────────────────────
     let videos: ShortVideo[]
 
-    // Robust two-pass parser:
-    //  Pass 1 — strip code fences, extract the JSON array, direct parse
-    //  Pass 2 — sanitize literal (unescaped) newlines/tabs inside string values
     const sanitizeAndParse = (raw: string): ShortVideo[] => {
-      // 1) Strip markdown code fences (```json…``` or ```…```)
       let cleaned = raw
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/\s*```$/i, '')
         .trim()
 
-      // 2) If there's surrounding text, extract the first top-level JSON array
       const arrayMatch = cleaned.match(/\[[\s\S]*\]/)
       if (arrayMatch) cleaned = arrayMatch[0]
 
-      // 3) First attempt — direct parse (works when GPT is well-behaved)
       try {
         return JSON.parse(cleaned) as ShortVideo[]
       } catch {
-        // 4) Fallback: GPT sometimes puts literal newlines/tabs inside string
-        //    values, which is invalid JSON.  Re-escape them and retry.
         const sanitized = cleaned.replace(
           /"(?:[^"\\]|\\.)*"/g,
           (str) =>
@@ -227,7 +226,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── 8. Save to history (non-blocking — failure won't break generation) ───
+    // ── 8. Save to history ───────────────────────────────────────────────────
     const { error: insertError } = await supabase.from('generations').insert({
       user_id: user.id,
       niche,
@@ -235,11 +234,10 @@ export async function POST(req: NextRequest) {
     })
 
     if (insertError) {
-      // Log but don't block — user still gets their content
       console.error('[generate] Failed to save to generations table:', insertError.message, insertError.code)
     }
 
-    // ── 9. Increment usage counter for free users (legacy path only) ─────────
+    // ── 9. Increment usage counter for free users ────────────────────────────
     if (!isPro && !isTopicMode) {
       const { error: updateError } = await supabase
         .from('profiles')

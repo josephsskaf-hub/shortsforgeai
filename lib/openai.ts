@@ -13,22 +13,44 @@ export interface ShortVideo {
 }
 
 const NICHE_CONTEXT: Record<string, string> = {
+  // Legacy niches
   mideast: 'Middle East Secrets — hidden stories, geopolitics, untold facts, and shocking truths from the Middle East region (Dubai, Saudi Arabia, Egypt, Iran, etc.)',
   money: 'Money Facts — viral finance content, wealth inequality, how the rich get richer, money psychology, banking secrets, economic facts',
   mind: 'Mind Blowing Facts — jaw-dropping science, history, psychology, and nature facts that make people say "I never knew that"',
   dark: 'Dark Mysteries — unsolved mysteries, creepy historical events, government cover-ups, unexplained phenomena, horror history',
   motivation: 'Motivation — powerful motivational content, success mindset, daily discipline, overcoming failure, inspirational stories of real people',
-  // New niche aliases used by the simple /create flow
+  // Core niches
   history: 'History — fascinating historical facts, lost civilizations, ancient empires, wars, rulers, and turning points the textbooks rarely mention',
   mystery: 'Mystery — conspiracies, unsolved disappearances, secret societies, paranormal phenomena, government cover-ups, eerie unexplained events',
   finance: 'Finance — money psychology, wealth-building secrets, banking and economy facts, hidden financial truths, viral investing insights',
   science: 'Science — mind-bending physics, biology, space, the human body, cutting-edge discoveries that feel like science fiction',
   technology: 'Technology — AI breakthroughs, future tech, hidden truths about big tech, gadgets, cybersecurity, the next industrial revolution',
   general: 'General Viral — the most curiosity-driven, scroll-stopping facts and stories across any topic',
+  // New viral niches
+  'strange-facts': 'Strange Facts — the weirdest, most bizarre, and jaw-dropping facts from science, history, and nature that feel completely unreal',
+  'hidden-places': 'Hidden Places — secret locations, forbidden zones, underground cities, and mysterious places most people will never see',
+  'ancient-mysteries': 'Ancient Mysteries — lost civilizations, mysterious artifacts, impossible ancient technology, pyramids, and archaeological secrets',
+  'billionaire-secrets': 'Billionaire Secrets — untold stories of how the ultra-rich really live, think, spend, and hide their wealth',
+  'ai-tools': 'AI Tools — the most powerful AI tools transforming work, creativity, and life that most people do not know about',
+  'money-hacks': 'Money Hacks — little-known financial tricks, tax secrets, passive income strategies, and wealth-building shortcuts',
+  'psychology-facts': 'Psychology Facts — shocking truths about how the human mind works, dark psychology, manipulation tactics, and behavior science',
+  'space-mysteries': 'Space Mysteries — mind-blowing discoveries, unexplained cosmic phenomena, alien theories, and the terrifying scale of the universe',
+  'crime-stories': 'Crime Stories — true crime, heists, serial killers, masterminds, unsolved cases, and the darkest chapters of criminal history',
+  'war-secrets': 'War Secrets — classified military operations, untold battles, government cover-ups, secret weapons, and the real stories behind wars',
+  'survival-tips': 'Survival Tips — life-saving knowledge, extreme survival stories, disaster preparedness, and skills that could save your life',
+  'conspiracy-files': 'Conspiracy Files — the most convincing conspiracy theories, government secrets, shadow organizations, and alternative histories',
+  'tech-breakthroughs': 'Tech Breakthroughs — revolutionary technologies changing the world right now, from biotech to quantum computing',
+  'lost-civilizations': 'Lost Civilizations — advanced ancient cultures, mysterious disappearances, forgotten empires, and archaeological anomalies',
+  'animal-facts': 'Animal Facts — the most shocking, bizarre, and fascinating animal behaviors, abilities, and secrets from the natural world',
+  'health-facts': 'Health Facts — surprising truths about the human body, controversial medical facts, and wellness secrets doctors do not always share',
+  'celebrity-secrets': 'Celebrity Secrets — the untold stories, hidden scandals, secret lives, and shocking truths about famous people',
+  'luxury-lifestyle': 'Luxury Lifestyle — how billionaires and celebrities really live, ultra-luxury experiences, and the world of extreme wealth',
+  'future-predictions': 'Future Predictions — what scientists, futurists, and AI predict for the next 10-100 years that will change everything',
+  'dark-history': 'Dark History — the most disturbing, suppressed, and chilling chapters of human history that were hidden from textbooks',
 }
 
 export function buildGenerationPrompt(niche: string): string {
-  const context = NICHE_CONTEXT[niche] || niche
+  const context = NICHE_CONTEXT[niche] || NICHE_CONTEXT.general
 
   return `You are a viral YouTube Shorts content creator specializing in the "${context}" niche.
 
