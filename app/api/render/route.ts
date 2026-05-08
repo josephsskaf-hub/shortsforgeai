@@ -27,16 +27,6 @@ interface RenderRequestBody {
   tone?: string
 }
 
-const MUSIC_URLS = [
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-]
-
-function pickMusic(): string {
-  return MUSIC_URLS[Math.floor(Math.random() * MUSIC_URLS.length)]
-}
-
 function distributeDurations(scenes: Scene[], totalSeconds: number): number[] {
   const lengths = scenes.map((s) => Math.max(1, (s.narration || '').length))
   const totalLen = lengths.reduce((a, b) => a + b, 0) || 1
@@ -47,8 +37,7 @@ function distributeDurations(scenes: Scene[], totalSeconds: number): number[] {
 function findStockUrl(stockClips: StockClipInput[], sceneNumber: number): string | null {
   const hit = stockClips.find((c) => c.sceneNumber === sceneNumber)
   const url = hit?.videoUrl ?? null
-  // Filter out mock/placeholder URLs
-  if (!url || url.includes('placeholder')) return null
+  if (!url || url.includes('placeholder') || url.includes('example.com')) return null
   return url
 }
 
@@ -112,7 +101,7 @@ export async function POST(req: NextRequest) {
     if (!script) return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     if (!scenes.length) return NextResponse.json({ error: 'Scenes are required.' }, { status: 400 })
 
-    // — Voiceover (non-fatal if it fails) —
+    // Voiceover (non-fatal if it fails)
     let voiceoverUrl: string | null = null
     if (process.env.OPENAI_API_KEY) {
       try {
@@ -126,7 +115,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // — Timing —
+    // Timing
     const totalDuration = Math.min(45, Math.max(20, scenes.reduce((a, s) => a + (s.duration || 0), 0) || 35))
     const durations = distributeDurations(scenes, totalDuration)
     const finalDur = durations.reduce((a, b) => a + b, 0)
@@ -134,13 +123,13 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const elements: any[] = []
 
-    // Dark gradient background
+    // Dark background
     elements.push({
       type: 'shape', track: 1, time: 0, duration: finalDur,
       fill_color: '#0a0a0f', x: '50%', y: '50%', width: '100%', height: '100%',
     })
 
-    // Video clips + narration text per scene
+    // Per-scene: video clip + dark overlay + narration text
     let cursor = 0
     scenes.forEach((scene, i) => {
       const dur = durations[i]
@@ -152,17 +141,15 @@ export async function POST(req: NextRequest) {
           source: url, fit: 'cover', x: '50%', y: '50%', width: '100%', height: '100%',
           volume: '0%',
         })
-        // Dark overlay on top of video for readability
         elements.push({
           type: 'shape', track: 3, time: cursor, duration: dur,
           fill_color: 'rgba(0,0,0,0.45)', x: '50%', y: '50%', width: '100%', height: '100%',
         })
       }
 
-      // Narration text — split into chunks so it fits on screen
       const narration = (scene.narration || '').trim()
       if (narration) {
-        const chunks = splitNarration(narration, 100)
+        const chunks = splitNarration(narration, 90)
         const chunkDur = Math.max(1, dur / chunks.length)
         chunks.forEach((chunk, ci) => {
           elements.push({
@@ -187,22 +174,18 @@ export async function POST(req: NextRequest) {
       cursor += dur
     })
 
-    // Voiceover
+    // Voiceover audio
     if (voiceoverUrl) {
-      elements.push({ type: 'audio', track: 5, time: 0, duration: finalDur, source: voiceoverUrl, volume: '100%' })
+      elements.push({
+        type: 'audio', track: 5, time: 0, duration: finalDur,
+        source: voiceoverUrl, volume: '100%',
+      })
     }
-
-    // Background music
-    elements.push({
-      type: 'audio', track: 6, time: 0, duration: finalDur,
-      source: pickMusic(), volume: voiceoverUrl ? '8%' : '25%',
-      audio_fade_in: 1, audio_fade_out: 2,
-    })
 
     // CTA at end
     const ctaTime = Math.max(0, finalDur - 2.5)
     elements.push({
-      type: 'text', track: 7, time: ctaTime, duration: Math.min(2.5, finalDur),
+      type: 'text', track: 6, time: ctaTime, duration: Math.min(2.5, finalDur),
       text: 'www.shortsforge.com',
       x: '50%', y: '90%', width: '80%',
       font_family: 'Montserrat', font_weight: '700',
@@ -225,7 +208,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ renderId: 'mock-' + Date.now().toString(36), status: 'rendering', isMock: true })
     }
 
-    console.log('[render] sending to Creatomate, elements:', elements.length, 'dur:', finalDur)
+    console.log('[render] submitting to Creatomate, elements:', elements.length, 'dur:', finalDur, 'voiceover:', !!voiceoverUrl)
 
     let creatomateRes: Response
     try {
@@ -242,7 +225,7 @@ export async function POST(req: NextRequest) {
     if (!creatomateRes.ok) {
       const detail = await creatomateRes.text().catch(() => '')
       console.error('[render] Creatomate rejected:', creatomateRes.status, detail)
-      return NextResponse.json({ error: 'Render service rejected the job.' }, { status: 502 })
+      return NextResponse.json({ error: 'Render service rejected the job: ' + detail }, { status: 502 })
     }
 
     const data = (await creatomateRes.json()) as { id?: string; status?: string } | Array<{ id?: string; status?: string }>
