@@ -6,7 +6,17 @@ interface PricingClientProps {
   isPro: boolean
   generationsUsed: number
   hasStripeCustomer: boolean
+  userId: string
 }
+
+// Stripe Payment Links (one-time credit packs).
+// Override at build time with NEXT_PUBLIC_STRIPE_STARTER_URL / NEXT_PUBLIC_STRIPE_PRO_URL.
+const STARTER_URL =
+  process.env.NEXT_PUBLIC_STRIPE_STARTER_URL ||
+  'https://buy.stripe.com/eVqdR95gFdLV4M3cF8gjC0l'
+const PRO_URL =
+  process.env.NEXT_PUBLIC_STRIPE_PRO_URL ||
+  'https://buy.stripe.com/28E6oH7oNePZ92j20ugjC0m'
 
 const STARTER_FEATURES = [
   '10 video credits',
@@ -44,7 +54,7 @@ const FAQS = [
 ]
 
 export default function PricingClient(props: PricingClientProps) {
-  const { isPro } = props
+  const { isPro, userId } = props
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
@@ -76,13 +86,16 @@ export default function PricingClient(props: PricingClientProps) {
     setTimeout(() => setToast(null), 2800)
   }
 
-  async function handleBuy(pack: 'starter' | 'pro') {
-    // One-time credit-pack checkout is not wired into Stripe yet.
-    // Existing /api/stripe/checkout only supports subscription tiers (creator/pro),
-    // so we show a soft "coming soon" toast rather than starting a wrong checkout.
+  function handleBuy(pack: 'starter' | 'pro') {
+    if (!userId) {
+      showToast('Please sign in again to continue.')
+      return
+    }
     setPurchasing(pack)
-    showToast('Coming soon — credit-pack checkout launches shortly.')
-    setTimeout(() => setPurchasing(null), 600)
+    const base = pack === 'starter' ? STARTER_URL : PRO_URL
+    // client_reference_id flows through to the webhook so we know whose credits to top up.
+    const url = `${base}${base.includes('?') ? '&' : '?'}client_reference_id=${encodeURIComponent(userId)}`
+    window.location.href = url
   }
 
   async function handlePortal() {

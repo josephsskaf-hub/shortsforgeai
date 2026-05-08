@@ -22,6 +22,7 @@ export default async function PricingPage() {
       isPro={profile?.is_pro ?? false}
       generationsUsed={profile?.generations_used ?? 0}
       hasStripeCustomer={!!profile?.stripe_customer_id}
+      userId={user.id}
     />
   )
 }

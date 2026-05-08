@@ -34,6 +34,56 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+
+        // ── Path A: One-time credit-pack purchase via Stripe Payment Link ──
+        // Payment Links use mode='payment' and pass the Supabase user ID via
+        // ?client_reference_id=... appended on the pricing page.
+        if (session.mode === 'payment') {
+          const userId = session.client_reference_id
+          if (!userId) {
+            console.warn('[stripe webhook] payment session has no client_reference_id', session.id)
+            break
+          }
+
+          const amount = session.amount_total ?? 0
+          let creditsToAdd = 0
+          if (amount === 900) creditsToAdd = 10
+          else if (amount === 1900) creditsToAdd = 25
+
+          if (creditsToAdd === 0) {
+            console.warn('[stripe webhook] unexpected amount_total for credit pack:', amount, session.id)
+            break
+          }
+
+          // Read-modify-write the credit balance.
+          const { data: profile, error: fetchErr } = await supabase
+            .from('profiles')
+            .select('video_credits')
+            .eq('id', userId)
+            .single()
+
+          if (fetchErr) {
+            console.error('[stripe webhook] failed to fetch profile for credit top-up:', fetchErr.message, userId)
+            break
+          }
+
+          const current = profile?.video_credits ?? 0
+          const next = current + creditsToAdd
+
+          const { error: updateErr } = await supabase
+            .from('profiles')
+            .update({ video_credits: next })
+            .eq('id', userId)
+
+          if (updateErr) {
+            console.error('[stripe webhook] failed to add credits:', updateErr.message, userId)
+          } else {
+            console.log(`[stripe webhook] +${creditsToAdd} credits → user ${userId} (now ${next})`)
+          }
+          break
+        }
+
+        // ── Path B: Subscription checkout (existing flow) ──
         const userId = session.metadata?.supabase_user_id
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
