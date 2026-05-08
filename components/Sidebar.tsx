@@ -33,11 +33,20 @@ function NavLink({ href, icon, label, badge, exact, pathname, onClick }: {
   href: string; icon: string; label: string; badge: string | null; exact: boolean; pathname: string; onClick?: () => void
 }) {
   const active = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'))
+  const router = useRouter()
+
+  function handleClick(e: React.MouseEvent) {
+    if (active) {
+      e.preventDefault()
+      router.refresh()
+    }
+    onClick?.()
+  }
 
   return (
     <Link
       href={href}
-      onClick={onClick}
+      onClick={handleClick}
       className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-xs font-medium transition-all relative"
       style={{
         background: active ? 'rgba(99,102,241,.1)' : 'transparent',
@@ -85,7 +94,7 @@ export default function Sidebar({
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
   const FREE_LIMIT = 2
-  const PRO_LIMIT = 100
+  const PRO_LIMIT = 25
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
   const freeUsedPct = Math.min(100, (generationsUsed / FREE_LIMIT) * 100)
   const proUsedPct = Math.min(100, (generationsUsed / PRO_LIMIT) * 100)
@@ -272,11 +281,11 @@ export default function Sidebar({
                 </p>
               ) : (
                 <p className="text-xs mb-2" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — upgrade for 100/month
+                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — get 10 videos for $9
                 </p>
               )}
               <Link href="/pricing" className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }} onClick={onClose}>
-                ⭐ Upgrade — from $9/mo →
+                🎬 Get 10 Videos — $9 →
               </Link>
             </div>
           </div>
@@ -285,7 +294,7 @@ export default function Sidebar({
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,.05)', border: '1px solid rgba(16,185,129,.15)' }}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Pro generations</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Video credits used</span>
                 <span className="text-xs font-black" style={{ color: generationsUsed >= PRO_LIMIT ? '#f87171' : '#34d399', fontSize: '0.68rem' }}>
                   {generationsUsed} / {PRO_LIMIT}
                 </span>
@@ -303,7 +312,7 @@ export default function Sidebar({
               </div>
               {generationsUsed >= PRO_LIMIT && (
                 <p className="text-xs mt-1.5" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.65rem' }}>
-                  Monthly limit reached. Resets next billing cycle.
+                  Credits used up. <Link href="/pricing" style={{ color: '#818cf8', textDecoration: 'none' }}>Get more →</Link>
                 </p>
               )}
             </div>

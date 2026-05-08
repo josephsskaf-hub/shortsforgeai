@@ -662,28 +662,28 @@ export default function HomePage() {
           {/* Creator */}
           <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '2px solid rgba(99,102,241,.35)', borderRadius: 20, padding: '30px 28px 34px', position: 'relative', overflow: 'hidden', boxShadow: '0 0 60px rgba(99,102,241,.15)' }}>
             <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #6366f1, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Creator</div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Starter</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
               <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9</span>
-              <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>one-time</span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>For creators posting consistently.</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>10 video credits, no subscription.</p>
             {[
-              '100 generations per month',
+              '10 video credits',
               'All 26 viral niches unlocked',
               '⚡ Viral Hook Engine',
               'Hooks, titles, scripts & hashtags',
               'Descriptions & video prompts',
-              'Cancel anytime',
+              'Credits never expire',
             ].map((f) => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
                 <span style={{ color: '#34d399' }}>✓</span> {f}
               </div>
             ))}
             <Link href="/pricing" style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}>
-              Get Creator — $9/mo →
+              Get 10 Videos — $9 →
             </Link>
-            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--muted)', marginTop: 10 }}>Pro at $19/mo unlocks unlimited.</p>
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--muted)', marginTop: 10 }}>Pro: $19 for 25 videos. One-time purchase.</p>
           </div>
         </div>
       </section>

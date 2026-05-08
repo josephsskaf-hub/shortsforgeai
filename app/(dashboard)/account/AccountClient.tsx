@@ -142,7 +142,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
 
         {/* Subscription card */}
         <div className="rounded-2xl p-6" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-          <h2 className="font-bold text-sm mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Subscription</h2>
+          <h2 className="font-bold text-sm mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Plan & Credits</h2>
 
           {isPro ? (
             <div>

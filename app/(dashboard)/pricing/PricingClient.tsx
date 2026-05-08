@@ -20,17 +20,17 @@ const starterFeatures = [
 ]
 
 const creatorFeatures = [
-  '100 generations every month',
+  '10 video credits (one-time)',
   'All 26 viral niches unlocked',
   '⚡ Viral Hook Engine access',
   'Hooks, titles, scripts, hashtags & descriptions',
   'Copy-paste ready packages',
-  'Cancel anytime',
+  'Credits never expire',
 ]
 
 const proFeatures = [
-  'Unlimited generations',
-  'Everything in Creator',
+  '25 video credits (one-time)',
+  'Everything in Starter',
   '🖼️ Thumbnail text generator',
   '🚀 Priority support',
   'Beta access: AI Video Generator',
@@ -166,13 +166,13 @@ export default function PricingClient({
 
           <div className="mb-6">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--indigo-light)' }}>
-              Creator
+              Starter
             </div>
             <div className="flex items-end gap-1 mb-1">
               <span className="font-black" style={{ fontSize: '2.4rem', color: 'var(--text)', lineHeight: 1 }}>$9</span>
-              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>/month</span>
+              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>one-time</span>
             </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>For creators posting consistently.</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>10 video credits. No subscription.</p>
           </div>
 
           <div className="flex flex-col gap-2.5 mb-7">
@@ -209,7 +209,7 @@ export default function PricingClient({
                 cursor: 'pointer',
               }}
             >
-              Get Creator — $9/mo →
+              Get Starter Pack — $9 →
             </button>
           )}
         </div>
@@ -236,9 +236,9 @@ export default function PricingClient({
             </div>
             <div className="flex items-end gap-1 mb-1">
               <span className="font-black" style={{ fontSize: '2.4rem', color: 'var(--text)', lineHeight: 1 }}>$19</span>
-              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>/month</span>
+              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>one-time</span>
             </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>For full-time faceless channels.</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>25 video credits. No subscription.</p>
           </div>
 
           <div className="flex flex-col gap-2.5 mb-7">
@@ -274,14 +274,14 @@ export default function PricingClient({
                 cursor: 'pointer',
               }}
             >
-              Get Pro — $19/mo →
+              Get Pro Pack — $19 →
             </button>
           )}
         </div>
       </div>
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
-        Cancel anytime. No hidden fees.
+        One-time purchase. Credits never expire. No hidden fees.
       </p>
 
       {/* FAQ */}
