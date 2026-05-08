@@ -255,17 +255,22 @@ export default function CreateClient() {
       setStage('render', 86)
       let renderUrl: string | null = null
       try {
+        // Build stockClips in the format the render route expects
+        const stockClipsPayload = Object.entries(selectedClips).map(([sceneNum, clip]) => ({
+          sceneNumber: parseInt(sceneNum, 10),
+          videoUrl: clip.url,
+        }))
+
         const renderRes = await fetch('/api/render', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            video,
+            script: video.script,
             scenes,
-            selectedClips,
+            stockClips: stockClipsPayload,
+            title: video.title,
             niche: effectiveNiche,
-            topic: effectiveTopic,
             tone,
-            duration,
           }),
         })
         if (renderRes.ok) {
@@ -279,11 +284,11 @@ export default function CreateClient() {
                 const pollRes = await fetch(`/api/render/${renderId}`, { cache: 'no-store' })
                 if (!pollRes.ok) break
                 const pollData = await pollRes.json()
-                if (pollData.status === 'done' && pollData.url) {
+                if (pollData.status === 'succeeded' && pollData.url) {
                   renderUrl = pollData.url as string
                   break
                 }
-                if (pollData.status === 'error') break
+                if (pollData.status === 'failed') break
               } catch {
                 break
               }
