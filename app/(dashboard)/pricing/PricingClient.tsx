@@ -91,7 +91,7 @@ export default function PricingClient({
           <div className="text-2xl">✅</div>
           <div>
             <p className="font-bold text-sm" style={{ color: 'var(--text)' }}>You&apos;re on a paid plan</p>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>Manage your subscription anytime via the billing portal.</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>You have video credits. Generate more anytime from the pricing page.</p>
           </div>
         </div>
       ) : (
@@ -291,11 +291,11 @@ export default function PricingClient({
         </h2>
         <div className="flex flex-col gap-3">
           {[
-            { q: 'Can I cancel anytime?', a: 'Yes. Cancel directly from the billing portal. Your access continues until the end of your billing period.' },
-            { q: 'What counts as a generation?', a: 'One click of "Generate 5 Viral Shorts" = 1 generation. Each generation produces 5 complete scripts.' },
-            { q: "What's the difference between Creator and Pro?", a: 'Creator is $9/month with 100 generations/month and the Hook Engine. Pro is $19/month with unlimited generations, the Thumbnail Generator, priority support, and AI Video Generator beta.' },
+            { q: 'Is this a subscription?', a: 'No. These are one-time credit purchases — you pay once and use the credits whenever you want. No recurring charges.' },
+            { q: 'What counts as 1 credit?', a: '1 credit = 1 video generated. Credits never expire.' },
+            { q: "What's the difference between Starter and Pro?", a: 'Starter is $9 for 10 video credits. Pro is $19 for 25 video credits. Same features, more videos.' },
             { q: 'Is the content unique every time?', a: 'Yes. GPT-4o generates fresh scripts on every request — no two generations are identical.' },
-            { q: 'How many niches do I get?', a: 'Starter gets Money Facts. Creator and Pro both unlock all 26 viral niches.' },
+            { q: 'Can I buy more credits later?', a: 'Yes. Just come back to this page and purchase another pack whenever you need more videos.' },
           ].map((faq) => (
             <div
               key={faq.q}

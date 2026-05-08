@@ -512,10 +512,10 @@ export default function HomePage() {
           <div style={{ marginTop: 24, borderRadius: 16, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.18)' }}>
             <div>
               <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                🔒 Unlock all 26 niches from just $9/month
+                🎬 Get 10 videos for just $9
               </p>
               <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-                Hook Engine + 100 generations/month — cancel anytime.
+                One-time credit pack — no subscription, no monthly fees.
               </p>
             </div>
             <Link href="/pricing" style={{ padding: '10px 24px', borderRadius: 12, fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', flexShrink: 0 }}>
@@ -567,9 +567,9 @@ export default function HomePage() {
             ))}
           </div>
           <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 32px rgba(99,102,241,.45)' }}>
-            Unlock Full Access — from $9/month →
+            Get Started — 10 videos for $9 →
           </Link>
-          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Creator at $9/mo for 100 generations or Pro at $19/mo for unlimited.</p>
+          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 12 }}>Starter: $9 for 10 videos · Pro: $19 for 25 videos. One-time purchase.</p>
         </div>
       </section>
 

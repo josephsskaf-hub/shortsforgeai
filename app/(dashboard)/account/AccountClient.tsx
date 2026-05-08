@@ -56,7 +56,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
         <h1 className="font-black tracking-tight mb-2" style={{ fontSize: '1.45rem', color: 'var(--text)', lineHeight: 1.15 }}>
           Account <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Settings</span>
         </h1>
-        <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Manage your account and subscription</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Manage your account and video credits</p>
       </div>
 
       <div className="flex flex-col gap-5" style={{ maxWidth: 640 }}>
@@ -182,7 +182,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 className="block w-full text-center rounded-xl py-3 text-sm font-black text-white transition-all"
                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', textDecoration: 'none' }}
               >
-                ⭐ Upgrade to Creator — $9/month
+                🎬 Get 10 Videos — $9 (one-time)
               </Link>
             </div>
           )}

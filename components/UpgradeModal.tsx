@@ -69,7 +69,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
           <span className="grad-text">free generations</span>
         </h2>
         <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-          Upgrade to keep building viral Shorts. Unlock all 26 niches for just $9/month.
+          Get more videos with a one-time credit pack. No subscription needed.
         </p>
 
         {/* Features */}
@@ -109,7 +109,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
             cursor: 'pointer',
           }}
         >
-          Unlock Creator — $9/month →
+          Get 10 Videos — $9 (one-time) →
         </button>
 
         <button
