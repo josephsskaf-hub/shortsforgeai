@@ -62,7 +62,7 @@ export default function DashboardClient({
   const creditsZero = credits !== null && credits <= 0
 
   function handlePickClick(nicheId: string) {
-    router.push(`/create?niche=${nicheId}&autostart=true`)
+    router.push(`/create?niche=${nicheId}`)
   }
 
   return (
@@ -124,7 +124,7 @@ export default function DashboardClient({
         </p>
 
         <Link
-          href="/create?autostart=true"
+          href="/create"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
             background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',

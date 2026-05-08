@@ -40,7 +40,7 @@ function NichePill({
 
   function handleClick() {
     onClose?.()
-    router.push(`/create?niche=${niche.id}&autostart=true`)
+    router.push(`/create?niche=${niche.id}`)
   }
 
   return (
