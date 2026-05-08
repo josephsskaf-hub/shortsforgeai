@@ -16,16 +16,16 @@ interface SidebarProps {
 }
 
 const TOP_PICKS = [
-  { id: 'mystery', icon: '🔮', label: 'Mystery', color: 'rgba(168,85,247,' },
-  { id: 'mind', icon: '🤯', label: 'Facts', color: 'rgba(59,130,246,' },
-  { id: 'money', icon: '💰', label: 'Money', color: 'rgba(16,185,129,' },
-  { id: 'ai-tools', icon: '🤖', label: 'AI', color: 'rgba(99,102,241,' },
-  { id: 'psychology-facts', icon: '🧠', label: 'Psychology', color: 'rgba(236,72,153,' },
-  { id: 'space-mysteries', icon: '🌌', label: 'Space', color: 'rgba(14,165,233,' },
-  { id: 'history', icon: '⚔️', label: 'History', color: 'rgba(245,158,11,' },
-  { id: 'conspiracy-files', icon: '👁️', label: 'Conspiracy', color: 'rgba(239,68,68,' },
-  { id: 'luxury-lifestyle', icon: '💎', label: 'Luxury', color: 'rgba(251,191,36,' },
-  { id: 'dark-history', icon: '🌑', label: 'Dark Stories', color: 'rgba(99,102,241,' },
+  { id: 'mystery', icon: '🔮', label: 'Mystery', hex: '#a855f7', glow: 'rgba(168,85,247,' },
+  { id: 'strange-facts', icon: '🤯', label: 'Facts', hex: '#6366f1', glow: 'rgba(99,102,241,' },
+  { id: 'money', icon: '💰', label: 'Money', hex: '#10b981', glow: 'rgba(16,185,129,' },
+  { id: 'ai-tools', icon: '🤖', label: 'AI Tools', hex: '#6366f1', glow: 'rgba(99,102,241,' },
+  { id: 'psychology-facts', icon: '🧠', label: 'Psychology', hex: '#ec4899', glow: 'rgba(236,72,153,' },
+  { id: 'space-mysteries', icon: '🌌', label: 'Space', hex: '#0ea5e9', glow: 'rgba(14,165,233,' },
+  { id: 'history', icon: '⚔️', label: 'History', hex: '#f59e0b', glow: 'rgba(245,158,11,' },
+  { id: 'conspiracy-files', icon: '👁️', label: 'Conspiracy', hex: '#ef4444', glow: 'rgba(239,68,68,' },
+  { id: 'luxury-lifestyle', icon: '💎', label: 'Luxury', hex: '#fbbf24', glow: 'rgba(251,191,36,' },
+  { id: 'dark-history', icon: '🌑', label: 'Dark Stories', hex: '#818cf8', glow: 'rgba(129,140,248,' },
 ]
 
 function NichePill({
@@ -48,19 +48,53 @@ function NichePill({
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left w-full transition-all"
+      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left w-full transition-all"
       style={{
-        background: hovered ? `${niche.color}0.12)` : `${niche.color}0.06)`,
-        border: `1px solid ${niche.color}${hovered ? '0.4)' : '0.18)'})`,
+        background: hovered
+          ? `linear-gradient(135deg, ${niche.glow}0.15), rgba(255,255,255,0.03))`
+          : `${niche.glow}0.07)`,
+        border: `1px solid ${niche.glow}${hovered ? '0.45)' : '0.2)'})`,
         color: hovered ? '#fff' : 'var(--muted2)',
         cursor: 'pointer',
-        boxShadow: hovered ? `0 0 16px ${niche.color}0.25)` : 'none',
-        transform: hovered ? 'translateX(2px)' : 'none',
+        boxShadow: hovered
+          ? `0 0 18px ${niche.glow}0.28), inset 0 1px 0 rgba(255,255,255,0.07)`
+          : '0 0 0 transparent',
+        transform: hovered ? 'translateX(3px)' : 'translateX(0)',
+        transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
-      <span style={{ fontSize: '1rem', flexShrink: 0 }}>{niche.icon}</span>
-      <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '-0.01em' }}>{niche.label}</span>
-      <span style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.5 }}>→</span>
+      <span
+        style={{
+          fontSize: '1.15rem',
+          flexShrink: 0,
+          filter: hovered ? `drop-shadow(0 0 6px ${niche.hex}99)` : 'none',
+          transition: 'filter 0.18s ease',
+        }}
+      >
+        {niche.icon}
+      </span>
+      <span
+        style={{
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          letterSpacing: '-0.01em',
+          color: hovered ? '#fff' : 'var(--muted2)',
+          transition: 'color 0.18s ease',
+        }}
+      >
+        {niche.label}
+      </span>
+      <span
+        style={{
+          marginLeft: 'auto',
+          fontSize: '0.65rem',
+          opacity: hovered ? 0.8 : 0.4,
+          color: hovered ? niche.hex : 'inherit',
+          transition: 'all 0.18s ease',
+        }}
+      >
+        →
+      </span>
     </button>
   )
 }
@@ -83,6 +117,7 @@ function NavItem({
   badge?: string
 }) {
   const router = useRouter()
+  const [hovered, setHovered] = useState(false)
   const hrefPath = href.split('?')[0]
   const active = exact
     ? pathname === hrefPath
@@ -100,35 +135,49 @@ function NavItem({
     <Link
       href={href}
       onClick={handleClick}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold transition-all relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold relative"
       style={{
-        background: active ? 'rgba(99,102,241,0.13)' : 'transparent',
-        color: active ? '#a5b4fc' : 'var(--muted2)',
-        border: active ? '1px solid rgba(99,102,241,0.22)' : '1px solid transparent',
+        background: active
+          ? 'linear-gradient(135deg, rgba(99,102,241,0.16), rgba(124,58,237,0.1))'
+          : hovered
+          ? 'rgba(255,255,255,0.04)'
+          : 'transparent',
+        color: active ? '#a5b4fc' : hovered ? 'var(--text)' : 'var(--muted2)',
+        border: active
+          ? '1px solid rgba(99,102,241,0.28)'
+          : '1px solid transparent',
         textDecoration: 'none',
         fontSize: '0.88rem',
-        boxShadow: active ? '0 0 20px rgba(99,102,241,0.1)' : 'none',
-      }}
-      onMouseEnter={(e) => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
-          ;(e.currentTarget as HTMLElement).style.color = 'var(--text)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = 'transparent'
-          ;(e.currentTarget as HTMLElement).style.color = 'var(--muted2)'
-        }
+        boxShadow: active ? '0 0 24px rgba(99,102,241,0.14), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
       {active && (
         <span
-          className="absolute rounded-r"
-          style={{ left: -1, top: '20%', height: '60%', width: 3, background: '#818cf8', borderRadius: '0 3px 3px 0' }}
+          className="absolute"
+          style={{
+            left: -1,
+            top: '18%',
+            height: '64%',
+            width: 3,
+            background: 'linear-gradient(180deg, #818cf8, #a78bfa)',
+            borderRadius: '0 3px 3px 0',
+            boxShadow: '0 0 8px rgba(129,140,248,0.6)',
+          }}
         />
       )}
-      <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{icon}</span>
+      <span
+        style={{
+          fontSize: '1.2rem',
+          flexShrink: 0,
+          filter: active ? 'drop-shadow(0 0 5px rgba(129,140,248,0.5))' : 'none',
+          transition: 'filter 0.18s ease',
+        }}
+      >
+        {icon}
+      </span>
       <span style={{ flex: 1 }}>{label}</span>
       {badge && (
         <span
@@ -208,7 +257,7 @@ export default function Sidebar({
       {isOpen && onClose && (
         <div
           className="fixed inset-0 z-40 md:hidden"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
           onClick={onClose}
         />
       )}
@@ -217,8 +266,8 @@ export default function Sidebar({
         className="fixed left-0 top-0 h-screen flex flex-col z-50 transition-transform duration-300"
         style={{
           width: 248,
-          background: 'var(--sidebar-bg)',
-          borderRight: '1px solid var(--border)',
+          background: 'linear-gradient(180deg, rgba(10,10,20,0.98) 0%, rgba(8,8,16,0.99) 100%)',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
@@ -227,13 +276,13 @@ export default function Sidebar({
           href={isLoggedIn ? '/dashboard' : '/'}
           onClick={onClose}
           className="flex items-center gap-3 px-5 flex-shrink-0"
-          style={{ height: 72, borderBottom: '1px solid var(--border)', textDecoration: 'none' }}
+          style={{ height: 72, borderBottom: '1px solid rgba(255,255,255,0.06)', textDecoration: 'none' }}
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
               background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
-              boxShadow: '0 0 28px rgba(99,102,241,0.5)',
+              boxShadow: '0 0 30px rgba(99,102,241,0.55)',
               fontSize: '1.3rem',
             }}
           >
@@ -273,26 +322,42 @@ export default function Sidebar({
               style={{
                 background: creditsZero
                   ? 'rgba(239,68,68,0.08)'
-                  : 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(124,58,237,0.08))',
+                  : 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(124,58,237,0.1))',
                 border: creditsZero
-                  ? '1px solid rgba(239,68,68,0.3)'
-                  : '1px solid rgba(99,102,241,0.28)',
+                  ? '1px solid rgba(239,68,68,0.32)'
+                  : '1px solid rgba(99,102,241,0.32)',
                 boxShadow: creditsZero
-                  ? '0 0 20px rgba(239,68,68,0.1)'
-                  : '0 0 24px rgba(99,102,241,0.15)',
+                  ? '0 0 22px rgba(239,68,68,0.12)'
+                  : '0 0 28px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
                 textDecoration: 'none',
+                transition: 'all 0.18s ease',
               }}
             >
               <div className="flex items-center gap-2.5">
-                <span style={{ fontSize: '1.15rem' }}>⚡</span>
+                <div
+                  style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    background: creditsZero
+                      ? 'rgba(239,68,68,0.15)'
+                      : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                    border: creditsZero
+                      ? '1px solid rgba(239,68,68,0.3)'
+                      : '1px solid rgba(99,102,241,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.1rem',
+                    boxShadow: creditsZero ? 'none' : '0 0 12px rgba(99,102,241,0.3)',
+                  }}
+                >
+                  ⚡
+                </div>
                 {creditsLoading ? (
                   <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
                 ) : (
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
                       {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 1 }}>
+                    <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : 'var(--muted)', marginTop: 1 }}>
                       {creditsZero ? 'No credits left' : 'available'}
                     </div>
                   </div>
@@ -300,11 +365,17 @@ export default function Sidebar({
               </div>
               <div
                 style={{
-                  width: 26, height: 26, borderRadius: 8,
-                  background: creditsZero ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.18)',
-                  border: creditsZero ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(99,102,241,0.35)',
+                  width: 30, height: 30, borderRadius: 9,
+                  background: creditsZero
+                    ? 'rgba(239,68,68,0.18)'
+                    : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                  border: creditsZero
+                    ? '1px solid rgba(239,68,68,0.35)'
+                    : '1px solid rgba(99,102,241,0.4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: creditsZero ? '#f87171' : '#818cf8', fontSize: '1rem', fontWeight: 900,
+                  color: creditsZero ? '#f87171' : '#a5b4fc',
+                  fontSize: '1.1rem', fontWeight: 900,
+                  boxShadow: creditsZero ? 'none' : '0 0 10px rgba(99,102,241,0.25)',
                 }}
               >
                 +
@@ -318,9 +389,14 @@ export default function Sidebar({
 
           {/* Top Picks */}
           <div
-            style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.14em', color: 'var(--muted)', padding: '12px 8px 8px', textTransform: 'uppercase' }}
+            style={{
+              fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.15em',
+              color: 'rgba(255,255,255,0.35)', padding: '12px 8px 8px',
+              textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5,
+            }}
           >
-            🔥 Top Picks
+            <span style={{ fontSize: '0.75rem' }}>🔥</span>
+            Top Picks
           </div>
           <div className="flex flex-col gap-1 mb-3">
             {TOP_PICKS.map((niche) => (
@@ -329,7 +405,7 @@ export default function Sidebar({
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'var(--border)', margin: '4px 4px 8px' }} />
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 4px 8px' }} />
 
           {/* Main nav */}
           <NavItem href="/create" icon="⚡" label="Generate" exact={false} pathname={pathname} onClick={onClose} />
@@ -364,57 +440,8 @@ export default function Sidebar({
         ) : null}
 
         {/* User row + small logout */}
-        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px 12px' }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px' }}>
           <div className="flex items-center gap-2.5">
             <div
               style={{
-                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                background: isLoggedIn ? 'linear-gradient(135deg, #6366f1, #7c3aed)' : 'rgba(255,255,255,0.06)',
-                border: isLoggedIn ? 'none' : '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.85rem', fontWeight: 800, color: '#fff',
-              }}
-            >
-              {isLoggedIn ? (userEmail?.[0] ?? 'U').toUpperCase() : '👤'}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {isLoggedIn ? userEmail : 'Guest User'}
-              </div>
-              <div style={{ fontSize: '0.62rem', color: isPro ? '#34d399' : 'var(--muted)', marginTop: 1 }}>
-                {isLoggedIn ? (isPro ? '✦ Pro Plan' : 'Free Plan') : 'Not signed in'}
-              </div>
-            </div>
-            {isLoggedIn ? (
-              <button
-                onClick={handleSignOut}
-                title="Sign out"
-                style={{
-                  background: 'transparent', border: '1px solid var(--border)', borderRadius: 8,
-                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 7px', fontSize: '0.75rem',
-                  flexShrink: 0, transition: 'all 0.15s',
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.4)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
-              >
-                🚪
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                style={{
-                  background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 8,
-                  color: '#818cf8', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
-                }}
-              >
-                Sign in
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} defaultTab="signup" />}
-    </>
-  )
-}
+                width
