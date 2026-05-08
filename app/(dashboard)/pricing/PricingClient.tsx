@@ -26,28 +26,10 @@ const STARTER_FEATURES = [
   'Email support',
 ]
 
-<<<<<<< HEAD
-const creatorFeatures = [
-  '10 video credits (one-time)',
-  'All 26 viral niches unlocked',
-  '⚡ Viral Hook Engine access',
-  'Hooks, titles, scripts, hashtags & descriptions',
-  'Copy-paste ready packages',
-  'Credits never expire',
-]
-
-const proFeatures = [
-  '25 video credits (one-time)',
-  'Everything in Starter',
-  '🖼️ Thumbnail text generator',
-  '🚀 Priority support',
-  'Beta access: AI Video Generator',
-=======
 const PRO_FEATURES = [
   '25 video credits',
   'Everything in Starter',
   'Priority render queue',
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
   'Early access to new niches',
   'Valid for 12 months',
 ]
@@ -177,19 +159,6 @@ export default function PricingClient(props: PricingClientProps) {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Current status */}
-      {isPro ? (
-        <div
-          className="max-w-lg mx-auto mb-8 flex items-center gap-4 rounded-xl px-5 py-4"
-          style={{ background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.18)' }}
-        >
-          <div className="text-2xl">✅</div>
-          <div>
-            <p className="font-bold text-sm" style={{ color: 'var(--text)' }}>You&apos;re on a paid plan</p>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>You have video credits. Generate more anytime from the pricing page.</p>
-          </div>
-=======
       {/* Current credits */}
       <div
         className="max-w-lg mx-auto mb-8 flex items-center gap-4 rounded-xl px-5 py-4"
@@ -206,7 +175,6 @@ export default function PricingClient(props: PricingClientProps) {
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
             Each Short uses 1 credit.
           </p>
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
         </div>
         {isPro && (
           <button
@@ -294,15 +262,6 @@ export default function PricingClient(props: PricingClientProps) {
 
           <div className="mb-5">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--indigo-light)' }}>
-<<<<<<< HEAD
-              Starter
-            </div>
-            <div className="flex items-end gap-1 mb-1">
-              <span className="font-black" style={{ fontSize: '2.4rem', color: 'var(--text)', lineHeight: 1 }}>$9</span>
-              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>one-time</span>
-            </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>10 video credits. No subscription.</p>
-=======
               Pro Pack
             </div>
             <div className="flex items-end gap-1 mb-1">
@@ -310,7 +269,6 @@ export default function PricingClient(props: PricingClientProps) {
               <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>one-time</span>
             </div>
             <p className="text-xs" style={{ color: 'var(--muted)' }}>25 videos — best price per Short.</p>
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
           </div>
 
           <div className="flex flex-col gap-2.5 mb-7 flex-1">
@@ -322,101 +280,6 @@ export default function PricingClient(props: PricingClientProps) {
             ))}
           </div>
 
-<<<<<<< HEAD
-          {isPro ? (
-            <button
-              onClick={handlePortal}
-              disabled={portalLoading}
-              className="w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                boxShadow: '0 4px 22px rgba(16,185,129,.3)',
-                opacity: portalLoading ? 0.7 : 1,
-                cursor: portalLoading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {portalLoading ? 'Opening...' : '⚙️ Manage Billing'}
-            </button>
-          ) : (
-            <button
-              onClick={() => window.open(CREATOR_LINK, '_blank')}
-              className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-                boxShadow: '0 4px 28px rgba(99,102,241,.45)',
-                animation: 'btn-pulse 2.8s ease-in-out infinite',
-                cursor: 'pointer',
-              }}
-            >
-              Get Starter Pack — $9 →
-            </button>
-          )}
-        </div>
-
-        {/* Pro ($19) */}
-        <div
-          className="rounded-2xl p-7 relative overflow-hidden transition-all"
-          style={{
-            background: 'linear-gradient(160deg, rgba(236,72,153,.08), rgba(168,85,247,.06))',
-            border: '1px solid rgba(236,72,153,.32)',
-            boxShadow: '0 0 50px rgba(236,72,153,.12)',
-          }}
-        >
-          <div
-            className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-            style={{ background: 'linear-gradient(135deg, #ec4899, #a855f7)', color: 'white' }}
-          >
-            Unlimited
-          </div>
-
-          <div className="mb-6">
-            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: '#f0abfc' }}>
-              Pro
-            </div>
-            <div className="flex items-end gap-1 mb-1">
-              <span className="font-black" style={{ fontSize: '2.4rem', color: 'var(--text)', lineHeight: 1 }}>$19</span>
-              <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>one-time</span>
-            </div>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>25 video credits. No subscription.</p>
-          </div>
-
-          <div className="flex flex-col gap-2.5 mb-7">
-            {proFeatures.map((f) => (
-              <div key={f} className="flex items-center gap-2.5 text-sm">
-                <span style={{ color: '#34d399', fontSize: '0.8rem' }}>✓</span>
-                <span style={{ color: 'var(--text2)' }}>{f}</span>
-              </div>
-            ))}
-          </div>
-
-          {isPro ? (
-            <button
-              onClick={handlePortal}
-              disabled={portalLoading}
-              className="w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                boxShadow: '0 4px 22px rgba(16,185,129,.3)',
-                opacity: portalLoading ? 0.7 : 1,
-                cursor: portalLoading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {portalLoading ? 'Opening...' : '⚙️ Manage Billing'}
-            </button>
-          ) : (
-            <button
-              onClick={() => window.open(PRO_LINK, '_blank')}
-              className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 55%, #6366f1 100%)',
-                boxShadow: '0 4px 28px rgba(236,72,153,.4)',
-                cursor: 'pointer',
-              }}
-            >
-              Get Pro Pack — $19 →
-            </button>
-          )}
-=======
           <button
             onClick={() => handleBuy('pro')}
             disabled={purchasing === 'pro'}
@@ -431,16 +294,11 @@ export default function PricingClient(props: PricingClientProps) {
           >
             {purchasing === 'pro' ? 'Loading...' : 'Buy 25 Credits — $19'}
           </button>
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
         </div>
       </div>
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
-<<<<<<< HEAD
-        One-time purchase. Credits never expire. No hidden fees.
-=======
         One-time payment. No subscription. Refund within 7 days if unused.
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
       </p>
 
       {/* FAQ */}
@@ -449,17 +307,7 @@ export default function PricingClient(props: PricingClientProps) {
           Frequently Asked Questions
         </h2>
         <div className="flex flex-col gap-3">
-<<<<<<< HEAD
-          {[
-            { q: 'Is this a subscription?', a: 'No. These are one-time credit purchases — you pay once and use the credits whenever you want. No recurring charges.' },
-            { q: 'What counts as 1 credit?', a: '1 credit = 1 video generated. Credits never expire.' },
-            { q: "What's the difference between Starter and Pro?", a: 'Starter is $9 for 10 video credits. Pro is $19 for 25 video credits. Same features, more videos.' },
-            { q: 'Is the content unique every time?', a: 'Yes. GPT-4o generates fresh scripts on every request — no two generations are identical.' },
-            { q: 'Can I buy more credits later?', a: 'Yes. Just come back to this page and purchase another pack whenever you need more videos.' },
-          ].map((faq) => (
-=======
           {FAQS.map((faq) => (
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
             <div
               key={faq.q}
               className="rounded-xl px-5 py-4"

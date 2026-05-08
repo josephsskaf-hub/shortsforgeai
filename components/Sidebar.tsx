@@ -45,17 +45,8 @@ function NavLink({
   searchKey?: string
   onClick?: () => void
 }) {
-<<<<<<< HEAD
-  const active = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'))
   const router = useRouter()
 
-  function handleClick(e: React.MouseEvent) {
-    if (active) {
-      e.preventDefault()
-      router.refresh()
-    }
-    onClick?.()
-=======
   // Strip query for path comparison (next/navigation pathname has no search)
   const hrefPath = href.split('?')[0]
   let active = exact
@@ -67,7 +58,14 @@ function NavLink({
     const cur = new URLSearchParams(window.location.search).get('niche') ?? ''
     const want = searchKey ?? ''
     if (cur !== want) active = false
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
+  }
+
+  function handleClick(e: React.MouseEvent) {
+    if (active) {
+      e.preventDefault()
+      router.refresh()
+    }
+    onClick?.()
   }
 
   return (
@@ -120,14 +118,6 @@ export default function Sidebar({
   const [creditsLoading, setCreditsLoading] = useState(true)
 
   const initial = (userEmail?.[0] ?? 'G').toUpperCase()
-<<<<<<< HEAD
-  const FREE_LIMIT = 2
-  const PRO_LIMIT = 25
-  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
-  const freeUsedPct = Math.min(100, (generationsUsed / FREE_LIMIT) * 100)
-  const proUsedPct = Math.min(100, (generationsUsed / PRO_LIMIT) * 100)
-=======
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
 
   const fetchCredits = useCallback(async () => {
     if (!isLoggedIn) {
@@ -314,7 +304,7 @@ export default function Sidebar({
 
           <div className="mx-2.5 my-1.5" style={{ height: 1, background: 'var(--border)' }} />
 
-          {/* Tools section — keep existing pages reachable */}
+          {/* Tools section */}
           <div className="px-2.5 pb-1.5 pt-2 font-bold uppercase tracking-widest" style={{ color: 'var(--muted)', fontSize: '0.58rem', letterSpacing: '0.14em' }}>
             Tools
           </div>
@@ -360,7 +350,7 @@ export default function Sidebar({
           )}
         </nav>
 
-        {/* Bottom CTA — guest sign-up, or low-credit upsell */}
+        {/* Bottom CTA — guest sign-up, or no-credits upsell */}
         {!isLoggedIn ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.12), rgba(124,58,237,.08))', border: '1px solid rgba(99,102,241,.22)' }}>
@@ -377,84 +367,6 @@ export default function Sidebar({
           </div>
         ) : creditsZero ? (
           <div className="px-3 pb-3 flex-shrink-0">
-<<<<<<< HEAD
-            <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '1px solid rgba(99,102,241,.18)' }}>
-              {/* Usage label */}
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Free generations</span>
-                <span className="text-xs font-black" style={{ color: freeRemaining === 0 ? '#f87171' : 'var(--indigo-light)', fontSize: '0.68rem' }}>
-                  {generationsUsed} / {FREE_LIMIT} used
-                </span>
-              </div>
-              {/* Progress bar */}
-              <div className="rounded-full overflow-hidden mb-2" style={{ height: 5, background: 'rgba(255,255,255,.07)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${freeUsedPct}%`,
-                    background: freeRemaining === 0
-                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                      : 'linear-gradient(90deg, #6366f1, #a855f7)',
-                  }}
-                />
-              </div>
-              {freeRemaining === 0 ? (
-                <p className="text-xs mb-2" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  You&apos;ve used all free generations. Upgrade to continue.
-                </p>
-              ) : (
-                <p className="text-xs mb-2" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                  {freeRemaining} generation{freeRemaining !== 1 ? 's' : ''} left — get 10 videos for $9
-                </p>
-              )}
-              <Link href="/pricing" className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }} onClick={onClose}>
-                🎬 Get 10 Videos — $9 →
-              </Link>
-            </div>
-          </div>
-        ) : (
-          /* Pro user usage display */
-          <div className="px-3 pb-3 flex-shrink-0">
-            <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,.05)', border: '1px solid rgba(16,185,129,.15)' }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>Video credits used</span>
-                <span className="text-xs font-black" style={{ color: generationsUsed >= PRO_LIMIT ? '#f87171' : '#34d399', fontSize: '0.68rem' }}>
-                  {generationsUsed} / {PRO_LIMIT}
-                </span>
-              </div>
-              <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,.07)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${proUsedPct}%`,
-                    background: generationsUsed >= PRO_LIMIT
-                      ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                      : 'linear-gradient(90deg, #10b981, #34d399)',
-                  }}
-                />
-              </div>
-              {generationsUsed >= PRO_LIMIT && (
-                <p className="text-xs mt-1.5" style={{ color: '#f87171', lineHeight: 1.45, fontSize: '0.65rem' }}>
-                  Credits used up. <Link href="/pricing" style={{ color: '#818cf8', textDecoration: 'none' }}>Get more →</Link>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Trust signal footer */}
-        <div
-          className="px-4 py-2.5 flex-shrink-0 text-center"
-          style={{ borderTop: '1px solid var(--border)' }}
-        >
-          <span
-            className="text-xs font-semibold"
-            style={{ color: 'var(--muted)', fontSize: '0.65rem' }}
-          >
-            🔥 1,200+ active creators
-          </span>
-        </div>
-=======
             <div className="rounded-xl p-3" style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.22)' }}>
               <p className="text-xs mb-1" style={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.7rem' }}>⚠️ No credits left</p>
               <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
@@ -466,7 +378,6 @@ export default function Sidebar({
             </div>
           </div>
         ) : null}
->>>>>>> 7db74db10bb21e4f0e6d25549919f9ce2dabddea
 
         {/* User card */}
         <div className="px-3 pb-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
