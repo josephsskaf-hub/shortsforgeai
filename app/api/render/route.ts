@@ -28,9 +28,9 @@ interface RenderRequestBody {
 }
 
 const MUSIC_URLS = [
-  'https://cdn.pixabay.com/download/audio/2022/10/30/audio_946bc6c659.mp3',
-  'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1718e49cfe.mp3',
-  'https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
 ]
 
 function pickMusic(): string {
