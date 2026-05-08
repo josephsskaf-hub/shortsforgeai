@@ -802,7 +802,7 @@ export default function HomePage() {
           <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2025 ShortsForgeAI. All rights reserved.</p>
         </div>
       </footer>
-      </div>{/* end main content */}
-    </div>{/* end outer flex */}
+      </div>
+    </div>
   )
 }
