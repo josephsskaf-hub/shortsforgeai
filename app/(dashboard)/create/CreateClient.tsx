@@ -31,12 +31,12 @@ interface ShortVideoResult {
 }
 
 const NICHE_PILLS: { id: string; label: string; emoji: string }[] = [
-  { id: 'general', label: 'Geral', emoji: '🎬' },
-  { id: 'history', label: 'História', emoji: '📖' },
-  { id: 'mystery', label: 'Mistério', emoji: '🔮' },
-  { id: 'finance', label: 'Finanças', emoji: '💰' },
-  { id: 'science', label: 'Ciência', emoji: '🧬' },
-  { id: 'technology', label: 'Tecnologia', emoji: '🤖' },
+  { id: 'general', label: 'General', emoji: '🎬' },
+  { id: 'history', label: 'History', emoji: '📖' },
+  { id: 'mystery', label: 'Mystery', emoji: '🔮' },
+  { id: 'finance', label: 'Finance', emoji: '💰' },
+  { id: 'science', label: 'Science', emoji: '🧬' },
+  { id: 'technology', label: 'Technology', emoji: '🤖' },
 ]
 
 const TONE_PILLS: { id: string; label: string; emoji: string }[] = [
@@ -50,12 +50,12 @@ const DURATION_OPTIONS = [30, 45, 60]
 const DEFAULT_DURATION = 30
 
 const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
-  { id: 'script', label: '✍️ Escrevendo script viral...', weight: 18 },
-  { id: 'voice', label: '🎙️ Gerando narração com IA...', weight: 22 },
-  { id: 'visuals', label: '🎬 Buscando visuais cinematográficos...', weight: 22 },
-  { id: 'captions', label: '📝 Criando legendas animadas...', weight: 8 },
-  { id: 'music', label: '🎵 Adicionando trilha sonora...', weight: 8 },
-  { id: 'render', label: '⚡ Renderizando seu Short...', weight: 22 },
+  { id: 'script', label: '✍️ Writing viral script...', weight: 18 },
+  { id: 'voice', label: '🎙️ Generating AI narration...', weight: 22 },
+  { id: 'visuals', label: '🎬 Finding cinematic visuals...', weight: 22 },
+  { id: 'captions', label: '📝 Building animated captions...', weight: 8 },
+  { id: 'music', label: '🎵 Adding cinematic soundtrack...', weight: 8 },
+  { id: 'render', label: '⚡ Rendering your Short...', weight: 22 },
 ]
 
 interface FinalAssets {
@@ -148,7 +148,7 @@ export default function CreateClient() {
     if (running) return
 
     if (!topic.trim()) {
-      setError('Adicione um tema para o vídeo.')
+      setError('Please add a topic for your video.')
       return
     }
 
@@ -173,11 +173,11 @@ export default function CreateClient() {
       })
       if (!genRes.ok) {
         const err = await genRes.json().catch(() => ({}))
-        throw new Error(err.error || 'Falha ao gerar o script.')
+        throw new Error(err.error || 'Failed to generate the script.')
       }
       const genData = await genRes.json()
       const video: ShortVideoResult | undefined = Array.isArray(genData.videos) ? genData.videos[0] : undefined
-      if (!video) throw new Error('Resposta inválida do gerador de scripts.')
+      if (!video) throw new Error('Invalid response from the script generator.')
       setStage('voice', 22)
 
       // Step 2 — Voiceover
@@ -320,7 +320,7 @@ export default function CreateClient() {
       setRunning(false)
       setStageId(null)
       setProgress(0)
-      setError(err instanceof Error ? err.message : 'Algo deu errado. Tente novamente.')
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     }
   }
 
@@ -351,7 +351,7 @@ export default function CreateClient() {
             boxShadow: '0 4px 24px rgba(16,185,129,.4)',
           }}
         >
-          ✅ Copiado!
+          ✅ Copied!
         </div>
       )}
 
@@ -361,10 +361,10 @@ export default function CreateClient() {
           ⚡ Autopilot
         </div>
         <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', color: 'var(--text)' }}>
-          Crie um Short em <span className="grad-text">um clique</span>
+          Create a Short in <span className="grad-text">one click</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-          A IA escreve o script, gera a narração, busca os visuais e renderiza tudo automaticamente.
+          AI writes the script, generates the narration, finds the visuals and renders everything automatically.
         </p>
       </div>
 
@@ -381,13 +381,13 @@ export default function CreateClient() {
           {/* Topic input */}
           <label className="block mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              Sobre o que é o seu vídeo?
+              What&apos;s your video about?
             </div>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Ex: 3 segredos sobre o Triângulo das Bermudas"
+              placeholder="e.g. 3 secrets about the Bermuda Triangle"
               className="w-full rounded-xl px-4 py-3.5 text-base outline-none transition-all"
               style={{
                 background: 'rgba(0,0,0,.32)',
@@ -407,7 +407,7 @@ export default function CreateClient() {
           {/* Niche pills */}
           <div className="mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
-              Nicho
+              Niche
             </div>
             <div className="flex flex-wrap gap-2">
               {NICHE_PILLS.map((n) => (
@@ -425,7 +425,7 @@ export default function CreateClient() {
           {/* Tone pills */}
           <div className="mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
-              Tom
+              Tone
             </div>
             <div className="flex flex-wrap gap-2">
               {TONE_PILLS.map((t) => (
@@ -443,7 +443,7 @@ export default function CreateClient() {
           {/* Duration */}
           <div className="mb-6">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
-              Duração
+              Duration
             </div>
             <div className="flex flex-wrap gap-2">
               {DURATION_OPTIONS.map((d) => (
@@ -487,23 +487,23 @@ export default function CreateClient() {
               opacity: creditsLoading ? 0.7 : 1,
             }}
           >
-            ⚡ Gerar Video — 1 crédito
+            ⚡ Generate Video — 1 credit
           </button>
 
           {/* Credits hint */}
           <div className="mt-3 text-center text-xs" style={{ color: creditsZero ? '#f87171' : 'var(--muted)' }}>
             {creditsLoading
-              ? 'Carregando saldo…'
+              ? 'Loading balance…'
               : creditsZero
-              ? 'Sem créditos — compre mais em Pricing.'
-              : `Você tem ${credits ?? 0} crédito${credits === 1 ? '' : 's'} disponíve${credits === 1 ? 'l' : 'is'}.`}
+              ? 'No credits left. Get more in Pricing.'
+              : `You have ${credits ?? 0} credit${credits === 1 ? '' : 's'} available.`}
           </div>
         </div>
       )}
 
       {/* Progress view */}
       {running && (
-        <ProgressView progress={progress} stageLabel={currentStage?.label ?? '⚡ Iniciando...'} />
+        <ProgressView progress={progress} stageLabel={currentStage?.label ?? '⚡ Starting...'} />
       )}
 
       {/* Final / export view */}
@@ -596,7 +596,7 @@ function ProgressView({ progress, stageLabel }: { progress: number; stageLabel: 
         {stageLabel}
       </div>
       <div className="text-xs mb-5" style={{ color: 'var(--muted)' }}>
-        Aguarde — estamos montando seu Short do início ao fim.
+        Hang tight — we&apos;re building your Short from start to finish.
       </div>
 
       {/* Progress bar */}
@@ -671,7 +671,7 @@ function FinalView({
       >
         <span className="text-lg">✅</span>
         <span>
-          <strong style={{ color: 'var(--text)' }}>Pronto!</strong> Seu Short está renderizado e pronto pra postar.
+          <strong style={{ color: 'var(--text)' }}>Done!</strong> Your Short is rendered and ready to post.
         </span>
       </div>
 
@@ -717,7 +717,7 @@ function FinalView({
           <div className="flex-1 min-w-0 flex flex-col gap-3">
             <div>
               <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted2)', fontSize: '0.6rem' }}>
-                Título
+                Title
               </div>
               <div className="font-bold text-base leading-snug" style={{ color: 'var(--text)' }}>
                 {video.title}
@@ -747,7 +747,7 @@ function FinalView({
                     color: '#fbbf24',
                   }}
                 >
-                  ⏳ Renderização final em fila
+                  ⏳ Final render queued
                 </div>
               )}
               {voiceoverUrl && (
@@ -775,7 +775,7 @@ function FinalView({
                   cursor: 'pointer',
                 }}
               >
-                📄 Baixar Pacote (.txt)
+                📄 Download Pack (.txt)
               </button>
             </div>
 
@@ -787,21 +787,21 @@ function FinalView({
       </div>
 
       {/* Title */}
-      <FieldBlock label="Título" value={video.title} onCopy={onCopy} />
+      <FieldBlock label="Title" value={video.title} onCopy={onCopy} />
 
       {/* Hashtags */}
       <FieldBlock label="Hashtags" value={video.hashtags.join(' ')} onCopy={onCopy} />
 
       {/* Description */}
       <FieldBlock
-        label="Descrição YouTube"
+        label="YouTube Description"
         value={video.youtubeDescription}
         onCopy={onCopy}
         multiline
       />
 
       {/* Script */}
-      <FieldBlock label="Script Completo" value={video.script} onCopy={onCopy} multiline />
+      <FieldBlock label="Full Script" value={video.script} onCopy={onCopy} multiline />
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3 justify-center mt-2">
@@ -815,7 +815,7 @@ function FinalView({
             cursor: 'pointer',
           }}
         >
-          🔄 Gerar Outro
+          🔄 Generate Another
         </button>
         <Link
           href="/dashboard"
@@ -868,7 +868,7 @@ function FieldBlock({
             fontSize: '0.62rem',
           }}
         >
-          📋 Copiar
+          📋 Copy
         </button>
       </div>
       <div
@@ -917,10 +917,10 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
           </button>
           <div className="text-4xl mb-4 text-center">⚡</div>
           <h2 className="text-xl font-black tracking-tight mb-3 text-center" style={{ color: 'var(--text)' }}>
-            Sem créditos
+            No credits left
           </h2>
           <p className="text-sm text-center mb-6" style={{ color: 'var(--muted2)', lineHeight: 1.6 }}>
-            Você usou todos os seus créditos. Compre um pack pra continuar criando vídeos virais.
+            You&apos;ve used all your credits. Get more in Pricing to keep building viral videos.
           </p>
           <Link
             href="/pricing"
@@ -931,14 +931,14 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
               textDecoration: 'none',
             }}
           >
-            💳 Comprar Créditos
+            💳 Buy Credits
           </Link>
           <button
             onClick={onClose}
             className="block w-full text-center mt-2 py-2 text-xs font-bold transition-all"
             style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
           >
-            Voltar
+            Back
           </button>
         </div>
       </div>

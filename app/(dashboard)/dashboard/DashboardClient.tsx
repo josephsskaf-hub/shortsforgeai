@@ -23,24 +23,24 @@ const CARDS: QuickCard[] = [
   {
     href: '/create',
     emoji: '🎬',
-    title: 'Criar Video',
-    subtitle: 'Qualquer tema, qualquer nicho',
+    title: 'Create Video',
+    subtitle: 'Any topic, any niche',
     accent: 'rgba(99,102,241,.4)',
     glow: 'rgba(99,102,241,.18)',
   },
   {
     href: '/create?niche=history',
     emoji: '📖',
-    title: 'Video de História',
-    subtitle: 'Fatos históricos, civilizações, guerras',
+    title: 'History Video',
+    subtitle: 'Historical facts, civilizations, wars',
     accent: 'rgba(245,158,11,.4)',
     glow: 'rgba(245,158,11,.16)',
   },
   {
     href: '/create?niche=mystery',
     emoji: '🔮',
-    title: 'Video de Mistério',
-    subtitle: 'Conspirações, segredos, fenômenos',
+    title: 'Mystery Video',
+    subtitle: 'Conspiracies, secrets, phenomena',
     accent: 'rgba(168,85,247,.4)',
     glow: 'rgba(168,85,247,.18)',
   },
@@ -118,7 +118,7 @@ export default function DashboardClient({
           className="font-black tracking-tight mb-2 relative z-10"
           style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.1rem)', color: 'var(--text)', lineHeight: 1.1 }}
         >
-          Crie seu próximo{' '}
+          Create your next{' '}
           <span
             style={{
               background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a855f7)',
@@ -126,7 +126,7 @@ export default function DashboardClient({
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Short Viral
+            Viral Short
           </span>
         </h1>
 
@@ -134,7 +134,7 @@ export default function DashboardClient({
           className="relative z-10 mx-auto"
           style={{ fontSize: '0.9rem', color: 'var(--muted2)', maxWidth: 460, lineHeight: 1.55 }}
         >
-          Escolha um shortcut abaixo e deixe a IA gerar tudo em um clique — script, voz, visuais e legendas.
+          Pick a shortcut below and let AI generate everything in one click — script, voice, visuals and captions.
         </p>
       </div>
 
@@ -184,7 +184,7 @@ export default function DashboardClient({
                 boxShadow: '0 4px 18px rgba(99,102,241,.32)',
               }}
             >
-              Criar Agora →
+              Create Now →
             </div>
           </Link>
         ))}
@@ -220,7 +220,7 @@ export default function DashboardClient({
             </div>
             <div>
               <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: creditsZero ? '#f87171' : 'var(--muted)', fontSize: '0.6rem' }}>
-                Saldo de Créditos
+                Credit Balance
               </div>
               {creditsLoading ? (
                 <div
@@ -234,15 +234,15 @@ export default function DashboardClient({
                 />
               ) : (
                 <div className="font-black" style={{ fontSize: '1.05rem', color: 'var(--text)' }}>
-                  Você tem{' '}
+                  You have{' '}
                   <span style={{ color: creditsZero ? '#f87171' : '#34d399' }}>
-                    {credits ?? 0} crédito{credits === 1 ? '' : 's'}
+                    {credits ?? 0} credit{credits === 1 ? '' : 's'}
                   </span>{' '}
-                  disponíve{credits === 1 ? 'l' : 'is'}
+                  available
                 </div>
               )}
               <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                Cada vídeo consome 1 crédito.
+                Each video uses 1 credit.
               </div>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function DashboardClient({
               textDecoration: 'none',
             }}
           >
-            {creditsZero ? '💳 Comprar Créditos' : '+ Mais Créditos'}
+            {creditsZero ? '💳 Buy Credits' : '+ More Credits'}
           </Link>
         </div>
       )}
@@ -273,7 +273,7 @@ export default function DashboardClient({
           <div className="flex items-center gap-1.5">
             <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>🎬</span>
             <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{totalGenerations}</span>
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>packs gerados</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>packs generated</span>
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">
@@ -282,7 +282,7 @@ export default function DashboardClient({
           </div>
           <div className="ml-auto">
             <Link href="/history" className="text-xs font-bold" style={{ color: 'var(--indigo-light)', textDecoration: 'none' }}>
-              Ver histórico →
+              View history →
             </Link>
           </div>
         </div>
@@ -298,10 +298,10 @@ export default function DashboardClient({
           }}
         >
           <p className="font-bold text-base mb-2" style={{ color: 'var(--text)' }}>
-            🔑 Crie sua conta para começar
+            🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
-            3 créditos grátis na primeira conta — basta entrar.
+            3 free credits on signup — just sign in.
           </p>
         </div>
       )}

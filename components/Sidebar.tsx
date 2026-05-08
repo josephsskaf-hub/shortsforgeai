@@ -16,9 +16,9 @@ interface SidebarProps {
 }
 
 const quickCreateItems = [
-  { href: '/create', icon: '🎬', label: 'Criar Video', exact: false },
-  { href: '/create?niche=history', icon: '📖', label: 'História', exact: false },
-  { href: '/create?niche=mystery', icon: '🔮', label: 'Mistério', exact: false },
+  { href: '/create', icon: '🎬', label: 'Create Video', exact: false },
+  { href: '/create?niche=history', icon: '📖', label: 'History', exact: false },
+  { href: '/create?niche=mystery', icon: '🔮', label: 'Mystery', exact: false },
 ]
 
 const accountNavItems = [
@@ -345,7 +345,7 @@ export default function Sidebar({
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.12), rgba(124,58,237,.08))', border: '1px solid rgba(99,102,241,.22)' }}>
               <p className="text-xs mb-1" style={{ color: 'var(--text)', fontWeight: 700 }}>⚡ 3 free video credits</p>
-              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Crie sua conta grátis e gere seu primeiro Short.</p>
+              <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45 }}>Create your free account and generate your first Short.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all"
@@ -358,12 +358,12 @@ export default function Sidebar({
         ) : creditsZero ? (
           <div className="px-3 pb-3 flex-shrink-0">
             <div className="rounded-xl p-3" style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.22)' }}>
-              <p className="text-xs mb-1" style={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.7rem' }}>⚠️ Sem créditos</p>
+              <p className="text-xs mb-1" style={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.7rem' }}>⚠️ No credits left</p>
               <p className="text-xs mb-2.5" style={{ color: 'var(--muted)', lineHeight: 1.45, fontSize: '0.68rem' }}>
-                Compre um pack pra continuar criando vídeos.
+                Buy a pack to keep creating videos.
               </p>
               <Link href="/pricing" onClick={onClose} className="block w-full text-center rounded-lg py-2 text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }}>
-                💳 Comprar Créditos →
+                💳 Buy Credits →
               </Link>
             </div>
           </div>

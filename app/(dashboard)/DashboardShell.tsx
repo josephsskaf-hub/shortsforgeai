@@ -16,7 +16,7 @@ interface DashboardShellProps {
 const pageTitles: Record<string, string> = {
   '/': 'Home',
   '/dashboard': 'Creator Hub',
-  '/create': 'Criar Video',
+  '/create': 'Create Video',
   '/generate': 'Generate New Short',
   '/history': 'Viral History',
   '/pricing': 'Pricing',
