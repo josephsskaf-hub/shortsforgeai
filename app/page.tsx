@@ -12,6 +12,7 @@ import ThumbnailGenerator from '@/components/ThumbnailGenerator'
 import RetentionMap from '@/components/RetentionMap'
 import CloneViral from '@/components/CloneViral'
 import SocialProof from '@/components/SocialProof'
+import Sidebar from '@/components/Sidebar'
 
 // ─── Niche data (mirrors dashboard IDs exactly) ───────────────────────────────
 const DEFAULT_PILLS = ['🎬 YouTube Shorts', '🔥 High Engagement', '📋 Ready to Copy']
@@ -335,6 +336,8 @@ export default function HomePage() {
 
   // Auth state
   const [user, setUser] = useState<{ id: string } | null>(null)
+  const [userEmail, setUserEmail] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
 
@@ -343,6 +346,7 @@ export default function HomePage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user ? { id: user.id } : null)
       if (user) {
+        setUserEmail(user.email ?? '')
         const { data } = await supabase
           .from('profiles')
           .select('is_pro')
@@ -381,7 +385,75 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', background: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Desktop sidebar spacer */}
+      <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
+
+      {/* Sidebar — always visible on desktop */}
+      <Sidebar
+        userEmail={userEmail}
+        isPro={isPro}
+        generationsUsed={0}
+        isLoggedIn={!!user}
+        isOpen={true}
+        onClose={() => {}}
+      />
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="md:hidden">
+          <Sidebar
+            userEmail={userEmail}
+            isPro={isPro}
+            generationsUsed={0}
+            isLoggedIn={!!user}
+            isOpen={true}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </div>
+      )}
+
+      {/* Section nav dots — right side */}
+      <nav
+        className="hidden md:flex flex-col gap-3 fixed z-50"
+        style={{ right: 20, top: '50%', transform: 'translateY(-50%)' }}
+        aria-label="Page sections"
+      >
+        {[
+          { href: '#hero', label: 'Home' },
+          { href: '#niche-grid', label: 'Niches' },
+          { href: '#features', label: 'Features' },
+          { href: '#pricing', label: 'Pricing' },
+        ].map((dot) => (
+          <a
+            key={dot.href}
+            href={dot.href}
+            title={dot.label}
+            style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: 'rgba(129,140,248,0.45)',
+              border: '1.5px solid rgba(129,140,248,0.7)',
+              display: 'block',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = '#818cf8'
+              el.style.transform = 'scale(1.5)'
+              el.style.boxShadow = '0 0 8px rgba(129,140,248,0.8)'
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = 'rgba(129,140,248,0.45)'
+              el.style.transform = 'scale(1)'
+              el.style.boxShadow = 'none'
+            }}
+          />
+        ))}
+      </nav>
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0" style={{ color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Background glows */}
       <div className="fixed pointer-events-none" style={{ width: 800, height: 800, background: 'var(--indigo)', top: -300, right: -200, opacity: 0.045, filter: 'blur(120px)', borderRadius: '50%', zIndex: 0 }} />
       <div className="fixed pointer-events-none" style={{ width: 600, height: 600, background: 'var(--purple)', bottom: -200, left: -100, opacity: 0.04, filter: 'blur(100px)', borderRadius: '50%', zIndex: 0 }} />
@@ -425,7 +497,7 @@ export default function HomePage() {
       </div>
 
       {/* ─── Hero ─── */}
-      <section style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '72px 24px 40px' }}>
+      <section id="hero" style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: '72px 24px 40px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 999, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.25)', marginBottom: 28 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px rgba(52,211,153,.6)', display: 'inline-block' }} />
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>26 Niches · Generate up to 1,000 Shorts/month · Built for serious creators</span>
@@ -583,7 +655,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── Benefits ─── */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '56px 24px', maxWidth: 1100, margin: '0 auto' }}>
+      <section id="features" style={{ position: 'relative', zIndex: 10, padding: '56px 24px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 10 }}>Why ShortsForgeAI</div>
           <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.3rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }}>
@@ -636,7 +708,7 @@ export default function HomePage() {
       </section>
 
       {/* ─── Pricing ─── */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '56px 24px', maxWidth: 800, margin: '0 auto' }}>
+      <section id="pricing" style={{ position: 'relative', zIndex: 10, padding: '56px 24px', maxWidth: 800, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 10 }}>Pricing</div>
           <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.3rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }}>Simple &amp; transparent</h2>
@@ -730,6 +802,7 @@ export default function HomePage() {
           <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2025 ShortsForgeAI. All rights reserved.</p>
         </div>
       </footer>
-    </div>
+      </div>{/* end main content */}
+    </div>{/* end outer flex */}
   )
 }

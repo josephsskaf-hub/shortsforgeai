@@ -156,7 +156,7 @@ export default function NicheCard({
         ) : disabled ? (
           <>🔒 Upgrade to Unlock</>
         ) : (
-          <>⚡ Generate Viral Scripts</>
+          <>⚡ Generate Viral Video</>
         )}
       </button>
     </div>

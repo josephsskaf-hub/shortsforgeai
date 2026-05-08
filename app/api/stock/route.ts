@@ -11,53 +11,40 @@ interface StockClip {
   height: number
 }
 
-interface PexelsVideoFile {
-  link: string
-  width: number
-  height: number
-  quality?: string
-  file_type?: string
-}
-
-interface PexelsVideo {
+interface PexelsPhoto {
   id: number
-  duration: number
   width: number
   height: number
-  image: string
-  video_files: PexelsVideoFile[]
+  src: {
+    original: string
+    large2x: string
+    large: string
+    portrait: string
+  }
 }
 
-interface PexelsResponse {
-  videos?: PexelsVideo[]
+interface PexelsPhotosResponse {
+  photos?: PexelsPhoto[]
 }
 
-const MOCK: StockClip[] = [
-  {
-    id: 'mock-1',
-    url: 'https://videos.pexels.com/video-files/placeholder/1.mp4',
-    thumbnail: 'https://images.pexels.com/videos/placeholder/1.jpg',
-    duration: 8,
+// Curated Pexels photo IDs for cinematic dark backgrounds
+// These are publicly accessible without API key
+const MOCK_PHOTO_IDS = [3408744, 1089842, 1252500, 256541, 3109807, 1169754, 1624600, 949587]
+
+function mockUrl(id: number): string {
+  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop`
+}
+
+function buildMock(): StockClip[] {
+  return MOCK_PHOTO_IDS.slice(0, 4).map((id) => ({
+    id: `mock-${id}`,
+    url: mockUrl(id),
+    thumbnail: mockUrl(id),
+    duration: 5,
     width: 1080,
     height: 1920,
-  },
-  {
-    id: 'mock-2',
-    url: 'https://videos.pexels.com/video-files/placeholder/2.mp4',
-    thumbnail: 'https://images.pexels.com/videos/placeholder/2.jpg',
-    duration: 10,
-    width: 1080,
-    height: 1920,
-  },
-  {
-    id: 'mock-3',
-    url: 'https://videos.pexels.com/video-files/placeholder/3.mp4',
-    thumbnail: 'https://images.pexels.com/videos/placeholder/3.jpg',
-    duration: 6,
-    width: 1080,
-    height: 1920,
-  },
-]
+  }))
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -68,10 +55,11 @@ export async function GET(req: NextRequest) {
 
     const apiKey = process.env.PEXELS_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ videos: MOCK, mock: true })
+      console.log('[stock] No PEXELS_API_KEY — using curated mock images')
+      return NextResponse.json({ videos: buildMock(), mock: true })
     }
 
-    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(
       q
     )}&per_page=4&orientation=portrait`
 
@@ -84,34 +72,35 @@ export async function GET(req: NextRequest) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[stock] fetch error:', msg)
-      return NextResponse.json({ videos: MOCK, mock: true })
+      return NextResponse.json({ videos: buildMock(), mock: true })
     }
 
     if (!res.ok) {
       console.error('[stock] Pexels non-ok status:', res.status)
-      return NextResponse.json({ videos: MOCK, mock: true })
+      return NextResponse.json({ videos: buildMock(), mock: true })
     }
 
-    const data = (await res.json()) as PexelsResponse
-    const videos: StockClip[] = (data.videos ?? []).map((v) => {
-      const portraitFile =
-        v.video_files.find((f) => f.height >= f.width && f.quality === 'hd') ||
-        v.video_files.find((f) => f.height >= f.width) ||
-        v.video_files[0]
-      return {
-        id: v.id,
-        url: portraitFile?.link ?? '',
-        thumbnail: v.image,
-        duration: v.duration,
-        width: portraitFile?.width ?? v.width,
-        height: portraitFile?.height ?? v.height,
-      }
-    })
+    const data = (await res.json()) as PexelsPhotosResponse
+    const photos = data.photos ?? []
+
+    if (photos.length === 0) {
+      return NextResponse.json({ videos: buildMock(), mock: true })
+    }
+
+    const videos: StockClip[] = photos.map((p) => ({
+      id: p.id,
+      // Use portrait src for best 9:16 fit, fallback to large2x
+      url: p.src.portrait || p.src.large2x || p.src.large || p.src.original,
+      thumbnail: p.src.portrait || p.src.large2x,
+      duration: 5,
+      width: p.width,
+      height: p.height,
+    }))
 
     return NextResponse.json({ videos })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[stock] unexpected error:', msg)
-    return NextResponse.json({ videos: MOCK, mock: true })
+    return NextResponse.json({ videos: buildMock(), mock: true })
   }
 }
