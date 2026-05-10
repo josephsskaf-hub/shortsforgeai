@@ -102,6 +102,96 @@ const TOP_PICKS = [
     pills: DEFAULT_PILLS,
     badge: 'Best for Shorts',
   },
+  {
+    id: 'conspiracy-theories',
+    emoji: '🕶️',
+    name: 'Conspiracy Theories',
+    description: 'Wild claims & cover-ups the internet won’t let die',
+    tags: ['Mystery', 'High Retention', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Viral Pick',
+  },
+  {
+    id: 'dark-psychology',
+    emoji: '🧬',
+    name: 'Dark Psychology',
+    description: 'Manipulation tactics & the science of influence',
+    tags: ['Psychology', 'Saves', 'High Retention'],
+    pills: DEFAULT_PILLS,
+    badge: 'High Retention',
+  },
+  {
+    id: 'unexplained-events',
+    emoji: '🌀',
+    name: 'Unexplained Events',
+    description: 'Strange disappearances science can’t explain',
+    tags: ['Mystery', 'Curiosity', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Trending',
+  },
+  {
+    id: 'mind-blowing-science',
+    emoji: '🧪',
+    name: 'Mind-Blowing Science',
+    description: 'Discoveries that rewrote what we thought we knew',
+    tags: ['Science', 'Education', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Best for Shorts',
+  },
+  {
+    id: 'survival-stories',
+    emoji: '🏔️',
+    name: 'Survival Stories',
+    description: 'Against-all-odds escapes from the harshest places',
+    tags: ['Stories', 'Suspense', 'High Retention'],
+    pills: DEFAULT_PILLS,
+    badge: 'High Retention',
+  },
+  {
+    id: 'celebrity-secrets',
+    emoji: '🌟',
+    name: 'Celebrity Secrets',
+    description: 'Hidden scandals & untold stories from the spotlight',
+    tags: ['Entertainment', 'Gossip', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Trending',
+  },
+  {
+    id: 'war-untold',
+    emoji: '⚔️',
+    name: 'War Untold Stories',
+    description: 'Classified missions & the soldiers history forgot',
+    tags: ['History', 'Stories', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Viral Pick',
+  },
+  {
+    id: 'nature-extremes',
+    emoji: '🌋',
+    name: 'Nature’s Extremes',
+    description: 'The most dangerous places & disasters on Earth',
+    tags: ['Nature', 'Curiosity', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Best for Shorts',
+  },
+  {
+    id: 'tech-fails',
+    emoji: '💥',
+    name: 'Tech Fails & Disasters',
+    description: 'Billion-dollar bugs & legendary product flops',
+    tags: ['Tech', 'Trending', 'Viral'],
+    pills: DEFAULT_PILLS,
+    badge: 'Trending',
+  },
+  {
+    id: 'body-mind-hacks',
+    emoji: '⚡',
+    name: 'Body & Mind Hacks',
+    description: 'Science-backed tricks to upgrade focus & energy',
+    tags: ['Health', 'Saves', 'Daily Content'],
+    pills: DEFAULT_PILLS,
+    badge: 'Viral Pick',
+  },
 ]
 
 const FREE_NICHE_ID = 'money'
@@ -116,6 +206,21 @@ export default function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
+
+  const [heroPrompt, setHeroPrompt] = useState('')
+
+  function handleHeroGenerate() {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    const trimmed = heroPrompt.trim()
+    if (trimmed) {
+      router.push(`/dashboard?prompt=${encodeURIComponent(trimmed)}`)
+    } else {
+      router.push('/dashboard')
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -211,34 +316,110 @@ export default function HomePage() {
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>AI Shorts generator · Built for faceless creators</span>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.4rem)', fontWeight: 900, lineHeight: 1.06, letterSpacing: '-0.03em', margin: '0 auto 16px', maxWidth: 780 }}>
-            Create Viral Shorts From{' '}
+          <h1 style={{ fontSize: 'clamp(2.4rem, 7vw, 4rem)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.035em', margin: '0 auto 14px', maxWidth: 780 }}>
+            Viral Shorts.{' '}
             <span style={{ background: 'linear-gradient(135deg, #818cf8, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Trending Niches
+              One Click.
             </span>
           </h1>
 
-          <p style={{ fontSize: '1.05rem', color: 'var(--muted2)', maxWidth: 600, margin: '0 auto 30px', lineHeight: 1.6 }}>
-            Pick a niche, generate ready-to-post Shorts scripts, titles, hooks, captions, hashtags, and video prompts in seconds.
+          <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.55 }}>
+            AI-generated scripts, hooks & hashtags — built for faceless creators.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
             <Link
               href={user ? '/dashboard' : '/signup'}
-              style={{ padding: '15px 36px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 36px rgba(99,102,241,.5)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              style={{ padding: '13px 30px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 28px rgba(99,102,241,.45)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              Start Free →
+              Start Free
             </Link>
             <button
               onClick={() => scrollTo(pricingRef)}
-              style={{ padding: '15px 28px', borderRadius: 14, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text2)', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+              style={{ padding: '13px 24px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text2)', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
             >
               View Pricing
             </button>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', letterSpacing: '0.01em' }}>
-            Free to start &nbsp;•&nbsp; No credit card required
+          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', letterSpacing: '0.01em' }}>
+            No credit card required
           </p>
+        </section>
+
+        {/* ─── Prompt Input (InVideo-style) ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '0 20px 32px', maxWidth: 860, margin: '0 auto' }}>
+          <div
+            style={{
+              background: 'linear-gradient(180deg, rgba(20,20,38,0.92), rgba(13,13,28,0.96))',
+              border: '1px solid rgba(99,102,241,.28)',
+              borderRadius: 20,
+              padding: 'clamp(18px, 3vw, 26px)',
+              boxShadow: '0 0 60px rgba(99,102,241,.15), 0 0 0 1px rgba(99,102,241,.08) inset',
+              backdropFilter: 'blur(16px)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: '1.05rem' }}>✨</span>
+              <span style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                What Short do you want to create?
+              </span>
+            </div>
+            <div className="hero-prompt-row">
+              <input
+                type="text"
+                value={heroPrompt}
+                onChange={(e) => setHeroPrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleHeroGenerate() }}
+                placeholder="Describe your Short idea… e.g. 'Top 5 Ocean Mysteries'"
+                className="hero-prompt-input"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '14px 16px',
+                  fontSize: '0.95rem',
+                  color: 'var(--text)',
+                  background: 'rgba(255,255,255,.04)',
+                  border: '1px solid rgba(255,255,255,.1)',
+                  borderRadius: 12,
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <button
+                onClick={handleHeroGenerate}
+                className="hero-prompt-btn"
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: 12,
+                  fontSize: '0.92rem',
+                  fontWeight: 900,
+                  color: '#fff',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+                  boxShadow: '0 6px 24px rgba(99,102,241,.45)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                Generate →
+              </button>
+            </div>
+            <p style={{ marginTop: 12, fontSize: '0.74rem', color: 'var(--muted)' }}>
+              Press Enter to generate · Free tier supported · No credit card
+            </p>
+          </div>
+          <style>{`
+            .hero-prompt-row { display: flex; gap: 10px; align-items: stretch; }
+            .hero-prompt-input::placeholder { color: rgba(255,255,255,.4); }
+            .hero-prompt-input:focus { border-color: rgba(99,102,241,.55); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+            @media (max-width: 560px) {
+              .hero-prompt-row { flex-direction: column; }
+              .hero-prompt-btn { width: 100%; }
+            }
+          `}</style>
         </section>
 
         {/* ─── Top Picks ─── */}
