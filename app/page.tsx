@@ -9,6 +9,17 @@ import Sidebar from '@/components/Sidebar'
 
 const DEFAULT_PILLS = ['🎬 YouTube Shorts', '🔥 High Engagement', '📋 Ready to Copy']
 
+// Quick-pick chips below the hero textarea — clicking one fills the textarea
+// with a preset prompt and the user can submit immediately.
+const QUICK_TAGS: { emoji: string; label: string; prompt: string }[] = [
+  { emoji: '🎯', label: 'Featured',        prompt: 'Plan a viral YouTube Short on the most-talked-about topic this week.' },
+  { emoji: '🔮', label: 'Mystery & UFOs',  prompt: 'Plan a YouTube Short about an unexplained UFO sighting or government cover-up.' },
+  { emoji: '💰', label: 'Money Facts',     prompt: 'Plan a YouTube Short revealing a wild money fact most people have never heard.' },
+  { emoji: '🧠', label: 'Dark Psychology', prompt: 'Plan a YouTube Short exposing a dark psychology trick used to manipulate people.' },
+  { emoji: '🚀', label: 'Space Secrets',   prompt: 'Plan a YouTube Short about a chilling secret hidden in deep space.' },
+  { emoji: '💀', label: 'True Crime',      prompt: 'Plan a YouTube Short about a chilling unsolved true crime case.' },
+]
+
 // Top picks for the homepage — curated trending niches.
 // IDs map to existing niche IDs used by the auth/upgrade routing.
 const TOP_PICKS = [
@@ -200,6 +211,7 @@ export default function HomePage() {
   const router = useRouter()
   const nicheGridRef = useRef<HTMLDivElement>(null)
   const pricingRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [userEmail, setUserEmail] = useState('')
@@ -347,78 +359,144 @@ export default function HomePage() {
         </section>
 
         {/* ─── Prompt Input (InVideo-style) ─── */}
-        <section style={{ position: 'relative', zIndex: 10, padding: '0 20px 32px', maxWidth: 860, margin: '0 auto' }}>
+        <section style={{ position: 'relative', zIndex: 10, padding: '0 20px 32px', maxWidth: 760, margin: '0 auto' }}>
           <div
             style={{
-              background: 'linear-gradient(180deg, rgba(20,20,38,0.92), rgba(13,13,28,0.96))',
-              border: '1px solid rgba(99,102,241,.28)',
+              position: 'relative',
+              background: '#16162a',
               borderRadius: 20,
-              padding: 'clamp(18px, 3vw, 26px)',
-              boxShadow: '0 0 60px rgba(99,102,241,.15), 0 0 0 1px rgba(99,102,241,.08) inset',
-              backdropFilter: 'blur(16px)',
+              padding: '20px 20px 60px',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(99,102,241,0.10) inset',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: '1.05rem' }}>✨</span>
-              <span style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                What Short do you want to create?
-              </span>
-            </div>
-            <div className="hero-prompt-row">
-              <input
-                type="text"
-                value={heroPrompt}
-                onChange={(e) => setHeroPrompt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleHeroGenerate() }}
-                placeholder="Describe your Short idea… e.g. 'Top 5 Ocean Mysteries'"
-                className="hero-prompt-input"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: '14px 16px',
-                  fontSize: '0.95rem',
-                  color: 'var(--text)',
-                  background: 'rgba(255,255,255,.04)',
-                  border: '1px solid rgba(255,255,255,.1)',
-                  borderRadius: 12,
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                }}
-              />
+            <textarea
+              value={heroPrompt}
+              onChange={(e) => setHeroPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleHeroGenerate()
+                }
+              }}
+              placeholder="Plan a Short, pick a niche, or describe your video idea..."
+              rows={6}
+              className="hero-prompt-textarea"
+              style={{
+                width: '100%',
+                minHeight: 170,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                resize: 'none',
+                color: 'var(--text)',
+                fontSize: '1rem',
+                fontFamily: 'inherit',
+                lineHeight: 1.55,
+                padding: 0,
+              }}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              style={{ display: 'none' }}
+              onChange={() => { /* placeholder — no-op for now */ }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Attach a file"
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                left: 16,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '1.2rem',
+                lineHeight: 1,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                fontFamily: 'inherit',
+              }}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={handleHeroGenerate}
+              aria-label="Submit prompt"
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                right: 16,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: '#ffffff',
+                border: 'none',
+                color: '#0d0d1c',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                boxShadow: '0 2px 10px rgba(255,255,255,0.18)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
+          </div>
+          <div
+            className="quick-tags-row"
+            style={{
+              display: 'flex',
+              gap: 8,
+              marginTop: 14,
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 4,
+              scrollbarWidth: 'none',
+            }}
+          >
+            {QUICK_TAGS.map((t) => (
               <button
-                onClick={handleHeroGenerate}
-                className="hero-prompt-btn"
+                key={t.label}
+                type="button"
+                onClick={() => setHeroPrompt(t.prompt)}
                 style={{
-                  padding: '14px 28px',
-                  borderRadius: 12,
-                  fontSize: '0.92rem',
-                  fontWeight: 900,
-                  color: '#fff',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-                  boxShadow: '0 6px 24px rgba(99,102,241,.45)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text2)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit',
                 }}
               >
-                Generate →
+                <span>{t.emoji}</span>
+                <span>{t.label}</span>
               </button>
-            </div>
-            <p style={{ marginTop: 12, fontSize: '0.74rem', color: 'var(--muted)' }}>
-              Press Enter to generate · Free tier supported · No credit card
-            </p>
+            ))}
           </div>
           <style>{`
-            .hero-prompt-row { display: flex; gap: 10px; align-items: stretch; }
-            .hero-prompt-input::placeholder { color: rgba(255,255,255,.4); }
-            .hero-prompt-input:focus { border-color: rgba(99,102,241,.55); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
-            @media (max-width: 560px) {
-              .hero-prompt-row { flex-direction: column; }
-              .hero-prompt-btn { width: 100%; }
-            }
+            .hero-prompt-textarea::placeholder { color: rgba(255,255,255,.38); }
+            .quick-tags-row::-webkit-scrollbar { display: none; }
           `}</style>
         </section>
 
