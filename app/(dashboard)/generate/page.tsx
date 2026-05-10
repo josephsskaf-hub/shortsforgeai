@@ -1,6 +1,12 @@
-import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
+import GenerateClient from './GenerateClient'
 
-// /generate is an alias for /dashboard
+export const dynamic = 'force-dynamic'
+
 export default function GeneratePage() {
-  redirect('/dashboard')
+  return (
+    <Suspense fallback={null}>
+      <GenerateClient />
+    </Suspense>
+  )
 }

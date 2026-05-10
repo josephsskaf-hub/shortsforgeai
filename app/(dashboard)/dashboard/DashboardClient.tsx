@@ -31,6 +31,16 @@ export default function DashboardClient({
   const router = useRouter()
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
+  const [videoPrompt, setVideoPrompt] = useState('')
+
+  function handleVideoGenerate() {
+    const p = videoPrompt.trim()
+    if (!p) {
+      router.push('/generate')
+      return
+    }
+    router.push(`/generate?prompt=${encodeURIComponent(p)}`)
+  }
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -132,8 +142,96 @@ export default function DashboardClient({
             textDecoration: 'none',
           }}
         >
-          ⚡ Generate Now
+          ✍️ Generate Script
         </Link>
+      </div>
+
+      {/* ── 🎬 NEW: AI Video Generator (RunwayML) ── */}
+      <div
+        className="relative rounded-[20px] overflow-hidden mb-7 px-5 md:px-6 py-5 md:py-6"
+        style={{
+          background: 'linear-gradient(135deg, rgba(168,85,247,.12) 0%, rgba(236,72,153,.06) 100%)',
+          border: '1px solid rgba(168,85,247,.32)',
+          boxShadow: '0 0 60px rgba(168,85,247,.12)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span
+            className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
+            style={{
+              background: 'rgba(168,85,247,.18)',
+              border: '1px solid rgba(168,85,247,.32)',
+              color: '#c4b5fd',
+            }}
+          >
+            🎬 Beta · AI Video
+          </span>
+          <span
+            className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
+            style={{
+              background: 'rgba(16,185,129,.1)',
+              border: '1px solid rgba(16,185,129,.3)',
+              color: '#34d399',
+            }}
+          >
+            Powered by RunwayML
+          </span>
+        </div>
+        <h2
+          className="font-black tracking-tight mb-1.5"
+          style={{ fontSize: 'clamp(1.1rem, 2.8vw, 1.4rem)', color: 'var(--text)', lineHeight: 1.1 }}
+        >
+          Generate a real AI Short from one prompt
+        </h2>
+        <p className="text-sm mb-4" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+          Type your idea — we plan 4 cinematic scenes and RunwayML Gen-4 Turbo renders a vertical
+          9:16 video in ~1–2 minutes.
+        </p>
+        <div
+          className="flex items-stretch gap-2 flex-wrap"
+          style={{
+            padding: 6,
+            borderRadius: 14,
+            background: 'rgba(13,13,28,.85)',
+            border: '1px solid rgba(168,85,247,.3)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,.04)',
+          }}
+        >
+          <input
+            type="text"
+            value={videoPrompt}
+            onChange={(e) => setVideoPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleVideoGenerate()
+            }}
+            placeholder="e.g. A neon Tokyo alley at midnight with a lone samurai"
+            maxLength={500}
+            style={{
+              flex: 1,
+              minWidth: 200,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--text)',
+              fontSize: '0.9rem',
+              padding: '10px 12px',
+              fontFamily: 'inherit',
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleVideoGenerate}
+            className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+            style={{
+              background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 22px rgba(168,85,247,.45)',
+            }}
+          >
+            ⚡ Generate Video →
+          </button>
+        </div>
       </div>
 
       {/* ── 🔥 Top Picks Grid ── */}

@@ -222,15 +222,16 @@ export default function HomePage() {
   const [heroPrompt, setHeroPrompt] = useState('')
 
   function handleHeroGenerate() {
+    const trimmed = heroPrompt.trim()
     if (!user) {
-      router.push('/login')
+      const dest = trimmed ? `/generate?prompt=${encodeURIComponent(trimmed)}` : '/generate'
+      router.push(`/login?redirect=${encodeURIComponent(dest)}`)
       return
     }
-    const trimmed = heroPrompt.trim()
     if (trimmed) {
-      router.push(`/dashboard?prompt=${encodeURIComponent(trimmed)}`)
+      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`)
     } else {
-      router.push('/dashboard')
+      router.push('/generate')
     }
   }
 
