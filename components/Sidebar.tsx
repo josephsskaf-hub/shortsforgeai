@@ -207,9 +207,20 @@ export default function Sidebar({
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isPro, setIsPro] = useState(initialIsPro)
   const [userEmail, setUserEmail] = useState(initialEmail)
+  const [displayName, setDisplayName] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
+
+  function extractDisplayName(meta: Record<string, unknown> | undefined | null): string {
+    if (!meta) return ''
+    const candidates = ['full_name', 'name', 'display_name', 'user_name']
+    for (const key of candidates) {
+      const v = meta[key]
+      if (typeof v === 'string' && v.trim().length > 0) return v.trim()
+    }
+    return ''
+  }
 
   const fetchCredits = useCallback(async () => {
     if (!isLoggedIn) { setCredits(null); setCreditsLoading(false); return }
@@ -231,11 +242,18 @@ export default function Sidebar({
   }, [fetchCredits])
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setDisplayName(extractDisplayName(user.user_metadata as Record<string, unknown> | null))
+      }
+    })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        setIsLoggedIn(false); setUserEmail(''); setIsPro(false); setCredits(null)
+        setIsLoggedIn(false); setUserEmail(''); setDisplayName(''); setIsPro(false); setCredits(null)
       } else if (event === 'SIGNED_IN' && session?.user) {
         setIsLoggedIn(true); setUserEmail(session.user.email ?? '')
+        setDisplayName(extractDisplayName(session.user.user_metadata as Record<string, unknown> | null))
         const { data } = await supabase.from('profiles').select('is_pro').eq('id', session.user.id).single()
         if (data) setIsPro(data.is_pro ?? false)
         fetchCredits()
@@ -313,9 +331,16 @@ export default function Sidebar({
         </Link>
 
         {/* Scrollable nav */}
-        <nav className="flex-1 overflow-y-auto flex flex-col" style={{ padding: '8px 10px 12px' }}>
+        <nav className="flex-1 overflow-y-auto flex flex-col" style={{ padding: '12px 10px 12px' }}>
 
-          {/* Top Picks */}
+          {/* Main nav */}
+          <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '12px 4px 4px' }} />
+
+          {/* Topics */}
           <div
             style={{
               fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.15em',
@@ -324,98 +349,90 @@ export default function Sidebar({
             }}
           >
             <span style={{ fontSize: '0.75rem' }}>🔥</span>
-            Top Picks
+            Topics
           </div>
-          <div className="flex flex-col gap-1 mb-3">
+          <div className="flex flex-col gap-1 mb-2">
             {TOP_PICKS.map((niche) => (
               <NichePill key={niche.id} niche={niche} onClose={onClose} />
             ))}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 4px 8px' }} />
-
-          {/* Credits Card — positioned near main nav */}
-          {isLoggedIn && (
-            <div style={{ padding: '0 2px 10px' }}>
-              <Link
-                href="/pricing"
-                onClick={onClose}
-                className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
-                style={{
-                  background: creditsZero
-                    ? 'rgba(239,68,68,0.08)'
-                    : 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(124,58,237,0.1))',
-                  border: creditsZero
-                    ? '1px solid rgba(239,68,68,0.32)'
-                    : '1px solid rgba(99,102,241,0.32)',
-                  boxShadow: creditsZero
-                    ? '0 0 22px rgba(239,68,68,0.12)'
-                    : '0 0 28px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
-                  textDecoration: 'none',
-                  transition: 'all 0.18s ease',
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div
-                    style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: creditsZero
-                        ? 'rgba(239,68,68,0.15)'
-                        : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
-                      border: creditsZero
-                        ? '1px solid rgba(239,68,68,0.3)'
-                        : '1px solid rgba(99,102,241,0.4)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.1rem',
-                      boxShadow: creditsZero ? 'none' : '0 0 12px rgba(99,102,241,0.3)',
-                    }}
-                  >
-                    ⚡
-                  </div>
-                  {creditsLoading ? (
-                    <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
-                        {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
-                      </div>
-                      <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : 'var(--muted)', marginTop: 1 }}>
-                        {creditsZero ? 'No credits left' : 'available'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div
-                  style={{
-                    width: 30, height: 30, borderRadius: 9,
-                    background: creditsZero
-                      ? 'rgba(239,68,68,0.18)'
-                      : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
-                    border: creditsZero
-                      ? '1px solid rgba(239,68,68,0.35)'
-                      : '1px solid rgba(99,102,241,0.4)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: creditsZero ? '#f87171' : '#a5b4fc',
-                    fontSize: '1.1rem', fontWeight: 900,
-                    boxShadow: creditsZero ? 'none' : '0 0 10px rgba(99,102,241,0.25)',
-                  }}
-                >
-                  +
-                </div>
-              </Link>
-            </div>
-          )}
-
-          {/* Main nav */}
-          <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
-          <NavItem href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
-
         </nav>
 
-        {/* Bottom: guest CTA or no-credits upsell */}
+        {/* Bottom area: credits card + (guest CTA or no-credits upsell) */}
+        {isLoggedIn && (
+          <div className="px-3 pt-3 pb-2 flex-shrink-0">
+            <Link
+              href="/pricing"
+              onClick={onClose}
+              className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
+              style={{
+                background: creditsZero
+                  ? 'rgba(239,68,68,0.08)'
+                  : 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(124,58,237,0.1))',
+                border: creditsZero
+                  ? '1px solid rgba(239,68,68,0.32)'
+                  : '1px solid rgba(99,102,241,0.32)',
+                boxShadow: creditsZero
+                  ? '0 0 22px rgba(239,68,68,0.12)'
+                  : '0 0 28px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
+                textDecoration: 'none',
+                transition: 'all 0.18s ease',
+              }}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    background: creditsZero
+                      ? 'rgba(239,68,68,0.15)'
+                      : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                    border: creditsZero
+                      ? '1px solid rgba(239,68,68,0.3)'
+                      : '1px solid rgba(99,102,241,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.1rem',
+                    boxShadow: creditsZero ? 'none' : '0 0 12px rgba(99,102,241,0.3)',
+                  }}
+                >
+                  ⚡
+                </div>
+                {creditsLoading ? (
+                  <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
+                      {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : 'var(--muted)', marginTop: 1 }}>
+                      {creditsZero ? 'No credits left' : 'available'}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  width: 30, height: 30, borderRadius: 9,
+                  background: creditsZero
+                    ? 'rgba(239,68,68,0.18)'
+                    : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                  border: creditsZero
+                    ? '1px solid rgba(239,68,68,0.35)'
+                    : '1px solid rgba(99,102,241,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: creditsZero ? '#f87171' : '#a5b4fc',
+                  fontSize: '1.1rem', fontWeight: 900,
+                  boxShadow: creditsZero ? 'none' : '0 0 10px rgba(99,102,241,0.25)',
+                }}
+              >
+                +
+              </div>
+            </Link>
+          </div>
+        )}
+
         {!isLoggedIn ? (
-          <div className="px-3 pb-3 flex-shrink-0">
+          <div className="px-3 pt-3 pb-3 flex-shrink-0">
             <div style={{ borderRadius: 14, padding: '14px 14px', background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(124,58,237,0.08))', border: '1px solid rgba(99,102,241,0.22)' }}>
               <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>⚡ 3 free credits</p>
               <p style={{ fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
@@ -428,7 +445,7 @@ export default function Sidebar({
             </div>
           </div>
         ) : creditsZero ? (
-          <div className="px-3 pb-3 flex-shrink-0">
+          <div className="px-3 pb-2 flex-shrink-0">
             <div style={{ borderRadius: 14, padding: '14px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)' }}>
               <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}>⚠️ No credits left</p>
               <p style={{ fontSize: '0.7rem', color: 'var(--muted)', lineHeight: 1.45, marginBottom: 10 }}>Buy a pack to keep creating.</p>
@@ -451,15 +468,33 @@ export default function Sidebar({
                 fontSize: '0.85rem', fontWeight: 800, color: '#fff',
               }}
             >
-              {isLoggedIn ? (userEmail?.[0] ?? 'U').toUpperCase() : '👤'}
+              {isLoggedIn ? ((displayName || userEmail)?.[0] ?? 'U').toUpperCase() : '👤'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {isLoggedIn ? userEmail : 'Guest User'}
-              </div>
-              <div style={{ fontSize: '0.62rem', color: isPro ? '#34d399' : 'var(--muted)', marginTop: 1 }}>
-                {isLoggedIn ? (isPro ? '✦ Pro Plan' : 'Free Plan') : 'Not signed in'}
-              </div>
+              {isLoggedIn ? (
+                <>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {displayName || (userEmail ? userEmail.split('@')[0] : 'Account')}
+                  </div>
+                  {userEmail && (
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {userEmail}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.62rem', color: isPro ? '#34d399' : 'var(--muted)', marginTop: 1 }}>
+                    {isPro ? '✦ Pro Plan' : 'Free Plan'}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    Guest User
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginTop: 1 }}>
+                    Not signed in
+                  </div>
+                </>
+              )}
             </div>
             {isLoggedIn ? (
               <button
