@@ -89,7 +89,7 @@ Example output format:
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
   // Try models in order: gen4_turbo first, then gen3a_turbo as fallback
   const modelsToTry = ['gen4_turbo', 'gen3a_turbo']
-  const bases = [RUNWAY_BASE_PROD, RUNWAY_BASE]
+  const bases = [RUNWAY_BASE] // dev key only works on dev endpoint
 
   let res: Response | null = null
   let lastError = ''
