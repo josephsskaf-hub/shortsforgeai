@@ -94,16 +94,19 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
     ratio: '720:1280',
   })
 
-  // Try primary endpoint, fall back to production endpoint
+  console.log('[runway] sending body:', body.slice(0, 300))
+
+  // Try production endpoint first, fall back to dev
   let res: Response | null = null
   let lastError = ''
-  for (const base of [RUNWAY_BASE, RUNWAY_BASE_PROD]) {
+  for (const base of [RUNWAY_BASE_PROD, RUNWAY_BASE]) {
     try {
       res = await fetch(`${base}/text_to_video`, {
         method: 'POST',
         headers: authHeaders(),
         body,
       })
+      console.log(`[runway] got response from ${base}: status=${res.status}`)
       break
     } catch (fetchErr) {
       lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
@@ -114,17 +117,28 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
   if (!res) throw new Error(`Runway unreachable: ${lastError}`)
 
   const rawText = await res.text()
-  console.log(`[runway] POST text_to_video status=${res.status} body=${rawText.slice(0, 500)}`)
+  console.log(`[runway] POST text_to_video status=${res.status} body=${rawText.slice(0, 800)}`)
 
   let data: Record<string, unknown> = {}
   try { data = JSON.parse(rawText) } catch { /* non-json */ }
 
   if (!res.ok) {
+    // Extract as much detail as possible from the validation error
+    const errMsg = typeof data.error === 'string' ? data.error : null
+    const errMessage = typeof data.message === 'string' ? data.message : null
+    const errDetail = typeof (data as {detail?: unknown}).detail === 'string'
+      ? (data as {detail: string}).detail : null
+    const errErrors = Array.isArray(data.errors)
+      ? ' | details: ' + JSON.stringify(data.errors).slice(0, 300)
+      : ''
+    const errValidation = Array.isArray((data as {validation?: unknown}).validation)
+      ? ' | validation: ' + JSON.stringify((data as {validation: unknown[]}).validation).slice(0, 300)
+      : ''
     const detail =
-      (typeof data.error === 'string' ? data.error : null) ||
-      (typeof data.message === 'string' ? data.message : null) ||
-      (typeof (data as {detail?: unknown}).detail === 'string' ? (data as {detail: string}).detail : null) ||
-      rawText.slice(0, 200) ||
+      (errMsg ? errMsg + errErrors + errValidation : null) ||
+      (errMessage ? errMessage + errErrors + errValidation : null) ||
+      errDetail ||
+      rawText.slice(0, 400) ||
       `Runway HTTP ${res.status}`
     throw new Error(detail)
   }
