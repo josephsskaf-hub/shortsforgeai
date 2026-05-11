@@ -87,8 +87,8 @@ Example output format:
 }
 
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  // Try models in order: gen4_turbo first, then gen3a_turbo as fallback
-  const modelsToTry = ['gen4_turbo', 'gen3a_turbo']
+  // gen3a_turbo is the text-to-video model; gen4_turbo requires an image input
+  const modelsToTry = ['gen3a_turbo']
   const bases = [RUNWAY_BASE] // dev key only works on dev endpoint
 
   let res: Response | null = null
@@ -100,7 +100,7 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
       model,
       promptText,
       duration: 5,
-      ratio: '720:1280',
+      ratio: '768:1280', // valid 9:16 ratio for gen3a_turbo
     })
     console.log(`[runway] trying model=${model} body=${body.slice(0, 300)}`)
 
