@@ -408,8 +408,8 @@ export default function Sidebar({
           <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 4px 8px' }} />
 
           {/* Main nav */}
-          <NavItem href="/create" icon="⚡" label="Generate Script" exact={false} pathname={pathname} onClick={onClose} />
-          <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+          <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/create" icon="✍️" label="Create Video" exact={false} pathname={pathname} onClick={onClose} />
           <NavItem href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>

@@ -110,7 +110,7 @@ export default function ChannelBuilderClient() {
             className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }}
           >
-            ⚡ Generate Scripts
+            ⚡ Generate Videos
           </Link>
         </div>
       </div>

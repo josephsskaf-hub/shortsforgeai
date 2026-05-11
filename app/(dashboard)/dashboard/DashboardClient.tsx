@@ -142,7 +142,7 @@ export default function DashboardClient({
             textDecoration: 'none',
           }}
         >
-          ✍️ Generate Script
+          ✍️ Create Video
         </Link>
       </div>
 

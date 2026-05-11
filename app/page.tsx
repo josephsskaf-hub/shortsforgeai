@@ -317,8 +317,40 @@ export default function HomePage() {
             <span style={{ fontWeight: 900, fontSize: '0.95rem', background: 'linear-gradient(135deg, #3B82F6, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ShortsForgeAI</span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
-            <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
+            {!authChecked ? (
+              <div style={{ width: 160, height: 36 }} aria-hidden="true" />
+            ) : user ? (
+              <>
+                <span
+                  title={userEmail}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '6px 12px', borderRadius: 10, fontSize: '0.78rem', fontWeight: 600,
+                    color: 'var(--muted2)', border: '1px solid var(--border)',
+                    maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0,
+                    }}
+                  >
+                    {(userEmail?.[0] ?? 'U').toUpperCase()}
+                  </span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail || 'Account'}</span>
+                </span>
+                <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
+                <Link href="/signup" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Start Free</Link>
+              </>
+            )}
           </div>
         </nav>
 
@@ -337,7 +369,7 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.55 }}>
-            AI-generated scripts, hooks & hashtags — built for faceless creators.
+            AI-generated faceless videos — built for Shorts creators.
           </p>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
@@ -513,7 +545,7 @@ export default function HomePage() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--indigo-light)' }}>
-              ⚡ Generate Script · Start Free
+              ⚡ Generate Video · Start Free
             </div>
           </div>
 
