@@ -116,7 +116,7 @@ export default function DashboardClient({
           Your next{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a855f7)',
+              background: 'linear-gradient(135deg, #3B82F6, #c4b5fd, #a855f7)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -137,7 +137,7 @@ export default function DashboardClient({
           href="/create"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
             boxShadow: '0 4px 32px rgba(99,102,241,.5)',
             textDecoration: 'none',
           }}
@@ -188,27 +188,33 @@ export default function DashboardClient({
           9:16 video in ~1–2 minutes.
         </p>
         <div
-          className="flex items-stretch gap-2 flex-wrap"
           style={{
-            padding: 6,
+            padding: 8,
             borderRadius: 14,
             background: 'rgba(13,13,28,.85)',
             border: '1px solid rgba(168,85,247,.3)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
           }}
         >
-          <input
-            type="text"
+          <textarea
             value={videoPrompt}
             onChange={(e) => setVideoPrompt(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleVideoGenerate()
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleVideoGenerate()
+              }
             }}
             placeholder="e.g. A neon Tokyo alley at midnight with a lone samurai"
             maxLength={500}
+            rows={2}
             style={{
-              flex: 1,
-              minWidth: 200,
+              width: '100%',
+              minHeight: 64,
+              resize: 'none',
               background: 'transparent',
               border: 'none',
               outline: 'none',
@@ -216,21 +222,26 @@ export default function DashboardClient({
               fontSize: '0.9rem',
               padding: '10px 12px',
               fontFamily: 'inherit',
+              lineHeight: 1.5,
+              boxSizing: 'border-box',
             }}
           />
-          <button
-            type="button"
-            onClick={handleVideoGenerate}
-            className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
-            style={{
-              background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 4px 22px rgba(168,85,247,.45)',
-            }}
-          >
-            ⚡ Generate Video →
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={handleVideoGenerate}
+              className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+              style={{
+                background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 22px rgba(168,85,247,.45)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ⚡ Generate Video →
+            </button>
+          </div>
         </div>
       </div>
 
@@ -369,7 +380,7 @@ export default function DashboardClient({
             🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
-            3 free credits on signup — just sign in.
+            2 free credits on signup — just sign in.
           </p>
         </div>
       )}
