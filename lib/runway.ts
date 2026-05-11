@@ -2,6 +2,8 @@ import { openai } from '@/lib/openai'
 
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1'
 const RUNWAY_VERSION = '2024-11-06'
+// Fallback base if dev subdomain fails
+const RUNWAY_BASE_PROD = 'https://api.runwayml.com/v1'
 
 export interface RunwayTaskHandle {
   id: string
@@ -85,40 +87,53 @@ Example output format:
 }
 
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  const res = await fetch(`${RUNWAY_BASE}/text_to_video`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({
-      model: 'gen4_turbo',
-      promptText,
-      duration: 5,
-      ratio: '720:1280',
-    }),
+  const body = JSON.stringify({
+    model: 'gen4_turbo',
+    promptText,
+    duration: 5,
+    ratio: '720:1280',
   })
 
-  const data = await res.json().catch(() => ({} as Record<string, unknown>))
+  // Try primary endpoint, fall back to production endpoint
+  let res: Response | null = null
+  let lastError = ''
+  for (const base of [RUNWAY_BASE, RUNWAY_BASE_PROD]) {
+    try {
+      res = await fetch(`${base}/text_to_video`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body,
+      })
+      break
+    } catch (fetchErr) {
+      lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+      console.error(`[runway] fetch failed for ${base}:`, lastError)
+    }
+  }
+
+  if (!res) throw new Error(`Runway unreachable: ${lastError}`)
+
+  const rawText = await res.text()
+  console.log(`[runway] POST text_to_video status=${res.status} body=${rawText.slice(0, 500)}`)
+
+  let data: Record<string, unknown> = {}
+  try { data = JSON.parse(rawText) } catch { /* non-json */ }
 
   if (!res.ok) {
     const detail =
-      (data && typeof (data as Record<string, unknown>).error === 'string'
-        ? (data as { error: string }).error
-        : null) ||
-      (data && typeof (data as Record<string, unknown>).message === 'string'
-        ? (data as { message: string }).message
-        : null) ||
-      `Runway error ${res.status}`
+      (typeof data.error === 'string' ? data.error : null) ||
+      (typeof data.message === 'string' ? data.message : null) ||
+      (typeof (data as {detail?: unknown}).detail === 'string' ? (data as {detail: string}).detail : null) ||
+      rawText.slice(0, 200) ||
+      `Runway HTTP ${res.status}`
     throw new Error(detail)
   }
 
   const id =
-    (data && typeof (data as Record<string, unknown>).id === 'string'
-      ? (data as { id: string }).id
-      : null) ||
-    (data && typeof (data as Record<string, unknown>).taskId === 'string'
-      ? (data as { taskId: string }).taskId
-      : null)
+    (typeof data.id === 'string' ? data.id : null) ||
+    (typeof data.taskId === 'string' ? data.taskId : null)
 
-  if (!id) throw new Error('Runway returned no task id.')
+  if (!id) throw new Error(`Runway returned no task id. Response: ${rawText.slice(0, 200)}`)
 
   return { id, promptText }
 }
@@ -156,13 +171,3 @@ export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
   } else if (output && typeof output === 'object' && typeof (output as { url?: unknown }).url === 'string') {
     videoUrl = (output as { url: string }).url
   }
-
-  const failure =
-    typeof data.failure === 'string'
-      ? data.failure
-      : typeof (data as { failureCode?: unknown }).failureCode === 'string'
-      ? ((data as { failureCode: string }).failureCode)
-      : null
-
-  return { id, status, progress, videoUrl, failure }
-}
