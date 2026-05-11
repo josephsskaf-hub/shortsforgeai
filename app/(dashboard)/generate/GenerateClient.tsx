@@ -44,6 +44,18 @@ const QUALITY_OPTIONS: {
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
 
+// Defensive check: never feed an image URL into a <video> element.
+// Push #009 used extension-sniffing inside lib/runway.ts which could leak the
+// intermediate text_to_image URL into videoUrl. Push #010 removes that
+// classifier, but we still guard at render time so any future regression
+// shows "Video file not ready" instead of a static frame inside <video>.
+function looksLikeVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  if (/\.(png|jpe?g|webp|gif|avif)(\?|$|&)/.test(lower)) return false
+  return true
+}
+
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -127,7 +139,7 @@ export default function GenerateClient() {
   }, [tasks, states])
 
   const successClips = useMemo(
-    () => orderedClips.filter((s) => s.status === 'SUCCEEDED' && s.videoUrl),
+    () => orderedClips.filter((s) => s.status === 'SUCCEEDED' && looksLikeVideoUrl(s.videoUrl)),
     [orderedClips]
   )
 
@@ -654,9 +666,19 @@ export default function GenerateClient() {
                   .map((t) => {
                     const s = states[t.id]
                     const status = s?.status ?? 'PENDING'
-                    const ok = status === 'SUCCEEDED'
                     const failed = status === 'FAILED' || status === 'CANCELLED'
                     const running = status === 'RUNNING'
+                    const playable = status === 'SUCCEEDED' && looksLikeVideoUrl(s?.videoUrl)
+                    const succeededNoFile = status === 'SUCCEEDED' && !playable
+                    const label = failed
+                      ? 'failed'
+                      : playable
+                      ? 'completed'
+                      : succeededNoFile
+                      ? 'no file'
+                      : running
+                      ? 'processing'
+                      : 'queued'
                     return (
                       <div
                         key={t.id}
@@ -664,31 +686,39 @@ export default function GenerateClient() {
                         style={{
                           aspectRatio: '9 / 16',
                           background: 'rgba(0,0,0,.4)',
-                          border: ok
+                          border: playable
                             ? '1px solid rgba(16,185,129,.4)'
-                            : failed
+                            : failed || succeededNoFile
                             ? '1px solid rgba(239,68,68,.35)'
                             : '1px solid var(--border)',
                           position: 'relative',
                         }}
                       >
-                        {ok && s?.videoUrl ? (
+                        {playable && s?.videoUrl ? (
                           <video
+                            key={t.id}
                             src={s.videoUrl}
                             muted
                             loop
                             autoPlay
                             playsInline
+                            preload="metadata"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         ) : (
                           <div
-                            className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                            className="absolute inset-0 flex items-center justify-center text-xs font-bold text-center px-2"
                             style={{
-                              color: failed ? '#f87171' : running ? '#93c5fd' : 'var(--muted)',
+                              color: failed || succeededNoFile ? '#f87171' : running ? '#93c5fd' : 'var(--muted)',
                             }}
                           >
-                            {failed ? '⚠ Failed' : running ? <Spinner /> : '⏳ Queued'}
+                            {failed
+                              ? '⚠ Failed'
+                              : succeededNoFile
+                              ? 'No file'
+                              : running
+                              ? <Spinner />
+                              : '⏳ Queued'}
                           </div>
                         )}
                         <div
@@ -699,7 +729,7 @@ export default function GenerateClient() {
                             fontSize: '0.65rem',
                           }}
                         >
-                          Clip {t.index + 1} · {status.toLowerCase()}
+                          Clip {t.index + 1} · {label}
                         </div>
                       </div>
                     )
@@ -729,6 +759,21 @@ export default function GenerateClient() {
             </section>
           )}
 
+          {phase === 'done' && successClips.length === 0 && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+              style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
+            >
+              <div className="font-black text-base mb-1" style={{ color: '#fca5a5' }}>
+                Video file not ready
+              </div>
+              <p className="text-sm" style={{ color: 'var(--muted2)' }}>
+                Runway reported success but didn&apos;t return a playable file yet. Please refresh the
+                page in a moment.
+              </p>
+            </section>
+          )}
+
           {phase === 'done' && successClips.length > 0 && currentClipUrl && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
@@ -753,6 +798,7 @@ export default function GenerateClient() {
                   controls
                   autoPlay
                   playsInline
+                  preload="metadata"
                   onEnded={handleVideoEnd}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
@@ -805,6 +851,12 @@ export default function GenerateClient() {
               </p>
             </section>
           )}
+
+          <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
+              ShortsForgeAI v1.0
+            </p>
+          </div>
 
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <button

@@ -14,8 +14,7 @@ export interface RunwayTaskState {
   id: string
   status: RunwayTaskStatus
   progress: number | null
-  videoUrl: string | null
-  imageUrl: string | null
+  outputUrl: string | null
   failure: string | null
 }
 
@@ -274,20 +273,19 @@ export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
     outputUrl = (output as { url: string }).url
   }
 
-  // Figure out if this is image or video task by extension or by stored kind.
-  // Callers that care use imageUrl/videoUrl separately. Both fields point to the
-  // same URL — the consumer knows which API created the task.
-  const lowered = outputUrl?.toLowerCase() ?? ''
-  const isImage = /\.(png|jpe?g|webp)(\?|$)/.test(lowered)
-
+  // NOTE: do not classify the URL as image-or-video here. Extension-sniffing on
+  // Runway CDN URLs is unreliable (signed CDN URLs may not surface the file
+  // extension cleanly, and a misclassification leaks the intermediate image URL
+  // into the video result and breaks <video> playback on the client). Each
+  // caller already knows which kind of task it polled — let them reason about
+  // the output. We just hand back the raw URL.
   console.log(`[Runway] /tasks/${id} status=${status} progress=${progress} output=${outputUrl?.slice(0, 120) ?? 'null'}`)
 
   return {
     id,
     status,
     progress,
-    videoUrl: outputUrl && !isImage ? outputUrl : null,
-    imageUrl: outputUrl && isImage ? outputUrl : null,
+    outputUrl: outputUrl ?? null,
     failure: typeof data.failure === 'string'
       ? data.failure
       : typeof (data as { failureCode?: unknown }).failureCode === 'string'
@@ -330,12 +328,12 @@ export async function startVideoForScene(
 
   // 2) poll until image is ready
   const imgState = await pollRunwayTaskUntilDone(imgTask.id, { maxMs: 45_000, intervalMs: 1500 })
-  if (!imgState.imageUrl) {
-    throw new Error(`text_to_image succeeded but returned no image URL for task ${imgTask.id}`)
+  if (!imgState.outputUrl) {
+    throw new Error(`text_to_image succeeded but returned no output URL for task ${imgTask.id}`)
   }
-  console.log('[Runway] image ready:', imgState.imageUrl.slice(0, 120))
+  console.log('[Runway] image ready:', imgState.outputUrl.slice(0, 120))
 
   // 3) image → video (10s clips always — duration multiplied client-side by # of scenes)
-  const videoTask = await startRunwayImageToVideo(imgState.imageUrl, sceneText, platform, 10)
+  const videoTask = await startRunwayImageToVideo(imgState.outputUrl, sceneText, platform, 10)
   return videoTask
 }

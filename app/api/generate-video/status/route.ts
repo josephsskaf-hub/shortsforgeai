@@ -37,9 +37,22 @@ export async function GET(req: NextRequest) {
     const results = await Promise.all(
       ids.map(async (id) => {
         try {
-          return await getRunwayTask(id)
+          const state = await getRunwayTask(id)
+          // The /generate flow only polls image_to_video task ids on the client,
+          // so the output URL is the final MP4. Surface it as videoUrl, but
+          // only when the task actually succeeded — never expose intermediate
+          // or empty URLs as the "ready" video.
+          const isReady = state.status === 'SUCCEEDED' && !!state.outputUrl
+          return {
+            id: state.id,
+            status: state.status,
+            progress: state.progress,
+            videoUrl: isReady ? state.outputUrl : null,
+            failure: state.failure,
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
+          console.error(`[generate-video/status] task ${id} lookup error:`, msg)
           return {
             id,
             status: 'FAILED' as const,
