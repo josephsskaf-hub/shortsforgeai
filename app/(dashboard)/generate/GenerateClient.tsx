@@ -62,6 +62,7 @@ export default function GenerateClient() {
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const autoAnalyzeKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     return () => {
@@ -150,19 +151,25 @@ export default function GenerateClient() {
     [orderedClips]
   )
 
-  async function handleAnalyze() {
-    const trimmed = prompt.trim()
-    if (!trimmed) {
+  async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
+    const source = (overridePrompt ?? prompt).trim()
+    if (!source) {
       setError('Please describe your video idea first.')
       return
     }
+    if (overridePrompt !== undefined) setPrompt(overridePrompt)
     setError(null)
+    setAnalysis(null)
+    setScenes([])
+    setTasks([])
+    setStates({})
+    setPlayerIndex(0)
     setPhase('analyzing')
     try {
       const res = await fetch('/api/analyze-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: trimmed }),
+        body: JSON.stringify({ prompt: source }),
       })
       if (res.status === 401) {
         router.push('/login?redirect=/generate')
@@ -171,7 +178,7 @@ export default function GenerateClient() {
       const data = await res.json()
       if (!res.ok) {
         console.error('[generate] analyze failed:', data?.error)
-        setError('Could not analyze that idea. Please try again.')
+        setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
         setPhase('idle')
         return
       }
@@ -184,10 +191,22 @@ export default function GenerateClient() {
       setPhase('options')
     } catch (err) {
       console.error('[generate] analyze threw:', err)
-      setError('Could not analyze that idea. Please try again.')
+      setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
       setPhase('idle')
     }
   }
+
+  // Auto-trigger analyze when URL has ?autoanalyze=1&prompt=… (topic quick-start)
+  useEffect(() => {
+    const sp = searchParams?.get('prompt') ?? ''
+    const auto = searchParams?.get('autoanalyze') === '1'
+    if (!auto || !sp.trim()) return
+    const key = sp.trim()
+    if (autoAnalyzeKeyRef.current === key) return
+    autoAnalyzeKeyRef.current = key
+    handleAnalyze(sp, { fromTopic: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   async function handleGenerate() {
     const trimmed = prompt.trim()

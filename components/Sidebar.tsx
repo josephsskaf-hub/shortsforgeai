@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import AuthModal from '@/components/AuthModal'
 
 interface SidebarProps {
@@ -16,50 +16,93 @@ interface SidebarProps {
 }
 
 const TOP_PICKS = [
-  { id: 'mystery', icon: '🔮', label: 'Mystery', hex: '#a855f7', glow: 'rgba(168,85,247,' },
-  { id: 'strange-facts', icon: '🤯', label: 'Facts', hex: '#6366f1', glow: 'rgba(99,102,241,' },
-  { id: 'money', icon: '💰', label: 'Money', hex: '#10b981', glow: 'rgba(16,185,129,' },
-  { id: 'ai-tools', icon: '🤖', label: 'AI Tools', hex: '#6366f1', glow: 'rgba(99,102,241,' },
-  { id: 'psychology-facts', icon: '🧠', label: 'Psychology', hex: '#ec4899', glow: 'rgba(236,72,153,' },
-  { id: 'space-mysteries', icon: '🌌', label: 'Space', hex: '#0ea5e9', glow: 'rgba(14,165,233,' },
-  { id: 'history', icon: '⚔️', label: 'History', hex: '#f59e0b', glow: 'rgba(245,158,11,' },
-  { id: 'conspiracy-files', icon: '👁️', label: 'Conspiracy', hex: '#ef4444', glow: 'rgba(239,68,68,' },
-  { id: 'luxury-lifestyle', icon: '💎', label: 'Luxury', hex: '#fbbf24', glow: 'rgba(251,191,36,' },
-  { id: 'dark-history', icon: '🌑', label: 'Dark Stories', hex: '#818cf8', glow: 'rgba(129,140,248,' },
+  {
+    id: 'mystery', icon: '🔮', label: 'Mystery', hex: '#a855f7', glow: 'rgba(168,85,247,',
+    prompt: 'Create a mysterious YouTube Shorts video about an unexplained event, hidden signal, lost civilization, or unsolved mystery with a strong hook and cinematic atmosphere.',
+  },
+  {
+    id: 'strange-facts', icon: '🤯', label: 'Facts', hex: '#6366f1', glow: 'rgba(99,102,241,',
+    prompt: 'Create a fast-paced viral facts YouTube Shorts video with surprising and mind-blowing facts that sound fake but are real.',
+  },
+  {
+    id: 'money', icon: '💰', label: 'Money', hex: '#10b981', glow: 'rgba(16,185,129,',
+    prompt: 'Create a viral money facts YouTube Shorts video about wealth, luxury, billionaire secrets, hidden business tricks, or financial psychology.',
+  },
+  {
+    id: 'ai-tools', icon: '🤖', label: 'AI Tools', hex: '#6366f1', glow: 'rgba(99,102,241,',
+    prompt: 'Create a modern AI-focused YouTube Shorts video about powerful AI tools, future technology, automation, or shocking AI capabilities.',
+  },
+  {
+    id: 'psychology-facts', icon: '🧠', label: 'Psychology', hex: '#ec4899', glow: 'rgba(236,72,153,',
+    prompt: 'Create a dark psychology YouTube Shorts video about manipulation, human behavior, attraction, or psychological tricks.',
+  },
+  {
+    id: 'space-mysteries', icon: '🌌', label: 'Space', hex: '#0ea5e9', glow: 'rgba(14,165,233,',
+    prompt: 'Create a cinematic YouTube Shorts video about space mysteries, unexplained cosmic events, planets, or strange signals from space.',
+  },
+  {
+    id: 'history', icon: '⚔️', label: 'History', hex: '#f59e0b', glow: 'rgba(245,158,11,',
+    prompt: 'Create a mysterious history YouTube Shorts video about hidden historical events, ancient civilizations, or forgotten secrets.',
+  },
+  {
+    id: 'conspiracy-files', icon: '👁️', label: 'Conspiracy', hex: '#ef4444', glow: 'rgba(239,68,68,',
+    prompt: 'Create a suspenseful YouTube Shorts video exploring a strange conspiracy theory or unexplained government mystery without presenting theories as confirmed facts.',
+  },
+  {
+    id: 'luxury-lifestyle', icon: '💎', label: 'Luxury', hex: '#fbbf24', glow: 'rgba(251,191,36,',
+    prompt: 'Create a luxury lifestyle YouTube Shorts video about billionaires, expensive objects, hidden wealth, or ultra-rich lifestyles.',
+  },
+  {
+    id: 'dark-history', icon: '🌑', label: 'Dark Stories', hex: '#818cf8', glow: 'rgba(129,140,248,',
+    prompt: 'Create a creepy dark story YouTube Shorts video with suspense, mystery, and a shocking ending.',
+  },
 ]
 
 function NichePill({
   niche,
   onClose,
+  active,
 }: {
   niche: typeof TOP_PICKS[0]
   onClose?: () => void
+  active: boolean
 }) {
   const router = useRouter()
   const [hovered, setHovered] = useState(false)
 
   function handleClick() {
     onClose?.()
-    router.push(`/create?niche=${niche.id}`)
+    if (active) return // same topic already active — Next.js would no-op; skip explicitly
+    const href = `/generate?prompt=${encodeURIComponent(niche.prompt)}&autoanalyze=1`
+    router.push(href)
   }
+
+  const highlight = active || hovered
 
   return (
     <button
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      aria-pressed={active}
       className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left w-full transition-all"
       style={{
-        background: hovered
+        background: active
+          ? 'linear-gradient(135deg, rgba(37,99,235,0.22), rgba(29,78,216,0.12))'
+          : hovered
           ? `linear-gradient(135deg, ${niche.glow}0.15), rgba(255,255,255,0.03))`
           : `${niche.glow}0.07)`,
-        border: `1px solid ${niche.glow}${hovered ? '0.45)' : '0.2)'})`,
-        color: hovered ? '#fff' : 'var(--muted2)',
-        cursor: 'pointer',
-        boxShadow: hovered
+        border: active
+          ? '1px solid rgba(37,99,235,0.55)'
+          : `1px solid ${niche.glow}${hovered ? '0.45)' : '0.2)'})`,
+        color: highlight ? '#fff' : 'var(--muted2)',
+        cursor: active ? 'default' : 'pointer',
+        boxShadow: active
+          ? '0 0 22px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.07)'
+          : hovered
           ? `0 0 18px ${niche.glow}0.28), inset 0 1px 0 rgba(255,255,255,0.07)`
           : '0 0 0 transparent',
-        transform: hovered ? 'translateX(3px)' : 'translateX(0)',
+        transform: hovered && !active ? 'translateX(3px)' : 'translateX(0)',
         transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
@@ -67,7 +110,7 @@ function NichePill({
         style={{
           fontSize: '1.15rem',
           flexShrink: 0,
-          filter: hovered ? `drop-shadow(0 0 6px ${niche.hex}99)` : 'none',
+          filter: highlight ? `drop-shadow(0 0 6px ${niche.hex}99)` : 'none',
           transition: 'filter 0.18s ease',
         }}
       >
@@ -78,7 +121,7 @@ function NichePill({
           fontSize: '0.8rem',
           fontWeight: 700,
           letterSpacing: '-0.01em',
-          color: hovered ? '#fff' : 'var(--muted2)',
+          color: highlight ? '#fff' : 'var(--muted2)',
           transition: 'color 0.18s ease',
         }}
       >
@@ -88,15 +131,50 @@ function NichePill({
         style={{
           marginLeft: 'auto',
           fontSize: '0.65rem',
-          opacity: hovered ? 0.8 : 0.4,
-          color: hovered ? niche.hex : 'inherit',
+          opacity: active ? 1 : hovered ? 0.8 : 0.4,
+          color: active ? '#93c5fd' : hovered ? niche.hex : 'inherit',
           transition: 'all 0.18s ease',
         }}
       >
-        →
+        {active ? '●' : '→'}
       </span>
     </button>
   )
+}
+
+function TopicList({
+  pathname,
+  activePrompt,
+  onClose,
+}: {
+  pathname: string
+  activePrompt: string
+  onClose?: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-1 mb-2">
+      {TOP_PICKS.map((niche) => (
+        <NichePill
+          key={niche.id}
+          niche={niche}
+          onClose={onClose}
+          active={pathname === '/generate' && activePrompt === niche.prompt}
+        />
+      ))}
+    </div>
+  )
+}
+
+function TopicListWithSearchParams({
+  pathname,
+  onClose,
+}: {
+  pathname: string
+  onClose?: () => void
+}) {
+  const searchParams = useSearchParams()
+  const activePrompt = pathname === '/generate' ? searchParams?.get('prompt') ?? '' : ''
+  return <TopicList pathname={pathname} activePrompt={activePrompt} onClose={onClose} />
 }
 
 function NavItem({
@@ -351,11 +429,9 @@ export default function Sidebar({
             <span style={{ fontSize: '0.75rem' }}>🔥</span>
             Topics
           </div>
-          <div className="flex flex-col gap-1 mb-2">
-            {TOP_PICKS.map((niche) => (
-              <NichePill key={niche.id} niche={niche} onClose={onClose} />
-            ))}
-          </div>
+          <Suspense fallback={<TopicList pathname={pathname} activePrompt="" onClose={onClose} />}>
+            <TopicListWithSearchParams pathname={pathname} onClose={onClose} />
+          </Suspense>
 
         </nav>
 
