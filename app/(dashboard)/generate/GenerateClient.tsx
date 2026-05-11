@@ -18,8 +18,22 @@ interface TaskState {
 }
 
 type Phase = 'idle' | 'planning' | 'generating' | 'done' | 'error'
+type Duration = '10s' | '30s' | '60s'
+type Platform = 'TikTok' | 'YouTube' | 'YouTube Shorts'
+type Quality = 'standard' | 'pro'
 
 const POLL_INTERVAL_MS = 5000
+
+const DURATIONS: Duration[] = ['10s', '30s', '60s']
+const PLATFORMS: { label: Platform; icon: string }[] = [
+  { label: 'TikTok', icon: '📱' },
+  { label: 'YouTube', icon: '▶' },
+  { label: 'YouTube Shorts', icon: '📲' },
+]
+const QUALITY_OPTIONS: { key: Quality; title: string; desc: string; credits: number; icon: string }[] = [
+  { key: 'standard', title: 'Standard', desc: 'RunwayML Gen-4 Turbo — fast & sharp', credits: 1, icon: '⚡' },
+  { key: 'pro', title: 'Pro', desc: 'RunwayML Gen-4 Turbo + best settings — cinematic quality', credits: 2, icon: '✨' },
+]
 
 export default function GenerateClient() {
   const router = useRouter()
@@ -33,6 +47,9 @@ export default function GenerateClient() {
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
   const [playerIndex, setPlayerIndex] = useState(0)
+  const [duration, setDuration] = useState<Duration>('30s')
+  const [platform, setPlatform] = useState<Platform>('YouTube Shorts')
+  const [quality, setQuality] = useState<Quality>('standard')
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -267,74 +284,158 @@ export default function GenerateClient() {
           border: '1px solid var(--border)',
         }}
       >
-        <label
-          className="block text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: 'var(--indigo-light)' }}
-        >
-          Your idea
-        </label>
+        {/* Textarea */}
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="e.g. A neon-soaked Tokyo alley at midnight with a lone samurai walking toward the camera."
-          rows={3}
+          placeholder="Give me a topic, your point of view and instructions in any language…"
           maxLength={500}
           disabled={phase === 'planning' || phase === 'generating'}
-          className="w-full rounded-xl px-4 py-3 text-sm leading-relaxed"
+          className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
           style={{
             background: 'rgba(0,0,0,.3)',
             border: '1px solid var(--border)',
             color: 'var(--text)',
             outline: 'none',
-            resize: 'vertical',
+            resize: 'none',
+            minHeight: '200px',
           }}
         />
-        <div className="flex items-center justify-between mt-3 flex-wrap gap-3">
-          <div className="text-xs" style={{ color: 'var(--muted)' }}>
-            {prompt.length}/500 · 4 scenes · ~20s total · 720×1280 vertical
-          </div>
-          <div className="flex gap-2">
-            {(phase === 'done' || phase === 'error') && (
+
+        {/* Duration */}
+        <div className="mt-5">
+          <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Duration</div>
+          <div className="flex gap-2 flex-wrap">
+            {DURATIONS.map((d) => (
               <button
-                onClick={handleReset}
-                className="rounded-xl px-4 py-2.5 text-sm font-bold"
+                key={d}
+                onClick={() => setDuration(d)}
+                disabled={phase === 'planning' || phase === 'generating'}
+                className="rounded-full px-4 py-1.5 text-sm font-bold"
                 style={{
-                  background: 'rgba(255,255,255,.04)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text)',
+                  background: duration === d ? 'rgba(99,102,241,.85)' : 'rgba(255,255,255,.04)',
+                  border: duration === d ? '1px solid rgba(99,102,241,.6)' : '1px solid var(--border)',
+                  color: duration === d ? '#fff' : 'var(--muted)',
                   cursor: 'pointer',
+                  transition: 'all 0.15s',
                 }}
               >
-                🔄 Generate Another
+                {d}
               </button>
-            )}
+            ))}
+          </div>
+        </div>
+
+        {/* Platform */}
+        <div className="mt-4">
+          <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Platform</div>
+          <div className="flex gap-2 flex-wrap">
+            {PLATFORMS.map(({ label, icon }) => (
+              <button
+                key={label}
+                onClick={() => setPlatform(label)}
+                disabled={phase === 'planning' || phase === 'generating'}
+                className="rounded-full px-4 py-1.5 text-sm font-bold flex items-center gap-1.5"
+                style={{
+                  background: platform === label ? 'rgba(99,102,241,.85)' : 'rgba(255,255,255,.04)',
+                  border: platform === label ? '1px solid rgba(99,102,241,.6)' : '1px solid var(--border)',
+                  color: platform === label ? '#fff' : 'var(--muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: '0.8rem' }}>{icon}</span> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quality */}
+        <div className="mt-4">
+          <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Quality</div>
+          <div className="grid grid-cols-2 gap-3">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q.key}
+                onClick={() => setQuality(q.key)}
+                disabled={phase === 'planning' || phase === 'generating'}
+                className="rounded-xl p-3 text-left"
+                style={{
+                  background: quality === q.key ? 'rgba(99,102,241,.15)' : 'rgba(255,255,255,.03)',
+                  border: quality === q.key ? '1px solid rgba(99,102,241,.5)' : '1px solid var(--border)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span>{q.icon}</span>
+                  <span className="text-sm font-black" style={{ color: quality === q.key ? '#c4b5fd' : 'var(--text)' }}>{q.title}</span>
+                  <span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: 'rgba(168,85,247,.15)',
+                      color: '#c4b5fd',
+                      border: '1px solid rgba(168,85,247,.2)',
+                    }}>
+                    {q.credits} credit{q.credits > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="text-xs" style={{ color: 'var(--muted2)' }}>{q.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end mt-5 gap-2 flex-wrap">
+          {(phase === 'done' || phase === 'error') && (
             <button
-              onClick={() => handleGenerate()}
-              disabled={phase === 'planning' || phase === 'generating' || !prompt.trim()}
-              className="rounded-xl px-6 py-2.5 text-sm font-black text-white"
+              onClick={handleReset}
+              className="rounded-xl px-4 py-2.5 text-sm font-bold"
               style={{
-                background:
-                  phase === 'planning' || phase === 'generating' || !prompt.trim()
-                    ? 'rgba(255,255,255,.04)'
-                    : 'linear-gradient(135deg, var(--indigo), var(--purple))',
-                border: 'none',
-                cursor:
-                  phase === 'planning' || phase === 'generating' || !prompt.trim()
-                    ? 'not-allowed'
-                    : 'pointer',
-                color:
-                  phase === 'planning' || phase === 'generating' || !prompt.trim()
-                    ? 'var(--muted)'
-                    : '#fff',
-                boxShadow:
-                  phase === 'planning' || phase === 'generating' || !prompt.trim()
-                    ? 'none'
-                    : '0 8px 28px rgba(168,85,247,.35)',
+                background: 'rgba(255,255,255,.04)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                cursor: 'pointer',
               }}
             >
-              ⚡ Generate Video
+              🔄 Generate Another
             </button>
-          </div>
+          )}
+          <button
+            onClick={() => handleGenerate()}
+            disabled={phase === 'planning' || phase === 'generating' || !prompt.trim()}
+            className="rounded-xl px-6 py-2.5 text-sm font-black text-white flex items-center gap-2"
+            style={{
+              background:
+                phase === 'planning' || phase === 'generating' || !prompt.trim()
+                  ? 'rgba(255,255,255,.04)'
+                  : 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              border: 'none',
+              cursor:
+                phase === 'planning' || phase === 'generating' || !prompt.trim()
+                  ? 'not-allowed'
+                  : 'pointer',
+              color:
+                phase === 'planning' || phase === 'generating' || !prompt.trim()
+                  ? 'var(--muted)'
+                  : '#fff',
+              boxShadow:
+                phase === 'planning' || phase === 'generating' || !prompt.trim()
+                  ? 'none'
+                  : '0 8px 28px rgba(168,85,247,.35)',
+            }}
+          >
+            Generate
+            <span style={{
+              padding: '2px 8px',
+              borderRadius: 99,
+              background: 'rgba(255,255,255,.18)',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+            }}>
+              {QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 1} credit{(QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 1) > 1 ? 's' : ''}
+            </span>
+          </button>
         </div>
       </section>
 
