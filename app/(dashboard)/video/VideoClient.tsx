@@ -758,9 +758,6 @@ function Step2Scenes({
   if (scenes.length === 0) return null
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
-        {scenes.length} scenes · ~{totalDuration}s total
-      </div>
       <div className="flex flex-col gap-2.5">
         {scenes.map((s) => (
           <div
