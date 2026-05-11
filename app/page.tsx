@@ -380,11 +380,11 @@ export default function HomePage() {
                 }
               }}
               placeholder="Plan a Short, pick a niche, or describe your video idea..."
-              rows={6}
+              rows={8}
               className="hero-prompt-textarea"
               style={{
                 width: '100%',
-                minHeight: 170,
+                minHeight: 220,
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',

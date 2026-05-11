@@ -87,56 +87,71 @@ Example output format:
 }
 
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  const body = JSON.stringify({
-    model: 'gen4_turbo',
-    promptText,
-    duration: 5,
-    ratio: '720:1280',
-  })
+  // Try models in order: gen4_turbo first, then gen3a_turbo as fallback
+  const modelsToTry = ['gen4_turbo', 'gen3a_turbo']
+  const bases = [RUNWAY_BASE_PROD, RUNWAY_BASE]
 
-  console.log('[runway] sending body:', body.slice(0, 300))
-
-  // Try production endpoint first, fall back to dev
   let res: Response | null = null
   let lastError = ''
-  for (const base of [RUNWAY_BASE_PROD, RUNWAY_BASE]) {
-    try {
-      res = await fetch(`${base}/text_to_video`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body,
-      })
-      console.log(`[runway] got response from ${base}: status=${res.status}`)
-      break
-    } catch (fetchErr) {
-      lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
-      console.error(`[runway] fetch failed for ${base}:`, lastError)
+  let usedModel = modelsToTry[0]
+
+  outer: for (const model of modelsToTry) {
+    const body = JSON.stringify({
+      model,
+      promptText,
+      duration: 5,
+      ratio: '720:1280',
+    })
+    console.log(`[runway] trying model=${model} body=${body.slice(0, 300)}`)
+
+    for (const base of bases) {
+      try {
+        const r = await fetch(`${base}/text_to_video`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body,
+        })
+        const rawT = await r.text()
+        console.log(`[runway] ${model}@${base} status=${r.status} body=${rawT.slice(0, 800)}`)
+
+        // If this is a validation error for the model, try next model
+        if (r.status === 422) {
+          lastError = `${model}: ${rawT.slice(0, 300)}`
+          console.warn(`[runway] 422 for model ${model}, will try next`)
+          break // break inner loop (try next model)
+        }
+
+        res = r
+        usedModel = model
+        // Attach parsed raw text for later use
+        ;(res as Response & { _rawText?: string })._rawText = rawT
+        break outer
+      } catch (fetchErr) {
+        lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+        console.error(`[runway] fetch failed for ${base}:`, lastError)
+      }
     }
   }
 
-  if (!res) throw new Error(`Runway unreachable: ${lastError}`)
+  if (!res) throw new Error(`Runway error: ${lastError}`)
 
-  const rawText = await res.text()
-  console.log(`[runway] POST text_to_video status=${res.status} body=${rawText.slice(0, 800)}`)
+  const rawText = (res as Response & { _rawText?: string })._rawText ?? await res.text()
+  console.log(`[runway] final model=${usedModel} status=${res.status}`)
 
   let data: Record<string, unknown> = {}
   try { data = JSON.parse(rawText) } catch { /* non-json */ }
 
   if (!res.ok) {
-    // Extract as much detail as possible from the validation error
     const errMsg = typeof data.error === 'string' ? data.error : null
     const errMessage = typeof data.message === 'string' ? data.message : null
     const errDetail = typeof (data as {detail?: unknown}).detail === 'string'
       ? (data as {detail: string}).detail : null
     const errErrors = Array.isArray(data.errors)
-      ? ' | details: ' + JSON.stringify(data.errors).slice(0, 300)
-      : ''
-    const errValidation = Array.isArray((data as {validation?: unknown}).validation)
-      ? ' | validation: ' + JSON.stringify((data as {validation: unknown[]}).validation).slice(0, 300)
+      ? ' | ' + JSON.stringify(data.errors).slice(0, 300)
       : ''
     const detail =
-      (errMsg ? errMsg + errErrors + errValidation : null) ||
-      (errMessage ? errMessage + errErrors + errValidation : null) ||
+      (errMsg ? errMsg + errErrors : null) ||
+      (errMessage ? errMessage + errErrors : null) ||
       errDetail ||
       rawText.slice(0, 400) ||
       `Runway HTTP ${res.status}`
