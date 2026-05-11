@@ -143,20 +143,21 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
-export async function generateScenes(prompt: string): Promise<string[]> {
-  const userPrompt = `You break a Short-form video idea into 4 vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo).
+export async function generateScenes(prompt: string, count = 4): Promise<string[]> {
+  const safeCount = Math.max(1, Math.min(8, Math.round(count)))
+  const userPrompt = `You break a Short-form video idea into ${safeCount} vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo).
 
 Idea: "${prompt}"
 
-Return ONLY a valid JSON array of exactly 4 strings — no markdown, no preamble. Each string must:
+Return ONLY a valid JSON array of exactly ${safeCount} string${safeCount === 1 ? '' : 's'} — no markdown, no preamble. Each string must:
 - Be one sentence, ~15-25 words
 - Be visual, specific, concrete (subject + setting + lighting + camera motion + mood)
-- Stay coherent across the 4 shots so they tell one short story
+- Stay coherent across the ${safeCount} shot${safeCount === 1 ? '' : 's'} so ${safeCount === 1 ? 'it tells a strong single beat' : 'they tell one short story'}
 - Avoid text overlays, logos, or watermarks
 - Be optimized for vertical 9:16 framing (tall composition)
 
-Example output format:
-["scene 1 description", "scene 2 description", "scene 3 description", "scene 4 description"]`
+Example output format for ${safeCount} shot${safeCount === 1 ? '' : 's'}:
+${JSON.stringify(Array.from({ length: safeCount }, (_, i) => `scene ${i + 1} description`))}`
 
   const completion = await openai.chat.completions.create(
     {
@@ -190,11 +191,9 @@ Example output format:
   }
 
   if (!Array.isArray(parsed)) throw new Error('Scenes response was not an array.')
-  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, 4)
-  if (scenes.length < 4) {
-    while (scenes.length < 4) {
-      scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
-    }
+  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, safeCount)
+  while (scenes.length < safeCount) {
+    scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
   }
   return scenes
 }
