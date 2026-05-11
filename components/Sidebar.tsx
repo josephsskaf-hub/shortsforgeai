@@ -312,78 +312,6 @@ export default function Sidebar({
           </div>
         </Link>
 
-        {/* Credits Card */}
-        {isLoggedIn && (
-          <div className="px-3 pt-4 pb-2 flex-shrink-0">
-            <Link
-              href="/pricing"
-              onClick={onClose}
-              className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
-              style={{
-                background: creditsZero
-                  ? 'rgba(239,68,68,0.08)'
-                  : 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(124,58,237,0.1))',
-                border: creditsZero
-                  ? '1px solid rgba(239,68,68,0.32)'
-                  : '1px solid rgba(99,102,241,0.32)',
-                boxShadow: creditsZero
-                  ? '0 0 22px rgba(239,68,68,0.12)'
-                  : '0 0 28px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
-                textDecoration: 'none',
-                transition: 'all 0.18s ease',
-              }}
-            >
-              <div className="flex items-center gap-2.5">
-                <div
-                  style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: creditsZero
-                      ? 'rgba(239,68,68,0.15)'
-                      : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
-                    border: creditsZero
-                      ? '1px solid rgba(239,68,68,0.3)'
-                      : '1px solid rgba(99,102,241,0.4)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.1rem',
-                    boxShadow: creditsZero ? 'none' : '0 0 12px rgba(99,102,241,0.3)',
-                  }}
-                >
-                  ⚡
-                </div>
-                {creditsLoading ? (
-                  <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
-                ) : (
-                  <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
-                      {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
-                    </div>
-                    <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : 'var(--muted)', marginTop: 1 }}>
-                      {creditsZero ? 'No credits left' : 'available'}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div
-                style={{
-                  width: 30, height: 30, borderRadius: 9,
-                  background: creditsZero
-                    ? 'rgba(239,68,68,0.18)'
-                    : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
-                  border: creditsZero
-                    ? '1px solid rgba(239,68,68,0.35)'
-                    : '1px solid rgba(99,102,241,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: creditsZero ? '#f87171' : '#a5b4fc',
-                  fontSize: '1.1rem', fontWeight: 900,
-                  boxShadow: creditsZero ? 'none' : '0 0 10px rgba(99,102,241,0.25)',
-                }}
-              >
-                +
-              </div>
-            </Link>
-          </div>
-        )}
-
         {/* Scrollable nav */}
         <nav className="flex-1 overflow-y-auto flex flex-col" style={{ padding: '8px 10px 12px' }}>
 
@@ -407,9 +335,80 @@ export default function Sidebar({
           {/* Divider */}
           <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 4px 8px' }} />
 
+          {/* Credits Card — positioned near main nav */}
+          {isLoggedIn && (
+            <div style={{ padding: '0 2px 10px' }}>
+              <Link
+                href="/pricing"
+                onClick={onClose}
+                className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
+                style={{
+                  background: creditsZero
+                    ? 'rgba(239,68,68,0.08)'
+                    : 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(124,58,237,0.1))',
+                  border: creditsZero
+                    ? '1px solid rgba(239,68,68,0.32)'
+                    : '1px solid rgba(99,102,241,0.32)',
+                  boxShadow: creditsZero
+                    ? '0 0 22px rgba(239,68,68,0.12)'
+                    : '0 0 28px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
+                  textDecoration: 'none',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    style={{
+                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                      background: creditsZero
+                        ? 'rgba(239,68,68,0.15)'
+                        : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                      border: creditsZero
+                        ? '1px solid rgba(239,68,68,0.3)'
+                        : '1px solid rgba(99,102,241,0.4)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.1rem',
+                      boxShadow: creditsZero ? 'none' : '0 0 12px rgba(99,102,241,0.3)',
+                    }}
+                  >
+                    ⚡
+                  </div>
+                  {creditsLoading ? (
+                    <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#a5b4fc', lineHeight: 1.1 }}>
+                        {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : 'var(--muted)', marginTop: 1 }}>
+                        {creditsZero ? 'No credits left' : 'available'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    width: 30, height: 30, borderRadius: 9,
+                    background: creditsZero
+                      ? 'rgba(239,68,68,0.18)'
+                      : 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.2))',
+                    border: creditsZero
+                      ? '1px solid rgba(239,68,68,0.35)'
+                      : '1px solid rgba(99,102,241,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: creditsZero ? '#f87171' : '#a5b4fc',
+                    fontSize: '1.1rem', fontWeight: 900,
+                    boxShadow: creditsZero ? 'none' : '0 0 10px rgba(99,102,241,0.25)',
+                  }}
+                >
+                  +
+                </div>
+              </Link>
+            </div>
+          )}
+
           {/* Main nav */}
           <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
-          <NavItem href="/create" icon="✍️" label="Create Video" exact={false} pathname={pathname} onClick={onClose} />
           <NavItem href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
