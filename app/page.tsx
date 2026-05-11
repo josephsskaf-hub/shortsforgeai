@@ -460,12 +460,10 @@ export default function HomePage() {
             className="quick-tags-row"
             style={{
               display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
               gap: 8,
               marginTop: 14,
-              overflowX: 'auto',
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: 4,
-              scrollbarWidth: 'none',
             }}
           >
             {QUICK_TAGS.map((t) => (
@@ -474,7 +472,6 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setHeroPrompt(t.prompt)}
                 style={{
-                  flexShrink: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 7,
@@ -497,7 +494,6 @@ export default function HomePage() {
           </div>
           <style>{`
             .hero-prompt-textarea::placeholder { color: rgba(255,255,255,.38); }
-            .quick-tags-row::-webkit-scrollbar { display: none; }
           `}</style>
         </section>
 
