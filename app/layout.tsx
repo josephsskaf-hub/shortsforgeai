@@ -7,9 +7,9 @@ export const metadata: Metadata = {
     'AI-powered viral short-form content generator for YouTube Shorts, TikTok, and Instagram Reels. Pick a niche, get 5 ready-to-post scripts instantly.',
   keywords: 'viral shorts, youtube shorts generator, ai content creator, tiktok scripts',
   icons: {
-    icon: '/icon.png',
-    shortcut: '/favicon.ico',
-    apple: '/icon.png',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 }
 

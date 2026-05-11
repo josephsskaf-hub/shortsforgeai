@@ -273,7 +273,7 @@ export default function Sidebar({
       >
         {/* Logo */}
         <Link
-          href={isLoggedIn ? '/dashboard' : '/'}
+          href="/"
           onClick={onClose}
           className="flex items-center gap-3 px-5 flex-shrink-0"
           style={{ height: 72, borderBottom: '1px solid rgba(255,255,255,0.06)', textDecoration: 'none' }}
