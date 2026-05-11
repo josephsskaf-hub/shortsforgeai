@@ -198,7 +198,7 @@ export default function PricingClient(props: PricingClientProps) {
               opacity: portalLoading ? 0.6 : 1,
             }}
           >
-            ⚙️ Billing
+            Billing
           </button>
         )}
       </div>
@@ -218,7 +218,7 @@ export default function PricingClient(props: PricingClientProps) {
           cta={null}
         />
 
-        {/* Creator — Most Popular */}
+        {/* Creator - Most Popular */}
         <PlanCard
           name="Creator"
           price="$9"
@@ -228,13 +228,13 @@ export default function PricingClient(props: PricingClientProps) {
           badge={{ label: 'Most Popular', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           highlight
           cta={{
-            label: purchasing === 'creator' ? 'Loading…' : 'Get Creator — $9/mo',
+            label: purchasing === 'creator' ? 'Loading...' : 'Get Creator $9/mo',
             onClick: () => handleBuy('creator'),
             loading: purchasing === 'creator',
           }}
         />
 
-        {/* Pro — Best Value */}
+        {/* Pro - Best Value */}
         <PlanCard
           name="Pro"
           price="$19"
@@ -243,7 +243,7 @@ export default function PricingClient(props: PricingClientProps) {
           features={PRO_FEATURES}
           badge={{ label: 'Best Value', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           cta={{
-            label: purchasing === 'pro' ? 'Loading…' : 'Get Pro — $19/mo',
+            label: purchasing === 'pro' ? 'Loading...' : 'Get Pro $19/mo',
             onClick: () => handleBuy('pro'),
             loading: purchasing === 'pro',
           }}
@@ -347,7 +347,7 @@ function PlanCard({
       <div className="flex flex-col gap-2.5 mb-7 flex-1">
         {features.map((f) => (
           <div key={f} className="flex items-start gap-2.5 text-sm">
-            <span style={{ color: '#34d399', fontSize: '0.8rem', marginTop: 2 }}>✓</span>
+            <span style={{ color: '#34d399', fontSize: '0.8rem', marginTop: 2 }}>checkmark</span>
             <span style={{ color: 'var(--text2)' }}>{f}</span>
           </div>
         ))}
@@ -377,4 +377,27 @@ function PlanCard({
             color: 'var(--muted2)',
           }}
         >
-  
+          Current plan
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CreditTier({ name, cost, desc }: { name: string; cost: string; desc: string }) {
+  return (
+    <div
+      className="rounded-xl p-4 text-center"
+      style={{
+        background: 'rgba(15,15,30,0.7)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#93C5FD' }}>
+        {name}
+      </div>
+      <div className="font-black text-lg mb-1" style={{ color: 'var(--text)' }}>{cost}</div>
+      <div className="text-xs" style={{ color: 'var(--muted)' }}>{desc}</div>
+    </div>
+  )
+}

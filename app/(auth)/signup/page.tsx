@@ -99,15 +99,28 @@ export default function SignupPage() {
           >
             ⚡
           </div>
-          <div
-            className="font-black text-sm tracking-tight"
-            style={{
-              background: 'linear-gradient(135deg, #3B82F6, #a78bfa)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            ShortsForgeAI
+          <div>
+            <div
+              className="font-black text-sm tracking-tight"
+              style={{
+                background: 'linear-gradient(135deg, #818cf8, #a78bfa)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              ShortsForgeAI
+            </div>
+            <div
+              className="text-xs font-bold tracking-widest px-1.5 py-0.5 rounded w-fit"
+              style={{
+                background: 'rgba(99,102,241,.15)',
+                border: '1px solid rgba(99,102,241,.3)',
+                color: 'var(--indigo-light)',
+                fontSize: '0.52rem',
+              }}
+            >
+              AI
+            </div>
           </div>
         </div>
 
@@ -160,7 +173,7 @@ export default function SignupPage() {
                   className="w-2 h-2 rounded-full animate-pulse-dot"
                   style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }}
                 />
-                Free tier · 2 free credits included
+                Free tier · 5 viral scripts included
               </div>
 
               <form onSubmit={handleSignup} className="flex flex-col gap-4">
@@ -245,7 +258,7 @@ export default function SignupPage() {
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-bold text-sm text-white transition-all mt-1"
                   style={{
-                    background: 'linear-gradient(135deg, #2563EB, #7c3aed)',
+                    background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
                     boxShadow: '0 4px 22px rgba(99,102,241,.3)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
@@ -272,4 +285,3 @@ export default function SignupPage() {
     </div>
   )
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                      

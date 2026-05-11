@@ -22,4 +22,8 @@ export default async function PricingPage() {
     <PricingClient
       isPro={profile?.is_pro ?? false}
       generationsUsed={profile?.generations_used ?? 0}
-      hasStripeCustom
+      hasStripeCustomer={!!profile?.stripe_customer_id}
+      userId={user?.id ?? ''}
+    />
+  )
+}

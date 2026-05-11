@@ -125,7 +125,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
         {/* Top accent */}
         <div
           className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, #2563EB, #a855f7, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, #6366f1, #a855f7, transparent)' }}
         />
         {/* Glow orb */}
         <div
@@ -156,11 +156,11 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               ⚡
             </div>
             <div>
-              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #3B82F6, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 ShortsForgeAI
               </div>
               <div className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>
-                Generate viral Shorts in seconds
+                Generate 5 viral scripts in 30 seconds
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.18)', color: '#34d399' }}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }} />
-                  Free tier · 2 free credits — no card required
+                  Free tier · 5 viral scripts included — no card required
                 </div>
               )}
 
@@ -224,7 +224,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                 </h2>
                 <p className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
                   {tab === 'signup'
-                    ? 'Create your free account and get 2 free credits instantly.'
+                    ? 'Create your free account and get 5 viral scripts instantly.'
                     : 'Sign in to access your account and continue generating.'}
                 </p>
               </div>
@@ -311,7 +311,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-black text-sm text-white transition-all mt-1 flex items-center justify-center gap-2"
                   style={{
-                    background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
                     boxShadow: loading ? 'none' : '0 4px 28px rgba(99,102,241,.45)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
@@ -352,4 +352,3 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     </div>
   )
 }
-                 

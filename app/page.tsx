@@ -695,4 +695,23 @@ export default function HomePage() {
                 ['/templates', 'Templates'],
                 ['/login', 'Sign In'],
               ].map(([href, label]) => (
-                <Link key={href} href={href} style={{ fontSize: '0.875rem', color: 'v
+                <Link key={href} href={href} style={{ fontSize: '0.875rem', color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>{label}</Link>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2026 ShortsForgeAI. All rights reserved.</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  )
+}
+ar(--muted)', textDecoration: 'none', fontWeight: 500 }}>{label}</Link>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2026 ShortsForgeAI. All rights reserved.</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  )
+}

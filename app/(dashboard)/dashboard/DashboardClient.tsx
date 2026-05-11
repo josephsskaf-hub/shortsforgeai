@@ -116,7 +116,7 @@ export default function DashboardClient({
           Your next{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #3B82F6, #c4b5fd, #a855f7)',
+              background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a855f7)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -137,7 +137,7 @@ export default function DashboardClient({
           href="/create"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
             boxShadow: '0 4px 32px rgba(99,102,241,.5)',
             textDecoration: 'none',
           }}
@@ -369,7 +369,7 @@ export default function DashboardClient({
             🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
-            2 free credits on signup — just sign in.
+            3 free credits on signup — just sign in.
           </p>
         </div>
       )}

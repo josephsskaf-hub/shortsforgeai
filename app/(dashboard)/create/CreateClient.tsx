@@ -77,13 +77,11 @@ const PLATFORM_OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: 'shorts',   label: 'YouTube Shorts',   emoji: '📱' },
 ]
 
-const MEDIA_OPTIONS: { id: string; label: string; desc: string; emoji: string; cost: number }[] = [
-  { id: 'basic', label: 'Basic', desc: 'Fast and efficient for simple Shorts.',                                            emoji: '📹', cost: 1 },
-  { id: 'pro',   label: 'Pro',   desc: 'Better hooks, better structure, stronger viral script.',                          emoji: '🚀', cost: 2 },
-  { id: 'ultra', label: 'Ultra', desc: 'Best quality for premium Shorts, deeper storytelling and stronger retention.',    emoji: '✨', cost: 4 },
+const MEDIA_OPTIONS: { id: string; label: string; desc: string; emoji: string; disabled?: boolean }[] = [
+  { id: 'stock',  label: 'Basic',  desc: 'uses licensed stock media from top providers', emoji: '📹' },
+  { id: 'ai',     label: 'Basic',  desc: 'uses our most efficient generative models',    emoji: '✨' },
+  { id: 'pro',    label: 'Pro',    desc: 'uses veo 3.1 fast, sora 2 and similar models', emoji: '🚀', disabled: true },
 ]
-
-const MEDIA_COST: Record<string, number> = { basic: 1, pro: 2, ultra: 4 }
 
 const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
   { id: 'script',   label: '✍️ Writing viral script...',        weight: 18 },
@@ -120,7 +118,7 @@ export default function CreateClient() {
   const [tone, setTone] = useState('cinematic')
   const [duration, setDuration] = useState(DEFAULT_DURATION)
   const [platform, setPlatform] = useState('shorts')
-  const [media, setMedia] = useState('basic')
+  const [media, setMedia] = useState('stock')
   const [userEmail, setUserEmail] = useState('')
 
   const [credits, setCredits] = useState<number | null>(null)
@@ -373,65 +371,17 @@ export default function CreateClient() {
       await wait(300)
 
       // Deduct credit on success
-      let creditsUsed = 1
       try {
         const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
         if (dedRes.ok) {
           const data = await dedRes.json()
           if (typeof data.credits === 'number') setCredits(data.credits)
-          if (typeof data.used === 'number') creditsUsed = data.used
           window.dispatchEvent(new CustomEvent('creditsChanged'))
         } else {
           await refreshCreditsFromServer()
         }
       } catch {
         await refreshCreditsFromServer()
-      }
-
-      // Try to persist to Supabase `videos` table; if it fails (missing table, etc.)
-      // we keep the in-page result display as a fallback.
-      let persistedVideoId: string | null = null
-      if (renderUrl) {
-        try {
-          const { createClient } = await import('@/lib/supabase/client')
-          const supabase = createClient()
-          const { data: userData } = await supabase.auth.getUser()
-          const uid = userData?.user?.id
-          if (uid) {
-            const insertPayload = {
-              user_id: uid,
-              title: video.title,
-              video_url: renderUrl,
-              thumbnail_url: scenes[0] ? selectedClips[scenes[0].sceneNumber]?.thumbnail ?? null : null,
-              platform,
-              duration,
-              quality_mode: media,
-              credits_used: creditsUsed,
-              niche: effectiveNiche,
-              topic: effectiveTopic,
-              script: video.script,
-              hashtags: video.hashtags,
-              youtube_description: video.youtubeDescription,
-              status: 'completed',
-            }
-            const { data: inserted, error: insertError } = await supabase
-              .from('videos')
-              .insert(insertPayload)
-              .select('id')
-              .single()
-            if (!insertError && inserted?.id) {
-              persistedVideoId = inserted.id as string
-            }
-          }
-        } catch (persistErr) {
-          console.warn('[create] could not persist video row:', persistErr)
-        }
-      }
-
-      if (persistedVideoId) {
-        // Hand off to the dedicated result page.
-        router.push(`/videos/${persistedVideoId}`)
-        return
       }
 
       setFinal({
@@ -574,10 +524,7 @@ export default function CreateClient() {
   const currentStage = stageId ? STAGE_MESSAGES.find((s) => s.id === stageId) : null
 
   return (
-    <div
-      className="px-4 md:px-6 py-5 md:py-7 pb-24 md:pb-20 mx-auto"
-      style={{ width: '100%', maxWidth: 'min(56rem, 100%)', boxSizing: 'border-box' }}
-    >
+    <div className="px-4 md:px-6 py-5 md:py-7 pb-24 md:pb-20 max-w-4xl mx-auto">
       {/* Toast */}
       {copyToast && (
         <div
@@ -595,12 +542,12 @@ export default function CreateClient() {
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#2563EB,#7c3aed)', boxShadow: '0 0 24px rgba(99,102,241,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#6366f1,#7c3aed)', boxShadow: '0 0 24px rgba(99,102,241,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
             ⚡
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              Autopilot · v1.0
+              Autopilot · v4.0
             </div>
             <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Generate a Short in <span className="grad-text">one click</span>
@@ -787,21 +734,25 @@ export default function CreateClient() {
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setMedia(m.id)}
+                  disabled={m.disabled}
+                  onClick={() => !m.disabled && setMedia(m.id)}
                   style={{
                     flex: '1 1 140px',
                     minWidth: 130,
                     padding: '12px 14px',
                     borderRadius: 14,
-                    background: media === m.id
+                    background: media === m.id && !m.disabled
                       ? 'linear-gradient(135deg, rgba(99,102,241,.28), rgba(124,58,237,.18))'
+                      : m.disabled
+                      ? 'rgba(255,255,255,.02)'
                       : 'rgba(255,255,255,.04)',
-                    border: media === m.id
+                    border: media === m.id && !m.disabled
                       ? '1px solid rgba(99,102,241,.55)'
                       : '1px solid var(--border2)',
-                    cursor: 'pointer',
+                    cursor: m.disabled ? 'not-allowed' : 'pointer',
                     textAlign: 'left',
-                    boxShadow: media === m.id ? '0 0 20px rgba(99,102,241,.15)' : 'none',
+                    opacity: m.disabled ? 0.45 : 1,
+                    boxShadow: media === m.id && !m.disabled ? '0 0 20px rgba(99,102,241,.15)' : 'none',
                     transition: 'all .15s',
                   }}
                 >
@@ -810,13 +761,15 @@ export default function CreateClient() {
                     <span style={{
                       fontSize: '0.8rem',
                       fontWeight: 800,
-                      color: media === m.id ? 'var(--text)' : 'var(--muted2)',
+                      color: media === m.id && !m.disabled ? 'var(--text)' : 'var(--muted2)',
                     }}>
                       {m.label}
                     </span>
-                    <span style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--muted)', marginLeft: 'auto' }}>
-                      {m.cost} credit{m.cost > 1 ? 's' : ''}
-                    </span>
+                    {m.disabled && (
+                      <span style={{ fontSize: '0.5rem', fontWeight: 800, color: '#a855f7', background: 'rgba(168,85,247,.15)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>
+                        SOON
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '0.62rem', color: 'var(--muted)', lineHeight: 1.4 }}>
                     {m.desc}
@@ -849,14 +802,14 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+                : 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(99,102,241,.45)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
             }}
           >
-            ⚡ Generate • {MEDIA_COST[media] ?? 1} credit{(MEDIA_COST[media] ?? 1) > 1 ? 's' : ''}
+            ⚡ Generate — 1 credit
           </button>
 
           {/* Credits hint */}
@@ -886,7 +839,7 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+                : 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(99,102,241,.55)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
@@ -894,7 +847,7 @@ export default function CreateClient() {
               pointerEvents: 'auto',
             }}
           >
-            ⚡ Generate • {MEDIA_COST[media] ?? 1} credit{(MEDIA_COST[media] ?? 1) > 1 ? 's' : ''}
+            ⚡ Generate — 1 credit
           </button>
         </div>
       )}
@@ -1039,7 +992,7 @@ function ProgressView({
           className="h-full transition-all"
           style={{
             width: `${Math.min(100, Math.max(2, progress))}%`,
-            background: 'linear-gradient(90deg, #2563EB, #a855f7, #ec4899, #a855f7, #2563EB)',
+            background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #a855f7, #6366f1)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 2.4s linear infinite',
             transitionDuration: '600ms',
@@ -1104,11 +1057,11 @@ function FinalView({
         {/* Top bar: version + format */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#2563EB,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
-              AUTOPILOT v1.0
+              AUTOPILOT v4.0
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
@@ -1168,7 +1121,7 @@ function FinalView({
         {/* Creator row + reactions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(99,102,241,.4)' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(99,102,241,.4)' }}>
               {userInitial}
             </div>
             <div>
@@ -1239,7 +1192,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#2563EB,#7c3aed,#a855f7)',
+              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
               boxShadow: '0 4px 24px rgba(99,102,241,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1253,7 +1206,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#2563EB,#7c3aed,#a855f7)',
+              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
               boxShadow: '0 4px 24px rgba(99,102,241,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1356,7 +1309,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
           boxShadow: '0 0 80px rgba(99,102,241,.25), 0 30px 80px rgba(0,0,0,.5)',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #2563EB, #a855f7, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #6366f1, #a855f7, transparent)' }} />
         <div className="p-7 relative z-10">
           <button
             onClick={onClose}
@@ -1381,7 +1334,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
             href="/pricing"
             className="block w-full text-center rounded-xl py-3.5 text-sm font-black text-white transition-all"
             style={{
-              background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
               boxShadow: '0 4px 28px rgba(99,102,241,.45)',
               textDecoration: 'none',
             }}
@@ -1400,4 +1353,3 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
-                                                                               

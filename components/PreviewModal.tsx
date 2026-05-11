@@ -116,7 +116,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: '#34d399',
               }}
             >
-              ⚡ Generate Script in seconds
+              ⚡ 5 scripts in ~15 seconds
             </div>
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
@@ -224,7 +224,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             onClick={onConfirm}
             className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-black text-white mb-3 transition-all"
             style={{
-              background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
               boxShadow: '0 6px 28px rgba(99,102,241,.45)',
               animation: 'btn-pulse 2.8s ease-in-out infinite',
               border: 'none',

@@ -10,4 +10,10 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   async redirects() {
-    retur
+    return [
+      { source: '/auth.html', destination: '/login', permanent: true },
+    ]
+  },
+}
+
+module.exports = nextConfig
