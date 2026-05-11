@@ -264,14 +264,16 @@ export default function CreateClient() {
       }
       setStage('visuals', 56)
 
-      // Step 4 — Stock clips per scene
+      // Step 4 — Stock clips per scene. We pass the scene index so the curated
+      // library fallback can rotate clips across scenes that hit the same tag
+      // bucket (Pexels API path naturally varies by query).
       const selectedClips: Record<number, StockClip> = {}
       if (scenes.length > 0) {
         const results = await Promise.all(
-          scenes.map(async (s) => {
+          scenes.map(async (s, sceneIdx) => {
             try {
               const r = await fetch(
-                `/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}`,
+                `/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}&i=${sceneIdx}`,
                 { cache: 'no-store' }
               )
               if (!r.ok) return { sceneNumber: s.sceneNumber, videos: [] as StockClip[] }
