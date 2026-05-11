@@ -313,12 +313,12 @@ export default function HomePage() {
         {/* ─── Nav ─── */}
         <nav style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 64, borderBottom: '1px solid var(--border)', background: 'rgba(8,8,15,.9)', backdropFilter: 'blur(24px)' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: '0 0 20px rgba(99,102,241,.5)' }}>⚡</div>
-            <span style={{ fontWeight: 900, fontSize: '0.95rem', background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ShortsForgeAI</span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: '0 0 20px rgba(99,102,241,.5)' }}>⚡</div>
+            <span style={{ fontWeight: 900, fontSize: '0.95rem', background: 'linear-gradient(135deg, #3B82F6, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ShortsForgeAI</span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
-            <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
+            <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
           </div>
         </nav>
 
@@ -331,7 +331,7 @@ export default function HomePage() {
 
           <h1 style={{ fontSize: 'clamp(2.4rem, 7vw, 4rem)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.035em', margin: '0 auto 14px', maxWidth: 780 }}>
             Viral Shorts.{' '}
-            <span style={{ background: 'linear-gradient(135deg, #818cf8, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg, #3B82F6, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               One Click.
             </span>
           </h1>
@@ -343,7 +343,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
             <Link
               href={user ? '/dashboard' : '/signup'}
-              style={{ padding: '13px 30px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 28px rgba(99,102,241,.45)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              style={{ padding: '13px 30px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 28px rgba(99,102,241,.45)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
               Start Free
             </Link>
@@ -517,7 +517,7 @@ export default function HomePage() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--indigo-light)' }}>
-              ⚡ 5 scripts per generation
+              ⚡ Generate Script · Start Free
             </div>
           </div>
 
@@ -553,12 +553,12 @@ export default function HomePage() {
                   Get more Shorts every month
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
-                  Upgrade from free to 200 generations/month starting at $9.
+                  Upgrade from free — 300 credits/month starting at $9.
                 </p>
               </div>
               <button
                 onClick={() => scrollTo(pricingRef)}
-                style={{ padding: '11px 24px', borderRadius: 12, fontSize: '0.875rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', flexShrink: 0, border: 'none', cursor: 'pointer' }}
+                style={{ padding: '11px 24px', borderRadius: 12, fontSize: '0.875rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', flexShrink: 0, border: 'none', cursor: 'pointer' }}
               >
                 See Plans →
               </button>
@@ -590,8 +590,8 @@ export default function HomePage() {
               <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Try it out, no card needed</p>
               <div style={{ flex: 1 }}>
                 {[
-                  '2 free generations',
-                  '5 scripts per generation',
+                  '2 free credits',
+                  'Basic generation only',
                   'Basic viral hooks',
                   'Basic titles and hashtags',
                 ].map((f) => (
@@ -610,7 +610,7 @@ export default function HomePage() {
 
             {/* Creator */}
             <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '2px solid rgba(99,102,241,.35)', borderRadius: 20, padding: '30px 28px 34px', position: 'relative', overflow: 'hidden', boxShadow: '0 0 60px rgba(99,102,241,.15)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #6366f1, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
+              <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Creator</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                 <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9</span>
@@ -619,8 +619,8 @@ export default function HomePage() {
               <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>For serious faceless creators</p>
               <div style={{ flex: 1 }}>
                 {[
-                  '200 generations per month',
-                  'Up to 1,000 Shorts scripts per month',
+                  '300 credits / month',
+                  'Up to 300 Basic / 150 Pro / 75 Ultra',
                   'All trending niches',
                   'Hooks, titles, captions, hashtags',
                   'Copy complete package',
@@ -632,14 +632,15 @@ export default function HomePage() {
               </div>
               <Link
                 href="/pricing"
-                style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}
+                style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}
               >
                 Upgrade to Creator
               </Link>
             </div>
 
             {/* Pro */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '30px 28px 34px', boxShadow: '0 0 30px rgba(139,92,246,.08)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '30px 28px 34px', boxShadow: '0 0 30px rgba(139,92,246,.08)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Best Value</div>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Pro</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                 <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$19</span>
@@ -648,11 +649,11 @@ export default function HomePage() {
               <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Power users & growing channels</p>
               <div style={{ flex: 1 }}>
                 {[
-                  'More generations',
-                  'Priority access',
+                  '900 credits / month',
+                  'Up to 900 Basic / 450 Pro / 225 Ultra',
                   'Advanced viral formats',
-                  'More niche options',
-                  'Future AI video features',
+                  'Pro AI models (Veo / Sora-class)',
+                  'Priority support',
                 ].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
                     <span style={{ color: '#34d399' }}>✓</span> {f}
@@ -683,7 +684,7 @@ export default function HomePage() {
         <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)', padding: '28px 32px' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>⚡</div>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>⚡</div>
               <span style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--muted2)' }}>ShortsForgeAI</span>
             </div>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
@@ -694,13 +695,4 @@ export default function HomePage() {
                 ['/templates', 'Templates'],
                 ['/login', 'Sign In'],
               ].map(([href, label]) => (
-                <Link key={href} href={href} style={{ fontSize: '0.875rem', color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>{label}</Link>
-              ))}
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2026 ShortsForgeAI. All rights reserved.</p>
-          </div>
-        </footer>
-      </div>
-    </div>
-  )
-}
+                <Link key={href} href={href} style={{ fontSize: '0.875rem', color: 'v

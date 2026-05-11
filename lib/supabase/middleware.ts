@@ -31,8 +31,9 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // /dashboard is now public — auth is enforced at the action level (generate button)
-  const protectedPaths = ['/history', '/pricing']
+  // /pricing is public — anyone can browse plans.
+  // Auth is enforced at the action level (checkout requires sign-in).
+  const protectedPaths = ['/history', '/library']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
 
   if (isProtected && !user) {
@@ -44,8 +45,4 @@ export async function updateSession(request: NextRequest) {
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  return supabaseResponse
-}
+    return NextResponse.redirect(url
