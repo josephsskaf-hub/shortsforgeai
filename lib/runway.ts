@@ -15,31 +15,36 @@ export interface RunwayTaskState {
   status: RunwayTaskStatus
   progress: number | null
   videoUrl: string | null
+  imageUrl: string | null
   failure: string | null
 }
 
-// ─── Validation helpers ───────────────────────────────────────────────────────
+// ─── Validation helpers ──────────────────────────────────────────────────────
 
-const VALID_MODELS = ['gen4_turbo'] as const
-const VALID_DURATIONS = [5, 10] as const
-const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
+const VALID_VIDEO_DURATIONS = [5, 10] as const
+const VALID_VIDEO_RATIOS = ['720:1280', '1280:720', '960:960'] as const
+// Runway gen4_image supports many ratios — we only need a 9:16 subset.
+const VALID_IMAGE_RATIOS = ['720:1280', '1280:720', '1024:1024'] as const
 
-type ValidModel = (typeof VALID_MODELS)[number]
-type ValidDuration = (typeof VALID_DURATIONS)[number]
-type ValidRatio = (typeof VALID_RATIOS)[number]
+type VideoRatio = (typeof VALID_VIDEO_RATIOS)[number]
+type VideoDuration = (typeof VALID_VIDEO_DURATIONS)[number]
+type ImageRatio = (typeof VALID_IMAGE_RATIOS)[number]
 
-interface RunwayTextToVideoPayload {
-  model: ValidModel
-  promptText: string
-  ratio: ValidRatio
-  duration: ValidDuration
+interface ImageToVideoPayload {
+  model: 'gen4_turbo'
+  promptImage: string
+  promptText?: string
+  ratio: VideoRatio
+  duration: VideoDuration
 }
 
-/**
- * Map platform name → Runway pixel-based ratio.
- * Runway does NOT accept "9:16" — must use pixel dimensions.
- */
-export function mapPlatformToRatio(platform: string): ValidRatio {
+interface TextToImagePayload {
+  model: 'gen4_image'
+  promptText: string
+  ratio: ImageRatio
+}
+
+export function mapPlatformToRatio(platform: string): VideoRatio {
   switch ((platform ?? '').toLowerCase().trim()) {
     case 'youtube shorts':
     case 'tiktok':
@@ -51,62 +56,28 @@ export function mapPlatformToRatio(platform: string): ValidRatio {
     case 'square':
       return '960:960'
     default:
-      return '720:1280' // safe default: vertical 9:16
+      return '720:1280'
   }
 }
 
-/**
- * Sanitize a raw user / AI-generated prompt for Runway.
- * Strips hashtags, platform instructions, URLs, CTAs — leaves only
- * the cinematic visual description that Runway expects.
- */
 export function sanitizePromptForRunway(raw: string): string {
   const cleaned = raw
     .split('\n')
     .filter((line) => {
       const t = line.trim()
       if (!t) return false
-      // Drop pure-hashtag lines
       if (t.startsWith('#')) return false
-      // Drop CTA / platform-instruction lines
       if (/\b(subscribe|follow|like|comment|share|youtube|tiktok|instagram|shorts|www\.)\b/i.test(t)) return false
-      // Drop lines that are mostly hashtags (3+ tags)
       if ((t.match(/#\w+/g) ?? []).length >= 3) return false
       return true
     })
     .join(' ')
-    // Remove inline hashtags
     .replace(/#\w+/g, '')
-    // Remove URLs
     .replace(/https?:\/\/\S+/g, '')
-    // Collapse whitespace
     .replace(/\s{2,}/g, ' ')
     .trim()
     .slice(0, 500)
-
   return cleaned
-}
-
-/**
- * Build a strictly-typed Runway text-to-video payload and validate every field.
- * Throws a descriptive error if any field would fail Runway validation.
- */
-export function buildRunwayPayload(
-  rawPrompt: string,
-  platform = 'YouTube Shorts',
-  durationSeconds = 10
-): RunwayTextToVideoPayload {
-  const promptText = sanitizePromptForRunway(rawPrompt)
-  if (!promptText) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
-  if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
-
-  const model: ValidModel = 'gen4_turbo'
-  const ratio = mapPlatformToRatio(platform)
-
-  // Runway only accepts 5 or 10 — clamp
-  const duration: ValidDuration = durationSeconds <= 5 ? 5 : 10
-
-  return { model, promptText, ratio, duration }
 }
 
 function authHeaders() {
@@ -119,15 +90,8 @@ function authHeaders() {
   }
 }
 
-/**
- * Extract the most human-readable error detail from a Runway error response.
- * Runway returns: { error, docUrl, issues: [{ path, message }] }
- */
 function extractRunwayError(data: Record<string, unknown>, rawText: string, httpStatus: number): string {
-  // Log full structure for server-side debugging
   console.error('[runway] full error body:', JSON.stringify(data).slice(0, 1200))
-
-  // Try issues[] first — most specific
   if (Array.isArray(data.issues) && data.issues.length > 0) {
     const firstIssue = data.issues[0] as Record<string, unknown>
     const path = Array.isArray(firstIssue.path) ? firstIssue.path.join('.') : String(firstIssue.path ?? '')
@@ -135,13 +99,12 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
     if (path && message) return `${path}: ${message}`
     if (message) return message
   }
-
-  // Fall back to top-level error / message
   if (typeof data.error === 'string' && data.error) return data.error
   if (typeof data.message === 'string' && data.message) return data.message
-
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
+
+// ─── Scene planning (OpenAI) ─────────────────────────────────────────────────
 
 export async function generateScenes(prompt: string, count = 4): Promise<string[]> {
   const safeCount = Math.max(1, Math.min(8, Math.round(count)))
@@ -184,11 +147,7 @@ ${JSON.stringify(Array.from({ length: safeCount }, (_, i) => `scene ${i + 1} des
   if (m) cleaned = m[0]
 
   let parsed: unknown
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch {
-    throw new Error('Failed to parse scenes JSON from OpenAI.')
-  }
+  try { parsed = JSON.parse(cleaned) } catch { throw new Error('Failed to parse scenes JSON from OpenAI.') }
 
   if (!Array.isArray(parsed)) throw new Error('Scenes response was not an array.')
   const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, safeCount)
@@ -198,55 +157,84 @@ ${JSON.stringify(Array.from({ length: safeCount }, (_, i) => `scene ${i + 1} des
   return scenes
 }
 
-/**
- * Start a Runway text-to-video task.
- * @param rawPromptText  Raw scene description (will be sanitized before sending).
- * @param platform       Platform name for ratio mapping (default: "YouTube Shorts").
- * @param durationSeconds  Desired duration — only 5 or 10 will be sent to Runway.
- */
-export async function startRunwayTask(
-  rawPromptText: string,
-  platform = 'YouTube Shorts',
-  durationSeconds = 10
-): Promise<RunwayTaskHandle> {
-  // Build and validate payload BEFORE calling Runway (no credits charged yet)
-  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds)
+// ─── Runway: low-level POST ──────────────────────────────────────────────────
 
+async function postRunway(path: string, payload: unknown): Promise<{ id: string }> {
   const bodyStr = JSON.stringify(payload)
-  console.log(`[runway] sending to /text_to_video — model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)
+  console.log(`[Runway] POST ${path} payload:`, bodyStr)
 
   let res: Response
   try {
-    res = await fetch(`${RUNWAY_BASE}/text_to_video`, {
+    res = await fetch(`${RUNWAY_BASE}${path}`, {
       method: 'POST',
       headers: authHeaders(),
       body: bodyStr,
     })
   } catch (fetchErr) {
     const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
-    console.error('[runway] network error:', msg)
+    console.error(`[Runway] ${path} network error:`, msg)
     throw new Error(`Runway network error: ${msg}`)
   }
 
   const rawText = await res.text()
-  console.log(`[runway] response status=${res.status} body=${rawText.slice(0, 600)}`)
+  console.error(`[Runway] ${path} response: status=${res.status} body=${rawText.slice(0, 800)}`)
 
   let data: Record<string, unknown> = {}
-  try { data = JSON.parse(rawText) } catch { /* non-JSON response */ }
+  try { data = JSON.parse(rawText) } catch { /* non-JSON */ }
 
   if (!res.ok) {
     const detail = extractRunwayError(data, rawText, res.status)
-    throw new Error(`Runway rejected the request: ${detail}`)
+    throw new Error(`Runway rejected ${path}: ${detail}`)
   }
 
   const id =
     (typeof data.id === 'string' ? data.id : null) ||
     (typeof data.taskId === 'string' ? data.taskId : null)
 
-  if (!id) throw new Error(`Runway returned no task id. Response: ${rawText.slice(0, 200)}`)
-
-  return { id, promptText: payload.promptText }
+  if (!id) throw new Error(`Runway ${path} returned no task id. Response: ${rawText.slice(0, 200)}`)
+  console.log(`[Runway] ${path} task id=${id}`)
+  return { id }
 }
+
+// ─── Runway: text_to_image (gen4_image) ──────────────────────────────────────
+
+export async function startRunwayTextToImage(rawPromptText: string, ratio: ImageRatio = '720:1280'): Promise<RunwayTaskHandle> {
+  const promptText = sanitizePromptForRunway(rawPromptText)
+  if (!promptText) throw new Error('promptText is empty after sanitization.')
+  if (!VALID_IMAGE_RATIOS.includes(ratio)) throw new Error(`Invalid image ratio: ${ratio}`)
+  const payload: TextToImagePayload = { model: 'gen4_image', promptText, ratio }
+  const { id } = await postRunway('/text_to_image', payload)
+  return { id, promptText }
+}
+
+// ─── Runway: image_to_video (gen4_turbo) ─────────────────────────────────────
+
+export async function startRunwayImageToVideo(
+  promptImage: string,
+  rawPromptText: string,
+  platform = 'YouTube Shorts',
+  durationSeconds = 10
+): Promise<RunwayTaskHandle> {
+  if (!promptImage || !/^https?:\/\//.test(promptImage)) {
+    throw new Error('promptImage must be an https URL.')
+  }
+  const promptText = sanitizePromptForRunway(rawPromptText)
+  const ratio = mapPlatformToRatio(platform)
+  const duration: VideoDuration = durationSeconds <= 5 ? 5 : 10
+
+  const payload: ImageToVideoPayload = {
+    model: 'gen4_turbo',
+    promptImage,
+    ratio,
+    duration,
+  }
+  if (promptText) payload.promptText = promptText
+
+  const { id } = await postRunway('/image_to_video', payload)
+  return { id, promptText }
+}
+
+// ─── Runway: GET /tasks/{id} ─────────────────────────────────────────────────
 
 export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
   const res = await fetch(`${RUNWAY_BASE}/tasks/${encodeURIComponent(id)}`, {
@@ -255,39 +243,99 @@ export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
     cache: 'no-store',
   })
 
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  const rawText = await res.text()
+  let data: Record<string, unknown> = {}
+  try { data = JSON.parse(rawText) } catch { /* non-JSON */ }
 
   if (!res.ok) {
     const detail =
       (typeof data.error === 'string' ? data.error : null) ||
       (typeof data.message === 'string' ? data.message : null) ||
       `Runway task lookup failed (${res.status})`
+    console.error(`[Runway] /tasks/${id} error: status=${res.status} body=${rawText.slice(0, 400)}`)
     throw new Error(detail)
   }
 
   const status = (typeof data.status === 'string' ? data.status : 'PENDING') as RunwayTaskStatus
   const progress = typeof data.progress === 'number' ? data.progress : null
 
-  let videoUrl: string | null = null
+  // Output can be: string url, [string], [{url}], {url}
+  let outputUrl: string | null = null
   const output = data.output
   if (Array.isArray(output) && output.length > 0) {
     const first = output[0]
-    if (typeof first === 'string') videoUrl = first
+    if (typeof first === 'string') outputUrl = first
     else if (first && typeof first === 'object' && typeof (first as { url?: unknown }).url === 'string') {
-      videoUrl = (first as { url: string }).url
+      outputUrl = (first as { url: string }).url
     }
   } else if (typeof output === 'string') {
-    videoUrl = output
+    outputUrl = output
   } else if (output && typeof output === 'object' && typeof (output as { url?: unknown }).url === 'string') {
-    videoUrl = (output as { url: string }).url
+    outputUrl = (output as { url: string }).url
   }
 
-  const failure =
-    typeof data.failure === 'string'
+  // Figure out if this is image or video task by extension or by stored kind.
+  // Callers that care use imageUrl/videoUrl separately. Both fields point to the
+  // same URL — the consumer knows which API created the task.
+  const lowered = outputUrl?.toLowerCase() ?? ''
+  const isImage = /\.(png|jpe?g|webp)(\?|$)/.test(lowered)
+
+  console.log(`[Runway] /tasks/${id} status=${status} progress=${progress} output=${outputUrl?.slice(0, 120) ?? 'null'}`)
+
+  return {
+    id,
+    status,
+    progress,
+    videoUrl: outputUrl && !isImage ? outputUrl : null,
+    imageUrl: outputUrl && isImage ? outputUrl : null,
+    failure: typeof data.failure === 'string'
       ? data.failure
       : typeof (data as { failureCode?: unknown }).failureCode === 'string'
       ? ((data as { failureCode: string }).failureCode)
-      : null
+      : null,
+  }
+}
 
-  return { id, status, progress, videoUrl, failure }
+// ─── Inline poller used during the synchronous request (image gen wait) ──────
+
+export async function pollRunwayTaskUntilDone(
+  id: string,
+  opts: { maxMs?: number; intervalMs?: number } = {}
+): Promise<RunwayTaskState> {
+  const maxMs = opts.maxMs ?? 45_000
+  const intervalMs = opts.intervalMs ?? 1500
+  const deadline = Date.now() + maxMs
+
+  while (Date.now() < deadline) {
+    const state = await getRunwayTask(id)
+    if (state.status === 'SUCCEEDED') return state
+    if (state.status === 'FAILED' || state.status === 'CANCELLED') {
+      throw new Error(`Runway task ${id} ${state.status.toLowerCase()}${state.failure ? ` — ${state.failure}` : ''}`)
+    }
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  throw new Error(`Runway task ${id} did not complete within ${maxMs}ms (last poll still pending).`)
+}
+
+// ─── High-level: scene → image → video task handle ───────────────────────────
+
+export async function startVideoForScene(
+  sceneText: string,
+  platform = 'YouTube Shorts'
+): Promise<RunwayTaskHandle> {
+  // 1) text → image
+  const imgRatio: ImageRatio = '720:1280' // vertical 9:16
+  console.log('[Runway] starting text_to_image for scene:', sceneText.slice(0, 100))
+  const imgTask = await startRunwayTextToImage(sceneText, imgRatio)
+
+  // 2) poll until image is ready
+  const imgState = await pollRunwayTaskUntilDone(imgTask.id, { maxMs: 45_000, intervalMs: 1500 })
+  if (!imgState.imageUrl) {
+    throw new Error(`text_to_image succeeded but returned no image URL for task ${imgTask.id}`)
+  }
+  console.log('[Runway] image ready:', imgState.imageUrl.slice(0, 120))
+
+  // 3) image → video (10s clips always — duration multiplied client-side by # of scenes)
+  const videoTask = await startRunwayImageToVideo(imgState.imageUrl, sceneText, platform, 10)
+  return videoTask
 }
