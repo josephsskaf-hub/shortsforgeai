@@ -370,18 +370,25 @@ export default function CreateClient() {
       setProgress(100)
       await wait(300)
 
-      // Deduct credit on success
-      try {
-        const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
-        if (dedRes.ok) {
-          const data = await dedRes.json()
-          if (typeof data.credits === 'number') setCredits(data.credits)
-          window.dispatchEvent(new CustomEvent('creditsChanged'))
-        } else {
+      // Only deduct a credit when the render actually produced a video file.
+      // If visuals couldn't be prepared or Creatomate failed, the user gets a
+      // clear error and keeps their credit.
+      const renderSucceeded = !!renderUrl && !renderError
+      if (renderSucceeded) {
+        try {
+          const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
+          if (dedRes.ok) {
+            const data = await dedRes.json()
+            if (typeof data.credits === 'number') setCredits(data.credits)
+            window.dispatchEvent(new CustomEvent('creditsChanged'))
+          } else {
+            await refreshCreditsFromServer()
+          }
+        } catch {
           await refreshCreditsFromServer()
         }
-      } catch {
-        await refreshCreditsFromServer()
+      } else {
+        console.warn('[create] skipping credit deduction — render did not succeed:', renderError)
       }
 
       setFinal({

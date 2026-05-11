@@ -40,6 +40,12 @@ function findStockUrl(stockClips: StockClipInput[], sceneNumber: number): string
   if (!url || url.includes('placeholder') || url.includes('example.com') || url.includes('mock')) return null
   // Only allow http/https URLs
   if (!url.startsWith('http')) return null
+  // Reject the legacy hardcoded mock photo bucket so a regression there can
+  // never leak the same snow/aurora-toned image into every render again.
+  if (/pexels-photo-(3408744|1089842|1252500|256541|3109807|1169754|1624600|949587)\.jpe?g/i.test(url)) {
+    console.warn('[render] rejecting legacy mock stock URL:', url)
+    return null
+  }
   return url
 }
 
@@ -102,6 +108,20 @@ export async function POST(req: NextRequest) {
 
     if (!script) return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     if (!scenes.length) return NextResponse.json({ error: 'Scenes are required.' }, { status: 400 })
+
+    // Reject the render if no scene has a real, query-relevant stock URL.
+    // The old silent-mock fallback in /api/stock used to paper over a missing
+    // PEXELS_API_KEY with the same 4 hardcoded photos for every video. That's
+    // exactly the "snow/aurora on every render" bug. Surface a clean error
+    // instead of rendering a video with no real visuals.
+    const usableStockCount = scenes.filter((s) => findStockUrl(stockClips, s.sceneNumber)).length
+    if (usableStockCount === 0) {
+      console.error('[render] rejecting: no usable stock URL on any scene')
+      return NextResponse.json(
+        { error: 'Could not prepare visuals. Please try again.' },
+        { status: 502 }
+      )
+    }
 
     // — Voiceover (non-fatal) —
     let voiceoverUrl: string | null = null
