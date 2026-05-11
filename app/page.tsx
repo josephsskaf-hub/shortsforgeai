@@ -705,13 +705,3 @@ export default function HomePage() {
     </div>
   )
 }
-ar(--muted)', textDecoration: 'none', fontWeight: 500 }}>{label}</Link>
-              ))}
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>© 2026 ShortsForgeAI. All rights reserved.</p>
-          </div>
-        </footer>
-      </div>
-    </div>
-  )
-}
