@@ -171,3 +171,13 @@ export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
   } else if (output && typeof output === 'object' && typeof (output as { url?: unknown }).url === 'string') {
     videoUrl = (output as { url: string }).url
   }
+
+  const failure =
+    typeof data.failure === 'string'
+      ? data.failure
+      : typeof (data as { failureCode?: unknown }).failureCode === 'string'
+      ? ((data as { failureCode: string }).failureCode)
+      : null
+
+  return { id, status, progress, videoUrl, failure }
+}
