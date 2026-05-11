@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 
 interface Scene {
   sceneNumber: number
@@ -93,6 +94,7 @@ const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
 ]
 
 interface FinalAssets {
+  videoId: string | null
   video: ShortVideoResult
   scenes: Scene[]
   selectedClips: Record<number, StockClip>
@@ -101,6 +103,10 @@ interface FinalAssets {
   topic: string
   renderUrl: string | null
   renderError: string | null
+  duration: number
+  platform: string
+  media: string
+  creditsUsed: number
 }
 
 export default function CreateClient() {
@@ -371,6 +377,7 @@ export default function CreateClient() {
       await wait(300)
 
       // Deduct credit on success
+      const creditsUsed = 1
       try {
         const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
         if (dedRes.ok) {
@@ -384,7 +391,47 @@ export default function CreateClient() {
         await refreshCreditsFromServer()
       }
 
+      // Persist generated video to Supabase `videos` table (best-effort).
+      // If the table doesn't exist or insert fails, we log and continue.
+      let videoId: string | null = null
+      try {
+        const supabase = createSupabaseClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const payload = {
+            user_id: user.id,
+            title: (video.title || effectiveTopic || 'Untitled Short').slice(0, 200),
+            prompt: effectiveTopic,
+            script: video.script ?? null,
+            description: video.youtubeDescription ?? null,
+            hashtags: Array.isArray(video.hashtags) ? video.hashtags : null,
+            platform,
+            duration,
+            niche: effectiveNiche,
+            tone,
+            quality_mode: media,
+            credits_used: creditsUsed,
+            status: renderUrl ? 'completed' : (renderError ? 'failed' : 'completed'),
+            video_url: renderUrl,
+            created_at: new Date().toISOString(),
+          }
+          const { data: inserted, error: insertError } = await supabase
+            .from('videos')
+            .insert(payload)
+            .select('id')
+            .single()
+          if (insertError) {
+            console.warn('[videos] insert failed:', insertError.message)
+          } else if (inserted?.id) {
+            videoId = inserted.id as string
+          }
+        }
+      } catch (persistErr) {
+        console.warn('[videos] persist threw:', persistErr instanceof Error ? persistErr.message : persistErr)
+      }
+
       setFinal({
+        videoId,
         video,
         scenes,
         selectedClips,
@@ -393,12 +440,20 @@ export default function CreateClient() {
         topic: effectiveTopic,
         renderUrl,
         renderError,
+        duration,
+        platform,
+        media,
+        creditsUsed,
       })
       setRunning(false)
       setStageId(null)
+      setProgress(0)
+      setAutoPicking(false)
+      setError(null)
     } catch (err) {
       setRunning(false)
       setStageId(null)
+      setAutoPicking(false)
       setProgress(0)
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     }
@@ -414,6 +469,13 @@ export default function CreateClient() {
     setFinal(null)
     setError(null)
     setProgress(0)
+    setRunning(false)
+    setAutoPicking(false)
+    setStageId(null)
+    setAutopickedTopic(null)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   function cleanAutostartUrl(currentNiche: string) {
@@ -1006,6 +1068,14 @@ function ProgressView({
   )
 }
 
+interface EditableFields {
+  title: string
+  topic: string
+  script: string
+  description: string
+  hashtags: string
+}
+
 function FinalView({
   final,
   onCopy,
@@ -1017,115 +1087,190 @@ function FinalView({
   onRegenerate: () => void
   userEmail: string
 }) {
-  const { video, scenes, selectedClips, renderUrl, renderError } = final
-  const previewClip = scenes[0] ? selectedClips[scenes[0].sceneNumber] : null
+  const { video, renderUrl, renderError } = final
   const userInitial = userEmail ? userEmail[0].toUpperCase() : 'S'
+
+  const previewThumb = useMemo(() => {
+    const firstClip = Object.values(final.selectedClips)[0]
+    return firstClip?.thumbnail ?? undefined
+  }, [final.selectedClips])
+
+  const [editing, setEditing] = useState(false)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editSaved, setEditSaved] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  const initialFields: EditableFields = {
+    title: video.title ?? '',
+    topic: final.topic ?? '',
+    script: video.script ?? '',
+    description: video.youtubeDescription ?? '',
+    hashtags: Array.isArray(video.hashtags) ? video.hashtags.join(' ') : '',
+  }
+  const [fields, setFields] = useState<EditableFields>(initialFields)
+
+  function openEdit() {
+    setFields(initialFields)
+    setEditError(null)
+    setEditSaved(false)
+    setEditing(true)
+  }
+
+  function closeEdit() {
+    setEditing(false)
+    setEditError(null)
+  }
+
+  async function saveEdit() {
+    if (savingEdit) return
+    setSavingEdit(true)
+    setEditError(null)
+    try {
+      if (!final.videoId) {
+        // No persisted row to update — keep changes in memory only.
+        setEditSaved(true)
+        setTimeout(() => setEditSaved(false), 1800)
+        setEditing(false)
+        return
+      }
+      const supabase = createSupabaseClient()
+      const hashtagList = fields.hashtags
+        .split(/\s+/)
+        .map((h) => h.trim())
+        .filter(Boolean)
+      const { error } = await supabase
+        .from('videos')
+        .update({
+          title: fields.title.slice(0, 200),
+          prompt: fields.topic,
+          script: fields.script,
+          description: fields.description,
+          hashtags: hashtagList,
+        })
+        .eq('id', final.videoId)
+      if (error) {
+        setEditError(error.message)
+      } else {
+        setEditSaved(true)
+        setTimeout(() => setEditSaved(false), 1800)
+        setEditing(false)
+      }
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Save failed.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  // Resolve a friendly platform label for the metadata row.
+  const platformLabel =
+    PLATFORM_OPTIONS.find((p) => p.id === final.platform)?.label ?? final.platform
+  const mediaLabel =
+    MEDIA_OPTIONS.find((m) => m.id === final.media)?.label ?? final.media
+
+  const isFailed = !renderUrl && !!renderError
 
   return (
     <div className="flex flex-col gap-4">
+      <style jsx global>{`
+        @keyframes cc_spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+      `}</style>
 
-      {/* Render error notice (non-fatal) */}
-      {!renderUrl && renderError && (
-        <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm"
-          style={{
-            background: 'rgba(245,158,11,.07)',
-            border: '1px solid rgba(245,158,11,.25)',
-            color: '#fbbf24',
-          }}
-        >
-          <span className="text-lg mt-0.5">⚠️</span>
-          <div>
-            <div className="font-bold mb-0.5" style={{ color: '#fde68a' }}>MP4 render pending</div>
-            <div className="text-xs" style={{ color: '#fbbf24', opacity: 0.85 }}>{renderError}</div>
-            <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-              Script and visuals are ready below. Use the AI Video button to generate the final MP4.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Video Player Card ─── */}
+      {/* ─── Result Card ─── */}
       <div
-        className="rounded-[24px] overflow-hidden"
+        className="rounded-[20px] overflow-hidden"
         style={{
-          background: 'rgba(10,10,22,0.95)',
-          border: '1px solid rgba(99,102,241,.25)',
-          boxShadow: '0 0 60px rgba(99,102,241,.12)',
+          background: '#1F2023',
+          border: '1px solid rgba(255,255,255,.08)',
+          boxShadow: '0 12px 48px rgba(0,0,0,.5)',
         }}
       >
-        {/* Top bar: version + format */}
+        {/* Top bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: '#2A2B2F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0, border: '1px solid rgba(255,255,255,.08)' }}>
               ⚡
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
-              AUTOPILOT v4.0
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '0.04em' }}>
+              AUTOPILOT
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
-            📱 YouTube Shorts · 9:16
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: '#2A2B2F', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
+            📱 {platformLabel} · 9:16
           </div>
         </div>
 
-        {/* Video preview — centered, 9:16 */}
+        {/* Video / state preview — centered, 9:16 */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 20px 0' }}>
           <div
             style={{
               width: 'min(300px, 100%)',
               aspectRatio: '9 / 16',
-              borderRadius: 16,
+              borderRadius: 14,
               overflow: 'hidden',
-              background: 'rgba(0,0,0,.7)',
+              background: '#000',
               border: '1px solid rgba(255,255,255,.08)',
-              boxShadow: '0 12px 48px rgba(0,0,0,.6)',
               position: 'relative',
             }}
           >
             {renderUrl ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
               <video
+                key={renderUrl}
                 src={renderUrl}
                 controls
                 playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                preload="metadata"
+                poster={previewThumb}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000', borderRadius: 12 }}
               />
-            ) : previewClip ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video
-                src={previewClip.url}
-                muted
-                loop
-                autoPlay
-                controls
-                playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            ) : isFailed ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#f87171', padding: 16, textAlign: 'center' }}>
+                <span style={{ fontSize: '2.4rem' }}>⚠️</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Generation failed — try again</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.9 }}>{renderError}</span>
+              </div>
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--muted)' }}>
-                <span style={{ fontSize: '3rem' }}>🎬</span>
-                <span style={{ fontSize: '0.78rem' }}>Preview unavailable</span>
+                <span style={{ fontSize: '2rem', animation: 'cc_spin 1.6s linear infinite', display: 'inline-block' }}>⏳</span>
+                <span style={{ fontSize: '0.78rem' }}>Rendering your video…</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Title below video */}
-        <div style={{ padding: '18px 20px 4px', textAlign: 'center' }}>
+        <div style={{ padding: '18px 20px 6px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 900, color: 'var(--text)', lineHeight: 1.25, letterSpacing: '-0.02em', margin: 0 }}>
             {video.title}
           </h2>
         </div>
 
-        {/* Creator row + reactions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
+        {/* Metadata row */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', padding: '0 20px 14px' }}>
+          {[
+            platformLabel,
+            `${final.duration}s`,
+            mediaLabel,
+            `${final.creditsUsed} credit${final.creditsUsed === 1 ? '' : 's'}`,
+          ].map((m, i) => (
+            <span
+              key={i}
+              style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted2)', background: '#2A2B2F', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 8px', whiteSpace: 'nowrap' }}
+            >
+              {m}
+            </span>
+          ))}
+        </div>
+
+        {/* Creator row + reactions (secondary) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(99,102,241,.4)' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2A2B2F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 900, color: 'var(--text)', flexShrink: 0, border: '1px solid rgba(255,255,255,.08)' }}>
               {userInitial}
             </div>
             <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text)' }}>ShortsForgeAI</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)' }}>ShortsForgeAI</div>
               <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 1 }}>AI-generated · {final.niche}</div>
             </div>
           </div>
@@ -1133,9 +1278,7 @@ function FinalView({
             {(['👍', '👎'] as const).map((icon) => (
               <button
                 key={icon}
-                style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,.15)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,.3)' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)' }}
+                style={{ width: 30, height: 30, borderRadius: 8, background: '#2A2B2F', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)' }}
               >
                 {icon}
               </button>
@@ -1144,47 +1287,135 @@ function FinalView({
         </div>
       </div>
 
+      {/* ─── Edit panel (inline, slides open below result) ─── */}
+      {editing && (
+        <div
+          className="rounded-[20px] p-5"
+          style={{
+            background: '#1F2023',
+            border: '1px solid rgba(255,255,255,.1)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-black uppercase tracking-widest" style={{ fontSize: '0.7rem', color: 'var(--text)' }}>
+              ✏️ Edit
+            </div>
+            {editSaved && (
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#34d399' }}>Saved ✓</div>
+            )}
+          </div>
+
+          <EditField
+            label="Title"
+            value={fields.title}
+            onChange={(v) => setFields((f) => ({ ...f, title: v }))}
+          />
+          <EditField
+            label="Prompt / topic"
+            value={fields.topic}
+            onChange={(v) => setFields((f) => ({ ...f, topic: v }))}
+          />
+          <EditField
+            label="Script"
+            value={fields.script}
+            onChange={(v) => setFields((f) => ({ ...f, script: v }))}
+            multiline
+            rows={6}
+          />
+          <EditField
+            label="Description"
+            value={fields.description}
+            onChange={(v) => setFields((f) => ({ ...f, description: v }))}
+            multiline
+            rows={3}
+          />
+          <EditField
+            label="Hashtags (space-separated)"
+            value={fields.hashtags}
+            onChange={(v) => setFields((f) => ({ ...f, hashtags: v }))}
+          />
+
+          {editError && (
+            <div className="text-xs mb-3" style={{ color: '#f87171' }}>
+              {editError}
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-3 justify-end">
+            <button
+              onClick={closeEdit}
+              disabled={savingEdit}
+              style={{
+                padding: '10px 18px', borderRadius: 10,
+                background: '#2A2B2F', border: '1px solid rgba(255,255,255,.1)',
+                color: 'var(--muted2)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={savingEdit}
+              style={{
+                padding: '10px 20px', borderRadius: 10,
+                background: '#3B82F6', border: 'none',
+                color: '#fff', fontWeight: 900, fontSize: '0.85rem',
+                cursor: savingEdit ? 'wait' : 'pointer', opacity: savingEdit ? 0.7 : 1,
+                boxShadow: '0 4px 18px rgba(59,130,246,.35)',
+              }}
+            >
+              {savingEdit ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ─── Bottom Action Bar ─── */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          background: 'rgba(12,12,24,0.9)',
-          border: '1px solid rgba(99,102,241,.2)',
-          borderRadius: 16,
+          background: '#1F2023',
+          border: '1px solid rgba(255,255,255,.08)',
+          borderRadius: 14,
           padding: '12px 14px',
           flexWrap: 'wrap',
         }}
       >
-        {/* Left action icons */}
+        {/* Left action icons (secondary) */}
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button
             onClick={onRegenerate}
             title="Generate another"
-            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 38, height: 38, borderRadius: 10, background: '#2A2B2F', border: '1px solid rgba(255,255,255,.1)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)' }}
           >🔄</button>
           <button
             onClick={() => onCopy(video.script)}
             title="Copy script"
-            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 38, height: 38, borderRadius: 10, background: '#2A2B2F', border: '1px solid rgba(255,255,255,.1)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted2)' }}
           >📋</button>
-          <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
-            title="Generate AI video"
-            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-          >🎬</Link>
-        </div>
-
-        {/* Version badge */}
-        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '5px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          Version 1
         </div>
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Download MP4 button */}
+        {/* Edit button — secondary, to the LEFT of Download */}
+        <button
+          onClick={editing ? closeEdit : openEdit}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '11px 18px', borderRadius: 12,
+            background: '#2A2B2F',
+            border: '1px solid rgba(255,255,255,.12)',
+            color: 'var(--text)', fontWeight: 800, fontSize: '0.9rem',
+            cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          ✏️ {editing ? 'Close' : 'Edit'}
+        </button>
+
+        {/* Download button — primary blue */}
         {renderUrl ? (
           <a
             href={renderUrl}
@@ -1192,30 +1423,43 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
-              boxShadow: '0 4px 24px rgba(99,102,241,.45)',
+              background: '#3B82F6',
+              boxShadow: '0 4px 22px rgba(59,130,246,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
             }}
           >
-            ⬇️ Download MP4
+            ⬇️ Download
           </a>
         ) : (
-          <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+          <button
+            disabled
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
-              boxShadow: '0 4px 24px rgba(99,102,241,.45)',
-              color: '#fff', fontWeight: 900, fontSize: '0.95rem',
-              textDecoration: 'none', whiteSpace: 'nowrap',
+              background: '#374151',
+              color: '#9ca3af', fontWeight: 900, fontSize: '0.95rem',
+              whiteSpace: 'nowrap', border: 'none', cursor: 'not-allowed',
             }}
           >
-            🎬 Generate AI Video
-          </Link>
+            ⬇️ Download
+          </button>
         )}
       </div>
+
+      {/* ─── Generate Another (prominent) ─── */}
+      <button
+        onClick={onRegenerate}
+        className="w-full rounded-xl py-3.5 text-sm font-black transition-all"
+        style={{
+          background: '#2A2B2F',
+          border: '1px solid rgba(255,255,255,.12)',
+          color: 'var(--text)',
+          cursor: 'pointer',
+        }}
+      >
+        ✨ Create New Video
+      </button>
 
       {/* Script fields */}
       <FieldBlock label="Title" value={video.title} onCopy={onCopy} />
@@ -1229,8 +1473,8 @@ function FinalView({
           href="/dashboard"
           className="rounded-xl px-6 py-3 text-sm font-bold"
           style={{
-            background: 'rgba(255,255,255,.04)',
-            border: '1px solid var(--border)',
+            background: '#2A2B2F',
+            border: '1px solid rgba(255,255,255,.08)',
             color: 'var(--muted2)',
             textDecoration: 'none',
           }}
@@ -1239,6 +1483,55 @@ function FinalView({
         </Link>
       </div>
     </div>
+  )
+}
+
+function EditField({
+  label,
+  value,
+  onChange,
+  multiline,
+  rows,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  multiline?: boolean
+  rows?: number
+}) {
+  const sharedStyle: React.CSSProperties = {
+    width: '100%',
+    background: '#15161A',
+    border: '1px solid rgba(255,255,255,.1)',
+    borderRadius: 10,
+    padding: '10px 12px',
+    color: 'var(--text)',
+    fontSize: '0.85rem',
+    outline: 'none',
+    fontFamily: 'inherit',
+    resize: multiline ? 'vertical' : undefined,
+  }
+  return (
+    <label className="block mb-3">
+      <div className="text-xs font-bold mb-1.5" style={{ color: 'var(--muted2)', fontSize: '0.68rem' }}>
+        {label}
+      </div>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={rows ?? 4}
+          style={sharedStyle}
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={sharedStyle}
+        />
+      )}
+    </label>
   )
 }
 
