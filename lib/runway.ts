@@ -87,10 +87,9 @@ Example output format:
 }
 
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  // Try gen4_turbo first (production), then gen3a_turbo as fallback
-  const modelsToTry = ['gen4_turbo', 'gen3a_turbo']
-  // Try production endpoint first, then dev as fallback
-  const bases = [RUNWAY_BASE_PROD, RUNWAY_BASE]
+  // gen4_turbo on dev endpoint supports text-to-video (no image needed for dev keys)
+  const modelsToTry = ['gen4_turbo']
+  const bases = [RUNWAY_BASE] // dev API key only works on dev endpoint
 
   let res: Response | null = null
   let lastError = ''
@@ -100,8 +99,8 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
     const body = JSON.stringify({
       model,
       promptText,
-      duration: 5,
-      ratio: '768:1280', // valid 9:16 ratio
+      duration: 10,       // gen4_turbo on dev supports 5 or 10 — try 10
+      ratio: '720:1280',  // 9:16 vertical
     })
     console.log(`[runway] trying model=${model} body=${body.slice(0, 300)}`)
 
@@ -116,10 +115,10 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
         console.log(`[runway] ${model}@${base} status=${r.status} body=${rawT.slice(0, 800)}`)
 
         // If this is a validation/availability error, try next base/model
-        if (r.status === 422 || r.status === 404 || rawT.includes('not available') || rawT.includes('not found')) {
+        if (r.status === 422 || r.status === 404 || rawT.includes('not available') || rawT.includes('not found') || rawT.includes('incorrect hostname')) {
           lastError = `${model}@${base}: ${rawT.slice(0, 300)}`
           console.warn(`[runway] ${r.status} for model ${model} at ${base}, trying next`)
-          continue // try next base URL for same model
+          break // break inner loop (try next model)
         }
 
         res = r
