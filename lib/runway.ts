@@ -87,9 +87,10 @@ Example output format:
 }
 
 export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  // gen3a_turbo is the text-to-video model; gen4_turbo requires an image input
-  const modelsToTry = ['gen3a_turbo']
-  const bases = [RUNWAY_BASE] // dev key only works on dev endpoint
+  // Try gen4_turbo first (production), then gen3a_turbo as fallback
+  const modelsToTry = ['gen4_turbo', 'gen3a_turbo']
+  // Try production endpoint first, then dev as fallback
+  const bases = [RUNWAY_BASE_PROD, RUNWAY_BASE]
 
   let res: Response | null = null
   let lastError = ''
@@ -100,7 +101,7 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
       model,
       promptText,
       duration: 5,
-      ratio: '768:1280', // valid 9:16 ratio for gen3a_turbo
+      ratio: '768:1280', // valid 9:16 ratio
     })
     console.log(`[runway] trying model=${model} body=${body.slice(0, 300)}`)
 
@@ -114,11 +115,11 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
         const rawT = await r.text()
         console.log(`[runway] ${model}@${base} status=${r.status} body=${rawT.slice(0, 800)}`)
 
-        // If this is a validation error for the model, try next model
-        if (r.status === 422) {
-          lastError = `${model}: ${rawT.slice(0, 300)}`
-          console.warn(`[runway] 422 for model ${model}, will try next`)
-          break // break inner loop (try next model)
+        // If this is a validation/availability error, try next base/model
+        if (r.status === 422 || r.status === 404 || rawT.includes('not available') || rawT.includes('not found')) {
+          lastError = `${model}@${base}: ${rawT.slice(0, 300)}`
+          console.warn(`[runway] ${r.status} for model ${model} at ${base}, trying next`)
+          continue // try next base URL for same model
         }
 
         res = r
