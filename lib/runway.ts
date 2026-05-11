@@ -2,8 +2,6 @@ import { openai } from '@/lib/openai'
 
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1'
 const RUNWAY_VERSION = '2024-11-06'
-// Fallback base if dev subdomain fails
-const RUNWAY_BASE_PROD = 'https://api.runwayml.com/v1'
 
 export interface RunwayTaskHandle {
   id: string
@@ -20,6 +18,97 @@ export interface RunwayTaskState {
   failure: string | null
 }
 
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+const VALID_MODELS = ['gen4_turbo'] as const
+const VALID_DURATIONS = [5, 10] as const
+const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
+
+type ValidModel = (typeof VALID_MODELS)[number]
+type ValidDuration = (typeof VALID_DURATIONS)[number]
+type ValidRatio = (typeof VALID_RATIOS)[number]
+
+interface RunwayTextToVideoPayload {
+  model: ValidModel
+  promptText: string
+  ratio: ValidRatio
+  duration: ValidDuration
+}
+
+/**
+ * Map platform name → Runway pixel-based ratio.
+ * Runway does NOT accept "9:16" — must use pixel dimensions.
+ */
+export function mapPlatformToRatio(platform: string): ValidRatio {
+  switch ((platform ?? '').toLowerCase().trim()) {
+    case 'youtube shorts':
+    case 'tiktok':
+    case 'instagram reels':
+      return '720:1280'
+    case 'youtube':
+    case 'landscape youtube':
+      return '1280:720'
+    case 'square':
+      return '960:960'
+    default:
+      return '720:1280' // safe default: vertical 9:16
+  }
+}
+
+/**
+ * Sanitize a raw user / AI-generated prompt for Runway.
+ * Strips hashtags, platform instructions, URLs, CTAs — leaves only
+ * the cinematic visual description that Runway expects.
+ */
+export function sanitizePromptForRunway(raw: string): string {
+  const cleaned = raw
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim()
+      if (!t) return false
+      // Drop pure-hashtag lines
+      if (t.startsWith('#')) return false
+      // Drop CTA / platform-instruction lines
+      if (/\b(subscribe|follow|like|comment|share|youtube|tiktok|instagram|shorts|www\.)\b/i.test(t)) return false
+      // Drop lines that are mostly hashtags (3+ tags)
+      if ((t.match(/#\w+/g) ?? []).length >= 3) return false
+      return true
+    })
+    .join(' ')
+    // Remove inline hashtags
+    .replace(/#\w+/g, '')
+    // Remove URLs
+    .replace(/https?:\/\/\S+/g, '')
+    // Collapse whitespace
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 500)
+
+  return cleaned
+}
+
+/**
+ * Build a strictly-typed Runway text-to-video payload and validate every field.
+ * Throws a descriptive error if any field would fail Runway validation.
+ */
+export function buildRunwayPayload(
+  rawPrompt: string,
+  platform = 'YouTube Shorts',
+  durationSeconds = 10
+): RunwayTextToVideoPayload {
+  const promptText = sanitizePromptForRunway(rawPrompt)
+  if (!promptText) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
+  if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
+
+  const model: ValidModel = 'gen4_turbo'
+  const ratio = mapPlatformToRatio(platform)
+
+  // Runway only accepts 5 or 10 — clamp
+  const duration: ValidDuration = durationSeconds <= 5 ? 5 : 10
+
+  return { model, promptText, ratio, duration }
+}
+
 function authHeaders() {
   const key = process.env.RUNWAY_API_KEY
   if (!key) throw new Error('RUNWAY_API_KEY is not configured.')
@@ -28,6 +117,30 @@ function authHeaders() {
     'X-Runway-Version': RUNWAY_VERSION,
     'Content-Type': 'application/json',
   }
+}
+
+/**
+ * Extract the most human-readable error detail from a Runway error response.
+ * Runway returns: { error, docUrl, issues: [{ path, message }] }
+ */
+function extractRunwayError(data: Record<string, unknown>, rawText: string, httpStatus: number): string {
+  // Log full structure for server-side debugging
+  console.error('[runway] full error body:', JSON.stringify(data).slice(0, 1200))
+
+  // Try issues[] first — most specific
+  if (Array.isArray(data.issues) && data.issues.length > 0) {
+    const firstIssue = data.issues[0] as Record<string, unknown>
+    const path = Array.isArray(firstIssue.path) ? firstIssue.path.join('.') : String(firstIssue.path ?? '')
+    const message = typeof firstIssue.message === 'string' ? firstIssue.message : ''
+    if (path && message) return `${path}: ${message}`
+    if (message) return message
+  }
+
+  // Fall back to top-level error / message
+  if (typeof data.error === 'string' && data.error) return data.error
+  if (typeof data.message === 'string' && data.message) return data.message
+
+  return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
 export async function generateScenes(prompt: string): Promise<string[]> {
@@ -86,76 +199,45 @@ Example output format:
   return scenes
 }
 
-export async function startRunwayTask(promptText: string): Promise<RunwayTaskHandle> {
-  // gen4_turbo on dev endpoint supports text-to-video (no image needed for dev keys)
-  const modelsToTry = ['gen4_turbo']
-  const bases = [RUNWAY_BASE] // dev API key only works on dev endpoint
+/**
+ * Start a Runway text-to-video task.
+ * @param rawPromptText  Raw scene description (will be sanitized before sending).
+ * @param platform       Platform name for ratio mapping (default: "YouTube Shorts").
+ * @param durationSeconds  Desired duration — only 5 or 10 will be sent to Runway.
+ */
+export async function startRunwayTask(
+  rawPromptText: string,
+  platform = 'YouTube Shorts',
+  durationSeconds = 10
+): Promise<RunwayTaskHandle> {
+  // Build and validate payload BEFORE calling Runway (no credits charged yet)
+  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds)
 
-  let res: Response | null = null
-  let lastError = ''
-  let usedModel = modelsToTry[0]
+  const bodyStr = JSON.stringify(payload)
+  console.log(`[runway] sending to /text_to_video — model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)
 
-  outer: for (const model of modelsToTry) {
-    const body = JSON.stringify({
-      model,
-      promptText,
-      duration: 10,       // gen4_turbo on dev supports 5 or 10 — try 10
-      ratio: '720:1280',  // 9:16 vertical
+  let res: Response
+  try {
+    res = await fetch(`${RUNWAY_BASE}/text_to_video`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: bodyStr,
     })
-    console.log(`[runway] trying model=${model} body=${body.slice(0, 300)}`)
-
-    for (const base of bases) {
-      try {
-        const r = await fetch(`${base}/text_to_video`, {
-          method: 'POST',
-          headers: authHeaders(),
-          body,
-        })
-        const rawT = await r.text()
-        console.log(`[runway] ${model}@${base} status=${r.status} body=${rawT.slice(0, 800)}`)
-
-        // If this is a validation/availability error, try next base/model
-        if (r.status === 422 || r.status === 404 || rawT.includes('not available') || rawT.includes('not found') || rawT.includes('incorrect hostname')) {
-          lastError = `${model}@${base}: ${rawT.slice(0, 300)}`
-          console.warn(`[runway] ${r.status} for model ${model} at ${base}, trying next`)
-          break // break inner loop (try next model)
-        }
-
-        res = r
-        usedModel = model
-        // Attach parsed raw text for later use
-        ;(res as Response & { _rawText?: string })._rawText = rawT
-        break outer
-      } catch (fetchErr) {
-        lastError = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
-        console.error(`[runway] fetch failed for ${base}:`, lastError)
-      }
-    }
+  } catch (fetchErr) {
+    const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+    console.error('[runway] network error:', msg)
+    throw new Error(`Runway network error: ${msg}`)
   }
 
-  if (!res) throw new Error(`Runway error: ${lastError}`)
-
-  const rawText = (res as Response & { _rawText?: string })._rawText ?? await res.text()
-  console.log(`[runway] final model=${usedModel} status=${res.status}`)
+  const rawText = await res.text()
+  console.log(`[runway] response status=${res.status} body=${rawText.slice(0, 600)}`)
 
   let data: Record<string, unknown> = {}
-  try { data = JSON.parse(rawText) } catch { /* non-json */ }
+  try { data = JSON.parse(rawText) } catch { /* non-JSON response */ }
 
   if (!res.ok) {
-    const errMsg = typeof data.error === 'string' ? data.error : null
-    const errMessage = typeof data.message === 'string' ? data.message : null
-    const errDetail = typeof (data as {detail?: unknown}).detail === 'string'
-      ? (data as {detail: string}).detail : null
-    const errErrors = Array.isArray(data.errors)
-      ? ' | ' + JSON.stringify(data.errors).slice(0, 300)
-      : ''
-    const detail =
-      (errMsg ? errMsg + errErrors : null) ||
-      (errMessage ? errMessage + errErrors : null) ||
-      errDetail ||
-      rawText.slice(0, 400) ||
-      `Runway HTTP ${res.status}`
-    throw new Error(detail)
+    const detail = extractRunwayError(data, rawText, res.status)
+    throw new Error(`Runway rejected the request: ${detail}`)
   }
 
   const id =
@@ -164,7 +246,7 @@ export async function startRunwayTask(promptText: string): Promise<RunwayTaskHan
 
   if (!id) throw new Error(`Runway returned no task id. Response: ${rawText.slice(0, 200)}`)
 
-  return { id, promptText }
+  return { id, promptText: payload.promptText }
 }
 
 export async function getRunwayTask(id: string): Promise<RunwayTaskState> {

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateScenes, startRunwayTask } from '@/lib/runway'
+import { generateScenes, startRunwayTask, buildRunwayPayload } from '@/lib/runway'
 
 export const maxDuration = 60
+
+// Runway Gen-4 Turbo only supports 5 or 10 seconds.
+// 30s / 60s multi-clip stitching is not yet implemented.
+const SUPPORTED_DURATIONS = [5, 10]
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let body: { prompt?: string }
+    let body: { prompt?: string; platform?: string; duration?: number }
     try {
       body = await req.json()
     } catch {
@@ -48,6 +52,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
     }
 
+    // Resolve platform and duration — clamp duration to valid Runway values (5 or 10)
+    const platform = (body.platform ?? 'YouTube Shorts').toString()
+    const requestedDuration = Number(body.duration) || 10
+    if (!SUPPORTED_DURATIONS.includes(requestedDuration) && requestedDuration > 10) {
+      return NextResponse.json(
+        { error: 'Multi-clip rendering (30s / 60s) is coming soon. Please choose 10s for now.' },
+        { status: 400 }
+      )
+    }
+    const duration = requestedDuration <= 5 ? 5 : 10
+
     // Step 1 — OpenAI breaks the prompt into 4 cinematic scenes
     let scenes: string[]
     try {
@@ -61,15 +76,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Pre-validate the first scene payload BEFORE launching tasks.
+    // This catches any Runway field errors early — before credits are charged.
+    try {
+      buildRunwayPayload(scenes[0], platform, duration)
+    } catch (validationErr: unknown) {
+      const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
+      console.error('[generate-video] payload pre-validation failed:', msg)
+      return NextResponse.json(
+        { error: `Request validation failed: ${msg}` },
+        { status: 400 }
+      )
+    }
+
     // Step 2 — Kick off RunwayML tasks (in parallel) and return the task IDs
     let tasks: { id: string; promptText: string }[]
     try {
-      tasks = await Promise.all(scenes.map((sceneText) => startRunwayTask(sceneText)))
+      tasks = await Promise.all(
+        scenes.map((sceneText) => startRunwayTask(sceneText, platform, duration))
+      )
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] runway task start failed:', msg)
+      // Pass the specific Runway error through so the UI can show a useful message
       return NextResponse.json(
-        { error: `Runway: ${msg}` },
+        { error: msg },
         { status: 502 }
       )
     }

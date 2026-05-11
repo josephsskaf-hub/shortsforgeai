@@ -24,7 +24,13 @@ type Quality = 'standard' | 'pro'
 
 const POLL_INTERVAL_MS = 5000
 
-const DURATIONS: Duration[] = ['10s', '30s', '60s']
+// 30s / 60s multi-clip stitching is not yet implemented for Runway Gen-4 Turbo.
+// Only 10s is enabled; the others are shown as disabled with a tooltip.
+const DURATIONS: { value: Duration; enabled: boolean }[] = [
+  { value: '10s', enabled: true },
+  { value: '30s', enabled: false },
+  { value: '60s', enabled: false },
+]
 const PLATFORMS: { label: Platform; icon: string }[] = [
   { label: 'TikTok', icon: '📱' },
   { label: 'YouTube', icon: '▶' },
@@ -47,7 +53,7 @@ export default function GenerateClient() {
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
   const [playerIndex, setPlayerIndex] = useState(0)
-  const [duration, setDuration] = useState<Duration>('30s')
+  const [duration, setDuration] = useState<Duration>('10s')
   const [platform, setPlatform] = useState<Platform>('YouTube Shorts')
   const [quality, setQuality] = useState<Quality>('standard')
 
@@ -173,7 +179,11 @@ export default function GenerateClient() {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: effective }),
+        body: JSON.stringify({
+          prompt: effective,
+          platform,
+          duration: duration === '10s' ? 10 : duration === '30s' ? 30 : 60,
+        }),
       })
       const data = await res.json()
 
@@ -306,22 +316,28 @@ export default function GenerateClient() {
         <div className="mt-5">
           <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Duration</div>
           <div className="flex gap-2 flex-wrap">
-            {DURATIONS.map((d) => (
-              <button
+            {DURATIONS.map(({ value: d, enabled }) => (
+              <span
                 key={d}
-                onClick={() => setDuration(d)}
-                disabled={phase === 'planning' || phase === 'generating'}
-                className="rounded-full px-4 py-1.5 text-sm font-bold"
-                style={{
-                  background: duration === d ? 'rgba(99,102,241,.85)' : 'rgba(255,255,255,.04)',
-                  border: duration === d ? '1px solid rgba(99,102,241,.6)' : '1px solid var(--border)',
-                  color: duration === d ? '#fff' : 'var(--muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
+                title={enabled ? undefined : 'Coming soon: multi-clip rendering'}
+                style={{ display: 'inline-block' }}
               >
-                {d}
-              </button>
+                <button
+                  onClick={() => enabled && setDuration(d)}
+                  disabled={!enabled || phase === 'planning' || phase === 'generating'}
+                  className="rounded-full px-4 py-1.5 text-sm font-bold"
+                  style={{
+                    background: duration === d && enabled ? 'rgba(99,102,241,.85)' : 'rgba(255,255,255,.04)',
+                    border: duration === d && enabled ? '1px solid rgba(99,102,241,.6)' : '1px solid var(--border)',
+                    color: enabled ? (duration === d ? '#fff' : 'var(--muted)') : 'rgba(255,255,255,.2)',
+                    cursor: enabled ? 'pointer' : 'not-allowed',
+                    opacity: enabled ? 1 : 0.45,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {d}
+                </button>
+              </span>
             ))}
           </div>
         </div>
