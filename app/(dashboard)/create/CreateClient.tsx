@@ -71,6 +71,18 @@ const TONE_PILLS: { id: string; label: string; emoji: string }[] = [
 const DURATION_OPTIONS = [30, 45, 60]
 const DEFAULT_DURATION = 30
 
+const PLATFORM_OPTIONS: { id: string; label: string; emoji: string }[] = [
+  { id: 'tiktok',   label: 'TikTok',          emoji: '🎵' },
+  { id: 'youtube',  label: 'YouTube',          emoji: '▶️' },
+  { id: 'shorts',   label: 'YouTube Shorts',   emoji: '📱' },
+]
+
+const MEDIA_OPTIONS: { id: string; label: string; desc: string; emoji: string; disabled?: boolean }[] = [
+  { id: 'stock',  label: 'Basic',  desc: 'uses licensed stock media from top providers', emoji: '📹' },
+  { id: 'ai',     label: 'Basic',  desc: 'uses our most efficient generative models',    emoji: '✨' },
+  { id: 'pro',    label: 'Pro',    desc: 'uses veo 3.1 fast, sora 2 and similar models', emoji: '🚀', disabled: true },
+]
+
 const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
   { id: 'script',   label: '✍️ Writing viral script...',        weight: 18 },
   { id: 'voice',    label: '🎙️ Generating AI narration...',     weight: 22 },
@@ -105,6 +117,9 @@ export default function CreateClient() {
   const [niche, setNiche] = useState(initialNiche)
   const [tone, setTone] = useState('cinematic')
   const [duration, setDuration] = useState(DEFAULT_DURATION)
+  const [platform, setPlatform] = useState('shorts')
+  const [media, setMedia] = useState('stock')
+  const [userEmail, setUserEmail] = useState('')
 
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
@@ -141,6 +156,15 @@ export default function CreateClient() {
     }
     load()
     return () => { cancelled = true }
+  }, [])
+
+  // Load user email for creator row
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      createClient().auth.getUser().then(({ data: { user } }) => {
+        if (user?.email) setUserEmail(user.email)
+      })
+    })
   }, [])
 
   // Sync niche from URL changes (sidebar quick-create links)
@@ -517,14 +541,21 @@ export default function CreateClient() {
 
       {/* Header */}
       <div className="mb-6">
-        <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--indigo-light)' }}>
-          ⚡ Autopilot
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#6366f1,#7c3aed)', boxShadow: '0 0 24px rgba(99,102,241,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
+            ⚡
+          </div>
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
+              Autopilot · v4.0
+            </div>
+            <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
+              Generate a Short in <span className="grad-text">one click</span>
+            </h1>
+          </div>
         </div>
-        <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', color: 'var(--text)' }}>
-          Generate a Short in <span className="grad-text">one click</span>
-        </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-          AI writes the script, generates the narration, finds the visuals and renders everything automatically.
+          AI writes the script, generates narration, finds visuals and renders everything automatically.
         </p>
       </div>
 
@@ -659,7 +690,7 @@ export default function CreateClient() {
           </div>
 
           {/* Duration */}
-          <div className="mb-6">
+          <div className="mb-4">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
               Duration
             </div>
@@ -671,6 +702,79 @@ export default function CreateClient() {
                   label={`${d}s`}
                   onClick={() => setDuration(d)}
                 />
+              ))}
+            </div>
+          </div>
+
+          {/* Platform */}
+          <div className="mb-4">
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
+              Platform
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORM_OPTIONS.map((p) => (
+                <Pill
+                  key={p.id}
+                  active={platform === p.id}
+                  emoji={p.emoji}
+                  label={p.label}
+                  onClick={() => setPlatform(p.id)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Media Quality */}
+          <div className="mb-6">
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)', fontSize: '0.62rem' }}>
+              Media
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {MEDIA_OPTIONS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  disabled={m.disabled}
+                  onClick={() => !m.disabled && setMedia(m.id)}
+                  style={{
+                    flex: '1 1 140px',
+                    minWidth: 130,
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    background: media === m.id && !m.disabled
+                      ? 'linear-gradient(135deg, rgba(99,102,241,.28), rgba(124,58,237,.18))'
+                      : m.disabled
+                      ? 'rgba(255,255,255,.02)'
+                      : 'rgba(255,255,255,.04)',
+                    border: media === m.id && !m.disabled
+                      ? '1px solid rgba(99,102,241,.55)'
+                      : '1px solid var(--border2)',
+                    cursor: m.disabled ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    opacity: m.disabled ? 0.45 : 1,
+                    boxShadow: media === m.id && !m.disabled ? '0 0 20px rgba(99,102,241,.15)' : 'none',
+                    transition: 'all .15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: media === m.id && !m.disabled ? 'var(--text)' : 'var(--muted2)',
+                    }}>
+                      {m.label}
+                    </span>
+                    {m.disabled && (
+                      <span style={{ fontSize: '0.5rem', fontWeight: 800, color: '#a855f7', background: 'rgba(168,85,247,.15)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>
+                        SOON
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--muted)', lineHeight: 1.4 }}>
+                    {m.desc}
+                  </div>
+                </button>
               ))}
             </div>
           </div>
@@ -767,6 +871,7 @@ export default function CreateClient() {
           final={final}
           onCopy={handleCopy}
           onRegenerate={handleRegenerate}
+          userEmail={userEmail}
         />
       )}
 
@@ -905,57 +1010,19 @@ function FinalView({
   final,
   onCopy,
   onRegenerate,
+  userEmail,
 }: {
   final: FinalAssets
   onCopy: (text: string) => void
   onRegenerate: () => void
+  userEmail: string
 }) {
-  const { video, scenes, selectedClips, voiceoverUrl, renderUrl, renderError } = final
+  const { video, scenes, selectedClips, renderUrl, renderError } = final
   const previewClip = scenes[0] ? selectedClips[scenes[0].sceneNumber] : null
-
-  function downloadAll() {
-    const text = [
-      `🎬 TITLE: ${video.title}`,
-      ``,
-      `📝 SCRIPT:`,
-      video.script,
-      ``,
-      `#️⃣ HASHTAGS: ${video.hashtags.join(' ')}`,
-      ``,
-      `📄 DESCRIPTION:`,
-      video.youtubeDescription,
-      ``,
-      `🎥 VIDEO PROMPT:`,
-      video.videoPrompt,
-    ].join('\n')
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `short-${final.niche}-${Date.now()}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
+  const userInitial = userEmail ? userEmail[0].toUpperCase() : 'S'
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Success banner */}
-      <div
-        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
-        style={{
-          background: 'linear-gradient(90deg, rgba(16,185,129,.1), rgba(16,185,129,.04))',
-          border: '1px solid rgba(16,185,129,.25)',
-          color: 'var(--muted2)',
-        }}
-      >
-        <span className="text-lg">✅</span>
-        <span>
-          <strong style={{ color: 'var(--text)' }}>Script ready!</strong>{' '}
-          {renderUrl ? 'Your MP4 is rendered and ready to post.' : 'Script, voice and visuals are generated below.'}
-        </span>
-      </div>
+    <div className="flex flex-col gap-4">
 
       {/* Render error notice (non-fatal) */}
       {!renderUrl && renderError && (
@@ -969,40 +1036,61 @@ function FinalView({
         >
           <span className="text-lg mt-0.5">⚠️</span>
           <div>
-            <div className="font-bold mb-0.5" style={{ color: '#fde68a' }}>MP4 render issue</div>
+            <div className="font-bold mb-0.5" style={{ color: '#fde68a' }}>MP4 render pending</div>
             <div className="text-xs" style={{ color: '#fbbf24', opacity: 0.85 }}>{renderError}</div>
             <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-              Your script and voiceover are still available below. You can download the pack and create the video manually.
+              Script and visuals are ready below. Use the AI Video button to generate the final MP4.
             </div>
           </div>
         </div>
       )}
 
-      {/* Preview */}
+      {/* ─── Video Player Card ─── */}
       <div
-        className="rounded-[20px] p-5 md:p-6"
+        className="rounded-[24px] overflow-hidden"
         style={{
-          background: 'rgba(15,15,30,0.85)',
-          border: '1px solid rgba(99,102,241,.22)',
-          boxShadow: '0 0 30px rgba(99,102,241,.08)',
+          background: 'rgba(10,10,22,0.95)',
+          border: '1px solid rgba(99,102,241,.25)',
+          boxShadow: '0 0 60px rgba(99,102,241,.12)',
         }}
       >
-        <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-          🎬 Preview
+        {/* Top bar: version + format */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+              ⚡
+            </div>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
+              AUTOPILOT v4.0
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
+            📱 YouTube Shorts · 9:16
+          </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-5">
+
+        {/* Video preview — centered, 9:16 */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 20px 0' }}>
           <div
-            className="rounded-2xl overflow-hidden flex-shrink-0 mx-auto md:mx-0"
             style={{
-              width: 220,
+              width: 'min(300px, 100%)',
               aspectRatio: '9 / 16',
-              background: 'rgba(0,0,0,.5)',
-              border: '1px solid var(--border2)',
+              borderRadius: 16,
+              overflow: 'hidden',
+              background: 'rgba(0,0,0,.7)',
+              border: '1px solid rgba(255,255,255,.08)',
+              boxShadow: '0 12px 48px rgba(0,0,0,.6)',
+              position: 'relative',
             }}
           >
             {renderUrl ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={renderUrl} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <video
+                src={renderUrl}
+                controls
+                playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+              />
             ) : previewClip ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
               <video
@@ -1010,117 +1098,133 @@ function FinalView({
                 muted
                 loop
                 autoPlay
+                controls
                 playsInline
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-3xl">🎬</div>
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--muted)' }}>
+                <span style={{ fontSize: '3rem' }}>🎬</span>
+                <span style={{ fontSize: '0.78rem' }}>Preview unavailable</span>
+              </div>
             )}
           </div>
-          <div className="flex-1 min-w-0 flex flex-col gap-3">
+        </div>
+
+        {/* Title below video */}
+        <div style={{ padding: '18px 20px 4px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 900, color: 'var(--text)', lineHeight: 1.25, letterSpacing: '-0.02em', margin: 0 }}>
+            {video.title}
+          </h2>
+        </div>
+
+        {/* Creator row + reactions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(99,102,241,.4)' }}>
+              {userInitial}
+            </div>
             <div>
-              <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted2)', fontSize: '0.6rem' }}>
-                Title
-              </div>
-              <div className="font-bold text-base leading-snug" style={{ color: 'var(--text)' }}>
-                {video.title}
-              </div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text)' }}>ShortsForgeAI</div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 1 }}>AI-generated · {final.niche}</div>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              {renderUrl ? (
-                <a
-                  href={renderUrl}
-                  download={`short-${final.niche}.mp4`}
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
-                    boxShadow: '0 4px 18px rgba(99,102,241,.32)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  ⬇️ Download MP4
-                </a>
-              ) : (
-                <div
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold"
-                  style={{
-                    background: 'rgba(99,102,241,.07)',
-                    border: '1px solid rgba(99,102,241,.18)',
-                    color: 'var(--muted)',
-                    fontSize: '0.7rem',
-                  }}
-                >
-                  📝 Script + Voice ready
-                </div>
-              )}
-              {voiceoverUrl && (
-                <a
-                  href={voiceoverUrl}
-                  download="voiceover.mp3"
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold"
-                  style={{
-                    background: 'rgba(99,102,241,.08)',
-                    border: '1px solid rgba(99,102,241,.22)',
-                    color: 'var(--indigo-light)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  🎙️ Download Voiceover
-                </a>
-              )}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['👍', '👎'] as const).map((icon) => (
               <button
-                onClick={downloadAll}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all"
-                style={{
-                  background: 'rgba(16,185,129,.08)',
-                  border: '1px solid rgba(16,185,129,.25)',
-                  color: '#34d399',
-                  cursor: 'pointer',
-                }}
+                key={icon}
+                style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,.15)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,.3)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)' }}
               >
-                📄 Download Pack (.txt)
+                {icon}
               </button>
-            </div>
-
-            {voiceoverUrl && (
-              <audio src={voiceoverUrl} controls style={{ width: '100%' }} />
-            )}
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Title */}
+      {/* ─── Bottom Action Bar ─── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'rgba(12,12,24,0.9)',
+          border: '1px solid rgba(99,102,241,.2)',
+          borderRadius: 16,
+          padding: '12px 14px',
+          flexWrap: 'wrap',
+        }}
+      >
+        {/* Left action icons */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={onRegenerate}
+            title="Generate another"
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >🔄</button>
+          <button
+            onClick={() => onCopy(video.script)}
+            title="Copy script"
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >📋</button>
+          <Link
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            title="Generate AI video"
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+          >🎬</Link>
+        </div>
+
+        {/* Version badge */}
+        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '5px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          Version 1
+        </div>
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Download MP4 button */}
+        {renderUrl ? (
+          <a
+            href={renderUrl}
+            download={`short-${final.niche}.mp4`}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 12,
+              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
+              boxShadow: '0 4px 24px rgba(99,102,241,.45)',
+              color: '#fff', fontWeight: 900, fontSize: '0.95rem',
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            ⬇️ Download MP4
+          </a>
+        ) : (
+          <Link
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 12,
+              background: 'linear-gradient(135deg,#6366f1,#7c3aed,#a855f7)',
+              boxShadow: '0 4px 24px rgba(99,102,241,.45)',
+              color: '#fff', fontWeight: 900, fontSize: '0.95rem',
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            🎬 Generate AI Video
+          </Link>
+        )}
+      </div>
+
+      {/* Script fields */}
       <FieldBlock label="Title" value={video.title} onCopy={onCopy} />
-
-      {/* Hashtags */}
       <FieldBlock label="Hashtags" value={video.hashtags.join(' ')} onCopy={onCopy} />
-
-      {/* Description */}
-      <FieldBlock
-        label="YouTube Description"
-        value={video.youtubeDescription}
-        onCopy={onCopy}
-        multiline
-      />
-
-      {/* Script */}
+      <FieldBlock label="YouTube Description" value={video.youtubeDescription} onCopy={onCopy} multiline />
       <FieldBlock label="Full Script" value={video.script} onCopy={onCopy} multiline />
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3 justify-center mt-2">
-        <button
-          onClick={onRegenerate}
-          className="rounded-xl px-6 py-3 text-sm font-black text-white"
-          style={{
-            background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
-            boxShadow: '0 4px 22px rgba(99,102,241,.35)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          🔄 Generate Another
-        </button>
+      {/* Footer actions */}
+      <div className="flex flex-wrap gap-3 justify-center mt-2 pb-4">
         <Link
           href="/dashboard"
           className="rounded-xl px-6 py-3 text-sm font-bold"
