@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       const url = findStockUrl(stockClips, scene.sceneNumber)
       if (url) {
         elements.push({
-          type: 'image',
+          type: 'video',
           track: 2,
           time: cursor,
           duration: dur,
@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
           y: '50%',
           width: '100%',
           height: '100%',
+          volume: '0%',
         })
         elements.push({
           type: 'shape',
