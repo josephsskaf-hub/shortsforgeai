@@ -20,7 +20,43 @@ export interface RunwayTaskState {
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 
-const VALID_MODELS = ['gen4_turbo'] as const
+const VALID_MODELS = ['gen4.5'] as const
+const VALID_DURATIONS = [5, 10] as const
+const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
+
+type ValidModel = (typeof VALID_MODELS)[number]
+type ValidDuration = (typeof VALID_DURATIONS)[number]
+type ValidRatio = (typeof VALID_RATIOS)[number]
+
+interface RunwayTextToVideoPayload {
+  model: ValidModel
+  promptText: string
+  ratio: ValidRatio
+  duration: ValidDuration
+}
+import { openai } from '@/lib/openai'
+
+const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1'
+const RUNWAY_VERSION = '2024-11-06'
+
+export interface RunwayTaskHandle {
+  id: string
+  promptText: string
+}
+
+export type RunwayTaskStatus = 'PENDING' | 'THROTTLED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED'
+
+export interface RunwayTaskState {
+  id: string
+  status: RunwayTaskStatus
+  progress: number | null
+  videoUrl: string | null
+  failure: string | null
+}
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+const VALID_MODELS = ['gen4.5'] as const
 const VALID_DURATIONS = [5, 10] as const
 const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
 
@@ -100,7 +136,7 @@ export function buildRunwayPayload(
   if (!promptText) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
   if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
 
-  const model: ValidModel = 'gen4_turbo'
+  const model: ValidModel = 'gen4.5'
   const ratio = mapPlatformToRatio(platform)
 
   // Runway only accepts 5 or 10 — clamp
