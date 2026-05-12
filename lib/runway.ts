@@ -294,6 +294,53 @@ export async function getRunwayTask(id: string): Promise<RunwayTaskState> {
   }
 }
 
+// ─── Video-URL extraction (Rule 1 — push #012) ───────────────────────────────
+
+const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif|avif|tif?f|bmp)(\?|#|$)/i
+const VIDEO_EXT_RE = /\.(mp4|mov|webm|m4v|mkv)(\?|#|$)/i
+const VIDEO_HOST_RE = /(runwayml|dnznrvs|cloudfront|akamaized|videos\.pexels|res\.cloudinary|archive\.org|test-videos\.co\.uk|download\.blender\.org)/i
+
+/**
+ * Inspect a Runway task state and return a real video URL or null.
+ *
+ * Rules:
+ *  - Must come from a SUCCEEDED task (callers should check first, but we
+ *    also reject when there is no outputUrl at all).
+ *  - URLs ending in image extensions (.png/.jpg/.jpeg/.webp/.gif/...) are
+ *    rejected — these are intermediate text_to_image frames leaking through.
+ *  - URLs with explicit video extensions (.mp4/.mov/.webm/...) are accepted.
+ *  - URLs without an extension are accepted if the host belongs to a known
+ *    video CDN (Runway / CloudFront / Akamai / Pexels videos / etc).
+ *  - Everything else is rejected.
+ */
+export function extractVideoUrl(state: RunwayTaskState): string | null {
+  const url = state.outputUrl
+  if (!url) {
+    console.log(`[extractVideoUrl] rejected: no outputUrl on task ${state.id}`)
+    return null
+  }
+
+  const imgMatch = url.match(IMAGE_EXT_RE)
+  if (imgMatch) {
+    console.error(`[extractVideoUrl] rejected: ${url.slice(0, 160)} (extension: ${imgMatch[1]})`)
+    return null
+  }
+
+  const vidMatch = url.match(VIDEO_EXT_RE)
+  if (vidMatch) {
+    console.log(`[extractVideoUrl] found: ${url.slice(0, 160)} (extension: ${vidMatch[1]})`)
+    return url
+  }
+
+  if (VIDEO_HOST_RE.test(url)) {
+    console.log(`[extractVideoUrl] found by host: ${url.slice(0, 160)}`)
+    return url
+  }
+
+  console.error(`[extractVideoUrl] rejected: ${url.slice(0, 160)} (no video extension, unknown host)`)
+  return null
+}
+
 // ─── Inline poller used during the synchronous request (image gen wait) ──────
 
 export async function pollRunwayTaskUntilDone(

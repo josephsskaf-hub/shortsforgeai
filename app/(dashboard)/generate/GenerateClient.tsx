@@ -71,6 +71,10 @@ export default function GenerateClient() {
   const [playerIndex, setPlayerIndex] = useState(0)
   const [duration, setDuration] = useState<Duration>(30)
   const [quality, setQuality] = useState<Quality>('basic_ai')
+  // Cost the server reports back on POST /api/generate-video — we echo it on
+  // every status poll so the route can refund the exact amount if the whole
+  // generation ends up with no playable clip.
+  const [chargedCost, setChargedCost] = useState<number>(1)
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -90,9 +94,10 @@ export default function GenerateClient() {
     async function poll() {
       try {
         const ids = tasks.map((t) => t.id).join(',')
-        const res = await fetch(`/api/generate-video/status?tasks=${encodeURIComponent(ids)}`, {
-          cache: 'no-store',
-        })
+        const res = await fetch(
+          `/api/generate-video/status?tasks=${encodeURIComponent(ids)}&cost=${chargedCost}`,
+          { cache: 'no-store' }
+        )
         const data = await res.json()
         if (cancelled) return
         if (!res.ok) throw new Error('Status lookup failed')
@@ -101,8 +106,18 @@ export default function GenerateClient() {
         for (const t of data.tasks as TaskState[]) next[t.id] = t
         setStates(next)
 
+        // Server tells us when it has auto-refunded the failed generation —
+        // bubble that to the sidebar so the credits chip updates immediately.
+        if (data.refunded) {
+          try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+        }
+
         if (data.done) {
-          if (data.anyFailed && data.succeeded === 0) {
+          // Rule 1 enforcement: the server already downgrades SUCCEEDED-with-no-
+          // video to FAILED. "playable" is the count of clips with a real video
+          // URL. If nothing's playable when done, this is a hard failure.
+          const playable = typeof data.playable === 'number' ? data.playable : 0
+          if (playable === 0) {
             setError(GENERIC_ERROR)
             setPhase('error')
             return
@@ -128,7 +143,7 @@ export default function GenerateClient() {
         pollTimerRef.current = null
       }
     }
-  }, [phase, tasks])
+  }, [phase, tasks, chargedCost])
 
   const orderedClips = useMemo(() => {
     return tasks
@@ -266,6 +281,13 @@ export default function GenerateClient() {
 
       setScenes(data.scenes ?? [])
       setTasks(data.tasks ?? [])
+      // Remember the exact cost the server reported so we can echo it on every
+      // status poll and the route can refund the right amount on failure.
+      if (typeof data.cost === 'number' && data.cost >= 1) {
+        setChargedCost(Math.min(2, Math.max(1, Math.floor(data.cost))))
+      } else {
+        setChargedCost(QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1)
+      }
       // Notify sidebar to refresh credits
       try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
     } catch (err: unknown) {
@@ -668,17 +690,19 @@ export default function GenerateClient() {
                     const status = s?.status ?? 'PENDING'
                     const failed = status === 'FAILED' || status === 'CANCELLED'
                     const running = status === 'RUNNING'
-                    const playable = status === 'SUCCEEDED' && looksLikeVideoUrl(s?.videoUrl)
+                    // Rule 1 + 2: only count as playable if status is SUCCEEDED
+                    // AND we have a URL that actually looks like a video file.
+                    const playable = status === 'SUCCEEDED' && !!s?.videoUrl && looksLikeVideoUrl(s.videoUrl)
                     const succeededNoFile = status === 'SUCCEEDED' && !playable
                     const label = failed
-                      ? 'failed'
+                      ? 'falhou'
                       : playable
-                      ? 'completed'
+                      ? 'concluído'
                       : succeededNoFile
-                      ? 'no file'
+                      ? 'sem arquivo'
                       : running
-                      ? 'processing'
-                      : 'queued'
+                      ? 'processando'
+                      : 'na fila'
                     return (
                       <div
                         key={t.id}
@@ -696,7 +720,7 @@ export default function GenerateClient() {
                       >
                         {playable && s?.videoUrl ? (
                           <video
-                            key={t.id}
+                            key={s.videoUrl}
                             src={s.videoUrl}
                             muted
                             loop
@@ -713,12 +737,12 @@ export default function GenerateClient() {
                             }}
                           >
                             {failed
-                              ? '⚠ Failed'
+                              ? '⚠ Falhou'
                               : succeededNoFile
-                              ? 'No file'
+                              ? 'Sem arquivo'
                               : running
-                              ? <Spinner />
-                              : '⏳ Queued'}
+                              ? <><Spinner /><span className="ml-2">Processando…</span></>
+                              : '⏳ Na fila'}
                           </div>
                         )}
                         <div
@@ -765,12 +789,19 @@ export default function GenerateClient() {
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
             >
               <div className="font-black text-base mb-1" style={{ color: '#fca5a5' }}>
-                Video file not ready
+                Arquivo de vídeo não disponível. Tente novamente.
               </div>
-              <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-                Runway reported success but didn&apos;t return a playable file yet. Please refresh the
-                page in a moment.
-              </p>
+            </section>
+          )}
+
+          {phase === 'error' && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+              style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
+            >
+              <div className="font-black text-base" style={{ color: '#fca5a5' }}>
+                Geração falhou. Tente novamente.
+              </div>
             </section>
           )}
 
@@ -799,6 +830,7 @@ export default function GenerateClient() {
                   autoPlay
                   playsInline
                   preload="metadata"
+                  poster={undefined /* Runway tasks don't return a thumbnail */}
                   onEnded={handleVideoEnd}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
@@ -823,27 +855,34 @@ export default function GenerateClient() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                {successClips.map((s, i) => (
-                  <a
-                    key={s.id}
-                    href={s.videoUrl ?? '#'}
-                    download={`shortsforge-clip-${i + 1}.mp4`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
-                    style={{
-                      background:
-                        i === 0
-                          ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
-                          : 'rgba(37,99,235,.12)',
-                      border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
-                      color: i === 0 ? '#fff' : '#93c5fd',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    ⬇ Clip {i + 1}
-                  </a>
-                ))}
+                {successClips.map((s, i) => {
+                  // Rule 5 — only render the download anchor when the URL
+                  // actually looks like a video. successClips already filters
+                  // via looksLikeVideoUrl, but we re-check here so any future
+                  // regression cannot ship a broken download.
+                  if (!s.videoUrl || !looksLikeVideoUrl(s.videoUrl)) return null
+                  return (
+                    <a
+                      key={s.id}
+                      href={s.videoUrl}
+                      download={`shortsforge-clip-${i + 1}.mp4`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
+                      style={{
+                        background:
+                          i === 0
+                            ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
+                            : 'rgba(37,99,235,.12)',
+                        border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
+                        color: i === 0 ? '#fff' : '#93c5fd',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      ⬇ Clip {i + 1}
+                    </a>
+                  )
+                })}
               </div>
               <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
                 Tip: drop the clips into any editor (CapCut, InVideo) to merge them with captions and

@@ -163,7 +163,16 @@ export async function POST(req: NextRequest) {
       console.error('[generate-video] credit deduction failed AFTER tasks started:', deductErr.message)
       // Tasks are already running on Runway side. We can't cancel them cleanly.
       // Log and continue — better to give the user the video than fail here.
+    } else {
+      console.log(`[generate-video] credits deducted: ${cost} for user ${user.id}`)
     }
+
+    // generation_id is the sorted, comma-joined set of task ids — stable across
+    // polls so the status route can dedupe refunds and the client can render
+    // logs against a consistent identifier.
+    const taskIds = tasks.map((t) => t.id)
+    const generationId = [...taskIds].sort().join(',')
+    console.log(`[generate-video] generation_id=${generationId} user=${user.id} cost=${cost}`)
 
     return NextResponse.json({
       prompt,
@@ -171,6 +180,7 @@ export async function POST(req: NextRequest) {
       quality,
       cost,
       creditsRemaining: Math.max(0, available - cost),
+      generationId,
       scenes,
       tasks: tasks.map((t, i) => ({
         id: t.id,
