@@ -15,6 +15,14 @@ export interface PersistedTaskHandle {
   index: number
 }
 
+// Caption segment used to overlay text on the composed video. `start` and
+// `duration` are in seconds, relative to the start of the composed MP4.
+export interface CaptionSegment {
+  text: string
+  start: number
+  duration: number
+}
+
 export interface GenerationMeta {
   task_ids: PersistedTaskHandle[]
   prompt: string
@@ -25,6 +33,17 @@ export interface GenerationMeta {
   quality: string
   pending_scenes?: string[]       // scenes not yet sent to Runway (multi-clip)
   completed_clip_urls?: string[]  // video URLs from already-finished clips
+
+  // Push #026 — audio + captions + final composition. Populated by the
+  // /api/generate-video POST handler from the analyze-idea creative brief, then
+  // consumed by /api/generate-video/status when all Runway clips are done.
+  voiceover_script?: string       // full English narration text
+  scene_captions?: string[]       // short 6-8 word caption per scene
+  // Final composition state (filled in by /status after Runway succeeds).
+  voiceover_url?: string          // public URL of the uploaded TTS mp3
+  compose_render_id?: string      // Creatomate render job id
+  compose_status?: 'idle' | 'submitting' | 'rendering' | 'succeeded' | 'failed'
+  final_video_url?: string        // composed MP4 (visual + audio + captions)
 }
 
 export function encodeGenerationMeta(meta: GenerationMeta): string {

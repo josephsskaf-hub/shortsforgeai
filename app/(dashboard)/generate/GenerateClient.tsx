@@ -156,6 +156,12 @@ export default function GenerateClient() {
   const [clipsTotal, setClipsTotal] = useState<number>(1)
   const [completedClipUrls, setCompletedClipUrls] = useState<string[]>([])
   const [allClipUrls, setAllClipUrls] = useState<string[]>([])
+  // Push #026 — backend phase: 'visuals' (Runway still running) vs
+  // 'composing' (Runway done, Creatomate is rendering the final MP4) vs
+  // 'done'. The client uses this to swap the loading message between
+  // "Creating visuals..." and "Adding voiceover and captions...".
+  const [composePhase, setComposePhase] = useState<'visuals' | 'composing' | 'done'>('visuals')
+  const [composeProgress, setComposeProgress] = useState<number>(0)
   const [copyHint, setCopyHint] = useState<'copied' | 'failed' | null>(null)
   const [downloadState, setDownloadState] = useState<'idle' | 'fetching' | 'error'>('idle')
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
@@ -279,6 +285,18 @@ export default function GenerateClient() {
           setClipsTotal(data.clips_total)
         }
 
+        // Push #026 — surface the backend "composing" phase so the loading
+        // message switches from "Creating visuals…" to "Adding voiceover and
+        // captions…" once Runway clips are done and Creatomate is rendering.
+        if (data.phase === 'composing') {
+          setComposePhase('composing')
+          if (typeof data.compose_progress === 'number') {
+            setComposeProgress(Math.max(0, Math.min(100, data.compose_progress)))
+          }
+        } else if (data.phase === 'done') {
+          setComposePhase('done')
+        }
+
         if (data.status === 'completed') {
           if (Array.isArray(data.all_clip_urls) && data.all_clip_urls.length > 0) {
             setAllClipUrls(data.all_clip_urls)
@@ -375,7 +393,8 @@ export default function GenerateClient() {
   useEffect(() => {
     if (typeof document === 'undefined') return
     if (phase === 'generating') {
-      document.title = `${totalProgress}% — ShortsForgeAI`
+      const pct = composePhase === 'composing' ? composeProgress : totalProgress
+      document.title = `${pct}% — ShortsForgeAI`
     } else if (phase === 'done') {
       document.title = `Video Ready — ShortsForgeAI`
     } else if (phase === 'error') {
@@ -388,7 +407,7 @@ export default function GenerateClient() {
       // immediately overwrite it for dep changes; the unmount case is handled
       // by the dedicated mount effect below.
     }
-  }, [phase, totalProgress])
+  }, [phase, totalProgress, composePhase, composeProgress])
 
   // Restore the tab title when the user navigates away from /generate.
   useEffect(() => {
@@ -511,6 +530,8 @@ export default function GenerateClient() {
     setGenerationId(null)
     setCompletedClipUrls([])
     setAllClipUrls([])
+    setComposePhase('visuals')
+    setComposeProgress(0)
     // Optimistically size the tile grid from the user's chosen duration so the
     // skeleton appears immediately, before the POST response lands.
     setClipsTotal(duration === 10 ? 1 : duration === 30 ? 3 : 5)
@@ -527,6 +548,17 @@ export default function GenerateClient() {
             .filter((s) => s.trim().length > 0)
         : analysis?.scenePlan ?? []
 
+    // Push #026: also pass the voiceover script + per-scene captions to the
+    // server. /api/generate-video persists them so /status can compose the
+    // final MP4 (TTS audio + caption overlays) once Runway finishes.
+    const briefSceneCaptions =
+      analysis?.scenes && analysis.scenes.length > 0
+        ? analysis.scenes
+            .map((s) => (typeof s.caption === 'string' ? s.caption : ''))
+            .filter((s) => s.trim().length > 0)
+        : []
+    const briefVoiceover = analysis?.voiceover_script ?? ''
+
     try {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
@@ -538,6 +570,8 @@ export default function GenerateClient() {
           quality,
           provider_prompt: analysis?.provider_prompt ?? undefined,
           scene_visual_prompts: briefScenePrompts.length > 0 ? briefScenePrompts : undefined,
+          voiceover_script: briefVoiceover.trim() ? briefVoiceover : undefined,
+          scene_captions: briefSceneCaptions.length > 0 ? briefSceneCaptions : undefined,
         }),
       })
       const data = await res.json()
@@ -623,6 +657,8 @@ export default function GenerateClient() {
     setClipsTotal(1)
     setCompletedClipUrls([])
     setAllClipUrls([])
+    setComposePhase('visuals')
+    setComposeProgress(0)
     setDownloadState('idle')
   }
 
@@ -737,7 +773,9 @@ export default function GenerateClient() {
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
           {showStep2 && 'Pick duration, platform, and quality — then generate.'}
-          {showRender && 'Rendering your vertical 9:16 video.'}
+          {showRender && (composePhase === 'composing'
+            ? 'Adding voiceover and captions to your video.'
+            : 'Rendering your vertical 9:16 video.')}
         </p>
       </div>
 
@@ -1327,17 +1365,21 @@ export default function GenerateClient() {
                 <Spinner />
                 <div>
                   <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-                    Rendering your video…
+                    {composePhase === 'composing'
+                      ? 'Adding voiceover and captions…'
+                      : 'Creating visuals…'}
                   </div>
                   <div className="text-sm" style={{ color: 'var(--muted2)' }}>
-                    This usually takes a couple of minutes. You can leave this page — we&apos;ll keep working.
+                    {composePhase === 'composing'
+                      ? 'Rendering the final video with audio, captions, and your call-to-action.'
+                      : 'This usually takes a couple of minutes. You can leave this page — we’ll keep working.'}
                   </div>
                 </div>
                 <div className="ml-auto text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                  {totalProgress}%
+                  {composePhase === 'composing' ? composeProgress : totalProgress}%
                 </div>
               </div>
-              <ProgressBar progress={totalProgress} />
+              <ProgressBar progress={composePhase === 'composing' ? composeProgress : totalProgress} />
             </section>
           )}
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getRunwayTask, startRunwayTask, type RunwayTaskState } from '@/lib/runway'
 import {
@@ -8,6 +9,7 @@ import {
   touchGeneration,
   type GenerationMeta,
 } from '@/lib/generations'
+import { startComposition, checkComposition } from '@/lib/compose'
 
 export const maxDuration = 30
 
@@ -16,6 +18,29 @@ function looksLikeVideoUrl(url: string | null | undefined): boolean {
   const lower = url.toLowerCase()
   if (/\.(png|jpe?g|webp|gif|avif)(\?|$|&)/.test(lower)) return false
   return true
+}
+
+// Push #026 — patch the meta blob on a processing row without flipping its
+// status. We use the same `status='processing'` guard as `finalizeGeneration`
+// to make sure only one polling request wins each transition.
+async function patchMeta(
+  supabase: SupabaseClient,
+  generationId: string,
+  patch: Partial<GenerationMeta>,
+  currentMeta: GenerationMeta | null,
+): Promise<GenerationMeta | null> {
+  if (!currentMeta) return null
+  const next = { ...currentMeta, ...patch }
+  const { error } = await supabase
+    .from('videos')
+    .update({ script: JSON.stringify(next), updated_at: new Date().toISOString() })
+    .eq('id', generationId)
+    .eq('status', 'processing')
+  if (error) {
+    console.error('[generate-video/status] patchMeta error:', error.message)
+    return null
+  }
+  return next
 }
 
 async function fetchTaskStates(ids: string[]): Promise<RunwayTaskState[]> {
@@ -89,11 +114,18 @@ export async function GET(req: NextRequest) {
       // Already finalised â return cached state without hitting Runway again.
       if (status !== 'processing') {
         const allUrls = meta?.completed_clip_urls ?? []
-        const primary = typeof video.video_url === 'string' ? video.video_url : null
+        const composed = typeof meta?.final_video_url === 'string' ? meta.final_video_url : null
+        const stored = typeof video.video_url === 'string' ? video.video_url : null
+        // Prefer the composed MP4 (push #026); fall back to stored
+        // `video_url` (the raw Runway clip URL we used to write before #026
+        // for legacy rows or when composition was skipped).
+        const primary = composed ?? stored
         return NextResponse.json({
           generation_id: video.id,
           status,
           video_url: primary,
+          final_video_url: composed,
+          voiceover_url: typeof meta?.voiceover_url === 'string' ? meta.voiceover_url : null,
           all_clip_urls: allUrls.length > 0 ? allUrls : primary ? [primary] : [],
           completed_clip_urls: allUrls,
           clips_total: meta?.scenes.length ?? (primary ? 1 : 0),
@@ -125,6 +157,107 @@ export async function GET(req: NextRequest) {
           status: 'failed',
           done: true,
           tasks: [],
+        })
+      }
+
+      // Push #026 â composing phase: Runway is already done. Skip Runway
+      // polling, just check Creatomate. Charge credits only when the composed
+      // MP4 actually exists; on failure, finalise as failed with 0 credits.
+      if (meta?.compose_render_id) {
+        const allClipUrls = meta.completed_clip_urls ?? []
+        const clipsTotal = meta.scenes.length ?? allClipUrls.length
+        const composeState = await checkComposition(meta.compose_render_id)
+        console.log(
+          `[generate-video/status] generation ${video.id} compose=${composeState.kind} renderId=${meta.compose_render_id}`,
+        )
+
+        if (composeState.kind === 'rendering') {
+          await touchGeneration(supabase, String(video.id))
+          return NextResponse.json({
+            generation_id: video.id,
+            status: 'processing',
+            phase: 'composing',
+            compose_progress: composeState.progress,
+            done: false,
+            clips_done: allClipUrls.length,
+            clips_total: clipsTotal,
+            completed_clip_urls: allClipUrls,
+            tasks: [],
+          })
+        }
+
+        if (composeState.kind === 'failed') {
+          console.error(
+            `[generate-video/status] generation ${video.id} compose failed: ${composeState.reason}`,
+          )
+          await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+          return NextResponse.json({
+            generation_id: video.id,
+            status: 'failed',
+            phase: 'composing_failed',
+            error: 'Final video rendering failed. Please try again.',
+            done: true,
+            tasks: [],
+          })
+        }
+
+        // succeeded â finalise + charge credits
+        const finalUrl = composeState.url
+        const rawCost = meta.cost ?? 15
+        const cost = meta.quality === 'pro' ? 20 : Math.max(15, Math.min(20, rawCost))
+        const finalMeta = JSON.stringify({
+          ...meta,
+          final_video_url: finalUrl,
+          compose_status: 'succeeded',
+        })
+        const won = await finalizeGeneration(supabase, String(video.id), 'completed', {
+          video_url: finalUrl,
+          credits_used: cost,
+          script: finalMeta,
+        })
+        let creditsDeducted = false
+        if (won) {
+          const { data: profile, error: profileErr } = await supabase
+            .from('profiles')
+            .select('video_credits')
+            .eq('id', user.id)
+            .single()
+          if (profileErr) {
+            console.error('[generate-video/status] could not load credits:', profileErr.message)
+          } else {
+            const current = profile?.video_credits ?? 0
+            const next = Math.max(0, current - cost)
+            const { error: dedErr } = await supabase
+              .from('profiles')
+              .update({ video_credits: next })
+              .eq('id', user.id)
+            if (dedErr) {
+              console.error('[generate-video/status] credit deduction failed:', dedErr.message)
+            } else {
+              creditsDeducted = true
+              console.log(
+                `[generate-video/status] generation ${video.id} -> completed (composed), ` +
+                `final_url=${finalUrl.slice(0, 80)} duration=${meta.duration}s ` +
+                `charged ${cost} credit(s) (${current} -> ${next})`,
+              )
+            }
+          }
+        }
+
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'completed',
+          phase: 'done',
+          done: true,
+          video_url: finalUrl,
+          final_video_url: finalUrl,
+          voiceover_url: meta.voiceover_url ?? null,
+          all_clip_urls: allClipUrls,
+          completed_clip_urls: allClipUrls,
+          clips_total: clipsTotal,
+          tasks: [],
+          cost,
+          creditsDeducted,
         })
       }
 
@@ -236,69 +369,114 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      const primaryUrl = allClipUrls[0]
-      // Flat per-job pricing: Basic = 15 credits, Pro = 20 credits, regardless of
-      // clip count. The clamp defends against legacy in-flight rows that were
-      // saved under the old per-clip multiplication or the old 1/2 credit pricing.
-      const rawCost = meta?.cost ?? 15
-      const cost = meta?.quality === 'pro' ? 20 : Math.max(15, Math.min(20, rawCost))
+      // Push #026 — instead of finalising with the raw silent Runway clip,
+      // submit a Creatomate composition (visuals + TTS + captions + CTA) and
+      // let the next /status poll pick up the composed MP4. Credits are
+      // charged only when the composed final_video_url actually exists.
+      //
+      // If we have no CREATOMATE_API_KEY OR the brief has neither a voiceover
+      // script nor scene captions, we cannot produce the audio+captions
+      // output the spec demands. Be honest: deliver the raw clip but charge
+      // 0 credits and log a clear warning. We never claim a silent clip is
+      // "complete with audio".
+      const canCompose =
+        !!process.env.CREATOMATE_API_KEY &&
+        ((meta?.voiceover_script ?? '').trim().length > 0 ||
+          (meta?.scene_captions ?? []).length > 0)
 
-      // Persist the complete list of clip URLs into meta so that cached reads
-      // (status returning early because the row is already finalised) can hand
-      // back every clip, not just the primary one.
-      const finalMeta = meta
-        ? JSON.stringify({ ...meta, completed_clip_urls: allClipUrls, pending_scenes: [] })
-        : undefined
-      const finalisePatch: Record<string, unknown> = {
-        video_url: primaryUrl,
-        credits_used: cost,
-      }
-      if (finalMeta) finalisePatch.script = finalMeta
-
-      // Atomic finalise: only one polling request gets to flip processing -> completed,
-      // so credits can never be deducted twice.
-      const won = await finalizeGeneration(supabase, String(video.id), 'completed', finalisePatch)
-
-      let creditsDeducted = false
-      if (won) {
-        const { data: profile, error: profileErr } = await supabase
-          .from('profiles')
-          .select('video_credits')
-          .eq('id', user.id)
-          .single()
-
-        if (profileErr) {
-          console.error('[generate-video/status] could not load credits for deduction:', profileErr.message)
-        } else {
-          const current = profile?.video_credits ?? 0
-          const next = Math.max(0, current - cost)
-          const { error: dedErr } = await supabase
-            .from('profiles')
-            .update({ video_credits: next })
-            .eq('id', user.id)
-          if (dedErr) {
-            console.error('[generate-video/status] credit deduction failed:', dedErr.message)
-          } else {
-            creditsDeducted = true
-            console.log(`[generate-video/status] generation ${video.id} -> completed, charged ${cost} credit(s) (balance ${current} -> ${next})`)
-          }
+      if (!canCompose) {
+        console.warn(
+          `[generate-video/status] generation ${video.id} cannot compose - ` +
+          `CREATOMATE_API_KEY=${!!process.env.CREATOMATE_API_KEY} ` +
+          `vo_chars=${(meta?.voiceover_script ?? '').length} ` +
+          `captions=${(meta?.scene_captions ?? []).length}. ` +
+          `Delivering raw Runway clip with 0 credits charged.`,
+        )
+        // TODO(push-026): wire up an alternative composition path (Shotstack,
+        // ffmpeg lambda, etc.) when CREATOMATE_API_KEY is unavailable. For now
+        // we keep the legacy raw-clip delivery but refund credits so users
+        // are not charged for a silent 10s clip.
+        const fbMeta = meta
+          ? JSON.stringify({ ...meta, completed_clip_urls: allClipUrls, pending_scenes: [] })
+          : undefined
+        const fbPatch: Record<string, unknown> = {
+          video_url: allClipUrls[0],
+          credits_used: 0,
         }
+        if (fbMeta) fbPatch.script = fbMeta
+        await finalizeGeneration(supabase, String(video.id), 'completed', fbPatch)
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'completed',
+          phase: 'done',
+          done: true,
+          composed: false,
+          video_url: allClipUrls[0],
+          final_video_url: null,
+          all_clip_urls: allClipUrls,
+          completed_clip_urls: allClipUrls,
+          clips_total: meta?.scenes.length ?? allClipUrls.length,
+          tasks: results,
+          cost: 0,
+          creditsDeducted: false,
+        })
       }
+
+      let composeResult: { renderId: string; voiceoverUrl: string | null; composedDurationSec: number }
+      try {
+        composeResult = await startComposition({
+          userId: user.id,
+          clipUrls: allClipUrls,
+          voiceoverScript: meta?.voiceover_script ?? '',
+          sceneCaptions: meta?.scene_captions ?? [],
+          totalDurationSec: meta?.duration ?? 30,
+        })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`[generate-video/status] composition start failed: ${msg}`)
+        await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'failed',
+          phase: 'composing_failed',
+          error: 'Final video rendering failed. Please try again.',
+          done: true,
+          tasks: results,
+        })
+      }
+
+      const pendingMeta = await patchMeta(
+        supabase,
+        String(video.id),
+        {
+          completed_clip_urls: allClipUrls,
+          pending_scenes: [],
+          compose_render_id: composeResult.renderId,
+          compose_status: 'rendering',
+          voiceover_url: composeResult.voiceoverUrl ?? undefined,
+        },
+        meta,
+      )
+
+      console.log(
+        `[generate-video/status] generation ${video.id}: Runway done, composition ` +
+        `submitted (renderId=${composeResult.renderId}, dur=${composeResult.composedDurationSec}s, ` +
+        `vo=${!!composeResult.voiceoverUrl})`,
+      )
 
       return NextResponse.json({
         generation_id: video.id,
-        status: 'completed',
-        done: true,
+        status: 'processing',
+        phase: 'composing',
+        compose_progress: 5,
+        done: false,
         succeeded,
         playable: allClipUrls.length,
         total: results.length,
-        video_url: primaryUrl,
-        all_clip_urls: allClipUrls,
+        clips_done: allClipUrls.length,
+        clips_total: pendingMeta?.scenes.length ?? meta?.scenes.length ?? allClipUrls.length,
         completed_clip_urls: allClipUrls,
-        clips_total: meta?.scenes.length ?? allClipUrls.length,
         tasks: results,
-        cost,
-        creditsDeducted,
       })
     }
 

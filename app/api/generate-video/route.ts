@@ -106,6 +106,11 @@ export async function POST(req: NextRequest) {
       quality?: string
       provider_prompt?: string
       scene_visual_prompts?: unknown
+      // Push #026 — pass-through fields from the analyze-idea creative brief.
+      // These power the final-video composition step (TTS + captions) once
+      // Runway finishes its silent visual clips.
+      voiceover_script?: string
+      scene_captions?: unknown
     }
     try {
       body = await req.json()
@@ -274,6 +279,31 @@ export async function POST(req: NextRequest) {
 
     // Step 3 â Persist the generation row so we can recover after a refresh
     // and so /status can authorize the polling request.
+    // Push #026 — pull voiceover script + per-scene captions from the brief
+    // so /status can compose the final MP4 once Runway finishes its silent
+    // clips. Both are best-effort — missing fields just mean composition
+    // either skips audio (no script) or skips overlays (no captions).
+    const voiceoverScript = (() => {
+      const raw = typeof body.voiceover_script === 'string' ? body.voiceover_script.trim() : ''
+      if (!raw) return ''
+      return raw.length > 4000 ? raw.slice(0, 4000) : raw
+    })()
+    const sceneCaptions: string[] = (() => {
+      if (!Array.isArray(body.scene_captions)) return []
+      return body.scene_captions
+        .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+        .map((c) => {
+          const words = c.trim().replace(/[.!?]+$/g, '').split(/\s+/).filter(Boolean)
+          return words.slice(0, 8).join(' ')
+        })
+        .slice(0, clipCount)
+    })()
+
+    console.log(
+      `[generate-video] brief — voiceover_chars=${voiceoverScript.length} ` +
+      `captions=${sceneCaptions.length}/${clipCount}`,
+    )
+
     const meta = encodeGenerationMeta({
       task_ids: taskHandles,
       prompt,
@@ -284,6 +314,9 @@ export async function POST(req: NextRequest) {
       quality,
       pending_scenes: scenes.slice(1),   // clips 1..N-1 queued for later
       completed_clip_urls: [],            // filled in by /status as clips finish
+      voiceover_script: voiceoverScript || undefined,
+      scene_captions: sceneCaptions.length > 0 ? sceneCaptions : undefined,
+      compose_status: 'idle',
     })
 
     const { data: inserted, error: insertErr } = await supabase
