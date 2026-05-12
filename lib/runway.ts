@@ -38,12 +38,17 @@ interface RunwayTextToVideoPayload {
 /**
  * Map platform name -> Runway pixel-based ratio.
  * Runway does NOT accept "9:16" -- must use pixel dimensions.
+ * Push #021 added snake_case identifiers from the platform selector
+ * ("youtube_shorts", "tiktok", "instagram_reels") alongside the legacy
+ * display labels.
  */
 export function mapPlatformToRatio(platform: string): ValidRatio {
   switch ((platform ?? '').toLowerCase().trim()) {
     case 'youtube shorts':
+    case 'youtube_shorts':
     case 'tiktok':
     case 'instagram reels':
+    case 'instagram_reels':
       return '720:1280'
     case 'youtube':
     case 'landscape youtube':

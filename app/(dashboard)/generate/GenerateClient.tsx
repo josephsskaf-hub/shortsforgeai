@@ -40,6 +40,7 @@ interface ActiveSummary {
 type Phase = 'idle' | 'analyzing' | 'options' | 'generating' | 'done' | 'error'
 type Duration = 10 | 30 | 50
 type Quality = 'basic' | 'pro'
+type Platform = 'youtube_shorts' | 'tiktok' | 'instagram_reels'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -51,8 +52,16 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic', title: 'Basic', desc: 'Standard video generation for short-form creators.',                       credits: 15, icon: '⚡' },
+  { key: 'basic', title: 'Basic', desc: 'Standard video generation for short-form creators.',                 credits: 15, icon: '⚡' },
   { key: 'pro',   title: 'Pro',   desc: 'Better cinematic prompting and higher-quality generation settings.', credits: 20, icon: '✨' },
+]
+
+// All platforms produce the same vertical 9:16 output; the choice is stored as
+// metadata so we can surface it later in history/title without re-rendering.
+const PLATFORM_OPTIONS: { key: Platform; label: string; icon: string }[] = [
+  { key: 'youtube_shorts',  label: 'YouTube Shorts',   icon: '📺' },
+  { key: 'tiktok',          label: 'TikTok',           icon: '🎵' },
+  { key: 'instagram_reels', label: 'Instagram Reels',  icon: '📸' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -77,9 +86,9 @@ export default function GenerateClient() {
   const [tasks, setTasks] = useState<TaskHandle[]>([])
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
-  const [playerIndex, setPlayerIndex] = useState(0)
   const [duration, setDuration] = useState<Duration>(10)
   const [quality, setQuality] = useState<Quality>('basic')
+  const [platform, setPlatform] = useState<Platform>('youtube_shorts')
   const [chargedCost, setChargedCost] = useState<number>(15)
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [recoverable, setRecoverable] = useState<ActiveSummary | null>(null)
@@ -285,39 +294,23 @@ export default function GenerateClient() {
     return out
   }, [clipsTotal, tasks, states, completedClipUrls])
 
-  const successClips = useMemo(() => {
-    // For the result player: prefer the final all_clip_urls list (set on
-    // completion); otherwise fall back to whatever has finished so far.
-    if (allClipUrls.length > 0) {
-      return allClipUrls.map((url, i) => ({
-        id: `final-${i}`,
-        status: 'SUCCEEDED' as const,
-        progress: 1,
-        videoUrl: url,
-        failure: null,
-      })) satisfies TaskState[]
-    }
-    return slots
-      .filter((s) => s.label === 'done' && s.videoUrl)
-      .map((s) => ({
-        id: `slot-${s.slot}`,
-        status: 'SUCCEEDED' as const,
-        progress: 1,
-        videoUrl: s.videoUrl,
-        failure: null,
-      })) satisfies TaskState[]
-  }, [allClipUrls, slots])
+  // Push #021 collapses the old multi-clip player into a single result. We
+  // surface the first available URL — server-side `video_url` (allClipUrls[0])
+  // for finished jobs, falling back to whatever the polling has handed us so
+  // far. The internal multi-clip pipeline is hidden from the user.
+  const primaryVideoUrl = useMemo(() => {
+    return (
+      allClipUrls.find((u) => looksLikeVideoUrl(u)) ??
+      completedClipUrls.find((u) => looksLikeVideoUrl(u)) ??
+      null
+    )
+  }, [allClipUrls, completedClipUrls])
 
   const totalProgress = useMemo(() => {
     if (slots.length === 0) return 0
     const sum = slots.reduce((acc, s) => acc + s.progress, 0)
     return Math.min(100, Math.round((sum / slots.length) * 100))
   }, [slots])
-
-  const succeededCount = useMemo(
-    () => slots.filter((s) => s.label === 'done').length,
-    [slots]
-  )
 
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
@@ -332,7 +325,7 @@ export default function GenerateClient() {
     setScenes([])
     setTasks([])
     setStates({})
-    setPlayerIndex(0)
+
     setPhase('analyzing')
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30000)
@@ -398,7 +391,7 @@ export default function GenerateClient() {
     setStates({})
     setTasks([])
     setScenes([])
-    setPlayerIndex(0)
+
     setGenerationId(null)
     setCompletedClipUrls([])
     setAllClipUrls([])
@@ -413,7 +406,7 @@ export default function GenerateClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: trimmed,
-          platform: 'YouTube Shorts',
+          platform,
           duration,
           quality,
         }),
@@ -489,7 +482,7 @@ export default function GenerateClient() {
     setTasks([])
     setStates({})
     setError(null)
-    setPlayerIndex(0)
+
     setGenerationId(null)
     setClipsTotal(1)
     setCompletedClipUrls([])
@@ -505,20 +498,13 @@ export default function GenerateClient() {
     setError(null)
   }
 
-  function handleVideoEnd() {
-    setPlayerIndex((i) => {
-      const next = i + 1
-      return next < successClips.length ? next : 0
-    })
-  }
-
   useEffect(() => {
     const el = videoRef.current
     if (el && phase === 'done') {
       el.load()
       el.play().catch(() => {})
     }
-  }, [playerIndex, phase])
+  }, [phase, primaryVideoUrl])
 
   // ── Recovery actions ─────────────────────────────────────────────────────
   const continueProgress = useCallback(async () => {
@@ -527,7 +513,7 @@ export default function GenerateClient() {
     setTasks(recoverable.tasks)
     setScenes(recoverable.scenes)
     setStates({})
-    setPlayerIndex(0)
+
     setPrompt(recoverable.prompt || prompt)
     setChargedCost(Math.min(20, Math.max(15, Math.floor(recoverable.cost || 15))))
     setGenerationId(recoverable.generation_id)
@@ -564,10 +550,7 @@ export default function GenerateClient() {
     }
   }, [recoverable])
 
-  const currentClipUrl = successClips[playerIndex]?.videoUrl ?? null
   // Flat per-job cost: 15 credits (Basic) or 20 credits (Pro), regardless of duration.
-  // 30s/50s jobs render 3 or 5 clips but still bill once, on successful completion.
-  const expectedClipCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
   const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15
   const lowCredits = creditBalance !== null && creditBalance < selectedCost
   const showStep1 = phase === 'idle' || phase === 'analyzing'
@@ -597,12 +580,12 @@ export default function GenerateClient() {
           </span>
         </div>
         <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-          🎬 Generate a Real AI Short
+          🎬 Create AI Short
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
-          {showStep2 && 'Pick duration and quality, then generate.'}
-          {showRender && 'Rendering your vertical 9:16 Short.'}
+          {showStep2 && 'Pick duration, platform, and quality — then generate.'}
+          {showRender && 'Rendering your vertical 9:16 video.'}
         </p>
       </div>
 
@@ -834,15 +817,10 @@ export default function GenerateClient() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {d === 10 ? '10s (quick)' : d === 30 ? '30s (3 clips)' : '50s (5 clips)'}
+                    {`${d}s`}
                   </button>
                 ))}
               </div>
-              {duration !== 10 && (
-                <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-                  Delivered as {duration === 30 ? '3' : '5'} separate 10s clips you can stitch in any editor (CapCut, InVideo). Charged once, on success.
-                </p>
-              )}
             </div>
 
             {/* Platform */}
@@ -854,17 +832,30 @@ export default function GenerateClient() {
                 Platform
               </div>
               <div className="flex gap-2 flex-wrap">
-                <span
-                  className="rounded-full px-4 py-1.5 text-sm font-bold flex items-center gap-1.5"
-                  style={{
-                    background: 'rgba(37,99,235,.85)',
-                    border: '1px solid rgba(37,99,235,.6)',
-                    color: '#fff',
-                  }}
-                >
-                  <span style={{ fontSize: '0.8rem' }}>📲</span> YouTube Shorts (9:16)
-                </span>
+                {PLATFORM_OPTIONS.map((p) => {
+                  const selected = platform === p.key
+                  return (
+                    <button
+                      key={p.key}
+                      onClick={() => setPlatform(p.key)}
+                      className="rounded-full px-4 py-1.5 text-sm font-bold flex items-center gap-1.5"
+                      style={{
+                        background: selected ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
+                        border: selected ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                        color: selected ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.8rem' }}>{p.icon}</span>
+                      <span>{p.label}</span>
+                    </button>
+                  )
+                })}
               </div>
+              <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+                All platforms deliver vertical 9:16 video, ready to upload.
+              </p>
             </div>
 
             {/* Quality cards */}
@@ -968,20 +959,7 @@ export default function GenerateClient() {
                 }}
               >
                 {submitting ? <><Spinner /><span>Starting…</span></> : (
-                  <>
-                    Generate
-                    <span
-                      style={{
-                        padding: '2px 10px',
-                        borderRadius: 99,
-                        background: 'rgba(255,255,255,.18)',
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {selectedCost} credit{selectedCost > 1 ? 's' : ''}
-                    </span>
-                  </>
+                  <span>Generate • {selectedCost} credits</span>
                 )}
               </button>
             </div>
@@ -992,134 +970,136 @@ export default function GenerateClient() {
       {/* ── Render / Done / Error ── */}
       {showRender && (
         <>
-          {slots.length > 0 && (
+          {/* Single-video render card. Even for 30s/50s jobs (which Runway
+              fulfils as 3 or 5 sequential 10s clips internally) we present one
+              "Rendering your video..." state and one final video to the user. */}
+          {phase === 'generating' && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-                  {phase === 'done'
-                    ? `✅ Your Short is ready (${slots.length} clip${slots.length > 1 ? 's' : ''})`
-                    : `🎬 Rendering your Short… (${Math.min(succeededCount + 1, slots.length)}/${slots.length})`}
+              <div className="flex items-center gap-3 mb-3">
+                <Spinner />
+                <div>
+                  <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+                    Rendering your video…
+                  </div>
+                  <div className="text-sm" style={{ color: 'var(--muted2)' }}>
+                    This usually takes a couple of minutes. You can leave this page — we&apos;ll keep working.
+                  </div>
                 </div>
-                <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
+                <div className="ml-auto text-xs font-bold" style={{ color: 'var(--muted)' }}>
                   {totalProgress}%
                 </div>
               </div>
               <ProgressBar progress={totalProgress} />
-              <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
-                {phase === 'done'
-                  ? slots.length > 1
-                    ? `All ${slots.length} clips finished. Download them below and stitch in any editor.`
-                    : 'Your 10s clip is ready. Press play below to watch.'
-                  : `Rendering ${slots.length > 1 ? slots.length + ' clips' : 'your clip'}… Runway takes ~30-90s per 10s clip. We poll every 5s and launch the next clip automatically.`}
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-                {slots.map((s) => {
-                  const failed = s.label === 'failed'
-                  const playable = s.label === 'done' && !!s.videoUrl
-                  const succeededNoFile = s.label === 'no file'
-                  const running = s.label === 'rendering'
-                  return (
-                    <div
-                      key={s.slot}
-                      className="rounded-xl overflow-hidden"
-                      style={{
-                        aspectRatio: '9 / 16',
-                        background: 'rgba(0,0,0,.4)',
-                        border: playable
-                          ? '1px solid rgba(16,185,129,.4)'
-                          : failed || succeededNoFile
-                          ? '1px solid rgba(239,68,68,.35)'
-                          : '1px solid var(--border)',
-                        position: 'relative',
-                      }}
-                    >
-                      {playable && s.videoUrl ? (
-                        <video
-                          key={s.videoUrl}
-                          src={s.videoUrl}
-                          muted
-                          loop
-                          autoPlay
-                          playsInline
-                          preload="metadata"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div
-                          className="absolute inset-0 flex items-center justify-center text-xs font-bold text-center px-2"
-                          style={{
-                            color: failed || succeededNoFile ? '#f87171' : running ? '#93c5fd' : 'var(--muted)',
-                          }}
-                        >
-                          {failed
-                            ? '⚠ Failed'
-                            : succeededNoFile
-                            ? 'No file'
-                            : running
-                            ? <><Spinner /><span className="ml-2">Rendering…</span></>
-                            : '⏳ Queued'}
-                        </div>
-                      )}
-                      <div
-                        className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs font-bold"
-                        style={{
-                          background: 'linear-gradient(to top, rgba(0,0,0,.85), transparent)',
-                          color: '#fff',
-                          fontSize: '0.65rem',
-                        }}
-                      >
-                        Clip {s.slot + 1} · {s.label}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {scenes.length > 0 && (
-                <details className="mt-5">
-                  <summary
-                    className="text-xs font-black uppercase tracking-widest cursor-pointer"
-                    style={{ color: 'var(--muted2)' }}
-                  >
-                    🎬 Scene prompts
-                  </summary>
-                  <ol
-                    className="mt-2 text-xs space-y-1.5"
-                    style={{ color: 'var(--muted2)', paddingLeft: 20 }}
-                  >
-                    {scenes.map((s, i) => (
-                      <li key={i}>
-                        <span style={{ color: '#93c5fd', fontWeight: 700 }}>#{i + 1}</span> {s}
-                      </li>
-                    ))}
-                  </ol>
-                </details>
-              )}
             </section>
           )}
 
-          {phase === 'generating' && slots.length === 0 && (
+          {phase === 'done' && primaryVideoUrl && (
             <section
-              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
-              <Spinner />
-              <div>
-                <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-                  Rendering your video…
-                </div>
-                <div className="text-sm" style={{ color: 'var(--muted2)' }}>
-                  Resuming your in-progress generation. This can take up to a few minutes.
-                </div>
+              <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
+                ✅ Your video is ready
               </div>
+              <div
+                className="rounded-2xl overflow-hidden w-full max-w-[300px]"
+                style={{
+                  border: '1px solid rgba(37,99,235,.4)',
+                  boxShadow: '0 12px 48px rgba(37,99,235,.2)',
+                  background: '#000',
+                  aspectRatio: '9 / 16',
+                }}
+              >
+                <video
+                  ref={videoRef}
+                  key={primaryVideoUrl}
+                  src={primaryVideoUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="metadata"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
+                <a
+                  href={primaryVideoUrl}
+                  download={`shortsforge-${duration}s.mp4`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                    border: 'none',
+                    textDecoration: 'none',
+                    boxShadow: '0 8px 28px rgba(37,99,235,.4)',
+                  }}
+                >
+                  ⬇ Download Video
+                </a>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!primaryVideoUrl) return
+                    try {
+                      await navigator.clipboard.writeText(primaryVideoUrl)
+                      setCopyHint('copied')
+                    } catch {
+                      setCopyHint('failed')
+                    }
+                    setTimeout(() => setCopyHint(null), 1800)
+                  }}
+                  className="rounded-xl px-3.5 py-2.5 text-xs font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.04)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                  aria-live="polite"
+                >
+                  {copyHint === 'copied' ? '✓ Copied' : copyHint === 'failed' ? '✗ Copy failed' : '🔗 Copy URL'}
+                </button>
+
+                {typeof navigator !== 'undefined' && 'share' in navigator && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await (navigator as Navigator & { share: (d: ShareData) => Promise<void> }).share({
+                          title: 'My ShortsForgeAI video',
+                          text: 'Check out this AI-generated video I just made.',
+                          url: primaryVideoUrl,
+                        })
+                      } catch {
+                        // user cancelled or share unsupported; non-fatal
+                      }
+                    }}
+                    className="rounded-xl px-3.5 py-2.5 text-xs font-bold"
+                    style={{
+                      background: 'rgba(255,255,255,.04)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📤 Share
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs mt-4 text-center" style={{ color: 'var(--muted)' }}>
+                Tip: drop the video into CapCut or InVideo to add captions, voiceover, and effects.
+              </p>
             </section>
           )}
 
-          {phase === 'done' && successClips.length === 0 && (
+          {phase === 'done' && !primaryVideoUrl && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
@@ -1174,146 +1154,6 @@ export default function GenerateClient() {
             </section>
           )}
 
-          {phase === 'done' && successClips.length > 0 && currentClipUrl && (
-            <section
-              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
-            >
-              <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                {successClips.length > 1
-                  ? `▶ Preview clip ${playerIndex + 1}/${successClips.length}`
-                  : '▶ Your Short'}
-              </div>
-              <div
-                className="rounded-2xl overflow-hidden w-full max-w-[300px]"
-                style={{
-                  border: '1px solid rgba(37,99,235,.4)',
-                  boxShadow: '0 12px 48px rgba(37,99,235,.2)',
-                  background: '#000',
-                  aspectRatio: '9 / 16',
-                }}
-              >
-                <video
-                  ref={videoRef}
-                  key={currentClipUrl}
-                  src={currentClipUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  poster={undefined}
-                  onEnded={handleVideoEnd}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-4">
-                {successClips.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPlayerIndex(i)}
-                    className="rounded-full"
-                    style={{
-                      width: 10,
-                      height: 10,
-                      background: i === playerIndex ? '#93c5fd' : 'rgba(255,255,255,.18)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: i === playerIndex ? '0 0 8px rgba(37,99,235,.6)' : 'none',
-                    }}
-                    aria-label={`Jump to clip ${i + 1}`}
-                  />
-                ))}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                {successClips.map((s, i) => {
-                  if (!s.videoUrl || !looksLikeVideoUrl(s.videoUrl)) return null
-                  return (
-                    <a
-                      key={s.id}
-                      href={s.videoUrl}
-                      download={`shortsforge-clip-${i + 1}.mp4`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
-                      style={{
-                        background:
-                          i === 0
-                            ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
-                            : 'rgba(37,99,235,.12)',
-                        border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
-                        color: i === 0 ? '#fff' : '#93c5fd',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      ⬇ Clip {i + 1}
-                    </a>
-                  )
-                })}
-              </div>
-
-              {/* Copy / Share actions for the currently-playing clip */}
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!currentClipUrl) return
-                    try {
-                      await navigator.clipboard.writeText(currentClipUrl)
-                      setCopyHint('copied')
-                    } catch {
-                      setCopyHint('failed')
-                    }
-                    setTimeout(() => setCopyHint(null), 1800)
-                  }}
-                  disabled={!currentClipUrl}
-                  className="rounded-xl px-3.5 py-2 text-xs font-bold"
-                  style={{
-                    background: 'rgba(255,255,255,.04)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                    cursor: currentClipUrl ? 'pointer' : 'not-allowed',
-                    opacity: currentClipUrl ? 1 : 0.6,
-                  }}
-                  aria-live="polite"
-                >
-                  {copyHint === 'copied' ? '✓ Copied' : copyHint === 'failed' ? '✗ Copy failed' : '🔗 Copy URL'}
-                </button>
-                {typeof navigator !== 'undefined' && 'share' in navigator && currentClipUrl && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await (navigator as Navigator & { share: (d: ShareData) => Promise<void> }).share({
-                          title: 'My ShortsForgeAI clip',
-                          text: 'Check out this AI-generated Short I just made.',
-                          url: currentClipUrl,
-                        })
-                      } catch {
-                        // user cancelled or share unsupported; non-fatal
-                      }
-                    }}
-                    className="rounded-xl px-3.5 py-2 text-xs font-bold"
-                    style={{
-                      background: 'rgba(255,255,255,.04)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    📤 Share
-                  </button>
-                )}
-              </div>
-
-              <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
-                {successClips.length > 1
-                  ? `Heads-up: 30s and 50s jobs are delivered as ${successClips.length} separate 10s clips. Drop them into CapCut, InVideo, or any editor to stitch with captions and voiceover.`
-                  : 'Tip: drop the clip into CapCut or InVideo to add captions, voiceover, and effects.'}
-              </p>
-            </section>
-          )}
-
           <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
             <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
               ShortsForgeAI v1.0
@@ -1331,7 +1171,7 @@ export default function GenerateClient() {
                 cursor: 'pointer',
               }}
             >
-              🔄 Start over
+              🔄 Create another video
             </button>
           </div>
         </>

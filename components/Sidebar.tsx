@@ -319,10 +319,24 @@ export default function Sidebar({
     return () => window.removeEventListener('creditsChanged', fetchCredits)
   }, [fetchCredits])
 
+  // Self-verify auth on mount so we never render a "Guest" sidebar to a user
+  // who is actually signed in. The public homepage (`app/page.tsx`) is a client
+  // component whose initial render happens before `supabase.auth.getUser()`
+  // resolves; before push #021 it would mount this Sidebar with isLoggedIn=false,
+  // making Home navigation flash a logged-out UI even though the session is fine.
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    let cancelled = false
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (cancelled) return
       if (user) {
+        setIsLoggedIn(true)
+        setUserEmail((prev) => prev || user.email || '')
         setDisplayName(extractDisplayName(user.user_metadata as Record<string, unknown> | null))
+        // Pull is_pro if the parent didn't already hydrate it correctly.
+        const { data } = await supabase.from('profiles').select('is_pro').eq('id', user.id).single()
+        if (!cancelled && data) setIsPro(data.is_pro ?? false)
+      } else {
+        setIsLoggedIn(false)
       }
     })
 
@@ -337,7 +351,7 @@ export default function Sidebar({
         fetchCredits()
       }
     })
-    return () => subscription.unsubscribe()
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSignOut() {
