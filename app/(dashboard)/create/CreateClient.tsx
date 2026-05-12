@@ -1179,7 +1179,7 @@ function FinalView({
             style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >📋</button>
           <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}&autoanalyze=1`}
             title="Generate AI video"
             style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
           >🎬</Link>
@@ -1211,7 +1211,7 @@ function FinalView({
           </a>
         ) : (
           <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}&autoanalyze=1`}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,

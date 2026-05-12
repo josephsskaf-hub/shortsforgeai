@@ -39,7 +39,9 @@ export default function DashboardClient({
       router.push('/generate')
       return
     }
-    router.push(`/generate?prompt=${encodeURIComponent(p)}`)
+    // autoanalyze=1 makes /generate kick off the analyze step automatically,
+    // so the user never sees a second "type a prompt" screen.
+    router.push(`/generate?prompt=${encodeURIComponent(p)}&autoanalyze=1`)
   }
 
   useEffect(() => {

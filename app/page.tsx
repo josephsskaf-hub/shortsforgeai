@@ -224,12 +224,14 @@ export default function HomePage() {
   function handleHeroGenerate() {
     const trimmed = heroPrompt.trim()
     if (!user) {
-      const dest = trimmed ? `/generate?prompt=${encodeURIComponent(trimmed)}` : '/generate'
+      const dest = trimmed
+        ? `/generate?prompt=${encodeURIComponent(trimmed)}&autoanalyze=1`
+        : '/generate'
       router.push(`/login?redirect=${encodeURIComponent(dest)}`)
       return
     }
     if (trimmed) {
-      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`)
+      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}&autoanalyze=1`)
     } else {
       router.push('/generate')
     }
