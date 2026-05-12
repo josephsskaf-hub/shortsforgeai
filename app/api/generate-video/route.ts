@@ -301,8 +301,17 @@ export async function POST(req: NextRequest) {
 
     console.log(
       `[generate-video] brief — voiceover_chars=${voiceoverScript.length} ` +
-      `captions=${sceneCaptions.length}/${clipCount}`,
+      `captions=${sceneCaptions.length}/${clipCount} ` +
+      `received_vo=${typeof body.voiceover_script === 'string' ? body.voiceover_script.length : 'none'} ` +
+      `received_captions=${Array.isArray(body.scene_captions) ? body.scene_captions.length : 'none'} ` +
+      `creatomate_env=${!!process.env.CREATOMATE_API_KEY}`,
     )
+    if (!voiceoverScript || sceneCaptions.length === 0) {
+      console.warn(
+        `[generate-video] brief is missing audio or captions — status route will ` +
+        `synthesise the gap (this happens when the user generates without analyzing first).`,
+      )
+    }
 
     const meta = encodeGenerationMeta({
       task_ids: taskHandles,

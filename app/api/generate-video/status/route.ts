@@ -374,15 +374,23 @@ export async function GET(req: NextRequest) {
       // let the next /status poll pick up the composed MP4. Credits are
       // charged only when the composed final_video_url actually exists.
       //
-      // If we have no CREATOMATE_API_KEY OR the brief has neither a voiceover
-      // script nor scene captions, we cannot produce the audio+captions
-      // output the spec demands. Be honest: deliver the raw clip but charge
-      // 0 credits and log a clear warning. We never claim a silent clip is
-      // "complete with audio".
-      const canCompose =
-        !!process.env.CREATOMATE_API_KEY &&
-        ((meta?.voiceover_script ?? '').trim().length > 0 ||
-          (meta?.scene_captions ?? []).length > 0)
+      // We only require CREATOMATE_API_KEY here. If the brief is missing the
+      // voiceover_script or scene_captions, startComposition() synthesises
+      // them from the prompt + scenes so the final video always has audio
+      // and overlays. The only case we still fall back on raw clips is when
+      // CREATOMATE_API_KEY is missing in this environment.
+      const haveBriefAudio = (meta?.voiceover_script ?? '').trim().length > 0
+      const haveBriefCaptions = (meta?.scene_captions ?? []).length > 0
+      console.log(
+        `[generate-video/status] generation ${video.id} compose precheck — ` +
+        `CREATOMATE_API_KEY=${!!process.env.CREATOMATE_API_KEY} ` +
+        `OPENAI_API_KEY=${!!process.env.OPENAI_API_KEY} ` +
+        `SUPABASE_SERVICE_ROLE_KEY=${!!process.env.SUPABASE_SERVICE_ROLE_KEY} ` +
+        `vo_chars=${(meta?.voiceover_script ?? '').length} ` +
+        `captions=${(meta?.scene_captions ?? []).length} ` +
+        `scenes=${meta?.scenes.length ?? 0} clips=${allClipUrls.length}`,
+      )
+      const canCompose = !!process.env.CREATOMATE_API_KEY
 
       if (!canCompose) {
         console.warn(
@@ -422,13 +430,43 @@ export async function GET(req: NextRequest) {
         })
       }
 
+      // If the brief is missing audio or captions, synthesize them locally so
+      // we never ship a silent clip just because the analyze-idea step was
+      // skipped (e.g. a topic shortcut or a manual generate). We derive
+      // captions from the per-scene Runway prompts (~6 words each) and the
+      // voiceover script by concatenating those captions.
+      const fallbackCaptions: string[] =
+        haveBriefCaptions
+          ? meta!.scene_captions!
+          : (meta?.scenes ?? []).map((s) => {
+              const words = s.replace(/[.!?]+/g, ' ').split(/\s+/).filter(Boolean)
+              return words.slice(0, 6).join(' ')
+            }).filter((c) => c.length > 0)
+      const fallbackVoiceover: string =
+        haveBriefAudio
+          ? meta!.voiceover_script!
+          : (() => {
+              const fromCaptions = fallbackCaptions.join('. ').trim()
+              const base = (meta?.prompt ?? '').trim()
+              const merged = fromCaptions || base
+              if (!merged) return 'Watch this story unfold. Follow for more.'
+              return `${merged}. Follow for more.`
+            })()
+      if (!haveBriefAudio || !haveBriefCaptions) {
+        console.log(
+          `[generate-video/status] generation ${video.id} synthesised compose inputs — ` +
+          `voiceover_chars=${fallbackVoiceover.length} captions=${fallbackCaptions.length} ` +
+          `(brief had vo=${haveBriefAudio} captions=${haveBriefCaptions})`,
+        )
+      }
+
       let composeResult: { renderId: string; voiceoverUrl: string | null; composedDurationSec: number }
       try {
         composeResult = await startComposition({
           userId: user.id,
           clipUrls: allClipUrls,
-          voiceoverScript: meta?.voiceover_script ?? '',
-          sceneCaptions: meta?.scene_captions ?? [],
+          voiceoverScript: fallbackVoiceover,
+          sceneCaptions: fallbackCaptions,
           totalDurationSec: meta?.duration ?? 30,
         })
       } catch (err) {

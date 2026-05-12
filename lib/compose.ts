@@ -248,7 +248,8 @@ export async function startComposition(input: ComposeInput): Promise<ComposeStar
 
   console.log(
     `[compose] starting — user=${userId.slice(0, 8)} clips=${clipUrls.length} ` +
-    `duration=${totalDurationSec}s vo_chars=${voiceoverScript.length} captions=${sceneCaptions.length}`,
+    `duration=${totalDurationSec}s vo_chars=${voiceoverScript.length} captions=${sceneCaptions.length} ` +
+    `env_openai=${!!process.env.OPENAI_API_KEY} env_supabase=${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`,
   )
 
   // Step 1+2: TTS + upload. Both are best-effort — if either fails we still
@@ -257,13 +258,17 @@ export async function startComposition(input: ComposeInput): Promise<ComposeStar
   // covers the case where the final output is unsatisfactory.
   let voiceoverUrl: string | null = null
   if (voiceoverScript.trim().length > 0) {
+    console.log(`[compose] step 1: requesting OpenAI TTS (script ${voiceoverScript.length} chars)`)
     const buf = await generateTTS(voiceoverScript)
     if (buf) {
+      console.log(`[compose] step 2: TTS ok (${buf.length} bytes) — uploading to Supabase`)
       voiceoverUrl = await uploadVoiceover(userId, buf)
       console.log(`[compose] voiceover ${voiceoverUrl ? 'uploaded' : 'upload failed'} (${buf.length} bytes)`)
+    } else {
+      console.error('[compose] step 1 returned no buffer — TTS failed; composition will have no audio')
     }
   } else {
-    console.warn('[compose] voiceover_script is empty')
+    console.warn('[compose] voiceover_script is empty — composition will have no audio track')
   }
 
   // Step 3: build + submit Creatomate composition.
@@ -273,6 +278,13 @@ export async function startComposition(input: ComposeInput): Promise<ComposeStar
     sceneCaptions,
     totalDurationSec,
   })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const elementCount = (source.elements as any[]).length
+  console.log(
+    `[compose] step 3: submitting to Creatomate — elements=${elementCount} ` +
+    `duration=${duration}s has_audio=${!!voiceoverUrl}`,
+  )
 
   let res: Response
   try {

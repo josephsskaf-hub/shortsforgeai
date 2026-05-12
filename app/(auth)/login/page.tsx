@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
@@ -24,67 +24,60 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [loadingPhase, setLoadingPhase] = useState<'starting' | 'still' | 'timeout'>('starting')
   const [error, setError] = useState<string | null>(null)
 
-  const stillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => () => {
-    if (stillTimerRef.current) clearTimeout(stillTimerRef.current)
-    if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+  // If a session already exists in cookies (e.g. the user opened /login while
+  // already signed in, or returned via a bookmark), jump straight into the
+  // app without waiting for an onAuthStateChange event. The bug we were
+  // chasing — the button stuck on "Signing in..." even though Supabase had
+  // already set the cookie — went away once we stopped depending on
+  // router.push/router.refresh after the cookie was set.
+  useEffect(() => {
+    let cancelled = false
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session) return
+      window.location.replace(safeRedirect(searchParams.get('redirect')))
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  function clearLoadingTimers() {
-    if (stillTimerRef.current) { clearTimeout(stillTimerRef.current); stillTimerRef.current = null }
-    if (timeoutTimerRef.current) { clearTimeout(timeoutTimerRef.current); timeoutTimerRef.current = null }
-  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setLoadingPhase('starting')
     setError(null)
-
-    // 0–5s: "Signing in..."  5–10s: "Still signing in..."  >10s: timeout.
-    stillTimerRef.current = setTimeout(() => setLoadingPhase('still'), 5000)
-    timeoutTimerRef.current = setTimeout(() => {
-      setLoadingPhase('timeout')
-      setError('Login is taking longer than expected. Please try again.')
-      setLoading(false)
-      // Keep email so the user can retry; clear password only.
-      setPassword('')
-    }, 10000)
 
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        clearLoadingTimers()
         const lowered = error.message.toLowerCase()
-        const isCreds = lowered.includes('invalid login credentials') || lowered.includes('invalid email or password')
+        const isCreds =
+          lowered.includes('invalid login credentials') ||
+          lowered.includes('invalid email or password')
         setError(isCreds ? 'Invalid email or password.' : error.message)
         setLoading(false)
         return
       }
     } catch (err) {
-      clearLoadingTimers()
       const msg = err instanceof Error ? err.message : 'Login failed. Please try again.'
       setError(msg)
       setLoading(false)
       return
     }
 
-    // Redirect immediately on success — do NOT block on profile/credits.
-    clearLoadingTimers()
+    // Hard navigate so the Next.js middleware sees the freshly-set Supabase
+    // auth cookies on the next request. router.push + router.refresh used to
+    // race the cookie sync and leave the UI stuck on "Signing in...".
     const dest = safeRedirect(searchParams.get('redirect'))
-    router.push(dest)
-    router.refresh()
+    window.location.assign(dest)
   }
 
   return (
@@ -265,9 +258,7 @@ function LoginForm() {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              {loading
-                ? (loadingPhase === 'still' ? 'Still signing in...' : 'Signing in...')
-                : 'Sign In'}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 

@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 
 interface AuthModalProps {
   onClose: () => void
@@ -10,35 +9,15 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalProps) {
-  const router = useRouter()
   const supabase = createClient()
 
   const [tab, setTab] = useState<'login' | 'signup'>(defaultTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [loadingPhase, setLoadingPhase] = useState<'starting' | 'still' | 'timeout'>('starting')
   const [error, setError] = useState<string | null>(null)
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-
-  // Loading-phase timers — give the user visible feedback if Supabase auth is
-  // slow. The phases let us swap the button label without re-running the
-  // signInWithPassword call.
-  const stillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (stillTimerRef.current) clearTimeout(stillTimerRef.current)
-      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
-    }
-  }, [])
-
-  function clearLoadingTimers() {
-    if (stillTimerRef.current) { clearTimeout(stillTimerRef.current); stillTimerRef.current = null }
-    if (timeoutTimerRef.current) { clearTimeout(timeoutTimerRef.current); timeoutTimerRef.current = null }
-  }
 
   function switchTab(t: 'login' | 'signup') {
     setTab(t)
@@ -50,47 +29,30 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setLoadingPhase('starting')
     setError(null)
 
-    // 0–5s: "Signing in..."  5–10s: "Still signing in..."  >10s: timeout.
-    stillTimerRef.current = setTimeout(() => setLoadingPhase('still'), 5000)
-    timeoutTimerRef.current = setTimeout(() => {
-      setLoadingPhase('timeout')
-      setError('Login is taking longer than expected. Please try again.')
-      setLoading(false)
-      // password stays cleared; keep the email filled so the user can retry
-      setPassword('')
-    }, 10000)
-
-    let signedIn = false
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        clearLoadingTimers()
-        // Map Supabase's "Invalid login credentials" to a friendlier message.
         const lowered = error.message.toLowerCase()
-        const isCreds = lowered.includes('invalid login credentials') || lowered.includes('invalid email or password')
+        const isCreds =
+          lowered.includes('invalid login credentials') ||
+          lowered.includes('invalid email or password')
         setError(isCreds ? 'Invalid email or password.' : error.message)
         setLoading(false)
         return
       }
-      signedIn = true
     } catch (err) {
-      clearLoadingTimers()
       const msg = err instanceof Error ? err.message : 'Login failed. Please try again.'
       setError(msg)
       setLoading(false)
       return
     }
 
-    if (signedIn) {
-      // Redirect immediately on success — do NOT block on profile/credits.
-      // The sidebar and dashboard fetch their own data after navigation.
-      clearLoadingTimers()
-      router.refresh()
-      onClose()
-    }
+    // Hard navigate so the Next.js middleware sees the freshly-set Supabase
+    // auth cookies on the next request. router.refresh raced the cookie sync
+    // and left the modal stuck on the loading button.
+    window.location.assign('/generate')
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -143,8 +105,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     // Try immediate sign-in (if email confirmation is disabled)
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (!signInError) {
-      router.refresh()
-      onClose()
+      window.location.assign('/generate')
     } else {
       setEmailSent(true)
       setLoading(false)
@@ -371,9 +332,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   {loading ? (
                     <>
                       <div className="w-4 h-4 rounded-full border border-white/20" style={{ borderTopColor: 'white', animation: 'spin 0.65s linear infinite' }} />
-                      {tab === 'signup'
-                        ? 'Creating account...'
-                        : loadingPhase === 'still' ? 'Still signing in...' : 'Signing in...'}
+                      {tab === 'signup' ? 'Creating account...' : 'Signing in...'}
                     </>
                   ) : tab === 'signup' ? '⚡ Create Free Account' : '🔑 Sign In'}
                 </button>
