@@ -24,11 +24,21 @@ interface Analysis {
   scenePlan: string[]
 }
 
-type Phase = 'idle' | 'analyzing' | 'options' | 'generating' | 'done' | 'error'
-type Duration = 10 | 30 | 60
+type Phase =
+  | 'idle'
+  | 'analyzing'
+  | 'options'
+  | 'generating'
+  | 'composing'
+  | 'done'
+  | 'error'
+type Duration = 10 | 30 | 50
 type Quality = 'basic' | 'basic_ai' | 'pro'
+type ComposeStage = 'voiceover' | 'captions' | 'rendering' | null
 
 const POLL_INTERVAL_MS = 5000
+const FINAL_POLL_INTERVAL_MS = 4000
+const FINAL_POLL_MAX_ATTEMPTS = 90 // ~6 minutes
 
 const QUALITY_OPTIONS: {
   key: Quality
@@ -71,18 +81,27 @@ export default function GenerateClient() {
   const [playerIndex, setPlayerIndex] = useState(0)
   const [duration, setDuration] = useState<Duration>(30)
   const [quality, setQuality] = useState<Quality>('basic_ai')
-  // Cost the server reports back on POST /api/generate-video — we echo it on
-  // every status poll so the route can refund the exact amount if the whole
-  // generation ends up with no playable clip.
   const [chargedCost, setChargedCost] = useState<number>(1)
 
+  // Final composition state — only when finalVideoUrl is set is the video
+  // actually "ready". Runway clip URLs are visuals only, not the final MP4.
+  const [finalRenderId, setFinalRenderId] = useState<string | null>(null)
+  const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
+  const [finalRenderError, setFinalRenderError] = useState<string | null>(null)
+  const [composeStage, setComposeStage] = useState<ComposeStage>(null)
+  const [finalProgress, setFinalProgress] = useState(0)
+  const [creditsDeducted, setCreditsDeducted] = useState(false)
+
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const finalPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const composeTriggeredRef = useRef(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+      if (finalPollTimerRef.current) clearTimeout(finalPollTimerRef.current)
     }
   }, [])
 
@@ -113,16 +132,22 @@ export default function GenerateClient() {
         }
 
         if (data.done) {
-          // Rule 1 enforcement: the server already downgrades SUCCEEDED-with-no-
-          // video to FAILED. "playable" is the count of clips with a real video
-          // URL. If nothing's playable when done, this is a hard failure.
-          const playable = typeof data.playable === 'number' ? data.playable : 0
+          // Count playable clips from the tasks themselves (the status route
+          // doesn't return a separate `playable` field). A "playable" clip
+          // SUCCEEDED and returned a URL that looks like a video file.
+          const playable = (data.tasks as TaskState[]).filter(
+            (t) => t.status === 'SUCCEEDED' && looksLikeVideoUrl(t.videoUrl)
+          ).length
           if (playable === 0) {
             setError(GENERIC_ERROR)
             setPhase('error')
             return
           }
-          setPhase('done')
+          // Visuals are ready — move to composing phase. The composing effect
+          // will fire /api/finalize-video to build the actual final MP4
+          // (voiceover + captions + composition). Until that succeeds, we do
+          // NOT treat the Short as ready.
+          setPhase('composing')
           return
         }
 
@@ -144,6 +169,170 @@ export default function GenerateClient() {
       }
     }
   }, [phase, tasks, chargedCost])
+
+  // ── Composition pipeline ───────────────────────────────────────────────
+  // When the Runway phase finishes successfully, fire /api/finalize-video to
+  // produce the actual composed MP4 (visuals + voiceover + captions). Until
+  // that's ready, we do NOT show "Your Short is ready" or enable Download.
+  useEffect(() => {
+    if (phase !== 'composing') return
+    if (composeTriggeredRef.current) return
+    composeTriggeredRef.current = true
+
+    const playableUrls = tasks
+      .slice()
+      .sort((a, b) => a.index - b.index)
+      .map((t) => states[t.id])
+      .filter(
+        (s): s is TaskState =>
+          !!s && s.status === 'SUCCEEDED' && looksLikeVideoUrl(s.videoUrl)
+      )
+      .map((s) => s.videoUrl as string)
+
+    if (playableUrls.length === 0) {
+      setFinalRenderError('No visual clips available to compose.')
+      setPhase('error')
+      setError('Final composition failed. Please try again.')
+      return
+    }
+
+    setComposeStage('voiceover')
+    setFinalProgress(8)
+    setFinalRenderError(null)
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/finalize-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visualUrls: playableUrls,
+            prompt: prompt.trim(),
+            title: analysis?.title ?? '',
+            summary: analysis?.summary ?? '',
+            duration,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          const msg =
+            typeof data?.error === 'string'
+              ? data.error
+              : 'Final composition failed. Please try again.'
+          console.error('[generate] finalize-video failed:', msg)
+          setFinalRenderError(msg)
+          setComposeStage(null)
+          setPhase('error')
+          setError(msg)
+          return
+        }
+        setComposeStage('rendering')
+        setFinalProgress(45)
+        setFinalRenderId(data.renderId)
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : 'Final composition request failed.'
+        console.error('[generate] finalize-video threw:', err)
+        setFinalRenderError(msg)
+        setComposeStage(null)
+        setPhase('error')
+        setError('Final composition failed. Please try again.')
+      }
+    })()
+  }, [phase, tasks, states, prompt, analysis, duration])
+
+  // Poll Creatomate render until the final MP4 lands.
+  useEffect(() => {
+    if (phase !== 'composing' || !finalRenderId) return
+    let cancelled = false
+    let attempts = 0
+
+    async function poll() {
+      attempts++
+      try {
+        const res = await fetch(
+          `/api/render/${encodeURIComponent(finalRenderId!)}`,
+          { cache: 'no-store' }
+        )
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          setFinalRenderError(data.error || 'Render lookup failed.')
+          setPhase('error')
+          setError('Final composition failed. Please try again.')
+          return
+        }
+        if (typeof data.progress === 'number') {
+          setFinalProgress((p) => Math.max(p, Math.min(99, 45 + data.progress * 0.5)))
+        }
+        if (data.status === 'succeeded') {
+          if (!data.url) {
+            setFinalRenderError('Final video URL missing from render service.')
+            setPhase('error')
+            setError('Final composition failed. Please try again.')
+            return
+          }
+          setFinalProgress(100)
+          setFinalVideoUrl(data.url as string)
+          setComposeStage(null)
+          setPhase('done')
+          return
+        }
+        if (data.status === 'failed') {
+          setFinalRenderError(data.error || 'Render failed.')
+          setPhase('error')
+          setError('Final composition failed. Please try again.')
+          return
+        }
+        if (attempts >= FINAL_POLL_MAX_ATTEMPTS) {
+          setFinalRenderError('Final render timed out — please try again.')
+          setPhase('error')
+          setError('Final composition failed. Please try again.')
+          return
+        }
+        finalPollTimerRef.current = setTimeout(poll, FINAL_POLL_INTERVAL_MS)
+      } catch (err) {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : 'Render poll failed.'
+        console.error('[generate] final-render poll error:', msg)
+        setFinalRenderError(msg)
+        setPhase('error')
+        setError('Final composition failed. Please try again.')
+      }
+    }
+
+    finalPollTimerRef.current = setTimeout(poll, 1500)
+    return () => {
+      cancelled = true
+      if (finalPollTimerRef.current) {
+        clearTimeout(finalPollTimerRef.current)
+        finalPollTimerRef.current = null
+      }
+    }
+  }, [phase, finalRenderId])
+
+  // Deduct credits ONLY after the final composed MP4 is ready.
+  // Never deduct for incomplete visuals or failed composition.
+  useEffect(() => {
+    if (phase !== 'done' || !finalVideoUrl || creditsDeducted) return
+    setCreditsDeducted(true)
+    ;(async () => {
+      try {
+        const res = await fetch('/api/credits/deduct', { method: 'POST' })
+        if (res.ok) {
+          try {
+            window.dispatchEvent(new Event('creditsChanged'))
+          } catch {}
+        } else {
+          console.warn('[generate] credit deduct returned', res.status)
+        }
+      } catch (err) {
+        console.error('[generate] credit deduct failed:', err)
+      }
+    })()
+  }, [phase, finalVideoUrl, creditsDeducted])
 
   const orderedClips = useMemo(() => {
     return tasks
@@ -256,6 +445,13 @@ export default function GenerateClient() {
     setTasks([])
     setScenes([])
     setPlayerIndex(0)
+    setFinalRenderId(null)
+    setFinalVideoUrl(null)
+    setFinalRenderError(null)
+    setComposeStage(null)
+    setFinalProgress(0)
+    setCreditsDeducted(false)
+    composeTriggeredRef.current = false
     setPhase('generating')
 
     try {
@@ -312,6 +508,10 @@ export default function GenerateClient() {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
     }
+    if (finalPollTimerRef.current) {
+      clearTimeout(finalPollTimerRef.current)
+      finalPollTimerRef.current = null
+    }
     setPhase('idle')
     setAnalysis(null)
     setScenes([])
@@ -319,12 +519,23 @@ export default function GenerateClient() {
     setStates({})
     setError(null)
     setPlayerIndex(0)
+    setFinalRenderId(null)
+    setFinalVideoUrl(null)
+    setFinalRenderError(null)
+    setComposeStage(null)
+    setFinalProgress(0)
+    setCreditsDeducted(false)
+    composeTriggeredRef.current = false
   }
 
   function handleBackToEdit() {
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
+    }
+    if (finalPollTimerRef.current) {
+      clearTimeout(finalPollTimerRef.current)
+      finalPollTimerRef.current = null
     }
     setPhase('idle')
     setError(null)
@@ -349,7 +560,19 @@ export default function GenerateClient() {
   const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
-  const showRender = phase === 'generating' || phase === 'done' || phase === 'error'
+  const showRender =
+    phase === 'generating' ||
+    phase === 'composing' ||
+    phase === 'done' ||
+    phase === 'error'
+
+  // Stage label for the final-composition phase.
+  function composeStageLabel(): string {
+    if (composeStage === 'voiceover') return '🎙️ Generating voiceover...'
+    if (composeStage === 'captions') return '📝 Adding captions...'
+    if (composeStage === 'rendering') return '⚡ Rendering final video...'
+    return '🎬 Preparing final composition...'
+  }
 
   return (
     <main className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
@@ -379,7 +602,10 @@ export default function GenerateClient() {
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
           {showStep2 && 'Pick duration and quality, then generate.'}
-          {showRender && 'Rendering your vertical 9:16 Short.'}
+          {showRender && phase === 'composing' && composeStageLabel()}
+          {showRender && phase === 'generating' && '🎬 Creating visuals...'}
+          {showRender && phase === 'done' && '✅ Video ready'}
+          {showRender && phase === 'error' && '⚠ Generation failed'}
         </p>
       </div>
 
@@ -537,7 +763,7 @@ export default function GenerateClient() {
                 Duration
               </div>
               <div className="flex gap-2 flex-wrap">
-                {([10, 30, 60] as Duration[]).map((d) => (
+                {([10, 30, 50] as Duration[]).map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
@@ -554,12 +780,9 @@ export default function GenerateClient() {
                   </button>
                 ))}
               </div>
-              {duration !== 10 && (
-                <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-                  Rendered as {duration === 30 ? '3' : '6'} cinematic 10s clips you can stitch in
-                  any editor.
-                </p>
-              )}
+              <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+                Final MP4 is composed with voiceover and burned-in captions to match your selected duration.
+              </p>
             </div>
 
             {/* Platform */}
@@ -676,18 +899,33 @@ export default function GenerateClient() {
             >
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-                  {phase === 'done'
-                    ? '✅ Your Short is ready'
-                    : `🎬 Rendering ${Math.min(succeededCount + 1, tasks.length)}/${tasks.length}…`}
+                  {phase === 'done' && finalVideoUrl
+                    ? '✅ Your video is ready'
+                    : phase === 'composing'
+                    ? composeStageLabel()
+                    : phase === 'error'
+                    ? '⚠ Generation failed'
+                    : `🎬 Creating visuals ${Math.min(
+                        succeededCount + 1,
+                        tasks.length
+                      )}/${tasks.length}…`}
                 </div>
                 <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                  {totalProgress}%
+                  {phase === 'composing'
+                    ? `${Math.round(finalProgress)}%`
+                    : `${totalProgress}%`}
                 </div>
               </div>
-              <ProgressBar progress={totalProgress} />
+              <ProgressBar
+                progress={phase === 'composing' ? finalProgress : totalProgress}
+              />
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
-                {phase === 'done'
-                  ? 'All clips finished. Press play below to watch the full Short.'
+                {phase === 'done' && finalVideoUrl
+                  ? 'Final MP4 ready below — full video with voiceover and burned-in captions.'
+                  : phase === 'composing'
+                  ? 'Final composition adds voiceover, captions, and stitches everything into one MP4.'
+                  : phase === 'error'
+                  ? finalRenderError ?? 'Generation failed. Please try again.'
                   : 'Runway typically takes ~30-90 seconds per 10s clip. We poll every 5 seconds.'}
               </div>
 
@@ -793,13 +1031,13 @@ export default function GenerateClient() {
             </section>
           )}
 
-          {phase === 'done' && successClips.length === 0 && (
+          {phase === 'done' && !finalVideoUrl && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
             >
               <div className="font-black text-base mb-1" style={{ color: '#fca5a5' }}>
-                Arquivo de vídeo não disponível. Tente novamente.
+                Final composition failed. Please try again.
               </div>
             </section>
           )}
@@ -809,19 +1047,26 @@ export default function GenerateClient() {
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
             >
-              <div className="font-black text-base" style={{ color: '#fca5a5' }}>
-                Geração falhou. Tente novamente.
+              <div className="font-black text-base mb-1" style={{ color: '#fca5a5' }}>
+                {finalRenderError
+                  ? 'Final composition failed. Please try again.'
+                  : 'Geração falhou. Tente novamente.'}
               </div>
+              {finalRenderError && (
+                <div className="text-xs mt-1" style={{ color: '#fca5a5', opacity: 0.85 }}>
+                  {finalRenderError}
+                </div>
+              )}
             </section>
           )}
 
-          {phase === 'done' && successClips.length > 0 && currentClipUrl && (
+          {phase === 'done' && finalVideoUrl && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
               <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                ▶ Full Short — clip {playerIndex + 1}/{successClips.length}
+                ▶ Your final Short ({duration}s)
               </div>
               <div
                 className="rounded-2xl overflow-hidden w-full max-w-[300px]"
@@ -834,69 +1079,35 @@ export default function GenerateClient() {
               >
                 <video
                   ref={videoRef}
-                  key={currentClipUrl}
-                  src={currentClipUrl}
+                  key={finalVideoUrl}
+                  src={finalVideoUrl}
                   controls
                   autoPlay
                   playsInline
                   preload="metadata"
-                  poster={undefined /* Runway tasks don't return a thumbnail */}
-                  onEnded={handleVideoEnd}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </div>
-              <div className="flex items-center gap-2 mt-4">
-                {successClips.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPlayerIndex(i)}
-                    className="rounded-full"
-                    style={{
-                      width: 10,
-                      height: 10,
-                      background: i === playerIndex ? '#93c5fd' : 'rgba(255,255,255,.18)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: i === playerIndex ? '0 0 8px rgba(37,99,235,.6)' : 'none',
-                    }}
-                    aria-label={`Jump to clip ${i + 1}`}
-                  />
-                ))}
-              </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                {successClips.map((s, i) => {
-                  // Rule 5 — only render the download anchor when the URL
-                  // actually looks like a video. successClips already filters
-                  // via looksLikeVideoUrl, but we re-check here so any future
-                  // regression cannot ship a broken download.
-                  if (!s.videoUrl || !looksLikeVideoUrl(s.videoUrl)) return null
-                  return (
-                    <a
-                      key={s.id}
-                      href={s.videoUrl}
-                      download={`shortsforge-clip-${i + 1}.mp4`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
-                      style={{
-                        background:
-                          i === 0
-                            ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
-                            : 'rgba(37,99,235,.12)',
-                        border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
-                        color: i === 0 ? '#fff' : '#93c5fd',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      ⬇ Clip {i + 1}
-                    </a>
-                  )
-                })}
+                <a
+                  href={finalVideoUrl}
+                  download={`shortsforge-${duration}s.mp4`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                    border: 'none',
+                    textDecoration: 'none',
+                    boxShadow: '0 8px 28px rgba(37,99,235,.4)',
+                  }}
+                >
+                  ⬇ Download MP4
+                </a>
               </div>
               <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
-                Tip: drop the clips into any editor (CapCut, InVideo) to merge them with captions and
-                voiceover.
+                Final {duration}s MP4 with voiceover and burned-in English captions.
               </p>
             </section>
           )}

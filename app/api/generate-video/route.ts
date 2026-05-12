@@ -4,9 +4,10 @@ import { generateScenes, startRunwayTask, buildRunwayPayload } from '@/lib/runwa
 
 export const maxDuration = 60
 
-// Runway Gen-4 Turbo only supports 5 or 10 seconds.
-// 30s / 60s multi-clip stitching is not yet implemented.
-const SUPPORTED_DURATIONS = [5, 10]
+// Runway Gen-4 Turbo only accepts 5 or 10 seconds per clip.
+// For longer durations (30s / 50s) the client composes the final MP4 by
+// tiling/looping the 10s Runway clips inside /api/finalize-video.
+const FINAL_DURATIONS = [10, 30, 50]
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,16 +53,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
     }
 
-    // Resolve platform and duration — clamp duration to valid Runway values (5 or 10)
+    // Resolve platform and duration.
+    // The user's selected duration (10/30/50) becomes the FINAL composed
+    // length. Runway itself only renders 5s or 10s clips — we always ask
+    // for 10s clips and let /api/finalize-video tile them to the target.
     const platform = (body.platform ?? 'YouTube Shorts').toString()
-    const requestedDuration = Number(body.duration) || 10
-    if (!SUPPORTED_DURATIONS.includes(requestedDuration) && requestedDuration > 10) {
-      return NextResponse.json(
-        { error: 'Multi-clip rendering (30s / 60s) is coming soon. Please choose 10s for now.' },
-        { status: 400 }
-      )
-    }
-    const duration = requestedDuration <= 5 ? 5 : 10
+    const rawDuration = Number(body.duration) || 10
+    const finalDuration = FINAL_DURATIONS.includes(rawDuration) ? rawDuration : 10
+    const runwayClipDuration = 10
 
     // Step 1 — OpenAI breaks the prompt into 4 cinematic scenes
     let scenes: string[]
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
     // Pre-validate the first scene payload BEFORE launching tasks.
     // This catches any Runway field errors early — before credits are charged.
     try {
-      buildRunwayPayload(scenes[0], platform, duration)
+      buildRunwayPayload(scenes[0], platform, runwayClipDuration)
     } catch (validationErr: unknown) {
       const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
       console.error('[generate-video] payload pre-validation failed:', msg)
@@ -93,7 +92,9 @@ export async function POST(req: NextRequest) {
     let tasks: { id: string; promptText: string }[]
     try {
       tasks = await Promise.all(
-        scenes.map((sceneText) => startRunwayTask(sceneText, platform, duration))
+        scenes.map((sceneText) =>
+          startRunwayTask(sceneText, platform, runwayClipDuration)
+        )
       )
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       prompt,
       scenes,
+      duration: finalDuration,
       tasks: tasks.map((t, i) => ({
         id: t.id,
         promptText: t.promptText,
