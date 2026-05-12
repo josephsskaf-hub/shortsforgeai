@@ -90,15 +90,39 @@ export function sanitizePromptForRunway(raw: string): string {
 /**
  * Build a strictly-typed Runway text-to-video payload and validate every field.
  * Throws a descriptive error if any field would fail Runway validation.
+ *
+ * `quality` controls the prompt enhancement:
+ *  - 'basic': sanitized prompt only, standard settings.
+ *  - 'pro':   appends a cinematic-quality enhancer so Runway leans into
+ *             depth, lighting, and film-grade composition.
  */
+export type Quality = 'basic' | 'pro'
+
+const PRO_ENHANCER =
+  'cinematic film grade, 35mm motion picture lighting, shallow depth of field, ' +
+  'volumetric atmosphere, ultra-detailed textures, smooth gimbal camera motion, ' +
+  'high dynamic range, vertical 9:16 framing'
+
 export function buildRunwayPayload(
   rawPrompt: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): RunwayTextToVideoPayload {
-  const promptText = sanitizePromptForRunway(rawPrompt)
-  if (!promptText) throw new Error('promptText is empty after sanitization -- cannot send to Runway.')
-  if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
+  const sanitized = sanitizePromptForRunway(rawPrompt)
+  if (!sanitized) throw new Error('promptText is empty after sanitization -- cannot send to Runway.')
+
+  // For Pro, fold in the cinematic enhancer but never overflow the 500-char cap.
+  // We keep ~12 chars of breathing room for the separator.
+  let promptText = sanitized
+  if (quality === 'pro') {
+    const budget = 500 - PRO_ENHANCER.length - 4
+    const base = sanitized.length > budget ? sanitized.slice(0, budget).trim() : sanitized
+    promptText = `${base} -- ${PRO_ENHANCER}`
+  }
+  if (promptText.length > 500) {
+    promptText = promptText.slice(0, 500)
+  }
 
   const model: ValidModel = 'gen4.5'
   const ratio = mapPlatformToRatio(platform)
@@ -212,10 +236,11 @@ ${JSON.stringify(Array.from({ length: clampedCount }, (_, i) => `scene ${i + 1} 
 export async function startRunwayTask(
   rawPromptText: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): Promise<RunwayTaskHandle> {
   // Build and validate payload BEFORE calling Runway (no credits charged yet)
-  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds)
+  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds, quality)
 
   const bodyStr = JSON.stringify(payload)
   console.log(`[runway] sending to /text_to_video -- model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)

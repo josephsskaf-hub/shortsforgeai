@@ -39,10 +39,11 @@ interface ActiveSummary {
 
 type Phase = 'idle' | 'analyzing' | 'options' | 'generating' | 'done' | 'error'
 type Duration = 10 | 30 | 50
-type Quality = 'basic' | 'basic_ai' | 'pro'
+type Quality = 'basic' | 'pro'
 
 const POLL_INTERVAL_MS = 5000
 
+// Flat cost per job — 1 credit (Basic) or 2 credits (Pro) for any duration.
 const QUALITY_OPTIONS: {
   key: Quality
   title: string
@@ -50,9 +51,8 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 1, icon: '🎞️' },
-  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 1, icon: '⚡' },
-  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 2, icon: '✨' },
+  { key: 'basic', title: 'Basic', desc: 'Standard prompt settings, fast generation.',        credits: 1, icon: '⚡' },
+  { key: 'pro',   title: 'Pro',   desc: 'Stronger cinematic prompt settings, premium look.', credits: 2, icon: '✨' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -79,7 +79,7 @@ export default function GenerateClient() {
   const [error, setError] = useState<string | null>(null)
   const [playerIndex, setPlayerIndex] = useState(0)
   const [duration, setDuration] = useState<Duration>(10)
-  const [quality, setQuality] = useState<Quality>('basic_ai')
+  const [quality, setQuality] = useState<Quality>('basic')
   const [chargedCost, setChargedCost] = useState<number>(1)
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [recoverable, setRecoverable] = useState<ActiveSummary | null>(null)
@@ -450,7 +450,7 @@ export default function GenerateClient() {
         setClipsTotal(data.scenes.length)
       }
       if (typeof data.cost === 'number' && data.cost >= 1) {
-        setChargedCost(Math.min(50, Math.max(1, Math.floor(data.cost))))
+        setChargedCost(Math.min(2, Math.max(1, Math.floor(data.cost))))
       } else {
         setChargedCost(QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1)
       }
@@ -512,7 +512,7 @@ export default function GenerateClient() {
     setStates({})
     setPlayerIndex(0)
     setPrompt(recoverable.prompt || prompt)
-    setChargedCost(Math.min(50, Math.max(1, Math.floor(recoverable.cost || 1))))
+    setChargedCost(Math.min(2, Math.max(1, Math.floor(recoverable.cost || 1))))
     setGenerationId(recoverable.generation_id)
     setCompletedClipUrls(recoverable.completed_clip_urls ?? [])
     setAllClipUrls([])
@@ -548,11 +548,10 @@ export default function GenerateClient() {
   }, [recoverable])
 
   const currentClipUrl = successClips[playerIndex]?.videoUrl ?? null
-  const perClipCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
-  // Server multiplies per-clip cost by the number of clips for the chosen duration.
-  // Mirror that here so the button & warning show the real total.
+  // Flat per-job cost: 1 credit (Basic) or 2 credits (Pro), regardless of duration.
+  // 30s/50s jobs render 3 or 5 clips but still bill once, on successful completion.
   const expectedClipCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
-  const selectedCost = perClipCost * expectedClipCount
+  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
   const lowCredits = creditBalance !== null && creditBalance < selectedCost
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
@@ -824,7 +823,7 @@ export default function GenerateClient() {
               </div>
               {duration !== 10 && (
                 <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-                  Rendered as {duration === 30 ? '3' : '5'} cinematic 10s clips stitched together automatically.
+                  Delivered as {duration === 30 ? '3' : '5'} separate 10s clips you can stitch in any editor (CapCut, InVideo). Charged once, on success.
                 </p>
               )}
             </div>
@@ -990,8 +989,10 @@ export default function GenerateClient() {
               <ProgressBar progress={totalProgress} />
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {phase === 'done'
-                  ? 'All clips finished. Press play below to watch the full Short.'
-                  : 'Rendering your video… Runway typically takes ~30-90 seconds per 10s clip. We poll every 5 seconds.'}
+                  ? slots.length > 1
+                    ? `All ${slots.length} clips finished. Download them below and stitch in any editor.`
+                    : 'Your 10s clip is ready. Press play below to watch.'
+                  : `Rendering ${slots.length > 1 ? slots.length + ' clips' : 'your clip'}… Runway takes ~30-90s per 10s clip. We poll every 5s and launch the next clip automatically.`}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
@@ -1158,7 +1159,9 @@ export default function GenerateClient() {
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
               <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                ▶ Full Short — clip {playerIndex + 1}/{successClips.length}
+                {successClips.length > 1
+                  ? `▶ Preview clip ${playerIndex + 1}/${successClips.length}`
+                  : '▶ Your Short'}
               </div>
               <div
                 className="rounded-2xl overflow-hidden w-full max-w-[300px]"
@@ -1283,8 +1286,9 @@ export default function GenerateClient() {
               </div>
 
               <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
-                Tip: drop the clips into any editor (CapCut, InVideo) to merge them with captions and
-                voiceover.
+                {successClips.length > 1
+                  ? `Heads-up: 30s and 50s jobs are delivered as ${successClips.length} separate 10s clips. Drop them into CapCut, InVideo, or any editor to stitch with captions and voiceover.`
+                  : 'Tip: drop the clip into CapCut or InVideo to add captions, voiceover, and effects.'}
               </p>
             </section>
           )}

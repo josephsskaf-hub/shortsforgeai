@@ -177,7 +177,12 @@ export async function GET(req: NextRequest) {
         const nextScene = pendingScenes[0]
         let nextTask: { id: string; promptText: string }
         try {
-          nextTask = await startRunwayTask(nextScene, meta!.platform, 10)
+          nextTask = await startRunwayTask(
+            nextScene,
+            meta!.platform,
+            10,
+            meta!.quality === 'pro' ? 'pro' : 'basic',
+          )
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           console.error('[generate-video/status] failed to launch next clip:', msg)
@@ -232,7 +237,11 @@ export async function GET(req: NextRequest) {
       }
 
       const primaryUrl = allClipUrls[0]
-      const cost = Math.max(1, Math.min(50, meta?.cost ?? 1))
+      // Flat per-job pricing: Basic = 1 credit, Pro = 2 credits, regardless of
+      // clip count. The cap defends against legacy in-flight rows that were
+      // saved under the old per-clip multiplication.
+      const rawCost = meta?.cost ?? 1
+      const cost = meta?.quality === 'pro' ? 2 : Math.max(1, Math.min(2, rawCost))
 
       // Persist the complete list of clip URLs into meta so that cached reads
       // (status returning early because the row is already finalised) can hand

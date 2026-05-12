@@ -10,11 +10,13 @@ import {
 
 export const maxDuration = 60
 
-type Quality = 'basic' | 'basic_ai' | 'pro'
+type Quality = 'basic' | 'pro'
 
+// Flat per-job cost. The spec says credits are charged ONCE for the whole
+// generation regardless of clip count — 30s and 50s jobs do not pay 3x or 5x.
 function costForQuality(q: string | undefined): number {
   if (q === 'pro') return 2
-  return 1 // 'basic' and 'basic_ai'
+  return 1 // 'basic'
 }
 
 /**
@@ -100,8 +102,9 @@ export async function POST(req: NextRequest) {
     const requestedDuration = Number(body.duration) || 10
     const duration = requestedDuration <= 10 ? 10 : requestedDuration <= 30 ? 30 : 50
     const clipCount = clipCountForDuration(duration)
-    const quality: Quality = (body.quality === 'pro' || body.quality === 'basic_ai' ? body.quality : 'basic') as Quality
-    const cost = costForQuality(quality) * clipCount
+    const quality: Quality = body.quality === 'pro' ? 'pro' : 'basic'
+    // Flat cost — 1 credit for Basic, 2 credits for Pro, regardless of duration.
+    const cost = costForQuality(quality)
 
     // ââ Credit balance check (we DO NOT deduct here â deduction happens after
     // the Runway task completes successfully in /status). âââââââââââââââââââââ
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
     // Pre-validate the first scene payload BEFORE launching tasks.
     // This catches any Runway field errors early â before credits are charged.
     try {
-      buildRunwayPayload(scenes[0], platform, 10)
+      buildRunwayPayload(scenes[0], platform, 10, quality)
     } catch (validationErr: unknown) {
       const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
       console.error('[generate-video] payload pre-validation failed:', msg)
@@ -155,7 +158,7 @@ export async function POST(req: NextRequest) {
     // pending_scenes and launched sequentially by /status as each clip finishes.
     let singleTask: { id: string; promptText: string }
     try {
-      singleTask = await startRunwayTask(scenes[0], platform, 10)
+      singleTask = await startRunwayTask(scenes[0], platform, 10, quality)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] runway task start failed:', msg)
