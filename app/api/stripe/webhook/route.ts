@@ -30,6 +30,35 @@ export async function POST(req: NextRequest) {
 
   const supabase = getAdminClient()
 
+  // Idempotency guard. Stripe retries the same event on 5xx (or if our
+  // response is slow), and this handler has read-modify-write paths that
+  // would double-credit a user on retry. We dedupe on event.id by inserting
+  // into `stripe_events` — duplicate inserts fail and we exit early.
+  // Run this once in the Supabase SQL editor:
+  //   create table if not exists public.stripe_events (
+  //     id text primary key,
+  //     received_at timestamptz default now()
+  //   );
+  try {
+    const { error: dedupeErr } = await supabase
+      .from('stripe_events')
+      .insert({ id: event.id })
+    if (dedupeErr) {
+      // 23505 = unique_violation — we've already processed this event.
+      if (dedupeErr.code === '23505') {
+        return NextResponse.json({ received: true, duplicate: true })
+      }
+      // 42P01 = relation does not exist — table hasn't been created yet.
+      // Log and fall through; idempotency will be a no-op until the migration
+      // is applied, which is better than rejecting live webhooks.
+      if (dedupeErr.code !== '42P01') {
+        console.error('[stripe webhook] dedupe insert error:', dedupeErr.code, dedupeErr.message)
+      }
+    }
+  } catch (err) {
+    console.error('[stripe webhook] dedupe threw:', err)
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {

@@ -20,7 +20,7 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -31,27 +31,41 @@ export default function SignupPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      // Fire welcome email (non-blocking — never fails signup)
-      fetch('/api/send-welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      }).catch(() => {/* ignore email errors */})
-
-      // Try to sign in immediately (if email confirmation is off)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (!signInError) {
-        router.push('/dashboard')
-        router.refresh()
-      } else {
-        setSuccess(true)
-        setLoading(false)
-      }
+      return
     }
+
+    // Supabase returns a successful response with an empty identities array
+    // when the email is already registered. Don't leak that, and don't send
+    // a welcome email to an existing user — just point them at sign-in.
+    const identities = data.user?.identities
+    if (data.user && Array.isArray(identities) && identities.length === 0) {
+      setSuccess(true)
+      setLoading(false)
+      return
+    }
+
+    // Try to sign in immediately (if email confirmation is off).
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (signInError) {
+      // Email confirmation flow — surface the "check your inbox" screen.
+      setSuccess(true)
+      setLoading(false)
+      return
+    }
+
+    // Welcome email now that we're authenticated (the send-welcome route
+    // requires a valid session and verifies the email matches the caller).
+    fetch('/api/send-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {/* non-blocking — never fail signup on email failure */})
+
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (
@@ -173,7 +187,7 @@ export default function SignupPage() {
                   className="w-2 h-2 rounded-full animate-pulse-dot"
                   style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }}
                 />
-                Free tier · 5 viral scripts included
+                Free tier · 3 AI video credits included
               </div>
 
               <form onSubmit={handleSignup} className="flex flex-col gap-4">

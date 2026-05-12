@@ -74,7 +74,7 @@ async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string |
     const res = await fetch(supabaseUrl + '/storage/v1/object/voiceovers/' + fileName, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'audio/mpeg' },
-      body: buffer,
+      body: new Uint8Array(buffer),
     })
     if (!res.ok) {
       console.error('[render] upload failed:', res.status, await res.text().catch(() => ''))
@@ -86,6 +86,8 @@ async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string |
     return null
   }
 }
+
+const RENDER_COST = 1 // legacy Creatomate render path costs 1 credit per render
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,6 +102,29 @@ export async function POST(req: NextRequest) {
       body = (await req.json()) as RenderRequestBody
     } catch {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
+    }
+
+    // Credit gate. Without this, anyone with a session can hammer Creatomate
+    // for free. Check the balance before any expensive upstream calls (TTS,
+    // Creatomate). We deduct atomically below once the render has actually
+    // been queued, so a Creatomate rejection doesn't burn a credit.
+    {
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      if (profileErr && profileErr.code !== 'PGRST116') {
+        console.error('[render] credit lookup failed:', profileErr.message)
+        return NextResponse.json({ error: 'Could not verify your credit balance.' }, { status: 500 })
+      }
+      const balance = profile?.video_credits ?? 0
+      if (balance < RENDER_COST) {
+        return NextResponse.json(
+          { error: 'Not enough credits.', needed: RENDER_COST, balance },
+          { status: 402 }
+        )
+      }
     }
 
     const script = (body.script ?? '').trim()
@@ -302,6 +327,33 @@ export async function POST(req: NextRequest) {
     if (!renderId) {
       console.error('[render] No render ID returned:', responseText)
       return NextResponse.json({ error: 'Render service returned no job id.' }, { status: 502 })
+    }
+
+    // Deduct credits now that the render is queued. Guarded by `.gte` so
+    // concurrent requests can't drive the balance negative; if the guard
+    // rejects, we still let the render proceed (the user already had enough
+    // credits when the gate above ran), but we log loudly so we can audit.
+    try {
+      const { data: profileNow } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      const balance = profileNow?.video_credits ?? 0
+      const next = Math.max(0, balance - RENDER_COST)
+      const { error: dedErr, data: rows } = await supabase
+        .from('profiles')
+        .update({ video_credits: next })
+        .eq('id', user.id)
+        .gte('video_credits', RENDER_COST)
+        .select('id')
+      if (dedErr) {
+        console.error('[render] credit deduction error:', dedErr.message)
+      } else if (!rows || rows.length === 0) {
+        console.warn('[render] credit deduction skipped — balance moved out from under us', user.id)
+      }
+    } catch (err) {
+      console.error('[render] credit deduction threw:', err)
     }
 
     console.log('[render] started, renderId:', renderId)

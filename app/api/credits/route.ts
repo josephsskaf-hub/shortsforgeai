@@ -28,11 +28,17 @@ export async function GET() {
       if (error.code === '42703' || error.message?.includes('video_credits')) {
         return NextResponse.json({ credits: DEFAULT_CREDITS, migrationNeeded: true })
       }
+      // No row found (new user before profiles row exists) — give them the free tier.
       if (error.code === 'PGRST116') {
         return NextResponse.json({ credits: DEFAULT_CREDITS })
       }
-      console.error('[credits GET] error:', error.message)
-      return NextResponse.json({ credits: DEFAULT_CREDITS })
+      // Don't fall back to DEFAULT_CREDITS on an unknown error — that would hide a
+      // real DB failure and let users start a generation they can't actually pay for.
+      console.error('[credits GET] db error:', error.code, error.message)
+      return NextResponse.json(
+        { error: 'Could not load your credit balance. Please retry.' },
+        { status: 500 }
+      )
     }
 
     const credits = data?.video_credits ?? DEFAULT_CREDITS

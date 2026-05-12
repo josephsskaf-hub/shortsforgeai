@@ -211,7 +211,6 @@ export default function HomePage() {
   const router = useRouter()
   const nicheGridRef = useRef<HTMLDivElement>(null)
   const pricingRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [userEmail, setUserEmail] = useState('')
@@ -256,14 +255,17 @@ export default function HomePage() {
 
   function handleNicheClick(nicheId: string) {
     if (!user) {
-      router.push('/login')
+      const dest = `/create?niche=${encodeURIComponent(nicheId)}`
+      router.push(`/login?redirect=${encodeURIComponent(dest)}`)
       return
     }
     if (nicheId !== FREE_NICHE_ID && !isPro) {
       router.push('/pricing')
       return
     }
-    router.push('/dashboard')
+    // Carry the chosen niche through so the create page lands on it instead
+    // of forcing the user to re-pick from the dashboard.
+    router.push(`/create?niche=${encodeURIComponent(nicheId)}`)
   }
 
   function isCardDisabled(nicheId: string): boolean {
@@ -430,38 +432,6 @@ export default function HomePage() {
                 padding: 0,
               }}
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: 'none' }}
-              onChange={() => { /* placeholder — no-op for now */ }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Attach a file"
-              style={{
-                position: 'absolute',
-                bottom: 16,
-                left: 16,
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: '1.2rem',
-                lineHeight: 1,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-                fontFamily: 'inherit',
-              }}
-            >
-              +
-            </button>
             <button
               type="button"
               onClick={handleHeroGenerate}

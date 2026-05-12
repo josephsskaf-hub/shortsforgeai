@@ -43,6 +43,11 @@ export async function GET() {
         scenes: meta?.scenes ?? [],
         tasks: meta?.task_ids ?? [],
         cost: meta?.cost ?? 1,
+        clips_total: meta?.scenes?.length ?? (meta?.task_ids?.length ?? 1),
+        clips_done: meta?.completed_clip_urls?.length ?? 0,
+        completed_clip_urls: meta?.completed_clip_urls ?? [],
+        duration: meta?.duration ?? 10,
+        quality: meta?.quality ?? 'basic_ai',
       },
     })
   } catch (error: unknown) {

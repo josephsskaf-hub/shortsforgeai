@@ -88,10 +88,15 @@ export async function GET(req: NextRequest) {
 
       // Already finalised â return cached state without hitting Runway again.
       if (status !== 'processing') {
+        const allUrls = meta?.completed_clip_urls ?? []
+        const primary = typeof video.video_url === 'string' ? video.video_url : null
         return NextResponse.json({
           generation_id: video.id,
           status,
-          video_url: typeof video.video_url === 'string' ? video.video_url : null,
+          video_url: primary,
+          all_clip_urls: allUrls.length > 0 ? allUrls : primary ? [primary] : [],
+          completed_clip_urls: allUrls,
+          clips_total: meta?.scenes.length ?? (primary ? 1 : 0),
           done: true,
           tasks: [],
         })
@@ -133,8 +138,9 @@ export async function GET(req: NextRequest) {
       const succeeded = results.filter((r) => r.status === 'SUCCEEDED').length
 
       if (!allDone) {
-        // Still working â touch updated_at so the stale sweeper sees activity.
         await touchGeneration(supabase, String(video.id))
+        const completedUrlsSoFar = meta?.completed_clip_urls ?? []
+        const clipsTotal = meta?.scenes.length ?? 1
         return NextResponse.json({
           generation_id: video.id,
           status: 'processing',
@@ -143,6 +149,10 @@ export async function GET(req: NextRequest) {
           playable: playable.length,
           total: results.length,
           tasks: results,
+          completed_clip_urls: completedUrlsSoFar,
+          clip_index: completedUrlsSoFar.length,
+          clips_done: completedUrlsSoFar.length,
+          clips_total: clipsTotal,
         })
       }
 
@@ -224,12 +234,21 @@ export async function GET(req: NextRequest) {
       const primaryUrl = allClipUrls[0]
       const cost = Math.max(1, Math.min(50, meta?.cost ?? 1))
 
-      // Atomic finalise: only one polling request gets to flip processing -> completed,
-      // so credits can never be deducted twice.
-      const won = await finalizeGeneration(supabase, String(video.id), 'completed', {
+      // Persist the complete list of clip URLs into meta so that cached reads
+      // (status returning early because the row is already finalised) can hand
+      // back every clip, not just the primary one.
+      const finalMeta = meta
+        ? JSON.stringify({ ...meta, completed_clip_urls: allClipUrls, pending_scenes: [] })
+        : undefined
+      const finalisePatch: Record<string, unknown> = {
         video_url: primaryUrl,
         credits_used: cost,
-      })
+      }
+      if (finalMeta) finalisePatch.script = finalMeta
+
+      // Atomic finalise: only one polling request gets to flip processing -> completed,
+      // so credits can never be deducted twice.
+      const won = await finalizeGeneration(supabase, String(video.id), 'completed', finalisePatch)
 
       let creditsDeducted = false
       if (won) {
@@ -266,6 +285,8 @@ export async function GET(req: NextRequest) {
         total: results.length,
         video_url: primaryUrl,
         all_clip_urls: allClipUrls,
+        completed_clip_urls: allClipUrls,
+        clips_total: meta?.scenes.length ?? allClipUrls.length,
         tasks: results,
         cost,
         creditsDeducted,

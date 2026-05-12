@@ -1,12 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
+// Only honor redirects that stay on our own site, so a malicious referrer
+// can't bounce a logged-in user out to an external phishing page.
+function safeRedirect(raw: string | null): string {
+  if (!raw) return '/dashboard'
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
+  return raw
+}
+
+// Wrap the searchParams-consuming form in a Suspense boundary — Next.js 14
+// requires this when a client page reads useSearchParams during prerender.
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -25,7 +44,8 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      const dest = safeRedirect(searchParams.get('redirect'))
+      router.push(dest)
       router.refresh()
     }
   }

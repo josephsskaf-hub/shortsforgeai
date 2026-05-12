@@ -6,3 +6,5 @@ RODAR-DEPLOY.bat
 CORRIGIR-E-PUSH.bat
 RODAR-DEPLOY.bat
 CORRIGIR-E-PUSH.bat
+tsconfig.tsbuildinfo
+*.log

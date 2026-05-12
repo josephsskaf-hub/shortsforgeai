@@ -86,30 +86,6 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
           </div>
         )}
 
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center relative transition-all"
-          style={{
-            background: 'rgba(255,255,255,.03)',
-            border: '1px solid var(--border)',
-            color: 'var(--muted2)',
-            cursor: 'pointer',
-            fontSize: '0.88rem',
-          }}
-          title="Notifications"
-        >
-          🔔
-          <span
-            className="absolute rounded-full animate-pulse-dot"
-            style={{
-              top: 7,
-              right: 7,
-              width: 6,
-              height: 6,
-              background: 'var(--indigo-light)',
-              border: '1.5px solid var(--bg)',
-            }}
-          />
-        </div>
       </div>
     </div>
   )

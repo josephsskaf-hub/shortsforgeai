@@ -24,7 +24,9 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
   const [portalLoading, setPortalLoading] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
 
-  const FREE_LIMIT = 2
+  // Free-tier video credits — kept in sync with DEFAULT_CREDITS in
+  // app/api/credits/route.ts and the signup/welcome-email copy.
+  const FREE_LIMIT = 3
   const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
   const initial = (email?.[0] ?? 'U').toUpperCase()
 
@@ -35,13 +37,23 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
     router.refresh()
   }
 
+  const [portalError, setPortalError] = useState<string | null>(null)
   async function handlePortal() {
     setPortalLoading(true)
+    setPortalError(null)
     try {
       const res = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data?.url) {
+        window.location.href = data.url
+        return
+      }
+      // No URL means the request failed — show the user instead of leaving the
+      // button spinning forever.
+      setPortalError(data?.error || 'Could not open the billing portal. Please retry.')
     } catch {
+      setPortalError('Could not open the billing portal. Please retry.')
+    } finally {
       setPortalLoading(false)
     }
   }
@@ -167,6 +179,11 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
               >
                 {portalLoading ? 'Opening...' : '⚙️ Manage Billing'}
               </button>
+              {portalError && (
+                <p className="text-xs mt-2" style={{ color: '#f87171' }} role="alert">
+                  {portalError}
+                </p>
+              )}
             </div>
           ) : (
             <div>
@@ -174,7 +191,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 <span className="text-2xl">⚡</span>
                 <div>
                   <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Free Plan</div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>2 total generations · Upgrade to go unlimited</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>3 free video credits · Upgrade to go unlimited</div>
                 </div>
               </div>
               <Link

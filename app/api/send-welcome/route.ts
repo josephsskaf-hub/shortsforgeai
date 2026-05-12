@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shortsforgeai.vercel.app'
@@ -6,10 +7,24 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shorts
 
 export async function POST(request: NextRequest) {
   try {
+    // Require a signed-in caller, and only allow them to send a welcome to
+    // their own email. Without this guard the endpoint is a spam/quota-burn
+    // vector — anyone could POST any email and trigger Resend.
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { email, name } = await request.json()
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    }
+    if (typeof email !== 'string' || email.toLowerCase() !== (user.email ?? '').toLowerCase()) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // If no Resend key is configured, silently skip (don't break signup)
@@ -53,9 +68,9 @@ export async function POST(request: NextRequest) {
 
               <!-- Free generations badge -->
               <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-                <p style="color:#818cf8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free scripts are waiting</p>
-                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free generations</p>
-                <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Each gives you <strong style="color:#94a3b8;">5 complete Shorts packages</strong> with hooks, titles, full scripts, hashtags &amp; descriptions.</p>
+                <p style="color:#818cf8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
+                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">3 free video credits</p>
+                <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to generate <strong style="color:#94a3b8;">3 short AI videos</strong> — 10s clips, vertical 9:16, ready to upload.</p>
               </div>
 
               <!-- Features list -->
@@ -129,8 +144,8 @@ export async function POST(request: NextRequest) {
 
 Welcome to ShortsForgeAI! 🎬
 
-You have 2 free script generations waiting for you.
-Each generation gives you 5 complete Shorts packages with:
+You have 3 free video credits waiting — enough to generate 3 short AI videos.
+Every Short comes with:
 - Hooks that stop the scroll
 - Titles optimized for YouTube
 - Full scripts ready to film
@@ -153,7 +168,7 @@ www.shortsforgeai.vercel.app`
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [email],
-        subject: '⚡ Your 2 free Shorts scripts are ready',
+        subject: '⚡ Your 3 free AI video credits are ready',
         html,
         text,
       }),
@@ -162,15 +177,16 @@ www.shortsforgeai.vercel.app`
     if (!response.ok) {
       const body = await response.text()
       console.error('[send-welcome] Resend error:', response.status, body)
-      // Return success anyway so signup doesn't appear to fail
-      return NextResponse.json({ sent: false, error: body })
+      // Return success anyway so signup doesn't appear to fail — but don't echo
+      // the upstream response body to the client; it may contain provider
+      // diagnostics that don't belong in user-facing payloads.
+      return NextResponse.json({ sent: false, error: 'Email provider rejected the request.' })
     }
 
     const data = await response.json()
     return NextResponse.json({ sent: true, id: data.id })
   } catch (err) {
     console.error('[send-welcome] Unexpected error:', err)
-    // Never fail the signup — log and return 200
-    return NextResponse.json({ sent: false, error: String(err) })
+    return NextResponse.json({ sent: false, error: 'Welcome email could not be sent.' })
   }
 }
