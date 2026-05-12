@@ -31,11 +31,36 @@ interface CreativeBrief {
   youtube_title: string
   youtube_description: string
   hashtags: string[]
+  // Push #024B: short cinematic prompt safe to send straight to Runway.
+  // Max 500 chars (hard clamp), visual-only — no voiceover, hashtags, or
+  // YouTube metadata. The client may pass this to /api/generate-video so the
+  // server can skip a fresh OpenAI scene call for the overall video.
+  provider_prompt: string
 
   // Legacy compatibility — populated from the new fields so older callers
   // (e.g. GenerateClient before the matching client update) don't break.
   title: string
   scenePlan: string[]
+}
+
+// Runway's text_to_video endpoint rejects prompts >500 chars. We clamp every
+// model-facing string to this cap before either storing it or sending it on.
+const PROVIDER_PROMPT_MAX = 500
+
+// Hard-clamp a string to `max` characters at a sentence/comma boundary when
+// possible, falling back to a plain slice. Strips leading/trailing whitespace.
+export function clampToProviderLimit(raw: string, max = PROVIDER_PROMPT_MAX): string {
+  const trimmed = raw.replace(/\s+/g, ' ').trim()
+  if (trimmed.length <= max) return trimmed
+  const window = trimmed.slice(0, max)
+  // Prefer to cut at the last sentence boundary or comma so we don't end mid-word.
+  const lastSentence = Math.max(window.lastIndexOf('. '), window.lastIndexOf('! '), window.lastIndexOf('? '))
+  if (lastSentence > max * 0.6) return window.slice(0, lastSentence + 1).trim()
+  const lastComma = window.lastIndexOf(', ')
+  if (lastComma > max * 0.6) return window.slice(0, lastComma).trim()
+  const lastSpace = window.lastIndexOf(' ')
+  if (lastSpace > max * 0.6) return window.slice(0, lastSpace).trim()
+  return window.trim()
 }
 
 function inferNiche(prompt: string): string {
@@ -109,6 +134,12 @@ function fallbackBrief(prompt: string): CreativeBrief {
       voiceover: 'Follow for the part nobody is allowed to talk about.',
     },
   ]
+  const providerPrompt = clampToProviderLimit(
+    `Cinematic vertical 9:16 video, ${tone.toLowerCase()} tone, ${niche.toLowerCase()} aesthetic. ` +
+    `Dark moody lighting, deep shadows, dramatic camera moves, rich color grading, ` +
+    `high contrast, atmospheric haze, single subject framing, suspenseful build, ` +
+    `ultra-detailed textures, 35mm film grain, hyperreal.`,
+  )
   return {
     viral_title: trimmed || 'The Truth Nobody Told You',
     hook: 'You have never heard about this — and that is exactly the point.',
@@ -122,6 +153,7 @@ function fallbackBrief(prompt: string): CreativeBrief {
     youtube_title: trimmed || 'The Story Nobody Wanted You To Hear #shorts',
     youtube_description: 'A cinematic Short about the part of the story most people never get told. Watch to the end for the twist.',
     hashtags: ['#shorts', '#viral', '#mystery', '#fyp', '#storytime'],
+    provider_prompt: providerPrompt,
     title: trimmed || 'The Truth Nobody Told You',
     scenePlan: scenes.map((s) => s.visual_prompt),
   }
@@ -148,6 +180,9 @@ GENRE-SPECIFIC GUIDANCE:
 - True Crime: cold lighting, slow tracking shots, evidence-board feel, restraint.
 - Tech / AI: clean futurism, glowing UI, magenta/teal palette, motion in every shot.
 
+PROVIDER PROMPT — important:
+You also produce a separate "provider_prompt": a SHORT cinematic description (200-450 chars, NEVER over 500) that an AI video model can use directly. It must be visual only — no voiceover, no hashtags, no YouTube text, no scene list. Describe overall mood, color palette, lighting, camera language, subject framing. Example: "Cinematic vertical 9:16 video of a deep ocean at night, sonar screens glowing blue, underwater shadows moving slowly, suspenseful scientific monitoring station, realistic lighting, high contrast, mysterious mood, slow camera movement."
+
 OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching this exact schema:
 {
   "viral_title": string,
@@ -161,7 +196,7 @@ OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching t
       "scene_number": number,
       "duration_seconds": number,
       "caption": string,
-      "visual_prompt": string,
+      "visual_prompt": string (max 450 characters, cinematic-specific),
       "voiceover": string
     }
   ],
@@ -169,7 +204,8 @@ OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching t
   "pacing_notes": string,
   "youtube_title": string,
   "youtube_description": string,
-  "hashtags": string[]
+  "hashtags": string[],
+  "provider_prompt": string (200-450 chars, hard max 500)
 }`
 
 // ─── Coercion helpers ────────────────────────────────────────────────────────
@@ -204,11 +240,15 @@ function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
     if (!entry || typeof entry !== 'object') return
     const e = entry as Record<string, unknown>
     const fb = fallbacks[i] ?? fallbacks[fallbacks.length - 1]
+    // Per-scene visual_prompt is what /api/generate-video sends to Runway as
+    // the per-clip prompt. Hard-clamp it to PROVIDER_PROMPT_MAX so a long
+    // model response can never trigger "Prompt is too long" downstream.
+    const rawVisual = asString(e.visual_prompt, fb.visual_prompt)
     out.push({
       scene_number: asNumber(e.scene_number, i + 1),
       duration_seconds: asNumber(e.duration_seconds, fb.duration_seconds),
       caption: clampCaption(asString(e.caption, fb.caption)),
-      visual_prompt: asString(e.visual_prompt, fb.visual_prompt),
+      visual_prompt: clampToProviderLimit(rawVisual),
       voiceover: asString(e.voiceover, fb.voiceover),
     })
   })
@@ -296,6 +336,25 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         .filter((h) => h.length > 1)
       if (hashtags.length === 0) hashtags = fallback.hashtags
 
+      // Build the provider_prompt. Prefer the model's own value, fall back to
+      // synthesising one from summary + visual prompts, then clamp hard to
+      // PROVIDER_PROMPT_MAX. This is the string /api/generate-video will hand
+      // to Runway, so the >500-char failure mode is closed here.
+      const modelProvider = asString(data.provider_prompt, '')
+      const synthesised =
+        modelProvider ||
+        [summary, scenes.map((s) => s.visual_prompt).join(' ')]
+          .filter(Boolean)
+          .join(' ') ||
+        fallback.provider_prompt
+      const provider_prompt_raw = synthesised
+      const provider_prompt = clampToProviderLimit(provider_prompt_raw)
+      if (provider_prompt_raw.length !== provider_prompt.length) {
+        console.log(
+          `[analyze-idea] provider_prompt clamped ${provider_prompt_raw.length} -> ${provider_prompt.length} chars`,
+        )
+      }
+
       brief = {
         viral_title,
         hook,
@@ -309,6 +368,7 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         youtube_title,
         youtube_description,
         hashtags,
+        provider_prompt,
         // Legacy compatibility
         title: viral_title,
         scenePlan: scenes.map((s) => s.visual_prompt),

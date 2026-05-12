@@ -42,6 +42,8 @@ interface Analysis {
   youtube_title?: string
   youtube_description?: string
   hashtags?: string[]
+  // Push #024B — pre-clamped (<=500 chars) cinematic prompt safe for Runway
+  provider_prompt?: string
 }
 
 interface ActiveSummary {
@@ -383,6 +385,7 @@ export default function GenerateClient() {
         youtube_title: typeof data.youtube_title === 'string' ? data.youtube_title : undefined,
         youtube_description: typeof data.youtube_description === 'string' ? data.youtube_description : undefined,
         hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((h: unknown): h is string => typeof h === 'string') : undefined,
+        provider_prompt: typeof data.provider_prompt === 'string' ? data.provider_prompt : undefined,
       })
       setPhase('options')
     } catch (err) {
@@ -431,6 +434,17 @@ export default function GenerateClient() {
     setClipsTotal(duration === 10 ? 1 : duration === 30 ? 3 : 5)
     setPhase('generating')
 
+    // Push #024B: hand the analyze-idea brief (provider_prompt + per-scene
+    // visual prompts) to the server when we have one. The server uses these
+    // — clamped to 500 chars — as the Runway scene text and skips the extra
+    // OpenAI scene call. Falls back to the user prompt if no brief is loaded.
+    const briefScenePrompts =
+      analysis?.scenes && analysis.scenes.length > 0
+        ? analysis.scenes
+            .map((s) => (typeof s.visual_prompt === 'string' ? s.visual_prompt : ''))
+            .filter((s) => s.trim().length > 0)
+        : analysis?.scenePlan ?? []
+
     try {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
@@ -440,6 +454,8 @@ export default function GenerateClient() {
           platform,
           duration,
           quality,
+          provider_prompt: analysis?.provider_prompt ?? undefined,
+          scene_visual_prompts: briefScenePrompts.length > 0 ? briefScenePrompts : undefined,
         }),
       })
       const data = await res.json()
@@ -597,11 +613,26 @@ export default function GenerateClient() {
   const showRender = phase === 'generating' || phase === 'done' || phase === 'error'
 
   return (
-    <main className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
+    <main className="px-4 sm:px-6 py-8 mx-auto" style={{ maxWidth: 'min(1080px, 100%)' }}>
       <style jsx>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .gv-card { animation: fadeUp 0.35s ease both; }
+        .gv-step2-grid {
+          display: grid;
+          gap: 16px;
+          grid-template-columns: 1fr;
+        }
+        @media (min-width: 1024px) {
+          .gv-step2-grid {
+            grid-template-columns: minmax(0, 1fr) 320px;
+            align-items: start;
+          }
+          .gv-step2-settings {
+            position: sticky;
+            top: 16px;
+          }
+        }
       `}</style>
 
       {/* Header */}
@@ -784,9 +815,9 @@ export default function GenerateClient() {
 
       {/* ── STEP 2: Options ── */}
       {showStep2 && analysis && (
-        <>
+        <div className="gv-step2-grid">
           <section
-            className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
+            className="gv-card rounded-2xl p-5 sm:p-6"
             style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -1009,10 +1040,21 @@ export default function GenerateClient() {
             )}
           </section>
 
-          <section
-            className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-            style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+          <aside
+            className="gv-card gv-step2-settings rounded-2xl p-5 sm:p-6"
+            style={{ background: 'rgba(15,15,30,0.92)', border: '1px solid var(--border)' }}
           >
+            <div
+              className="text-sm font-black mb-4 pb-3"
+              style={{
+                color: 'var(--text)',
+                borderBottom: '1px solid var(--border)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              ⚙ Generation Settings
+            </div>
+
             {/* Duration */}
             <div>
               <div
@@ -1076,22 +1118,22 @@ export default function GenerateClient() {
               </p>
             </div>
 
-            {/* Quality cards */}
+            {/* Quality cards — stacked so they fit the narrow side panel */}
             <div className="mt-5">
               <div
                 className="text-xs font-black uppercase tracking-widest mb-2"
                 style={{ color: 'var(--muted)' }}
               >
-                Media & quality
+                Quality
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-2">
                 {QUALITY_OPTIONS.map((q) => {
                   const selected = quality === q.key
                   return (
                     <button
                       key={q.key}
                       onClick={() => setQuality(q.key)}
-                      className="rounded-xl p-4 text-left"
+                      className="rounded-xl p-3 text-left"
                       style={{
                         background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
                         border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
@@ -1116,10 +1158,10 @@ export default function GenerateClient() {
                             border: '1px solid rgba(37,99,235,.3)',
                           }}
                         >
-                          {q.credits} credit{q.credits > 1 ? 's' : ''}
+                          {q.credits} credits
                         </span>
                       </div>
-                      <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                      <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.45 }}>
                         {q.desc}
                       </div>
                     </button>
@@ -1160,15 +1202,12 @@ export default function GenerateClient() {
               </div>
             )}
 
-            {/* Generate */}
-            <div className="flex items-center justify-between mt-6 gap-3 flex-wrap">
-              <p className="text-xs flex-1 min-w-[200px]" style={{ color: 'var(--muted)' }}>
-                Analyze Idea is free. Credits are charged only when your video is successfully generated.
-              </p>
+            {/* Generate — full-width inside the narrow settings panel */}
+            <div className="mt-5">
               <button
                 onClick={handleGenerate}
                 disabled={!!recoverable || lowCredits || submitting}
-                className="rounded-xl px-6 py-3 text-sm font-black text-white flex items-center gap-2"
+                className="w-full rounded-xl px-6 py-3 text-sm font-black text-white flex items-center justify-center gap-2"
                 style={{
                   background: recoverable || lowCredits || submitting
                     ? 'rgba(255,255,255,.04)'
@@ -1183,9 +1222,12 @@ export default function GenerateClient() {
                   <span>Generate • {selectedCost} credits</span>
                 )}
               </button>
+              <p className="text-xs mt-3" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+                Credits are charged only when your video is successfully generated.
+              </p>
             </div>
-          </section>
-        </>
+          </aside>
+        </div>
       )}
 
       {/* ── Render / Done / Error ── */}

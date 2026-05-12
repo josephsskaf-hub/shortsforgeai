@@ -99,7 +99,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let body: { prompt?: string; platform?: string; duration?: number; quality?: string }
+    let body: {
+      prompt?: string
+      platform?: string
+      duration?: number
+      quality?: string
+      provider_prompt?: string
+      scene_visual_prompts?: unknown
+    }
     try {
       body = await req.json()
     } catch {
@@ -110,8 +117,15 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
-    if (prompt.length > 500) {
-      return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
+    // The user-facing idea field is the textarea — cap is generous (1500)
+    // because we never send this raw to Runway. The per-clip prompt that
+    // actually reaches Runway is built below from the analyze-idea brief
+    // (provider_prompt + scene_visual_prompts) and hard-clamped to 500.
+    if (prompt.length > 1500) {
+      return NextResponse.json(
+        { error: 'Your idea is too long. Please trim it to 1500 characters.' },
+        { status: 400 },
+      )
     }
 
     // Resolve platform and duration.
@@ -157,17 +171,72 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1 â OpenAI breaks the prompt into N cinematic scenes (one per clip).
-    let scenes: string[]
-    try {
-      scenes = await generateScenes(prompt, clipCount)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[generate-video] scene generation failed:', msg)
-      return NextResponse.json(
-        { error: 'Failed to plan scenes. Please try a different prompt.' },
-        { status: 500 }
-      )
+    // Runway's text_to_video endpoint rejects prompts >500 chars, so every
+    // string we hand it is clamped here at the boundary.
+    const RUNWAY_MAX = 500
+    const clampForRunway = (raw: string): string => {
+      const flat = (raw ?? '').replace(/\s+/g, ' ').trim()
+      if (flat.length <= RUNWAY_MAX) return flat
+      const window = flat.slice(0, RUNWAY_MAX)
+      const lastSentence = Math.max(window.lastIndexOf('. '), window.lastIndexOf('! '), window.lastIndexOf('? '))
+      if (lastSentence > RUNWAY_MAX * 0.6) return window.slice(0, lastSentence + 1).trim()
+      const lastComma = window.lastIndexOf(', ')
+      if (lastComma > RUNWAY_MAX * 0.6) return window.slice(0, lastComma).trim()
+      const lastSpace = window.lastIndexOf(' ')
+      if (lastSpace > RUNWAY_MAX * 0.6) return window.slice(0, lastSpace).trim()
+      return window.trim()
     }
+
+    // Push #024B: prefer the per-scene visual prompts from /api/analyze-idea
+    // when the client passes them through. Falls back to generating fresh
+    // scenes via OpenAI when the user hits Generate without analyzing first.
+    // Either way every string is clamped to RUNWAY_MAX before going anywhere
+    // near Runway.
+    const providerPromptRaw = typeof body.provider_prompt === 'string' ? body.provider_prompt.trim() : ''
+    const providerPrompt = providerPromptRaw ? clampForRunway(providerPromptRaw) : ''
+    if (providerPrompt) {
+      console.log('[runway] provider_prompt length:', providerPrompt.length)
+      console.log('[runway] provider_prompt preview:', providerPrompt.slice(0, 100))
+    }
+
+    const incomingScenePrompts = Array.isArray(body.scene_visual_prompts)
+      ? body.scene_visual_prompts
+          .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+          .map((s) => s.trim())
+      : []
+
+    let scenes: string[]
+    if (incomingScenePrompts.length >= clipCount) {
+      scenes = incomingScenePrompts.slice(0, clipCount).map(clampForRunway)
+      console.log(`[generate-video] using brief scene prompts (count=${scenes.length})`)
+    } else if (incomingScenePrompts.length > 0) {
+      const padBase = providerPrompt || prompt
+      try {
+        const generated = await generateScenes(padBase, clipCount - incomingScenePrompts.length)
+        scenes = [...incomingScenePrompts, ...generated].slice(0, clipCount).map(clampForRunway)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[generate-video] partial scene padding failed:', msg)
+        scenes = incomingScenePrompts.slice(0, clipCount).map(clampForRunway)
+        while (scenes.length < clipCount) {
+          scenes.push(clampForRunway(providerPrompt || prompt))
+        }
+      }
+    } else {
+      const seedPrompt = providerPrompt || prompt
+      try {
+        scenes = (await generateScenes(seedPrompt, clipCount)).map(clampForRunway)
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[generate-video] scene generation failed:', msg)
+        return NextResponse.json(
+          { error: 'Failed to plan scenes. Please try a different prompt.' },
+          { status: 500 }
+        )
+      }
+    }
+
+    scenes.forEach((s, i) => console.log(`[runway] scene prompt length [${i + 1}/${scenes.length}]:`, s.length))
 
     // Pre-validate the first scene payload BEFORE launching tasks.
     // This catches any Runway field errors early â before credits are charged.
