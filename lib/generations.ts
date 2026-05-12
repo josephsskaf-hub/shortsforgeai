@@ -1,5 +1,5 @@
 // Helpers for the async-video-generation flow (push #016/#017).
-// State lives in the existing `videos` table — no schema rewrite required.
+// State lives in the existing `videos` table â no schema rewrite required.
 // The 003 migration is additive (`updated_at` + trigger + index) and the code
 // below degrades cleanly when the migration has not yet been applied.
 
@@ -23,6 +23,8 @@ export interface GenerationMeta {
   platform: string
   duration: number
   quality: string
+  pending_scenes?: string[]       // scenes not yet sent to Runway (multi-clip)
+  completed_clip_urls?: string[]  // video URLs from already-finished clips
 }
 
 export function encodeGenerationMeta(meta: GenerationMeta): string {
