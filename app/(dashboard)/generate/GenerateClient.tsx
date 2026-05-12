@@ -69,7 +69,7 @@ export default function GenerateClient() {
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
   const [playerIndex, setPlayerIndex] = useState(0)
-  const [duration, setDuration] = useState<Duration>(30)
+  const [duration, setDuration] = useState<Duration>(10)
   const [quality, setQuality] = useState<Quality>('basic_ai')
   // Cost the server reports back on POST /api/generate-video — we echo it on
   // every status poll so the route can refund the exact amount if the whole

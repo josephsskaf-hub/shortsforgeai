@@ -135,12 +135,21 @@ export async function POST(req: NextRequest) {
 
     const augmentedScenes = scenes.map((s) => augmentForQuality(s, quality))
 
-    // ── Step 3: for each scene, run text→image→video. Run in parallel. ─────
-    let tasks: { id: string; promptText: string }[]
+    // ── Step 3: for each scene, run text→image→video. SEQUENTIALLY. ──────────
+    // The Runway dev API is on Usage Tier 1, which caps concurrency at 1 — only
+    // one task may be submitting at a time. Firing scenes in parallel caused
+    // every task after the first to be rejected with a rate-limit / concurrency
+    // error, failing the whole generation. Submit them one at a time with a
+    // small delay between starts so they queue cleanly on Runway's side.
+    const SUBMIT_DELAY_MS = 1500
+    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+    const tasks: { id: string; promptText: string }[] = []
     try {
-      tasks = await Promise.all(
-        augmentedScenes.map((sceneText) => startVideoForScene(sceneText, platform))
-      )
+      for (let i = 0; i < augmentedScenes.length; i++) {
+        if (i > 0) await sleep(SUBMIT_DELAY_MS)
+        const handle = await startVideoForScene(augmentedScenes[i], platform)
+        tasks.push(handle)
+      }
       console.log(`[generate-video] started ${tasks.length} image_to_video tasks`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
