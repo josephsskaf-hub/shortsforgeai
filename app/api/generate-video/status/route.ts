@@ -393,40 +393,24 @@ export async function GET(req: NextRequest) {
       const canCompose = !!process.env.CREATOMATE_API_KEY
 
       if (!canCompose) {
-        console.warn(
-          `[generate-video/status] generation ${video.id} cannot compose - ` +
-          `CREATOMATE_API_KEY=${!!process.env.CREATOMATE_API_KEY} ` +
-          `vo_chars=${(meta?.voiceover_script ?? '').length} ` +
-          `captions=${(meta?.scene_captions ?? []).length}. ` +
-          `Delivering raw Runway clip with 0 credits charged.`,
+        // Push #026 — the prior fallback silently marked the row "completed"
+        // with the raw Runway clip URL, which made the UI claim "Your video is
+        // ready" for a silent 10s clip. Per the spec, generation is completed
+        // ONLY when a composed final_video_url exists. So treat the missing
+        // CREATOMATE_API_KEY as a hard failure and refund credits — never ship
+        // a silent clip as the final video.
+        console.error(
+          `[generate-video/status] generation ${video.id} cannot compose: ` +
+          `CREATOMATE_API_KEY is not configured. Marking generation as failed.`,
         )
-        // TODO(push-026): wire up an alternative composition path (Shotstack,
-        // ffmpeg lambda, etc.) when CREATOMATE_API_KEY is unavailable. For now
-        // we keep the legacy raw-clip delivery but refund credits so users
-        // are not charged for a silent 10s clip.
-        const fbMeta = meta
-          ? JSON.stringify({ ...meta, completed_clip_urls: allClipUrls, pending_scenes: [] })
-          : undefined
-        const fbPatch: Record<string, unknown> = {
-          video_url: allClipUrls[0],
-          credits_used: 0,
-        }
-        if (fbMeta) fbPatch.script = fbMeta
-        await finalizeGeneration(supabase, String(video.id), 'completed', fbPatch)
+        await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
         return NextResponse.json({
           generation_id: video.id,
-          status: 'completed',
-          phase: 'done',
+          status: 'failed',
+          phase: 'composing_failed',
+          error: 'Final video rendering is not configured. Please contact support.',
           done: true,
-          composed: false,
-          video_url: allClipUrls[0],
-          final_video_url: null,
-          all_clip_urls: allClipUrls,
-          completed_clip_urls: allClipUrls,
-          clips_total: meta?.scenes.length ?? allClipUrls.length,
           tasks: results,
-          cost: 0,
-          creditsDeducted: false,
         })
       }
 

@@ -156,6 +156,11 @@ export default function GenerateClient() {
   const [clipsTotal, setClipsTotal] = useState<number>(1)
   const [completedClipUrls, setCompletedClipUrls] = useState<string[]>([])
   const [allClipUrls, setAllClipUrls] = useState<string[]>([])
+  // Push #026 — the composed final MP4 URL (visual + voiceover + captions).
+  // The "Your video is ready" UI and the Download button ONLY trust this — raw
+  // Runway clip URLs in allClipUrls/completedClipUrls are visuals, not the
+  // final video, and must never be surfaced as the result.
+  const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
   // Push #026 — backend phase: 'visuals' (Runway still running) vs
   // 'composing' (Runway done, Creatomate is rendering the final MP4) vs
   // 'done'. The client uses this to swap the loading message between
@@ -285,6 +290,14 @@ export default function GenerateClient() {
           setClipsTotal(data.clips_total)
         }
 
+        // Push #026 — track the composed MP4 URL separately so the result UI
+        // never accidentally shows a raw Runway clip as "ready". The server
+        // sets `final_video_url` only after Creatomate finishes; everything
+        // else (all_clip_urls, video_url) may contain visual-only clips.
+        if (typeof data.final_video_url === 'string' && looksLikeVideoUrl(data.final_video_url)) {
+          setFinalVideoUrl(data.final_video_url)
+        }
+
         // Push #026 — surface the backend "composing" phase so the loading
         // message switches from "Creating visuals…" to "Adding voiceover and
         // captions…" once Runway clips are done and Creatomate is rendering.
@@ -298,17 +311,39 @@ export default function GenerateClient() {
         }
 
         if (data.status === 'completed') {
-          if (Array.isArray(data.all_clip_urls) && data.all_clip_urls.length > 0) {
-            setAllClipUrls(data.all_clip_urls)
-          } else if (typeof data.video_url === 'string' && data.video_url) {
-            setAllClipUrls([data.video_url])
+          // Push #026 — only treat status=completed as truly done when the
+          // composed final_video_url exists. If the server marked it completed
+          // without a composed URL (legacy rows, or an upstream regression),
+          // fail explicitly so we never present a silent raw clip as the
+          // final result.
+          const composedUrl =
+            typeof data.final_video_url === 'string' && looksLikeVideoUrl(data.final_video_url)
+              ? data.final_video_url
+              : null
+          if (!composedUrl) {
+            console.error('[generate] status=completed but final_video_url missing')
+            setError('Final composition failed. Please try again.')
+            setPhase('error')
+            return
           }
+          // Mirror into allClipUrls so the rest of the UI (slot rendering,
+          // backwards-compatible reads) sees the same value, but the result
+          // card / Download button keep using primaryVideoUrl which is now
+          // derived strictly from finalVideoUrl.
+          setFinalVideoUrl(composedUrl)
+          setAllClipUrls([composedUrl])
           try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
           setPhase('done')
           return
         }
         if (data.status === 'failed' || data.status === 'cancelled') {
-          setError(data.stale ? 'Generation took too long and was cancelled. Please try again.' : GENERIC_ERROR)
+          setError(
+            data.stale
+              ? 'Generation took too long and was cancelled. Please try again.'
+              : typeof data.error === 'string' && data.error.trim().length > 0
+              ? data.error
+              : GENERIC_ERROR
+          )
           setPhase('error')
           return
         }
@@ -370,17 +405,15 @@ export default function GenerateClient() {
     return out
   }, [clipsTotal, tasks, states, completedClipUrls])
 
-  // Push #021 collapses the old multi-clip player into a single result. We
-  // surface the first available URL — server-side `video_url` (allClipUrls[0])
-  // for finished jobs, falling back to whatever the polling has handed us so
-  // far. The internal multi-clip pipeline is hidden from the user.
+  // Push #026 — the result UI must NEVER surface a raw Runway clip as the
+  // final video. Only the composed `final_video_url` (visuals + voiceover +
+  // captions, correct duration) counts. Raw Runway clip URLs live in
+  // allClipUrls / completedClipUrls and are used for in-flight progress
+  // tiles, not for the "Your video is ready" card or the Download button.
   const primaryVideoUrl = useMemo(() => {
-    return (
-      allClipUrls.find((u) => looksLikeVideoUrl(u)) ??
-      completedClipUrls.find((u) => looksLikeVideoUrl(u)) ??
-      null
-    )
-  }, [allClipUrls, completedClipUrls])
+    if (finalVideoUrl && looksLikeVideoUrl(finalVideoUrl)) return finalVideoUrl
+    return null
+  }, [finalVideoUrl])
 
   const totalProgress = useMemo(() => {
     if (slots.length === 0) return 0
@@ -530,6 +563,7 @@ export default function GenerateClient() {
     setGenerationId(null)
     setCompletedClipUrls([])
     setAllClipUrls([])
+    setFinalVideoUrl(null)
     setComposePhase('visuals')
     setComposeProgress(0)
     // Optimistically size the tile grid from the user's chosen duration so the
@@ -657,6 +691,7 @@ export default function GenerateClient() {
     setClipsTotal(1)
     setCompletedClipUrls([])
     setAllClipUrls([])
+    setFinalVideoUrl(null)
     setComposePhase('visuals')
     setComposeProgress(0)
     setDownloadState('idle')
@@ -692,6 +727,7 @@ export default function GenerateClient() {
     setGenerationId(recoverable.generation_id)
     setCompletedClipUrls(recoverable.completed_clip_urls ?? [])
     setAllClipUrls([])
+    setFinalVideoUrl(null)
     setClipsTotal(
       recoverable.clips_total ??
       (recoverable.scenes?.length || recoverable.tasks?.length || 1)
@@ -1551,6 +1587,7 @@ export default function GenerateClient() {
                     setTasks([])
                     setCompletedClipUrls([])
                     setAllClipUrls([])
+                    setFinalVideoUrl(null)
                     setGenerationId(null)
                     handleGenerate()
                   }}
