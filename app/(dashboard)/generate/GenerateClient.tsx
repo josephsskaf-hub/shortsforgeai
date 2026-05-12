@@ -179,12 +179,15 @@ export default function GenerateClient() {
   )
 
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
-    const source = (overridePrompt ?? prompt).trim()
+    // Guard against accidentally passing a React event when wired as
+    // onClick={handleAnalyze} — only treat string overrides as a prompt.
+    const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
+    const source = (override ?? prompt).trim()
     if (!source) {
       setError('Please describe your video idea first.')
       return
     }
-    if (overridePrompt !== undefined) setPrompt(overridePrompt)
+    if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
     setScenes([])
@@ -192,11 +195,16 @@ export default function GenerateClient() {
     setStates({})
     setPlayerIndex(0)
     setPhase('analyzing')
+    // Failsafe: never let the UI stay stuck on "Analyzing…" forever if the
+    // network hangs or the API never responds.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
     try {
       const res = await fetch('/api/analyze-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: source }),
+        signal: controller.signal,
       })
       if (res.status === 401) {
         router.push('/login?redirect=/generate')
@@ -220,6 +228,8 @@ export default function GenerateClient() {
       console.error('[generate] analyze threw:', err)
       setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
       setPhase('idle')
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
@@ -419,7 +429,7 @@ export default function GenerateClient() {
               Analyzing your idea is free — no credits are charged.
             </p>
             <button
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze()}
               disabled={phase === 'analyzing' || !prompt.trim()}
               className="rounded-xl px-6 py-2.5 text-sm font-black text-white flex items-center gap-2"
               style={{
