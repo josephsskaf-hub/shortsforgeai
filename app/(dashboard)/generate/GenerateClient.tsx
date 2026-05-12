@@ -1,7 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+
+interface TaskHandle {
+  id: string
+  promptText: string
+  index: number
+}
+
+interface TaskState {
+  id: string
+  status: 'PENDING' | 'THROTTLED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED'
+  progress: number | null
+  videoUrl: string | null
+  failure: string | null
+}
 
 interface Analysis {
   title: string
@@ -10,14 +24,21 @@ interface Analysis {
   scenePlan: string[]
 }
 
+interface ActiveSummary {
+  generation_id: string
+  prompt: string
+  tasks: TaskHandle[]
+  scenes: string[]
+  created_at: string
+  updated_at: string
+  cost: number
+}
+
 type Phase = 'idle' | 'analyzing' | 'options' | 'generating' | 'done' | 'error'
 type Duration = 10 | 30 | 60
 type Quality = 'basic' | 'basic_ai' | 'pro'
-type GenStatus = 'processing' | 'completed' | 'failed'
 
 const POLL_INTERVAL_MS = 5000
-// Stop polling after ~10 minutes — Runway tasks should never run that long.
-const MAX_POLL_ATTEMPTS = 120
 
 const QUALITY_OPTIONS: {
   key: Quality
@@ -33,8 +54,7 @@ const QUALITY_OPTIONS: {
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
 
-// Defensive guard: never feed an image URL into a <video> element. Runway's
-// text_to_image intermediate step can sometimes leak through.
+// Defensive check: never feed an image URL into a <video> element.
 function looksLikeVideoUrl(url: string | null | undefined): boolean {
   if (!url) return false
   const lower = url.toLowerCase()
@@ -50,20 +70,19 @@ export default function GenerateClient() {
   const [prompt, setPrompt] = useState(initialPrompt)
   const [phase, setPhase] = useState<Phase>('idle')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [scenes, setScenes] = useState<string[]>([])
+  const [tasks, setTasks] = useState<TaskHandle[]>([])
+  const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
-  const [duration, setDuration] = useState<Duration>(10)
+  const [playerIndex, setPlayerIndex] = useState(0)
+  const [duration, setDuration] = useState<Duration>(30)
   const [quality, setQuality] = useState<Quality>('basic_ai')
-
-  // Async generation state — one Runway pipeline per generation. We poll the
-  // backend by generation_id and only flip into the "done" phase once the
-  // server confirms a real video_url is available.
+  const [chargedCost, setChargedCost] = useState<number>(1)
   const [generationId, setGenerationId] = useState<string | null>(null)
-  const [genStatus, setGenStatus] = useState<GenStatus>('processing')
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [progress, setProgress] = useState<number | null>(null)
+  const [recoverable, setRecoverable] = useState<ActiveSummary | null>(null)
+  const [recoveryBusy, setRecoveryBusy] = useState<'continue' | 'cancel' | 'start_over' | null>(null)
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pollAttemptsRef = useRef(0)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
 
@@ -73,69 +92,74 @@ export default function GenerateClient() {
     }
   }, [])
 
-  // Poll status while generating
+  // ── Check for an existing processing generation on mount ─────────────────
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/generate-video/active', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        if (data?.active) {
+          setRecoverable({
+            generation_id: data.active.generation_id,
+            prompt: data.active.prompt ?? '',
+            tasks: Array.isArray(data.active.tasks) ? data.active.tasks : [],
+            scenes: Array.isArray(data.active.scenes) ? data.active.scenes : [],
+            created_at: data.active.created_at,
+            updated_at: data.active.updated_at,
+            cost: typeof data.active.cost === 'number' ? data.active.cost : 1,
+          })
+        } else if (data?.swept) {
+          // A stale job was just cleaned up — refresh the credits chip.
+          try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+        }
+      } catch {
+        // Best-effort — recovery panel is optional UX.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // ── Polling driver (status by generation_id) ─────────────────────────────
   useEffect(() => {
     if (phase !== 'generating' || !generationId) return
     let cancelled = false
-    pollAttemptsRef.current = 0
 
     async function poll() {
-      if (cancelled || !generationId) return
-      pollAttemptsRef.current += 1
-      if (pollAttemptsRef.current > MAX_POLL_ATTEMPTS) {
-        setError(GENERIC_ERROR)
-        setPhase('error')
-        return
-      }
       try {
         const res = await fetch(
-          `/api/generate-video/status?generation_id=${encodeURIComponent(generationId)}`,
+          `/api/generate-video/status?generation_id=${encodeURIComponent(generationId!)}`,
           { cache: 'no-store' }
         )
-        if (cancelled) return
         const data = await res.json()
-        if (!res.ok) {
-          console.error('[generate] status poll non-ok:', res.status, data?.error)
-          if (res.status === 404 || res.status === 403) {
-            setError(GENERIC_ERROR)
-            setPhase('error')
-            return
-          }
-          // Soft retry on transient backend errors.
-          pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS)
-          return
-        }
+        if (cancelled) return
+        if (!res.ok) throw new Error('Status lookup failed')
 
-        if (data.charged) {
-          try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+        if (Array.isArray(data.tasks) && data.tasks.length > 0) {
+          const next: Record<string, TaskState> = {}
+          for (const t of data.tasks as TaskState[]) next[t.id] = t
+          setStates(next)
         }
-
-        if (typeof data.progress === 'number') setProgress(data.progress)
 
         if (data.status === 'completed') {
-          if (data.video_url && looksLikeVideoUrl(data.video_url)) {
-            setVideoUrl(data.video_url)
-            setGenStatus('completed')
-            setPhase('done')
-          } else {
-            setError(GENERIC_ERROR)
-            setPhase('error')
-          }
+          try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+          setPhase('done')
           return
         }
-        if (data.status === 'failed') {
-          setGenStatus('failed')
-          setError(GENERIC_ERROR)
+        if (data.status === 'failed' || data.status === 'cancelled') {
+          setError(data.stale ? 'Generation took too long and was cancelled. Please try again.' : GENERIC_ERROR)
           setPhase('error')
           return
         }
-        // still processing
-        setGenStatus('processing')
+
         pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS)
       } catch (err: unknown) {
         if (cancelled) return
         console.error('[generate] status poll error:', err)
-        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS)
+        setError(GENERIC_ERROR)
+        setPhase('error')
       }
     }
 
@@ -149,9 +173,40 @@ export default function GenerateClient() {
     }
   }, [phase, generationId])
 
+  const orderedClips = useMemo(() => {
+    return tasks
+      .slice()
+      .sort((a, b) => a.index - b.index)
+      .map((t) => states[t.id])
+      .filter((s): s is TaskState => !!s)
+  }, [tasks, states])
+
+  const successClips = useMemo(
+    () => orderedClips.filter((s) => s.status === 'SUCCEEDED' && looksLikeVideoUrl(s.videoUrl)),
+    [orderedClips]
+  )
+
+  const totalProgress = useMemo(() => {
+    if (tasks.length === 0) return 0
+    let sum = 0
+    for (const t of tasks) {
+      const s = states[t.id]
+      if (!s) { sum += 0; continue }
+      if (s.status === 'SUCCEEDED') sum += 1
+      else if (s.status === 'FAILED' || s.status === 'CANCELLED') sum += 1
+      else if (typeof s.progress === 'number') sum += Math.max(0, Math.min(1, s.progress))
+      else if (s.status === 'RUNNING') sum += 0.4
+      else sum += 0.1
+    }
+    return Math.min(100, Math.round((sum / tasks.length) * 100))
+  }, [tasks, states])
+
+  const succeededCount = useMemo(
+    () => orderedClips.filter((s) => s.status === 'SUCCEEDED').length,
+    [orderedClips]
+  )
+
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
-    // Guard against accidentally passing a React event when wired as
-    // onClick={handleAnalyze} — only treat string overrides as a prompt.
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const source = (override ?? prompt).trim()
     if (!source) {
@@ -161,11 +216,11 @@ export default function GenerateClient() {
     if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
-    setGenerationId(null)
-    setVideoUrl(null)
-    setProgress(null)
+    setScenes([])
+    setTasks([])
+    setStates({})
+    setPlayerIndex(0)
     setPhase('analyzing')
-    // Failsafe: never let the UI stay stuck on "Analyzing…" forever.
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30000)
     try {
@@ -182,7 +237,7 @@ export default function GenerateClient() {
       const data = await res.json()
       if (!res.ok) {
         console.error('[generate] analyze failed:', data?.error)
-        setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze your idea. Please try again.')
+        setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
         setPhase('idle')
         return
       }
@@ -195,14 +250,13 @@ export default function GenerateClient() {
       setPhase('options')
     } catch (err) {
       console.error('[generate] analyze threw:', err)
-      setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze your idea. Please try again.')
+      setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
       setPhase('idle')
     } finally {
       clearTimeout(timeoutId)
     }
   }
 
-  // Auto-trigger analyze when URL has ?autoanalyze=1&prompt=… (topic / dashboard quick-start)
   useEffect(() => {
     const sp = searchParams?.get('prompt') ?? ''
     const auto = searchParams?.get('autoanalyze') === '1'
@@ -214,30 +268,18 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  function handlePromptKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter submits, Shift+Enter inserts a newline. Don't redirect the user.
-    if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault()
-      if (phase === 'analyzing') return
-      if (!prompt.trim()) return
-      handleAnalyze()
-    }
-  }
-
   async function handleGenerate() {
     const trimmed = prompt.trim()
     if (!trimmed) {
       setError('Please describe your video idea first.')
       return
     }
-    // Guard against double-submits.
-    if (phase === 'generating') return
-
     setError(null)
+    setStates({})
+    setTasks([])
+    setScenes([])
+    setPlayerIndex(0)
     setGenerationId(null)
-    setVideoUrl(null)
-    setProgress(null)
-    setGenStatus('processing')
     setPhase('generating')
 
     try {
@@ -258,32 +300,42 @@ export default function GenerateClient() {
         return
       }
 
+      // Concurrency-limit: another generation is still processing.
+      if (res.status === 409 && data?.error === 'active_generation_exists') {
+        setPhase('idle')
+        setRecoverable({
+          generation_id: data.generation_id,
+          prompt: '',
+          tasks: [],
+          scenes: [],
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          cost: 1,
+        })
+        return
+      }
+
       if (res.status === 402) {
         setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 1} credit(s).`)
         setPhase('error')
         return
       }
 
-      if (res.status === 409) {
-        setError(data?.error || 'You already have a video processing. Please wait.')
-        setPhase('error')
-        return
-      }
-
       if (!res.ok) {
         console.error('[generate] generate-video error:', data?.error)
-        setError(data?.error || GENERIC_ERROR)
-        setPhase('error')
-        return
-      }
-
-      if (!data?.generation_id) {
         setError(GENERIC_ERROR)
         setPhase('error')
         return
       }
 
-      setGenerationId(data.generation_id)
+      setScenes(data.scenes ?? [])
+      setTasks(data.tasks ?? [])
+      setGenerationId(data.generation_id ?? null)
+      if (typeof data.cost === 'number' && data.cost >= 1) {
+        setChargedCost(Math.min(2, Math.max(1, Math.floor(data.cost))))
+      } else {
+        setChargedCost(QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1)
+      }
     } catch (err: unknown) {
       console.error('[generate] generate threw:', err)
       setError(GENERIC_ERROR)
@@ -298,10 +350,12 @@ export default function GenerateClient() {
     }
     setPhase('idle')
     setAnalysis(null)
-    setGenerationId(null)
-    setVideoUrl(null)
-    setProgress(null)
+    setScenes([])
+    setTasks([])
+    setStates({})
     setError(null)
+    setPlayerIndex(0)
+    setGenerationId(null)
   }
 
   function handleBackToEdit() {
@@ -313,36 +367,64 @@ export default function GenerateClient() {
     setError(null)
   }
 
+  function handleVideoEnd() {
+    setPlayerIndex((i) => {
+      const next = i + 1
+      return next < successClips.length ? next : 0
+    })
+  }
+
   useEffect(() => {
     const el = videoRef.current
     if (el && phase === 'done') {
       el.load()
       el.play().catch(() => {})
     }
-  }, [videoUrl, phase])
+  }, [playerIndex, phase])
 
+  // ── Recovery actions ─────────────────────────────────────────────────────
+  const continueProgress = useCallback(async () => {
+    if (!recoverable) return
+    setRecoveryBusy('continue')
+    setTasks(recoverable.tasks)
+    setScenes(recoverable.scenes)
+    setStates({})
+    setPlayerIndex(0)
+    setPrompt(recoverable.prompt || prompt)
+    setChargedCost(Math.min(2, Math.max(1, Math.floor(recoverable.cost || 1))))
+    setGenerationId(recoverable.generation_id)
+    setError(null)
+    setRecoverable(null)
+    setPhase('generating')
+    setRecoveryBusy(null)
+  }, [recoverable, prompt])
+
+  const cancelRecoverable = useCallback(async (mode: 'cancel' | 'start_over') => {
+    if (!recoverable) return
+    setRecoveryBusy(mode)
+    try {
+      await fetch('/api/generate-video/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ generation_id: recoverable.generation_id }),
+      })
+      try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+    } catch (err) {
+      console.error('[generate] cancel threw:', err)
+    } finally {
+      setRecoverable(null)
+      setRecoveryBusy(null)
+      if (mode === 'start_over') {
+        handleReset()
+      }
+    }
+  }, [recoverable])
+
+  const currentClipUrl = successClips[playerIndex]?.videoUrl ?? null
   const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
   const showRender = phase === 'generating' || phase === 'done' || phase === 'error'
-
-  const headerCaption = useMemo(() => {
-    if (showStep1) return 'Describe your idea. We\'ll analyze it before charging any credits.'
-    if (showStep2) return 'Pick duration and quality, then generate.'
-    if (phase === 'generating') return 'Rendering your vertical 9:16 Short. This usually takes 1–2 minutes.'
-    if (phase === 'done') return 'Your Short is ready.'
-    if (phase === 'error') return 'Something went wrong.'
-    return ''
-  }, [showStep1, showStep2, phase])
-
-  const progressPct = useMemo(() => {
-    if (phase === 'done') return 100
-    if (phase === 'error') return 0
-    if (typeof progress === 'number') {
-      return Math.min(99, Math.max(2, Math.round(progress * 100)))
-    }
-    return 10
-  }, [phase, progress])
 
   return (
     <main className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
@@ -370,9 +452,72 @@ export default function GenerateClient() {
           🎬 Generate a Real AI Short
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-          {headerCaption}
+          {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
+          {showStep2 && 'Pick duration and quality, then generate.'}
+          {showRender && 'Rendering your vertical 9:16 Short.'}
         </p>
       </div>
+
+      {/* ── Recovery panel ── */}
+      {recoverable && (
+        <section
+          className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+          style={{
+            background: 'rgba(245,158,11,.06)',
+            border: '1px solid rgba(245,158,11,.35)',
+          }}
+        >
+          <div className="font-black text-base mb-1" style={{ color: '#FCD34D' }}>
+            You have a video currently processing.
+          </div>
+          <div className="text-xs mb-4" style={{ color: 'var(--muted2)' }}>
+            Resume polling to wait for it, cancel it to refund the slot, or discard it and start fresh.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={continueProgress}
+              disabled={!!recoveryBusy}
+              className="rounded-xl px-4 py-2 text-xs font-black text-white"
+              style={{
+                background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                border: 'none',
+                cursor: recoveryBusy ? 'wait' : 'pointer',
+                opacity: recoveryBusy ? 0.7 : 1,
+              }}
+            >
+              ▶ Continue progress
+            </button>
+            <button
+              onClick={() => cancelRecoverable('cancel')}
+              disabled={!!recoveryBusy}
+              className="rounded-xl px-4 py-2 text-xs font-bold"
+              style={{
+                background: 'rgba(255,255,255,.04)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                cursor: recoveryBusy ? 'wait' : 'pointer',
+                opacity: recoveryBusy ? 0.7 : 1,
+              }}
+            >
+              ✖ Cancel generation
+            </button>
+            <button
+              onClick={() => cancelRecoverable('start_over')}
+              disabled={!!recoveryBusy}
+              className="rounded-xl px-4 py-2 text-xs font-bold"
+              style={{
+                background: 'rgba(239,68,68,.08)',
+                border: '1px solid rgba(239,68,68,.32)',
+                color: '#fca5a5',
+                cursor: recoveryBusy ? 'wait' : 'pointer',
+                opacity: recoveryBusy ? 0.7 : 1,
+              }}
+            >
+              🔄 Start over
+            </button>
+          </div>
+        </section>
+      )}
 
       {error && (
         <div
@@ -402,7 +547,6 @@ export default function GenerateClient() {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handlePromptKeyDown}
             placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
             maxLength={1000}
             disabled={phase === 'analyzing'}
@@ -418,7 +562,7 @@ export default function GenerateClient() {
           />
           <div className="flex items-center justify-between mt-4 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              Analyzing your idea is free — no credits are charged. Press Enter to analyze.
+              Analyzing your idea is free — no credits are charged.
             </p>
             <button
               onClick={() => handleAnalyze()}
@@ -542,14 +686,14 @@ export default function GenerateClient() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {d === 10 ? '10 seconds (default)' : `${d} seconds`}
+                    {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
                   </button>
                 ))}
               </div>
               {duration !== 10 && (
                 <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-                  Renders a single 10-second cinematic clip — you can stitch into a longer Short
-                  in any editor.
+                  Rendered as {duration === 30 ? '3' : '6'} cinematic 10s clips you can stitch in
+                  any editor.
                 </p>
               )}
             </div>
@@ -632,18 +776,16 @@ export default function GenerateClient() {
             <div className="flex items-center justify-end mt-6 gap-2 flex-wrap">
               <button
                 onClick={handleGenerate}
-                disabled={phase === 'generating'}
+                disabled={!!recoverable}
                 className="rounded-xl px-6 py-3 text-sm font-black text-white flex items-center gap-2"
                 style={{
-                  background: phase === 'generating'
-                    ? 'rgba(255,255,255,.06)'
+                  background: recoverable
+                    ? 'rgba(255,255,255,.04)'
                     : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
                   border: 'none',
-                  cursor: phase === 'generating' ? 'not-allowed' : 'pointer',
-                  boxShadow: phase === 'generating'
-                    ? 'none'
-                    : '0 8px 28px rgba(37,99,235,.4)',
-                  color: phase === 'generating' ? 'var(--muted)' : '#fff',
+                  cursor: recoverable ? 'not-allowed' : 'pointer',
+                  color: recoverable ? 'var(--muted)' : '#fff',
+                  boxShadow: recoverable ? 'none' : '0 8px 28px rgba(37,99,235,.4)',
                 }}
               >
                 Generate
@@ -667,41 +809,176 @@ export default function GenerateClient() {
       {/* ── Render / Done / Error ── */}
       {showRender && (
         <>
-          <section
-            className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-            style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
-          >
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+          {tasks.length > 0 && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+                  {phase === 'done'
+                    ? '✅ Your Short is ready'
+                    : phase === 'generating'
+                    ? `🎬 Rendering your video… (${Math.min(succeededCount + 1, tasks.length)}/${tasks.length})`
+                    : `🎬 Rendering ${Math.min(succeededCount + 1, tasks.length)}/${tasks.length}…`}
+                </div>
+                <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
+                  {totalProgress}%
+                </div>
+              </div>
+              <ProgressBar progress={totalProgress} />
+              <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {phase === 'done'
-                  ? '✅ Your Short is ready'
-                  : phase === 'error'
-                  ? '⚠️ Generation failed'
-                  : genStatus === 'processing'
-                  ? '🎬 Rendering your video…'
-                  : '🎬 Working…'}
+                  ? 'All clips finished. Press play below to watch the full Short.'
+                  : 'Rendering your video… Runway typically takes ~30-90 seconds per 10s clip. We poll every 5 seconds.'}
               </div>
-              <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                {progressPct}%
-              </div>
-            </div>
-            <ProgressBar progress={progressPct} />
-            <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
-              {phase === 'done'
-                ? 'Your video is ready below.'
-                : phase === 'error'
-                ? 'No credits were charged. Try again with a different prompt.'
-                : 'Runway typically takes 1–2 minutes per clip. We poll every 5 seconds.'}
-            </div>
-          </section>
 
-          {phase === 'done' && videoUrl && looksLikeVideoUrl(videoUrl) && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                {tasks
+                  .slice()
+                  .sort((a, b) => a.index - b.index)
+                  .map((t) => {
+                    const s = states[t.id]
+                    const status = s?.status ?? 'PENDING'
+                    const failed = status === 'FAILED' || status === 'CANCELLED'
+                    const running = status === 'RUNNING'
+                    const playable = status === 'SUCCEEDED' && !!s?.videoUrl && looksLikeVideoUrl(s.videoUrl)
+                    const succeededNoFile = status === 'SUCCEEDED' && !playable
+                    const label = failed
+                      ? 'failed'
+                      : playable
+                      ? 'done'
+                      : succeededNoFile
+                      ? 'no file'
+                      : running
+                      ? 'rendering'
+                      : 'queued'
+                    return (
+                      <div
+                        key={t.id}
+                        className="rounded-xl overflow-hidden"
+                        style={{
+                          aspectRatio: '9 / 16',
+                          background: 'rgba(0,0,0,.4)',
+                          border: playable
+                            ? '1px solid rgba(16,185,129,.4)'
+                            : failed || succeededNoFile
+                            ? '1px solid rgba(239,68,68,.35)'
+                            : '1px solid var(--border)',
+                          position: 'relative',
+                        }}
+                      >
+                        {playable && s?.videoUrl ? (
+                          <video
+                            key={s.videoUrl}
+                            src={s.videoUrl}
+                            muted
+                            loop
+                            autoPlay
+                            playsInline
+                            preload="metadata"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div
+                            className="absolute inset-0 flex items-center justify-center text-xs font-bold text-center px-2"
+                            style={{
+                              color: failed || succeededNoFile ? '#f87171' : running ? '#93c5fd' : 'var(--muted)',
+                            }}
+                          >
+                            {failed
+                              ? '⚠ Failed'
+                              : succeededNoFile
+                              ? 'No file'
+                              : running
+                              ? <><Spinner /><span className="ml-2">Rendering…</span></>
+                              : '⏳ Queued'}
+                          </div>
+                        )}
+                        <div
+                          className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs font-bold"
+                          style={{
+                            background: 'linear-gradient(to top, rgba(0,0,0,.85), transparent)',
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          Clip {t.index + 1} · {label}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {scenes.length > 0 && (
+                <details className="mt-5">
+                  <summary
+                    className="text-xs font-black uppercase tracking-widest cursor-pointer"
+                    style={{ color: 'var(--muted2)' }}
+                  >
+                    🎬 Scene prompts
+                  </summary>
+                  <ol
+                    className="mt-2 text-xs space-y-1.5"
+                    style={{ color: 'var(--muted2)', paddingLeft: 20 }}
+                  >
+                    {scenes.map((s, i) => (
+                      <li key={i}>
+                        <span style={{ color: '#93c5fd', fontWeight: 700 }}>#{i + 1}</span> {s}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+            </section>
+          )}
+
+          {phase === 'generating' && tasks.length === 0 && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
+              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+            >
+              <Spinner />
+              <div>
+                <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+                  Rendering your video…
+                </div>
+                <div className="text-sm" style={{ color: 'var(--muted2)' }}>
+                  Resuming your in-progress generation. This can take up to a few minutes.
+                </div>
+              </div>
+            </section>
+          )}
+
+          {phase === 'done' && successClips.length === 0 && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+              style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
+            >
+              <div className="font-black text-base mb-1" style={{ color: '#fca5a5' }}>
+                Video file not available. Please try again.
+              </div>
+            </section>
+          )}
+
+          {phase === 'error' && (
+            <section
+              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+              style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
+            >
+              <div className="font-black text-base" style={{ color: '#fca5a5' }}>
+                Video generation failed. Please try again.
+              </div>
+            </section>
+          )}
+
+          {phase === 'done' && successClips.length > 0 && currentClipUrl && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
               <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                ▶ Your Short
+                ▶ Full Short — clip {playerIndex + 1}/{successClips.length}
               </div>
               <div
                 className="rounded-2xl overflow-hidden w-full max-w-[300px]"
@@ -714,36 +991,65 @@ export default function GenerateClient() {
               >
                 <video
                   ref={videoRef}
-                  key={videoUrl}
-                  src={videoUrl}
+                  key={currentClipUrl}
+                  src={currentClipUrl}
                   controls
                   autoPlay
                   playsInline
                   preload="metadata"
+                  poster={undefined}
+                  onEnded={handleVideoEnd}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </div>
+              <div className="flex items-center gap-2 mt-4">
+                {successClips.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPlayerIndex(i)}
+                    className="rounded-full"
+                    style={{
+                      width: 10,
+                      height: 10,
+                      background: i === playerIndex ? '#93c5fd' : 'rgba(255,255,255,.18)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: i === playerIndex ? '0 0 8px rgba(37,99,235,.6)' : 'none',
+                    }}
+                    aria-label={`Jump to clip ${i + 1}`}
+                  />
+                ))}
+              </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                <a
-                  href={videoUrl}
-                  download="shortsforge-clip.mp4"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-                    border: 'none',
-                    color: '#fff',
-                    textDecoration: 'none',
-                  }}
-                >
-                  ⬇ Download MP4
-                </a>
+                {successClips.map((s, i) => {
+                  if (!s.videoUrl || !looksLikeVideoUrl(s.videoUrl)) return null
+                  return (
+                    <a
+                      key={s.id}
+                      href={s.videoUrl}
+                      download={`shortsforge-clip-${i + 1}.mp4`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
+                      style={{
+                        background:
+                          i === 0
+                            ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
+                            : 'rgba(37,99,235,.12)',
+                        border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
+                        color: i === 0 ? '#fff' : '#93c5fd',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      ⬇ Clip {i + 1}
+                    </a>
+                  )
+                })}
               </div>
               <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
-                Tip: drop the clip into any editor (CapCut, InVideo) to add captions, voiceover and
-                a CTA.
+                Tip: drop the clips into any editor (CapCut, InVideo) to merge them with captions and
+                voiceover.
               </p>
             </section>
           )}

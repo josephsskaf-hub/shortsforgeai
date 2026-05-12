@@ -1,37 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateScenes, sanitizePromptForRunway, startRunwayTextToImage } from '@/lib/runway'
+import { generateScenes, startRunwayTask, buildRunwayPayload } from '@/lib/runway'
+import {
+  encodeGenerationMeta,
+  fetchActiveGeneration,
+  finalizeGeneration,
+  isStale,
+} from '@/lib/generations'
 
-// Push #015/#016: this route MUST return quickly. Previously it ran the whole
-// text_to_image + image_to_video Runway pipeline inline, which routinely blew
-// past Vercel's 60s limit and surfaced as 502 / "Runway task did not complete"
-// errors. Now we kick off only the first stage (text_to_image), persist a
-// "processing" row, and return generation_id immediately. The status route
-// owns every subsequent stage transition.
-export const maxDuration = 30
+export const maxDuration = 60
+
+// Runway Gen-4 Turbo only supports 5 or 10 seconds.
+// 30s / 60s multi-clip stitching is not yet implemented.
+const SUPPORTED_DURATIONS = [5, 10]
 
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
-const QUALITY_COST: Record<Quality, number> = {
-  basic: 1,
-  basic_ai: 1,
-  pro: 2,
-}
-
-const PRO_PROMPT_SUFFIX =
-  ', cinematic 35mm anamorphic, premium volumetric lighting, shallow depth of field, film grain, 8K detail, ultra-sharp focus, color-graded'
-
-function augmentForQuality(prompt: string, quality: Quality): string {
-  if (quality !== 'pro') return prompt
-  if (prompt.length + PRO_PROMPT_SUFFIX.length > 500) {
-    return prompt.slice(0, 500 - PRO_PROMPT_SUFFIX.length) + PRO_PROMPT_SUFFIX
-  }
-  return prompt + PRO_PROMPT_SUFFIX
+function costForQuality(q: string | undefined): number {
+  if (q === 'pro') return 2
+  return 1 // 'basic' and 'basic_ai'
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
-
   try {
     if (!process.env.RUNWAY_API_KEY) {
       console.error('[generate-video] RUNWAY_API_KEY is not configured')
@@ -48,7 +38,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
     if (!user) {
       return NextResponse.json(
         { error: 'You must be signed in to generate a video.' },
@@ -56,12 +50,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let body: {
-      prompt?: string
-      platform?: string
-      duration?: number
-      quality?: Quality
+    // ── Concurrency / stale-job guard ────────────────────────────────────────
+    // Runway tier has concurrency = 1, so only one processing generation per
+    // user is allowed. If the existing one is stale we sweep it and proceed.
+    const active = await fetchActiveGeneration(supabase, user.id)
+    if (active) {
+      if (isStale({ created_at: active.created_at, updated_at: active.updated_at })) {
+        console.log(`[generate-video] sweeping stale generation ${active.id} for user ${user.id}`)
+        await finalizeGeneration(supabase, active.id, 'failed', { credits_used: 0 })
+      } else {
+        return NextResponse.json(
+          {
+            error: 'active_generation_exists',
+            generation_id: active.id,
+            status: 'processing',
+            created_at: active.created_at,
+            updated_at: active.updated_at ?? active.created_at,
+          },
+          { status: 409 }
+        )
+      }
     }
+
+    let body: { prompt?: string; platform?: string; duration?: number; quality?: string }
     try {
       body = await req.json()
     } catch {
@@ -72,190 +83,148 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
-    if (prompt.length > 1000) {
-      return NextResponse.json({ error: 'Prompt is too long.' }, { status: 400 })
+    if (prompt.length > 500) {
+      return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
     }
 
+    // Resolve platform and duration — clamp duration to valid Runway values (5 or 10)
     const platform = (body.platform ?? 'YouTube Shorts').toString()
-
-    // Runway tier limit is 1 concurrent task. Multi-clip (30s / 60s) would
-    // either need multiple sequential tasks (>2 min total) or break the
-    // concurrency rule, so we render a single 10s clip and just record what
-    // the user asked for. UI keeps the duration buttons; backend clamps.
     const requestedDuration = Number(body.duration) || 10
-
-    const quality: Quality =
-      body.quality === 'basic' || body.quality === 'pro' || body.quality === 'basic_ai'
-        ? body.quality
-        : 'basic_ai'
-    const cost = QUALITY_COST[quality]
-
-    console.log(
-      `[generate-video] user=${user.id} prompt="${prompt.slice(0, 80)}…" requestedDuration=${requestedDuration}s quality=${quality} cost=${cost}`
-    )
-
-    // ── Step 1: verify balance (do NOT deduct — happens after completion). ──
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('video_credits')
-      .eq('id', user.id)
-      .single()
-
-    if (profileErr && profileErr.code !== 'PGRST116') {
-      console.error('[generate-video] profile lookup error:', profileErr.message)
+    if (!SUPPORTED_DURATIONS.includes(requestedDuration) && requestedDuration > 10) {
       return NextResponse.json(
-        { error: 'Could not load your credit balance. Please try again.' },
-        { status: 500 }
+        { error: 'Multi-clip rendering (30s / 60s) is coming soon. Please choose 10s for now.' },
+        { status: 400 }
       )
     }
+    const duration = requestedDuration <= 5 ? 5 : 10
+    const quality: Quality = (body.quality === 'pro' || body.quality === 'basic_ai' ? body.quality : 'basic') as Quality
+    const cost = costForQuality(quality)
 
-    const available = profile?.video_credits ?? 0
-    if (available < cost) {
-      return NextResponse.json(
-        {
-          error: `Not enough credits. This generation needs ${cost} credit${cost === 1 ? '' : 's'}.`,
-          credits: available,
-        },
-        { status: 402 }
-      )
-    }
+    // ── Credit balance check (we DO NOT deduct here — deduction happens after
+    // the Runway task completes successfully in /status). ─────────────────────
+    {
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
 
-    // ── Step 2: concurrency guard. Runway tier allows 1 task at a time, and
-    // we want to avoid double-billing the user if they double-click Generate.
-    const { data: inflight } = await supabase
-      .from('generations')
-      .select('id, content, created_at')
-      .eq('user_id', user.id)
-      .eq('content->>type', 'runway_video')
-      .in('content->>status', ['processing'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    if (inflight && inflight.length > 0) {
-      const row = inflight[0] as { id: string; created_at: string }
-      const ageMs = Date.now() - new Date(row.created_at).getTime()
-      // Auto-expire after 10 minutes — anything older is almost certainly a
-      // crashed poll and shouldn't block the user forever.
-      if (ageMs < 10 * 60 * 1000) {
-        console.warn('[generate-video] blocked: user already has a processing generation', row.id)
+      if (profileErr && profileErr.code !== 'PGRST116') {
+        console.error('[generate-video] credit check failed:', profileErr.message)
+      }
+      const balance = profile?.video_credits ?? 0
+      if (balance < cost) {
         return NextResponse.json(
-          { error: 'You already have a video processing. Please wait for it to finish.' },
-          { status: 409 }
+          { error: 'Not enough credits.', needed: cost, balance },
+          { status: 402 }
         )
       }
-      console.warn('[generate-video] expiring stale processing row', row.id, 'ageMs=', ageMs)
     }
 
-    // ── Step 3: plan one cinematic scene from the user prompt. ──
-    let sceneText: string
+    // Step 1 — OpenAI breaks the prompt into 4 cinematic scenes
+    let scenes: string[]
     try {
-      const scenes = await generateScenes(prompt, 1)
-      sceneText = (scenes[0] ?? '').trim() || prompt
+      scenes = await generateScenes(prompt)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] scene generation failed:', msg)
       return NextResponse.json(
-        { error: 'Failed to plan the scene. Please try a different prompt.' },
+        { error: 'Failed to plan scenes. Please try a different prompt.' },
         { status: 500 }
       )
     }
 
-    const augmented = augmentForQuality(sceneText, quality)
-    const finalPromptText = sanitizePromptForRunway(augmented) || sanitizePromptForRunway(prompt)
-    if (!finalPromptText) {
+    // Pre-validate the first scene payload BEFORE launching tasks.
+    // This catches any Runway field errors early — before credits are charged.
+    try {
+      buildRunwayPayload(scenes[0], platform, duration)
+    } catch (validationErr: unknown) {
+      const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
+      console.error('[generate-video] payload pre-validation failed:', msg)
       return NextResponse.json(
-        { error: 'Prompt contained no usable visual description. Please rephrase.' },
+        { error: `Request validation failed: ${msg}` },
         { status: 400 }
       )
     }
 
-    // ── Step 4: kick off the text_to_image stage only. Returns immediately.
-    let textToImage
+    // Step 2 — Kick off RunwayML tasks (parallel) and return immediately.
+    // The route does NOT wait for the clips to finish — /status handles that.
+    let tasks: { id: string; promptText: string }[]
     try {
-      textToImage = await startRunwayTextToImage(finalPromptText, '720:1280')
+      tasks = await Promise.all(
+        scenes.map((sceneText) => startRunwayTask(sceneText, platform, duration))
+      )
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error('[generate-video] text_to_image start failed:', msg)
-      return NextResponse.json({ error: msg }, { status: 502 })
+      console.error('[generate-video] runway task start failed:', msg)
+      // Pass the specific Runway error through so the UI can show a useful message
+      return NextResponse.json(
+        { error: msg },
+        { status: 502 }
+      )
     }
 
-    console.log(
-      '[generate-video] text_to_image started: task_id=',
-      textToImage.id,
-      'for user',
-      user.id
-    )
+    const taskHandles = tasks.map((t, i) => ({
+      id: t.id,
+      promptText: t.promptText,
+      index: i,
+    }))
 
-    // ── Step 5: persist a generation row in `processing` state. We stash all
-    // async-polling fields into the existing `content` JSONB column so this
-    // change does not require a schema migration.
-    const generationContent = {
-      type: 'runway_video',
+    // Step 3 — Persist the generation row so we can recover after a refresh
+    // and so /status can authorize the polling request.
+    const meta = encodeGenerationMeta({
+      task_ids: taskHandles,
       prompt,
-      sceneText: augmented,
-      promptText: finalPromptText,
+      scenes,
+      cost,
       platform,
-      requested_duration: requestedDuration,
+      duration,
       quality,
-      credits_required: cost,
-      // Two-stage Runway pipeline: text_to_image → image_to_video.
-      stage: 'text_to_image' as const,
-      text_to_image_task_id: textToImage.id,
-      text_to_image_url: null as string | null,
-      image_to_video_task_id: null as string | null,
-      status: 'processing' as const,
-      video_url: null as string | null,
-      error: null as string | null,
-      charged: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    })
 
-    const { data: insertRow, error: insertErr } = await supabase
-      .from('generations')
+    const { data: inserted, error: insertErr } = await supabase
+      .from('videos')
       .insert({
         user_id: user.id,
-        niche: 'runway_video',
-        content: generationContent,
+        status: 'processing',
+        platform,
+        duration,
+        quality_mode: quality,
+        credits_used: 0, // charged only on completion
+        topic: prompt,
+        script: meta,
+        title: prompt.slice(0, 60),
       })
-      .select('id')
+      .select('id, created_at')
       .single()
 
-    if (insertErr || !insertRow) {
-      console.error(
-        '[generate-video] failed to persist generation row:',
-        insertErr?.message
-      )
+    if (insertErr || !inserted) {
+      console.error('[generate-video] failed to persist generation row:', insertErr?.message)
       return NextResponse.json(
-        { error: 'Could not save generation. Please try again.' },
+        { error: 'Could not start generation. Please try again.' },
         { status: 500 }
       )
     }
 
-    console.log(
-      '[generate-video] queued generation',
-      insertRow.id,
-      'text_to_image_task_id=',
-      textToImage.id,
-      'cost=',
-      cost
-    )
+    console.log(`[generate-video] created generation ${inserted.id} for user ${user.id} (cost=${cost}, tasks=${taskHandles.length})`)
 
-    return NextResponse.json({
-      generation_id: insertRow.id,
-      status: 'processing',
-      stage: 'text_to_image',
-      prompt,
-      sceneText: augmented,
-      cost,
-      duration: requestedDuration,
-      quality,
-    })
+    return NextResponse.json(
+      {
+        generation_id: inserted.id,
+        status: 'processing',
+        prompt,
+        scenes,
+        tasks: taskHandles,
+        cost,
+        created_at: inserted.created_at,
+      },
+      { status: 202 }
+    )
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[generate-video] unexpected error:', msg)
     return NextResponse.json(
-      { error: 'Video generation failed. Please try again.' },
+      { error: 'Something went wrong. Please try again.' },
       { status: 500 }
     )
   }

@@ -1,90 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getRunwayTask, type RunwayTaskState } from '@/lib/runway'
 import {
-  extractVideoUrl,
-  getRunwayTask,
-  startRunwayImageToVideo,
-} from '@/lib/runway'
+  decodeGenerationMeta,
+  finalizeGeneration,
+  isStale,
+  touchGeneration,
+  type GenerationMeta,
+} from '@/lib/generations'
 
-// Status route — frontend polls this every 5–10s while a generation is in
-// flight. The two-stage Runway pipeline (text_to_image → image_to_video) is
-// driven entirely from here so the POST /generate-video request returns
-// quickly. Credits are deducted exactly once when the final video URL is
-// confirmed.
 export const maxDuration = 30
 
-type Stage = 'text_to_image' | 'image_to_video'
-type StatusValue = 'processing' | 'completed' | 'failed'
-
-interface GenerationContent {
-  type?: string
-  prompt?: string
-  sceneText?: string
-  promptText?: string
-  platform?: string
-  requested_duration?: number
-  quality?: string
-  credits_required?: number
-  stage?: Stage
-  text_to_image_task_id?: string | null
-  text_to_image_url?: string | null
-  image_to_video_task_id?: string | null
-  status?: StatusValue
-  video_url?: string | null
-  error?: string | null
-  charged?: boolean
-  created_at?: string
-  updated_at?: string
+function looksLikeVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  if (/\.(png|jpe?g|webp|gif|avif)(\?|$|&)/.test(lower)) return false
+  return true
 }
 
-async function deductCredits(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  cost: number,
-  generationId: string
-): Promise<void> {
-  if (cost <= 0) return
-  const { data: profile, error: fetchErr } = await supabase
-    .from('profiles')
-    .select('video_credits')
-    .eq('id', userId)
-    .single()
-  if (fetchErr) {
-    console.error(
-      '[generate-video/status] credit fetch failed for generation',
-      generationId,
-      ':',
-      fetchErr.message
-    )
-    return
-  }
-  const current = profile?.video_credits ?? 0
-  const next = Math.max(0, current - cost)
-  const { error: updateErr } = await supabase
-    .from('profiles')
-    .update({ video_credits: next })
-    .eq('id', userId)
-    // .gte guard means we don't underflow if balance drifted between the
-    // initial check in /generate-video and now.
-    .gte('video_credits', cost)
-  if (updateErr) {
-    console.error(
-      '[generate-video/status] credit update failed for generation',
-      generationId,
-      ':',
-      updateErr.message
-    )
-    return
-  }
-  console.log(
-    '[generate-video/status] credits deducted: cost=',
-    cost,
-    'user=',
-    userId,
-    'generation=',
-    generationId,
-    'new_balance=',
-    next
+async function fetchTaskStates(ids: string[]): Promise<RunwayTaskState[]> {
+  return Promise.all(
+    ids.map(async (id) => {
+      try {
+        return await getRunwayTask(id)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return {
+          id,
+          status: 'FAILED' as const,
+          progress: null,
+          videoUrl: null,
+          failure: msg,
+        }
+      }
+    })
   )
 }
 
@@ -105,339 +54,199 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
     }
 
-    const generationId = req.nextUrl.searchParams.get('generation_id') ?? ''
-    if (!generationId) {
-      return NextResponse.json(
-        { error: 'Missing generation_id parameter.' },
-        { status: 400 }
+    const generationId = req.nextUrl.searchParams.get('generation_id')
+
+    // ── Modern path: poll by generation_id (DB-backed, recoverable). ─────────
+    if (generationId) {
+      const { data: row, error: rowErr } = await supabase
+        .from('videos')
+        .select('id,user_id,status,video_url,credits_used,script,created_at,updated_at')
+        .eq('id', generationId)
+        .maybeSingle()
+
+      // Fallback if `updated_at` column doesn't exist yet.
+      let video = row as Record<string, unknown> | null
+      if (!video && rowErr && /updated_at/.test(rowErr.message ?? '')) {
+        const retry = await supabase
+          .from('videos')
+          .select('id,user_id,status,video_url,credits_used,script,created_at')
+          .eq('id', generationId)
+          .maybeSingle()
+        video = retry.data as Record<string, unknown> | null
+      }
+
+      if (!video) {
+        return NextResponse.json({ error: 'Generation not found.' }, { status: 404 })
+      }
+      if (video.user_id !== user.id) {
+        return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+      }
+
+      const status = (typeof video.status === 'string' ? video.status : 'processing') as string
+      const meta: GenerationMeta | null = decodeGenerationMeta(typeof video.script === 'string' ? video.script : null)
+      const taskIds = meta?.task_ids?.map((t) => t.id) ?? []
+
+      // Already finalised — return cached state without hitting Runway again.
+      if (status !== 'processing') {
+        return NextResponse.json({
+          generation_id: video.id,
+          status,
+          video_url: typeof video.video_url === 'string' ? video.video_url : null,
+          done: true,
+          tasks: [],
+        })
+      }
+
+      // Stale sweep — protect against jobs the user abandoned.
+      const createdAt = String(video.created_at)
+      const updatedAt = typeof video.updated_at === 'string' ? video.updated_at : null
+      if (isStale({ created_at: createdAt, updated_at: updatedAt })) {
+        console.log(`[generate-video/status] sweeping stale generation ${video.id}`)
+        await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'failed',
+          done: true,
+          stale: true,
+          tasks: [],
+        })
+      }
+
+      if (taskIds.length === 0) {
+        // Misshapen row — finalise it so the user isn't stuck forever.
+        await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'failed',
+          done: true,
+          tasks: [],
+        })
+      }
+
+      const results = await fetchTaskStates(taskIds)
+      const allDone = results.every(
+        (r) => r.status === 'SUCCEEDED' || r.status === 'FAILED' || r.status === 'CANCELLED'
       )
-    }
-
-    const { data: row, error: fetchErr } = await supabase
-      .from('generations')
-      .select('id, user_id, content, created_at')
-      .eq('id', generationId)
-      .single()
-
-    if (fetchErr || !row) {
-      return NextResponse.json({ error: 'Generation not found.' }, { status: 404 })
-    }
-    if (row.user_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
-    }
-
-    const content: GenerationContent = (row.content as GenerationContent) ?? {}
-    if (content.type !== 'runway_video') {
-      return NextResponse.json(
-        { error: 'This generation is not a Runway video.' },
-        { status: 400 }
+      const playable = results.filter(
+        (r) => r.status === 'SUCCEEDED' && looksLikeVideoUrl(r.videoUrl)
       )
-    }
+      const succeeded = results.filter((r) => r.status === 'SUCCEEDED').length
 
-    // ── Terminal states ─────────────────────────────────────────────────────
-    if (content.status === 'completed') {
+      if (!allDone) {
+        // Still working — touch updated_at so the stale sweeper sees activity.
+        await touchGeneration(supabase, String(video.id))
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'processing',
+          done: false,
+          succeeded,
+          playable: playable.length,
+          total: results.length,
+          tasks: results,
+        })
+      }
+
+      // ── Terminal state — finalise the row and (if successful) charge credits.
+      if (playable.length === 0) {
+        const moved = await finalizeGeneration(supabase, String(video.id), 'failed', {
+          credits_used: 0,
+        })
+        if (moved) {
+          console.log(`[generate-video/status] generation ${video.id} → failed (no playable clip)`)
+        }
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'failed',
+          done: true,
+          succeeded,
+          playable: 0,
+          total: results.length,
+          tasks: results,
+        })
+      }
+
+      const primaryUrl = playable[0].videoUrl!
+      const cost = Math.max(1, Math.min(10, meta?.cost ?? 1))
+
+      // Atomic finalise: only one polling request gets to flip processing → completed,
+      // so credits can never be deducted twice.
+      const won = await finalizeGeneration(supabase, String(video.id), 'completed', {
+        video_url: primaryUrl,
+        credits_used: cost,
+      })
+
+      let creditsDeducted = false
+      if (won) {
+        const { data: profile, error: profileErr } = await supabase
+          .from('profiles')
+          .select('video_credits')
+          .eq('id', user.id)
+          .single()
+
+        if (profileErr) {
+          console.error('[generate-video/status] could not load credits for deduction:', profileErr.message)
+        } else {
+          const current = profile?.video_credits ?? 0
+          const next = Math.max(0, current - cost)
+          const { error: dedErr } = await supabase
+            .from('profiles')
+            .update({ video_credits: next })
+            .eq('id', user.id)
+          if (dedErr) {
+            console.error('[generate-video/status] credit deduction failed:', dedErr.message)
+          } else {
+            creditsDeducted = true
+            console.log(`[generate-video/status] generation ${video.id} → completed, charged ${cost} credit(s) (balance ${current} → ${next})`)
+          }
+        }
+      }
+
       return NextResponse.json({
-        generation_id: row.id,
+        generation_id: video.id,
         status: 'completed',
-        video_url: content.video_url ?? null,
-        progress: 1,
-      })
-    }
-    if (content.status === 'failed') {
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'failed',
-        error: 'Video generation failed. Please try again.',
-        progress: null,
-      })
-    }
-
-    // ── Stage 1: text_to_image ─────────────────────────────────────────────
-    const stage: Stage = content.stage ?? 'text_to_image'
-    const cost = Math.max(1, Number(content.credits_required ?? 1))
-
-    if (stage === 'text_to_image') {
-      const taskId = content.text_to_image_task_id
-      if (!taskId) {
-        console.error('[generate-video/status] missing text_to_image_task_id on row', row.id)
-        await markFailed(supabase, row.id, user.id, content, 'No text_to_image task id stored.')
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'failed',
-          error: 'Video generation failed. Please try again.',
-          progress: null,
-        })
-      }
-
-      let state
-      try {
-        state = await getRunwayTask(taskId)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error(
-          '[generate-video/status] text_to_image lookup failed for',
-          taskId,
-          ':',
-          msg
-        )
-        // Transient — keep client polling.
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'processing',
-          stage: 'text_to_image',
-          progress: null,
-        })
-      }
-
-      console.log(
-        '[generate-video/status] text_to_image gen=',
-        row.id,
-        'task=',
-        taskId,
-        'status=',
-        state.status,
-        'progress=',
-        state.progress
-      )
-
-      if (state.status === 'SUCCEEDED') {
-        const imageUrl = state.outputUrl
-        if (!imageUrl) {
-          await markFailed(
-            supabase,
-            row.id,
-            user.id,
-            content,
-            'text_to_image succeeded with no output URL.'
-          )
-          return NextResponse.json({
-            generation_id: row.id,
-            status: 'failed',
-            error: 'Video generation failed. Please try again.',
-            progress: null,
-          })
-        }
-
-        // Kick off the image_to_video stage now. We do NOT wait for it here —
-        // the next poll will check its progress.
-        let videoTask
-        try {
-          videoTask = await startRunwayImageToVideo(
-            imageUrl,
-            content.promptText ?? content.sceneText ?? content.prompt ?? '',
-            content.platform ?? 'YouTube Shorts',
-            10
-          )
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error(
-            '[generate-video/status] image_to_video start failed for gen',
-            row.id,
-            ':',
-            msg
-          )
-          await markFailed(supabase, row.id, user.id, content, `image_to_video start failed: ${msg}`)
-          return NextResponse.json({
-            generation_id: row.id,
-            status: 'failed',
-            error: 'Video generation failed. Please try again.',
-            progress: null,
-          })
-        }
-
-        const nextContent: GenerationContent = {
-          ...content,
-          stage: 'image_to_video',
-          text_to_image_url: imageUrl,
-          image_to_video_task_id: videoTask.id,
-          updated_at: new Date().toISOString(),
-        }
-        await supabase
-          .from('generations')
-          .update({ content: nextContent })
-          .eq('id', row.id)
-          .eq('user_id', user.id)
-          .eq('content->>stage', 'text_to_image')
-
-        console.log(
-          '[generate-video/status] transitioned gen',
-          row.id,
-          'to image_to_video task_id=',
-          videoTask.id
-        )
-
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'processing',
-          stage: 'image_to_video',
-          progress: 0.4,
-        })
-      }
-
-      if (state.status === 'FAILED' || state.status === 'CANCELLED') {
-        await markFailed(
-          supabase,
-          row.id,
-          user.id,
-          content,
-          state.failure ?? `text_to_image ${state.status.toLowerCase()}`
-        )
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'failed',
-          error: 'Video generation failed. Please try again.',
-          progress: null,
-        })
-      }
-
-      const partial =
-        typeof state.progress === 'number'
-          ? Math.max(0, Math.min(0.4, state.progress * 0.4))
-          : 0.15
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'processing',
-        stage: 'text_to_image',
-        progress: partial,
+        done: true,
+        succeeded,
+        playable: playable.length,
+        total: results.length,
+        video_url: primaryUrl,
+        tasks: results,
+        cost,
+        creditsDeducted,
       })
     }
 
-    // ── Stage 2: image_to_video ────────────────────────────────────────────
-    const videoTaskId = content.image_to_video_task_id
-    if (!videoTaskId) {
-      console.error(
-        '[generate-video/status] missing image_to_video_task_id on row',
-        row.id
-      )
-      await markFailed(supabase, row.id, user.id, content, 'No image_to_video task id stored.')
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'failed',
-        error: 'Video generation failed. Please try again.',
-        progress: null,
-      })
+    // ── Legacy path: poll by raw `tasks=` query param. Kept for backwards
+    // compatibility with older clients; no credit logic on this branch. ───────
+    const tasksParam = req.nextUrl.searchParams.get('tasks') ?? ''
+    const ids = tasksParam
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'Missing tasks or generation_id parameter.' }, { status: 400 })
+    }
+    if (ids.length > 8) {
+      return NextResponse.json({ error: 'Too many tasks requested.' }, { status: 400 })
     }
 
-    let videoState
-    try {
-      videoState = await getRunwayTask(videoTaskId)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(
-        '[generate-video/status] image_to_video lookup failed for',
-        videoTaskId,
-        ':',
-        msg
-      )
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'processing',
-        stage: 'image_to_video',
-        progress: null,
-      })
-    }
-
-    console.log(
-      '[generate-video/status] image_to_video gen=',
-      row.id,
-      'task=',
-      videoTaskId,
-      'status=',
-      videoState.status,
-      'progress=',
-      videoState.progress
+    const results = await fetchTaskStates(ids)
+    const done = results.every(
+      (r) => r.status === 'SUCCEEDED' || r.status === 'FAILED' || r.status === 'CANCELLED'
     )
+    const anyFailed = results.some((r) => r.status === 'FAILED' || r.status === 'CANCELLED')
+    const succeeded = results.filter((r) => r.status === 'SUCCEEDED').length
+    const playable = results.filter(
+      (r) => r.status === 'SUCCEEDED' && looksLikeVideoUrl(r.videoUrl)
+    ).length
 
-    if (videoState.status === 'SUCCEEDED') {
-      const videoUrl = extractVideoUrl(videoState)
-      if (!videoUrl) {
-        await markFailed(
-          supabase,
-          row.id,
-          user.id,
-          content,
-          'image_to_video succeeded with no playable URL.'
-        )
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'failed',
-          error: 'Video generation failed. Please try again.',
-          progress: null,
-        })
-      }
-
-      const nextContent: GenerationContent = {
-        ...content,
-        status: 'completed',
-        video_url: videoUrl,
-        charged: true,
-        error: null,
-        updated_at: new Date().toISOString(),
-      }
-
-      // Atomic transition: only update if status was still 'processing'. If
-      // another concurrent poll already flipped it to 'completed', the update
-      // affects 0 rows and we skip the credit deduction.
-      const { data: updated, error: updErr } = await supabase
-        .from('generations')
-        .update({ content: nextContent })
-        .eq('id', row.id)
-        .eq('user_id', user.id)
-        .eq('content->>status', 'processing')
-        .select('id')
-
-      if (updErr) {
-        console.error(
-          '[generate-video/status] completion update failed:',
-          updErr.message
-        )
-        return NextResponse.json({
-          generation_id: row.id,
-          status: 'completed',
-          video_url: videoUrl,
-          progress: 1,
-        })
-      }
-
-      const weWonTheRace = (updated?.length ?? 0) > 0
-      if (weWonTheRace) {
-        await deductCredits(supabase, user.id, cost, row.id)
-      }
-
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'completed',
-        video_url: videoUrl,
-        progress: 1,
-        charged: weWonTheRace,
-      })
-    }
-
-    if (videoState.status === 'FAILED' || videoState.status === 'CANCELLED') {
-      await markFailed(
-        supabase,
-        row.id,
-        user.id,
-        content,
-        videoState.failure ?? `image_to_video ${videoState.status.toLowerCase()}`
-      )
-      return NextResponse.json({
-        generation_id: row.id,
-        status: 'failed',
-        error: 'Video generation failed. Please try again.',
-        progress: null,
-      })
-    }
-
-    const videoProgress =
-      typeof videoState.progress === 'number'
-        ? 0.4 + Math.max(0, Math.min(0.6, videoState.progress * 0.6))
-        : 0.5
     return NextResponse.json({
-      generation_id: row.id,
-      status: 'processing',
-      stage: 'image_to_video',
-      progress: videoProgress,
+      done,
+      anyFailed,
+      succeeded,
+      playable,
+      total: results.length,
+      tasks: results,
     })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
@@ -445,43 +254,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       { error: 'Status lookup failed. Please retry.' },
       { status: 500 }
-    )
-  }
-}
-
-async function markFailed(
-  supabase: ReturnType<typeof createClient>,
-  generationId: string,
-  userId: string,
-  content: GenerationContent,
-  reason: string
-): Promise<void> {
-  const nextContent: GenerationContent = {
-    ...content,
-    status: 'failed',
-    error: reason,
-    charged: false,
-    updated_at: new Date().toISOString(),
-  }
-  const { error } = await supabase
-    .from('generations')
-    .update({ content: nextContent })
-    .eq('id', generationId)
-    .eq('user_id', userId)
-    .eq('content->>status', 'processing')
-  if (error) {
-    console.error(
-      '[generate-video/status] failed-state update error for gen',
-      generationId,
-      ':',
-      error.message
-    )
-  } else {
-    console.log(
-      '[generate-video/status] gen',
-      generationId,
-      'marked failed:',
-      reason
     )
   }
 }
