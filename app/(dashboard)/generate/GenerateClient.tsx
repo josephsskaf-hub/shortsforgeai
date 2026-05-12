@@ -35,7 +35,7 @@ interface ActiveSummary {
 }
 
 type Phase = 'idle' | 'analyzing' | 'options' | 'generating' | 'done' | 'error'
-type Duration = 10 | 30 | 60
+type Duration = 10 | 30 | 50
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 const POLL_INTERVAL_MS = 5000
@@ -47,9 +47,9 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 1, icon: '🎞️' },
-  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 1, icon: '⚡' },
-  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 2, icon: '✨' },
+  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 1, icon: 'ðï¸' },
+  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 1, icon: 'â¡' },
+  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 2, icon: 'â¨' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -75,7 +75,7 @@ export default function GenerateClient() {
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
   const [playerIndex, setPlayerIndex] = useState(0)
-  const [duration, setDuration] = useState<Duration>(30)
+  const [duration, setDuration] = useState<Duration>(10)
   const [quality, setQuality] = useState<Quality>('basic_ai')
   const [chargedCost, setChargedCost] = useState<number>(1)
   const [generationId, setGenerationId] = useState<string | null>(null)
@@ -92,7 +92,7 @@ export default function GenerateClient() {
     }
   }, [])
 
-  // ── Check for an existing processing generation on mount ─────────────────
+  // ââ Check for an existing processing generation on mount âââââââââââââââââ
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -112,17 +112,17 @@ export default function GenerateClient() {
             cost: typeof data.active.cost === 'number' ? data.active.cost : 1,
           })
         } else if (data?.swept) {
-          // A stale job was just cleaned up — refresh the credits chip.
+          // A stale job was just cleaned up â refresh the credits chip.
           try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
         }
       } catch {
-        // Best-effort — recovery panel is optional UX.
+        // Best-effort â recovery panel is optional UX.
       }
     })()
     return () => { cancelled = true }
   }, [])
 
-  // ── Polling driver (status by generation_id) ─────────────────────────────
+  // ââ Polling driver (status by generation_id) âââââââââââââââââââââââââââââ
   useEffect(() => {
     if (phase !== 'generating' || !generationId) return
     let cancelled = false
@@ -382,7 +382,7 @@ export default function GenerateClient() {
     }
   }, [playerIndex, phase])
 
-  // ── Recovery actions ─────────────────────────────────────────────────────
+  // ââ Recovery actions âââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const continueProgress = useCallback(async () => {
     if (!recoverable) return
     setRecoveryBusy('continue')
@@ -449,7 +449,7 @@ export default function GenerateClient() {
           </span>
         </div>
         <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-          🎬 Generate a Real AI Short
+          ð¬ Generate a Real AI Short
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
@@ -458,7 +458,7 @@ export default function GenerateClient() {
         </p>
       </div>
 
-      {/* ── Recovery panel ── */}
+      {/* ââ Recovery panel ââ */}
       {recoverable && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
@@ -485,7 +485,7 @@ export default function GenerateClient() {
                 opacity: recoveryBusy ? 0.7 : 1,
               }}
             >
-              ▶ Continue progress
+              â¶ Continue progress
             </button>
             <button
               onClick={() => cancelRecoverable('cancel')}
@@ -499,7 +499,7 @@ export default function GenerateClient() {
                 opacity: recoveryBusy ? 0.7 : 1,
               }}
             >
-              ✖ Cancel generation
+              â Cancel generation
             </button>
             <button
               onClick={() => cancelRecoverable('start_over')}
@@ -513,7 +513,7 @@ export default function GenerateClient() {
                 opacity: recoveryBusy ? 0.7 : 1,
               }}
             >
-              🔄 Start over
+              ð Start over
             </button>
           </div>
         </section>
@@ -532,7 +532,7 @@ export default function GenerateClient() {
         </div>
       )}
 
-      {/* ── STEP 1: Idea ── */}
+      {/* ââ STEP 1: Idea ââ */}
       {showStep1 && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
@@ -547,7 +547,7 @@ export default function GenerateClient() {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
+            placeholder="Describe your Short â topic, angle, hook, anything you want viewers to feelâ¦"
             maxLength={1000}
             disabled={phase === 'analyzing'}
             className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
@@ -562,7 +562,7 @@ export default function GenerateClient() {
           />
           <div className="flex items-center justify-between mt-4 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              Analyzing your idea is free — no credits are charged.
+              Analyzing your idea is free â no credits are charged.
             </p>
             <button
               onClick={() => handleAnalyze()}
@@ -585,7 +585,7 @@ export default function GenerateClient() {
               {phase === 'analyzing' ? (
                 <>
                   <Spinner />
-                  Analyzing…
+                  Analyzingâ¦
                 </>
               ) : (
                 'Analyze Idea'
@@ -603,7 +603,7 @@ export default function GenerateClient() {
           <Spinner />
           <div>
             <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-              Analyzing your video concept…
+              Analyzing your video conceptâ¦
             </div>
             <div className="text-sm" style={{ color: 'var(--muted2)' }}>
               Detecting niche, drafting a title, and outlining the scenes.
@@ -612,7 +612,7 @@ export default function GenerateClient() {
         </section>
       )}
 
-      {/* ── STEP 2: Options ── */}
+      {/* ââ STEP 2: Options ââ */}
       {showStep2 && analysis && (
         <>
           <section
@@ -628,7 +628,7 @@ export default function GenerateClient() {
                   color: '#93c5fd',
                 }}
               >
-                Niche · {analysis.niche || 'General'}
+                Niche Â· {analysis.niche || 'General'}
               </span>
               <button
                 onClick={handleBackToEdit}
@@ -640,7 +640,7 @@ export default function GenerateClient() {
                   cursor: 'pointer',
                 }}
               >
-                ← Edit idea
+                â Edit idea
               </button>
             </div>
             <h2 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
@@ -673,7 +673,7 @@ export default function GenerateClient() {
                 Duration
               </div>
               <div className="flex gap-2 flex-wrap">
-                {([10, 30, 60] as Duration[]).map((d) => (
+                {([10, 30, 50] as Duration[]).map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
@@ -686,14 +686,13 @@ export default function GenerateClient() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
+                    {d === 10 ? '10s (quick)' : d === 30 ? '30s (3 clips)' : '50s (5 clips)'}
                   </button>
                 ))}
               </div>
               {duration !== 10 && (
                 <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-                  Rendered as {duration === 30 ? '3' : '6'} cinematic 10s clips you can stitch in
-                  any editor.
+                  Rendered as {duration === 30 ? '3' : '5'} cinematic 10s clips stitched together automatically.
                 </p>
               )}
             </div>
@@ -715,7 +714,7 @@ export default function GenerateClient() {
                     color: '#fff',
                   }}
                 >
-                  <span style={{ fontSize: '0.8rem' }}>📲</span> YouTube Shorts (9:16)
+                  <span style={{ fontSize: '0.8rem' }}>ð²</span> YouTube Shorts (9:16)
                 </span>
               </div>
             </div>
@@ -806,7 +805,7 @@ export default function GenerateClient() {
         </>
       )}
 
-      {/* ── Render / Done / Error ── */}
+      {/* ââ Render / Done / Error ââ */}
       {showRender && (
         <>
           {tasks.length > 0 && (
@@ -817,10 +816,10 @@ export default function GenerateClient() {
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="font-black text-base" style={{ color: 'var(--text)' }}>
                   {phase === 'done'
-                    ? '✅ Your Short is ready'
+                    ? 'â Your Short is ready'
                     : phase === 'generating'
-                    ? `🎬 Rendering your video… (${Math.min(succeededCount + 1, tasks.length)}/${tasks.length})`
-                    : `🎬 Rendering ${Math.min(succeededCount + 1, tasks.length)}/${tasks.length}…`}
+                    ? `ð¬ Rendering your videoâ¦ (${Math.min(succeededCount + 1, tasks.length)}/${tasks.length})`
+                    : `ð¬ Rendering ${Math.min(succeededCount + 1, tasks.length)}/${tasks.length}â¦`}
                 </div>
                 <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
                   {totalProgress}%
@@ -830,7 +829,7 @@ export default function GenerateClient() {
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {phase === 'done'
                   ? 'All clips finished. Press play below to watch the full Short.'
-                  : 'Rendering your video… Runway typically takes ~30-90 seconds per 10s clip. We poll every 5 seconds.'}
+                  : 'Rendering your videoâ¦ Runway typically takes ~30-90 seconds per 10s clip. We poll every 5 seconds.'}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
@@ -887,12 +886,12 @@ export default function GenerateClient() {
                             }}
                           >
                             {failed
-                              ? '⚠ Failed'
+                              ? 'â  Failed'
                               : succeededNoFile
                               ? 'No file'
                               : running
-                              ? <><Spinner /><span className="ml-2">Rendering…</span></>
-                              : '⏳ Queued'}
+                              ? <><Spinner /><span className="ml-2">Renderingâ¦</span></>
+                              : 'â³ Queued'}
                           </div>
                         )}
                         <div
@@ -903,7 +902,7 @@ export default function GenerateClient() {
                             fontSize: '0.65rem',
                           }}
                         >
-                          Clip {t.index + 1} · {label}
+                          Clip {t.index + 1} Â· {label}
                         </div>
                       </div>
                     )
@@ -916,7 +915,7 @@ export default function GenerateClient() {
                     className="text-xs font-black uppercase tracking-widest cursor-pointer"
                     style={{ color: 'var(--muted2)' }}
                   >
-                    🎬 Scene prompts
+                    ð¬ Scene prompts
                   </summary>
                   <ol
                     className="mt-2 text-xs space-y-1.5"
@@ -941,7 +940,7 @@ export default function GenerateClient() {
               <Spinner />
               <div>
                 <div className="font-black text-base" style={{ color: 'var(--text)' }}>
-                  Rendering your video…
+                  Rendering your videoâ¦
                 </div>
                 <div className="text-sm" style={{ color: 'var(--muted2)' }}>
                   Resuming your in-progress generation. This can take up to a few minutes.
@@ -959,157 +958,4 @@ export default function GenerateClient() {
                 Video file not available. Please try again.
               </div>
             </section>
-          )}
-
-          {phase === 'error' && (
-            <section
-              className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-              style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
-            >
-              <div className="font-black text-base" style={{ color: '#fca5a5' }}>
-                Video generation failed. Please try again.
-              </div>
-            </section>
-          )}
-
-          {phase === 'done' && successClips.length > 0 && currentClipUrl && (
-            <section
-              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
-            >
-              <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                ▶ Full Short — clip {playerIndex + 1}/{successClips.length}
-              </div>
-              <div
-                className="rounded-2xl overflow-hidden w-full max-w-[300px]"
-                style={{
-                  border: '1px solid rgba(37,99,235,.4)',
-                  boxShadow: '0 12px 48px rgba(37,99,235,.2)',
-                  background: '#000',
-                  aspectRatio: '9 / 16',
-                }}
-              >
-                <video
-                  ref={videoRef}
-                  key={currentClipUrl}
-                  src={currentClipUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  poster={undefined}
-                  onEnded={handleVideoEnd}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-4">
-                {successClips.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPlayerIndex(i)}
-                    className="rounded-full"
-                    style={{
-                      width: 10,
-                      height: 10,
-                      background: i === playerIndex ? '#93c5fd' : 'rgba(255,255,255,.18)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: i === playerIndex ? '0 0 8px rgba(37,99,235,.6)' : 'none',
-                    }}
-                    aria-label={`Jump to clip ${i + 1}`}
-                  />
-                ))}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                {successClips.map((s, i) => {
-                  if (!s.videoUrl || !looksLikeVideoUrl(s.videoUrl)) return null
-                  return (
-                    <a
-                      key={s.id}
-                      href={s.videoUrl}
-                      download={`shortsforge-clip-${i + 1}.mp4`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-xl px-4 py-2.5 text-xs font-bold text-white"
-                      style={{
-                        background:
-                          i === 0
-                            ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
-                            : 'rgba(37,99,235,.12)',
-                        border: i === 0 ? 'none' : '1px solid rgba(37,99,235,.3)',
-                        color: i === 0 ? '#fff' : '#93c5fd',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      ⬇ Clip {i + 1}
-                    </a>
-                  )
-                })}
-              </div>
-              <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
-                Tip: drop the clips into any editor (CapCut, InVideo) to merge them with captions and
-                voiceover.
-              </p>
-            </section>
-          )}
-
-          <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
-              ShortsForgeAI v1.0
-            </p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <button
-              onClick={handleReset}
-              className="rounded-xl px-5 py-2.5 text-sm font-bold"
-              style={{
-                background: 'rgba(255,255,255,.04)',
-                border: '1px solid var(--border)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-              }}
-            >
-              🔄 Start over
-            </button>
-          </div>
-        </>
-      )}
-    </main>
-  )
-}
-
-function Spinner() {
-  return (
-    <div
-      className="inline-block rounded-full"
-      style={{
-        width: 22,
-        height: 22,
-        border: '2px solid rgba(37,99,235,.25)',
-        borderTopColor: '#93c5fd',
-        animation: 'spin 0.9s linear infinite',
-      }}
-    />
-  )
-}
-
-function ProgressBar({ progress }: { progress: number }) {
-  return (
-    <div
-      className="w-full h-2 rounded-full overflow-hidden"
-      style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)' }}
-    >
-      <div
-        className="h-full"
-        style={{
-          width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(37,99,235,.85), rgba(59,130,246,1))',
-          boxShadow: '0 0 16px rgba(37,99,235,.55)',
-          transition: 'width 600ms ease',
-        }}
-      />
-    </div>
-  )
-}
+    
