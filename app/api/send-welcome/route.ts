@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
               <!-- Free generations badge -->
               <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
                 <p style="color:#818cf8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
-                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">3 free video credits</p>
-                <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to generate <strong style="color:#94a3b8;">3 short AI videos</strong> — 10s clips, vertical 9:16, ready to upload.</p>
+                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free video credits</p>
+                <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to try ShortsForgeAI before upgrading — vertical 9:16 Shorts, ready to upload.</p>
               </div>
 
               <!-- Features list -->
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
               <!-- Upgrade note -->
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
-                  After your free generations, upgrade to <strong style="color:#818cf8;">Pro for $5/month</strong> and generate up to <strong style="color:#818cf8;">1,000 Shorts scripts/month</strong>.
+                  Launch offer — 50% off your first month. Basic from <strong style="color:#818cf8;">$4.50</strong> (140 credits / mo), Pro from <strong style="color:#818cf8;">$9.50</strong> (350 credits / mo).
                 </p>
               </div>
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
 
 Welcome to ShortsForgeAI! 🎬
 
-You have 3 free video credits waiting — enough to generate 3 short AI videos.
+You have 2 free video credits waiting — enough to try ShortsForgeAI before upgrading.
 Every Short comes with:
 - Hooks that stop the scroll
 - Titles optimized for YouTube
@@ -154,7 +154,7 @@ Every Short comes with:
 👉 Start generating now:
 ${dashboardUrl}
 
-After your free generations, upgrade to Pro for $5/month and generate up to 1,000 Shorts scripts/month.
+Launch offer — 50% off your first month. Basic from $4.50/mo (140 credits), Pro from $9.50/mo (350 credits).
 
 — The ShortsForgeAI Team
 www.shortsforgeai.vercel.app`
@@ -168,7 +168,7 @@ www.shortsforgeai.vercel.app`
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [email],
-        subject: '⚡ Your 3 free AI video credits are ready',
+        subject: '⚡ Your 2 free AI video credits are ready',
         html,
         text,
       }),

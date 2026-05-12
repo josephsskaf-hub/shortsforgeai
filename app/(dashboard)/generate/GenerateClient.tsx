@@ -43,7 +43,7 @@ type Quality = 'basic' | 'pro'
 
 const POLL_INTERVAL_MS = 5000
 
-// Flat cost per job — 1 credit (Basic) or 2 credits (Pro) for any duration.
+// Flat cost per job — 15 credits (Basic) or 20 credits (Pro) for any duration.
 const QUALITY_OPTIONS: {
   key: Quality
   title: string
@@ -51,8 +51,8 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic', title: 'Basic', desc: 'Standard prompt settings, fast generation.',        credits: 1, icon: '⚡' },
-  { key: 'pro',   title: 'Pro',   desc: 'Stronger cinematic prompt settings, premium look.', credits: 2, icon: '✨' },
+  { key: 'basic', title: 'Basic', desc: 'Standard video generation for short-form creators.',                       credits: 15, icon: '⚡' },
+  { key: 'pro',   title: 'Pro',   desc: 'Better cinematic prompting and higher-quality generation settings.', credits: 20, icon: '✨' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -80,7 +80,7 @@ export default function GenerateClient() {
   const [playerIndex, setPlayerIndex] = useState(0)
   const [duration, setDuration] = useState<Duration>(10)
   const [quality, setQuality] = useState<Quality>('basic')
-  const [chargedCost, setChargedCost] = useState<number>(1)
+  const [chargedCost, setChargedCost] = useState<number>(15)
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [recoverable, setRecoverable] = useState<ActiveSummary | null>(null)
   const [recoveryBusy, setRecoveryBusy] = useState<'continue' | 'cancel' | 'start_over' | null>(null)
@@ -435,13 +435,13 @@ export default function GenerateClient() {
           scenes: [],
           created_at: data.created_at,
           updated_at: data.updated_at,
-          cost: 1,
+          cost: 15,
         })
         return
       }
 
       if (res.status === 402) {
-        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 1} credit(s).`)
+        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 15} credit(s).`)
         setPhase('error')
         return
       }
@@ -462,9 +462,9 @@ export default function GenerateClient() {
         setClipsTotal(data.scenes.length)
       }
       if (typeof data.cost === 'number' && data.cost >= 1) {
-        setChargedCost(Math.min(2, Math.max(1, Math.floor(data.cost))))
+        setChargedCost(Math.min(20, Math.max(15, Math.floor(data.cost))))
       } else {
-        setChargedCost(QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1)
+        setChargedCost(QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
       }
     } catch (err: unknown) {
       console.error('[generate] generate threw:', err)
@@ -529,7 +529,7 @@ export default function GenerateClient() {
     setStates({})
     setPlayerIndex(0)
     setPrompt(recoverable.prompt || prompt)
-    setChargedCost(Math.min(2, Math.max(1, Math.floor(recoverable.cost || 1))))
+    setChargedCost(Math.min(20, Math.max(15, Math.floor(recoverable.cost || 15))))
     setGenerationId(recoverable.generation_id)
     setCompletedClipUrls(recoverable.completed_clip_urls ?? [])
     setAllClipUrls([])
@@ -565,10 +565,10 @@ export default function GenerateClient() {
   }, [recoverable])
 
   const currentClipUrl = successClips[playerIndex]?.videoUrl ?? null
-  // Flat per-job cost: 1 credit (Basic) or 2 credits (Pro), regardless of duration.
+  // Flat per-job cost: 15 credits (Basic) or 20 credits (Pro), regardless of duration.
   // 30s/50s jobs render 3 or 5 clips but still bill once, on successful completion.
   const expectedClipCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
-  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
+  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15
   const lowCredits = creditBalance !== null && creditBalance < selectedCost
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'

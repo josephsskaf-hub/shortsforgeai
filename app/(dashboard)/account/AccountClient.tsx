@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -11,6 +11,8 @@ interface AccountClientProps {
   generationsUsed: number
   hasStripeCustomer: boolean
   createdAt: string | null
+  // Optional plan tier — if absent we fall back to is_pro for the legacy display.
+  planTier?: 'free' | 'basic' | 'pro'
 }
 
 function formatDate(dateStr: string | null) {
@@ -18,17 +20,33 @@ function formatDate(dateStr: string | null) {
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export default function AccountClient({ email, isPro, generationsUsed, hasStripeCustomer, createdAt }: AccountClientProps) {
+// Plan credit caps for the usage card. Kept in sync with the pricing page
+// (push #020): Free = 2, Basic = 140/mo, Pro = 350/mo.
+const PLAN_LIMITS = { free: 2, basic: 140, pro: 350 } as const
+
+export default function AccountClient({ email, isPro, generationsUsed, createdAt, planTier }: AccountClientProps) {
   const router = useRouter()
   const supabase = createClient()
   const [portalLoading, setPortalLoading] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [credits, setCredits] = useState<number | null>(null)
 
-  // Free-tier video credits — kept in sync with DEFAULT_CREDITS in
-  // app/api/credits/route.ts and the signup/welcome-email copy.
-  const FREE_LIMIT = 3
-  const freeRemaining = Math.max(0, FREE_LIMIT - generationsUsed)
+  const tier: 'free' | 'basic' | 'pro' = planTier ?? (isPro ? 'pro' : 'free')
+  const planLimit = PLAN_LIMITS[tier]
+  const planLabel = tier === 'pro' ? 'Pro Plan' : tier === 'basic' ? 'Basic Plan' : 'Free Plan'
+
   const initial = (email?.[0] ?? 'U').toUpperCase()
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/credits', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setCredits(typeof data.credits === 'number' ? data.credits : 0)
+      })
+      .catch(() => { if (!cancelled) setCredits(0) })
+    return () => { cancelled = true }
+  }, [])
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -48,8 +66,6 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
         window.location.href = data.url
         return
       }
-      // No URL means the request failed — show the user instead of leaving the
-      // button spinning forever.
       setPortalError(data?.error || 'Could not open the billing portal. Please retry.')
     } catch {
       setPortalError('Could not open the billing portal. Please retry.')
@@ -57,6 +73,10 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
       setPortalLoading(false)
     }
   }
+
+  const creditsRemaining = credits ?? 0
+  const usedThisCycle = Math.max(0, planLimit - creditsRemaining)
+  const usagePct = planLimit > 0 ? Math.min(100, (usedThisCycle / planLimit) * 100) : 0
 
   return (
     <div className="px-6 py-7 pb-20">
@@ -88,12 +108,12 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 <span
                   className="text-xs px-2.5 py-1 rounded-full font-bold"
                   style={{
-                    background: isPro ? 'rgba(16,185,129,.1)' : 'rgba(99,102,241,.1)',
-                    border: isPro ? '1px solid rgba(16,185,129,.25)' : '1px solid rgba(99,102,241,.2)',
-                    color: isPro ? '#34d399' : 'var(--indigo-light)',
+                    background: tier !== 'free' ? 'rgba(16,185,129,.1)' : 'rgba(99,102,241,.1)',
+                    border: tier !== 'free' ? '1px solid rgba(16,185,129,.25)' : '1px solid rgba(99,102,241,.2)',
+                    color: tier !== 'free' ? '#34d399' : 'var(--indigo-light)',
                   }}
                 >
-                  {isPro ? '⭐ Pro Plan' : 'Free Plan'}
+                  {tier === 'pro' ? '⭐ Pro Plan' : tier === 'basic' ? '✦ Basic Plan' : 'Free Plan'}
                 </span>
               </div>
             </div>
@@ -111,58 +131,62 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
           </div>
         </div>
 
-        {/* Usage card */}
+        {/* Usage card — video credits */}
         <div className="rounded-2xl p-6" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
           <h2 className="font-bold text-sm mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Usage</h2>
 
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div className="rounded-xl p-4" style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.12)' }}>
-              <div className="font-black text-xl" style={{ color: 'var(--text)' }}>{generationsUsed}</div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Scripts Generated</div>
+              <div className="font-black text-xl" style={{ color: 'var(--text)' }}>{creditsRemaining}</div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Credits left</div>
             </div>
-            <div className="rounded-xl p-4" style={{ background: isPro ? 'rgba(16,185,129,.06)' : 'rgba(99,102,241,.06)', border: isPro ? '1px solid rgba(16,185,129,.12)' : '1px solid rgba(99,102,241,.12)' }}>
-              <div className="font-black text-xl" style={{ color: isPro ? '#34d399' : 'var(--text)' }}>
-                {isPro ? '∞' : freeRemaining}
-              </div>
+            <div className="rounded-xl p-4" style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.12)' }}>
+              <div className="font-black text-xl" style={{ color: 'var(--text)' }}>{planLimit}</div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                {isPro ? 'Unlimited (Pro)' : 'Free Left'}
+                {tier === 'free' ? 'Free plan credits' : 'Credits / month'}
               </div>
             </div>
           </div>
 
-          {!isPro && (
-            <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}>
-              <div className="px-4 py-2 flex items-center justify-between">
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>Free tier usage</span>
-                <span className="text-xs font-bold" style={{ color: 'var(--text2)' }}>{generationsUsed} / {FREE_LIMIT}</span>
-              </div>
-              <div style={{ height: 4, background: 'rgba(255,255,255,.06)' }}>
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${Math.min(100, (generationsUsed / FREE_LIMIT) * 100)}%`,
-                    background: generationsUsed >= FREE_LIMIT
-                      ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                      : 'linear-gradient(90deg, #6366f1, #7c3aed)',
-                    transition: 'width .4s ease',
-                  }}
-                />
-              </div>
+          <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}>
+            <div className="px-4 py-2 flex items-center justify-between">
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>
+                {tier === 'free' ? 'Free tier usage' : 'This month'}
+              </span>
+              <span className="text-xs font-bold" style={{ color: 'var(--text2)' }}>
+                {creditsRemaining} / {planLimit} left
+              </span>
             </div>
-          )}
+            <div style={{ height: 4, background: 'rgba(255,255,255,.06)' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${usagePct}%`,
+                  background: usagePct >= 90
+                    ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+                    : 'linear-gradient(90deg, #6366f1, #7c3aed)',
+                  transition: 'width .4s ease',
+                }}
+              />
+            </div>
+          </div>
+
+          <p className="text-xs mt-4" style={{ color: 'var(--muted)' }}>
+            Basic Short = 15 credits · Pro Short = 20 credits · Failed generations do not consume credits.
+          </p>
         </div>
 
         {/* Subscription card */}
         <div className="rounded-2xl p-6" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-          <h2 className="font-bold text-sm mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Plan & Credits</h2>
+          <h2 className="font-bold text-sm mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Plan &amp; Credits</h2>
 
-          {isPro ? (
+          {tier !== 'free' ? (
             <div>
               <div className="flex items-center gap-3 mb-5 p-4 rounded-xl" style={{ background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.18)' }}>
                 <span className="text-2xl">✅</span>
                 <div>
-                  <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Pro Plan — Active</div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Unlimited generations included</div>
+                  <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>{planLabel} — Active</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{planLimit} credits per month included</div>
                 </div>
               </div>
               <button
@@ -191,7 +215,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 <span className="text-2xl">⚡</span>
                 <div>
                   <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Free Plan</div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>3 free video credits · Upgrade to go unlimited</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>2 free video credits · Upgrade for monthly credits</div>
                 </div>
               </div>
               <Link
@@ -199,7 +223,7 @@ export default function AccountClient({ email, isPro, generationsUsed, hasStripe
                 className="block w-full text-center rounded-xl py-3 text-sm font-black text-white transition-all"
                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', textDecoration: 'none' }}
               >
-                🎬 Get 10 Videos — $9 (one-time)
+                🎬 Upgrade — 50% off first month
               </Link>
             </div>
           )}

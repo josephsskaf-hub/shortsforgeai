@@ -64,9 +64,10 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
 
-        // ── Path A: One-time credit-pack purchase via Stripe Payment Link ──
-        // Payment Links use mode='payment' and pass the Supabase user ID via
-        // ?client_reference_id=... appended on the pricing page.
+        // ── Path A: Legacy one-time credit-pack purchase via Payment Link ──
+        // Push #020 moved off Payment Links onto Stripe Checkout subscriptions,
+        // but old links may still exist in the wild. Keep the legacy mapping
+        // so refunds / late webhooks don't lose users their pack.
         if (session.mode === 'payment') {
           const userId = session.client_reference_id
           if (!userId) {
@@ -84,7 +85,6 @@ export async function POST(req: NextRequest) {
             break
           }
 
-          // Read-modify-write the credit balance.
           const { data: profile, error: fetchErr } = await supabase
             .from('profiles')
             .select('video_credits')
@@ -112,22 +112,87 @@ export async function POST(req: NextRequest) {
           break
         }
 
-        // ── Path B: Subscription checkout (existing flow) ──
+        // ── Path B: Subscription checkout (push #020) ──
+        // The new pricing grants the user their plan's monthly credits up
+        // front when they complete checkout. Subsequent renewals are handled
+        // by `invoice.payment_succeeded`.
         const userId = session.metadata?.supabase_user_id
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
+        const tier = session.metadata?.tier === 'pro' ? 'pro' : 'basic'
+        const planCredits = tier === 'pro' ? 350 : 140
 
         if (!userId) break
 
-        await supabase
+        // Read current balance so the initial plan grant adds to (not replaces)
+        // any free credits the user still had unspent.
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('video_credits')
+          .eq('id', userId)
+          .single()
+
+        const current = currentProfile?.video_credits ?? 0
+        const next = current + planCredits
+
+        const { error: subUpdErr } = await supabase
           .from('profiles')
           .update({
             is_pro: true,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
+            video_credits: next,
           })
           .eq('id', userId)
 
+        if (subUpdErr) {
+          console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
+        } else {
+          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits}) → user ${userId} (now ${next})`)
+        }
+
+        break
+      }
+
+      case 'invoice.payment_succeeded': {
+        // Subscription renewal — refill the user's monthly credit allowance.
+        // First invoices are also `payment_succeeded`, but the idempotent
+        // stripe_events guard plus `billing_reason !== 'subscription_create'`
+        // keeps us from double-granting the initial credits already handled in
+        // `checkout.session.completed`.
+        const invoice = event.data.object as Stripe.Invoice & { billing_reason?: string; subscription?: string }
+        const billingReason = invoice.billing_reason
+        if (billingReason === 'subscription_create') break
+
+        const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null
+        if (!subscriptionId) break
+
+        let subscription: Stripe.Subscription
+        try {
+          subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[stripe webhook] failed to load subscription for renewal:', msg, subscriptionId)
+          break
+        }
+
+        const renewalUserId = subscription.metadata?.supabase_user_id
+        const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : 'basic'
+        const renewalCredits = renewalTier === 'pro' ? 350 : 140
+        if (!renewalUserId) break
+
+        // On renewal we set the balance to the plan amount rather than adding,
+        // so unused credits from the prior cycle don't pile up indefinitely.
+        const { error: renewErr } = await supabase
+          .from('profiles')
+          .update({ video_credits: renewalCredits, is_pro: true })
+          .eq('id', renewalUserId)
+
+        if (renewErr) {
+          console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
+        } else {
+          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}) → user ${renewalUserId}`)
+        }
         break
       }
 

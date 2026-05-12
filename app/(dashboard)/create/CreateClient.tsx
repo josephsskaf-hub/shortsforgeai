@@ -818,7 +818,7 @@ export default function CreateClient() {
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
             }}
           >
-            ⚡ Generate — 1 credit
+            ⚡ Generate
           </button>
 
           {/* Credits hint */}
@@ -856,7 +856,7 @@ export default function CreateClient() {
               pointerEvents: 'auto',
             }}
           >
-            ⚡ Generate — 1 credit
+            ⚡ Generate
           </button>
         </div>
       )}

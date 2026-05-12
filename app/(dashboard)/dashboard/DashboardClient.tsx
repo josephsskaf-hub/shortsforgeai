@@ -326,7 +326,7 @@ export default function DashboardClient({
                 </div>
               )}
               <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                Each video render uses 1 credit.
+                Basic Short = 15 credits · Pro Short = 20 credits.
               </div>
             </div>
           </div>

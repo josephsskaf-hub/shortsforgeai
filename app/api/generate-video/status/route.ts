@@ -237,11 +237,11 @@ export async function GET(req: NextRequest) {
       }
 
       const primaryUrl = allClipUrls[0]
-      // Flat per-job pricing: Basic = 1 credit, Pro = 2 credits, regardless of
-      // clip count. The cap defends against legacy in-flight rows that were
-      // saved under the old per-clip multiplication.
-      const rawCost = meta?.cost ?? 1
-      const cost = meta?.quality === 'pro' ? 2 : Math.max(1, Math.min(2, rawCost))
+      // Flat per-job pricing: Basic = 15 credits, Pro = 20 credits, regardless of
+      // clip count. The clamp defends against legacy in-flight rows that were
+      // saved under the old per-clip multiplication or the old 1/2 credit pricing.
+      const rawCost = meta?.cost ?? 15
+      const cost = meta?.quality === 'pro' ? 20 : Math.max(15, Math.min(20, rawCost))
 
       // Persist the complete list of clip URLs into meta so that cached reads
       // (status returning early because the row is already finalised) can hand

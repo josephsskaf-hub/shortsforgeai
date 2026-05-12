@@ -14,9 +14,10 @@ type Quality = 'basic' | 'pro'
 
 // Flat per-job cost. The spec says credits are charged ONCE for the whole
 // generation regardless of clip count — 30s and 50s jobs do not pay 3x or 5x.
+// Basic = 15 credits, Pro = 20 credits (push #020 pricing policy).
 function costForQuality(q: string | undefined): number {
-  if (q === 'pro') return 2
-  return 1 // 'basic'
+  if (q === 'pro') return 20
+  return 15 // 'basic'
 }
 
 /**
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     const duration = requestedDuration <= 10 ? 10 : requestedDuration <= 30 ? 30 : 50
     const clipCount = clipCountForDuration(duration)
     const quality: Quality = body.quality === 'pro' ? 'pro' : 'basic'
-    // Flat cost — 1 credit for Basic, 2 credits for Pro, regardless of duration.
+    // Flat cost — 15 credits for Basic, 20 credits for Pro, regardless of duration.
     const cost = costForQuality(quality)
 
     // ââ Credit balance check (we DO NOT deduct here â deduction happens after
