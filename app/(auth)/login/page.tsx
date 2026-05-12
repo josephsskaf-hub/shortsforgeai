@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -31,23 +31,60 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState<'starting' | 'still' | 'timeout'>('starting')
   const [error, setError] = useState<string | null>(null)
+
+  const stillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (stillTimerRef.current) clearTimeout(stillTimerRef.current)
+    if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+  }, [])
+
+  function clearLoadingTimers() {
+    if (stillTimerRef.current) { clearTimeout(stillTimerRef.current); stillTimerRef.current = null }
+    if (timeoutTimerRef.current) { clearTimeout(timeoutTimerRef.current); timeoutTimerRef.current = null }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setLoadingPhase('starting')
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError(error.message)
+    // 0–5s: "Signing in..."  5–10s: "Still signing in..."  >10s: timeout.
+    stillTimerRef.current = setTimeout(() => setLoadingPhase('still'), 5000)
+    timeoutTimerRef.current = setTimeout(() => {
+      setLoadingPhase('timeout')
+      setError('Login is taking longer than expected. Please try again.')
       setLoading(false)
-    } else {
-      const dest = safeRedirect(searchParams.get('redirect'))
-      router.push(dest)
-      router.refresh()
+      // Keep email so the user can retry; clear password only.
+      setPassword('')
+    }, 10000)
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        clearLoadingTimers()
+        const lowered = error.message.toLowerCase()
+        const isCreds = lowered.includes('invalid login credentials') || lowered.includes('invalid email or password')
+        setError(isCreds ? 'Invalid email or password.' : error.message)
+        setLoading(false)
+        return
+      }
+    } catch (err) {
+      clearLoadingTimers()
+      const msg = err instanceof Error ? err.message : 'Login failed. Please try again.'
+      setError(msg)
+      setLoading(false)
+      return
     }
+
+    // Redirect immediately on success — do NOT block on profile/credits.
+    clearLoadingTimers()
+    const dest = safeRedirect(searchParams.get('redirect'))
+    router.push(dest)
+    router.refresh()
   }
 
   return (
@@ -133,10 +170,10 @@ function LoginForm() {
             className="text-2xl font-black mb-1 tracking-tight"
             style={{ color: 'var(--text)' }}
           >
-            Welcome Back, Creator
+            Welcome back
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-            Continue building your viral Shorts empire.
+            Sign in to keep creating AI Shorts.
           </p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -228,7 +265,9 @@ function LoginForm() {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading
+                ? (loadingPhase === 'still' ? 'Still signing in...' : 'Signing in...')
+                : 'Sign In'}
             </button>
           </form>
 

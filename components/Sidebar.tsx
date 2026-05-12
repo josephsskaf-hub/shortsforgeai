@@ -289,6 +289,7 @@ export default function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   function extractDisplayName(meta: Record<string, unknown> | undefined | null): string {
     if (!meta) return ''
@@ -546,8 +547,58 @@ export default function Sidebar({
           </div>
         ) : null}
 
-        {/* User row + small logout */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px' }}>
+        {/* User row + settings menu + small logout */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px', position: 'relative' }}>
+          {settingsOpen && (
+            <>
+              <div
+                onClick={() => setSettingsOpen(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'transparent' }}
+                aria-hidden="true"
+              />
+              <div
+                role="menu"
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% - 6px)',
+                  left: 12,
+                  right: 12,
+                  zIndex: 61,
+                  background: 'rgba(18,18,30,0.98)',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  borderRadius: 12,
+                  boxShadow: '0 10px 32px rgba(0,0,0,0.5), 0 0 24px rgba(99,102,241,0.18)',
+                  padding: 6,
+                }}
+              >
+                {([
+                  { tab: 'members', label: 'Members', icon: '👥' },
+                  { tab: 'profile', label: 'Profile', icon: '👤' },
+                  { tab: 'manage', label: 'Manage Account', icon: '⚙' },
+                  { tab: 'usage', label: 'Usage', icon: '📊' },
+                ] as const).map((item) => (
+                  <Link
+                    key={item.tab}
+                    href={`/account?tab=${item.tab}`}
+                    onClick={() => { setSettingsOpen(false); onClose?.() }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 10px', borderRadius: 8,
+                      fontSize: '0.8rem', fontWeight: 600,
+                      color: 'var(--text2)', textDecoration: 'none',
+                      transition: 'background 0.12s ease',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.12)' }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
+                    <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+
           <div className="flex items-center gap-2.5">
             <div
               style={{
@@ -571,9 +622,6 @@ export default function Sidebar({
                       {userEmail}
                     </div>
                   )}
-                  <div style={{ fontSize: '0.62rem', color: isPro ? '#34d399' : 'var(--muted)', marginTop: 1 }}>
-                    {isPro ? '✦ Pro Plan' : 'Free Plan'}
-                  </div>
                 </>
               ) : (
                 <>
@@ -586,6 +634,27 @@ export default function Sidebar({
                 </>
               )}
             </div>
+
+            {isLoggedIn && (
+              <button
+                onClick={() => setSettingsOpen((v) => !v)}
+                title="Account settings"
+                aria-haspopup="menu"
+                aria-expanded={settingsOpen}
+                style={{
+                  background: settingsOpen ? 'rgba(99,102,241,0.18)' : 'transparent',
+                  border: settingsOpen ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8,
+                  color: settingsOpen ? '#a5b4fc' : 'var(--muted)',
+                  cursor: 'pointer', padding: '5px 7px', fontSize: '0.85rem',
+                  flexShrink: 0, transition: 'all 0.15s',
+                  lineHeight: 1,
+                }}
+              >
+                ⚙
+              </button>
+            )}
+
             {isLoggedIn ? (
               <button
                 onClick={handleSignOut}
