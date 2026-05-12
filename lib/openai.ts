@@ -1,7 +1,22 @@
 import OpenAI from 'openai'
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+// Lazy singleton — avoid instantiating at module load so Next.js can
+// statically analyze API route modules at build time without the env var.
+let _openai: OpenAI | null = null
+function getClient(): OpenAI {
+  if (_openai) return _openai
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
+  _openai = new OpenAI({ apiKey })
+  return _openai
+}
+
+export const openai = new Proxy({} as OpenAI, {
+  get(_target, prop) {
+    const client = getClient() as unknown as Record<string | symbol, unknown>
+    const value = client[prop]
+    return typeof value === 'function' ? (value as Function).bind(client) : value
+  },
 })
 
 export interface ShortVideo {

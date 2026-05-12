@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -17,9 +17,28 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState<'starting' | 'still' | 'timeout'>('starting')
   const [error, setError] = useState<string | null>(null)
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+
+  // Loading-phase timers — give the user visible feedback if Supabase auth is
+  // slow. The phases let us swap the button label without re-running the
+  // signInWithPassword call.
+  const stillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (stillTimerRef.current) clearTimeout(stillTimerRef.current)
+      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+    }
+  }, [])
+
+  function clearLoadingTimers() {
+    if (stillTimerRef.current) { clearTimeout(stillTimerRef.current); stillTimerRef.current = null }
+    if (timeoutTimerRef.current) { clearTimeout(timeoutTimerRef.current); timeoutTimerRef.current = null }
+  }
 
   function switchTab(t: 'login' | 'signup') {
     setTab(t)
@@ -31,13 +50,44 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setLoadingPhase('starting')
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
+    // 0–5s: "Signing in..."  5–10s: "Still signing in..."  >10s: timeout.
+    stillTimerRef.current = setTimeout(() => setLoadingPhase('still'), 5000)
+    timeoutTimerRef.current = setTimeout(() => {
+      setLoadingPhase('timeout')
+      setError('Login is taking longer than expected. Please try again.')
       setLoading(false)
-    } else {
+      // password stays cleared; keep the email filled so the user can retry
+      setPassword('')
+    }, 10000)
+
+    let signedIn = false
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        clearLoadingTimers()
+        // Map Supabase's "Invalid login credentials" to a friendlier message.
+        const lowered = error.message.toLowerCase()
+        const isCreds = lowered.includes('invalid login credentials') || lowered.includes('invalid email or password')
+        setError(isCreds ? 'Invalid email or password.' : error.message)
+        setLoading(false)
+        return
+      }
+      signedIn = true
+    } catch (err) {
+      clearLoadingTimers()
+      const msg = err instanceof Error ? err.message : 'Login failed. Please try again.'
+      setError(msg)
+      setLoading(false)
+      return
+    }
+
+    if (signedIn) {
+      // Redirect immediately on success — do NOT block on profile/credits.
+      // The sidebar and dashboard fetch their own data after navigation.
+      clearLoadingTimers()
       router.refresh()
       onClose()
     }
@@ -160,7 +210,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                 ShortsForgeAI
               </div>
               <div className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>
-                Generate 5 viral scripts in 30 seconds
+                Create AI Shorts with video generation
               </div>
             </div>
           </div>
@@ -194,7 +244,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.18)', color: '#34d399' }}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }} />
-                  Free tier · 5 viral scripts included — no card required
+                  Free tier · 2 AI video credits — no card required
                 </div>
               )}
 
@@ -220,12 +270,12 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               {/* Heading */}
               <div className="mb-5">
                 <h2 className="text-xl font-black tracking-tight mb-1" style={{ color: 'var(--text)' }}>
-                  {tab === 'signup' ? 'Start creating viral shorts' : 'Welcome back'}
+                  {tab === 'signup' ? 'Start creating AI Shorts' : 'Welcome back'}
                 </h2>
                 <p className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
                   {tab === 'signup'
-                    ? 'Create your free account and get 5 viral scripts instantly.'
-                    : 'Sign in to access your account and continue generating.'}
+                    ? 'Create your free account and start generating faceless videos in minutes.'
+                    : 'Sign in to access your account and continue creating videos.'}
                 </p>
               </div>
 
@@ -321,7 +371,9 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   {loading ? (
                     <>
                       <div className="w-4 h-4 rounded-full border border-white/20" style={{ borderTopColor: 'white', animation: 'spin 0.65s linear infinite' }} />
-                      {tab === 'signup' ? 'Creating account...' : 'Signing in...'}
+                      {tab === 'signup'
+                        ? 'Creating account...'
+                        : loadingPhase === 'still' ? 'Still signing in...' : 'Signing in...'}
                     </>
                   ) : tab === 'signup' ? '⚡ Create Free Account' : '🔑 Sign In'}
                 </button>

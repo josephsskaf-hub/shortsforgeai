@@ -116,7 +116,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: '#34d399',
               }}
             >
-              ⚡ 5 scripts in ~15 seconds
+              ⚡ Videos in ~60 seconds
             </div>
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"

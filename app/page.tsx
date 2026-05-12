@@ -211,7 +211,6 @@ export default function HomePage() {
   const router = useRouter()
   const nicheGridRef = useRef<HTMLDivElement>(null)
   const pricingRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [userEmail, setUserEmail] = useState('')
@@ -224,12 +223,14 @@ export default function HomePage() {
   function handleHeroGenerate() {
     const trimmed = heroPrompt.trim()
     if (!user) {
-      const dest = trimmed ? `/generate?prompt=${encodeURIComponent(trimmed)}` : '/generate'
+      const dest = trimmed
+        ? `/generate?prompt=${encodeURIComponent(trimmed)}&autoanalyze=1`
+        : '/generate'
       router.push(`/login?redirect=${encodeURIComponent(dest)}`)
       return
     }
     if (trimmed) {
-      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`)
+      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}&autoanalyze=1`)
     } else {
       router.push('/generate')
     }
@@ -254,14 +255,17 @@ export default function HomePage() {
 
   function handleNicheClick(nicheId: string) {
     if (!user) {
-      router.push('/login')
+      const dest = `/create?niche=${encodeURIComponent(nicheId)}`
+      router.push(`/login?redirect=${encodeURIComponent(dest)}`)
       return
     }
     if (nicheId !== FREE_NICHE_ID && !isPro) {
       router.push('/pricing')
       return
     }
-    router.push('/dashboard')
+    // Carry the chosen niche through so the create page lands on it instead
+    // of forcing the user to re-pick from the dashboard.
+    router.push(`/create?niche=${encodeURIComponent(nicheId)}`)
   }
 
   function isCardDisabled(nicheId: string): boolean {
@@ -317,8 +321,40 @@ export default function HomePage() {
             <span style={{ fontWeight: 900, fontSize: '0.95rem', background: 'linear-gradient(135deg, #3B82F6, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ShortsForgeAI</span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
-            <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
+            {!authChecked ? (
+              <div style={{ width: 160, height: 36 }} aria-hidden="true" />
+            ) : user ? (
+              <>
+                <span
+                  title={userEmail}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '6px 12px', borderRadius: 10, fontSize: '0.78rem', fontWeight: 600,
+                    color: 'var(--muted2)', border: '1px solid var(--border)',
+                    maxWidth: 200, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.7rem', fontWeight: 800, color: '#fff', flexShrink: 0,
+                    }}
+                  >
+                    {(userEmail?.[0] ?? 'U').toUpperCase()}
+                  </span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail || 'Account'}</span>
+                </span>
+                <Link href="/dashboard" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Dashboard</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
+                <Link href="/signup" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Start Free</Link>
+              </>
+            )}
           </div>
         </nav>
 
@@ -337,7 +373,7 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.55 }}>
-            AI-generated scripts, hooks & hashtags — built for faceless creators.
+            AI-generated faceless videos — built for Shorts creators.
           </p>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
@@ -396,38 +432,6 @@ export default function HomePage() {
                 padding: 0,
               }}
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: 'none' }}
-              onChange={() => { /* placeholder — no-op for now */ }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Attach a file"
-              style={{
-                position: 'absolute',
-                bottom: 16,
-                left: 16,
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: '1.2rem',
-                lineHeight: 1,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-                fontFamily: 'inherit',
-              }}
-            >
-              +
-            </button>
             <button
               type="button"
               onClick={handleHeroGenerate}
@@ -513,7 +517,7 @@ export default function HomePage() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--indigo-light)' }}>
-              ⚡ Generate Script · Start Free
+              ⚡ Generate Video · Start Free
             </div>
           </div>
 
@@ -549,7 +553,7 @@ export default function HomePage() {
                   Get more Shorts every month
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
-                  Upgrade from free — 300 credits/month starting at $9.
+                  Launch offer: 50% off your first month — Basic from $4.50.
                 </p>
               </div>
               <button
@@ -581,15 +585,15 @@ export default function HomePage() {
               <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Free</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                 <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$0</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/forever</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
               </div>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Try it out, no card needed</p>
+              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Try ShortsForgeAI before upgrading</p>
               <div style={{ flex: 1 }}>
                 {[
-                  '2 free credits',
-                  'Basic generation only',
-                  'Basic viral hooks',
-                  'Basic titles and hashtags',
+                  '2 credits',
+                  'Try ShortsForgeAI before upgrading',
+                  'MP4 ready to post',
+                  'Community support',
                 ].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
                     <span style={{ color: '#34d399' }}>✓</span> {f}
@@ -604,22 +608,23 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Creator */}
+            {/* Basic - Most Popular */}
             <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '2px solid rgba(99,102,241,.35)', borderRadius: 20, padding: '30px 28px 34px', position: 'relative', overflow: 'hidden', boxShadow: '0 0 60px rgba(99,102,241,.15)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Creator</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Basic</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
+                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$4.50</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>first month</span>
               </div>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>For serious faceless creators</p>
+              <p style={{ fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 700, marginBottom: 8 }}>then $9/month</p>
+              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>140 credits / month · ≈9 Shorts</p>
               <div style={{ flex: 1 }}>
                 {[
-                  '300 credits / month',
-                  'Up to 300 Basic / 150 Pro / 75 Ultra',
-                  'All trending niches',
-                  'Hooks, titles, captions, hashtags',
-                  'Copy complete package',
+                  '140 credits / month',
+                  '≈9 Shorts of 30–35s',
+                  '15 credits per Basic Short',
+                  'Launch offer: 50% off first month',
+                  'Email support',
                 ].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
                     <span style={{ color: '#34d399' }}>✓</span> {f}
@@ -630,25 +635,26 @@ export default function HomePage() {
                 href="/pricing"
                 style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}
               >
-                Upgrade to Creator
+                Get Basic — $4.50
               </Link>
             </div>
 
-            {/* Pro */}
+            {/* Pro - Best Value */}
             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '30px 28px 34px', boxShadow: '0 0 30px rgba(139,92,246,.08)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Best Value</div>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Pro</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$19</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
+                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9.50</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>first month</span>
               </div>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Power users & growing channels</p>
+              <p style={{ fontSize: '0.78rem', color: '#c4b5fd', fontWeight: 700, marginBottom: 8 }}>then $19/month</p>
+              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>350 credits / month · ≈17 Shorts</p>
               <div style={{ flex: 1 }}>
                 {[
-                  '900 credits / month',
-                  'Up to 900 Basic / 450 Pro / 225 Ultra',
-                  'Advanced viral formats',
-                  'Pro AI models (Veo / Sora-class)',
+                  '350 credits / month',
+                  '≈17 Shorts of 30–35s',
+                  '20 credits per Pro Short',
+                  'Launch offer: 50% off first month',
                   'Priority support',
                 ].map((f) => (
                   <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
@@ -660,10 +666,14 @@ export default function HomePage() {
                 href="/pricing"
                 style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', boxShadow: '0 4px 24px rgba(168,85,247,.4)' }}
               >
-                Upgrade to Pro
+                Get Pro — $9.50
               </Link>
             </div>
           </div>
+
+          <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginTop: 18, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+            50% off applies to the first month only. Plans renew at the regular monthly price.
+          </p>
 
           <style>{`
             .pricing-grid {

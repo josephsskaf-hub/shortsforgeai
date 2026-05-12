@@ -227,11 +227,11 @@ export default function CreateClient() {
       })
       if (!genRes.ok) {
         const err = await genRes.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to generate the script.')
+        throw new Error(err.error || 'Failed to generate the video.')
       }
       const genData = await genRes.json()
       const video: ShortVideoResult | undefined = Array.isArray(genData.videos) ? genData.videos[0] : undefined
-      if (!video) throw new Error('Invalid response from the script generator.')
+      if (!video) throw new Error('Invalid response from the video generator.')
       setStage('voice', 22)
 
       // Step 2 — Voiceover
@@ -264,14 +264,16 @@ export default function CreateClient() {
       }
       setStage('visuals', 56)
 
-      // Step 4 — Stock clips per scene
+      // Step 4 — Stock clips per scene. We pass the scene index so the curated
+      // library fallback can rotate clips across scenes that hit the same tag
+      // bucket (Pexels API path naturally varies by query).
       const selectedClips: Record<number, StockClip> = {}
       if (scenes.length > 0) {
         const results = await Promise.all(
-          scenes.map(async (s) => {
+          scenes.map(async (s, sceneIdx) => {
             try {
               const r = await fetch(
-                `/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}`,
+                `/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}&i=${sceneIdx}`,
                 { cache: 'no-store' }
               )
               if (!r.ok) return { sceneNumber: s.sceneNumber, videos: [] as StockClip[] }
@@ -370,18 +372,25 @@ export default function CreateClient() {
       setProgress(100)
       await wait(300)
 
-      // Deduct credit on success
-      try {
-        const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
-        if (dedRes.ok) {
-          const data = await dedRes.json()
-          if (typeof data.credits === 'number') setCredits(data.credits)
-          window.dispatchEvent(new CustomEvent('creditsChanged'))
-        } else {
+      // Only deduct a credit when the render actually produced a video file.
+      // If visuals couldn't be prepared or Creatomate failed, the user gets a
+      // clear error and keeps their credit.
+      const renderSucceeded = !!renderUrl && !renderError
+      if (renderSucceeded) {
+        try {
+          const dedRes = await fetch('/api/credits/deduct', { method: 'POST' })
+          if (dedRes.ok) {
+            const data = await dedRes.json()
+            if (typeof data.credits === 'number') setCredits(data.credits)
+            window.dispatchEvent(new CustomEvent('creditsChanged'))
+          } else {
+            await refreshCreditsFromServer()
+          }
+        } catch {
           await refreshCreditsFromServer()
         }
-      } catch {
-        await refreshCreditsFromServer()
+      } else {
+        console.warn('[create] skipping credit deduction — render did not succeed:', renderError)
       }
 
       setFinal({
@@ -547,7 +556,7 @@ export default function CreateClient() {
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              Autopilot · v4.0
+              ShortsForgeAI v1.0
             </div>
             <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Generate a Short in <span className="grad-text">one click</span>
@@ -809,7 +818,7 @@ export default function CreateClient() {
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
             }}
           >
-            ⚡ Generate — 1 credit
+            ⚡ Generate
           </button>
 
           {/* Credits hint */}
@@ -847,7 +856,7 @@ export default function CreateClient() {
               pointerEvents: 'auto',
             }}
           >
-            ⚡ Generate — 1 credit
+            ⚡ Generate
           </button>
         </div>
       )}
@@ -1061,7 +1070,7 @@ function FinalView({
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
-              AUTOPILOT v4.0
+              ShortsForgeAI v1.0
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
@@ -1170,7 +1179,7 @@ function FinalView({
             style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >📋</button>
           <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}&autoanalyze=1`}
             title="Generate AI video"
             style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
           >🎬</Link>
@@ -1202,7 +1211,7 @@ function FinalView({
           </a>
         ) : (
           <Link
-            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}`}
+            href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}&autoanalyze=1`}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,

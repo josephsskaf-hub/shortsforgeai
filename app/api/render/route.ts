@@ -40,6 +40,12 @@ function findStockUrl(stockClips: StockClipInput[], sceneNumber: number): string
   if (!url || url.includes('placeholder') || url.includes('example.com') || url.includes('mock')) return null
   // Only allow http/https URLs
   if (!url.startsWith('http')) return null
+  // Reject the legacy hardcoded mock photo bucket so a regression there can
+  // never leak the same snow/aurora-toned image into every render again.
+  if (/pexels-photo-(3408744|1089842|1252500|256541|3109807|1169754|1624600|949587)\.jpe?g/i.test(url)) {
+    console.warn('[render] rejecting legacy mock stock URL:', url)
+    return null
+  }
   return url
 }
 
@@ -68,7 +74,7 @@ async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string |
     const res = await fetch(supabaseUrl + '/storage/v1/object/voiceovers/' + fileName, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'audio/mpeg' },
-      body: buffer,
+      body: new Uint8Array(buffer),
     })
     if (!res.ok) {
       console.error('[render] upload failed:', res.status, await res.text().catch(() => ''))
@@ -80,6 +86,8 @@ async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string |
     return null
   }
 }
+
+const RENDER_COST = 1 // legacy Creatomate render path costs 1 credit per render
 
 export async function POST(req: NextRequest) {
   try {
@@ -96,12 +104,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
+    // Credit gate. Without this, anyone with a session can hammer Creatomate
+    // for free. Check the balance before any expensive upstream calls (TTS,
+    // Creatomate). We deduct atomically below once the render has actually
+    // been queued, so a Creatomate rejection doesn't burn a credit.
+    {
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      if (profileErr && profileErr.code !== 'PGRST116') {
+        console.error('[render] credit lookup failed:', profileErr.message)
+        return NextResponse.json({ error: 'Could not verify your credit balance.' }, { status: 500 })
+      }
+      const balance = profile?.video_credits ?? 0
+      if (balance < RENDER_COST) {
+        return NextResponse.json(
+          { error: 'Not enough credits.', needed: RENDER_COST, balance },
+          { status: 402 }
+        )
+      }
+    }
+
     const script = (body.script ?? '').trim()
     const scenes = Array.isArray(body.scenes) ? body.scenes : []
     const stockClips = Array.isArray(body.stockClips) ? body.stockClips : []
 
     if (!script) return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     if (!scenes.length) return NextResponse.json({ error: 'Scenes are required.' }, { status: 400 })
+
+    // Reject the render if no scene has a real, query-relevant stock URL.
+    // The old silent-mock fallback in /api/stock used to paper over a missing
+    // PEXELS_API_KEY with the same 4 hardcoded photos for every video. That's
+    // exactly the "snow/aurora on every render" bug. Surface a clean error
+    // instead of rendering a video with no real visuals.
+    const usableStockCount = scenes.filter((s) => findStockUrl(stockClips, s.sceneNumber)).length
+    if (usableStockCount === 0) {
+      console.error('[render] rejecting: no usable stock URL on any scene')
+      return NextResponse.json(
+        { error: 'Could not prepare visuals. Please try again.' },
+        { status: 502 }
+      )
+    }
 
     // — Voiceover (non-fatal) —
     let voiceoverUrl: string | null = null
@@ -282,6 +327,33 @@ export async function POST(req: NextRequest) {
     if (!renderId) {
       console.error('[render] No render ID returned:', responseText)
       return NextResponse.json({ error: 'Render service returned no job id.' }, { status: 502 })
+    }
+
+    // Deduct credits now that the render is queued. Guarded by `.gte` so
+    // concurrent requests can't drive the balance negative; if the guard
+    // rejects, we still let the render proceed (the user already had enough
+    // credits when the gate above ran), but we log loudly so we can audit.
+    try {
+      const { data: profileNow } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      const balance = profileNow?.video_credits ?? 0
+      const next = Math.max(0, balance - RENDER_COST)
+      const { error: dedErr, data: rows } = await supabase
+        .from('profiles')
+        .update({ video_credits: next })
+        .eq('id', user.id)
+        .gte('video_credits', RENDER_COST)
+        .select('id')
+      if (dedErr) {
+        console.error('[render] credit deduction error:', dedErr.message)
+      } else if (!rows || rows.length === 0) {
+        console.warn('[render] credit deduction skipped — balance moved out from under us', user.id)
+      }
+    } catch (err) {
+      console.error('[render] credit deduction threw:', err)
     }
 
     console.log('[render] started, renderId:', renderId)

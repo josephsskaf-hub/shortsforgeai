@@ -9,50 +9,42 @@ interface PricingClientProps {
   userId: string
 }
 
-// Stripe Payment Links (one-time credit packs).
-// Override at build time with NEXT_PUBLIC_STRIPE_STARTER_URL / NEXT_PUBLIC_STRIPE_PRO_URL.
-const CREATOR_URL =
-  process.env.NEXT_PUBLIC_STRIPE_STARTER_URL ||
-  'https://buy.stripe.com/eVqdR95gFdLV4M3cF8gjC0l'
-const PRO_URL =
-  process.env.NEXT_PUBLIC_STRIPE_PRO_URL ||
-  'https://buy.stripe.com/28E6oH7oNePZ92j20ugjC0m'
-
 const FREE_FEATURES = [
   '2 credits',
-  'Basic generation only',
+  'Try ShortsForgeAI before upgrading',
   'MP4 ready to post',
   'Community support',
 ]
 
-const CREATOR_FEATURES = [
-  '300 credits / month',
-  'Up to 300 Basic / 150 Pro / 75 Ultra generations',
-  'Priority render queue',
+const BASIC_FEATURES = [
+  '140 credits / month',
+  '≈9 Shorts of 30–35s',
+  '15 credits per Basic Short',
+  'Launch offer: 50% off first month',
   'Email support',
 ]
 
 const PRO_FEATURES = [
-  '900 credits / month',
-  'Up to 900 Basic / 450 Pro / 225 Ultra generations',
-  'Pro AI models (Veo / Sora-class)',
-  'Top priority render queue',
-  'Early access to new niches',
+  '350 credits / month',
+  '≈17 Shorts of 30–35s',
+  '20 credits per Pro Short',
+  'Launch offer: 50% off first month',
+  'Better cinematic prompting',
   'Priority support',
 ]
 
 const FAQS = [
   {
     q: 'How do credits work?',
-    a: 'Each Short uses credits based on the quality mode you pick: Basic = 1 credit, Pro = 2 credits, Ultra = 4 credits.',
+    a: 'Each Short uses credits based on the quality mode you pick: Basic = 15 credits, Pro = 20 credits. Failed generations do not consume credits. Credits reset every month based on your plan.',
   },
   {
     q: 'Can I switch plans later?',
     a: 'Yes. You can upgrade at any time. Manage billing from the portal once subscribed.',
   },
   {
-    q: 'Is this a subscription?',
-    a: 'Creator and Pro are monthly plans. Cancel anytime.',
+    q: 'How does the launch offer work?',
+    a: '50% off applies to the first month only. Plans renew at the regular monthly price ($9 Basic, $19 Pro).',
   },
   {
     q: 'Can I get a refund?',
@@ -94,15 +86,29 @@ export default function PricingClient(props: PricingClientProps) {
     setTimeout(() => setToast(null), 2800)
   }
 
-  function handleBuy(pack: 'creator' | 'pro') {
+  async function handleBuy(tier: 'basic' | 'pro') {
     if (!userId) {
       window.location.href = '/login?redirect=/pricing'
       return
     }
-    setPurchasing(pack)
-    const base = pack === 'creator' ? CREATOR_URL : PRO_URL
-    const url = `${base}${base.includes('?') ? '&' : '?'}client_reference_id=${encodeURIComponent(userId)}`
-    window.location.href = url
+    setPurchasing(tier)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data?.url) {
+        window.location.href = data.url
+        return
+      }
+      showToast(data?.error || 'Could not start checkout. Please retry.')
+    } catch {
+      showToast('Could not start checkout. Please retry.')
+    } finally {
+      setPurchasing(null)
+    }
   }
 
   async function handlePortal() {
@@ -159,7 +165,7 @@ export default function PricingClient(props: PricingClientProps) {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              Pay for what you use.
+              Launch offer — 50% off.
             </span>
           </h1>
           <p style={{ fontSize: '0.95rem', color: 'var(--muted)', maxWidth: 520, margin: '0 auto' }}>
@@ -182,7 +188,7 @@ export default function PricingClient(props: PricingClientProps) {
             {!userId ? 'Sign in to see your balance' : creditsLoading ? 'Loading balance...' : `You have ${credits ?? 0} credit${credits === 1 ? '' : 's'}`}
           </p>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            Basic = 1cr · Pro = 2cr · Ultra = 4cr
+            Basic = 15cr · Pro = 20cr per Short
           </p>
         </div>
         {isPro && (
@@ -213,37 +219,39 @@ export default function PricingClient(props: PricingClientProps) {
           name="Free"
           price="$0"
           period="/ month"
-          tagline="2 credits to try it out."
+          tagline="Try ShortsForgeAI before upgrading."
           features={FREE_FEATURES}
           cta={null}
         />
 
-        {/* Creator - Most Popular */}
+        {/* Basic - Most Popular */}
         <PlanCard
-          name="Creator"
-          price="$9"
-          period="/ month"
-          tagline="300 credits / month."
-          features={CREATOR_FEATURES}
+          name="Basic"
+          price="$4.50"
+          period="first month"
+          renewNote="then $9/month"
+          tagline="140 credits / month. ≈9 Shorts."
+          features={BASIC_FEATURES}
           badge={{ label: 'Most Popular', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           highlight
           cta={{
-            label: purchasing === 'creator' ? 'Loading...' : 'Get Creator $9/mo',
-            onClick: () => handleBuy('creator'),
-            loading: purchasing === 'creator',
+            label: purchasing === 'basic' ? 'Loading...' : 'Get Basic — $4.50',
+            onClick: () => handleBuy('basic'),
+            loading: purchasing === 'basic',
           }}
         />
 
         {/* Pro - Best Value */}
         <PlanCard
           name="Pro"
-          price="$19"
-          period="/ month"
-          tagline="900 credits / month."
+          price="$9.50"
+          period="first month"
+          renewNote="then $19/month"
+          tagline="350 credits / month. ≈17 Shorts."
           features={PRO_FEATURES}
           badge={{ label: 'Best Value', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           cta={{
-            label: purchasing === 'pro' ? 'Loading...' : 'Get Pro $19/mo',
+            label: purchasing === 'pro' ? 'Loading...' : 'Get Pro — $9.50',
             onClick: () => handleBuy('pro'),
             loading: purchasing === 'pro',
           }}
@@ -251,6 +259,7 @@ export default function PricingClient(props: PricingClientProps) {
       </div>
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
+        50% off applies to the first month only. Plans renew at the regular monthly price.
         Cancel anytime. Refund within 7 days if unused.
       </p>
 
@@ -260,10 +269,18 @@ export default function PricingClient(props: PricingClientProps) {
           How credits work
         </h2>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          <CreditTier name="Basic" cost="1 credit" desc="Fast and efficient for simple Shorts." />
-          <CreditTier name="Pro" cost="2 credits" desc="Better hooks, better structure, stronger viral script." />
-          <CreditTier name="Ultra" cost="4 credits" desc="Best quality for premium Shorts, deeper storytelling and stronger retention." />
+          <CreditTier name="Basic" cost="15 credits" desc="Standard video generation for short-form creators." />
+          <CreditTier name="Pro" cost="20 credits" desc="Better cinematic prompting and higher-quality generation settings." />
         </div>
+        <ul
+          className="mt-5 text-xs space-y-2"
+          style={{ color: 'var(--muted2)', paddingLeft: 20 }}
+        >
+          <li>Basic Short = <strong style={{ color: 'var(--text)' }}>15 credits</strong></li>
+          <li>Pro Short = <strong style={{ color: 'var(--text)' }}>20 credits</strong></li>
+          <li>Failed generations do not consume credits</li>
+          <li>Credits reset every month based on your plan</li>
+        </ul>
       </div>
 
       {/* FAQ */}
@@ -295,6 +312,7 @@ function PlanCard({
   name,
   price,
   period,
+  renewNote,
   tagline,
   features,
   badge,
@@ -304,6 +322,7 @@ function PlanCard({
   name: string
   price: string
   period: string
+  renewNote?: string
   tagline: string
   features: string[]
   badge?: { label: string; color: string }
@@ -341,13 +360,16 @@ function PlanCard({
           <span className="font-black" style={{ fontSize: '2.5rem', color: 'var(--text)', lineHeight: 1 }}>{price}</span>
           <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>{period}</span>
         </div>
+        {renewNote && (
+          <p className="text-xs mb-1" style={{ color: '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
+        )}
         <p className="text-xs" style={{ color: 'var(--muted)' }}>{tagline}</p>
       </div>
 
       <div className="flex flex-col gap-2.5 mb-7 flex-1">
         {features.map((f) => (
           <div key={f} className="flex items-start gap-2.5 text-sm">
-            <span style={{ color: '#34d399', fontSize: '0.8rem', marginTop: 2 }}>checkmark</span>
+            <span style={{ color: '#34d399', fontSize: '0.8rem', marginTop: 2 }}>✓</span>
             <span style={{ color: 'var(--text2)' }}>{f}</span>
           </div>
         ))}

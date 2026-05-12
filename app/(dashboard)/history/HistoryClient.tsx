@@ -55,6 +55,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
   const [filterNiche, setFilterNiche] = useState<string>('all')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const usedNiches = useMemo(() => [...new Set(generations.map((g) => g.niche))], [generations])
 
@@ -66,13 +67,22 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
   async function handleDelete(id: string) {
     if (deleteConfirm !== id) {
       setDeleteConfirm(id)
+      setDeleteError(null)
       setTimeout(() => setDeleteConfirm(null), 3000)
       return
     }
     setDeleting(id)
     setDeleteConfirm(null)
+    setDeleteError(null)
     try {
-      await supabase.from('generations').delete().eq('id', id)
+      const { error } = await supabase.from('generations').delete().eq('id', id)
+      if (error) {
+        // RLS-blocked or transient — surface to the user instead of optimistically
+        // dropping the row and silently leaving it in the DB.
+        console.error('[history] delete failed:', error.message)
+        setDeleteError('Could not delete that pack. Please retry.')
+        return
+      }
       setGenerations((prev) => prev.filter((g) => g.id !== id))
       if (expanded === id) setExpanded(null)
     } finally {
@@ -171,6 +181,16 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
               </button>
             )
           })}
+        </div>
+      )}
+
+      {deleteError && (
+        <div
+          role="alert"
+          className="rounded-xl px-4 py-3 text-sm mb-4"
+          style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.25)', color: '#f87171' }}
+        >
+          {deleteError}
         </div>
       )}
 

@@ -2,14 +2,12 @@
 
 import { useRouter } from 'next/navigation'
 
-const CREATOR_LINK = 'https://buy.stripe.com/7sYaEX8sR6jt2DVeNggjC0j'
-
 interface UpgradeModalProps {
   onClose: () => void
   generationsUsed: number
 }
 
-export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalProps) {
+export default function UpgradeModal({ onClose }: UpgradeModalProps) {
   const router = useRouter()
 
   return (
@@ -81,8 +79,8 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
           }}
         >
           {[
-            '⚡ Unlimited generations',
-            '🎯 All 5 viral niches',
+            '⚡ Up to 350 credits / month',
+            '🎯 All trending niches',
             '📋 Full copy-paste scripts',
             '🎬 AI video prompts',
             '📊 Generation history',
@@ -100,7 +98,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
         </div>
 
         <button
-          onClick={() => window.open(CREATOR_LINK, '_blank')}
+          onClick={() => router.push('/pricing')}
           className="w-full rounded-xl py-4 font-black text-base text-white mb-3 transition-all"
           style={{
             background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
@@ -109,7 +107,7 @@ export default function UpgradeModal({ onClose, generationsUsed }: UpgradeModalP
             cursor: 'pointer',
           }}
         >
-          Get 10 Videos — $9 (one-time) →
+          Launch offer — 50% off first month →
         </button>
 
         <button

@@ -18,9 +18,9 @@ export interface RunwayTaskState {
   failure: string | null
 }
 
-// ─── Validation helpers ───────────────────────────────────────────────────────
+// âââ Validation helpers âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-const VALID_MODELS = ['gen4_turbo'] as const
+const VALID_MODELS = ['gen4.5'] as const
 const VALID_DURATIONS = [5, 10] as const
 const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
 
@@ -36,14 +36,19 @@ interface RunwayTextToVideoPayload {
 }
 
 /**
- * Map platform name → Runway pixel-based ratio.
- * Runway does NOT accept "9:16" — must use pixel dimensions.
+ * Map platform name -> Runway pixel-based ratio.
+ * Runway does NOT accept "9:16" -- must use pixel dimensions.
+ * Push #021 added snake_case identifiers from the platform selector
+ * ("youtube_shorts", "tiktok", "instagram_reels") alongside the legacy
+ * display labels.
  */
 export function mapPlatformToRatio(platform: string): ValidRatio {
   switch ((platform ?? '').toLowerCase().trim()) {
     case 'youtube shorts':
+    case 'youtube_shorts':
     case 'tiktok':
     case 'instagram reels':
+    case 'instagram_reels':
       return '720:1280'
     case 'youtube':
     case 'landscape youtube':
@@ -57,7 +62,7 @@ export function mapPlatformToRatio(platform: string): ValidRatio {
 
 /**
  * Sanitize a raw user / AI-generated prompt for Runway.
- * Strips hashtags, platform instructions, URLs, CTAs — leaves only
+ * Strips hashtags, platform instructions, URLs, CTAs -- leaves only
  * the cinematic visual description that Runway expects.
  */
 export function sanitizePromptForRunway(raw: string): string {
@@ -90,20 +95,44 @@ export function sanitizePromptForRunway(raw: string): string {
 /**
  * Build a strictly-typed Runway text-to-video payload and validate every field.
  * Throws a descriptive error if any field would fail Runway validation.
+ *
+ * `quality` controls the prompt enhancement:
+ *  - 'basic': sanitized prompt only, standard settings.
+ *  - 'pro':   appends a cinematic-quality enhancer so Runway leans into
+ *             depth, lighting, and film-grade composition.
  */
+export type Quality = 'basic' | 'pro'
+
+const PRO_ENHANCER =
+  'cinematic film grade, 35mm motion picture lighting, shallow depth of field, ' +
+  'volumetric atmosphere, ultra-detailed textures, smooth gimbal camera motion, ' +
+  'high dynamic range, vertical 9:16 framing'
+
 export function buildRunwayPayload(
   rawPrompt: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): RunwayTextToVideoPayload {
-  const promptText = sanitizePromptForRunway(rawPrompt)
-  if (!promptText) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
-  if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
+  const sanitized = sanitizePromptForRunway(rawPrompt)
+  if (!sanitized) throw new Error('promptText is empty after sanitization -- cannot send to Runway.')
 
-  const model: ValidModel = 'gen4_turbo'
+  // For Pro, fold in the cinematic enhancer but never overflow the 500-char cap.
+  // We keep ~12 chars of breathing room for the separator.
+  let promptText = sanitized
+  if (quality === 'pro') {
+    const budget = 500 - PRO_ENHANCER.length - 4
+    const base = sanitized.length > budget ? sanitized.slice(0, budget).trim() : sanitized
+    promptText = `${base} -- ${PRO_ENHANCER}`
+  }
+  if (promptText.length > 500) {
+    promptText = promptText.slice(0, 500)
+  }
+
+  const model: ValidModel = 'gen4.5'
   const ratio = mapPlatformToRatio(platform)
 
-  // Runway only accepts 5 or 10 — clamp
+  // Runway only accepts 5 or 10 -- clamp
   const duration: ValidDuration = durationSeconds <= 5 ? 5 : 10
 
   return { model, promptText, ratio, duration }
@@ -120,14 +149,14 @@ function authHeaders() {
 }
 
 /**
- * Extract the most human-readable error detail from a Runway error response.
+ * Extract the most human-readable error detail from a Runyay error response.
  * Runway returns: { error, docUrl, issues: [{ path, message }] }
  */
 function extractRunwayError(data: Record<string, unknown>, rawText: string, httpStatus: number): string {
   // Log full structure for server-side debugging
   console.error('[runway] full error body:', JSON.stringify(data).slice(0, 1200))
 
-  // Try issues[] first — most specific
+  // Try issues[] first -- most specific
   if (Array.isArray(data.issues) && data.issues.length > 0) {
     const firstIssue = data.issues[0] as Record<string, unknown>
     const path = Array.isArray(firstIssue.path) ? firstIssue.path.join('.') : String(firstIssue.path ?? '')
@@ -143,20 +172,26 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
-export async function generateScenes(prompt: string): Promise<string[]> {
-  const userPrompt = `You break a Short-form video idea into 4 vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo).
+/**
+ * Generate N cinematic scene descriptions for the given prompt.
+ * @param prompt  The user's video idea.
+ * @param count   Number of scenes to generate (one per 10s clip). Default 4.
+ */
+export async function generateScenes(prompt: string, count = 4): Promise<string[]> {
+  const clampedCount = Math.max(1, Math.min(8, count))
+  const userPrompt = `You break a Short-form video idea into ${clampedCount} vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4.5).
 
 Idea: "${prompt}"
 
-Return ONLY a valid JSON array of exactly 4 strings — no markdown, no preamble. Each string must:
+Return ONLY a valid JSON array of exactly ${clampedCount} strings -- no markdown, no preamble. Each string must:
 - Be one sentence, ~15-25 words
 - Be visual, specific, concrete (subject + setting + lighting + camera motion + mood)
-- Stay coherent across the 4 shots so they tell one short story
+- Stay coherent across the ${clampedCount} shots so they tell one short story
 - Avoid text overlays, logos, or watermarks
 - Be optimized for vertical 9:16 framing (tall composition)
 
-Example output format:
-["scene 1 description", "scene 2 description", "scene 3 description", "scene 4 description"]`
+Example output format (${clampedCount} items):
+${JSON.stringify(Array.from({ length: clampedCount }, (_, i) => `scene ${i + 1} description`))}`
 
   const completion = await openai.chat.completions.create(
     {
@@ -165,12 +200,12 @@ Example output format:
         {
           role: 'system',
           content:
-            'You are an expert cinematic prompt engineer. You always respond with a valid JSON array of strings only — no markdown, no code fences, no commentary.',
+            'You are an expert cinematic prompt engineer. You always respond with a valid JSON array of strings only -- no markdown, no code fences, no commentary.',
         },
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.85,
-      max_tokens: 600,
+      max_tokens: 800,
     },
     { timeout: 25000 }
   )
@@ -190,11 +225,9 @@ Example output format:
   }
 
   if (!Array.isArray(parsed)) throw new Error('Scenes response was not an array.')
-  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, 4)
-  if (scenes.length < 4) {
-    while (scenes.length < 4) {
-      scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
-    }
+  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, clampedCount)
+  while (scenes.length < clampedCount) {
+    scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
   }
   return scenes
 }
@@ -203,18 +236,19 @@ Example output format:
  * Start a Runway text-to-video task.
  * @param rawPromptText  Raw scene description (will be sanitized before sending).
  * @param platform       Platform name for ratio mapping (default: "YouTube Shorts").
- * @param durationSeconds  Desired duration — only 5 or 10 will be sent to Runway.
+ * @param durationSeconds  Desired duration -- only 5 or 10 will be sent to Runway.
  */
 export async function startRunwayTask(
   rawPromptText: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): Promise<RunwayTaskHandle> {
   // Build and validate payload BEFORE calling Runway (no credits charged yet)
-  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds)
+  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds, quality)
 
   const bodyStr = JSON.stringify(payload)
-  console.log(`[runway] sending to /text_to_video — model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)
+  console.log(`[runway] sending to /text_to_video -- model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)
 
   let res: Response
   try {

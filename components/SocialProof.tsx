@@ -13,7 +13,7 @@ interface Stat {
 }
 
 const STATS: Stat[] = [
-  { id: 'scripts', target: 47832, suffix: '', label: 'Scripts Generated', format: 'number' },
+  { id: 'scripts', target: 47832, suffix: '', label: 'Videos Generated', format: 'number' },
   { id: 'creators', target: 12400, suffix: '+', label: 'Active Creators', format: 'number' },
   { id: 'retention', target: 94, suffix: '%', label: 'Retention Rate', format: 'percent' },
   { id: 'rank', target: 1, suffix: '', prefix: '#', label: 'Tool for Faceless Channels', format: 'rank' },

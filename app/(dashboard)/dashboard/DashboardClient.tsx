@@ -39,7 +39,9 @@ export default function DashboardClient({
       router.push('/generate')
       return
     }
-    router.push(`/generate?prompt=${encodeURIComponent(p)}`)
+    // autoanalyze=1 makes /generate kick off the analyze step automatically,
+    // so the user never sees a second "type a prompt" screen.
+    router.push(`/generate?prompt=${encodeURIComponent(p)}&autoanalyze=1`)
   }
 
   useEffect(() => {
@@ -142,7 +144,7 @@ export default function DashboardClient({
             textDecoration: 'none',
           }}
         >
-          ✍️ Generate Script
+          ✍️ Create Video
         </Link>
       </div>
 
@@ -324,7 +326,7 @@ export default function DashboardClient({
                 </div>
               )}
               <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                Each video render uses 1 credit.
+                Basic Short = 15 credits · Pro Short = 20 credits.
               </div>
             </div>
           </div>
@@ -355,7 +357,7 @@ export default function DashboardClient({
           <div className="flex items-center gap-1.5">
             <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>🎬</span>
             <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{totalGenerations}</span>
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>scripts generated</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>videos generated</span>
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">

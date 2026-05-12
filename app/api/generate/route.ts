@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'You must be signed in to generate scripts.' },
+        { error: 'You must be signed in to generate videos.' },
         { status: 401 }
       )
     }
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     if (!isTopicMode && !isPro && generationsUsed >= FREE_LIMIT) {
       return NextResponse.json(
         {
-          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Creator for 100/month.`,
+          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Basic ($9/mo, 140 credits) or Pro ($19/mo, 350 credits).`,
         },
         { status: 402 }
       )
