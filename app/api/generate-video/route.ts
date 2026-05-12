@@ -10,15 +10,21 @@ import {
 
 export const maxDuration = 60
 
-// Runway Gen-4 Turbo only supports 5 or 10 seconds.
-// 30s / 60s multi-clip stitching is not yet implemented.
-const SUPPORTED_DURATIONS = [5, 10]
-
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 function costForQuality(q: string | undefined): number {
   if (q === 'pro') return 2
   return 1 // 'basic' and 'basic_ai'
+}
+
+/**
+ * How many 10-second Runway clips are needed for the requested duration.
+ * 10s â 1 clip, 30s â 3 clips, 50s â 5 clips.
+ */
+function clipCountForDuration(duration: number): number {
+  if (duration <= 10) return 1
+  if (duration <= 30) return 3
+  return 5
 }
 
 export async function POST(req: NextRequest) {
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Concurrency / stale-job guard ────────────────────────────────────────
+    // ââ Concurrency / stale-job guard ââââââââââââââââââââââââââââââââââââââââ
     // Runway tier has concurrency = 1, so only one processing generation per
     // user is allowed. If the existing one is stale we sweep it and proceed.
     const active = await fetchActiveGeneration(supabase, user.id)
@@ -87,21 +93,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
     }
 
-    // Resolve platform and duration — clamp duration to valid Runway values (5 or 10)
+    // Resolve platform and duration.
+    // We support 10s (1 clip), 30s (3 clips), and 50s (5 clips).
+    // Each Runway clip is 10 seconds; clips are generated sequentially.
     const platform = (body.platform ?? 'YouTube Shorts').toString()
     const requestedDuration = Number(body.duration) || 10
-    if (!SUPPORTED_DURATIONS.includes(requestedDuration) && requestedDuration > 10) {
-      return NextResponse.json(
-        { error: 'Multi-clip rendering (30s / 60s) is coming soon. Please choose 10s for now.' },
-        { status: 400 }
-      )
-    }
-    const duration = requestedDuration <= 5 ? 5 : 10
+    const duration = requestedDuration <= 10 ? 10 : requestedDuration <= 30 ? 30 : 50
+    const clipCount = clipCountForDuration(duration)
     const quality: Quality = (body.quality === 'pro' || body.quality === 'basic_ai' ? body.quality : 'basic') as Quality
-    const cost = costForQuality(quality)
+    const cost = costForQuality(quality) * clipCount
 
-    // ── Credit balance check (we DO NOT deduct here — deduction happens after
-    // the Runway task completes successfully in /status). ─────────────────────
+    // ââ Credit balance check (we DO NOT deduct here â deduction happens after
+    // the Runway task completes successfully in /status). âââââââââââââââââââââ
     {
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
@@ -121,10 +124,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 1 — OpenAI breaks the prompt into 4 cinematic scenes
+    // Step 1 â OpenAI breaks the prompt into N cinematic scenes (one per clip).
     let scenes: string[]
     try {
-      scenes = await generateScenes(prompt)
+      scenes = await generateScenes(prompt, clipCount)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] scene generation failed:', msg)
@@ -135,9 +138,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Pre-validate the first scene payload BEFORE launching tasks.
-    // This catches any Runway field errors early — before credits are charged.
+    // This catches any Runway field errors early â before credits are charged.
     try {
-      buildRunwayPayload(scenes[0], platform, duration)
+      buildRunwayPayload(scenes[0], platform, 10)
     } catch (validationErr: unknown) {
       const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
       console.error('[generate-video] payload pre-validation failed:', msg)
@@ -147,17 +150,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 2 — Kick off a SINGLE RunwayML task and return immediately.
-    // Runway Tier 1 only allows concurrency=1, so we render one 10s clip.
-    // The route does NOT wait for the clip to finish — /status handles that.
-    const firstScene = scenes[0]
+    // Step 2 â Kick off ONLY the first Runway clip and return immediately.
+    // Runway Tier 1 has concurrency=1. Remaining clips are stored as
+    // pending_scenes and launched sequentially by /status as each clip finishes.
     let singleTask: { id: string; promptText: string }
     try {
-      singleTask = await startRunwayTask(firstScene, platform, duration)
+      singleTask = await startRunwayTask(scenes[0], platform, 10)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] runway task start failed:', msg)
-      // Pass the specific Runway error through so the UI can show a useful message
       return NextResponse.json(
         { error: msg },
         { status: 502 }
@@ -170,7 +171,7 @@ export async function POST(req: NextRequest) {
       index: 0,
     }]
 
-    // Step 3 — Persist the generation row so we can recover after a refresh
+    // Step 3 â Persist the generation row so we can recover after a refresh
     // and so /status can authorize the polling request.
     const meta = encodeGenerationMeta({
       task_ids: taskHandles,
@@ -180,6 +181,8 @@ export async function POST(req: NextRequest) {
       platform,
       duration,
       quality,
+      pending_scenes: scenes.slice(1),   // clips 1..N-1 queued for later
+      completed_clip_urls: [],            // filled in by /status as clips finish
     })
 
     const { data: inserted, error: insertErr } = await supabase
@@ -206,7 +209,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log(`[generate-video] created generation ${inserted.id} for user ${user.id} (cost=${cost}, tasks=${taskHandles.length})`)
+    console.log(`[generate-video] created generation ${inserted.id} for user ${user.id} (duration=${duration}s, clips=${clipCount}, cost=${cost})`)
 
     return NextResponse.json(
       {
@@ -216,6 +219,8 @@ export async function POST(req: NextRequest) {
         scenes,
         tasks: taskHandles,
         cost,
+        clip_count: clipCount,
+        duration,
         created_at: inserted.created_at,
       },
       { status: 202 }
