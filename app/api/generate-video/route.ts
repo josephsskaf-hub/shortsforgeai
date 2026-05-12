@@ -147,13 +147,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 2 — Kick off RunwayML tasks (parallel) and return immediately.
-    // The route does NOT wait for the clips to finish — /status handles that.
-    let tasks: { id: string; promptText: string }[]
+    // Step 2 — Kick off a SINGLE RunwayML task and return immediately.
+    // Runway Tier 1 only allows concurrency=1, so we render one 10s clip.
+    // The route does NOT wait for the clip to finish — /status handles that.
+    const firstScene = scenes[0]
+    let singleTask: { id: string; promptText: string }
     try {
-      tasks = await Promise.all(
-        scenes.map((sceneText) => startRunwayTask(sceneText, platform, duration))
-      )
+      singleTask = await startRunwayTask(firstScene, platform, duration)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] runway task start failed:', msg)
@@ -164,11 +164,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const taskHandles = tasks.map((t, i) => ({
-      id: t.id,
-      promptText: t.promptText,
-      index: i,
-    }))
+    const taskHandles = [{
+      id: singleTask.id,
+      promptText: singleTask.promptText,
+      index: 0,
+    }]
 
     // Step 3 — Persist the generation row so we can recover after a refresh
     // and so /status can authorize the polling request.
