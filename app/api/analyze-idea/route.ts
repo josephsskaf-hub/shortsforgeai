@@ -36,11 +36,38 @@ interface CreativeBrief {
   // YouTube metadata. The client may pass this to /api/generate-video so the
   // server can skip a fresh OpenAI scene call for the overall video.
   provider_prompt: string
+  // Push #025: hint at the duration the user asked for ("30 seconds", "ten
+  // seconds", "around 50s", or null if nothing was mentioned). The client
+  // uses this to pre-select the duration in Generation Settings.
+  detected_duration_seconds: number | null
 
   // Legacy compatibility — populated from the new fields so older callers
   // (e.g. GenerateClient before the matching client update) don't break.
   title: string
   scenePlan: string[]
+}
+
+/**
+ * Best-effort parse of an explicit duration mentioned in the prompt. Returns
+ * null when nothing is mentioned, so the client can decide its own default.
+ */
+function detectDurationFromPrompt(raw: string): number | null {
+  const text = (raw ?? '').toLowerCase()
+  const wordToNum: Record<string, number> = {
+    ten: 10, fifteen: 15, twenty: 20, 'twenty-five': 25, 'twenty five': 25,
+    thirty: 30, 'thirty-five': 35, 'thirty five': 35,
+    forty: 40, 'forty-five': 45, 'forty five': 45,
+    fifty: 50, sixty: 60,
+  }
+  const numMatch = text.match(/(?:~|around|about|roughly)?\s*(\d{1,3})\s*(?:s\b|sec\b|seconds?\b)/i)
+  if (numMatch) {
+    const n = Number(numMatch[1])
+    if (Number.isFinite(n)) return n
+  }
+  for (const [word, n] of Object.entries(wordToNum)) {
+    if (new RegExp(`\\b${word}\\s*(?:seconds?|sec|s)\\b`, 'i').test(text)) return n
+  }
+  return null
 }
 
 // Runway's text_to_video endpoint rejects prompts >500 chars. We clamp every
@@ -154,6 +181,7 @@ function fallbackBrief(prompt: string): CreativeBrief {
     youtube_description: 'A cinematic Short about the part of the story most people never get told. Watch to the end for the twist.',
     hashtags: ['#shorts', '#viral', '#mystery', '#fyp', '#storytime'],
     provider_prompt: providerPrompt,
+    detected_duration_seconds: detectDurationFromPrompt(prompt),
     title: trimmed || 'The Truth Nobody Told You',
     scenePlan: scenes.map((s) => s.visual_prompt),
   }
@@ -369,6 +397,7 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         youtube_description,
         hashtags,
         provider_prompt,
+        detected_duration_seconds: detectDurationFromPrompt(prompt),
         // Legacy compatibility
         title: viral_title,
         scenePlan: scenes.map((s) => s.visual_prompt),

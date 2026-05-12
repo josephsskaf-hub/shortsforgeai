@@ -87,6 +87,39 @@ const PLATFORM_OPTIONS: { key: Platform; label: string; icon: string }[] = [
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
+const DEFAULT_TITLE = 'ShortsForgeAI | AI Video Generator'
+
+/**
+ * Best-effort parse of the user's prompt for an explicit duration. We map any
+ * recognised value to one of the three options the API supports (10 / 30 / 50)
+ * — push #025 defaults to 30 when nothing is mentioned, instead of the old 10.
+ */
+function detectDurationFromPrompt(raw: string): Duration {
+  const text = (raw ?? '').toLowerCase()
+  const wordToNum: Record<string, number> = {
+    ten: 10, fifteen: 15, twenty: 20, 'twenty-five': 25, 'twenty five': 25,
+    thirty: 30, 'thirty-five': 35, 'thirty five': 35,
+    forty: 40, 'forty-five': 45, 'forty five': 45,
+    fifty: 50, sixty: 60,
+  }
+  let detected: number | null = null
+  // Numeric matches: "10s", "30 seconds", "around 50 sec", "~35s"
+  const numMatch = text.match(/(?:~|around|about|roughly)?\s*(\d{1,3})\s*(?:s\b|sec\b|seconds?\b)/i)
+  if (numMatch) detected = Number(numMatch[1])
+  // Word matches: "thirty seconds", "ten seconds"
+  if (detected === null) {
+    for (const [word, n] of Object.entries(wordToNum)) {
+      if (new RegExp(`\\b${word}\\s*(?:seconds?|sec|s)\\b`, 'i').test(text)) {
+        detected = n
+        break
+      }
+    }
+  }
+  if (detected === null) return 30 // no duration mentioned → 30 (push #025 default)
+  if (detected <= 15) return 10
+  if (detected <= 40) return 30
+  return 50
+}
 
 // Defensive check: never feed an image URL into a <video> element.
 function looksLikeVideoUrl(url: string | null | undefined): boolean {
@@ -108,7 +141,9 @@ export default function GenerateClient() {
   const [tasks, setTasks] = useState<TaskHandle[]>([])
   const [states, setStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
-  const [duration, setDuration] = useState<Duration>(10)
+  // Push #025: default to 30s. The Analyze Idea step (handleAnalyze) refines
+  // this from the prompt itself once the brief is built.
+  const [duration, setDuration] = useState<Duration>(30)
   const [quality, setQuality] = useState<Quality>('basic')
   const [platform, setPlatform] = useState<Platform>('youtube_shorts')
   const [chargedCost, setChargedCost] = useState<number>(15)
@@ -335,6 +370,33 @@ export default function GenerateClient() {
     return Math.min(100, Math.round((sum / slots.length) * 100))
   }, [slots])
 
+  // Push #025: reflect generation state in the browser tab title so the user
+  // can leave the tab and still see progress at a glance. Reset on unmount.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (phase === 'generating') {
+      document.title = `${totalProgress}% — ShortsForgeAI`
+    } else if (phase === 'done') {
+      document.title = `Video Ready — ShortsForgeAI`
+    } else if (phase === 'error') {
+      document.title = `Generation Failed — ShortsForgeAI`
+    } else {
+      document.title = DEFAULT_TITLE
+    }
+    return () => {
+      // Cleanup runs both on dep change AND on unmount. We let the next render
+      // immediately overwrite it for dep changes; the unmount case is handled
+      // by the dedicated mount effect below.
+    }
+  }, [phase, totalProgress])
+
+  // Restore the tab title when the user navigates away from /generate.
+  useEffect(() => {
+    return () => {
+      if (typeof document !== 'undefined') document.title = DEFAULT_TITLE
+    }
+  }, [])
+
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const source = (override ?? prompt).trim()
@@ -387,6 +449,26 @@ export default function GenerateClient() {
         hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((h: unknown): h is string => typeof h === 'string') : undefined,
         provider_prompt: typeof data.provider_prompt === 'string' ? data.provider_prompt : undefined,
       })
+
+      // Push #025: pre-select Duration from the prompt (or from a server-
+      // provided `detected_duration_seconds` hint when available). Maps any
+      // recognised value to 10 / 30 / 50; falls back to 30 when nothing is
+      // mentioned. Done after setAnalysis so the brief and the duration land
+      // in the same render.
+      const serverHint =
+        typeof data.detected_duration_seconds === 'number' && Number.isFinite(data.detected_duration_seconds)
+          ? (data.detected_duration_seconds as number)
+          : null
+      const pickedFromServer: Duration | null =
+        serverHint === null
+          ? null
+          : serverHint <= 15
+          ? 10
+          : serverHint <= 40
+          ? 30
+          : 50
+      setDuration(pickedFromServer ?? detectDurationFromPrompt(source))
+
       setPhase('options')
     } catch (err) {
       console.error('[generate] analyze threw:', err)

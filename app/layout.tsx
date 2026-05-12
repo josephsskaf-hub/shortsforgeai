@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ShortsForgeAI — Create 5 Viral Shorts in 30 Seconds',
+  title: 'ShortsForgeAI | AI Video Generator',
   description:
-    'AI-powered viral short-form content generator for YouTube Shorts, TikTok, and Instagram Reels. Pick a niche, get 5 ready-to-post scripts instantly.',
-  keywords: 'viral shorts, youtube shorts generator, ai content creator, tiktok scripts',
+    'AI-powered video generator for YouTube Shorts, TikTok, and Instagram Reels. Create cinematic faceless AI Shorts in minutes.',
+  keywords: 'ai video generator, youtube shorts, tiktok video, instagram reels, faceless video, ai shorts',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
