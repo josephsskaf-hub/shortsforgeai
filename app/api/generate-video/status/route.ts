@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getRunwayTask, type RunwayTaskState } from '@/lib/runway'
+import { getRunwayTask, startRunwayTask, type RunwayTaskState } from '@/lib/runway'
 import {
   decodeGenerationMeta,
   finalizeGeneration,
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     const generationId = req.nextUrl.searchParams.get('generation_id')
 
-    // ── Modern path: poll by generation_id (DB-backed, recoverable). ─────────
+    // ââ Modern path: poll by generation_id (DB-backed, recoverable). âââââââââ
     if (generationId) {
       const { data: row, error: rowErr } = await supabase
         .from('videos')
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       const meta: GenerationMeta | null = decodeGenerationMeta(typeof video.script === 'string' ? video.script : null)
       const taskIds = meta?.task_ids?.map((t) => t.id) ?? []
 
-      // Already finalised — return cached state without hitting Runway again.
+      // Already finalised â return cached state without hitting Runway again.
       if (status !== 'processing') {
         return NextResponse.json({
           generation_id: video.id,
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      // Stale sweep — protect against jobs the user abandoned.
+      // Stale sweep â protect against jobs the user abandoned.
       const createdAt = String(video.created_at)
       const updatedAt = typeof video.updated_at === 'string' ? video.updated_at : null
       if (isStale({ created_at: createdAt, updated_at: updatedAt })) {
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
       }
 
       if (taskIds.length === 0) {
-        // Misshapen row — finalise it so the user isn't stuck forever.
+        // Misshapen row â finalise it so the user isn't stuck forever.
         await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
         return NextResponse.json({
           generation_id: video.id,
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       const succeeded = results.filter((r) => r.status === 'SUCCEEDED').length
 
       if (!allDone) {
-        // Still working — touch updated_at so the stale sweeper sees activity.
+        // Still working â touch updated_at so the stale sweeper sees activity.
         await touchGeneration(supabase, String(video.id))
         return NextResponse.json({
           generation_id: video.id,
@@ -146,13 +146,69 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      // ── Terminal state — finalise the row and (if successful) charge credits.
-      if (playable.length === 0) {
+      // ââ Check for pending clips (multi-clip pipeline) ââââââââââââââââââââââââ
+      const pendingScenes = meta?.pending_scenes ?? []
+      const completedUrls = meta?.completed_clip_urls ?? []
+
+      if (pendingScenes.length > 0) {
+        if (playable.length === 0) {
+          // Current clip failed â abort the whole generation
+          await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+          console.log(`[generate-video/status] generation ${video.id} -> failed (clip failed, pending=${pendingScenes.length})`)
+          return NextResponse.json({
+            generation_id: video.id,
+            status: 'failed',
+            done: true,
+            tasks: results,
+          })
+        }
+
+        // Current clip succeeded â launch the next one
+        const nextScene = pendingScenes[0]
+        let nextTask: { id: string; promptText: string }
+        try {
+          nextTask = await startRunwayTask(nextScene, meta!.platform, 10)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[generate-video/status] failed to launch next clip:', msg)
+          await finalizeGeneration(supabase, String(video.id), 'failed', { credits_used: 0 })
+          return NextResponse.json({ generation_id: video.id, status: 'failed', done: true, tasks: results })
+        }
+
+        const newCompletedUrls = [...completedUrls, ...playable.map((p) => p.videoUrl!)]
+        const updatedMeta = {
+          ...meta!,
+          task_ids: [{ id: nextTask.id, promptText: nextTask.promptText, index: (meta?.task_ids.length ?? 0) }],
+          pending_scenes: pendingScenes.slice(1),
+          completed_clip_urls: newCompletedUrls,
+        }
+        await supabase
+          .from('videos')
+          .update({ script: JSON.stringify(updatedMeta), updated_at: new Date().toISOString() })
+          .eq('id', String(video.id))
+          .eq('status', 'processing')
+
+        console.log(`[generate-video/status] generation ${video.id}: clip done, launched next (remaining=${pendingScenes.length - 1})`)
+        return NextResponse.json({
+          generation_id: video.id,
+          status: 'processing',
+          done: false,
+          clip_index: updatedMeta.task_ids[0].index,
+          clips_done: newCompletedUrls.length,
+          clips_total: (meta?.scenes.length ?? 1),
+          tasks: results,
+        })
+      }
+
+      // ââ Terminal state â all clips done. Finalise and charge credits. ââââââââ
+      const allClipUrls = [...completedUrls, ...playable.map((p) => p.videoUrl!)]
+
+      if (allClipUrls.length === 0) {
         const moved = await finalizeGeneration(supabase, String(video.id), 'failed', {
           credits_used: 0,
         })
         if (moved) {
-          console.log(`[generate-video/status] generation ${video.id} → failed (no playable clip)`)
+          console.log(`[generate-video/status] generation ${video.id} -> failed (no playable clip)`)
         }
         return NextResponse.json({
           generation_id: video.id,
@@ -165,10 +221,10 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      const primaryUrl = playable[0].videoUrl!
-      const cost = Math.max(1, Math.min(10, meta?.cost ?? 1))
+      const primaryUrl = allClipUrls[0]
+      const cost = Math.max(1, Math.min(50, meta?.cost ?? 1))
 
-      // Atomic finalise: only one polling request gets to flip processing → completed,
+      // Atomic finalise: only one polling request gets to flip processing -> completed,
       // so credits can never be deducted twice.
       const won = await finalizeGeneration(supabase, String(video.id), 'completed', {
         video_url: primaryUrl,
@@ -196,7 +252,7 @@ export async function GET(req: NextRequest) {
             console.error('[generate-video/status] credit deduction failed:', dedErr.message)
           } else {
             creditsDeducted = true
-            console.log(`[generate-video/status] generation ${video.id} → completed, charged ${cost} credit(s) (balance ${current} → ${next})`)
+            console.log(`[generate-video/status] generation ${video.id} -> completed, charged ${cost} credit(s) (balance ${current} -> ${next})`)
           }
         }
       }
@@ -206,17 +262,17 @@ export async function GET(req: NextRequest) {
         status: 'completed',
         done: true,
         succeeded,
-        playable: playable.length,
+        playable: allClipUrls.length,
         total: results.length,
         video_url: primaryUrl,
+        all_clip_urls: allClipUrls,
         tasks: results,
         cost,
         creditsDeducted,
       })
     }
 
-    // ── Legacy path: poll by raw `tasks=` query param. Kept for backwards
-    // compatibility with older clients; no credit logic on this branch. ───────
+    // ââ Legacy path: poll by raw `tasks=` query param. âââââââââââââââââââââââ
     const tasksParam = req.nextUrl.searchParams.get('tasks') ?? ''
     const ids = tasksParam
       .split(',')
