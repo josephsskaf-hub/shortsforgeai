@@ -92,6 +92,11 @@ export default function GenerateClient() {
   const [allClipUrls, setAllClipUrls] = useState<string[]>([])
   const [copyHint, setCopyHint] = useState<'copied' | 'failed' | null>(null)
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
+  // Guards the Generate button between click and the POST round-trip
+  // finishing, so a fast double-click can't fire two generations even though
+  // the options panel unmounts on phase change.
+  const submittingRef = useRef(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -377,9 +382,16 @@ export default function GenerateClient() {
   }, [searchParams])
 
   async function handleGenerate() {
+    // Re-entrance guard. Setting state alone isn't enough: a double-click in
+    // the same JS tick can fire two handlers before React unmounts the panel.
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
     const trimmed = prompt.trim()
     if (!trimmed) {
       setError('Please describe your video idea first.')
+      submittingRef.current = false
+      setSubmitting(false)
       return
     }
     setError(null)
@@ -458,6 +470,11 @@ export default function GenerateClient() {
       console.error('[generate] generate threw:', err)
       setError(GENERIC_ERROR)
       setPhase('error')
+    } finally {
+      // Release the re-entrance guard whether the POST succeeded, errored,
+      // or hit a 409/402. Polling state is governed by `phase`, not by this.
+      submittingRef.current = false
+      setSubmitting(false)
     }
   }
 
@@ -938,30 +955,34 @@ export default function GenerateClient() {
             <div className="flex items-center justify-end mt-6 gap-2 flex-wrap">
               <button
                 onClick={handleGenerate}
-                disabled={!!recoverable || lowCredits}
+                disabled={!!recoverable || lowCredits || submitting}
                 className="rounded-xl px-6 py-3 text-sm font-black text-white flex items-center gap-2"
                 style={{
-                  background: recoverable || lowCredits
+                  background: recoverable || lowCredits || submitting
                     ? 'rgba(255,255,255,.04)'
                     : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
                   border: 'none',
-                  cursor: recoverable || lowCredits ? 'not-allowed' : 'pointer',
-                  color: recoverable || lowCredits ? 'var(--muted)' : '#fff',
-                  boxShadow: recoverable || lowCredits ? 'none' : '0 8px 28px rgba(37,99,235,.4)',
+                  cursor: recoverable || lowCredits || submitting ? 'not-allowed' : 'pointer',
+                  color: recoverable || lowCredits || submitting ? 'var(--muted)' : '#fff',
+                  boxShadow: recoverable || lowCredits || submitting ? 'none' : '0 8px 28px rgba(37,99,235,.4)',
                 }}
               >
-                Generate
-                <span
-                  style={{
-                    padding: '2px 10px',
-                    borderRadius: 99,
-                    background: 'rgba(255,255,255,.18)',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {selectedCost} credit{selectedCost > 1 ? 's' : ''}
-                </span>
+                {submitting ? <><Spinner /><span>Starting…</span></> : (
+                  <>
+                    Generate
+                    <span
+                      style={{
+                        padding: '2px 10px',
+                        borderRadius: 99,
+                        background: 'rgba(255,255,255,.18)',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {selectedCost} credit{selectedCost > 1 ? 's' : ''}
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </section>
