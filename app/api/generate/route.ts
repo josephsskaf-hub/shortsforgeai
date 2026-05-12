@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'You must be signed in to generate scripts.' },
+        { error: 'You must be signed in to generate videos.' },
         { status: 401 }
       )
     }

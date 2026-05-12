@@ -194,7 +194,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.18)', color: '#34d399' }}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }} />
-                  Free tier · 5 viral scripts included — no card required
+                  Free tier · 2 AI video credits — no card required
                 </div>
               )}
 

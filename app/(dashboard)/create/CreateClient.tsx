@@ -227,11 +227,11 @@ export default function CreateClient() {
       })
       if (!genRes.ok) {
         const err = await genRes.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to generate the script.')
+        throw new Error(err.error || 'Failed to generate the video.')
       }
       const genData = await genRes.json()
       const video: ShortVideoResult | undefined = Array.isArray(genData.videos) ? genData.videos[0] : undefined
-      if (!video) throw new Error('Invalid response from the script generator.')
+      if (!video) throw new Error('Invalid response from the video generator.')
       setStage('voice', 22)
 
       // Step 2 — Voiceover

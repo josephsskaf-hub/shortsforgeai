@@ -357,7 +357,7 @@ export default function DashboardClient({
           <div className="flex items-center gap-1.5">
             <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>🎬</span>
             <span className="text-xs font-black" style={{ color: 'var(--text)' }}>{totalGenerations}</span>
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>scripts generated</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>videos generated</span>
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">

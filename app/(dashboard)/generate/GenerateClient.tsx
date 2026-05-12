@@ -100,6 +100,7 @@ export default function GenerateClient() {
   const [completedClipUrls, setCompletedClipUrls] = useState<string[]>([])
   const [allClipUrls, setAllClipUrls] = useState<string[]>([])
   const [copyHint, setCopyHint] = useState<'copied' | 'failed' | null>(null)
+  const [downloadState, setDownloadState] = useState<'idle' | 'fetching' | 'error'>('idle')
   const [creditBalance, setCreditBalance] = useState<number | null>(null)
   // Guards the Generate button between click and the POST round-trip
   // finishing, so a fast double-click can't fire two generations even though
@@ -487,6 +488,7 @@ export default function GenerateClient() {
     setClipsTotal(1)
     setCompletedClipUrls([])
     setAllClipUrls([])
+    setDownloadState('idle')
   }
 
   function handleBackToEdit() {
@@ -943,7 +945,10 @@ export default function GenerateClient() {
             )}
 
             {/* Generate */}
-            <div className="flex items-center justify-end mt-6 gap-2 flex-wrap">
+            <div className="flex items-center justify-between mt-6 gap-3 flex-wrap">
+              <p className="text-xs flex-1 min-w-[200px]" style={{ color: 'var(--muted)' }}>
+                Analyze Idea is free. Credits are charged only when your video is successfully generated.
+              </p>
               <button
                 onClick={handleGenerate}
                 disabled={!!recoverable || lowCredits || submitting}
@@ -1026,21 +1031,59 @@ export default function GenerateClient() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
-                <a
-                  href={primaryVideoUrl}
-                  download={`shortsforge-${duration}s.mp4`}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!primaryVideoUrl || phase !== 'done' || downloadState === 'fetching') return
+                    setDownloadState('fetching')
+                    try {
+                      // Fetch as a blob so cross-origin URLs (Runway's storage
+                      // host) still trigger a Save dialog instead of opening
+                      // a new tab. The `download` attribute alone is ignored
+                      // by the browser when the response is cross-origin.
+                      const res = await fetch(primaryVideoUrl)
+                      if (!res.ok) throw new Error(`status ${res.status}`)
+                      const blob = await res.blob()
+                      const blobUrl = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = blobUrl
+                      a.download = `shortsforgeai-video-${generationId ?? 'short'}.mp4`
+                      document.body.appendChild(a)
+                      a.click()
+                      a.remove()
+                      window.URL.revokeObjectURL(blobUrl)
+                      setDownloadState('idle')
+                    } catch (err) {
+                      console.error('[generate] download failed:', err)
+                      setDownloadState('error')
+                      setTimeout(() => setDownloadState('idle'), 3000)
+                    }
+                  }}
+                  disabled={!primaryVideoUrl || phase !== 'done' || downloadState === 'fetching'}
+                  aria-live="polite"
                   className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                    background:
+                      !primaryVideoUrl || phase !== 'done' || downloadState === 'fetching'
+                        ? 'rgba(255,255,255,.06)'
+                        : downloadState === 'error'
+                        ? 'rgba(239,68,68,.18)'
+                        : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
                     border: 'none',
-                    textDecoration: 'none',
-                    boxShadow: '0 8px 28px rgba(37,99,235,.4)',
+                    color: !primaryVideoUrl || phase !== 'done' ? 'var(--muted)' : '#fff',
+                    cursor: !primaryVideoUrl || phase !== 'done' || downloadState === 'fetching' ? 'not-allowed' : 'pointer',
+                    boxShadow:
+                      !primaryVideoUrl || phase !== 'done' || downloadState !== 'idle'
+                        ? 'none'
+                        : '0 8px 28px rgba(37,99,235,.4)',
                   }}
                 >
-                  ⬇ Download Video
-                </a>
+                  {downloadState === 'fetching'
+                    ? 'Preparing download…'
+                    : downloadState === 'error'
+                    ? 'Could not download video. Please try again.'
+                    : '⬇ Download Video'}
+                </button>
 
                 <button
                   type="button"

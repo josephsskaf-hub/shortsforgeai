@@ -144,7 +144,7 @@ export default function TemplatesClient() {
             className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }}
           >
-            ⚡ Script Generator
+            ⚡ Create AI Short
           </Link>
         </div>
       </div>
