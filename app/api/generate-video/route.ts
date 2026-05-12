@@ -30,6 +30,24 @@ function clipCountForDuration(duration: number): number {
   return 5
 }
 
+/**
+ * Normalize the platform value to the human-readable label.
+ * Push #021's client started sending snake_case identifiers ("youtube_shorts",
+ * "tiktok", "instagram_reels") to match the new platform selector. The legacy
+ * `videos.platform` column was populated with display labels ("YouTube Shorts",
+ * etc.) and may have a CHECK constraint enforcing that — sending snake_case
+ * would make the INSERT fail and surface as "Video generation failed." in the
+ * UI. Normalize here so the DB always sees the original shape and Runway's
+ * ratio mapping is happy (it accepts both forms).
+ */
+function normalizePlatform(raw: string | undefined): string {
+  const v = (raw ?? '').toString().trim().toLowerCase()
+  if (v === 'tiktok') return 'TikTok'
+  if (v === 'instagram_reels' || v === 'instagram reels') return 'Instagram Reels'
+  if (v === 'youtube_shorts' || v === 'youtube shorts') return 'YouTube Shorts'
+  return 'YouTube Shorts'
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.RUNWAY_API_KEY) {
@@ -99,11 +117,21 @@ export async function POST(req: NextRequest) {
     // Resolve platform and duration.
     // We support 10s (1 clip), 30s (3 clips), and 50s (5 clips).
     // Each Runway clip is 10 seconds; clips are generated sequentially.
-    const platform = (body.platform ?? 'YouTube Shorts').toString()
+    const platform = normalizePlatform(body.platform)
     const requestedDuration = Number(body.duration) || 10
     const duration = requestedDuration <= 10 ? 10 : requestedDuration <= 30 ? 30 : 50
     const clipCount = clipCountForDuration(duration)
     const quality: Quality = body.quality === 'pro' ? 'pro' : 'basic'
+
+    console.log('[generate-video] request', {
+      user_id: user.id,
+      raw_platform: body.platform,
+      platform,
+      duration,
+      quality,
+      clipCount,
+      prompt_length: prompt.length,
+    })
     // Flat cost — 15 credits for Basic, 20 credits for Pro, regardless of duration.
     const cost = costForQuality(quality)
 
@@ -206,7 +234,19 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (insertErr || !inserted) {
-      console.error('[generate-video] failed to persist generation row:', insertErr?.message)
+      // Full error details — code (e.g. 23514 = check_violation, 22P02 = invalid
+      // text representation), details, hint — so DB constraint issues are
+      // visible in the server log instead of just a generic "row didn't insert".
+      console.error('[generate-video] failed to persist generation row:', {
+        message: insertErr?.message,
+        code: insertErr?.code,
+        details: insertErr?.details,
+        hint: insertErr?.hint,
+        platform,
+        duration,
+        quality,
+        runway_task_id: singleTask.id,
+      })
       return NextResponse.json(
         { error: 'Could not start generation. Please try again.' },
         { status: 500 }
@@ -231,7 +271,8 @@ export async function POST(req: NextRequest) {
     )
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
-    console.error('[generate-video] unexpected error:', msg)
+    const stack = error instanceof Error ? error.stack : undefined
+    console.error('[generate-video] unexpected error:', { msg, stack })
     return NextResponse.json(
       { error: 'Something went wrong. Please try again.' },
       { status: 500 }

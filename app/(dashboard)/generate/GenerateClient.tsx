@@ -441,8 +441,15 @@ export default function GenerateClient() {
       }
 
       if (!res.ok) {
-        console.error('[generate] generate-video error:', data?.error)
-        setError(GENERIC_ERROR)
+        console.error('[generate] generate-video error:', res.status, data?.error)
+        // Surface the server's specific error to the user. The server returns
+        // tailored messages ("Failed to plan scenes…", "Runway rejected the
+        // request: …", "Could not start generation. Please try again.") and
+        // collapsing them all into GENERIC_ERROR hides useful debugging info.
+        const serverMsg = typeof data?.error === 'string' && data.error.trim().length > 0
+          ? data.error
+          : GENERIC_ERROR
+        setError(serverMsg)
         setPhase('error')
         return
       }
