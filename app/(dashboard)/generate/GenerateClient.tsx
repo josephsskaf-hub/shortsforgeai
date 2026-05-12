@@ -17,11 +17,31 @@ interface TaskState {
   failure: string | null
 }
 
+interface SceneBrief {
+  scene_number: number
+  duration_seconds: number
+  caption: string
+  visual_prompt: string
+  voiceover: string
+}
+
 interface Analysis {
+  // Legacy
   title: string
   summary: string
   niche: string
   scenePlan: string[]
+  // Push #024A — richer creative brief from /api/analyze-idea
+  viral_title?: string
+  hook?: string
+  tone?: string
+  voiceover_script?: string
+  scenes?: SceneBrief[]
+  music_mood?: string
+  pacing_notes?: string
+  youtube_title?: string
+  youtube_description?: string
+  hashtags?: string[]
 }
 
 interface ActiveSummary {
@@ -349,10 +369,20 @@ export default function GenerateClient() {
         return
       }
       setAnalysis({
-        title: data.title ?? '',
+        title: data.viral_title ?? data.title ?? '',
         summary: data.summary ?? '',
         niche: data.niche ?? '',
         scenePlan: Array.isArray(data.scenePlan) ? data.scenePlan : [],
+        viral_title: typeof data.viral_title === 'string' ? data.viral_title : undefined,
+        hook: typeof data.hook === 'string' ? data.hook : undefined,
+        tone: typeof data.tone === 'string' ? data.tone : undefined,
+        voiceover_script: typeof data.voiceover_script === 'string' ? data.voiceover_script : undefined,
+        scenes: Array.isArray(data.scenes) ? (data.scenes as SceneBrief[]) : undefined,
+        music_mood: typeof data.music_mood === 'string' ? data.music_mood : undefined,
+        pacing_notes: typeof data.pacing_notes === 'string' ? data.pacing_notes : undefined,
+        youtube_title: typeof data.youtube_title === 'string' ? data.youtube_title : undefined,
+        youtube_description: typeof data.youtube_description === 'string' ? data.youtube_description : undefined,
+        hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((h: unknown): h is string => typeof h === 'string') : undefined,
       })
       setPhase('options')
     } catch (err) {
@@ -760,16 +790,30 @@ export default function GenerateClient() {
             style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <span
-                className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
-                style={{
-                  background: 'rgba(37,99,235,.12)',
-                  border: '1px solid rgba(37,99,235,.3)',
-                  color: '#93c5fd',
-                }}
-              >
-                Niche · {analysis.niche || 'General'}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
+                  style={{
+                    background: 'rgba(37,99,235,.12)',
+                    border: '1px solid rgba(37,99,235,.3)',
+                    color: '#93c5fd',
+                  }}
+                >
+                  Niche · {analysis.niche || 'General'}
+                </span>
+                {analysis.tone && (
+                  <span
+                    className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
+                    style={{
+                      background: 'rgba(168,85,247,.12)',
+                      border: '1px solid rgba(168,85,247,.3)',
+                      color: '#c4b5fd',
+                    }}
+                  >
+                    Tone · {analysis.tone}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={handleBackToEdit}
                 className="text-xs font-bold rounded-lg px-3 py-1.5"
@@ -784,12 +828,73 @@ export default function GenerateClient() {
               </button>
             </div>
             <h2 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
-              {analysis.title}
+              {analysis.viral_title || analysis.title}
             </h2>
+            {analysis.hook && (
+              <div
+                className="rounded-xl px-4 py-3 mb-3"
+                style={{
+                  background: 'rgba(37,99,235,.08)',
+                  border: '1px solid rgba(37,99,235,.25)',
+                }}
+              >
+                <div
+                  className="text-[10px] font-black uppercase tracking-widest mb-1"
+                  style={{ color: '#93c5fd' }}
+                >
+                  Hook · first 2 seconds
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text)', lineHeight: 1.5 }}>
+                  &ldquo;{analysis.hook}&rdquo;
+                </p>
+              </div>
+            )}
             <p className="text-sm mb-4" style={{ color: 'var(--muted2)', lineHeight: 1.55 }}>
               {analysis.summary}
             </p>
-            {analysis.scenePlan.length > 0 && (
+
+            {/* Rich scene list — uses captions + visual prompts if available,
+                falls back to the flat scenePlan strings for older responses. */}
+            {analysis.scenes && analysis.scenes.length > 0 ? (
+              <ol className="space-y-3 text-xs" style={{ color: 'var(--muted2)' }}>
+                {analysis.scenes.map((s, i) => (
+                  <li
+                    key={i}
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: 'rgba(255,255,255,.025)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span style={{ color: '#93c5fd', fontWeight: 700 }}>
+                        Scene {s.scene_number ?? i + 1}
+                      </span>
+                      <span className="font-bold" style={{ color: 'var(--muted)' }}>
+                        {s.duration_seconds || '—'}s
+                      </span>
+                    </div>
+                    {s.caption && (
+                      <div
+                        className="text-xs font-black mb-1.5"
+                        style={{ color: 'var(--text)', letterSpacing: '0.01em' }}
+                      >
+                        “{s.caption}”
+                      </div>
+                    )}
+                    {s.visual_prompt && (
+                      <div className="mb-1" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                        <span style={{ color: '#a5b4fc', fontWeight: 700 }}>Visual: </span>
+                        {s.visual_prompt}
+                      </div>
+                    )}
+                    {s.voiceover && (
+                      <div style={{ color: 'var(--muted)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                        <span style={{ color: '#c4b5fd', fontWeight: 700, fontStyle: 'normal' }}>VO: </span>
+                        {s.voiceover}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : analysis.scenePlan.length > 0 ? (
               <ol className="space-y-1.5 text-xs" style={{ color: 'var(--muted2)', paddingLeft: 20 }}>
                 {analysis.scenePlan.map((s, i) => (
                   <li key={i}>
@@ -797,6 +902,110 @@ export default function GenerateClient() {
                   </li>
                 ))}
               </ol>
+            ) : null}
+
+            {/* Full voiceover script */}
+            {analysis.voiceover_script && (
+              <details className="mt-4">
+                <summary
+                  className="text-[10px] font-black uppercase tracking-widest cursor-pointer"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  🎙️ Full voiceover script
+                </summary>
+                <p
+                  className="text-xs mt-2 px-3 py-2 rounded-lg"
+                  style={{
+                    color: 'var(--text2)',
+                    background: 'rgba(255,255,255,.03)',
+                    border: '1px solid var(--border)',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {analysis.voiceover_script}
+                </p>
+              </details>
+            )}
+
+            {/* Music + pacing */}
+            {(analysis.music_mood || analysis.pacing_notes) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                {analysis.music_mood && (
+                  <div
+                    className="rounded-lg px-3 py-2 text-xs"
+                    style={{ background: 'rgba(255,255,255,.025)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#93c5fd' }}>
+                      Music mood
+                    </div>
+                    <span style={{ color: 'var(--text2)' }}>{analysis.music_mood}</span>
+                  </div>
+                )}
+                {analysis.pacing_notes && (
+                  <div
+                    className="rounded-lg px-3 py-2 text-xs"
+                    style={{ background: 'rgba(255,255,255,.025)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#93c5fd' }}>
+                      Pacing
+                    </div>
+                    <span style={{ color: 'var(--text2)' }}>{analysis.pacing_notes}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* YouTube package */}
+            {(analysis.youtube_title || analysis.youtube_description || (analysis.hashtags && analysis.hashtags.length > 0)) && (
+              <details className="mt-4">
+                <summary
+                  className="text-[10px] font-black uppercase tracking-widest cursor-pointer"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  📺 YouTube package
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {analysis.youtube_title && (
+                    <div
+                      className="rounded-lg px-3 py-2 text-xs"
+                      style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
+                    >
+                      <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#a5b4fc' }}>
+                        Title
+                      </div>
+                      <span style={{ color: 'var(--text)' }}>{analysis.youtube_title}</span>
+                    </div>
+                  )}
+                  {analysis.youtube_description && (
+                    <div
+                      className="rounded-lg px-3 py-2 text-xs"
+                      style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
+                    >
+                      <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#a5b4fc' }}>
+                        Description
+                      </div>
+                      <span style={{ color: 'var(--text2)', lineHeight: 1.55 }}>{analysis.youtube_description}</span>
+                    </div>
+                  )}
+                  {analysis.hashtags && analysis.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {analysis.hashtags.map((h) => (
+                        <span
+                          key={h}
+                          className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: 'rgba(99,102,241,.12)',
+                            border: '1px solid rgba(99,102,241,.25)',
+                            color: '#a5b4fc',
+                          }}
+                        >
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
             )}
           </section>
 
