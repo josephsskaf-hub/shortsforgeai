@@ -52,9 +52,11 @@ function coerceStatus(v: unknown): VideoListItem['status'] {
 }
 
 function deriveTitle(row: RawRow): string {
-  // Prefer `topic` (push #028 + flow), fall back to `prompt` (legacy),
-  // then to `script` (truncated), then to a generic label so the card
-  // is never empty.
+  // Push #052 — staging schema uses `title`. Prefer that. Fall back
+  // through `topic` / `prompt` / `script` for legacy rows that may
+  // still be in the table from older pipelines.
+  const title = strOrNull(row.title)
+  if (title) return title.slice(0, 90)
   const topic = strOrNull(row.topic)
   if (topic) return topic.slice(0, 90)
   const prompt = strOrNull(row.prompt)
@@ -65,11 +67,13 @@ function deriveTitle(row: RawRow): string {
 }
 
 function toListItem(row: RawRow): VideoListItem {
+  // Push #052 — staging schema column order: `final_video_url` is the
+  // primary, `video_url` is legacy fallback.
   return {
     id: String(row.id ?? ''),
     title: deriveTitle(row),
     status: coerceStatus(row.status),
-    video_url: strOrNull(row.video_url) ?? strOrNull(row.final_video_url),
+    video_url: strOrNull(row.final_video_url) ?? strOrNull(row.video_url),
     thumbnail_url: strOrNull(row.thumbnail_url) ?? strOrNull(row.thumb_url),
     duration: numOrNull(row.duration) ?? numOrNull(row.duration_seconds),
     platform:
@@ -88,12 +92,15 @@ export async function GET() {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    // Try a generous column list first; if Supabase complains about an
-    // unknown column we retry with the minimum set we know exists in every
-    // deployed environment.
+    // Push #052 (QA fix A) — the staging `public.videos` table uses
+    // `title` + `final_video_url` (not `topic` + `video_url` like the
+    // legacy schema). The wide list now includes both naming conventions
+    // and toListItem() prefers the staging one. If the wide select fails
+    // because none of the optional columns exist, we retry with only
+    // the universally-present columns.
     const wideColumns =
-      'id,status,video_url,topic,prompt,script,duration,duration_seconds,platform,thumbnail_url,thumb_url,final_video_url,created_at'
-    const narrowColumns = 'id,status,video_url,topic,script,created_at'
+      'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,platform,thumbnail_url,thumb_url,render_id,created_at'
+    const narrowColumns = 'id,status,final_video_url,title,created_at'
 
     // Helper: run the videos SELECT with whichever column list works.
     // We hoist user.id to a local so the inner function doesn't need

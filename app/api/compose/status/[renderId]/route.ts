@@ -26,8 +26,14 @@ function creditCostFor(quality: Quality): number {
 
 // Push #050 — persist the finished video to `videos` so it appears in
 // Visual History on the Generate page and on /history. Writes through
-// the service-role admin client so RLS doesn't block us (the user-
-// scoped client only has INSERT policies if push #050's migration ran).
+// the service-role admin client so RLS doesn't block us.
+//
+// Push #052 (QA fix A) — the staging `public.videos` table uses the
+// columns `title` and `final_video_url`, not `topic` and `video_url`
+// like my push #050 migration assumed. Every insert was failing the
+// "column does not exist" branch silently. We now try the staging
+// schema FIRST and only fall back to the legacy names if the staging
+// columns themselves don't exist on a given environment.
 //
 // Best-effort: every failure path logs but never throws — Visual
 // History is a nice-to-have, not part of the user's video delivery,
@@ -41,22 +47,72 @@ async function persistCompletedVideo(args: {
   duration: number
   topic: string
   creditsUsed: number
-}): Promise<void> {
+}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy'; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
-    console.warn('[compose/status] history persist skipped — service-role env missing')
-    return
+    console.warn('[history] persist skipped — NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing')
+    return { ok: false, error: 'service-role env missing' }
   }
   const admin = createAdminClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // First try with all the columns the push #050 migration adds. If
-  // any of duration / quality / platform / render_id don't exist yet
-  // on this DB, the second attempt retries with the legacy column set
-  // we know has been present since migration 003.
-  const wideRow = {
+  // Schema #1 — the actual staging `public.videos` schema:
+  //   id, user_id, title, final_video_url, status, duration, quality,
+  //   platform, render_id, created_at.
+  // This is the one we expect to succeed on staging.
+  const stagingRow = {
+    user_id: args.userId,
+    title: args.topic.slice(0, 200) || 'Untitled Short',
+    final_video_url: args.videoUrl,
+    status: 'completed',
+    duration: args.duration,
+    quality: args.quality,
+    platform: 'YouTube Shorts',
+    render_id: args.renderId,
+  }
+
+  console.log('[history] insert attempt (staging schema):', JSON.stringify({
+    table: 'videos',
+    user_id_prefix: args.userId.slice(0, 8),
+    render_id: args.renderId,
+    final_video_url_host: safeUrlHost(args.videoUrl),
+    duration: args.duration,
+    quality: args.quality,
+  }))
+
+  const stagingInsert = await admin
+    .from('videos')
+    .insert(stagingRow)
+    .select('id')
+    .maybeSingle()
+
+  if (!stagingInsert.error) {
+    const id = stagingInsert.data?.id ?? '?'
+    console.log(`[history] insert OK (staging schema) id=${id}`)
+    return { ok: true, id: String(id), schema: 'staging' }
+  }
+
+  const stagingMsg = stagingInsert.error.message ?? ''
+  const isColumnMissing = /column .* does not exist|42703/.test(stagingMsg)
+  console.warn('[history] insert (staging schema) failed:', JSON.stringify({
+    message: stagingInsert.error.message,
+    code: (stagingInsert.error as { code?: string }).code,
+    details: (stagingInsert.error as { details?: string }).details,
+    hint: (stagingInsert.error as { hint?: string }).hint,
+  }))
+
+  // If staging columns exist but the insert failed for a non-schema
+  // reason (RLS, type mismatch, FK), we don't retry — that just hides
+  // the real cause behind a second failure. Only retry on column-not-
+  // exist, which means we're on an environment that still has the
+  // legacy schema from my push #050 migration.
+  if (!isColumnMissing) {
+    return { ok: false, error: stagingInsert.error.message }
+  }
+
+  const legacyRow = {
     user_id: args.userId,
     status: 'completed',
     video_url: args.videoUrl,
@@ -64,41 +120,33 @@ async function persistCompletedVideo(args: {
     topic: args.topic,
     duration: args.duration,
     quality: args.quality,
-    platform: 'YouTube Shorts',
     render_id: args.renderId,
   }
-  const narrowRow = {
-    user_id: args.userId,
-    status: 'completed',
-    video_url: args.videoUrl,
-    credits_used: args.creditsUsed,
-    topic: args.topic,
+  console.log('[history] retrying with legacy schema (topic/video_url)…')
+  const legacyInsert = await admin
+    .from('videos')
+    .insert(legacyRow)
+    .select('id')
+    .maybeSingle()
+  if (!legacyInsert.error) {
+    const id = legacyInsert.data?.id ?? '?'
+    console.log(`[history] insert OK (legacy schema) id=${id}`)
+    return { ok: true, id: String(id), schema: 'legacy' }
   }
-
-  const wide = await admin.from('videos').insert(wideRow).select('id').maybeSingle()
-  if (!wide.error) {
-    console.log(`[compose/status] persisted video id=${wide.data?.id ?? '?'} for user=${args.userId.slice(0, 8)}`)
-    return
-  }
-  const msg = wide.error.message ?? ''
-  const isColumnMissing = /column .* does not exist|42703/.test(msg)
-  if (!isColumnMissing) {
-    console.warn('[compose/status] videos insert (wide) failed:', JSON.stringify({
-      message: wide.error.message,
-      code: (wide.error as { code?: string }).code,
-    }))
-    return
-  }
-  // Retry with the legacy column set.
-  const narrow = await admin.from('videos').insert(narrowRow).select('id').maybeSingle()
-  if (!narrow.error) {
-    console.log(`[compose/status] persisted video (narrow) id=${narrow.data?.id ?? '?'}`)
-    return
-  }
-  console.warn('[compose/status] videos insert (narrow) also failed:', JSON.stringify({
-    message: narrow.error.message,
-    code: (narrow.error as { code?: string }).code,
+  console.warn('[history] insert (legacy schema) also failed:', JSON.stringify({
+    message: legacyInsert.error.message,
+    code: (legacyInsert.error as { code?: string }).code,
+    details: (legacyInsert.error as { details?: string }).details,
   }))
+  return { ok: false, error: legacyInsert.error.message }
+}
+
+function safeUrlHost(u: string): string {
+  try {
+    return new URL(u).host
+  } catch {
+    return 'invalid-url'
+  }
 }
 
 export async function GET(
@@ -185,15 +233,37 @@ export async function GET(
         // Only on the first "done" response (deductedParam=false) so a
         // refresh-driven status re-poll doesn't insert duplicates. Errors
         // are swallowed inside the helper — history is non-blocking.
-        await persistCompletedVideo({
-          userId: user.id,
-          renderId,
-          videoUrl: state.url,
-          quality,
+        //
+        // Push #052 (QA fix A) — wrap with explicit before/after logs at
+        // the call site too, so we can confirm in Vercel logs that the
+        // helper is reached AND see its result without having to dig
+        // through the internal log lines.
+        console.log('[history] attempting persist…', JSON.stringify({
+          render_id: renderId,
+          user_id_prefix: user.id.slice(0, 8),
           duration,
-          topic,
-          creditsUsed: cost,
-        })
+          quality,
+          has_topic: topic.length > 0,
+        }))
+        try {
+          const result = await persistCompletedVideo({
+            userId: user.id,
+            renderId,
+            videoUrl: state.url,
+            quality,
+            duration,
+            topic,
+            creditsUsed: cost,
+          })
+          console.log('[history] persist result:', JSON.stringify(result))
+        } catch (e) {
+          // persistCompletedVideo is meant to never throw, but if it
+          // somehow does we still want to know about it without
+          // failing the user response.
+          console.error('[history] persist threw unexpectedly:', e instanceof Error
+            ? JSON.stringify({ name: e.name, message: e.message, stack: e.stack?.split('\n').slice(0, 3).join(' | ') })
+            : String(e))
+        }
       }
 
       return NextResponse.json({

@@ -18,11 +18,29 @@ import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
+// Push #052 (QA fix B) — Creatomate's render CDN serves the actual MP4
+// from Backblaze B2 buckets (host f00X.backblazeb2.com), not from a
+// creatomate.com subdomain. The original allow-list rejected every
+// real video URL and the proxy returned 400, leaving the player
+// spinning. Adding both Backblaze host suffixes here so the proxy can
+// stream the file back. Keeping creatomate.com / supabase.* in case
+// Creatomate ever migrates the CDN or we host voiceovers via the same
+// proxy.
 const ALLOWED_HOST_SUFFIXES = [
-  'creatomate.com', // Creatomate render CDN (cdn.creatomate.com, etc.)
-  'supabase.co',    // Supabase storage public URLs
-  'supabase.in',    // Supabase EU region
+  'creatomate.com',  // Creatomate's own host (rarely the final video host)
+  'backblazeb2.com', // Default Creatomate output bucket (f00X.backblazeb2.com)
+  'backblaze.com',   // Other Backblaze hosts
+  'supabase.co',     // Supabase storage public URLs (voiceovers, future use)
+  'supabase.in',     // Supabase EU region
 ]
+
+function safeHost(urlStr: string): string {
+  try {
+    return new URL(urlStr).host
+  } catch {
+    return 'invalid-url'
+  }
+}
 
 function isAllowed(urlStr: string): boolean {
   try {
@@ -39,10 +57,17 @@ function isAllowed(urlStr: string): boolean {
 async function handle(req: NextRequest, method: 'GET' | 'HEAD') {
   const target = req.nextUrl.searchParams.get('url')
   if (!target) {
+    console.warn('[video-proxy] missing url parameter')
     return NextResponse.json({ error: 'url parameter is required.' }, { status: 400 })
   }
+  // Push #052 — surface the requested host in logs so we can spot any
+  // new CDN domains that need to be added to the allow-list.
+  const host = safeHost(target)
+  console.log(`[video-proxy] ${method} target host=${host}`)
+
   if (!isAllowed(target)) {
-    return NextResponse.json({ error: 'URL not allowed.' }, { status: 400 })
+    console.warn(`[video-proxy] rejected host=${host} — add it to ALLOWED_HOST_SUFFIXES if it's a legitimate CDN`)
+    return NextResponse.json({ error: 'URL not allowed.', host }, { status: 400 })
   }
 
   // Forward the Range header so seek / partial requests still work — the
