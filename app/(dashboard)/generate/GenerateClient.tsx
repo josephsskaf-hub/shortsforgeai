@@ -556,15 +556,18 @@ export default function GenerateClient() {
             maxLength={1000}
             disabled={phase === 'analyzing'}
             className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
-            // Push #032: this is the primary entry point of the app — make the
-            // input feel like a large, inviting canvas (~3× the previous size).
+            // Push #033: balanced height — tall enough to feel like a real
+            // canvas, short enough that the duration / quality / Generate
+            // controls below stay above the fold on a normal laptop screen.
+            // The `w-full` class already handles horizontal stretch.
             style={{
+              width: '100%',
               background: 'rgba(0,0,0,.3)',
               border: '1px solid var(--border)',
               color: 'var(--text)',
               outline: 'none',
               resize: 'none',
-              minHeight: '660px',
+              minHeight: '180px',
             }}
           />
           <div className="flex items-center justify-between mt-4 gap-3 flex-wrap">
