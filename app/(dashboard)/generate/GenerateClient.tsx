@@ -28,6 +28,12 @@ interface Analysis {
   // /api/compose so what the user reads is what gets narrated.
   hook: string
   voiceoverScript: string
+  // Push #047 — pull through the rest of the brief so the done screen can
+  // render a "ready-to-post" text package (caption + hashtags + CTA) the
+  // user can copy straight into YouTube.
+  hashtags: string[]
+  youtubeDescription: string
+  cta: string
 }
 
 // Pipeline state machine — described in push #028.
@@ -61,6 +67,21 @@ const QUALITY_OPTIONS: {
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
 
+// Push #047 — staged pipeline copy shown during the long generate/compose
+// phases. They rotate on a timer (purely cosmetic — real progress comes
+// from the API state machine) so the wait feels intentional, not empty.
+const LOADER_MESSAGES = [
+  'Analyzing viral angle…',
+  'Writing scroll-stopping hook…',
+  'Building 35-second script…',
+  'Creating cinematic scene prompts…',
+  'Optimizing captions and hashtags…',
+]
+
+// Threshold at which we show the "Low credits" upsell line below the
+// credits chip. Tuned to ~1 Pro-quality generation worth (20 credits).
+const LOW_CREDITS_THRESHOLD = 20
+
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -85,6 +106,24 @@ export default function GenerateClient() {
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
   // result section. Cleared automatically after ~2s.
   const [copied, setCopied] = useState(false)
+
+  // Push #047 — conversion polish state.
+  //   fromHome: did the prompt arrive from the homepage via sessionStorage?
+  //     drives the "Your idea is already loaded" helper line.
+  //   credits / creditsLoading: shown inline so the user never has to look
+  //     at the sidebar to see what they have left. Same /api/credits source
+  //     and `creditsChanged` event the sidebar uses, so the two stay in
+  //     lockstep.
+  //   loaderTick: 0..LOADER_MESSAGES.length-1, bumped on a timer while we
+  //     are in the long-running generate/compose phases so the message
+  //     rotates through the staged pipeline copy.
+  //   copiedSection: which output-card copy button just flashed "Copied!"
+  //     ('package' is the top-level one).
+  const [fromHome, setFromHome] = useState(false)
+  const [credits, setCredits] = useState<number | null>(null)
+  const [creditsLoading, setCreditsLoading] = useState(true)
+  const [loaderTick, setLoaderTick] = useState(0)
+  const [copiedSection, setCopiedSection] = useState<string | null>(null)
 
   // Idempotency flag for /api/compose/status — once we see `done` we tell the
   // server not to deduct credits again on subsequent polls.
@@ -112,6 +151,7 @@ export default function GenerateClient() {
       const pending = sessionStorage.getItem('pendingVideoPrompt')
       if (pending && pending.trim()) {
         setPrompt(pending)
+        setFromHome(true)
       }
       sessionStorage.removeItem('pendingVideoPrompt')
     } catch {
@@ -120,6 +160,57 @@ export default function GenerateClient() {
     // Mount-only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Push #047 — fetch the user's current credit balance directly on this
+  // page so we can render a clear "X credits left" chip + low-credits
+  // warning. Mirrors the sidebar's exact pattern (same endpoint, same
+  // `creditsChanged` event), so the two stay perfectly in sync — when a
+  // generation deducts credits, the sidebar dispatches the event and we
+  // refresh here too.
+  useEffect(() => {
+    let cancelled = false
+    async function fetchCredits() {
+      setCreditsLoading(true)
+      try {
+        const res = await fetch('/api/credits', { cache: 'no-store' })
+        if (res.status === 401) {
+          if (!cancelled) setCredits(null)
+          return
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        }
+      } catch {
+        if (!cancelled) setCredits(null)
+      } finally {
+        if (!cancelled) setCreditsLoading(false)
+      }
+    }
+    fetchCredits()
+    window.addEventListener('creditsChanged', fetchCredits)
+    return () => {
+      cancelled = true
+      window.removeEventListener('creditsChanged', fetchCredits)
+    }
+  }, [])
+
+  // Push #047 — rotate the staged-pipeline message every ~2.4s while we're
+  // in a long-running phase. This is purely cosmetic — the actual progress
+  // bar still tracks real API state. We reset the tick to 0 whenever we
+  // leave a loading phase so the next run starts at message 0.
+  useEffect(() => {
+    const inLoadingPhase =
+      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
+    if (!inLoadingPhase) {
+      setLoaderTick(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setLoaderTick((t) => t + 1)
+    }, 2400)
+    return () => clearInterval(interval)
+  }, [phase])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: generating  →  poll /api/generate-video/status
@@ -345,6 +436,22 @@ export default function GenerateClient() {
         setPhase('idle')
         return
       }
+      // Push #047 — derive a clean one-line CTA from the brief. analyze-idea
+      // doesn't return a dedicated CTA field, so we use the last scene's
+      // voiceover (almost always a "follow for…" line) and fall back to a
+      // sane default. We trim aggressively so it fits a single card row.
+      const scenes = Array.isArray(data.scenes) ? data.scenes : []
+      const lastSceneVo =
+        typeof scenes[scenes.length - 1]?.voiceover === 'string'
+          ? (scenes[scenes.length - 1].voiceover as string).trim()
+          : ''
+      const cta = lastSceneVo || 'Follow for more shorts like this.'
+      const hashtags = Array.isArray(data.hashtags)
+        ? (data.hashtags as unknown[]).filter((h): h is string => typeof h === 'string' && h.trim().length > 0)
+        : []
+      const youtubeDescription =
+        typeof data.youtube_description === 'string' ? data.youtube_description : ''
+
       setAnalysis({
         title: data.title ?? '',
         summary: data.summary ?? '',
@@ -353,6 +460,9 @@ export default function GenerateClient() {
         hook: typeof data.hook === 'string' ? data.hook : '',
         voiceoverScript:
           typeof data.voiceover_script === 'string' ? data.voiceover_script : '',
+        hashtags,
+        youtubeDescription,
+        cta,
       })
       setPhase('options')
     } catch (err) {
@@ -450,6 +560,22 @@ export default function GenerateClient() {
     }
   }
 
+  // Push #047 — copy any section of the output package to the clipboard,
+  // flashing a transient "✓ Copied" state on the matching button. Used by
+  // the per-card copy buttons and the top-level "Copy Full Short Package"
+  // button.
+  async function copySection(key: string, text: string) {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    try {
+      await navigator.clipboard.writeText(trimmed)
+      setCopiedSection(key)
+      setTimeout(() => setCopiedSection((c) => (c === key ? null : c)), 1800)
+    } catch {
+      // Clipboard can be denied in some browsers — silent no-op.
+    }
+  }
+
   async function handleShare() {
     if (!finalVideoUrl) return
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
@@ -486,6 +612,11 @@ export default function GenerateClient() {
     setGenerateProgress(0)
     setRenderProgress(0)
     setError(null)
+    // Push #047 — "Start over" clears the prompt + the homepage breadcrumb
+    // so the next run feels like a fresh start. We do NOT clear credits
+    // state — that's owned by the /api/credits effect.
+    setPrompt('')
+    setFromHome(false)
   }
 
   function handleBackToEdit() {
@@ -558,28 +689,36 @@ export default function GenerateClient() {
         .gv-card { animation: fadeUp 0.35s ease both; }
       `}</style>
 
-      {/* Header */}
+      {/* Header — push #047 conversion polish.
+          Step 1 uses the "Build Your Viral Short" headline + a credits chip
+          on the right. Later phases keep a tighter header so the screen
+          stays focused on the active generation. */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span
-            className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
-            style={{
-              background: 'rgba(37,99,235,.15)',
-              border: '1px solid rgba(37,99,235,.35)',
-              color: '#93c5fd',
-            }}
-          >
-            AI Video
-          </span>
+        <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
+                style={{
+                  background: 'rgba(37,99,235,.15)',
+                  border: '1px solid rgba(37,99,235,.35)',
+                  color: '#93c5fd',
+                }}
+              >
+                AI Video
+              </span>
+            </div>
+            <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
+              {showStep1 ? 'Build Your Viral Short' : '🎬 Generate a Real AI Short'}
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--muted2)' }}>
+              {showStep1 && 'Turn your idea into a hook, script, scenes, captions and hashtags.'}
+              {showStep2 && 'Pick duration and quality, then generate.'}
+              {showRender && 'Rendering your vertical 9:16 Short.'}
+            </p>
+          </div>
+          <CreditsChip credits={credits} loading={creditsLoading} />
         </div>
-        <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-          🎬 Generate a Real AI Short
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-          {showStep1 && 'Describe your idea. We\'ll analyze it before charging any credits.'}
-          {showStep2 && 'Pick duration and quality, then generate.'}
-          {showRender && 'Rendering your vertical 9:16 Short.'}
-        </p>
       </div>
 
       {error && (
@@ -601,6 +740,23 @@ export default function GenerateClient() {
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
           style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
         >
+          {/* Push #047 — only show the "already loaded" helper line when the
+              prompt arrived from the homepage's sessionStorage bridge. The
+              line clears once the user edits the prompt themselves (the
+              textarea's onChange below also flips fromHome off). */}
+          {fromHome && prompt.trim() && (
+            <div
+              className="rounded-lg px-3 py-2 mb-3 flex items-center gap-2 text-xs font-bold"
+              style={{
+                background: 'rgba(52,211,153,.08)',
+                border: '1px solid rgba(52,211,153,.28)',
+                color: '#34d399',
+              }}
+            >
+              <span aria-hidden="true">✓</span>
+              <span>Your idea is already loaded. Click generate to create your short.</span>
+            </div>
+          )}
           <label
             className="block text-xs font-black uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted)' }}
@@ -609,7 +765,12 @@ export default function GenerateClient() {
           </label>
           <textarea
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => {
+              setPrompt(e.target.value)
+              // Once the user edits the field themselves, the "already loaded"
+              // helper line no longer makes sense — clear the breadcrumb.
+              if (fromHome) setFromHome(false)
+            }}
             placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
             maxLength={1000}
             disabled={phase === 'analyzing'}
@@ -713,7 +874,7 @@ export default function GenerateClient() {
 
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              Analyzing your idea is free — no credits are charged.
+              You&apos;ll review the brief before any credits are charged.
             </p>
             <button
               onClick={() => handleAnalyze()}
@@ -739,7 +900,7 @@ export default function GenerateClient() {
                   Analyzing…
                 </>
               ) : (
-                'Analyze Idea'
+                'Generate Short'
               )}
             </button>
           </div>
@@ -909,10 +1070,16 @@ export default function GenerateClient() {
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
+              {/* Push #047 — staged-pipeline message. The rotating copy lives
+                  in `LOADER_MESSAGES` and is driven by `loaderTick`; the
+                  small grey caption underneath keeps the truthful API
+                  status so power users still see what's actually happening. */}
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="font-black text-base flex items-center gap-2" style={{ color: 'var(--text)' }}>
                   <Spinner />
-                  {statusMessage}
+                  <span style={{ minWidth: 0 }}>
+                    {LOADER_MESSAGES[loaderTick % LOADER_MESSAGES.length]}
+                  </span>
                 </div>
                 <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
                   {headlineProgress}%
@@ -920,9 +1087,10 @@ export default function GenerateClient() {
               </div>
               <ProgressBar progress={headlineProgress} />
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
-                {phase === 'generating' && `Runway typically takes ~30-90 seconds per 10s clip. ${succeededCount}/${tasks.length} clips ready.`}
-                {phase === 'clips_ready' && 'Clips finished. Running TTS, uploading the voiceover, and preparing the caption track…'}
-                {phase === 'composing' && 'Creatomate is rendering your full Short with voiceover, captions, and CTA.'}
+                {statusMessage}
+                {phase === 'generating' && tasks.length > 0 && (
+                  <> · {succeededCount}/{tasks.length} clips ready</>
+                )}
               </div>
 
               {/* The per-clip tile grid was removed in push #031 — the final
@@ -1072,29 +1240,312 @@ export default function GenerateClient() {
             </section>
           )}
 
-          <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
-              ShortsForgeAI v1.0
-            </p>
-          </div>
+          {/* Push #047 — ready-to-post text package. Renders after a
+              successful generation, alongside the video player above, so
+              the user can copy hook + script + scenes + caption + hashtags
+              + CTA into YouTube Shorts in one go. */}
+          {phase === 'done' && analysis && (
+            <ShortPackageSection
+              analysis={analysis}
+              copiedSection={copiedSection}
+              onCopy={copySection}
+            />
+          )}
 
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <button
-              onClick={handleReset}
-              className="rounded-xl px-5 py-2.5 text-sm font-bold"
-              style={{
-                background: 'rgba(255,255,255,.04)',
-                border: '1px solid var(--border)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-              }}
-            >
-              🔄 Start over
-            </button>
-          </div>
+          {/* Push #047 — Next Action block. Replaces the simple "Start over"
+              button on success with a conversion-oriented pair: re-engage
+              (Generate Another Short → handleReset) or convert (Upgrade for
+              More Credits → existing /pricing flow, which already routes to
+              the Stripe-hosted launch-offer links). For non-done phases
+              (generating, clips_ready, composing, failed) we keep the
+              original tiny "Start over" footer so users can bail out of a
+              stuck render. */}
+          {phase === 'done' ? (
+            <NextActionSection onAnother={handleReset} onUpgrade={() => router.push('/pricing')} />
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
+                <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
+                  ShortsForgeAI v1.0
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <button
+                  onClick={handleReset}
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.04)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔄 Start over
+                </button>
+              </div>
+            </>
+          )}
         </>
       )}
     </main>
+  )
+}
+
+// ─── Push #047 components ──────────────────────────────────────────────────
+
+// Inline credit chip — fed by the /api/credits effect at the top of
+// GenerateClient. Renders three states: loading skeleton, low-credits
+// warning (under LOW_CREDITS_THRESHOLD), and healthy balance. We don't
+// render anything for guests (credits === null after a 401) since the
+// page already redirects them to /login when they try to generate.
+function CreditsChip({ credits, loading }: { credits: number | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div
+        className="rounded-xl px-3 py-2 text-xs font-bold"
+        style={{
+          background: 'rgba(255,255,255,.04)',
+          border: '1px solid var(--border)',
+          color: 'var(--muted)',
+          minWidth: 120,
+          textAlign: 'right',
+        }}
+      >
+        Loading credits…
+      </div>
+    )
+  }
+  if (credits === null) return null
+  const low = credits < LOW_CREDITS_THRESHOLD
+  return (
+    <div style={{ textAlign: 'right' }}>
+      <div
+        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
+        style={{
+          background: low ? 'rgba(251,191,36,.10)' : 'rgba(52,211,153,.08)',
+          border: low ? '1px solid rgba(251,191,36,.35)' : '1px solid rgba(52,211,153,.30)',
+          color: low ? '#fbbf24' : '#34d399',
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: low ? '#fbbf24' : '#34d399',
+            boxShadow: low ? '0 0 8px rgba(251,191,36,.5)' : '0 0 8px rgba(52,211,153,.5)',
+            display: 'inline-block',
+          }}
+        />
+        You have {credits} credit{credits === 1 ? '' : 's'} left
+      </div>
+      {low && (
+        <p className="text-[11px] mt-1.5" style={{ color: '#fbbf24', fontWeight: 600 }}>
+          Low credits. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Upgrade to keep generating.</a>
+        </p>
+      )}
+    </div>
+  )
+}
+
+// Output text package. Each card has its own copy button; the top button
+// copies a clean plaintext bundle of everything at once. We feed the
+// shared `copySection` helper so the "✓ Copied" flash works the same way
+// on every button.
+function ShortPackageSection({
+  analysis,
+  copiedSection,
+  onCopy,
+}: {
+  analysis: Analysis
+  copiedSection: string | null
+  onCopy: (key: string, text: string) => void
+}) {
+  const hashtagsText = analysis.hashtags.join(' ')
+  const scenesText = analysis.scenePlan
+    .map((s, i) => `${i + 1}. ${s}`)
+    .join('\n')
+  const fullPackage = [
+    analysis.title ? `TITLE\n${analysis.title}` : '',
+    analysis.hook ? `HOOK\n${analysis.hook}` : '',
+    analysis.voiceoverScript ? `SCRIPT\n${analysis.voiceoverScript}` : '',
+    scenesText ? `VISUAL SCENES\n${scenesText}` : '',
+    analysis.youtubeDescription ? `CAPTION\n${analysis.youtubeDescription}` : '',
+    analysis.cta ? `CTA\n${analysis.cta}` : '',
+    hashtagsText ? `HASHTAGS\n${hashtagsText}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+  const cards: { key: string; label: string; body: string; mono?: boolean }[] = [
+    { key: 'hook', label: 'Viral Hook', body: analysis.hook },
+    { key: 'script', label: 'Full Script', body: analysis.voiceoverScript },
+    { key: 'scenes', label: 'Visual Scenes', body: scenesText },
+    {
+      key: 'caption',
+      label: 'Caption',
+      body: analysis.youtubeDescription || analysis.summary || '',
+    },
+    { key: 'hashtags', label: 'Hashtags', body: hashtagsText, mono: true },
+    { key: 'cta', label: 'CTA', body: analysis.cta },
+  ].filter((c) => c.body && c.body.trim().length > 0)
+
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div
+            className="text-xs font-black uppercase tracking-widest mb-1"
+            style={{ color: 'var(--muted)' }}
+          >
+            Ready to post
+          </div>
+          <h3 className="font-black text-lg sm:text-xl" style={{ color: 'var(--text)' }}>
+            Your Short Package
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={() => onCopy('package', fullPackage)}
+          className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+          style={{
+            background:
+              copiedSection === 'package'
+                ? 'linear-gradient(135deg, #10b981, #059669)'
+                : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+          }}
+        >
+          {copiedSection === 'package' ? '✓ Copied' : '📋 Copy Full Short Package'}
+        </button>
+      </div>
+
+      <div className="sf-package-grid">
+        {cards.map((c) => {
+          const isCopied = copiedSection === c.key
+          return (
+            <div
+              key={c.key}
+              className="rounded-xl p-4"
+              style={{
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                minWidth: 0,
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div
+                  className="text-xs font-black uppercase tracking-widest"
+                  style={{ color: '#93c5fd' }}
+                >
+                  {c.label}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCopy(c.key, c.body)}
+                  className="rounded-lg px-2.5 py-1 text-xs font-bold"
+                  style={{
+                    background: isCopied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.04)',
+                    border: isCopied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
+                    color: isCopied ? '#34d399' : 'var(--muted2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isCopied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <p
+                className="text-sm whitespace-pre-wrap"
+                style={{
+                  color: 'var(--text2)',
+                  lineHeight: 1.55,
+                  fontFamily: c.mono ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit',
+                  fontSize: c.mono ? '0.85rem' : '0.875rem',
+                  margin: 0,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {c.body}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+
+      <style jsx>{`
+        .sf-package-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+        @media (max-width: 640px) {
+          .sf-package-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+    </section>
+  )
+}
+
+function NextActionSection({
+  onAnother,
+  onUpgrade,
+}: {
+  onAnother: () => void
+  onUpgrade: () => void
+}) {
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
+      style={{
+        background: 'linear-gradient(135deg, rgba(99,102,241,.10), rgba(124,58,237,.06))',
+        border: '1px solid rgba(99,102,241,.28)',
+      }}
+    >
+      <h3 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
+        Ready to create more shorts?
+      </h3>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
+        Reset this idea and start fresh, or top up your credits to keep generating.
+      </p>
+      <div className="flex items-center justify-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={onAnother}
+          className="rounded-xl px-5 py-3 text-sm font-black text-white"
+          style={{
+            background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 6px 22px rgba(99,102,241,.4)',
+          }}
+        >
+          ⚡ Generate Another Short
+        </button>
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="rounded-xl px-5 py-3 text-sm font-bold"
+          style={{
+            background: 'rgba(255,255,255,.04)',
+            border: '1px solid var(--border2)',
+            color: 'var(--text)',
+            cursor: 'pointer',
+          }}
+        >
+          Upgrade for More Credits →
+        </button>
+      </div>
+    </section>
   )
 }
 
