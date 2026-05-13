@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import PricingCards from '@/components/PricingCards'
 
 interface TaskHandle {
   id: string
@@ -687,6 +688,12 @@ export default function GenerateClient() {
           </div>
         </section>
       )}
+
+      {/* Push #036: 3 pricing cards below Step 1 so the upgrade path lives
+          right next to where the user is about to spend credits. Hidden once
+          they leave Step 1 (analyzing / options / render phases) to keep the
+          subsequent screens focused on the active generation. */}
+      {showStep1 && <PricingCards />}
 
       {phase === 'analyzing' && (
         <section
