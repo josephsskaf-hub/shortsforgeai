@@ -20,7 +20,10 @@ export interface RunwayTaskState {
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 
-const VALID_MODELS = ['gen4_turbo'] as const
+// Runway model. The team's account is on Gen-4.5 — reverting to gen4_turbo
+// will get the request rejected. Keep this in sync with the model the API
+// key actually has access to.
+const VALID_MODELS = ['gen4.5'] as const
 const VALID_DURATIONS = [5, 10] as const
 const VALID_RATIOS = ['720:1280', '1280:720', '960:960'] as const
 
@@ -38,12 +41,18 @@ interface RunwayTextToVideoPayload {
 /**
  * Map platform name → Runway pixel-based ratio.
  * Runway does NOT accept "9:16" — must use pixel dimensions.
+ * Push #021 added snake_case identifiers from the platform selector
+ * ("youtube_shorts", "tiktok", "instagram_reels") alongside the legacy
+ * display labels — keep both forms so future client renames don't silently
+ * fall back to the default vertical ratio.
  */
 export function mapPlatformToRatio(platform: string): ValidRatio {
   switch ((platform ?? '').toLowerCase().trim()) {
     case 'youtube shorts':
+    case 'youtube_shorts':
     case 'tiktok':
     case 'instagram reels':
+    case 'instagram_reels':
       return '720:1280'
     case 'youtube':
     case 'landscape youtube':
@@ -90,17 +99,42 @@ export function sanitizePromptForRunway(raw: string): string {
 /**
  * Build a strictly-typed Runway text-to-video payload and validate every field.
  * Throws a descriptive error if any field would fail Runway validation.
+ *
+ * `quality` controls the prompt enhancement:
+ *  - 'basic': sanitized prompt only, standard settings.
+ *  - 'pro':   appends a cinematic-quality enhancer so Runway leans into
+ *             depth, lighting, and film-grade composition. This is the
+ *             paid differentiator for the Pro tier.
  */
+export type Quality = 'basic' | 'pro'
+
+const PRO_ENHANCER =
+  'cinematic film grade, 35mm motion picture lighting, shallow depth of field, ' +
+  'volumetric atmosphere, ultra-detailed textures, smooth gimbal camera motion, ' +
+  'high dynamic range, vertical 9:16 framing'
+
 export function buildRunwayPayload(
   rawPrompt: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): RunwayTextToVideoPayload {
-  const promptText = sanitizePromptForRunway(rawPrompt)
-  if (!promptText) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
-  if (promptText.length > 500) throw new Error(`promptText is too long (${promptText.length} chars, max 500).`)
+  const sanitized = sanitizePromptForRunway(rawPrompt)
+  if (!sanitized) throw new Error('promptText is empty after sanitization — cannot send to Runway.')
 
-  const model: ValidModel = 'gen4_turbo'
+  // For Pro, fold in the cinematic enhancer but never overflow the 500-char cap.
+  // We keep ~4 chars of breathing room for the " — " separator.
+  let promptText = sanitized
+  if (quality === 'pro') {
+    const budget = 500 - PRO_ENHANCER.length - 4
+    const base = sanitized.length > budget ? sanitized.slice(0, budget).trim() : sanitized
+    promptText = `${base} — ${PRO_ENHANCER}`
+  }
+  if (promptText.length > 500) {
+    promptText = promptText.slice(0, 500)
+  }
+
+  const model: ValidModel = 'gen4.5'
   const ratio = mapPlatformToRatio(platform)
 
   // Runway only accepts 5 or 10 — clamp
@@ -205,14 +239,16 @@ Example output format:
  * @param rawPromptText  Raw scene description (will be sanitized before sending).
  * @param platform       Platform name for ratio mapping (default: "YouTube Shorts").
  * @param durationSeconds  Desired duration — only 5 or 10 will be sent to Runway.
+ * @param quality        'basic' (default) or 'pro' (appends cinematic enhancer).
  */
 export async function startRunwayTask(
   rawPromptText: string,
   platform = 'YouTube Shorts',
-  durationSeconds = 10
+  durationSeconds = 10,
+  quality: Quality = 'basic'
 ): Promise<RunwayTaskHandle> {
   // Build and validate payload BEFORE calling Runway (no credits charged yet)
-  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds)
+  const payload = buildRunwayPayload(rawPromptText, platform, durationSeconds, quality)
 
   const bodyStr = JSON.stringify(payload)
   console.log(`[runway] sending to /text_to_video — model=${payload.model} ratio=${payload.ratio} duration=${payload.duration} promptText="${payload.promptText.slice(0, 120)}..."`)

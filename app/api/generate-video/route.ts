@@ -17,6 +17,19 @@ function clipCountForDuration(d: Duration): number {
   return Math.max(1, Math.round(d / 10))
 }
 
+// Credit cost shown on the Generate screen. Must match QUALITY_OPTIONS in
+// app/(dashboard)/generate/GenerateClient.tsx and the deduction logic in
+// /api/compose/status/[renderId].
+function creditCostFor(q: Quality): number {
+  return q === 'pro' ? 2 : 1
+}
+
+// The Runway helper only knows about 'basic' | 'pro'. 'basic_ai' is a
+// UI-side label that maps to the same Runway behavior as 'basic'.
+function runwayQualityFor(q: Quality): 'basic' | 'pro' {
+  return q === 'pro' ? 'pro' : 'basic'
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.RUNWAY_API_KEY) {
@@ -72,6 +85,28 @@ export async function POST(req: NextRequest) {
     })()
 
     const clipCount = clipCountForDuration(duration)
+    const cost = creditCostFor(quality)
+
+    // Step 0 — Upfront credit balance check. We don't deduct here (that
+    // happens in /api/compose/status once the final MP4 is confirmed), but
+    // refusing now prevents starting Runway tasks for a user who can't pay.
+    {
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      if (profileErr && profileErr.code !== 'PGRST116') {
+        console.error('[generate-video] credit balance fetch failed:', profileErr.message)
+      }
+      const balance = profile?.video_credits ?? 0
+      if (balance < cost) {
+        return NextResponse.json(
+          { error: 'Not enough credits.', needed: cost, balance },
+          { status: 402 }
+        )
+      }
+    }
 
     // Step 1 — OpenAI breaks the prompt into N cinematic scenes.
     let scenes: string[]
@@ -88,8 +123,9 @@ export async function POST(req: NextRequest) {
 
     // Pre-validate the first scene payload BEFORE launching tasks so any
     // Runway field error surfaces before any Runway billing happens.
+    const runwayQuality = runwayQualityFor(quality)
     try {
-      buildRunwayPayload(scenes[0], platform, 10)
+      buildRunwayPayload(scenes[0], platform, 10, runwayQuality)
     } catch (validationErr: unknown) {
       const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
       console.error('[generate-video] payload pre-validation failed:', msg)
@@ -103,7 +139,7 @@ export async function POST(req: NextRequest) {
     let tasks: { id: string; promptText: string }[]
     try {
       tasks = await Promise.all(
-        scenes.map((sceneText) => startRunwayTask(sceneText, platform, 10))
+        scenes.map((sceneText) => startRunwayTask(sceneText, platform, 10, runwayQuality))
       )
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
