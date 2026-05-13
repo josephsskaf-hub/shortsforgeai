@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { generateScenes, startRunwayTask, buildRunwayPayload } from '@/lib/runway'
+import {
+  buildRunwayPayload,
+  clampToProviderLimit,
+  generateScenes,
+  startRunwayTask,
+} from '@/lib/runway'
 
 export const maxDuration = 60
 
@@ -60,7 +65,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let body: { prompt?: string; platform?: string; duration?: number; quality?: string }
+    let body: {
+      prompt?: string
+      // Optional short visual-only prompt forwarded from /api/analyze-idea's
+      // creative brief (≤500 chars, no hashtags, no narration). When
+      // present, we use it as the seed for scene generation instead of the
+      // raw user idea — see push #041 for why.
+      provider_prompt?: string
+      platform?: string
+      duration?: number
+      quality?: string
+    }
     try {
       body = await req.json()
     } catch {
@@ -71,8 +86,12 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
-    if (prompt.length > 500) {
-      return NextResponse.json({ error: 'Prompt is too long (500 chars max).' }, { status: 400 })
+    // Push #041: the user idea field can carry a full creative brief — only
+    // the visual prompts that actually reach Runway need the 500-char cap,
+    // not this top-level user text. Bump to 1500 to match the textarea
+    // maxLength on the client.
+    if (prompt.length > 1500) {
+      return NextResponse.json({ error: 'Prompt is too long (1500 chars max).' }, { status: 400 })
     }
 
     const platform = (body.platform ?? 'YouTube Shorts').toString()
@@ -109,10 +128,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 1 — OpenAI breaks the prompt into N cinematic scenes.
+    // Push #041 — decide what seeds the scene generation.
+    // If the client passes the brief's `provider_prompt` (a short visual-only
+    // string ≤500 chars), use it directly — it's already been groomed for
+    // Runway. Otherwise derive one from the user idea, slicing to 400 chars
+    // before the sentence-aware clamp so we don't blow up the OpenAI prompt
+    // with a full creative brief. Either way the seed goes through
+    // clampToProviderLimit so it is provably ≤500.
+    const providerPromptRaw = (body.provider_prompt ?? '').trim()
+    const sceneSeed = providerPromptRaw
+      ? clampToProviderLimit(providerPromptRaw)
+      : clampToProviderLimit(prompt.slice(0, 400))
+    console.log(
+      `[generate] provider_prompt length: ${sceneSeed.length}, preview: ${sceneSeed.slice(0, 120)}`
+    )
+
+    // Step 1 — OpenAI breaks the seed into N cinematic scene descriptions.
+    // Each returned string is short (~15-25 words) and goes through
+    // buildRunwayPayload → clampToProviderLimit again before reaching Runway,
+    // so per-scene 500-char compliance is enforced at the boundary.
     let scenes: string[]
     try {
-      scenes = await generateScenes(prompt, clipCount)
+      scenes = await generateScenes(sceneSeed, clipCount)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] scene generation failed:', msg)

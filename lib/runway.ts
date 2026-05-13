@@ -64,6 +64,38 @@ export function mapPlatformToRatio(platform: string): ValidRatio {
   }
 }
 
+// Runway's text_to_video endpoint hard-rejects promptText over 500 chars.
+// Every visual prompt that touches the provider MUST go through
+// clampToProviderLimit() before the API call — this is the single source
+// of truth for that limit.
+export const PROVIDER_PROMPT_MAX = 500
+
+/**
+ * Hard-clamp a string to `max` chars, preferring sentence / comma / word
+ * boundaries when there's a clean break in the back half of the window.
+ * Whitespace is collapsed first so the count is honest. Push #041
+ * centralized this here so /api/generate-video and any future caller
+ * share one well-tested clamp.
+ */
+export function clampToProviderLimit(raw: string, max: number = PROVIDER_PROMPT_MAX): string {
+  const trimmed = (raw ?? '').replace(/\s+/g, ' ').trim()
+  if (!trimmed) return ''
+  if (trimmed.length <= max) return trimmed
+  const window = trimmed.slice(0, max)
+  // Sentence boundary (anywhere in the back 40% of the window).
+  const lastSentence = Math.max(
+    window.lastIndexOf('. '),
+    window.lastIndexOf('! '),
+    window.lastIndexOf('? '),
+  )
+  if (lastSentence > max * 0.6) return window.slice(0, lastSentence + 1).trim()
+  const lastComma = window.lastIndexOf(', ')
+  if (lastComma > max * 0.6) return window.slice(0, lastComma).trim()
+  const lastSpace = window.lastIndexOf(' ')
+  if (lastSpace > max * 0.6) return window.slice(0, lastSpace).trim()
+  return window.trim()
+}
+
 /**
  * Sanitize a raw user / AI-generated prompt for Runway.
  * Strips hashtags, platform instructions, URLs, CTAs — leaves only
@@ -126,13 +158,15 @@ export function buildRunwayPayload(
   // We keep ~4 chars of breathing room for the " — " separator.
   let promptText = sanitized
   if (quality === 'pro') {
-    const budget = 500 - PRO_ENHANCER.length - 4
+    const budget = PROVIDER_PROMPT_MAX - PRO_ENHANCER.length - 4
     const base = sanitized.length > budget ? sanitized.slice(0, budget).trim() : sanitized
     promptText = `${base} — ${PRO_ENHANCER}`
   }
-  if (promptText.length > 500) {
-    promptText = promptText.slice(0, 500)
-  }
+
+  // Final safety clamp — sentence-aware, hard cap at PROVIDER_PROMPT_MAX.
+  promptText = clampToProviderLimit(promptText)
+  console.log(`[provider_prompt] length: ${promptText.length}`)
+  console.log(`[provider_prompt] preview: ${promptText.slice(0, 120)}`)
 
   const model: ValidModel = 'gen4.5'
   const ratio = mapPlatformToRatio(platform)
