@@ -556,10 +556,9 @@ export default function GenerateClient() {
             maxLength={1000}
             disabled={phase === 'analyzing'}
             className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
-            // Push #033: balanced height — tall enough to feel like a real
-            // canvas, short enough that the duration / quality / Generate
-            // controls below stay above the fold on a normal laptop screen.
-            // The `w-full` class already handles horizontal stretch.
+            // Push #034: a touch taller (260px) but still leaves room for the
+            // duration + quality selectors directly below so users can pick
+            // everything in one screen before hitting Analyze.
             style={{
               width: '100%',
               background: 'rgba(0,0,0,.3)',
@@ -567,10 +566,93 @@ export default function GenerateClient() {
               color: 'var(--text)',
               outline: 'none',
               resize: 'none',
-              minHeight: '180px',
+              minHeight: '260px',
             }}
           />
-          <div className="flex items-center justify-between mt-4 gap-3 flex-wrap">
+
+          {/* Push #034: duration + quality selectors moved here from the
+              post-analyze step so users can pick everything in one screen
+              before they hit Analyze. The selected values persist into the
+              Generate step and drive credit cost + clip count. */}
+          <div className="mt-5">
+            <div
+              className="text-xs font-black uppercase tracking-widest mb-2"
+              style={{ color: 'var(--muted)' }}
+            >
+              Duration
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {([10, 30, 50] as Duration[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDuration(d)}
+                  className="rounded-full px-4 py-1.5 text-sm font-bold"
+                  style={{
+                    background: duration === d ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
+                    border: duration === d ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                    color: duration === d ? '#fff' : 'var(--muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div
+              className="text-xs font-black uppercase tracking-widest mb-2"
+              style={{ color: 'var(--muted)' }}
+            >
+              Media & quality
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {QUALITY_OPTIONS.map((q) => {
+                const selected = quality === q.key
+                return (
+                  <button
+                    key={q.key}
+                    onClick={() => setQuality(q.key)}
+                    className="rounded-xl p-4 text-left"
+                    style={{
+                      background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
+                      border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: selected ? '0 0 22px rgba(37,99,235,.18)' : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span>{q.icon}</span>
+                      <span
+                        className="text-sm font-black"
+                        style={{ color: selected ? '#93c5fd' : 'var(--text)' }}
+                      >
+                        {q.title}
+                      </span>
+                      <span
+                        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: 'rgba(37,99,235,.18)',
+                          color: '#93c5fd',
+                          border: '1px solid rgba(37,99,235,.3)',
+                        }}
+                      >
+                        {q.credits} credit{q.credits > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                      {q.desc}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
               Analyzing your idea is free — no credits are charged.
             </p>
@@ -725,114 +807,18 @@ export default function GenerateClient() {
             )}
           </section>
 
+          {/* Push #034: duration / quality controls were moved to Step 1
+              (above the Analyze button) so users pick them before paying any
+              attention budget on the brief. Step 2 just confirms the choice
+              and kicks off the actual generation. */}
           <section
             className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
             style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
           >
-            {/* Duration */}
-            <div>
-              <div
-                className="text-xs font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                Duration
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-xs" style={{ color: 'var(--muted2)' }}>
+                {duration}s · {QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts (9:16)
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {([10, 30, 50] as Duration[]).map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    className="rounded-full px-4 py-1.5 text-sm font-bold"
-                    style={{
-                      background: duration === d ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                      border: duration === d ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
-                      color: duration === d ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Platform */}
-            <div className="mt-5">
-              <div
-                className="text-xs font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                Platform
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <span
-                  className="rounded-full px-4 py-1.5 text-sm font-bold flex items-center gap-1.5"
-                  style={{
-                    background: 'rgba(37,99,235,.85)',
-                    border: '1px solid rgba(37,99,235,.6)',
-                    color: '#fff',
-                  }}
-                >
-                  <span style={{ fontSize: '0.8rem' }}>📲</span> YouTube Shorts (9:16)
-                </span>
-              </div>
-            </div>
-
-            {/* Quality cards */}
-            <div className="mt-5">
-              <div
-                className="text-xs font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                Media & quality
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {QUALITY_OPTIONS.map((q) => {
-                  const selected = quality === q.key
-                  return (
-                    <button
-                      key={q.key}
-                      onClick={() => setQuality(q.key)}
-                      className="rounded-xl p-4 text-left"
-                      style={{
-                        background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
-                        border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        boxShadow: selected ? '0 0 22px rgba(37,99,235,.18)' : 'none',
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span>{q.icon}</span>
-                        <span
-                          className="text-sm font-black"
-                          style={{ color: selected ? '#93c5fd' : 'var(--text)' }}
-                        >
-                          {q.title}
-                        </span>
-                        <span
-                          className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: 'rgba(37,99,235,.18)',
-                            color: '#93c5fd',
-                            border: '1px solid rgba(37,99,235,.3)',
-                          }}
-                        >
-                          {q.credits} credit{q.credits > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                        {q.desc}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Generate */}
-            <div className="flex items-center justify-end mt-6 gap-2 flex-wrap">
               <button
                 onClick={handleGenerate}
                 className="rounded-xl px-6 py-3 text-sm font-black text-white flex items-center gap-2"
