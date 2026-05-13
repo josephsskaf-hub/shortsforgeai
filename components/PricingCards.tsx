@@ -91,10 +91,12 @@ export default function PricingCards() {
         </div>
       )}
 
-      <div
-        className="grid mx-auto gap-4"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
-      >
+      {/* Push #050 — explicit 1-col on mobile, 3-col from md up. The old
+          `auto-fit minmax(240px, 1fr)` could leave 2 cards side-by-side on
+          narrow tablets and was reported as crammed on iPhone widths in
+          some browsers; explicit responsive cols make the breakpoint
+          predictable. */}
+      <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '64rem' }}>
         <PlanCard
           name="Free"
           price="$0"

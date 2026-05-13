@@ -432,6 +432,10 @@ export default function GenerateClient() {
       try {
         const params = new URLSearchParams({ quality })
         if (deductedRef.current) params.set('deducted', '1')
+        // Push #050 — pass duration + topic so the server can record them
+        // in the videos history row when the render finishes.
+        params.set('duration', String(duration))
+        if (prompt.trim()) params.set('topic', prompt.trim().slice(0, 500))
         const res = await fetch(
           `/api/compose/status/${encodeURIComponent(renderId as string)}?${params.toString()}`,
           { cache: 'no-store' }
@@ -481,6 +485,11 @@ export default function GenerateClient() {
         pollTimerRef.current = null
       }
     }
+    // Push #050: prompt/duration deliberately not in deps — they're read at
+    // poll fire-time via the closure and we don't want the poll loop to
+    // restart if the user happens to mutate the textarea on a separate
+    // mount (which can't actually happen mid-render but eslint can't tell).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, renderId, quality])
 
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
@@ -1364,14 +1373,23 @@ export default function GenerateClient() {
                   background: '#000',
                 }}
               >
+                {/* Push #050 — load through /api/video-proxy so the <video>
+                    element gets the file from the same origin. Creatomate's
+                    CDN doesn't return Access-Control-Allow-Origin on its
+                    MP4 responses, so a direct cross-origin src= used to
+                    spin forever in the player even though Download worked.
+                    The Download anchor below still points at the original
+                    URL (anchor downloads aren't subject to the same CORS
+                    rules as <video> playback). */}
                 <video
                   ref={videoRef}
                   key={finalVideoUrl}
-                  src={finalVideoUrl}
+                  src={`/api/video-proxy?url=${encodeURIComponent(finalVideoUrl)}`}
                   controls
                   autoPlay
                   playsInline
                   preload="metadata"
+                  crossOrigin="anonymous"
                   style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
               </div>
