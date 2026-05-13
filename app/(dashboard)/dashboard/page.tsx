@@ -1,46 +1,19 @@
-import { Suspense } from 'react'
+// Push #032 collapsed /dashboard into /generate so users land on the prompt
+// box directly. Logged-in users get a server-side 307 to /generate; guests
+// bounce to /login first. DashboardClient is no longer rendered for any
+// user — the file stays in the tree only so any stale bookmarks resolve.
+
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import DashboardClient from './DashboardClient'
 
-async function DashboardContent() {
+export default async function DashboardPage() {
   const supabase = createClient()
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  let profile = null
-  let totalGenerations = 0
-
-  if (user) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('is_pro, generations_used')
-      .eq('id', user.id)
-      .single()
-    profile = data
-
-    const { count } = await supabase
-      .from('generations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-    totalGenerations = count ?? 0
+  if (!user) {
+    redirect('/login?redirect=/generate')
   }
-
-  return (
-    <DashboardClient
-      isPro={profile?.is_pro ?? false}
-      generationsUsed={profile?.generations_used ?? 0}
-      totalGenerations={totalGenerations}
-      isLoggedIn={!!user}
-    />
-  )
-}
-
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={null}>
-      <DashboardContent />
-    </Suspense>
-  )
+  redirect('/generate')
 }
