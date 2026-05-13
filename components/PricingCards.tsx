@@ -16,25 +16,29 @@
 
 import { useState } from 'react'
 
+// Push #033: keep this in lockstep with the matching FREE_FEATURES /
+// BASIC_FEATURES / PRO_FEATURES arrays in
+// app/(dashboard)/pricing/PricingClient.tsx — the homepage embeds this
+// component side-by-side with that page's copy.
 const FREE_FEATURES = [
   '2 credits',
-  'Try ShortsForgeAI before upgrading',
+  'Try the platform',
   'MP4 ready to post',
   'Community support',
 ]
 
 const BASIC_FEATURES = [
   '140 credits / month',
-  '≈9 Shorts of 30–35s',
-  '15 credits per Basic Short',
+  '≈9 videos / month',
+  '15 credits per Basic video',
   'Launch offer: 50% off first month',
   'Email support',
 ]
 
 const PRO_FEATURES = [
   '350 credits / month',
-  '≈17 Shorts of 30–35s',
-  '20 credits per Pro Short',
+  '≈17 videos / month',
+  '20 credits per Pro video',
   'Launch offer: 50% off first month',
   'Better cinematic prompting',
   'Priority support',
@@ -109,7 +113,7 @@ export default function PricingCards() {
           name="Free"
           price="$0"
           period="/ month"
-          tagline="Try ShortsForgeAI before upgrading."
+          tagline="Try the platform."
           features={FREE_FEATURES}
           cta={null}
         />
@@ -119,7 +123,7 @@ export default function PricingCards() {
           price="$4.50"
           period="first month"
           renewNote="then $9/month"
-          tagline="140 credits / month. ≈9 Shorts."
+          tagline="140 credits / month. ≈9 videos."
           features={BASIC_FEATURES}
           badge="Most Popular"
           highlight
@@ -135,7 +139,7 @@ export default function PricingCards() {
           price="$9.50"
           period="first month"
           renewNote="then $19/month"
-          tagline="350 credits / month. ≈17 Shorts."
+          tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
           badge="Best Value"
           cta={{

@@ -96,6 +96,27 @@ export default function GenerateClient() {
     }
   }, [])
 
+  // Push #033: pull a prompt forwarded by the homepage's Generate Video card.
+  // app/page.tsx stashes the user's idea under `pendingVideoPrompt` in
+  // sessionStorage right before redirecting here. We only honor it when the
+  // URL has no ?prompt= of its own (so the autoanalyze niche-quick-start
+  // flow still wins when both are present) and we clear the key after
+  // reading so a hard refresh doesn't keep re-applying it.
+  useEffect(() => {
+    if (searchParams?.get('prompt')) return
+    try {
+      const pending = sessionStorage.getItem('pendingVideoPrompt')
+      if (pending && pending.trim()) {
+        setPrompt(pending)
+      }
+      sessionStorage.removeItem('pendingVideoPrompt')
+    } catch {
+      // sessionStorage can throw in some sandboxes — safe to ignore.
+    }
+    // Mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: generating  →  poll /api/generate-video/status
   // ────────────────────────────────────────────────────────────────────────

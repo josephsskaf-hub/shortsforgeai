@@ -226,9 +226,11 @@ export default function Sidebar({
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        {/* Logo */}
+        {/* Logo — push #033: jump straight into the prompt textarea when
+            the user clicks the lightning. The home page is a marketing
+            entry point now, not the place a logged-in user wants to land. */}
         <Link
-          href="/"
+          href="/generate"
           onClick={onClose}
           className="flex items-center gap-3 px-5 flex-shrink-0"
           style={{ height: 72, borderBottom: '1px solid rgba(255,255,255,0.06)', textDecoration: 'none' }}

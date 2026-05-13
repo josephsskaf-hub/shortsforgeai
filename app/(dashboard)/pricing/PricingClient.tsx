@@ -9,25 +9,30 @@ interface PricingClientProps {
   userId: string
 }
 
+// Push #033: feature copy aligned with the unified video-first model.
+// One credit cost per video (15 Basic / 20 Pro), no per-Short / per-script
+// split, no Ultra or Creator tiers. Numbers and CTA copy must stay in
+// lockstep with components/PricingCards.tsx — the homepage embeds that
+// component side-by-side with this page's text.
 const FREE_FEATURES = [
   '2 credits',
-  'Try ShortsForgeAI before upgrading',
+  'Try the platform',
   'MP4 ready to post',
   'Community support',
 ]
 
 const BASIC_FEATURES = [
   '140 credits / month',
-  '≈9 Shorts of 30–35s',
-  '15 credits per Basic Short',
+  '≈9 videos / month',
+  '15 credits per Basic video',
   'Launch offer: 50% off first month',
   'Email support',
 ]
 
 const PRO_FEATURES = [
   '350 credits / month',
-  '≈17 Shorts of 30–35s',
-  '20 credits per Pro Short',
+  '≈17 videos / month',
+  '20 credits per Pro video',
   'Launch offer: 50% off first month',
   'Better cinematic prompting',
   'Priority support',
@@ -219,7 +224,7 @@ export default function PricingClient(props: PricingClientProps) {
           name="Free"
           price="$0"
           period="/ month"
-          tagline="Try ShortsForgeAI before upgrading."
+          tagline="Try the platform."
           features={FREE_FEATURES}
           cta={null}
         />
@@ -230,7 +235,7 @@ export default function PricingClient(props: PricingClientProps) {
           price="$4.50"
           period="first month"
           renewNote="then $9/month"
-          tagline="140 credits / month. ≈9 Shorts."
+          tagline="140 credits / month. ≈9 videos."
           features={BASIC_FEATURES}
           badge={{ label: 'Most Popular', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           highlight
@@ -247,7 +252,7 @@ export default function PricingClient(props: PricingClientProps) {
           price="$9.50"
           period="first month"
           renewNote="then $19/month"
-          tagline="350 credits / month. ≈17 Shorts."
+          tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
           badge={{ label: 'Best Value', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
           cta={{
@@ -260,7 +265,7 @@ export default function PricingClient(props: PricingClientProps) {
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
         50% off applies to the first month only. Plans renew at the regular monthly price.
-        Cancel anytime. Refund within 7 days if unused.
+        Failed generations do not consume credits. Refund within 7 days if unused.
       </p>
 
       {/* How credits work */}
@@ -276,8 +281,8 @@ export default function PricingClient(props: PricingClientProps) {
           className="mt-5 text-xs space-y-2"
           style={{ color: 'var(--muted2)', paddingLeft: 20 }}
         >
-          <li>Basic Short = <strong style={{ color: 'var(--text)' }}>15 credits</strong></li>
-          <li>Pro Short = <strong style={{ color: 'var(--text)' }}>20 credits</strong></li>
+          <li>Basic video = <strong style={{ color: 'var(--text)' }}>15 credits</strong></li>
+          <li>Pro video = <strong style={{ color: 'var(--text)' }}>20 credits</strong></li>
           <li>Failed generations do not consume credits</li>
           <li>Credits reset every month based on your plan</li>
         </ul>

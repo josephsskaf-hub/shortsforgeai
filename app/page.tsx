@@ -1,56 +1,71 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/Sidebar'
+import PricingCards from '@/components/PricingCards'
 
-// Push #032: / is now a marketing-only page for unauthenticated visitors.
-// Logged-in users are bounced straight to /generate (the prompt textarea
-// lives there now — see GenerateClient.tsx). The hero textarea + QUICK_TAGS
-// row that lived here in push #031 was removed because it duplicated the
-// /generate input.
+// Push #033: video-first landing. The page is visible to BOTH guests and
+// logged-in users (the push #032 auto-redirect to /generate was removed
+// — the lightning logo in the sidebar handles "jump to the app" for
+// logged-in users instead). The Generate Video card on this page is a
+// thin shortcut: it forwards the prompt to /generate via sessionStorage
+// rather than running its own pipeline.
+
+const PENDING_PROMPT_KEY = 'pendingVideoPrompt'
 
 export default function HomePage() {
   const router = useRouter()
-  const pricingRef = useRef<HTMLDivElement>(null)
 
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [userEmail, setUserEmail] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
+
+  const [prompt, setPrompt] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
-        // Skip rendering the marketing page entirely — go straight to the
-        // prompt textarea on /generate.
-        router.replace('/generate')
-        return
+        setUser({ id: user.id })
+        setUserEmail(user.email ?? '')
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_pro')
+          .eq('id', user.id)
+          .single()
+        setIsPro(data?.is_pro ?? false)
+      } else {
+        setUser(null)
       }
-      setUser(null)
       setAuthChecked(true)
     })
-  }, [router])
+  }, [])
 
-  function scrollTo(ref: React.RefObject<HTMLDivElement>) {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  function handleAnalyze() {
+    const trimmed = prompt.trim()
+    try {
+      if (trimmed) sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed)
+      else sessionStorage.removeItem(PENDING_PROMPT_KEY)
+    } catch {
+      // sessionStorage can throw in private mode — fall through to the
+      // redirect anyway so the user can still type their idea on /generate.
+    }
+    if (user) {
+      router.push('/generate')
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent('/generate')}`)
+    }
   }
-
-  // While auth is in-flight (or we've confirmed a session and are about to
-  // redirect), render nothing. This avoids a flash of the marketing page
-  // for logged-in users on every visit.
-  if (!authChecked) return null
 
   return (
     <div style={{ display: 'flex', background: 'var(--bg)', minHeight: '100vh' }}>
       {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
 
-      {/* Sidebar */}
       <Sidebar
         userEmail={userEmail}
         isPro={isPro}
@@ -60,21 +75,6 @@ export default function HomePage() {
         onClose={() => {}}
       />
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="md:hidden">
-          <Sidebar
-            userEmail={userEmail}
-            isPro={isPro}
-            generationsUsed={0}
-            isLoggedIn={!!user}
-            isOpen={true}
-            onClose={() => setSidebarOpen(false)}
-          />
-        </div>
-      )}
-
-      {/* Main content */}
       <div className="flex-1 min-w-0" style={{ color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif' }}>
         {/* Background glows */}
         <div className="fixed pointer-events-none" style={{ width: 800, height: 800, background: 'var(--indigo)', top: -300, right: -200, opacity: 0.045, filter: 'blur(120px)', borderRadius: '50%', zIndex: 0 }} />
@@ -82,175 +82,128 @@ export default function HomePage() {
 
         {/* ─── Nav ─── */}
         <nav style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 64, borderBottom: '1px solid var(--border)', background: 'rgba(8,8,15,.9)', backdropFilter: 'blur(24px)' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <Link href={user ? '/generate' : '/'} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', boxShadow: '0 0 20px rgba(99,102,241,.5)' }}>⚡</div>
             <span style={{ fontWeight: 900, fontSize: '0.95rem', background: 'linear-gradient(135deg, #3B82F6, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ShortsForgeAI</span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
-            <Link href="/signup" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Start Free</Link>
+            {!authChecked ? (
+              <div style={{ width: 160, height: 36 }} aria-hidden="true" />
+            ) : user ? (
+              <Link href="/generate" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Open App</Link>
+            ) : (
+              <>
+                <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--muted2)', textDecoration: 'none', border: '1px solid var(--border)' }}>Sign In</Link>
+                <Link href="/signup" style={{ padding: '8px 20px', borderRadius: 10, fontSize: '0.82rem', fontWeight: 800, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}>Start Free</Link>
+              </>
+            )}
           </div>
         </nav>
 
         {/* ─── Hero ─── */}
-        <section id="hero" style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: 'clamp(40px, 7vw, 64px) 20px 28px' }}>
+        <section style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: 'clamp(40px, 7vw, 64px) 20px 24px', maxWidth: 820, margin: '0 auto' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 999, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.25)', marginBottom: 22 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px rgba(52,211,153,.6)', display: 'inline-block' }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>AI Shorts generator · Built for faceless creators</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399' }}>AI video generator · YouTube Shorts ready</span>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(2.4rem, 7vw, 4rem)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.035em', margin: '0 auto 14px', maxWidth: 780 }}>
-            Viral Shorts.{' '}
+          <h1 style={{ fontSize: 'clamp(2.2rem, 6.4vw, 3.6rem)', fontWeight: 900, lineHeight: 1.04, letterSpacing: '-0.035em', margin: '0 auto 16px', maxWidth: 760 }}>
+            Create{' '}
             <span style={{ background: 'linear-gradient(135deg, #3B82F6, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              One Click.
-            </span>
+              AI Shorts
+            </span>{' '}
+            in one click
           </h1>
 
-          <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.55 }}>
-            AI-generated faceless videos — built for Shorts creators.
-          </p>
-
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-            <Link
-              href="/signup"
-              style={{ padding: '13px 30px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 6px 28px rgba(99,102,241,.45)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              Start Free
-            </Link>
-            <button
-              onClick={() => scrollTo(pricingRef)}
-              style={{ padding: '13px 24px', borderRadius: 12, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text2)', border: '1px solid var(--border2)', background: 'rgba(255,255,255,.03)', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-            >
-              View Pricing
-            </button>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', letterSpacing: '0.01em' }}>
-            No credit card required
+          <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 560, margin: '0 auto', lineHeight: 1.55 }}>
+            Turn an idea into a vertical AI video with visuals, voiceover, captions, and download.
           </p>
         </section>
 
-        {/* ─── Pricing ─── */}
-        <section
-          id="pricing"
-          ref={pricingRef}
-          style={{ position: 'relative', zIndex: 10, padding: '40px 24px 64px', maxWidth: 1100, margin: '0 auto' }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: 36 }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 10 }}>Pricing</div>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.3rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }}>
-              Simple plans for every creator
+        {/* ─── Generate Video Card ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '0 20px 24px', maxWidth: 820, margin: '0 auto' }}>
+          <div
+            style={{
+              background: 'rgba(15,15,30,0.85)',
+              border: '1px solid var(--border)',
+              borderRadius: 20,
+              padding: '24px',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(99,102,241,0.08) inset',
+            }}
+          >
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', marginBottom: 4 }}>
+              Generate a Real AI Short
             </h2>
-          </div>
-
-          <div className="pricing-grid">
-            {/* Free */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '30px 28px 34px', boxShadow: '0 0 30px rgba(139,92,246,.08)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Free</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$0</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>/month</span>
-              </div>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>Try ShortsForgeAI before upgrading</p>
-              <div style={{ flex: 1 }}>
-                {[
-                  '2 credits',
-                  'Try ShortsForgeAI before upgrading',
-                  'MP4 ready to post',
-                  'Community support',
-                ].map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
-                    <span style={{ color: '#34d399' }}>✓</span> {f}
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/signup"
-                style={{ display: 'block', marginTop: 22, padding: '12px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text2)', textDecoration: 'none', background: 'rgba(255,255,255,.05)', border: '1px solid var(--border2)' }}
+            <p style={{ fontSize: '0.9rem', color: 'var(--muted2)', marginBottom: 16 }}>
+              Describe your idea. We&apos;ll analyze it before charging any credits.
+            </p>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  handleAnalyze()
+                }
+              }}
+              placeholder="Describe your video idea..."
+              maxLength={1000}
+              className="hero-prompt-textarea"
+              style={{
+                width: '100%',
+                minHeight: 180,
+                background: 'rgba(0,0,0,.3)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                outline: 'none',
+                resize: 'none',
+                borderRadius: 12,
+                padding: '14px 16px',
+                fontSize: '0.95rem',
+                lineHeight: 1.55,
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 14 }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                Analyzing your idea is free — no credits are charged.
+              </p>
+              <button
+                onClick={handleAnalyze}
+                disabled={!prompt.trim()}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: 12,
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  color: prompt.trim() ? '#fff' : 'var(--muted)',
+                  background: prompt.trim()
+                    ? 'linear-gradient(135deg, #2563EB, #1d4ed8)'
+                    : 'rgba(255,255,255,.04)',
+                  border: 'none',
+                  cursor: prompt.trim() ? 'pointer' : 'not-allowed',
+                  boxShadow: prompt.trim() ? '0 8px 28px rgba(37,99,235,.4)' : 'none',
+                }}
               >
-                Start Free
-              </Link>
-            </div>
-
-            {/* Basic - Most Popular */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06))', border: '2px solid rgba(99,102,241,.35)', borderRadius: 20, padding: '30px 28px 34px', position: 'relative', overflow: 'hidden', boxShadow: '0 0 60px rgba(99,102,241,.15)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Most Popular</div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--indigo-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Basic</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
-                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$4.50</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>first month</span>
-              </div>
-              <p style={{ fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 700, marginBottom: 8 }}>then $9/month</p>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>140 credits / month · ≈9 Shorts</p>
-              <div style={{ flex: 1 }}>
-                {[
-                  '140 credits / month',
-                  '≈9 Shorts of 30–35s',
-                  '15 credits per Basic Short',
-                  'Launch offer: 50% off first month',
-                  'Email support',
-                ].map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
-                    <span style={{ color: '#34d399' }}>✓</span> {f}
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/pricing"
-                style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)', boxShadow: '0 4px 24px rgba(99,102,241,.45)' }}
-              >
-                Get Basic — $4.50
-              </Link>
-            </div>
-
-            {/* Pro - Best Value */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '30px 28px 34px', boxShadow: '0 0 30px rgba(139,92,246,.08)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 16, right: 16, padding: '3px 12px', borderRadius: 999, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontSize: '0.65rem', fontWeight: 900, color: '#fff' }}>Best Value</div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Pro</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
-                <span style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>$9.50</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>first month</span>
-              </div>
-              <p style={{ fontSize: '0.78rem', color: '#c4b5fd', fontWeight: 700, marginBottom: 8 }}>then $19/month</p>
-              <p style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: 22 }}>350 credits / month · ≈17 Shorts</p>
-              <div style={{ flex: 1 }}>
-                {[
-                  '350 credits / month',
-                  '≈17 Shorts of 30–35s',
-                  '20 credits per Pro Short',
-                  'Launch offer: 50% off first month',
-                  'Priority support',
-                ].map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'var(--text2)', marginBottom: 10 }}>
-                    <span style={{ color: '#34d399' }}>✓</span> {f}
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/pricing"
-                style={{ display: 'block', marginTop: 22, padding: '14px 0', borderRadius: 12, textAlign: 'center', fontSize: '0.875rem', fontWeight: 900, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', boxShadow: '0 4px 24px rgba(168,85,247,.4)' }}
-              >
-                Get Pro — $9.50
-              </Link>
+                Analyze Idea
+              </button>
             </div>
           </div>
-
-          <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginTop: 18, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
-            50% off applies to the first month only. Plans renew at the regular monthly price.
-          </p>
-
           <style>{`
-            .pricing-grid {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: 20px;
-              align-items: stretch;
-            }
-            @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+            .hero-prompt-textarea::placeholder { color: rgba(255,255,255,.38); }
           `}</style>
         </section>
 
+        {/* ─── Pricing ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '24px 20px 16px', maxWidth: 1100, margin: '0 auto' }}>
+          <PricingCards />
+          <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginTop: 18, maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
+            50% off applies to the first month only. Failed generations do not consume credits.
+          </p>
+        </section>
+
         {/* ─── Footer ─── */}
-        <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)', padding: '28px 32px' }}>
+        <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)', padding: '28px 32px', marginTop: 24 }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>⚡</div>
@@ -259,8 +212,8 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               {[
                 ['/', 'Home'],
+                ['/generate', 'Generate'],
                 ['/pricing', 'Pricing'],
-                ['/templates', 'Templates'],
                 ['/login', 'Sign In'],
               ].map(([href, label]) => (
                 <Link key={href} href={href} style={{ fontSize: '0.875rem', color: 'var(--muted)', textDecoration: 'none', fontWeight: 500 }}>{label}</Link>
