@@ -41,6 +41,106 @@ export interface ComposeStartResult {
 const RUNWAY_CLIP_SECONDS = 10
 const CTA_TAIL_SECONDS = 2.5
 
+// Cinematic-narrator pace for OpenAI TTS "onyx". Tuned slightly under
+// observed speed so the audio leaves a short breath at the end instead of
+// cutting off mid-word when the duration target is hit.
+const WORDS_PER_SECOND_TARGET = 2.5
+
+function targetWordCount(durationSec: number): number {
+  return Math.max(20, Math.round(durationSec * WORDS_PER_SECOND_TARGET))
+}
+
+function wordCount(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length
+}
+
+/**
+ * Push #028 — scale the voiceover script to the selected duration.
+ *
+ * The brief's voiceover_script is sized for ~15s of narration regardless of
+ * the user's chosen duration, so 30s and 50s videos used to play audio only
+ * for the first third. We rewrite it to ~target words at ~2.5 wps so the TTS
+ * output actually covers the full video.
+ *
+ * If the script is already within ±20% of the target word count, we keep it
+ * unchanged. If OpenAI is unreachable or refuses, we fall back to the raw
+ * script — better to ship a short narration than no narration.
+ */
+async function scaleVoiceoverScriptToDuration(
+  rawScript: string,
+  totalDurationSec: number,
+): Promise<string> {
+  const baseline = rawScript.trim()
+  if (!baseline) return ''
+  const target = targetWordCount(totalDurationSec)
+  const current = wordCount(baseline)
+  const low = Math.round(target * 0.8)
+  const high = Math.round(target * 1.2)
+  if (current >= low && current <= high) {
+    console.log(
+      `[compose] voiceover script length OK (${current} words, target ${target} for ${totalDurationSec}s)`,
+    )
+    return baseline
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn(
+      `[compose] cannot rescale voiceover (have ${current}, want ${target}) — ` +
+      `OPENAI_API_KEY missing. Using original script.`,
+    )
+    return baseline
+  }
+
+  const action = current < low ? 'expand' : 'compress'
+  console.log(
+    `[compose] rescaling voiceover script: ${current} -> ~${target} words ` +
+    `(${action} for ${totalDurationSec}s @ ${WORDS_PER_SECOND_TARGET} wps)`,
+  )
+
+  try {
+    const completion = await openai.chat.completions.create(
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You rewrite short-form video narration to fit a target spoken length. ' +
+              'Always respond with plain prose only — no markdown, no JSON, no labels, ' +
+              'no scene numbers, no hashtags, no quotes.',
+          },
+          {
+            role: 'user',
+            content:
+              `Rewrite the narration below so it reads aloud at a cinematic narrator ` +
+              `pace (~${WORDS_PER_SECOND_TARGET} words/sec) for ${totalDurationSec} seconds. ` +
+              `Aim for ~${target} words total. Keep the same hook, topic, and English ` +
+              `voice. Do NOT add quotes, scene numbers, list bullets, or stage directions. ` +
+              `Output only the narration prose.\n\n` +
+              `Narration:\n${baseline}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: Math.min(1500, Math.max(400, target * 8)),
+      },
+      { timeout: 25000 },
+    )
+    const rewritten = (completion.choices[0]?.message?.content ?? '').trim()
+    if (!rewritten) {
+      console.warn('[compose] rescale returned empty — keeping original script.')
+      return baseline
+    }
+    const newCount = wordCount(rewritten)
+    console.log(
+      `[compose] rescaled script: ${current} -> ${newCount} words (target ${target})`,
+    )
+    return rewritten
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[compose] script rescale failed:', msg, '— using original script.')
+    return baseline
+  }
+}
+
 // ─── TTS ───────────────────────────────────────────────────────────────────
 async function generateTTS(script: string): Promise<Buffer | null> {
   if (!process.env.OPENAI_API_KEY) {
@@ -156,8 +256,13 @@ function buildCreatomateSource(input: {
     cursor += clipDur
   })
 
-  // Track 3 — TTS audio. Spans the whole video; Creatomate clamps it to
-  // `finalDur` when the track is longer than the composition.
+  // Track 3 — TTS audio, anchored at t=0 and reserving the full video
+  // duration on the timeline. This is what the spec calls
+  // `duration: totalDuration` on the audio track. If the TTS file itself is
+  // a few seconds short of finalDur, Creatomate just leaves silence at the
+  // tail — the VIDEO does NOT crop, because source.duration below pins the
+  // final length. Push #028 also rescales the script so audio actually fills
+  // the timeline instead of trailing off in the first 15s.
   if (voiceoverUrl) {
     elements.push({
       type: 'audio',
@@ -169,22 +274,31 @@ function buildCreatomateSource(input: {
     })
   }
 
-  // Track 4 — caption overlays, one window per Runway clip (with the
-  // caption split into ~4-word sub-chunks for legibility).
-  let captionCursor = 0
-  for (let i = 0; i < clipUrls.length; i++) {
-    if (captionCursor >= finalDur) break
-    const slot = Math.min(RUNWAY_CLIP_SECONDS, finalDur - captionCursor)
-    const raw = (sceneCaptions[i] ?? '').trim()
-    const chunks = raw ? splitCaption(raw, 4) : []
-    if (chunks.length > 0) {
-      const each = slot / chunks.length
+  // Track 4 — caption overlays distributed evenly across the FULL video
+  // duration.
+  //
+  // Push #028 — previously each caption was tied to a 10s clip slot, so a
+  // brief with fewer captions than clips (e.g. 2 captions for a 50s/5-clip
+  // video) only rendered text for the first ~20s. We now spread the N
+  // available captions across `finalDur` so the timeline is always covered:
+  //   1 caption  → spans the full duration
+  //   N captions → each block lasts finalDur / N
+  // Within each block, the caption is split into ~4-word sub-chunks that
+  // divide that block evenly.
+  const validCaptions = sceneCaptions.map((c) => c.trim()).filter((c) => c.length > 0)
+  if (validCaptions.length > 0) {
+    const blockDur = finalDur / validCaptions.length
+    validCaptions.forEach((raw, blockIdx) => {
+      const blockStart = blockIdx * blockDur
+      const chunks = splitCaption(raw, 4)
+      if (chunks.length === 0) return
+      const subDur = blockDur / chunks.length
       chunks.forEach((chunk, ci) => {
         elements.push({
           type: 'text',
           track: 4,
-          time: Math.round((captionCursor + ci * each) * 1000) / 1000,
-          duration: Math.round(each * 1000) / 1000,
+          time: Math.round((blockStart + ci * subDur) * 1000) / 1000,
+          duration: Math.round(subDur * 1000) / 1000,
           text: chunk,
           x: '50%', y: '72%',
           width: '86%',
@@ -196,8 +310,7 @@ function buildCreatomateSource(input: {
           stroke_width: 4,
         })
       })
-    }
-    captionCursor += slot
+    })
   }
 
   // Track 5 — CTA at the end. We pin it to the last ~2.5s so it always lands
@@ -256,10 +369,18 @@ export async function startComposition(input: ComposeInput): Promise<ComposeStar
   // submit the composition without an audio track so we at least get captions
   // and correct duration. The caller's credit-charge rule (only on success)
   // covers the case where the final output is unsatisfactory.
+  //
+  // Push #028 — first rescale the script to match the selected duration so
+  // a 50s video gets ~125 words of narration instead of the brief's default
+  // ~30 words (which used to leave the last ~35s silent).
   let voiceoverUrl: string | null = null
   if (voiceoverScript.trim().length > 0) {
-    console.log(`[compose] step 1: requesting OpenAI TTS (script ${voiceoverScript.length} chars)`)
-    const buf = await generateTTS(voiceoverScript)
+    const scaledScript = await scaleVoiceoverScriptToDuration(voiceoverScript, totalDurationSec)
+    console.log(
+      `[compose] step 1: requesting OpenAI TTS — script ${scaledScript.length} chars, ` +
+      `${wordCount(scaledScript)} words for ${totalDurationSec}s`,
+    )
+    const buf = await generateTTS(scaledScript)
     if (buf) {
       console.log(`[compose] step 2: TTS ok (${buf.length} bytes) — uploading to Supabase`)
       voiceoverUrl = await uploadVoiceover(userId, buf)
