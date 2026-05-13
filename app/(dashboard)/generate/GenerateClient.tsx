@@ -18,6 +18,17 @@ interface TaskState {
   failure: string | null
 }
 
+// Push #048 — Viral Intelligence block.
+type HookRating = 'weak' | 'medium' | 'strong' | 'excellent'
+interface ViralIntelligence {
+  viralScore: number
+  hookRating: HookRating
+  retentionNotes: string[]
+  thumbnailTexts: string[]
+  openingCaption: string
+  improvementSuggestions: string[]
+}
+
 interface Analysis {
   title: string
   summary: string
@@ -34,6 +45,10 @@ interface Analysis {
   hashtags: string[]
   youtubeDescription: string
   cta: string
+  // Push #048 — viral intelligence panel shown in Step 2. Optional because
+  // very old API responses might not carry the block; the UI gracefully
+  // hides the panel when absent.
+  viralIntelligence: ViralIntelligence | null
 }
 
 // Pipeline state machine — described in push #028.
@@ -82,6 +97,38 @@ const LOADER_MESSAGES = [
 // credits chip. Tuned to ~1 Pro-quality generation worth (20 credits).
 const LOW_CREDITS_THRESHOLD = 20
 
+// Push #048 — Visual History row shape returned by GET /api/videos.
+interface RecentVideo {
+  id: string
+  title: string
+  status: 'completed' | 'processing' | 'failed' | 'cancelled'
+  video_url: string | null
+  thumbnail_url: string | null
+  duration: number | null
+  platform: string
+  created_at: string
+}
+
+// Push #048 — Trending Hooks. Static templates the user can drop into the
+// prompt box (or just copy). Categories drive the colored tag on the chip.
+const TRENDING_HOOKS: { text: string; category: string }[] = [
+  { text: "This sounds fake, but it's real…", category: 'Mystery' },
+  { text: 'Nobody talks about this part of history…', category: 'History' },
+  { text: "Scientists still can't explain this…", category: 'Mystery' },
+  { text: 'This signal appeared once… then vanished.', category: 'Mystery' },
+  { text: 'What if everything you know about this is wrong?', category: 'Facts' },
+  { text: 'This place looks impossible, but it exists.', category: 'Nature' },
+  { text: 'They built this thousands of years ago.', category: 'History' },
+  { text: 'The ocean recorded something strange.', category: 'Nature' },
+]
+
+const HOOK_CATEGORY_COLOR: Record<string, { fg: string; bg: string; border: string }> = {
+  Mystery: { fg: '#a78bfa', bg: 'rgba(167,139,250,.10)', border: 'rgba(167,139,250,.30)' },
+  History: { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.30)' },
+  Facts: { fg: '#93c5fd', bg: 'rgba(147,197,253,.10)', border: 'rgba(147,197,253,.30)' },
+  Nature: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
+}
+
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -124,6 +171,13 @@ export default function GenerateClient() {
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [loaderTick, setLoaderTick] = useState(0)
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
+
+  // Push #048 — Visual History. List of the user's recent videos fetched
+  // from /api/videos. Empty array = empty state; null only during initial
+  // load. We never block the page on this — failures degrade to empty.
+  const [recentVideos, setRecentVideos] = useState<RecentVideo[] | null>(null)
+  // Push #048 — transient "Copied!" feedback on trending-hook chips.
+  const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null)
 
   // Idempotency flag for /api/compose/status — once we see `done` we tell the
   // server not to deduct credits again on subsequent polls.
@@ -192,6 +246,36 @@ export default function GenerateClient() {
     return () => {
       cancelled = true
       window.removeEventListener('creditsChanged', fetchCredits)
+    }
+  }, [])
+
+  // Push #048 — pull the user's recent videos for the Visual History
+  // section. We listen on `creditsChanged` (fired after every successful
+  // generation) so the list refreshes automatically when a new video
+  // finishes. Defensive: failures degrade to empty state, never break the
+  // page.
+  useEffect(() => {
+    let cancelled = false
+    async function fetchVideos() {
+      try {
+        const res = await fetch('/api/videos', { cache: 'no-store' })
+        if (res.status === 401) {
+          if (!cancelled) setRecentVideos([])
+          return
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setRecentVideos(Array.isArray(data.videos) ? data.videos : [])
+        }
+      } catch {
+        if (!cancelled) setRecentVideos([])
+      }
+    }
+    fetchVideos()
+    window.addEventListener('creditsChanged', fetchVideos)
+    return () => {
+      cancelled = true
+      window.removeEventListener('creditsChanged', fetchVideos)
     }
   }, [])
 
@@ -452,6 +536,39 @@ export default function GenerateClient() {
       const youtubeDescription =
         typeof data.youtube_description === 'string' ? data.youtube_description : ''
 
+      // Push #048 — viral intelligence block. Defensively coerce every
+      // field so a malformed model response can't crash the panel; if the
+      // block is missing entirely we set the field to null and the UI
+      // hides the panel gracefully.
+      let viralIntelligence: ViralIntelligence | null = null
+      const viRaw = data.viral_intelligence
+      if (viRaw && typeof viRaw === 'object') {
+        const v = viRaw as Record<string, unknown>
+        const scoreRaw = typeof v.viral_score === 'number' ? v.viral_score : 0
+        const score = Math.max(0, Math.min(100, Math.round(scoreRaw)))
+        const ratingStr = typeof v.hook_rating === 'string' ? v.hook_rating.toLowerCase() : ''
+        const rating: HookRating =
+          ratingStr === 'weak' || ratingStr === 'medium' || ratingStr === 'strong' || ratingStr === 'excellent'
+            ? (ratingStr as HookRating)
+            : score >= 85
+            ? 'excellent'
+            : score >= 70
+            ? 'strong'
+            : score >= 50
+            ? 'medium'
+            : 'weak'
+        const asArr = (x: unknown): string[] =>
+          Array.isArray(x) ? x.filter((s): s is string => typeof s === 'string' && s.trim().length > 0) : []
+        viralIntelligence = {
+          viralScore: score,
+          hookRating: rating,
+          retentionNotes: asArr(v.retention_notes),
+          thumbnailTexts: asArr(v.thumbnail_texts).slice(0, 3),
+          openingCaption: typeof v.opening_caption === 'string' ? v.opening_caption : '',
+          improvementSuggestions: asArr(v.improvement_suggestions).slice(0, 3),
+        }
+      }
+
       setAnalysis({
         title: data.title ?? '',
         summary: data.summary ?? '',
@@ -463,6 +580,7 @@ export default function GenerateClient() {
         hashtags,
         youtubeDescription,
         cta,
+        viralIntelligence,
       })
       setPhase('options')
     } catch (err) {
@@ -907,6 +1025,35 @@ export default function GenerateClient() {
         </section>
       )}
 
+      {/* Push #048 — Trending Hooks. Compact chip strip below the input.
+          "Use Hook" inserts the template into the prompt (without auto-
+          submitting), "Copy" puts it on the clipboard. Only shown on Step 1
+          so we don't clutter the brief / loading screens. */}
+      {showStep1 && (
+        <TrendingHooksSection
+          onUse={(text) => {
+            setPrompt(text)
+            if (fromHome) setFromHome(false)
+          }}
+          copiedIndex={copiedHookIndex}
+          onCopy={async (text, idx) => {
+            try {
+              await navigator.clipboard.writeText(text)
+              setCopiedHookIndex(idx)
+              setTimeout(() => setCopiedHookIndex((c) => (c === idx ? null : c)), 1800)
+            } catch {
+              // Clipboard can be denied — silent no-op.
+            }
+          }}
+        />
+      )}
+
+      {/* Push #048 — Visual History. Six most recent videos for this user,
+          read-only. Empty state when the list has 0 rows (which is the
+          default on a fresh account or before the first successful
+          generation persists to the videos table). */}
+      {showStep1 && <RecentVideosSection videos={recentVideos} />}
+
       {/* Push #036: 3 pricing cards below Step 1 so the upgrade path lives
           right next to where the user is about to spend credits. Hidden once
           they leave Step 1 (analyzing / options / render phases) to keep the
@@ -1033,6 +1180,14 @@ export default function GenerateClient() {
             )}
           </section>
 
+          {/* Push #048 — Viral Intelligence panel. Score, hook rating,
+              retention notes, thumbnail text suggestions and an opening
+              caption. Renders only when the brief actually carries the
+              block so old API responses still flow through cleanly. */}
+          {analysis.viralIntelligence && (
+            <ViralIntelligencePanel vi={analysis.viralIntelligence} />
+          )}
+
           {/* Push #034: duration / quality controls were moved to Step 1
               (above the Analyze button) so users pick them before paying any
               attention budget on the brief. Step 2 just confirms the choice
@@ -1091,6 +1246,39 @@ export default function GenerateClient() {
                 {phase === 'generating' && tasks.length > 0 && (
                   <> · {succeededCount}/{tasks.length} clips ready</>
                 )}
+              </div>
+
+              {/* Push #048 — 5-stage pipeline indicator + trust copy.
+                  Stage status is inferred from the existing phase machine
+                  + clip success counts so we don't add new round-trips to
+                  the API. */}
+              <PipelineStages
+                phase={phase}
+                succeededCount={succeededCount}
+                taskCount={tasks.length}
+                renderProgress={renderProgress}
+                finalReady={!!finalVideoUrl}
+              />
+
+              <div
+                className="rounded-xl px-3 py-2 mt-4 text-xs"
+                style={{
+                  background: 'rgba(99,102,241,.06)',
+                  border: '1px solid rgba(99,102,241,.20)',
+                  color: 'var(--muted2)',
+                  lineHeight: 1.55,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span aria-hidden="true">⚡</span>
+                  <span className="font-bold" style={{ color: '#93c5fd' }}>
+                    AI Video Engine — automated video pipeline
+                  </span>
+                </div>
+                <div>
+                  Your video is generated in stages. Credits are charged only when the final video is successfully created.
+                </div>
+                <div className="mt-1">Safe to keep this tab open while rendering.</div>
               </div>
 
               {/* The per-clip tile grid was removed in push #031 — the final
@@ -1288,6 +1476,675 @@ export default function GenerateClient() {
         </>
       )}
     </main>
+  )
+}
+
+// ─── Push #048 — Trending Hooks ─────────────────────────────────────────────
+// Static hook templates. "Use Hook" calls onUse to prefill the prompt
+// textarea; "Copy" calls onCopy and flashes the matching chip's button.
+function TrendingHooksSection({
+  onUse,
+  onCopy,
+  copiedIndex,
+}: {
+  onUse: (text: string) => void
+  onCopy: (text: string, idx: number) => void
+  copiedIndex: number | null
+}) {
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
+            Trending Hooks
+          </div>
+          <h3 className="font-black text-base sm:text-lg" style={{ color: 'var(--text)' }}>
+            Steal a viral opener
+          </h3>
+        </div>
+        <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+          Click <strong style={{ color: 'var(--text2)' }}>Use Hook</strong> to drop it into the box above.
+        </span>
+      </div>
+
+      <div className="th-grid">
+        {TRENDING_HOOKS.map((h, i) => {
+          const c = HOOK_CATEGORY_COLOR[h.category] ?? HOOK_CATEGORY_COLOR.Mystery
+          const isCopied = copiedIndex === i
+          return (
+            <div
+              key={i}
+              className="rounded-xl p-3 flex flex-col gap-2"
+              style={{
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid var(--border)',
+                minWidth: 0,
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className="text-[10px] font-black uppercase tracking-widest"
+                  style={{
+                    color: c.fg,
+                    background: c.bg,
+                    border: `1px solid ${c.border}`,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                  }}
+                >
+                  {h.category}
+                </span>
+              </div>
+              <p
+                className="text-sm font-bold"
+                style={{ color: 'var(--text)', lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}
+              >
+                “{h.text}”
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => onUse(h.text)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-bold flex-1"
+                  style={{
+                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Use Hook
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCopy(h.text, i)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-bold"
+                  style={{
+                    background: isCopied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.04)',
+                    border: isCopied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
+                    color: isCopied ? '#34d399' : 'var(--muted2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isCopied ? '✓' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <style jsx>{`
+        .th-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+        @media (min-width: 900px) {
+          .th-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (max-width: 520px) {
+          .th-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+    </section>
+  )
+}
+
+// ─── Push #048 — Visual History ─────────────────────────────────────────────
+// Empty state when the user has no rows yet. Status chip on every card.
+// "Open" link is rendered only when video_url is present (completed runs).
+function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
+  // null = still loading initial fetch
+  if (videos === null) {
+    return (
+      <section
+        className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+      >
+        <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+          Recent Videos
+        </div>
+        <div className="text-xs" style={{ color: 'var(--muted)' }}>
+          Loading your library…
+        </div>
+      </section>
+    )
+  }
+
+  if (videos.length === 0) {
+    return (
+      <section
+        className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
+        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+      >
+        <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
+          Recent Videos
+        </div>
+        <div className="font-black text-base mb-1" style={{ color: 'var(--text)' }}>
+          No videos yet
+        </div>
+        <p className="text-xs" style={{ color: 'var(--muted2)' }}>
+          Create your first Short — finished generations will show up here.
+        </p>
+      </section>
+    )
+  }
+
+  function statusChip(s: RecentVideo['status']) {
+    if (s === 'completed')
+      return { label: 'Completed', fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)' }
+    if (s === 'failed' || s === 'cancelled')
+      return { label: 'Failed', fg: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)' }
+    return { label: 'Processing', fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.32)' }
+  }
+
+  function formatDate(iso: string): string {
+    try {
+      const d = new Date(iso)
+      const diff = Date.now() - d.getTime()
+      const hours = Math.floor(diff / 3600000)
+      if (hours < 1) return 'Just now'
+      if (hours < 24) return `${hours}h ago`
+      const days = Math.floor(diff / 86400000)
+      if (days < 7) return `${days}d ago`
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    } catch {
+      return 'Recent'
+    }
+  }
+
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
+            Recent Videos
+          </div>
+          <h3 className="font-black text-base sm:text-lg" style={{ color: 'var(--text)' }}>
+            Your recent shorts
+          </h3>
+        </div>
+        <a
+          href="/history"
+          className="text-xs font-bold"
+          style={{ color: '#93c5fd', textDecoration: 'none' }}
+        >
+          View all →
+        </a>
+      </div>
+
+      <div className="rv-grid">
+        {videos.map((v) => {
+          const chip = statusChip(v.status)
+          const playable = v.status === 'completed' && !!v.video_url
+          return (
+            <div
+              key={v.id}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <div
+                className="rv-thumb"
+                style={{
+                  background: v.thumbnail_url
+                    ? `center / cover no-repeat url(${v.thumbnail_url})`
+                    : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12))',
+                  aspectRatio: '9 / 16',
+                  position: 'relative',
+                }}
+              >
+                {!v.thumbnail_url && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ color: 'rgba(147,197,253,.55)', fontSize: '1.8rem' }}
+                  >
+                    🎬
+                  </div>
+                )}
+                <span
+                  className="absolute"
+                  style={{
+                    top: 6,
+                    left: 6,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: chip.bg,
+                    border: `1px solid ${chip.border}`,
+                    color: chip.fg,
+                    fontSize: '0.62rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {chip.label}
+                </span>
+                {v.duration ? (
+                  <span
+                    className="absolute"
+                    style={{
+                      bottom: 6,
+                      right: 6,
+                      padding: '2px 6px',
+                      borderRadius: 6,
+                      background: 'rgba(0,0,0,.6)',
+                      color: '#fff',
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {Math.round(v.duration)}s
+                  </span>
+                ) : null}
+              </div>
+              <div className="p-2.5 flex flex-col gap-1.5" style={{ minHeight: 80 }}>
+                <p
+                  className="text-xs font-bold"
+                  style={{
+                    color: 'var(--text)',
+                    lineHeight: 1.35,
+                    margin: 0,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {v.title}
+                </p>
+                <div className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                  {v.platform} · {formatDate(v.created_at)}
+                </div>
+                {playable && v.video_url && (
+                  <a
+                    href={v.video_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-bold mt-1"
+                    style={{ color: '#93c5fd', textDecoration: 'none' }}
+                  >
+                    Open ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <style jsx>{`
+        .rv-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+        }
+        @media (max-width: 720px) {
+          .rv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 400px) {
+          .rv-grid { grid-template-columns: 1fr; }
+        }
+        .rv-thumb { position: relative; }
+      `}</style>
+    </section>
+  )
+}
+
+// ─── Push #048 — Generate Video Beta Layer ─────────────────────────────────
+// Five visible stages mapped from the existing phase machine. We never
+// surface raw provider errors here — all status comes from the friendly
+// phase enum.
+type StageStatus = 'queued' | 'active' | 'done'
+function PipelineStages({
+  phase,
+  succeededCount,
+  taskCount,
+  renderProgress,
+  finalReady,
+}: {
+  phase: Phase
+  succeededCount: number
+  taskCount: number
+  renderProgress: number
+  finalReady: boolean
+}) {
+  // Map the existing 4-phase state machine to 5 user-facing stages:
+  //  1. Creating visuals      — Runway clips (`generating`)
+  //  2. Generating voiceover  — TTS step (`clips_ready` + early `composing`)
+  //  3. Adding captions       — caption track build (early `composing`)
+  //  4. Rendering final video — Creatomate render bulk (`composing`)
+  //  5. Preparing download    — terminal `done` + final URL fetch
+  const visualsDone = phase === 'clips_ready' || phase === 'composing' || phase === 'done'
+  const visualsActive = phase === 'generating'
+
+  const voiceoverActive = phase === 'clips_ready' || (phase === 'composing' && renderProgress < 25)
+  const voiceoverDone = phase === 'composing' && renderProgress >= 25
+  const voiceoverDoneOrPast = voiceoverDone || phase === 'done'
+
+  const captionsActive = phase === 'composing' && renderProgress >= 25 && renderProgress < 60
+  const captionsDone = phase === 'composing' && renderProgress >= 60
+  const captionsDoneOrPast = captionsDone || phase === 'done'
+
+  const renderActive = phase === 'composing' && renderProgress >= 60 && renderProgress < 100
+  const renderDone = phase === 'done'
+
+  const downloadActive = phase === 'done' && !finalReady
+  const downloadDone = phase === 'done' && finalReady
+
+  const stages: { label: string; sub: string; status: StageStatus }[] = [
+    {
+      label: 'Creating visuals',
+      sub: taskCount > 0 ? `${Math.min(succeededCount, taskCount)}/${taskCount} clips` : 'AI scene model',
+      status: visualsDone ? 'done' : visualsActive ? 'active' : 'queued',
+    },
+    {
+      label: 'Generating voiceover',
+      sub: 'Neural narration',
+      status: voiceoverDoneOrPast ? 'done' : voiceoverActive ? 'active' : 'queued',
+    },
+    {
+      label: 'Adding captions',
+      sub: 'Word-by-word overlay',
+      status: captionsDoneOrPast ? 'done' : captionsActive ? 'active' : 'queued',
+    },
+    {
+      label: 'Rendering final video',
+      sub: 'AI Video Engine',
+      status: renderDone ? 'done' : renderActive ? 'active' : 'queued',
+    },
+    {
+      label: 'Preparing download',
+      sub: '9:16 MP4',
+      status: downloadDone ? 'done' : downloadActive ? 'active' : 'queued',
+    },
+  ]
+
+  return (
+    <ol
+      className="mt-5"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+        margin: 0,
+      }}
+    >
+      {stages.map((s, i) => {
+        const isDone = s.status === 'done'
+        const isActive = s.status === 'active'
+        const color = isDone ? '#34d399' : isActive ? '#93c5fd' : 'var(--muted)'
+        const ring = isDone
+          ? '1px solid rgba(52,211,153,.45)'
+          : isActive
+          ? '1px solid rgba(147,197,253,.45)'
+          : '1px solid var(--border)'
+        const bg = isDone
+          ? 'rgba(52,211,153,.08)'
+          : isActive
+          ? 'rgba(37,99,235,.08)'
+          : 'rgba(255,255,255,.03)'
+        return (
+          <li
+            key={i}
+            className="rounded-lg px-3 py-2 flex items-center gap-3"
+            style={{ background: bg, border: ring }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: isDone
+                  ? 'rgba(52,211,153,.18)'
+                  : isActive
+                  ? 'transparent'
+                  : 'rgba(255,255,255,.04)',
+                border: isDone
+                  ? '1px solid rgba(52,211,153,.55)'
+                  : isActive
+                  ? '2px solid rgba(147,197,253,.55)'
+                  : '1px solid var(--border)',
+                borderTopColor: isActive ? '#93c5fd' : undefined,
+                animation: isActive ? 'spin 0.9s linear infinite' : undefined,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color,
+                fontSize: '0.7rem',
+                fontWeight: 900,
+              }}
+            >
+              {isDone ? '✓' : isActive ? '' : i + 1}
+            </span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="text-sm font-bold" style={{ color, lineHeight: 1.2 }}>
+                {s.label}
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                {s.sub}
+              </div>
+            </div>
+            <span
+              className="text-[10px] font-black uppercase tracking-widest"
+              style={{ color }}
+            >
+              {isDone ? 'Done' : isActive ? 'Active' : 'Queued'}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// ─── Push #048 — Viral Intelligence Panel ──────────────────────────────────
+// Shown in Step 2 right under the creative brief. Color scheme follows the
+// spec: green for high score (≥75), amber for medium (50-74), red for weak
+// (<50). Layout is compact — two-column score / rating header on desktop,
+// stacks on mobile.
+function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
+  const { viralScore, hookRating, retentionNotes, thumbnailTexts, openingCaption, improvementSuggestions } = vi
+  const accent =
+    viralScore >= 75
+      ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong viral signal' }
+      : viralScore >= 50
+      ? { color: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.32)', label: 'Could be sharper' }
+      : { color: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)', label: 'Needs work' }
+  const ratingLabel: Record<HookRating, string> = {
+    weak: 'Weak',
+    medium: 'Medium',
+    strong: 'Strong',
+    excellent: 'Excellent',
+  }
+
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
+      style={{
+        background: 'rgba(15,15,30,0.85)',
+        border: `1px solid ${accent.border}`,
+        boxShadow: `0 0 28px ${accent.bg}`,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div
+            className="text-xs font-black uppercase tracking-widest mb-1"
+            style={{ color: 'var(--muted)' }}
+          >
+            Viral Intelligence
+          </div>
+          <h3 className="font-black text-lg sm:text-xl" style={{ color: 'var(--text)' }}>
+            Hook performance forecast
+          </h3>
+        </div>
+        <div className="flex items-stretch gap-3">
+          <div
+            className="rounded-xl px-4 py-2 text-center"
+            style={{
+              background: accent.bg,
+              border: `1px solid ${accent.border}`,
+              minWidth: 92,
+            }}
+          >
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
+              Score
+            </div>
+            <div className="font-black" style={{ color: accent.color, fontSize: '1.6rem', lineHeight: 1.1 }}>
+              {viralScore}
+              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 800 }}>/100</span>
+            </div>
+          </div>
+          <div
+            className="rounded-xl px-4 py-2 flex flex-col justify-center"
+            style={{
+              background: 'rgba(255,255,255,.03)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
+              Hook
+            </div>
+            <div className="font-black text-sm" style={{ color: accent.color }}>
+              {ratingLabel[hookRating]}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="vi-grid">
+        {retentionNotes.length > 0 && (
+          <div
+            className="rounded-xl p-4"
+            style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
+          >
+            <div
+              className="text-[10px] font-black uppercase tracking-widest mb-2"
+              style={{ color: '#93c5fd' }}
+            >
+              Retention notes
+            </div>
+            <ul className="space-y-1.5 text-xs" style={{ color: 'var(--text2)', paddingLeft: 0, listStyle: 'none' }}>
+              {retentionNotes.map((n, i) => (
+                <li key={i} style={{ display: 'flex', gap: 6 }}>
+                  <span style={{ color: accent.color, fontWeight: 800 }}>•</span>
+                  <span style={{ lineHeight: 1.5 }}>{n}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div
+          className="rounded-xl p-4 flex flex-col gap-3"
+          style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
+        >
+          {thumbnailTexts.length > 0 && (
+            <div>
+              <div
+                className="text-[10px] font-black uppercase tracking-widest mb-2"
+                style={{ color: '#93c5fd' }}
+              >
+                Thumbnail text ideas
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {thumbnailTexts.map((t, i) => (
+                  <span
+                    key={i}
+                    className="text-xs font-black"
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      background: accent.bg,
+                      border: `1px solid ${accent.border}`,
+                      color: accent.color,
+                      letterSpacing: '0.02em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {openingCaption && (
+            <div>
+              <div
+                className="text-[10px] font-black uppercase tracking-widest mb-2"
+                style={{ color: '#93c5fd' }}
+              >
+                Opening caption (0-2s)
+              </div>
+              <p
+                className="text-sm font-bold"
+                style={{ color: 'var(--text)', lineHeight: 1.45, margin: 0 }}
+              >
+                “{openingCaption}”
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {improvementSuggestions.length > 0 && (
+        <div
+          className="rounded-xl p-4 mt-3"
+          style={{
+            background: 'rgba(251,191,36,.06)',
+            border: '1px solid rgba(251,191,36,.30)',
+          }}
+        >
+          <div
+            className="text-[10px] font-black uppercase tracking-widest mb-2"
+            style={{ color: '#fbbf24' }}
+          >
+            How to push the score higher
+          </div>
+          <ul className="space-y-1.5 text-xs" style={{ color: 'var(--text2)', paddingLeft: 0, listStyle: 'none' }}>
+            {improvementSuggestions.map((n, i) => (
+              <li key={i} style={{ display: 'flex', gap: 6 }}>
+                <span style={{ color: '#fbbf24', fontWeight: 800 }}>→</span>
+                <span style={{ lineHeight: 1.5 }}>{n}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="text-[11px] mt-3" style={{ color: 'var(--muted)' }}>
+        Forecast is a guide, not a guarantee — real-world performance depends on thumbnail, posting time, and audience match.
+      </p>
+
+      <style jsx>{`
+        .vi-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 720px) {
+          .vi-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+    </section>
   )
 }
 
