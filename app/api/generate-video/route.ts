@@ -5,23 +5,24 @@ import { generateScenes, startRunwayTask, buildRunwayPayload } from '@/lib/runwa
 
 export const maxDuration = 60
 
-// Runway Gen-4 Turbo only generates clips of 5 or 10 seconds. To produce a
-// longer Short we kick off multiple 10s clips in parallel and let /api/compose
-// stitch them together.
-const SUPPORTED_DURATIONS = [10, 30, 60] as const
+// Runway only generates clips of 5 or 10 seconds. To produce a longer Short
+// we kick off multiple 10s clips in parallel and let /api/compose stitch
+// them together. Supported total durations: 10s (1 clip), 30s (3 clips),
+// 50s (5 clips). The default 30s lives in the client.
+const SUPPORTED_DURATIONS = [10, 30, 50] as const
 type Duration = (typeof SUPPORTED_DURATIONS)[number]
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 function clipCountForDuration(d: Duration): number {
-  // 10s → 1 clip, 30s → 3 clips, 60s → 6 clips. Each Runway clip is 10s.
+  // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Each Runway clip is 10s.
   return Math.max(1, Math.round(d / 10))
 }
 
 // Credit cost shown on the Generate screen. Must match QUALITY_OPTIONS in
 // app/(dashboard)/generate/GenerateClient.tsx and the deduction logic in
-// /api/compose/status/[renderId].
+// /api/compose/status/[renderId]. Basic / Basic AI = 15, Pro = 20.
 function creditCostFor(q: Quality): number {
-  return q === 'pro' ? 2 : 1
+  return q === 'pro' ? 20 : 15
 }
 
 // The Runway helper only knows about 'basic' | 'pro'. 'basic_ai' is a

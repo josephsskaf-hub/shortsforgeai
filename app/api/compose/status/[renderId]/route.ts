@@ -9,14 +9,14 @@ type Quality = 'basic' | 'basic_ai' | 'pro'
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
   // The UI display lives in app/(dashboard)/generate/GenerateClient.tsx — keep
-  // these two in sync when adjusting prices.
+  // these two in sync when adjusting prices. Basic / Basic AI = 15, Pro = 20.
   switch (quality) {
     case 'pro':
-      return 2
+      return 20
     case 'basic':
     case 'basic_ai':
     default:
-      return 1
+      return 15
   }
 }
 

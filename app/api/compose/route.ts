@@ -12,7 +12,7 @@ import {
 
 export const maxDuration = 60
 
-const SUPPORTED_DURATIONS = [10, 30, 60] as const
+const SUPPORTED_DURATIONS = [10, 30, 50] as const
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 interface ComposeBody {

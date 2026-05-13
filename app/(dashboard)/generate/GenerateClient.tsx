@@ -22,6 +22,11 @@ interface Analysis {
   summary: string
   niche: string
   scenePlan: string[]
+  // Push #024A added these on the server side. Push #030 surfaces them in
+  // the brief card and feeds the explicit voiceover_script straight into
+  // /api/compose so what the user reads is what gets narrated.
+  hook: string
+  voiceoverScript: string
 }
 
 // Pipeline state machine — described in push #028.
@@ -35,7 +40,7 @@ type Phase =
   | 'done'
   | 'failed'
 
-type Duration = 10 | 30 | 60
+type Duration = 10 | 30 | 50
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 const POLL_GENERATING_MS = 4000
@@ -48,9 +53,9 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 1, icon: '🎞️' },
-  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 1, icon: '⚡' },
-  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 2, icon: '✨' },
+  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 15, icon: '🎞️' },
+  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 15, icon: '⚡' },
+  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 20, icon: '✨' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -319,6 +324,9 @@ export default function GenerateClient() {
         summary: data.summary ?? '',
         niche: data.niche ?? '',
         scenePlan: Array.isArray(data.scenePlan) ? data.scenePlan : [],
+        hook: typeof data.hook === 'string' ? data.hook : '',
+        voiceoverScript:
+          typeof data.voiceover_script === 'string' ? data.voiceover_script : '',
       })
       setPhase('options')
     } catch (err) {
@@ -380,7 +388,7 @@ export default function GenerateClient() {
       }
 
       if (res.status === 402) {
-        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 1} credit(s).`)
+        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 15} credit(s).`)
         setPhase('failed')
         return
       }
@@ -449,7 +457,7 @@ export default function GenerateClient() {
     [orderedTasks, taskStates]
   )
 
-  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 1
+  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
   const showRender =
@@ -464,7 +472,7 @@ export default function GenerateClient() {
       case 'generating':
         return 'Creating visuals…'
       case 'clips_ready':
-        return 'Generating voiceover…'
+        return 'Generating voiceover & captions…'
       case 'composing':
         return 'Rendering final video…'
       case 'done':
@@ -646,14 +654,69 @@ export default function GenerateClient() {
             <p className="text-sm mb-4" style={{ color: 'var(--muted2)', lineHeight: 1.55 }}>
               {analysis.summary}
             </p>
+
+            {/* Hook — first 2 seconds, the scroll-stopper. */}
+            {analysis.hook && (
+              <div className="mb-4">
+                <div
+                  className="text-xs font-black uppercase tracking-widest mb-1.5"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  Hook
+                </div>
+                <p
+                  className="text-sm font-bold rounded-lg px-3 py-2"
+                  style={{
+                    background: 'rgba(37,99,235,.08)',
+                    border: '1px solid rgba(37,99,235,.25)',
+                    color: 'var(--text)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  “{analysis.hook}”
+                </p>
+              </div>
+            )}
+
+            {/* Voiceover script — what the narrator reads end-to-end. */}
+            {analysis.voiceoverScript && (
+              <div className="mb-4">
+                <div
+                  className="text-xs font-black uppercase tracking-widest mb-1.5"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  Voiceover script
+                </div>
+                <p
+                  className="text-sm rounded-lg px-3 py-2 whitespace-pre-wrap"
+                  style={{
+                    background: 'rgba(255,255,255,.03)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--muted2)',
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {analysis.voiceoverScript}
+                </p>
+              </div>
+            )}
+
             {analysis.scenePlan.length > 0 && (
-              <ol className="space-y-1.5 text-xs" style={{ color: 'var(--muted2)', paddingLeft: 20 }}>
-                {analysis.scenePlan.map((s, i) => (
-                  <li key={i}>
-                    <span style={{ color: '#93c5fd', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
-                  </li>
-                ))}
-              </ol>
+              <>
+                <div
+                  className="text-xs font-black uppercase tracking-widest mb-1.5"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  Scenes
+                </div>
+                <ol className="space-y-1.5 text-xs" style={{ color: 'var(--muted2)', paddingLeft: 20 }}>
+                  {analysis.scenePlan.map((s, i) => (
+                    <li key={i}>
+                      <span style={{ color: '#93c5fd', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
+                    </li>
+                  ))}
+                </ol>
+              </>
             )}
           </section>
 
@@ -670,7 +733,7 @@ export default function GenerateClient() {
                 Duration
               </div>
               <div className="flex gap-2 flex-wrap">
-                {([10, 30, 60] as Duration[]).map((d) => (
+                {([10, 30, 50] as Duration[]).map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
@@ -775,18 +838,7 @@ export default function GenerateClient() {
                   boxShadow: '0 8px 28px rgba(37,99,235,.4)',
                 }}
               >
-                Generate
-                <span
-                  style={{
-                    padding: '2px 10px',
-                    borderRadius: 99,
-                    background: 'rgba(255,255,255,.18)',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {selectedCost} credit{selectedCost > 1 ? 's' : ''}
-                </span>
+                Generate • {selectedCost} credits
               </button>
             </div>
           </section>
@@ -813,7 +865,7 @@ export default function GenerateClient() {
               <ProgressBar progress={headlineProgress} />
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {phase === 'generating' && `Runway typically takes ~30-90 seconds per 10s clip. ${succeededCount}/${tasks.length} clips ready.`}
-                {phase === 'clips_ready' && 'Clips finished. Generating voiceover and stitching the final video…'}
+                {phase === 'clips_ready' && 'Clips finished. Running TTS, uploading the voiceover, and preparing the caption track…'}
                 {phase === 'composing' && 'Creatomate is rendering your full Short with voiceover, captions, and CTA.'}
               </div>
 
@@ -1001,9 +1053,12 @@ export default function GenerateClient() {
 }
 
 // Build a voiceover script the /api/compose route can scale to the target
-// word count. We prefer the analysis summary (clean prose) and fall back to
-// the raw prompt.
+// word count. Prefer the explicit voiceover_script from analyze-idea so
+// what the brief card shows is what gets narrated; fall back to the summary,
+// then to the raw prompt.
 function buildVoiceoverScript(prompt: string, analysis: Analysis | null): string {
+  const vo = analysis?.voiceoverScript?.trim()
+  if (vo) return vo
   const summary = analysis?.summary?.trim()
   if (summary) return summary
   return prompt.trim()
@@ -1022,7 +1077,8 @@ function buildSceneCaptions(
     // Tighten each line so it fits the caption box.
     return fromPlan.map((s) => trimCaption(s))
   }
-  const targetCount = duration === 10 ? 1 : duration === 30 ? 3 : 6
+  // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Matches /api/generate-video.
+  const targetCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
 }
 
