@@ -39,6 +39,23 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       )
     }
+    // Push #049 — fail fast if the service-role key is missing. Without
+    // it the voiceover upload cannot reach Supabase storage and we'd
+    // burn an OpenAI TTS call on a job we can't finish.
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[compose] SUPABASE_SERVICE_ROLE_KEY is not configured — refusing to start render.')
+      return NextResponse.json(
+        { error: 'Voiceover storage is not configured. Please contact support.' },
+        { status: 500 }
+      )
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('[compose] NEXT_PUBLIC_SUPABASE_URL is not configured.')
+      return NextResponse.json(
+        { error: 'Storage backend is not configured.' },
+        { status: 500 }
+      )
+    }
 
     const supabase = createClient()
     const {
@@ -96,14 +113,31 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2 — Generate TTS.
+    console.log(
+      `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s`,
+    )
     let audioBuffer: Buffer
     try {
       audioBuffer = await generateTTS(scaledScript)
+      console.log(
+        `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg`,
+      )
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[compose] TTS failed:', msg)
+      // Surface the FULL error object so OpenAI-side issues (rate limit,
+      // quota, auth) are diagnosable without redeploying.
+      console.error('[compose] TTS failed:', err instanceof Error
+        ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
+        : String(err))
       return NextResponse.json(
         { error: 'Voiceover generation failed. Please try again.' },
+        { status: 502 }
+      )
+    }
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      console.error('[compose] TTS produced an empty buffer — refusing to upload.')
+      return NextResponse.json(
+        { error: 'Voiceover generation returned no audio. Please try again.' },
         { status: 502 }
       )
     }
@@ -112,9 +146,14 @@ export async function POST(req: NextRequest) {
     let voiceoverUrl: string
     try {
       voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer)
+      console.log(`[compose] voiceover stored at: ${voiceoverUrl}`)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[compose] voiceover upload failed:', msg)
+      // Surface FULL error object — name, message, stack head — so the
+      // root cause (bucket missing, RLS, network) is visible in Vercel
+      // logs. Never log the service key itself.
+      console.error('[compose] voiceover upload failed:', err instanceof Error
+        ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
+        : String(err))
       return NextResponse.json(
         { error: 'Could not store the voiceover. Please try again.' },
         { status: 502 }

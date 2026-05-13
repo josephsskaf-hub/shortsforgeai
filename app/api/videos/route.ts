@@ -95,21 +95,25 @@ export async function GET() {
       'id,status,video_url,topic,prompt,script,duration,duration_seconds,platform,thumbnail_url,thumb_url,final_video_url,created_at'
     const narrowColumns = 'id,status,video_url,topic,script,created_at'
 
-    let rows: RawRow[] = []
-    let query = await supabase
-      .from('videos')
-      .select(wideColumns)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(6)
-
-    if (query.error && /column .* does not exist|42703/.test(query.error.message ?? '')) {
-      query = await supabase
+    // Helper: run the videos SELECT with whichever column list works.
+    // We hoist user.id to a local so the inner function doesn't need
+    // to re-narrow nullability, and cast through `unknown` because the
+    // generic select() return type doesn't unify between the wide and
+    // narrow column shapes.
+    const userId = user.id
+    async function runSelect(columns: string) {
+      return supabase
         .from('videos')
-        .select(narrowColumns)
-        .eq('user_id', user.id)
+        .select(columns)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(6)
+    }
+
+    let query = await runSelect(wideColumns)
+
+    if (query.error && /column .* does not exist|42703/.test(query.error.message ?? '')) {
+      query = await runSelect(narrowColumns)
     }
 
     if (query.error) {
@@ -119,7 +123,9 @@ export async function GET() {
       return NextResponse.json({ videos: [] })
     }
 
-    rows = Array.isArray(query.data) ? (query.data as RawRow[]) : []
+    const rows: RawRow[] = Array.isArray(query.data)
+      ? (query.data as unknown as RawRow[])
+      : []
     return NextResponse.json({ videos: rows.map(toListItem) })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
