@@ -1,109 +1,50 @@
-// Push #026 — final-video composition pipeline.
-//
-// After Runway finishes its 10s silent visual clip(s) we still don't have a
-// shippable video. This module takes those clips plus the brief's
-// voiceover_script + scene captions and produces a single composed MP4 with
-// audio and burned-in captions, with the correct total duration.
-//
-// Steps:
-//   1. Generate TTS audio from voiceover_script (OpenAI TTS, voice "onyx").
-//   2. Upload the mp3 to Supabase Storage (public `voiceovers` bucket).
-//   3. Submit a Creatomate composition that:
-//        - concats the Runway clip URLs on the video track
-//        - adds the TTS audio on the audio track
-//        - burns scene captions on a text track
-//        - appends the www.shortsforge.com CTA in the last ~2s
-//   4. Caller polls Creatomate via /api/render/[id] (existing endpoint) to
-//      get the final MP4 URL.
-//
-// Honesty rules (from the push #026 spec):
-//   - Credits are charged only after `final_video_url` exists.
-//   - If CREATOMATE_API_KEY is missing OR composition fails, the caller MUST
-//     refund/skip credit deduction. We never claim "complete with audio" for
-//     a silent clip.
+// NOTE: do NOT statically `import { openai } from '@/lib/openai'` here.
+// The compose-status route only needs the Creatomate helpers and we don't
+// want to trigger OpenAI client instantiation (which reads OPENAI_API_KEY at
+// module load) when it isn't needed. The TTS / script-scaling functions
+// dynamically import it below.
 
-import { openai } from './openai'
-
-export interface ComposeInput {
-  userId: string
-  clipUrls: string[]            // sequence of Runway clip URLs (each ~10s)
-  voiceoverScript: string       // full narration
-  sceneCaptions: string[]       // one short caption per Runway clip
-  totalDurationSec: number      // 10 / 30 / 50
-}
-
-export interface ComposeStartResult {
-  renderId: string
-  voiceoverUrl: string | null   // sidecar mp3 (null if TTS or upload failed)
-  composedDurationSec: number   // duration written into the Creatomate source
-}
-
-const RUNWAY_CLIP_SECONDS = 10
+const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
+const CTA_TEXT = 'www.shortsforge.com'
 const CTA_TAIL_SECONDS = 2.5
 
-// Cinematic-narrator pace for OpenAI TTS "onyx". Tuned slightly under
-// observed speed so the audio leaves a short breath at the end instead of
-// cutting off mid-word when the duration target is hit.
-const WORDS_PER_SECOND_TARGET = 2.5
-
-function targetWordCount(durationSec: number): number {
-  return Math.max(20, Math.round(durationSec * WORDS_PER_SECOND_TARGET))
+export interface ComposeInputs {
+  clipUrls: string[]
+  voiceoverUrl: string
+  sceneCaptions: string[]
+  duration: number
 }
 
-function wordCount(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length
+export interface CreatomateRenderState {
+  status: 'planned' | 'waiting' | 'transcribing' | 'rendering' | 'succeeded' | 'failed' | 'cancelled' | 'unknown'
+  progress: number
+  url: string | null
+  error: string | null
+}
+
+// 2.5 words per second is a comfortable voiceover pace.
+export function targetWordCount(duration: number): number {
+  const seconds = Math.max(5, Math.min(120, Math.round(duration)))
+  return Math.round(seconds * 2.5)
 }
 
 /**
- * Push #028 — scale the voiceover script to the selected duration.
- *
- * The brief's voiceover_script is sized for ~15s of narration regardless of
- * the user's chosen duration, so 30s and 50s videos used to play audio only
- * for the first third. We rewrite it to ~target words at ~2.5 wps so the TTS
- * output actually covers the full video.
- *
- * IMPORTANT — call this from a route with ≥45s of execution budget. The OpenAI
- * rewrite below uses a 12s timeout, and the calling pipeline still needs room
- * for TTS, Supabase upload, and the Creatomate submit. Push #029 moved this
- * out of `/api/generate-video/status` (which is capped at 30s) and into
- * `/api/generate-video` POST (capped at 60s) so the status route stays well
- * under its budget.
- *
- * If the script is already within ±20% of the target word count, we keep it
- * unchanged. If OpenAI is unreachable or refuses, we fall back to the raw
- * script — better to ship a short narration than no narration.
+ * Rewrite a voiceover script so it lands close to the target word count.
+ * Falls back to a hard word-slice if the model call fails — we never want
+ * compose to die because of a script-scaling step.
  */
-export async function scaleVoiceoverScriptToDuration(
-  rawScript: string,
-  totalDurationSec: number,
-): Promise<string> {
-  const baseline = rawScript.trim()
-  if (!baseline) return ''
-  const target = targetWordCount(totalDurationSec)
-  const current = wordCount(baseline)
-  const low = Math.round(target * 0.8)
-  const high = Math.round(target * 1.2)
-  if (current >= low && current <= high) {
-    console.log(
-      `[compose] voiceover script length OK (${current} words, target ${target} for ${totalDurationSec}s)`,
-    )
-    return baseline
-  }
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn(
-      `[compose] cannot rescale voiceover (have ${current}, want ${target}) — ` +
-      `OPENAI_API_KEY missing. Using original script.`,
-    )
-    return baseline
-  }
+export async function scaleVoiceoverScript(rawScript: string, targetWords: number): Promise<string> {
+  const cleanInput = (rawScript ?? '').trim()
+  if (!cleanInput) return ''
 
-  const action = current < low ? 'expand' : 'compress'
-  console.log(
-    `[compose] rescaling voiceover script: ${current} -> ~${target} words ` +
-    `(${action} for ${totalDurationSec}s @ ${WORDS_PER_SECOND_TARGET} wps)`,
-  )
+  const words = cleanInput.split(/\s+/).filter(Boolean)
+  // If already close to target (±15%), don't bother round-tripping to OpenAI.
+  const lo = Math.floor(targetWords * 0.85)
+  const hi = Math.ceil(targetWords * 1.15)
+  if (words.length >= lo && words.length <= hi) return cleanInput
 
   try {
+    const { openai } = await import('@/lib/openai')
     const completion = await openai.chat.completions.create(
       {
         model: 'gpt-4o-mini',
@@ -111,395 +52,343 @@ export async function scaleVoiceoverScriptToDuration(
           {
             role: 'system',
             content:
-              'You rewrite short-form video narration to fit a target spoken length. ' +
-              'Always respond with plain prose only — no markdown, no JSON, no labels, ' +
-              'no scene numbers, no hashtags, no quotes.',
+              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook, the core idea, and a strong CTA. Reply with the script text only — no quotes, no markdown.',
           },
           {
             role: 'user',
-            content:
-              `Rewrite the narration below so it reads aloud at a cinematic narrator ` +
-              `pace (~${WORDS_PER_SECOND_TARGET} words/sec) for ${totalDurationSec} seconds. ` +
-              `Aim for ~${target} words total. Keep the same hook, topic, and English ` +
-              `voice. Do NOT add quotes, scene numbers, list bullets, or stage directions. ` +
-              `Output only the narration prose.\n\n` +
-              `Narration:\n${baseline}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit www.shortsforge.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,
-        max_tokens: Math.min(1500, Math.max(400, target * 8)),
+        max_tokens: Math.min(800, Math.max(120, targetWords * 4)),
       },
-      { timeout: 12000 },
+      { timeout: 20000 }
     )
-    const rewritten = (completion.choices[0]?.message?.content ?? '').trim()
-    if (!rewritten) {
-      console.warn('[compose] rescale returned empty — keeping original script.')
-      return baseline
-    }
-    const newCount = wordCount(rewritten)
-    console.log(
-      `[compose] rescaled script: ${current} -> ${newCount} words (target ${target})`,
-    )
-    return rewritten
+    const scaled = completion.choices[0]?.message?.content?.trim() ?? ''
+    if (scaled) return scaled
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[compose] script rescale failed:', msg, '— using original script.')
-    return baseline
+    console.error('[compose] scaleVoiceoverScript failed, falling back:', msg)
   }
+
+  // Fallback — naive truncate / pad.
+  if (words.length > targetWords) return words.slice(0, targetWords).join(' ')
+  return cleanInput
 }
 
-// ─── TTS ───────────────────────────────────────────────────────────────────
-async function generateTTS(script: string): Promise<Buffer | null> {
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('[compose] OPENAI_API_KEY missing — skipping TTS')
-    return null
-  }
-  const input = script.trim().slice(0, 4000)
-  if (!input) return null
-  try {
-    const speech = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'onyx',
-      input,
-    })
-    return Buffer.from(await speech.arrayBuffer())
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[compose] TTS generation failed:', msg)
-    return null
-  }
+export async function generateTTS(script: string): Promise<Buffer> {
+  const input = script.length > 3800 ? script.slice(0, 3800) : script
+  const { openai } = await import('@/lib/openai')
+  const speech = await openai.audio.speech.create({
+    model: 'tts-1',
+    voice: 'onyx',
+    input,
+  })
+  return Buffer.from(await speech.arrayBuffer())
 }
 
-async function uploadVoiceover(userId: string, buffer: Buffer): Promise<string | null> {
+export async function uploadVoiceoverToSupabase(userId: string, buffer: Buffer): Promise<string> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
-    console.warn('[compose] supabase storage creds missing — skipping VO upload')
-    return null
+    throw new Error('Supabase storage credentials are not configured.')
   }
   const fileName = `vo-${userId.slice(0, 8)}-${Date.now()}.mp3`
-  try {
-    const res = await fetch(`${supabaseUrl}/storage/v1/object/voiceovers/${fileName}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${serviceKey}`,
-        'Content-Type': 'audio/mpeg',
-      },
-      body: new Uint8Array(buffer),
-    })
-    if (!res.ok) {
-      console.error('[compose] VO upload failed:', res.status, await res.text().catch(() => ''))
-      return null
-    }
-    return `${supabaseUrl}/storage/v1/object/public/voiceovers/${fileName}`
-  } catch (err) {
-    console.error('[compose] VO upload threw:', err)
-    return null
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/voiceovers/${fileName}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'audio/mpeg',
+    },
+    body: buffer,
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Voiceover upload failed (${res.status}): ${detail.slice(0, 200)}`)
   }
+  return `${supabaseUrl}/storage/v1/object/public/voiceovers/${fileName}`
 }
 
-// ─── Captions ──────────────────────────────────────────────────────────────
-// Split a long caption into ~3-4 word sub-chunks so each on-screen line stays
-// readable. Each clip gets its 10 seconds divided evenly across its sub-chunks.
-function splitCaption(text: string, maxWords = 4): string[] {
-  const words = text.trim().replace(/[.!?]+$/g, '').split(/\s+/).filter(Boolean)
-  if (words.length === 0) return []
-  if (words.length <= maxWords) return [words.join(' ')]
-  const chunks: string[] = []
-  for (let i = 0; i < words.length; i += maxWords) {
-    chunks.push(words.slice(i, i + maxWords).join(' '))
-  }
-  return chunks
+interface CreatomateElement {
+  type: 'video' | 'audio' | 'text' | 'shape'
+  track: number
+  time: number
+  duration: number
+  source?: string
+  text?: string
+  x?: string
+  y?: string
+  width?: string
+  height?: string
+  fit?: string
+  volume?: string
+  fill_color?: string
+  stroke_color?: string
+  stroke_width?: number
+  font_family?: string
+  font_size?: number
+  font_weight?: string
 }
 
-// ─── Creatomate source builder ─────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildCreatomateSource(input: {
-  clipUrls: string[]
-  voiceoverUrl: string | null
-  sceneCaptions: string[]
-  totalDurationSec: number
-}): { source: Record<string, unknown>; duration: number } {
-  const { clipUrls, voiceoverUrl, sceneCaptions, totalDurationSec } = input
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v))
+}
 
-  // Each Runway clip is RUNWAY_CLIP_SECONDS long. The composed duration is
-  // either the requested duration or the actual covered seconds — pick the
-  // smaller so we never trim a clip mid-frame.
-  const coveredByClips = clipUrls.length * RUNWAY_CLIP_SECONDS
-  const finalDur = Math.max(RUNWAY_CLIP_SECONDS, Math.min(totalDurationSec, coveredByClips))
+function round3(v: number): number {
+  return Math.round(v * 1000) / 1000
+}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const elements: any[] = []
+/**
+ * Build a Creatomate source JSON: video clips tiled to fill `duration`,
+ * voiceover audio across the full timeline, captions evenly distributed,
+ * and a CTA in the last 2.5 seconds.
+ */
+export function buildCreatomateSource({
+  clipUrls,
+  voiceoverUrl,
+  sceneCaptions,
+  duration,
+}: ComposeInputs): Record<string, unknown> {
+  const totalDuration = clamp(Math.round(duration), 5, 90)
+  const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
+  if (cleanClips.length === 0) {
+    throw new Error('No video clips provided to compose.')
+  }
 
-  // Track 1 — dark background under everything (covers any letterboxing on
-  // off-ratio clips Runway might hand back).
+  const elements: CreatomateElement[] = []
+
+  // Track 1 — solid background so the video never shows a transparent gap.
   elements.push({
     type: 'shape',
     track: 1,
     time: 0,
-    duration: finalDur,
-    x: '50%', y: '50%',
-    width: '100%', height: '100%',
+    duration: totalDuration,
+    x: '50%',
+    y: '50%',
+    width: '100%',
+    height: '100%',
     fill_color: '#08080f',
   })
 
-  // Track 2 — Runway clips, concatenated. Each clip is muted because the
-  // visuals are silent and we put TTS on a dedicated audio track.
+  // Track 2 — tile / loop the clips to fill the full duration.
+  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
+  const CLIP_LEN = 10
   let cursor = 0
-  clipUrls.forEach((url) => {
-    if (cursor >= finalDur) return
-    const clipDur = Math.min(RUNWAY_CLIP_SECONDS, finalDur - cursor)
+  let i = 0
+  while (cursor < totalDuration) {
+    const remaining = totalDuration - cursor
+    const segLen = round3(Math.min(CLIP_LEN, remaining))
+    const url = cleanClips[i % cleanClips.length]
     elements.push({
       type: 'video',
       track: 2,
-      time: cursor,
-      duration: clipDur,
+      time: round3(cursor),
+      duration: segLen,
       source: url,
       fit: 'cover',
-      x: '50%', y: '50%',
-      width: '100%', height: '100%',
+      x: '50%',
+      y: '50%',
+      width: '100%',
+      height: '100%',
       volume: '0%',
     })
-    cursor += clipDur
-  })
-
-  // Track 3 — TTS audio, anchored at t=0 and reserving the full video
-  // duration on the timeline. This is what the spec calls
-  // `duration: totalDuration` on the audio track. If the TTS file itself is
-  // a few seconds short of finalDur, Creatomate just leaves silence at the
-  // tail — the VIDEO does NOT crop, because source.duration below pins the
-  // final length. Push #028 also rescales the script so audio actually fills
-  // the timeline instead of trailing off in the first 15s.
-  if (voiceoverUrl) {
-    elements.push({
-      type: 'audio',
-      track: 3,
-      time: 0,
-      duration: finalDur,
-      source: voiceoverUrl,
-      volume: '100%',
-    })
+    cursor += segLen
+    i += 1
   }
 
-  // Track 4 — caption overlays distributed evenly across the FULL video
-  // duration.
-  //
-  // Push #028 — previously each caption was tied to a 10s clip slot, so a
-  // brief with fewer captions than clips (e.g. 2 captions for a 50s/5-clip
-  // video) only rendered text for the first ~20s. We now spread the N
-  // available captions across `finalDur` so the timeline is always covered:
-  //   1 caption  → spans the full duration
-  //   N captions → each block lasts finalDur / N
-  // Within each block, the caption is split into ~4-word sub-chunks that
-  // divide that block evenly.
-  const validCaptions = sceneCaptions.map((c) => c.trim()).filter((c) => c.length > 0)
-  if (validCaptions.length > 0) {
-    const blockDur = finalDur / validCaptions.length
-    validCaptions.forEach((raw, blockIdx) => {
-      const blockStart = blockIdx * blockDur
-      const chunks = splitCaption(raw, 4)
-      if (chunks.length === 0) return
-      const subDur = blockDur / chunks.length
-      chunks.forEach((chunk, ci) => {
-        elements.push({
-          type: 'text',
-          track: 4,
-          time: Math.round((blockStart + ci * subDur) * 1000) / 1000,
-          duration: Math.round(subDur * 1000) / 1000,
-          text: chunk,
-          x: '50%', y: '72%',
-          width: '86%',
-          font_family: 'Montserrat',
-          font_size: 64,
-          font_weight: '900',
-          fill_color: '#ffffff',
-          stroke_color: 'rgba(0,0,0,0.95)',
-          stroke_width: 4,
-        })
+  // Track 3 — soft dark overlay so caption text always reads on any clip.
+  elements.push({
+    type: 'shape',
+    track: 3,
+    time: 0,
+    duration: totalDuration,
+    x: '50%',
+    y: '50%',
+    width: '100%',
+    height: '100%',
+    fill_color: 'rgba(0,0,0,0.35)',
+  })
+
+  // Track 4 — voiceover for the full duration.
+  elements.push({
+    type: 'audio',
+    track: 4,
+    time: 0,
+    duration: totalDuration,
+    source: voiceoverUrl,
+    volume: '100%',
+  })
+
+  // Track 5 — captions distributed evenly across the duration (minus CTA tail).
+  const captionsClean = sceneCaptions
+    .map((c) => (c ?? '').toString().trim())
+    .filter((c) => c.length > 0)
+  if (captionsClean.length > 0) {
+    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
+    const perCaption = round3(captionWindow / captionsClean.length)
+    captionsClean.forEach((caption, idx) => {
+      elements.push({
+        type: 'text',
+        track: 5,
+        time: round3(idx * perCaption),
+        duration: perCaption,
+        text: caption,
+        x: '50%',
+        y: '68%',
+        width: '86%',
+        font_family: 'Montserrat',
+        font_size: 58,
+        font_weight: '800',
+        fill_color: '#ffffff',
+        stroke_color: 'rgba(0,0,0,0.9)',
+        stroke_width: 3,
       })
     })
   }
 
-  // Track 5 — CTA at the end. We pin it to the last ~2.5s so it always lands
-  // in the final beat regardless of the requested duration.
-  const ctaTime = Math.max(0, finalDur - CTA_TAIL_SECONDS)
+  // Track 6 — CTA in the final 2.5s.
+  const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
   elements.push({
     type: 'text',
-    track: 5,
-    time: Math.round(ctaTime * 1000) / 1000,
-    duration: Math.min(CTA_TAIL_SECONDS, finalDur),
-    text: 'www.shortsforge.com',
-    x: '50%', y: '92%',
+    track: 6,
+    time: round3(ctaTime),
+    duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
+    text: CTA_TEXT,
+    x: '50%',
+    y: '90%',
     width: '80%',
     font_family: 'Montserrat',
-    font_size: 32,
-    font_weight: '800',
+    font_size: 30,
+    font_weight: '700',
     fill_color: '#ffffff',
-    stroke_color: 'rgba(99,102,241,0.95)',
+    stroke_color: 'rgba(99,102,241,0.9)',
     stroke_width: 2,
   })
 
-  const source = {
+  return {
     output_format: 'mp4',
     width: 1080,
     height: 1920,
     frame_rate: 30,
-    duration: finalDur,
+    duration: totalDuration,
     elements,
   }
-
-  return { source, duration: finalDur }
 }
 
-// ─── Public entry point ────────────────────────────────────────────────────
-// Generates TTS, uploads it, submits the Creatomate render, and returns the
-// render id. Throws on hard failures so the caller can leave credits intact.
-export async function startComposition(input: ComposeInput): Promise<ComposeStartResult> {
-  const { userId, clipUrls, voiceoverScript, sceneCaptions, totalDurationSec } = input
+export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
+  const key = process.env.CREATOMATE_API_KEY
+  if (!key) throw new Error('CREATOMATE_API_KEY is not configured.')
 
-  if (!clipUrls.length) {
-    throw new Error('No Runway clips to compose from.')
-  }
-  if (!process.env.CREATOMATE_API_KEY) {
-    // The caller logs + refunds; we surface this as a hard error so we never
-    // silently mark a silent-clip generation as "completed with audio".
-    throw new Error('CREATOMATE_API_KEY is not configured.')
-  }
-
-  console.log(
-    `[compose] starting — user=${userId.slice(0, 8)} clips=${clipUrls.length} ` +
-    `duration=${totalDurationSec}s vo_chars=${voiceoverScript.length} captions=${sceneCaptions.length} ` +
-    `env_openai=${!!process.env.OPENAI_API_KEY} env_supabase=${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-  )
-
-  // Step 1+2: TTS + upload. Both are best-effort — if either fails we still
-  // submit the composition without an audio track so we at least get captions
-  // and correct duration. The caller's credit-charge rule (only on success)
-  // covers the case where the final output is unsatisfactory.
-  //
-  // Push #029 — the script rescale (#028) used to run here, but pushed the
-  // status route past its 30s maxDuration and broke every generation. The
-  // POST `/api/generate-video` handler (60s budget) now rescales the script
-  // BEFORE storing it in meta.voiceover_script, so by the time we get here
-  // it already has the right word count for the selected duration. We just
-  // hand it to TTS as-is.
-  let voiceoverUrl: string | null = null
-  if (voiceoverScript.trim().length > 0) {
-    console.log(
-      `[compose] step 1: requesting OpenAI TTS — script ${voiceoverScript.length} chars, ` +
-      `${wordCount(voiceoverScript)} words for ${totalDurationSec}s`,
-    )
-    const buf = await generateTTS(voiceoverScript)
-    if (buf) {
-      console.log(`[compose] step 2: TTS ok (${buf.length} bytes) — uploading to Supabase`)
-      voiceoverUrl = await uploadVoiceover(userId, buf)
-      console.log(`[compose] voiceover ${voiceoverUrl ? 'uploaded' : 'upload failed'} (${buf.length} bytes)`)
-    } else {
-      console.error('[compose] step 1 returned no buffer — TTS failed; composition will have no audio')
-    }
-  } else {
-    console.warn('[compose] voiceover_script is empty — composition will have no audio track')
-  }
-
-  // Step 3: build + submit Creatomate composition.
-  const { source, duration } = buildCreatomateSource({
-    clipUrls,
-    voiceoverUrl,
-    sceneCaptions,
-    totalDurationSec,
+  const res = await fetch(`${CREATOMATE_BASE}/renders`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ source }),
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const elementCount = (source.elements as any[]).length
-  console.log(
-    `[compose] step 3: submitting to Creatomate — elements=${elementCount} ` +
-    `duration=${duration}s has_audio=${!!voiceoverUrl}`,
-  )
-
-  let res: Response
-  try {
-    res = await fetch('https://api.creatomate.com/v1/renders', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.CREATOMATE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ source }),
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new Error(`Creatomate unreachable: ${msg}`)
-  }
-
-  const responseText = await res.text().catch(() => '')
+  const text = await res.text()
   if (!res.ok) {
-    console.error('[compose] Creatomate rejected:', res.status, responseText.slice(0, 400))
-    throw new Error(`Creatomate rejected: ${responseText.slice(0, 200)}`)
+    throw new Error(`Creatomate rejected the render (${res.status}): ${text.slice(0, 300)}`)
   }
 
-  let data: { id?: string; status?: string } | Array<{ id?: string; status?: string }>
+  let parsed: unknown
   try {
-    data = JSON.parse(responseText)
+    parsed = JSON.parse(text)
   } catch {
-    throw new Error('Creatomate returned invalid JSON.')
+    throw new Error('Creatomate returned a non-JSON response.')
   }
-  const first = Array.isArray(data) ? data[0] : data
-  const renderId = first?.id
-  if (!renderId) {
-    console.error('[compose] no render id in response:', responseText.slice(0, 400))
+
+  const first = Array.isArray(parsed) ? parsed[0] : parsed
+  const obj = first as { id?: string } | null
+  if (!obj || typeof obj.id !== 'string' || !obj.id) {
     throw new Error('Creatomate returned no render id.')
   }
-
-  console.log(`[compose] submitted — renderId=${renderId} duration=${duration}s voiceover=${!!voiceoverUrl}`)
-
-  return {
-    renderId,
-    voiceoverUrl,
-    composedDurationSec: duration,
-  }
+  return obj.id
 }
 
-// ─── Status check ─────────────────────────────────────────────────────────
-export type ComposeStatus =
-  | { kind: 'rendering'; progress: number }
-  | { kind: 'succeeded'; url: string }
-  | { kind: 'failed'; reason: string }
+export async function pollCreatomateRender(renderId: string): Promise<CreatomateRenderState> {
+  const key = process.env.CREATOMATE_API_KEY
+  if (!key) throw new Error('CREATOMATE_API_KEY is not configured.')
 
-export async function checkComposition(renderId: string): Promise<ComposeStatus> {
-  if (!process.env.CREATOMATE_API_KEY) {
-    return { kind: 'failed', reason: 'CREATOMATE_API_KEY is not configured.' }
-  }
-  let res: Response
-  try {
-    res = await fetch(`https://api.creatomate.com/v1/renders/${encodeURIComponent(renderId)}`, {
-      headers: { Authorization: `Bearer ${process.env.CREATOMATE_API_KEY}` },
-      cache: 'no-store',
-    })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return { kind: 'failed', reason: `Creatomate unreachable: ${msg}` }
-  }
+  const res = await fetch(`${CREATOMATE_BASE}/renders/${encodeURIComponent(renderId)}`, {
+    headers: { Authorization: `Bearer ${key}` },
+    cache: 'no-store',
+  })
+
   if (!res.ok) {
-    return { kind: 'failed', reason: `Creatomate ${res.status}` }
+    throw new Error(`Creatomate lookup failed (${res.status})`)
   }
-  const data = (await res.json().catch(() => ({}))) as {
+
+  const data = (await res.json()) as {
     status?: string
     url?: string
     error_message?: string
     progress?: number
   }
-  const status = (data.status ?? '').toLowerCase()
-  if (status === 'succeeded') {
-    if (!data.url) return { kind: 'failed', reason: 'No URL on succeeded render.' }
-    return { kind: 'succeeded', url: data.url }
+
+  const raw = (data.status ?? '').toLowerCase()
+  let status: CreatomateRenderState['status']
+  switch (raw) {
+    case 'succeeded':
+      status = 'succeeded'
+      break
+    case 'failed':
+      status = 'failed'
+      break
+    case 'cancelled':
+      status = 'cancelled'
+      break
+    case 'planned':
+      status = 'planned'
+      break
+    case 'waiting':
+      status = 'waiting'
+      break
+    case 'transcribing':
+      status = 'transcribing'
+      break
+    case 'rendering':
+      status = 'rendering'
+      break
+    default:
+      status = 'unknown'
   }
-  if (status === 'failed' || status === 'cancelled') {
-    return { kind: 'failed', reason: data.error_message ?? `Render ${status}.` }
+
+  let progress: number
+  if (typeof data.progress === 'number' && data.progress >= 0 && data.progress <= 100) {
+    progress = Math.round(data.progress)
+  } else {
+    switch (status) {
+      case 'planned':
+        progress = 5
+        break
+      case 'waiting':
+        progress = 10
+        break
+      case 'transcribing':
+        progress = 25
+        break
+      case 'rendering':
+        progress = 60
+        break
+      case 'succeeded':
+        progress = 100
+        break
+      case 'failed':
+      case 'cancelled':
+        progress = 0
+        break
+      default:
+        progress = 15
+    }
   }
-  const rawProgress = typeof data.progress === 'number' ? data.progress : null
-  const progressFromStatus: Record<string, number> = {
-    planned: 5, waiting: 10, transcribing: 25, rendering: 60,
+
+  return {
+    status,
+    progress,
+    url: typeof data.url === 'string' ? data.url : null,
+    error: typeof data.error_message === 'string' ? data.error_message : null,
   }
-  const progress = rawProgress ?? progressFromStatus[status] ?? 15
-  return { kind: 'rendering', progress: Math.max(0, Math.min(100, Math.round(progress))) }
 }
