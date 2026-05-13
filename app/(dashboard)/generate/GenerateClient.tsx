@@ -82,6 +82,10 @@ export default function GenerateClient() {
   const [generateProgress, setGenerateProgress] = useState<number>(0)
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
 
+  // Push #045A — transient "Copied!" feedback on the Copy URL button in the
+  // result section. Cleared automatically after ~2s.
+  const [copied, setCopied] = useState(false)
+
   // Idempotency flag for /api/compose/status — once we see `done` we tell the
   // server not to deduct credits again on subsequent polls.
   const deductedRef = useRef<boolean>(false)
@@ -430,6 +434,38 @@ export default function GenerateClient() {
       setError(GENERIC_ERROR)
       setPhase('failed')
     }
+  }
+
+  // Push #045A — result-page actions. Both reach for finalVideoUrl only; the
+  // download anchor is untouched, so existing download behavior is preserved.
+  async function handleCopyUrl() {
+    if (!finalVideoUrl) return
+    try {
+      await navigator.clipboard.writeText(finalVideoUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can be denied in some browsers — silent no-op is fine
+      // because the Download button still works as the primary action.
+    }
+  }
+
+  async function handleShare() {
+    if (!finalVideoUrl) return
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        await navigator.share({
+          title: 'My AI Short',
+          text: 'Made with ShortsForgeAI',
+          url: finalVideoUrl,
+        })
+        return
+      } catch {
+        // User cancelled the share sheet or the platform refused — fall back
+        // to clipboard so the action button never feels dead.
+      }
+    }
+    await handleCopyUrl()
   }
 
   function handleReset() {
@@ -942,19 +978,34 @@ export default function GenerateClient() {
 
           {phase === 'done' && finalVideoUrl && (
             <section
-              className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex flex-col items-center"
+              className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center"
               style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
             >
-              <div className="font-black text-lg mb-3" style={{ color: 'var(--text)' }}>
-                ▶ Your Short — {duration}s
+              <div className="text-center">
+                <h2 className="font-black tracking-tight" style={{ fontSize: '1.5rem', color: 'var(--text)', lineHeight: 1.2 }}>
+                  Your video is ready
+                </h2>
+                <p className="text-xs mt-1.5" style={{ color: 'var(--muted)', letterSpacing: '0.04em' }}>
+                  {duration}s · YouTube Shorts 9:16
+                </p>
               </div>
+
+              {/* Push #045A — bigger result-page player. width caps at 460px
+                  on desktop, falls back to 90vw on smaller viewports;
+                  max-height pins it under the fold (78vh) so the buttons
+                  below remain visible. object-fit: contain lets the actual
+                  composed letterboxing show without cropping. */}
               <div
-                className="rounded-2xl overflow-hidden w-full max-w-[300px]"
+                className="rounded-2xl overflow-hidden mt-6"
                 style={{
-                  border: '1px solid rgba(37,99,235,.4)',
-                  boxShadow: '0 12px 48px rgba(37,99,235,.2)',
-                  background: '#000',
+                  width: 'min(460px, 90vw)',
+                  maxHeight: '78vh',
                   aspectRatio: '9 / 16',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  border: '1px solid rgba(37,99,235,.45)',
+                  boxShadow: '0 18px 60px rgba(37,99,235,.22)',
+                  background: '#000',
                 }}
               >
                 <video
@@ -965,11 +1016,11 @@ export default function GenerateClient() {
                   autoPlay
                   playsInline
                   preload="metadata"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-7">
                 <a
                   href={finalVideoUrl}
                   download={`shortsforge-${duration}s.mp4`}
@@ -981,12 +1032,41 @@ export default function GenerateClient() {
                     border: 'none',
                     color: '#fff',
                     textDecoration: 'none',
+                    boxShadow: '0 6px 22px rgba(37,99,235,.32)',
                   }}
                 >
                   ⬇ Download MP4
                 </a>
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    background: copied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.05)',
+                    border: copied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
+                    color: copied ? '#34d399' : 'var(--text)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {copied ? '✓ Copied' : '🔗 Copy URL'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.05)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📤 Share
+                </button>
               </div>
-              <p className="text-xs mt-3 text-center" style={{ color: 'var(--muted)' }}>
+
+              <p className="text-xs mt-6 text-center" style={{ color: 'var(--muted)', maxWidth: 420, lineHeight: 1.55 }}>
                 Voiceover, captions and CTA are baked into the final video. Upload it straight to YouTube Shorts.
               </p>
             </section>
