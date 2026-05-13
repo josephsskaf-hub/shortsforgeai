@@ -226,11 +226,11 @@ export default function Sidebar({
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        {/* Logo — push #033: jump straight into the prompt textarea when
-            the user clicks the lightning. The home page is a marketing
-            entry point now, not the place a logged-in user wants to land. */}
+        {/* Logo — push #040: send the user to the real homepage at "/".
+            That route now hosts the hero + Generate Video card + pricing
+            (push #033), so it's the correct destination for the logo. */}
         <Link
-          href="/generate"
+          href="/"
           onClick={onClose}
           className="flex items-center gap-3 px-5 flex-shrink-0"
           style={{ height: 72, borderBottom: '1px solid rgba(255,255,255,0.06)', textDecoration: 'none' }}
