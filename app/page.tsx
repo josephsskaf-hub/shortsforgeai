@@ -4,10 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import NicheCard from '@/components/NicheCard'
 import Sidebar from '@/components/Sidebar'
-
-const DEFAULT_PILLS = ['🎬 YouTube Shorts', '🔥 High Engagement', '📋 Ready to Copy']
 
 // Quick-pick chips below the hero textarea — clicking one fills the textarea
 // with a preset prompt and the user can submit immediately.
@@ -20,196 +17,11 @@ const QUICK_TAGS: { emoji: string; label: string; prompt: string }[] = [
   { emoji: '💀', label: 'True Crime',      prompt: 'Plan a YouTube Short about a chilling unsolved true crime case.' },
 ]
 
-// Top picks for the homepage — curated trending niches.
-// IDs map to existing niche IDs used by the auth/upgrade routing.
-const TOP_PICKS = [
-  {
-    id: 'conspiracies',
-    emoji: '🛸',
-    name: 'Mystery & UFOs',
-    description: 'Unexplained sightings, cover-ups & cosmic encounters',
-    tags: ['Mystery', 'High Retention', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Viral Pick',
-  },
-  {
-    id: 'darkhistory',
-    emoji: '📜',
-    name: 'Hidden History',
-    description: 'Disturbing events the textbooks left out',
-    tags: ['History', 'Shocking', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'mind',
-    emoji: '🤯',
-    name: 'Facts That Sound Fake',
-    description: 'Real facts so wild people refuse to believe them',
-    tags: ['Curiosity', 'Saves', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'High Retention',
-  },
-  {
-    id: 'ancient',
-    emoji: '🏛️',
-    name: 'Ancient Civilizations',
-    description: 'Lost empires, hidden ruins & forgotten history',
-    tags: ['History', 'Mystery', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Best for Shorts',
-  },
-  {
-    id: 'dark',
-    emoji: '🌊',
-    name: 'Ocean Mysteries',
-    description: 'Deep-sea creatures, lost wrecks & abyssal secrets',
-    tags: ['Mystery', 'High Retention', 'Suspense'],
-    pills: DEFAULT_PILLS,
-    badge: 'High Retention',
-  },
-  {
-    id: 'ai',
-    emoji: '🤖',
-    name: 'AI & Future Tech',
-    description: 'Breakthroughs, AI takeovers & the next decade of tech',
-    tags: ['Tech', 'Trending', 'Future'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'money',
-    emoji: '💰',
-    name: 'Money Facts',
-    description: 'Top-CPM finance niche with massive viral potential',
-    tags: ['High RPM', 'Finance', 'Monetization'],
-    pills: DEFAULT_PILLS,
-    badge: 'Free',
-  },
-  {
-    id: 'truecrime',
-    emoji: '🔍',
-    name: 'True Crime',
-    description: 'Cold cases, killers & unsolved disappearances',
-    tags: ['True Crime', 'Suspense', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Viral Pick',
-  },
-  {
-    id: 'luxury',
-    emoji: '💎',
-    name: 'Luxury & Billionaires',
-    description: 'Billionaire habits, ultra-luxury & wealth flex',
-    tags: ['Luxury', 'Aspirational', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'space',
-    emoji: '🚀',
-    name: 'Space Secrets',
-    description: 'Black holes, alien theories & cosmic mysteries',
-    tags: ['Science', 'Curiosity', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Best for Shorts',
-  },
-  {
-    id: 'conspiracy-theories',
-    emoji: '🕶️',
-    name: 'Conspiracy Theories',
-    description: 'Wild claims & cover-ups the internet won’t let die',
-    tags: ['Mystery', 'High Retention', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Viral Pick',
-  },
-  {
-    id: 'dark-psychology',
-    emoji: '🧬',
-    name: 'Dark Psychology',
-    description: 'Manipulation tactics & the science of influence',
-    tags: ['Psychology', 'Saves', 'High Retention'],
-    pills: DEFAULT_PILLS,
-    badge: 'High Retention',
-  },
-  {
-    id: 'unexplained-events',
-    emoji: '🌀',
-    name: 'Unexplained Events',
-    description: 'Strange disappearances science can’t explain',
-    tags: ['Mystery', 'Curiosity', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'mind-blowing-science',
-    emoji: '🧪',
-    name: 'Mind-Blowing Science',
-    description: 'Discoveries that rewrote what we thought we knew',
-    tags: ['Science', 'Education', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Best for Shorts',
-  },
-  {
-    id: 'survival-stories',
-    emoji: '🏔️',
-    name: 'Survival Stories',
-    description: 'Against-all-odds escapes from the harshest places',
-    tags: ['Stories', 'Suspense', 'High Retention'],
-    pills: DEFAULT_PILLS,
-    badge: 'High Retention',
-  },
-  {
-    id: 'celebrity-secrets',
-    emoji: '🌟',
-    name: 'Celebrity Secrets',
-    description: 'Hidden scandals & untold stories from the spotlight',
-    tags: ['Entertainment', 'Gossip', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'war-untold',
-    emoji: '⚔️',
-    name: 'War Untold Stories',
-    description: 'Classified missions & the soldiers history forgot',
-    tags: ['History', 'Stories', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Viral Pick',
-  },
-  {
-    id: 'nature-extremes',
-    emoji: '🌋',
-    name: 'Nature’s Extremes',
-    description: 'The most dangerous places & disasters on Earth',
-    tags: ['Nature', 'Curiosity', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Best for Shorts',
-  },
-  {
-    id: 'tech-fails',
-    emoji: '💥',
-    name: 'Tech Fails & Disasters',
-    description: 'Billion-dollar bugs & legendary product flops',
-    tags: ['Tech', 'Trending', 'Viral'],
-    pills: DEFAULT_PILLS,
-    badge: 'Trending',
-  },
-  {
-    id: 'body-mind-hacks',
-    emoji: '⚡',
-    name: 'Body & Mind Hacks',
-    description: 'Science-backed tricks to upgrade focus & energy',
-    tags: ['Health', 'Saves', 'Daily Content'],
-    pills: DEFAULT_PILLS,
-    badge: 'Viral Pick',
-  },
-]
-
-const FREE_NICHE_ID = 'money'
+// Push #031 removed the homepage TOP_PICKS niche grid. The hero textarea +
+// QUICK_TAGS row is now the single entry point for picking a topic.
 
 export default function HomePage() {
   const router = useRouter()
-  const nicheGridRef = useRef<HTMLDivElement>(null)
   const pricingRef = useRef<HTMLDivElement>(null)
 
   const [user, setUser] = useState<{ id: string } | null>(null)
@@ -252,28 +64,6 @@ export default function HomePage() {
       setAuthChecked(true)
     })
   }, [])
-
-  function handleNicheClick(nicheId: string) {
-    if (!user) {
-      const dest = `/create?niche=${encodeURIComponent(nicheId)}`
-      router.push(`/login?redirect=${encodeURIComponent(dest)}`)
-      return
-    }
-    if (nicheId !== FREE_NICHE_ID && !isPro) {
-      router.push('/pricing')
-      return
-    }
-    // Carry the chosen niche through so the create page lands on it instead
-    // of forcing the user to re-pick from the dashboard.
-    router.push(`/create?niche=${encodeURIComponent(nicheId)}`)
-  }
-
-  function isCardDisabled(nicheId: string): boolean {
-    if (!authChecked) return nicheId !== FREE_NICHE_ID
-    if (!user) return nicheId !== FREE_NICHE_ID
-    if (isPro) return false
-    return nicheId !== FREE_NICHE_ID
-  }
 
   function scrollTo(ref: React.RefObject<HTMLDivElement>) {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -501,70 +291,9 @@ export default function HomePage() {
           `}</style>
         </section>
 
-        {/* ─── Top Picks ─── */}
-        <section
-          id="niche-grid"
-          ref={nicheGridRef}
-          style={{ position: 'relative', zIndex: 10, padding: '20px 24px 56px', maxWidth: 1400, margin: '0 auto' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 4 }}>
-                Trending This Week
-              </div>
-              <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                Top Picks This Week
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 10, background: 'rgba(99,102,241,.07)', border: '1px solid rgba(99,102,241,.13)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--indigo-light)' }}>
-              ⚡ Generate Video · Start Free
-            </div>
-          </div>
-
-          <div className="niche-home-grid">
-            {TOP_PICKS.map((niche) => (
-              <NicheCard
-                key={niche.id}
-                {...niche}
-                onGenerate={handleNicheClick}
-                loading={false}
-                disabled={isCardDisabled(niche.id)}
-                selected={false}
-              />
-            ))}
-          </div>
-
-          <style>{`
-            .niche-home-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 16px;
-            }
-            @media (max-width: 1200px) { .niche-home-grid { grid-template-columns: repeat(3, 1fr); } }
-            @media (max-width: 860px)  { .niche-home-grid { grid-template-columns: repeat(2, 1fr); } }
-            @media (max-width: 520px)  { .niche-home-grid { grid-template-columns: 1fr; } }
-          `}</style>
-
-          {/* Upgrade banner near niches */}
-          {(!authChecked || !isPro) && (
-            <div style={{ marginTop: 28, borderRadius: 16, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.18)' }}>
-              <div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>
-                  Get more Shorts every month
-                </p>
-                <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
-                  Launch offer: 50% off your first month — Basic from $4.50.
-                </p>
-              </div>
-              <button
-                onClick={() => scrollTo(pricingRef)}
-                style={{ padding: '11px 24px', borderRadius: 12, fontSize: '0.875rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #7c3aed)', boxShadow: '0 4px 22px rgba(99,102,241,.35)', flexShrink: 0, border: 'none', cursor: 'pointer' }}
-              >
-                See Plans →
-              </button>
-            </div>
-          )}
-        </section>
+        {/* Push #031: removed the "Top Picks This Week" niche grid section.
+            The hero prompt input + QUICK_TAGS row above is now the single
+            entry point. Pricing is the next section below. */}
 
         {/* ─── Pricing ─── */}
         <section

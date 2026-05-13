@@ -11,6 +11,18 @@ const CTA_TAIL_SECONDS = 2.5
 export interface ComposeInputs {
   clipUrls: string[]
   voiceoverUrl: string
+  /**
+   * The narration text that the captions should be derived from. Push #031
+   * fixed caption sync — captions are now segments of the actual spoken
+   * script (one sentence per segment) rather than the visual scene
+   * descriptions, so what the viewer reads matches what the narrator says.
+   */
+  voiceoverScript: string
+  /**
+   * Legacy: short caption strings (typically derived from scene visual
+   * prompts). Used ONLY as a fallback when `voiceoverScript` is empty or
+   * cannot be segmented.
+   */
   sceneCaptions: string[]
   duration: number
 }
@@ -139,6 +151,49 @@ function round3(v: number): number {
 }
 
 /**
+ * Push #031: caption text is now derived from the voiceover script so the
+ * on-screen words match what the narrator is saying. Splits on sentence
+ * boundaries first, then breaks any over-long sentence into ~80-char word
+ * chunks. Empty input returns an empty array — the caller falls back to the
+ * scene descriptions in that case.
+ */
+export function splitScriptIntoCaptionSegments(
+  script: string,
+  maxChars = 80,
+): string[] {
+  const clean = (script ?? '').trim().replace(/\s+/g, ' ')
+  if (!clean) return []
+
+  // Split on sentence-ending punctuation while keeping the boundary char.
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  const captions: string[] = []
+  for (const sentence of sentences) {
+    if (sentence.length <= maxChars) {
+      captions.push(sentence)
+      continue
+    }
+    // Sentence too long for one caption — break at word boundaries.
+    const words = sentence.split(' ')
+    let buf = ''
+    for (const word of words) {
+      if (buf.length + word.length + 1 > maxChars && buf) {
+        captions.push(buf.trim())
+        buf = word
+      } else {
+        buf = buf ? `${buf} ${word}` : word
+      }
+    }
+    if (buf.trim()) captions.push(buf.trim())
+  }
+
+  return captions
+}
+
+/**
  * Build a Creatomate source JSON: video clips tiled to fill `duration`,
  * voiceover audio across the full timeline, captions evenly distributed,
  * and a CTA in the last 2.5 seconds.
@@ -146,6 +201,7 @@ function round3(v: number): number {
 export function buildCreatomateSource({
   clipUrls,
   voiceoverUrl,
+  voiceoverScript,
   sceneCaptions,
   duration,
 }: ComposeInputs): Record<string, unknown> {
@@ -219,10 +275,17 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions distributed evenly across the duration (minus CTA tail).
-  const captionsClean = sceneCaptions
-    .map((c) => (c ?? '').toString().trim())
-    .filter((c) => c.length > 0)
+  // Track 5 — captions distributed evenly across the duration (minus CTA
+  // tail). Caption text comes from the voiceover script first so it matches
+  // what the narrator says; falls back to the scene descriptions only when
+  // no script is available.
+  const scriptSegments = splitScriptIntoCaptionSegments(voiceoverScript)
+  const captionsClean = (scriptSegments.length > 0
+    ? scriptSegments
+    : sceneCaptions
+        .map((c) => (c ?? '').toString().trim())
+        .filter((c) => c.length > 0)
+  )
   if (captionsClean.length > 0) {
     const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
     const perCaption = round3(captionWindow / captionsClean.length)

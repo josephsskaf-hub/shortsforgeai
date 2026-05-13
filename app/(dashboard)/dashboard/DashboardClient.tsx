@@ -11,18 +11,8 @@ interface DashboardClientProps {
   isLoggedIn: boolean
 }
 
-const TOP_PICKS: { id: string; label: string; emoji: string; accent: string; glow: string }[] = [
-  { id: 'mystery',         label: 'Mystery',      emoji: '🔮', accent: 'rgba(168,85,247,.45)',  glow: 'rgba(168,85,247,.18)' },
-  { id: 'strange-facts',   label: 'Facts',         emoji: '🤯', accent: 'rgba(99,102,241,.45)', glow: 'rgba(99,102,241,.16)' },
-  { id: 'money',           label: 'Money',         emoji: '💰', accent: 'rgba(16,185,129,.4)',  glow: 'rgba(16,185,129,.14)' },
-  { id: 'ai-tools',        label: 'AI',            emoji: '🤖', accent: 'rgba(6,182,212,.4)',   glow: 'rgba(6,182,212,.14)' },
-  { id: 'psychology-facts',label: 'Psychology',    emoji: '🧠', accent: 'rgba(245,158,11,.4)',  glow: 'rgba(245,158,11,.14)' },
-  { id: 'space-mysteries', label: 'Space',         emoji: '🌌', accent: 'rgba(99,102,241,.45)', glow: 'rgba(99,102,241,.16)' },
-  { id: 'history',         label: 'History',       emoji: '📖', accent: 'rgba(245,158,11,.4)',  glow: 'rgba(245,158,11,.14)' },
-  { id: 'conspiracy-files',label: 'Conspiracy',    emoji: '🕵️', accent: 'rgba(239,68,68,.35)',  glow: 'rgba(239,68,68,.12)' },
-  { id: 'luxury-lifestyle',label: 'Luxury',        emoji: '💎', accent: 'rgba(251,191,36,.4)',  glow: 'rgba(251,191,36,.14)' },
-  { id: 'dark-history',    label: 'Dark Stories',  emoji: '💀', accent: 'rgba(239,68,68,.4)',   glow: 'rgba(239,68,68,.14)' },
-]
+// Push #031 removed the dashboard "Top Picks" niche grid. Topic shortcuts
+// live in the homepage hero textarea + quick-tag chips now.
 
 export default function DashboardClient({
   totalGenerations,
@@ -72,10 +62,6 @@ export default function DashboardClient({
   }, [isLoggedIn])
 
   const creditsZero = credits !== null && credits <= 0
-
-  function handlePickClick(nicheId: string) {
-    router.push(`/create?niche=${nicheId}`)
-  }
 
   return (
     <div className="px-4 md:px-6 py-5 md:py-7 pb-28 md:pb-20">
@@ -132,7 +118,7 @@ export default function DashboardClient({
           className="relative z-10 mx-auto mb-5"
           style={{ fontSize: '0.9rem', color: 'var(--muted2)', maxWidth: 480, lineHeight: 1.55 }}
         >
-          Pick a niche below — AI writes the script, generates the voice, finds visuals and renders the MP4 automatically.
+          Describe any idea — AI writes the script, generates the voice, finds visuals and renders the MP4 automatically.
         </p>
 
         <Link
@@ -247,34 +233,8 @@ export default function DashboardClient({
         </div>
       </div>
 
-      {/* ── 🔥 Top Picks Grid ── */}
-      <div className="mb-7">
-        <div className="flex items-center gap-2 mb-4">
-          <span style={{ fontSize: '1rem' }}>🔥</span>
-          <span className="font-black text-sm uppercase tracking-widest" style={{ color: 'var(--text)', fontSize: '0.72rem', letterSpacing: '0.12em' }}>
-            Top Picks
-          </span>
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-bold ml-1"
-            style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171', fontSize: '0.55rem' }}
-          >
-            VIRAL
-          </span>
-        </div>
-
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}
-        >
-          {TOP_PICKS.map((niche) => (
-            <TopPickCard
-              key={niche.id}
-              niche={niche}
-              onClick={() => handlePickClick(niche.id)}
-            />
-          ))}
-        </div>
-      </div>
+      {/* Push #031 removed the Top Picks grid that lived here. Credit
+          balance card follows directly after the hero CTA now. */}
 
       {/* ── Credit balance ── */}
       {isLoggedIn && (
@@ -390,48 +350,5 @@ export default function DashboardClient({
   )
 }
 
-function TopPickCard({
-  niche,
-  onClick,
-}: {
-  niche: { id: string; label: string; emoji: string; accent: string; glow: string }
-  onClick: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="relative flex flex-col items-center justify-center gap-2 rounded-2xl py-4 px-3 text-center transition-all"
-      style={{
-        background: hovered
-          ? `linear-gradient(135deg, ${niche.glow.replace(')', ', 1.6)')}, ${niche.glow})`
-          : 'rgba(15,15,30,0.85)',
-        border: `1px solid ${hovered ? niche.accent : 'rgba(255,255,255,.06)'}`,
-        boxShadow: hovered ? `0 0 28px ${niche.glow}` : '0 0 0 transparent',
-        cursor: 'pointer',
-        transform: hovered ? 'translateY(-2px) scale(1.02)' : 'translateY(0) scale(1)',
-        minHeight: 90,
-      }}
-    >
-      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{niche.emoji}</span>
-      <span
-        className="font-black"
-        style={{ fontSize: '0.75rem', color: hovered ? 'var(--text)' : 'var(--muted2)', letterSpacing: '0.02em' }}
-      >
-        {niche.label}
-      </span>
-      {hovered && (
-        <span
-          className="absolute bottom-1.5 right-2 text-xs font-bold"
-          style={{ color: niche.accent.replace('rgba(', 'rgba(').replace(', .4)', ', 1)').replace(', .45)', ', 1)'), fontSize: '0.55rem', letterSpacing: '0.08em' }}
-        >
-          ⚡ GO
-        </span>
-      )}
-    </button>
-  )
-}
+// TopPickCard component was deleted in push #031 along with the niche grid
+// it rendered for.

@@ -121,12 +121,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 4 — Build the Creatomate source.
+    // Step 4 — Build the Creatomate source. Pass the SCALED voiceover script
+    // (the same string we fed to TTS) so captions are split from the actual
+    // narration the viewer hears, not from the raw user input.
     let source: Record<string, unknown>
     try {
       source = buildCreatomateSource({
         clipUrls,
         voiceoverUrl,
+        voiceoverScript: scaledScript,
         sceneCaptions,
         duration,
       })

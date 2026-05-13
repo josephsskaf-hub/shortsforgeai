@@ -869,65 +869,11 @@ export default function GenerateClient() {
                 {phase === 'composing' && 'Creatomate is rendering your full Short with voiceover, captions, and CTA.'}
               </div>
 
-              {(phase === 'generating' || phase === 'clips_ready') && tasks.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-                  {orderedTasks.map((t) => {
-                    const s = taskStates[t.id]
-                    const status = s?.status ?? 'PENDING'
-                    const failed = status === 'FAILED' || status === 'CANCELLED'
-                    const running = status === 'RUNNING'
-                    const succeeded = status === 'SUCCEEDED'
-                    const label = failed
-                      ? 'falhou'
-                      : succeeded
-                      ? 'concluído'
-                      : running
-                      ? 'processando'
-                      : 'na fila'
-                    return (
-                      <div
-                        key={t.id}
-                        className="rounded-xl overflow-hidden"
-                        style={{
-                          aspectRatio: '9 / 16',
-                          background: 'rgba(0,0,0,.4)',
-                          border: succeeded
-                            ? '1px solid rgba(16,185,129,.4)'
-                            : failed
-                            ? '1px solid rgba(239,68,68,.35)'
-                            : '1px solid var(--border)',
-                          position: 'relative',
-                        }}
-                      >
-                        <div
-                          className="absolute inset-0 flex items-center justify-center text-xs font-bold text-center px-2"
-                          style={{
-                            color: failed ? '#f87171' : succeeded ? '#34d399' : running ? '#93c5fd' : 'var(--muted)',
-                          }}
-                        >
-                          {failed
-                            ? '⚠ Falhou'
-                            : succeeded
-                            ? '✓ Pronto'
-                            : running
-                            ? <><Spinner /><span className="ml-2">Processando…</span></>
-                            : '⏳ Na fila'}
-                        </div>
-                        <div
-                          className="absolute bottom-0 left-0 right-0 px-2 py-1.5 text-xs font-bold"
-                          style={{
-                            background: 'linear-gradient(to top, rgba(0,0,0,.85), transparent)',
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                          }}
-                        >
-                          Clip {t.index + 1} · {label}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              {/* The per-clip tile grid was removed in push #031 — the final
+                  output is a single composed MP4, so users only ever see ONE
+                  video on this page (the finalVideoUrl, rendered below in the
+                  `done` section). Progress is communicated through the
+                  spinner + bar above. */}
 
               {scenes.length > 0 && (
                 <details className="mt-5">
