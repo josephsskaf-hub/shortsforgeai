@@ -62,11 +62,18 @@ function wordCount(s: string): number {
  * for the first third. We rewrite it to ~target words at ~2.5 wps so the TTS
  * output actually covers the full video.
  *
+ * IMPORTANT — call this from a route with ≥45s of execution budget. The OpenAI
+ * rewrite below uses a 12s timeout, and the calling pipeline still needs room
+ * for TTS, Supabase upload, and the Creatomate submit. Push #029 moved this
+ * out of `/api/generate-video/status` (which is capped at 30s) and into
+ * `/api/generate-video` POST (capped at 60s) so the status route stays well
+ * under its budget.
+ *
  * If the script is already within ±20% of the target word count, we keep it
  * unchanged. If OpenAI is unreachable or refuses, we fall back to the raw
  * script — better to ship a short narration than no narration.
  */
-async function scaleVoiceoverScriptToDuration(
+export async function scaleVoiceoverScriptToDuration(
   rawScript: string,
   totalDurationSec: number,
 ): Promise<string> {
@@ -122,7 +129,7 @@ async function scaleVoiceoverScriptToDuration(
         temperature: 0.7,
         max_tokens: Math.min(1500, Math.max(400, target * 8)),
       },
-      { timeout: 25000 },
+      { timeout: 12000 },
     )
     const rewritten = (completion.choices[0]?.message?.content ?? '').trim()
     if (!rewritten) {
@@ -370,17 +377,19 @@ export async function startComposition(input: ComposeInput): Promise<ComposeStar
   // and correct duration. The caller's credit-charge rule (only on success)
   // covers the case where the final output is unsatisfactory.
   //
-  // Push #028 — first rescale the script to match the selected duration so
-  // a 50s video gets ~125 words of narration instead of the brief's default
-  // ~30 words (which used to leave the last ~35s silent).
+  // Push #029 — the script rescale (#028) used to run here, but pushed the
+  // status route past its 30s maxDuration and broke every generation. The
+  // POST `/api/generate-video` handler (60s budget) now rescales the script
+  // BEFORE storing it in meta.voiceover_script, so by the time we get here
+  // it already has the right word count for the selected duration. We just
+  // hand it to TTS as-is.
   let voiceoverUrl: string | null = null
   if (voiceoverScript.trim().length > 0) {
-    const scaledScript = await scaleVoiceoverScriptToDuration(voiceoverScript, totalDurationSec)
     console.log(
-      `[compose] step 1: requesting OpenAI TTS — script ${scaledScript.length} chars, ` +
-      `${wordCount(scaledScript)} words for ${totalDurationSec}s`,
+      `[compose] step 1: requesting OpenAI TTS — script ${voiceoverScript.length} chars, ` +
+      `${wordCount(voiceoverScript)} words for ${totalDurationSec}s`,
     )
-    const buf = await generateTTS(scaledScript)
+    const buf = await generateTTS(voiceoverScript)
     if (buf) {
       console.log(`[compose] step 2: TTS ok (${buf.length} bytes) — uploading to Supabase`)
       voiceoverUrl = await uploadVoiceover(userId, buf)

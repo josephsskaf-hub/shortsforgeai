@@ -7,6 +7,7 @@ import {
   finalizeGeneration,
   isStale,
 } from '@/lib/generations'
+import { scaleVoiceoverScriptToDuration } from '@/lib/compose'
 
 export const maxDuration = 60
 
@@ -283,11 +284,22 @@ export async function POST(req: NextRequest) {
     // so /status can compose the final MP4 once Runway finishes its silent
     // clips. Both are best-effort — missing fields just mean composition
     // either skips audio (no script) or skips overlays (no captions).
-    const voiceoverScript = (() => {
+    const rawVoiceoverScript = (() => {
       const raw = typeof body.voiceover_script === 'string' ? body.voiceover_script.trim() : ''
       if (!raw) return ''
       return raw.length > 4000 ? raw.slice(0, 4000) : raw
     })()
+    // Push #029 — rescale the brief's voiceover_script to the selected
+    // duration HERE, not at compose time. The brief is always sized for ~15s
+    // of narration; a 50s video needs ~125 words so audio fills the timeline
+    // instead of trailing off at 15s. Doing this in POST (maxDuration=60)
+    // keeps the status route (maxDuration=30) well under its budget, which is
+    // what regressed in b5fcd04. The function caps its own OpenAI call at
+    // 12s and falls back to the original script on any error, so this can
+    // never break the POST.
+    const voiceoverScript = rawVoiceoverScript
+      ? await scaleVoiceoverScriptToDuration(rawVoiceoverScript, duration)
+      : ''
     const sceneCaptions: string[] = (() => {
       if (!Array.isArray(body.scene_captions)) return []
       return body.scene_captions
