@@ -493,7 +493,7 @@ export default function GenerateClient() {
   })()
 
   return (
-    <main className="px-4 sm:px-6 py-8 max-w-3xl mx-auto">
+    <main className="px-4 sm:px-6 py-8 max-w-4xl mx-auto">
       <style jsx>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -556,17 +556,18 @@ export default function GenerateClient() {
             maxLength={1000}
             disabled={phase === 'analyzing'}
             className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
-            // Push #034: a touch taller (260px) but still leaves room for the
-            // duration + quality selectors directly below so users can pick
-            // everything in one screen before hitting Analyze.
+            // Push #035: textarea sized to exactly 830 × 400 px. `w-full` plus
+            // maxWidth keeps it responsive — it caps at 830 px on wide
+            // viewports and shrinks to fit on smaller screens.
             style={{
               width: '100%',
+              maxWidth: '830px',
               background: 'rgba(0,0,0,.3)',
               border: '1px solid var(--border)',
               color: 'var(--text)',
               outline: 'none',
               resize: 'none',
-              minHeight: '260px',
+              minHeight: '400px',
             }}
           />
 
