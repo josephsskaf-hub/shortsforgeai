@@ -6,15 +6,20 @@
 // experience (current credits, FAQ, billing portal) — this is just the
 // in-flow nudge below the prompt textarea.
 //
-// CTAs:
+// Push #046 — CTAs now redirect directly to Stripe-hosted launch-offer
+// payment links instead of hitting /api/stripe/checkout. This bypasses
+// the server-side price-id lookup (the link itself encodes the price)
+// and works for guests too — Stripe handles account / email collection.
 //   - Free  → static "Current plan" label (no action)
-//   - Basic → POST /api/stripe/checkout { tier: 'basic' } → redirect
-//   - Pro   → POST /api/stripe/checkout { tier: 'pro'   } → redirect
-//
-// On 401 from checkout, we bounce to /login?redirect=/generate so the user
-// can sign in and come back.
+//   - Basic → buy.stripe.com basic launch link
+//   - Pro   → buy.stripe.com pro launch link
 
 import { useState } from 'react'
+
+const STRIPE_LINKS: Record<'basic' | 'pro', string> = {
+  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
+  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
+}
 
 // Push #033: keep this in lockstep with the matching FREE_FEATURES /
 // BASIC_FEATURES / PRO_FEATURES arrays in
@@ -48,30 +53,11 @@ export default function PricingCards() {
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleBuy(tier: 'basic' | 'pro') {
+  function handleBuy(tier: 'basic' | 'pro') {
     setError(null)
     setPurchasing(tier)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      if (res.status === 401) {
-        window.location.href = '/login?redirect=/generate'
-        return
-      }
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data?.url) {
-        window.location.href = data.url
-        return
-      }
-      setError(typeof data?.error === 'string' ? data.error : 'Could not start checkout. Please retry.')
-    } catch {
-      setError('Could not start checkout. Please retry.')
-    } finally {
-      setPurchasing(null)
-    }
+    // Direct Stripe-hosted launch-offer link — no server round-trip.
+    window.location.href = STRIPE_LINKS[tier]
   }
 
   return (

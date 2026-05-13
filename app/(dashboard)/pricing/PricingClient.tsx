@@ -9,6 +9,15 @@ interface PricingClientProps {
   userId: string
 }
 
+// Push #046: Basic / Pro CTAs redirect straight to Stripe-hosted
+// launch-offer payment links (the links themselves carry the price ID).
+// /api/stripe/checkout is still in the tree but no longer called from
+// this page or from components/PricingCards.tsx — keep both maps in sync.
+const STRIPE_LINKS: Record<'basic' | 'pro', string> = {
+  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
+  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
+}
+
 // Push #033: feature copy aligned with the unified video-first model.
 // One credit cost per video (15 Basic / 20 Pro), no per-Short / per-script
 // split, no Ultra or Creator tiers. Numbers and CTA copy must stay in
@@ -91,29 +100,17 @@ export default function PricingClient(props: PricingClientProps) {
     setTimeout(() => setToast(null), 2800)
   }
 
-  async function handleBuy(tier: 'basic' | 'pro') {
+  // Push #046 — go straight to the Stripe-hosted launch-offer payment
+  // link rather than calling /api/stripe/checkout. The link encodes the
+  // price; Stripe handles the rest. Keep the unauthenticated bounce so
+  // returning customers always have a session attached before payment.
+  function handleBuy(tier: 'basic' | 'pro') {
     if (!userId) {
       window.location.href = '/login?redirect=/pricing'
       return
     }
     setPurchasing(tier)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data?.url) {
-        window.location.href = data.url
-        return
-      }
-      showToast(data?.error || 'Could not start checkout. Please retry.')
-    } catch {
-      showToast('Could not start checkout. Please retry.')
-    } finally {
-      setPurchasing(null)
-    }
+    window.location.href = STRIPE_LINKS[tier]
   }
 
   async function handlePortal() {
