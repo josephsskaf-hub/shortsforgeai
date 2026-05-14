@@ -6,6 +6,8 @@
 // graceful fallbacks for unavailable metrics ("Not tracked yet" /
 // "Not available").
 
+import Link from 'next/link'
+
 export interface MetricsData {
   totalUsers: number | null
   newUsersToday: number | null
@@ -126,19 +128,9 @@ export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
               Live counts from the staging Supabase project. Signed in as {viewerEmail}.
             </p>
           </div>
-          <a
-            href="/admin/funnel"
-            className="text-xs font-bold rounded-lg px-3 py-2"
-            style={{
-              background: 'rgba(37,99,235,.10)',
-              border: '1px solid rgba(37,99,235,.35)',
-              color: '#93c5fd',
-              textDecoration: 'none',
-            }}
-          >
-            View funnel →
-          </a>
         </div>
+
+        <AdminNav active="metrics" />
       </header>
 
       <Section title="Users">
@@ -189,6 +181,36 @@ interface Card {
   value: number | string | null
   hint?: string
   eventName?: string
+}
+
+function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
+  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users'; label: string; href: string }> = [
+    { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
+    { key: 'funnel', label: 'Funnel', href: '/admin/funnel' },
+    { key: 'users', label: 'Users', href: '/admin/users' },
+  ]
+  return (
+    <nav className="mt-4 flex items-center gap-2 flex-wrap">
+      {tabs.map((t) => {
+        const isActive = t.key === active
+        return (
+          <Link
+            key={t.key}
+            href={t.href}
+            className="text-xs font-bold rounded-lg px-3 py-1.5"
+            style={{
+              background: isActive ? 'rgba(37,99,235,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(37,99,235,.45)' : 'var(--border)'}`,
+              color: isActive ? '#93c5fd' : 'var(--muted2)',
+              textDecoration: 'none',
+            }}
+          >
+            {t.label}
+          </Link>
+        )
+      })}
+    </nav>
+  )
 }
 
 function Section({

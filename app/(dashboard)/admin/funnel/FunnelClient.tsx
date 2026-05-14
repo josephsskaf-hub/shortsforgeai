@@ -105,19 +105,9 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
               Live counts from public.events on the staging Supabase project. Signed in as {viewerEmail}.
             </p>
           </div>
-          <Link
-            href="/admin/metrics"
-            className="text-xs font-bold rounded-lg px-3 py-2"
-            style={{
-              background: 'rgba(255,255,255,.04)',
-              border: '1px solid var(--border)',
-              color: 'var(--muted2)',
-              textDecoration: 'none',
-            }}
-          >
-            ← Back to Metrics
-          </Link>
         </div>
+
+        <AdminNav active="funnel" />
       </header>
 
       {!data.eventsAvailable && (
@@ -213,5 +203,35 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
         </div>
       </section>
     </div>
+  )
+}
+
+function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
+  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users'; label: string; href: string }> = [
+    { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
+    { key: 'funnel', label: 'Funnel', href: '/admin/funnel' },
+    { key: 'users', label: 'Users', href: '/admin/users' },
+  ]
+  return (
+    <nav className="mt-4 flex items-center gap-2 flex-wrap">
+      {tabs.map((t) => {
+        const isActive = t.key === active
+        return (
+          <Link
+            key={t.key}
+            href={t.href}
+            className="text-xs font-bold rounded-lg px-3 py-1.5"
+            style={{
+              background: isActive ? 'rgba(37,99,235,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(37,99,235,.45)' : 'var(--border)'}`,
+              color: isActive ? '#93c5fd' : 'var(--muted2)',
+              textDecoration: 'none',
+            }}
+          >
+            {t.label}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
