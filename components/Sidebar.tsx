@@ -261,7 +261,7 @@ export default function Sidebar({
               {/* Push #045A — tiny version tag, subtle enough not to fight
                   the wordmark but visible at a glance. */}
               <span
-                aria-label="version 1.0"
+                aria-label="version 1.1"
                 style={{
                   fontSize: '0.6rem',
                   color: 'rgba(255,255,255,0.4)',
@@ -270,7 +270,7 @@ export default function Sidebar({
                   lineHeight: 1,
                 }}
               >
-                V1.0
+                V1.1
               </span>
             </div>
             <span
@@ -288,11 +288,13 @@ export default function Sidebar({
         {/* Scrollable nav */}
         <nav className="flex-1 overflow-y-auto flex flex-col" style={{ padding: '12px 10px 12px' }}>
 
-          {/* Main nav — push #031 removed the TOPICS section that used to
-              live below the divider. The nav is intentionally minimal now:
-              just the two destinations users actually navigate to. */}
+          {/* Main nav — push #053 swapped the old "History" item (which
+              routed to Shorts Packs) for "My Videos" pointing at the new
+              AI video library backed by public.videos. /history still
+              exists for the legacy Shorts Packs view but is no longer the
+              primary entry point. */}
           <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
-          <NavItem href="/history" icon="📋" label="History" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/my-videos" icon="📼" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
 

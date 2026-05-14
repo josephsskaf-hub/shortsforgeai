@@ -98,7 +98,7 @@ Return ONLY a valid JSON array containing exactly 1 object — no markdown, no c
 
 The object must have these exact fields:
 - "title": string — a click-bait, curiosity-driving title under 70 chars with 1 relevant emoji at the end
-- "script": string — a complete ${durationSec}-second script with 3 clearly labeled sections: "🎯 HOOK:" (first 3 seconds, shocking statement), "📝 CONTENT:" (main body), "🔗 ENDING:" (CTA — must end with: "Visit www.shortsforge.com"). Use \\n\\n between sections.
+- "script": string — a complete ${durationSec}-second script with 3 clearly labeled sections: "🎯 HOOK:" (first 3 seconds, shocking statement), "📝 CONTENT:" (main body), "🔗 ENDING:" (CTA — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
 - "videoPrompt": string — a detailed AI video generation prompt describing visuals, camera angles, text overlays, transitions, mood, and vertical 9:16 format
 - "hashtags": array of 7 strings — each starting with # (e.g. "#shorts"), mix of niche-specific and viral tags
 - "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO, include primary keyword naturally

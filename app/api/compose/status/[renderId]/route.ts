@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { pollCreatomateRender } from '@/lib/compose'
 
 export const maxDuration = 30
+// Push #050 — this route reads auth cookies and writes to the videos
+// table; explicit dynamic so Next never tries to prerender it.
+export const dynamic = 'force-dynamic'
 
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
@@ -20,12 +24,137 @@ function creditCostFor(quality: Quality): number {
   }
 }
 
+// Push #050 — persist the finished video to `videos` so it appears in
+// Visual History on the Generate page and on /history. Writes through
+// the service-role admin client so RLS doesn't block us.
+//
+// Push #052 (QA fix A) — the staging `public.videos` table uses the
+// columns `title` and `final_video_url`, not `topic` and `video_url`
+// like my push #050 migration assumed. Every insert was failing the
+// "column does not exist" branch silently. We now try the staging
+// schema FIRST and only fall back to the legacy names if the staging
+// columns themselves don't exist on a given environment.
+//
+// Best-effort: every failure path logs but never throws — Visual
+// History is a nice-to-have, not part of the user's video delivery,
+// so a missing column / missing table must NEVER block returning the
+// final_video_url to the client.
+async function persistCompletedVideo(args: {
+  userId: string
+  renderId: string
+  videoUrl: string
+  quality: Quality
+  duration: number
+  topic: string
+  creditsUsed: number
+}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy'; error?: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceKey) {
+    console.warn('[history] persist skipped — NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing')
+    return { ok: false, error: 'service-role env missing' }
+  }
+  const admin = createAdminClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+
+  // Schema #1 — the actual staging `public.videos` schema:
+  //   id, user_id, title, final_video_url, status, duration, quality,
+  //   platform, render_id, created_at.
+  // This is the one we expect to succeed on staging.
+  const stagingRow = {
+    user_id: args.userId,
+    title: args.topic.slice(0, 200) || 'Untitled Short',
+    final_video_url: args.videoUrl,
+    status: 'completed',
+    duration: args.duration,
+    quality: args.quality,
+    platform: 'YouTube Shorts',
+    render_id: args.renderId,
+  }
+
+  console.log('[history] insert attempt (staging schema):', JSON.stringify({
+    table: 'videos',
+    user_id_prefix: args.userId.slice(0, 8),
+    render_id: args.renderId,
+    final_video_url_host: safeUrlHost(args.videoUrl),
+    duration: args.duration,
+    quality: args.quality,
+  }))
+
+  const stagingInsert = await admin
+    .from('videos')
+    .insert(stagingRow)
+    .select('id')
+    .maybeSingle()
+
+  if (!stagingInsert.error) {
+    const id = stagingInsert.data?.id ?? '?'
+    console.log(`[history] insert OK (staging schema) id=${id}`)
+    return { ok: true, id: String(id), schema: 'staging' }
+  }
+
+  const stagingMsg = stagingInsert.error.message ?? ''
+  const isColumnMissing = /column .* does not exist|42703/.test(stagingMsg)
+  console.warn('[history] insert (staging schema) failed:', JSON.stringify({
+    message: stagingInsert.error.message,
+    code: (stagingInsert.error as { code?: string }).code,
+    details: (stagingInsert.error as { details?: string }).details,
+    hint: (stagingInsert.error as { hint?: string }).hint,
+  }))
+
+  // If staging columns exist but the insert failed for a non-schema
+  // reason (RLS, type mismatch, FK), we don't retry — that just hides
+  // the real cause behind a second failure. Only retry on column-not-
+  // exist, which means we're on an environment that still has the
+  // legacy schema from my push #050 migration.
+  if (!isColumnMissing) {
+    return { ok: false, error: stagingInsert.error.message }
+  }
+
+  const legacyRow = {
+    user_id: args.userId,
+    status: 'completed',
+    video_url: args.videoUrl,
+    credits_used: args.creditsUsed,
+    topic: args.topic,
+    duration: args.duration,
+    quality: args.quality,
+    render_id: args.renderId,
+  }
+  console.log('[history] retrying with legacy schema (topic/video_url)…')
+  const legacyInsert = await admin
+    .from('videos')
+    .insert(legacyRow)
+    .select('id')
+    .maybeSingle()
+  if (!legacyInsert.error) {
+    const id = legacyInsert.data?.id ?? '?'
+    console.log(`[history] insert OK (legacy schema) id=${id}`)
+    return { ok: true, id: String(id), schema: 'legacy' }
+  }
+  console.warn('[history] insert (legacy schema) also failed:', JSON.stringify({
+    message: legacyInsert.error.message,
+    code: (legacyInsert.error as { code?: string }).code,
+    details: (legacyInsert.error as { details?: string }).details,
+  }))
+  return { ok: false, error: legacyInsert.error.message }
+}
+
+function safeUrlHost(u: string): string {
+  try {
+    return new URL(u).host
+  } catch {
+    return 'invalid-url'
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { renderId: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = createServerSupabase()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -42,6 +171,13 @@ export async function GET(
     const quality: Quality =
       qParam === 'basic' || qParam === 'pro' ? qParam : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
+
+    // Push #050 — topic + duration travel as query params so we can record
+    // them in the videos history row on success. Both are optional: the
+    // route still works without them, the history row just has nulls.
+    const durationParam = Number(req.nextUrl.searchParams.get('duration') ?? '')
+    const duration = Number.isFinite(durationParam) && durationParam > 0 ? Math.floor(durationParam) : 30
+    const topic = (req.nextUrl.searchParams.get('topic') ?? '').toString().slice(0, 1000)
 
     if (!process.env.CREATOMATE_API_KEY) {
       return NextResponse.json(
@@ -65,12 +201,12 @@ export async function GET(
     if (state.status === 'succeeded' && state.url) {
       let creditsDeducted = false
       let creditsRemaining: number | null = null
+      const cost = creditCostFor(quality)
 
       // Idempotency: the client tells us whether it has already seen a "done"
       // for this render. If so, we skip deduction so refresh / multi-tab polls
       // don't double-charge.
       if (!deductedParam) {
-        const cost = creditCostFor(quality)
         const { data: profile, error: fetchError } = await supabase
           .from('profiles')
           .select('video_credits')
@@ -91,6 +227,42 @@ export async function GET(
           }
         } else {
           console.error('[compose/status] credit fetch error:', fetchError.message)
+        }
+
+        // Push #050 — persist the completed video for Visual History.
+        // Only on the first "done" response (deductedParam=false) so a
+        // refresh-driven status re-poll doesn't insert duplicates. Errors
+        // are swallowed inside the helper — history is non-blocking.
+        //
+        // Push #052 (QA fix A) — wrap with explicit before/after logs at
+        // the call site too, so we can confirm in Vercel logs that the
+        // helper is reached AND see its result without having to dig
+        // through the internal log lines.
+        console.log('[history] attempting persist…', JSON.stringify({
+          render_id: renderId,
+          user_id_prefix: user.id.slice(0, 8),
+          duration,
+          quality,
+          has_topic: topic.length > 0,
+        }))
+        try {
+          const result = await persistCompletedVideo({
+            userId: user.id,
+            renderId,
+            videoUrl: state.url,
+            quality,
+            duration,
+            topic,
+            creditsUsed: cost,
+          })
+          console.log('[history] persist result:', JSON.stringify(result))
+        } catch (e) {
+          // persistCompletedVideo is meant to never throw, but if it
+          // somehow does we still want to know about it without
+          // failing the user response.
+          console.error('[history] persist threw unexpectedly:', e instanceof Error
+            ? JSON.stringify({ name: e.name, message: e.message, stack: e.stack?.split('\n').slice(0, 3).join(' | ') })
+            : String(e))
         }
       }
 

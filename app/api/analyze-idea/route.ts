@@ -17,6 +17,22 @@ interface SceneBrief {
   voiceover: string
 }
 
+// Push #048 — Viral Intelligence Layer.
+// Optional metadata returned alongside the creative brief so the Generate
+// page can render a "Viral Intelligence" panel. Everything is best-effort:
+// if the model can't supply a field we derive a safe fallback so the panel
+// never disappears.
+export type HookRating = 'weak' | 'medium' | 'strong' | 'excellent'
+
+export interface ViralIntelligence {
+  viral_score: number
+  hook_rating: HookRating
+  retention_notes: string[]
+  thumbnail_texts: string[]
+  opening_caption: string
+  improvement_suggestions: string[]
+}
+
 interface CreativeBrief {
   // New rich fields
   viral_title: string
@@ -40,6 +56,9 @@ interface CreativeBrief {
   // seconds", "around 50s", or null if nothing was mentioned). The client
   // uses this to pre-select the duration in Generation Settings.
   detected_duration_seconds: number | null
+  // Push #048 — viral intelligence block. Always present in the response;
+  // populated from model output when possible, otherwise a sane fallback.
+  viral_intelligence: ViralIntelligence
 
   // Legacy compatibility — populated from the new fields so older callers
   // (e.g. GenerateClient before the matching client update) don't break.
@@ -115,6 +134,49 @@ function inferTone(niche: string): string {
   }
 }
 
+// Push #048 — derive a sane viral_intelligence block when the model
+// doesn't return one. Score scales with hook length / specificity heuristics
+// and we always supply 3 thumbnail texts so the UI panel has something to
+// render even on cold fallback.
+function fallbackViralIntelligence(hook: string, niche: string): ViralIntelligence {
+  const hookWords = hook.trim().split(/\s+/).filter(Boolean).length
+  // Heuristic: short, punchy hooks (6-12 words) score higher than essays.
+  let score = 65
+  if (hookWords >= 6 && hookWords <= 12) score = 78
+  else if (hookWords >= 4 && hookWords <= 18) score = 70
+  // Specificity bonus — numbers and proper nouns are pattern interrupts.
+  if (/\d/.test(hook)) score += 4
+  if (/[A-Z][a-z]+/.test(hook)) score += 2
+  score = Math.max(40, Math.min(94, score))
+  const rating: HookRating =
+    score >= 85 ? 'excellent' : score >= 70 ? 'strong' : score >= 55 ? 'medium' : 'weak'
+  const lowNiche = niche.toLowerCase()
+  return {
+    viral_score: score,
+    hook_rating: rating,
+    retention_notes: [
+      'Open mid-action — drop the viewer into the moment, not the setup.',
+      'Add a curiosity gap by 2-3s in so the viewer needs the next beat.',
+      'Cut visuals every 2-3s — same scene twice loses ~15% retention.',
+      'End on a cliffhanger or single-word reveal that demands a rewatch.',
+    ],
+    thumbnail_texts: [
+      'Nobody Saw This',
+      'The Truth Hits Hard',
+      'Watch Until The End',
+    ],
+    opening_caption: 'You won\'t believe this.',
+    improvement_suggestions:
+      score < 70
+        ? [
+            'Rewrite the hook so the payoff lands in the first 5 words.',
+            'Anchor the opening on a specific number, name, or claim.',
+            `Lean harder into the ${lowNiche || 'genre'} tropes the audience already searches for.`,
+          ]
+        : [],
+  }
+}
+
 function fallbackBrief(prompt: string): CreativeBrief {
   const trimmed = prompt.trim().slice(0, 80)
   const niche = inferNiche(prompt)
@@ -167,9 +229,10 @@ function fallbackBrief(prompt: string): CreativeBrief {
     `high contrast, atmospheric haze, single subject framing, suspenseful build, ` +
     `ultra-detailed textures, 35mm film grain, hyperreal.`,
   )
+  const fallbackHook = 'You have never heard about this — and that is exactly the point.'
   return {
     viral_title: trimmed || 'The Truth Nobody Told You',
-    hook: 'You have never heard about this — and that is exactly the point.',
+    hook: fallbackHook,
     summary: 'A fast-paced cinematic Short built around a single shocking idea, with strong visuals and a cliffhanger ending.',
     niche,
     tone,
@@ -182,6 +245,7 @@ function fallbackBrief(prompt: string): CreativeBrief {
     hashtags: ['#shorts', '#viral', '#mystery', '#fyp', '#storytime'],
     provider_prompt: providerPrompt,
     detected_duration_seconds: detectDurationFromPrompt(prompt),
+    viral_intelligence: fallbackViralIntelligence(fallbackHook, niche),
     title: trimmed || 'The Truth Nobody Told You',
     scenePlan: scenes.map((s) => s.visual_prompt),
   }
@@ -211,6 +275,14 @@ GENRE-SPECIFIC GUIDANCE:
 PROVIDER PROMPT — important:
 You also produce a separate "provider_prompt": a SHORT cinematic description (200-450 chars, NEVER over 500) that an AI video model can use directly. It must be visual only — no voiceover, no hashtags, no YouTube text, no scene list. Describe overall mood, color palette, lighting, camera language, subject framing. Example: "Cinematic vertical 9:16 video of a deep ocean at night, sonar screens glowing blue, underwater shadows moving slowly, suspenseful scientific monitoring station, realistic lighting, high contrast, mysterious mood, slow camera movement."
 
+VIRAL INTELLIGENCE — also produce a "viral_intelligence" block scoring the brief you just wrote:
+- viral_score: integer 0-100 estimating how likely this Short is to go viral on YouTube Shorts. Be honest — a generic hook should score 40-55, a specific cinematic one 65-80, a truly scroll-stopping pattern interrupt 80-95.
+- hook_rating: "weak" | "medium" | "strong" | "excellent" — must agree with viral_score (weak<50, medium 50-69, strong 70-84, excellent 85+).
+- retention_notes: array of 3-4 short tactical notes (one sentence each) on how the structure will hold attention.
+- thumbnail_texts: array of EXACTLY 3 thumbnail-overlay strings, MAX 4-6 words each, all-caps friendly. No emoji.
+- opening_caption: one short string for the first 2-second on-screen caption (max 6 words).
+- improvement_suggestions: array of 0-3 short tweaks the creator could make to push the score higher. If viral_score >= 70 this MUST be an empty array.
+
 OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching this exact schema:
 {
   "viral_title": string,
@@ -233,7 +305,15 @@ OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching t
   "youtube_title": string,
   "youtube_description": string,
   "hashtags": string[],
-  "provider_prompt": string (200-450 chars, hard max 500)
+  "provider_prompt": string (200-450 chars, hard max 500),
+  "viral_intelligence": {
+    "viral_score": number,
+    "hook_rating": "weak" | "medium" | "strong" | "excellent",
+    "retention_notes": string[],
+    "thumbnail_texts": string[],
+    "opening_caption": string,
+    "improvement_suggestions": string[]
+  }
 }`
 
 // ─── Coercion helpers ────────────────────────────────────────────────────────
@@ -259,6 +339,45 @@ function clampCaption(raw: string, maxWords = 8): string {
   const words = raw.trim().replace(/[.!?]+$/g, '').split(/\s+/).filter(Boolean)
   if (words.length <= maxWords) return words.join(' ')
   return words.slice(0, maxWords).join(' ')
+}
+
+// Push #048 — coerce the viral_intelligence block from model output, falling
+// back to the heuristic when any field is missing/invalid. The fallback is
+// computed AGAINST the final hook (after the brief has been coerced) so the
+// rating stays consistent with what the user sees in the card.
+function coerceViralIntelligence(raw: unknown, fallbacks: ViralIntelligence): ViralIntelligence {
+  if (!raw || typeof raw !== 'object') return fallbacks
+  const r = raw as Record<string, unknown>
+  const rawScore = asNumber(r.viral_score, fallbacks.viral_score)
+  const viral_score = Math.max(0, Math.min(100, Math.round(rawScore)))
+  const ratingRaw = asString(r.hook_rating, fallbacks.hook_rating).toLowerCase()
+  const hook_rating: HookRating =
+    ratingRaw === 'weak' || ratingRaw === 'medium' || ratingRaw === 'strong' || ratingRaw === 'excellent'
+      ? (ratingRaw as HookRating)
+      : viral_score >= 85
+      ? 'excellent'
+      : viral_score >= 70
+      ? 'strong'
+      : viral_score >= 50
+      ? 'medium'
+      : 'weak'
+  const retention_notes = asStringArray(r.retention_notes).slice(0, 4)
+  let thumbnail_texts = asStringArray(r.thumbnail_texts)
+    .map((t) => t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim())
+    .filter((t) => t.length > 0)
+    .slice(0, 3)
+  if (thumbnail_texts.length === 0) thumbnail_texts = fallbacks.thumbnail_texts
+  const opening_caption = asString(r.opening_caption, fallbacks.opening_caption).slice(0, 60)
+  const improvement_suggestions =
+    viral_score >= 70 ? [] : asStringArray(r.improvement_suggestions).slice(0, 3)
+  return {
+    viral_score,
+    hook_rating,
+    retention_notes: retention_notes.length > 0 ? retention_notes : fallbacks.retention_notes,
+    thumbnail_texts,
+    opening_caption,
+    improvement_suggestions,
+  }
 }
 
 function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
@@ -383,6 +502,14 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         )
       }
 
+      // Push #048 — viral_intelligence: prefer model output, fall back to a
+      // heuristic computed against the final coerced hook so the rating
+      // stays consistent with what the user actually sees.
+      const viral_intelligence = coerceViralIntelligence(
+        data.viral_intelligence,
+        fallbackViralIntelligence(hook, niche),
+      )
+
       brief = {
         viral_title,
         hook,
@@ -398,6 +525,7 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         hashtags,
         provider_prompt,
         detected_duration_seconds: detectDurationFromPrompt(prompt),
+        viral_intelligence,
         // Legacy compatibility
         title: viral_title,
         scenePlan: scenes.map((s) => s.visual_prompt),

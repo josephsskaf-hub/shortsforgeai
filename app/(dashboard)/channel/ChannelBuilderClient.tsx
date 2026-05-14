@@ -244,7 +244,7 @@ export default function ChannelBuilderClient() {
                     'Channel description: include target niche keywords',
                     'Banner: use Canva faceless channel template',
                     'Enable channel memberships (at 500 subs)',
-                    'Link shortsforge.com in description',
+                    'Link shortsforgeai.com in description',
                     'Set up auto-publish with YouTube Studio',
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text2)' }}>

@@ -211,10 +211,11 @@ export default function PricingClient(props: PricingClientProps) {
         )}
       </div>
 
-      {/* 3 plans */}
+      {/* 3 plans — push #050: explicit responsive cols so mobile gets a
+          clean single-column stack instead of three crammed cards. */}
       <div
-        className="grid mx-auto gap-5"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', maxWidth: '64rem' }}
+        className="grid mx-auto gap-5 grid-cols-1 md:grid-cols-3"
+        style={{ maxWidth: '64rem' }}
       >
         {/* Free */}
         <PlanCard

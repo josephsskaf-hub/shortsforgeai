@@ -47,6 +47,15 @@ body {
   line-height: 1.6;
 }
 
+/* Push #052 — block horizontal overflow on mobile. Some long URLs in
+   share/result cards and the background glow orbs could nudge layout
+   width slightly above the viewport on iPhone widths, producing the
+   "sliding right" feel. Desktop is unaffected since the dashboard
+   shell already sits inside its own overflow-x: hidden flex column. */
+@media (max-width: 640px) {
+  html, body { overflow-x: hidden; }
+}
+
 /* Noise texture overlay */
 body::after {
   content: '';
