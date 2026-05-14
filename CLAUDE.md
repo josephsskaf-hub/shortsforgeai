@@ -9,7 +9,7 @@
 
 ## Configuração dos vídeos InVideo
 - **Somente 1 legenda/subtitle** por vídeo (não múltiplas)
-- **Último segundo do vídeo:** incluir call to action com o site → **www.shortsforge.com**
+- **Último segundo do vídeo:** incluir call to action com o site → **shortsforgeai.com**
 - Formato: YouTube Shorts (9:16, vertical)
 - Duração: ~35 segundos
 - Estilo: dark, cinematic, fast-paced
@@ -20,7 +20,7 @@
 1. Verificar no YouTube Studio quais Shorts tiveram mais views/engajamento
 2. Escolher 5 temas similares aos que viralizaram
 3. Criar vídeos no InVideo com **Autopilot** (YouTube Shorts, 9:16, ~35s)
-4. Configurar: 1 legenda + www.shortsforge.com no último segundo
+4. Configurar: 1 legenda + shortsforgeai.com no último segundo
 5. Usuário baixa e sobe no YouTube
 
 ## Informações do projeto
