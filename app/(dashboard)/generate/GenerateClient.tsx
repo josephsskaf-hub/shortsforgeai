@@ -763,15 +763,6 @@ export default function GenerateClient() {
     }
   }, [phase, finalVideoUrl])
 
-  const orderedTasks = useMemo(
-    () => tasks.slice().sort((a, b) => a.index - b.index),
-    [tasks]
-  )
-
-  const succeededCount = useMemo(
-    () => orderedTasks.filter((t) => taskStates[t.id]?.status === 'SUCCEEDED').length,
-    [orderedTasks, taskStates]
-  )
 
   const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15
   const showStep1 = phase === 'idle' || phase === 'analyzing'
@@ -786,7 +777,7 @@ export default function GenerateClient() {
   const statusMessage = (() => {
     switch (phase) {
       case 'generating':
-        return 'Creating visuals…'
+        return 'Creating cinematic visuals…'
       case 'clips_ready':
         return 'Generating voiceover & captions…'
       case 'composing':
@@ -1252,9 +1243,6 @@ export default function GenerateClient() {
               <ProgressBar progress={headlineProgress} />
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {statusMessage}
-                {phase === 'generating' && tasks.length > 0 && (
-                  <> · {succeededCount}/{tasks.length} clips ready</>
-                )}
               </div>
 
               {/* Push #048 — 5-stage pipeline indicator + trust copy.
@@ -1263,8 +1251,6 @@ export default function GenerateClient() {
                   the API. */}
               <PipelineStages
                 phase={phase}
-                succeededCount={succeededCount}
-                taskCount={tasks.length}
                 renderProgress={renderProgress}
                 finalReady={!!finalVideoUrl}
               />
@@ -1830,14 +1816,10 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
 type StageStatus = 'queued' | 'active' | 'done'
 function PipelineStages({
   phase,
-  succeededCount,
-  taskCount,
   renderProgress,
   finalReady,
 }: {
   phase: Phase
-  succeededCount: number
-  taskCount: number
   renderProgress: number
   finalReady: boolean
 }) {
@@ -1866,8 +1848,8 @@ function PipelineStages({
 
   const stages: { label: string; sub: string; status: StageStatus }[] = [
     {
-      label: 'Creating visuals',
-      sub: taskCount > 0 ? `${Math.min(succeededCount, taskCount)}/${taskCount} clips` : 'AI scene model',
+      label: 'Creating cinematic visuals',
+      sub: 'AI scene model',
       status: visualsDone ? 'done' : visualsActive ? 'active' : 'queued',
     },
     {
