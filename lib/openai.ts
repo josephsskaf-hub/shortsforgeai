@@ -27,6 +27,83 @@ export interface ShortVideo {
   youtubeDescription: string
 }
 
+// Push #064 — duration-aware narration sizing.
+//   30s → 75–90 words and 4 scenes
+//   45s → 110–135 words and 5 scenes (default)
+//   60s → 150–180 words and 6 scenes
+export interface DurationPlan {
+  duration: 30 | 45 | 60
+  wordCountRange: [number, number]
+  sceneCount: number
+}
+
+export function durationPlanFor(duration: number): DurationPlan {
+  if (duration <= 35) return { duration: 30, wordCountRange: [75, 90], sceneCount: 4 }
+  if (duration >= 55) return { duration: 60, wordCountRange: [150, 180], sceneCount: 6 }
+  return { duration: 45, wordCountRange: [110, 135], sceneCount: 5 }
+}
+
+// Push #064 — story arc enforced on every Short. The arc keeps the AI
+// from emitting "5 random facts" without a build-up; the ending samples
+// are deliberately decisive so the closing scene doesn't trail off.
+export const STORY_ARC_SYSTEM_RULES = `Every video must follow this exact structure:
+1. HOOK (first 2 seconds): Grab attention immediately with a striking statement or question.
+2. SETUP: Briefly explain what the topic is.
+3. TENSION/MYSTERY: Show why it is strange, surprising, or important.
+4. EXPLANATION: Give enough context so the viewer understands.
+5. PAYOFF/ENDING: End with a strong final revelation, cliffhanger, or satisfying conclusion.
+
+Do NOT list random facts without a story arc.
+Do NOT end abruptly.
+The ending MUST feel complete and strong — examples:
+- "And that is why this mystery still refuses to disappear."
+- "Some discoveries do not solve history. They make it stranger."
+- "If this is what we found… what else is still hidden?"`
+
+// Push #064 — caption highlight picker. Caption objects carry an optional
+// `highlight` field so the renderer can paint that word in yellow. When the
+// model doesn't supply one, we pick the most impactful word from the
+// candidate list, falling back to the last meaningful word in the caption.
+const HIGHLIGHT_CANDIDATES = [
+  'strange', 'hidden', 'vanished', 'signal', 'mystery', 'impossible',
+  'forbidden', 'unknown', 'discovered', 'secret', 'ancient', 'bizarre',
+  'haunted', 'cursed', 'lost', 'found', 'real',
+]
+
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'so', 'of', 'to', 'in', 'on', 'at',
+  'by', 'for', 'with', 'as', 'is', 'was', 'were', 'are', 'be', 'been',
+  'this', 'that', 'these', 'those', 'it', 'its', 'their', 'they', 'them',
+  'he', 'she', 'we', 'you', 'i', 'me', 'my', 'your', 'our',
+  'do', 'does', 'did', 'has', 'have', 'had', 'can', 'could', 'will',
+  'would', 'should', 'just', 'than', 'then', 'when', 'where', 'why', 'how',
+  'no', 'not', 'yes', 'if', 'into', 'from', 'about', 'after', 'before',
+  'over', 'under', 'one', 'two',
+])
+
+function cleanWord(w: string): string {
+  return w.replace(/[^a-zA-Z]/g, '').toLowerCase()
+}
+
+export function pickHighlightWord(caption: string): string | null {
+  const text = (caption ?? '').trim()
+  if (!text) return null
+  const tokens = text.split(/\s+/)
+  // Pass 1 — explicit candidate word.
+  for (const tok of tokens) {
+    const c = cleanWord(tok)
+    if (HIGHLIGHT_CANDIDATES.includes(c)) return tok.replace(/[.,;!?:]+$/, '')
+  }
+  // Pass 2 — fall back to the last non-stopword (often the noun/adjective
+  // that carries the meaning).
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const raw = tokens[i].replace(/[.,;!?:]+$/, '')
+    const c = cleanWord(raw)
+    if (c.length >= 4 && !STOPWORDS.has(c)) return raw
+  }
+  return null
+}
+
 const NICHE_CONTEXT: Record<string, string> = {
   // Legacy niches
   mideast: 'Middle East Secrets — hidden stories, geopolitics, untold facts, and shocking truths from the Middle East region (Dubai, Saudi Arabia, Egypt, Iran, etc.)',
@@ -71,6 +148,8 @@ export function buildGenerationPrompt(niche: string): string {
 
 Generate exactly 5 viral YouTube Shorts scripts. Each short must be designed to maximize watch time, shares, and follows.
 
+${STORY_ARC_SYSTEM_RULES}
+
 Return ONLY a valid JSON array with exactly 5 objects. No markdown, no code blocks, no extra text — just the raw JSON array.
 
 Each object must have these exact fields:
@@ -86,22 +165,26 @@ Make every hook absolutely shocking. The first 3 seconds must make the viewer ph
 export function buildSingleVideoPrompt(niche: string, topic: string, tone: string, durationSec: number): string {
   const context = NICHE_CONTEXT[niche] || NICHE_CONTEXT.general
   const safeTopic = topic.trim() || 'viral curiosity'
+  const plan = durationPlanFor(durationSec)
+  const [minWords, maxWords] = plan.wordCountRange
 
   return `You are a viral YouTube Shorts content creator specializing in the "${context}" niche.
 
 Generate ONE viral YouTube Short tailored to this exact topic:
 "${safeTopic}"
 
-Tone: ${tone}. Target duration: ${durationSec} seconds. Vertical 9:16 format. English language.
+Tone: ${tone}. Target duration: ${plan.duration} seconds. Target word count: ${minWords}–${maxWords} words. Scene count: ${plan.sceneCount}. Vertical 9:16 format. English language.
+
+${STORY_ARC_SYSTEM_RULES}
 
 Return ONLY a valid JSON array containing exactly 1 object — no markdown, no code blocks, no extra text. Just the raw JSON array.
 
 The object must have these exact fields:
 - "title": string — a click-bait, curiosity-driving title under 70 chars with 1 relevant emoji at the end
-- "script": string — a complete ${durationSec}-second script with 3 clearly labeled sections: "🎯 HOOK:" (first 3 seconds, shocking statement), "📝 CONTENT:" (main body), "🔗 ENDING:" (CTA — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
+- "script": string — a complete ${plan.duration}-second script following the HOOK → SETUP → TENSION → EXPLANATION → PAYOFF arc above. Total word count must land in ${minWords}–${maxWords} words. Use 3 clearly labeled sections: "🎯 HOOK:" (first 2 seconds), "📝 CONTENT:" (setup + tension + explanation), "🔗 ENDING:" (CTA — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
 - "videoPrompt": string — a detailed AI video generation prompt describing visuals, camera angles, text overlays, transitions, mood, and vertical 9:16 format
 - "hashtags": array of 7 strings — each starting with # (e.g. "#shorts"), mix of niche-specific and viral tags
 - "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO, include primary keyword naturally
 
-Make the hook absolutely shocking. The first 3 seconds must make the viewer physically unable to scroll past.`
+Make the hook absolutely shocking. The first 2 seconds must make the viewer physically unable to scroll past.`
 }

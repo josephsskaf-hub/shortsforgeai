@@ -117,12 +117,28 @@ export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
         >
           Admin · Staging
         </div>
-        <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.6rem', color: 'var(--text)' }}>
-          Conversion Metrics
-        </h1>
-        <p className="text-xs" style={{ color: 'var(--muted)' }}>
-          Live counts from the staging Supabase project. Signed in as {viewerEmail}.
-        </p>
+        <div className="flex items-end justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.6rem', color: 'var(--text)' }}>
+              Conversion Metrics
+            </h1>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              Live counts from the staging Supabase project. Signed in as {viewerEmail}.
+            </p>
+          </div>
+          <a
+            href="/admin/funnel"
+            className="text-xs font-bold rounded-lg px-3 py-2"
+            style={{
+              background: 'rgba(37,99,235,.10)',
+              border: '1px solid rgba(37,99,235,.35)',
+              color: '#93c5fd',
+              textDecoration: 'none',
+            }}
+          >
+            View funnel →
+          </a>
+        </div>
       </header>
 
       <Section title="Users">

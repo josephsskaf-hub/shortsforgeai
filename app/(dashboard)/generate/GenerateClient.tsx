@@ -64,8 +64,17 @@ type Phase =
   | 'done'
   | 'failed'
 
-type Duration = 10 | 30 | 50
+// Push #064 — durations bumped to 30 / 45 / 60 so the AI has enough room to
+// build a real story arc (hook → setup → tension → payoff). 45s is the new
+// default; 30s is the "quick" option, 60s is the "deep story" option.
+type Duration = 30 | 45 | 60
 type Quality = 'basic' | 'basic_ai' | 'pro'
+
+const DURATION_OPTIONS: { value: Duration; label: string }[] = [
+  { value: 30, label: '30s — Quick' },
+  { value: 45, label: '45s — Recommended ⭐' },
+  { value: 60, label: '60s — Deep Story' },
+]
 
 const POLL_GENERATING_MS = 4000
 const POLL_COMPOSING_MS = 5000
@@ -143,7 +152,7 @@ export default function GenerateClient() {
   const [tasks, setTasks] = useState<TaskHandle[]>([])
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
-  const [duration, setDuration] = useState<Duration>(30)
+  const [duration, setDuration] = useState<Duration>(45)
   const [quality, setQuality] = useState<Quality>('basic_ai')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
@@ -193,6 +202,13 @@ export default function GenerateClient() {
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
+  }, [])
+
+  // Push #061 — fire a single page-view event on mount. Silently no-ops if
+  // public.events isn't available in this Supabase project.
+  useEffect(() => {
+    trackEvent('generate_page_view')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Push #033: pull a prompt forwarded by the homepage's Generate Video card.
@@ -460,8 +476,9 @@ export default function GenerateClient() {
           setRenderProgress(100)
           setFinalVideoUrl(url)
           setPhase('done')
-          // Push #060 — fire-and-forget event tracking.
+          // Push #060 / #061 — fire-and-forget event tracking.
           trackEvent('generate_completed')
+          trackEvent('video_generation_completed', { duration, quality })
           return
         }
 
@@ -469,6 +486,7 @@ export default function GenerateClient() {
           setError(typeof data.error === 'string' ? data.error : GENERIC_ERROR)
           setPhase('failed')
           trackEvent('generate_failed')
+          trackEvent('video_generation_failed', { duration, quality })
           return
         }
 
@@ -504,9 +522,13 @@ export default function GenerateClient() {
       setError('Please describe your video idea first.')
       return
     }
-    // Push #060 — fire-and-forget event tracking. Endpoint silently
-    // succeeds if public.events doesn't exist in this DB.
+    // Push #060 / #061 — fire-and-forget event tracking. Endpoint silently
+    // succeeds if public.events doesn't exist in this DB. We fire both the
+    // legacy name (kept for /admin/metrics dashboards) and the new spec
+    // name used by /admin/funnel.
+    trackEvent('analyze_idea_clicked')
     trackEvent('generate_started')
+    trackEvent('video_generation_started', { duration, quality })
     if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
@@ -523,7 +545,9 @@ export default function GenerateClient() {
       const res = await fetch('/api/analyze-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: source }),
+        // Push #064 — pass duration so analyze-idea can size word count
+        // and scene count to match the user's selection.
+        body: JSON.stringify({ prompt: source, duration }),
         signal: controller.signal,
       })
       if (res.status === 401) {
@@ -942,23 +966,26 @@ export default function GenerateClient() {
               Duration
             </div>
             <div className="flex gap-2 flex-wrap">
-              {([10, 30, 50] as Duration[]).map((d) => (
+              {DURATION_OPTIONS.map((opt) => (
                 <button
-                  key={d}
-                  onClick={() => setDuration(d)}
+                  key={opt.value}
+                  onClick={() => setDuration(opt.value)}
                   className="rounded-full px-4 py-1.5 text-sm font-bold"
                   style={{
-                    background: duration === d ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                    border: duration === d ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
-                    color: duration === d ? '#fff' : 'var(--muted)',
+                    background: duration === opt.value ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
+                    border: duration === opt.value ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                    color: duration === opt.value ? '#fff' : 'var(--muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
                 >
-                  {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
+                  {opt.label}
                 </button>
               ))}
             </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+              Longer videos give the AI more room to build a complete story.
+            </p>
           </div>
 
           <div className="mt-5">
@@ -2465,21 +2492,27 @@ function buildSceneCaptions(
     // Tighten each line so it fits the caption box.
     return fromPlan.map((s) => trimCaption(s))
   }
-  // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Matches /api/generate-video.
-  const targetCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
+  // 30s → 3 clips, 45s → 5 clips (rounded up from 4.5), 60s → 6 clips.
+  // Matches clipCountForDuration in /api/generate-video.
+  const targetCount = duration === 30 ? 3 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
 }
 
-// Push #060 — fire-and-forget event tracking. POSTs to /api/events which
-// silently succeeds if public.events doesn't exist in this Supabase
+// Push #060 / #061 — fire-and-forget event tracking. POSTs to /api/events
+// which silently succeeds if public.events doesn't exist in this Supabase
 // project. Errors are swallowed so tracking never affects the user-facing
 // pipeline.
-function trackEvent(name: string): void {
+function trackEvent(name: string, metadata?: Record<string, unknown>): void {
   try {
     void fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({
+        event_name: name,
+        name,
+        metadata: metadata ?? {},
+        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
+      }),
       keepalive: true,
     }).catch(() => {})
   } catch {

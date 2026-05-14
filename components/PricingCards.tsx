@@ -56,6 +56,22 @@ export default function PricingCards() {
   function handleBuy(tier: 'basic' | 'pro') {
     setError(null)
     setPurchasing(tier)
+    // Push #061 — fire-and-forget tracking before redirect. Both the
+    // legacy name (kept for /admin/metrics) and the new spec name are
+    // emitted so the funnel + metrics dashboards stay in sync.
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_name: tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked',
+          name: tier === 'basic' ? 'checkout_basic_click' : 'checkout_pro_click',
+        }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      // ignore
+    }
     // Direct Stripe-hosted launch-offer link — no server round-trip.
     window.location.href = STRIPE_LINKS[tier]
   }

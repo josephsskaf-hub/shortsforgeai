@@ -124,12 +124,15 @@ export default function PricingClient(props: PricingClientProps) {
       window.location.href = '/login?redirect=/pricing'
       return
     }
-    // Push #060 — fire-and-forget event tracking before redirect.
+    // Push #060 / #061 — fire-and-forget event tracking before redirect.
+    // Both the legacy name (kept for /admin/metrics) and the new spec name
+    // are emitted so the funnel + metrics dashboards stay in sync.
     try {
       void fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          event_name: tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked',
           name: tier === 'basic' ? 'checkout_basic_click' : 'checkout_pro_click',
         }),
         keepalive: true,

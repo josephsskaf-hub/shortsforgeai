@@ -5,10 +5,13 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
+import { pickHighlightWord } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
+// Push #064 — yellow used for the per-caption highlight word overlay.
+const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
@@ -309,6 +312,84 @@ export function splitScriptIntoCaptionSegments(
 }
 
 /**
+ * Push #064 — build the Creatomate text elements for a single caption
+ * slot. Returns the main white caption plus, when we can identify a
+ * meaningful highlight word, a smaller yellow accent line floating above
+ * the caption. Any failure picking the highlight falls back to the plain
+ * white caption — the render never depends on the accent rendering.
+ *
+ * The accent overlay is positioned slightly above the main caption (y=58
+ * vs y=68) so the user sees the keyword pop without it overlapping the
+ * sentence below. We don't try to use Creatomate rich-text markup because
+ * support varies — two text elements is the safest cross-version path.
+ */
+export function buildCaptionElements({
+  text,
+  time,
+  duration,
+  highlight,
+}: {
+  text: string
+  time: number
+  duration: number
+  highlight?: string | null
+}): CreatomateElement[] {
+  const out: CreatomateElement[] = []
+  // Main caption — always rendered, plain white, never blocked by accent
+  // issues.
+  out.push({
+    type: 'text',
+    track: 5,
+    time,
+    duration,
+    text,
+    x: '50%',
+    y: '68%',
+    width: '86%',
+    font_family: 'Montserrat',
+    font_size: 58,
+    font_weight: '800',
+    fill_color: '#ffffff',
+    stroke_color: 'rgba(0,0,0,0.9)',
+    stroke_width: 3,
+  })
+
+  // Accent overlay — best effort, never throws.
+  try {
+    const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
+    if (candidate) {
+      const cleaned = candidate.replace(/[.,;!?:]+$/, '').trim().toUpperCase()
+      if (cleaned) {
+        // Track 7 — above the white caption (track 5) and above the CTA
+        // (track 6), but at a different timestamp window than the CTA so
+        // they never compete for visibility.
+        out.push({
+          type: 'text',
+          track: 7,
+          time,
+          duration,
+          text: cleaned,
+          x: '50%',
+          y: '54%',
+          width: '80%',
+          font_family: 'Montserrat',
+          font_size: 44,
+          font_weight: '900',
+          fill_color: HIGHLIGHT_COLOR,
+          stroke_color: 'rgba(0,0,0,0.9)',
+          stroke_width: 3,
+        })
+      }
+    }
+  } catch {
+    // Highlight overlay is purely additive; swallow any error so the
+    // main caption (already pushed above) carries the render.
+  }
+
+  return out
+}
+
+/**
  * Build a Creatomate source JSON: video clips tiled to fill `duration`,
  * voiceover audio across the full timeline, captions evenly distributed,
  * and a CTA in the last 2.5 seconds.
@@ -405,22 +486,12 @@ export function buildCreatomateSource({
     const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
     const perCaption = round3(captionWindow / captionsClean.length)
     captionsClean.forEach((caption, idx) => {
-      elements.push({
-        type: 'text',
-        track: 5,
+      const elementsForCaption = buildCaptionElements({
+        text: caption,
         time: round3(idx * perCaption),
         duration: perCaption,
-        text: caption,
-        x: '50%',
-        y: '68%',
-        width: '86%',
-        font_family: 'Montserrat',
-        font_size: 58,
-        font_weight: '800',
-        fill_color: '#ffffff',
-        stroke_color: 'rgba(0,0,0,0.9)',
-        stroke_width: 3,
       })
+      elements.push(...elementsForCaption)
     })
   }
 

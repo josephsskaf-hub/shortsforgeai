@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openai } from '@/lib/openai'
+import { openai, durationPlanFor, STORY_ARC_SYSTEM_RULES } from '@/lib/openai'
 
 export const maxDuration = 30
 
@@ -13,6 +13,10 @@ interface SceneBrief {
   scene_number: number
   duration_seconds: number
   caption: string
+  // Push #064 — single word from `caption` to render in yellow on the
+  // final composed video. Optional: fall back to a heuristic pick when
+  // the model doesn't supply one.
+  highlight?: string | null
   visual_prompt: string
   voiceover: string
 }
@@ -251,18 +255,23 @@ function fallbackBrief(prompt: string): CreativeBrief {
   }
 }
 
-const SYSTEM_PROMPT = `You are an expert YouTube Shorts creative director specializing in viral faceless videos. Your job is to produce a complete creative brief for a 30-35 second Short that will go viral.
+function buildSystemPrompt(duration: number): string {
+  const plan = durationPlanFor(duration)
+  const [minWords, maxWords] = plan.wordCountRange
+  return `You are an expert YouTube Shorts creative director specializing in viral faceless videos. Your job is to produce a complete creative brief for a ${plan.duration} second Short that will go viral.
 
 The brief MUST include: a viral_title, a powerful hook for the first 2 seconds, a scene-by-scene breakdown with cinematic visual prompts (never generic), captions of MAX 6-8 words, full voiceover_script, music_mood, pacing_notes, youtube_title, youtube_description, and hashtags.
 
+${STORY_ARC_SYSTEM_RULES}
+
 QUALITY RULES (non-negotiable):
 - The hook lands in the first 2 seconds and is impossible to scroll past. No "in this video..." or "today we will...". Start mid-scene, mid-question, or mid-revelation.
-- Captions: maximum 6-8 words. Punchy fragments, not full sentences. No periods.
+- Captions: maximum 6-8 words. Punchy fragments, not full sentences. No periods. Each caption SHOULD include a "highlight" field naming the single most impactful word in the caption (preferred candidates: strange, hidden, vanished, signal, mystery, impossible, forbidden, unknown, discovered, secret, ancient, bizarre, haunted, cursed, lost, found, real). If none of those fit, pick the most striking noun or adjective in the caption.
 - Visual prompts must be EXTREMELY cinematic and specific. Describe camera angle, lighting, color palette, subject, atmosphere, lens feel. BAD: "ocean waves" or "historical ruins". GOOD: "extreme close-up of a sonar screen pulsing with an unknown signal, deep blue glow, underwater facility in soft focus behind, ominous teal atmosphere, slow push-in on the screen". Every visual_prompt should read like a shot list for a cinematographer.
 - Every scene is visually distinct from the others — different camera angle, different lighting, different subject framing. No two scenes should feel like the same shot.
-- The final scene ends on a cliffhanger or a powerful one-liner that demands the viewer follow.
+- The final scene ends with a strong payoff — a revelation, cliffhanger, or satisfying conclusion. The voiceover MUST NOT trail off.
 - Output is in English.
-- 4-6 scenes total. Durations add up to roughly 30-35 seconds.
+- Exactly ${plan.sceneCount} scenes. Total voiceover word count: ${minWords}–${maxWords} words. Durations add up to roughly ${plan.duration} seconds.
 
 GENRE-SPECIFIC GUIDANCE:
 - Mystery / Conspiracy: suspense, curiosity gaps, dark cinematic visuals, slow reveals, deep blues and shadow.
@@ -296,6 +305,7 @@ OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching t
       "scene_number": number,
       "duration_seconds": number,
       "caption": string,
+      "highlight": string (one word from caption to paint yellow on screen — see rules above),
       "visual_prompt": string (max 450 characters, cinematic-specific),
       "voiceover": string
     }
@@ -315,6 +325,7 @@ OUTPUT FORMAT — valid JSON ONLY (no markdown fences, no commentary) matching t
     "improvement_suggestions": string[]
   }
 }`
+}
 
 // ─── Coercion helpers ────────────────────────────────────────────────────────
 function asString(v: unknown, fallbackVal = ''): string {
@@ -391,10 +402,17 @@ function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
     // the per-clip prompt. Hard-clamp it to PROVIDER_PROMPT_MAX so a long
     // model response can never trigger "Prompt is too long" downstream.
     const rawVisual = asString(e.visual_prompt, fb.visual_prompt)
+    const caption = clampCaption(asString(e.caption, fb.caption))
+    // Push #064 — accept a per-scene "highlight" word. We don't validate
+    // here that it actually appears in the caption; the renderer in
+    // lib/compose.ts treats missing highlights as "fall back to the
+    // heuristic picker" and is tolerant of mismatches.
+    const highlight = asString(e.highlight, '') || null
     out.push({
       scene_number: asNumber(e.scene_number, i + 1),
       duration_seconds: asNumber(e.duration_seconds, fb.duration_seconds),
-      caption: clampCaption(asString(e.caption, fb.caption)),
+      caption,
+      highlight,
       visual_prompt: clampToProviderLimit(rawVisual),
       voiceover: asString(e.voiceover, fb.voiceover),
     })
@@ -415,7 +433,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string }
+    let body: { prompt?: string; duration?: number }
     try {
       body = await req.json()
     } catch {
@@ -429,6 +447,11 @@ export async function POST(req: NextRequest) {
     if (prompt.length > 1000) {
       return NextResponse.json({ error: 'Prompt is too long.' }, { status: 400 })
     }
+
+    // Push #064 — duration shapes word count + scene count. Defaults to 45s
+    // when missing or invalid so existing clients keep working.
+    const requestedDuration = Number(body.duration) || 45
+    const duration = [30, 45, 60].includes(requestedDuration) ? requestedDuration : 45
 
     const fallback = fallbackBrief(prompt)
 
@@ -448,7 +471,7 @@ Follow every rule in the system prompt. Return ONLY the JSON object — no markd
         {
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: buildSystemPrompt(duration) },
             { role: 'user', content: userMsg },
           ],
           temperature: 0.85,

@@ -145,8 +145,12 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: 'subscription',
-      success_url: `${appUrl}/dashboard?upgraded=true`,
-      cancel_url: `${appUrl}/pricing?cancelled=true`,
+      // Push #063 — recovery-friendly post-checkout pages. /checkout/success
+      // shows the activation note and nudges back into /generate;
+      // /checkout/cancelled re-offers the launch links so the abandoned-cart
+      // intent doesn't vanish.
+      success_url: `${appUrl}/checkout/success`,
+      cancel_url: `${appUrl}/checkout/cancelled`,
       metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
       subscription_data: {
         metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },

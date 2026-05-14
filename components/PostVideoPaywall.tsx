@@ -20,6 +20,25 @@ const STRIPE_LINKS = {
   pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
 }
 
+// Push #063 — fire-and-forget checkout click tracking so the paywall feeds
+// into /admin/funnel. Silently no-ops when public.events isn't present.
+function trackCheckoutClick(tier: 'basic' | 'pro'): void {
+  try {
+    void fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name: tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked',
+        name: tier === 'basic' ? 'checkout_basic_click' : 'checkout_pro_click',
+        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
+
 export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   const [dismissed, setDismissed] = useState(false)
   if (dismissed) return null
@@ -65,6 +84,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           features={['140 credits / month', '15 credits per Basic video']}
           href={STRIPE_LINKS.basic}
           ctaLabel="Start Basic →"
+          onClick={() => trackCheckoutClick('basic')}
         />
         <PlanCard
           name="Pro"
@@ -73,6 +93,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           features={['350 credits / month', '20 credits per Pro video']}
           href={STRIPE_LINKS.pro}
           ctaLabel="Start Pro →"
+          onClick={() => trackCheckoutClick('pro')}
           highlight
         />
       </div>
@@ -105,6 +126,7 @@ function PlanCard({
   href,
   ctaLabel,
   highlight,
+  onClick,
 }: {
   name: string
   price: string
@@ -113,6 +135,7 @@ function PlanCard({
   href: string
   ctaLabel: string
   highlight?: boolean
+  onClick?: () => void
 }) {
   return (
     <div
@@ -156,6 +179,7 @@ function PlanCard({
       </ul>
       <a
         href={href}
+        onClick={onClick}
         className="rounded-xl py-2.5 text-sm font-black text-center text-white"
         style={{
           background: 'linear-gradient(135deg, #2563EB, #7c3aed)',

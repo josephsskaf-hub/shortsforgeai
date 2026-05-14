@@ -5,20 +5,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/Sidebar'
-import PricingCards from '@/components/PricingCards'
 
-// Push #033: video-first landing. The page is visible to BOTH guests and
-// logged-in users (the push #032 auto-redirect to /generate was removed
-// — the lightning logo in the sidebar handles "jump to the app" for
-// logged-in users instead). The Generate Video card on this page is a
-// thin shortcut: it forwards the prompt to /generate via sessionStorage
-// rather than running its own pipeline.
+// Push #062 — Landing page overhaul. The hero, trust strip, "How it
+// works", examples grid, launch offer, and social-proof line are all
+// driven by simple static arrays below. The Generate Video card stays as
+// the primary CTA — it forwards the prompt to /generate via
+// sessionStorage rather than running its own pipeline.
 //
-// Push #046 — Conversion Upgrade V1
-//   - Stronger hero copy + autofocused, prominent input
-//   - Staged "instant feeling" loader between click and redirect
-//   - Before/After visual proof section (input vs. output)
-//   - Trending Niches social proof section above pricing
+// Push #061 — fires a `homepage_view` event on mount so /admin/funnel can
+// count top-of-funnel impressions.
 
 const PENDING_PROMPT_KEY = 'pendingVideoPrompt'
 
@@ -29,12 +24,95 @@ const LOADING_STEPS = [
   'Optimizing short pacing…',
 ]
 
-const TRENDING_NICHES: { title: string; tag: string; tagColor: string; emoji: string }[] = [
-  { title: 'Mystery Videos', tag: '+38% engagement trend', tagColor: '#34d399', emoji: '🛸' },
-  { title: 'History Secrets', tag: 'High retention format', tagColor: '#93c5fd', emoji: '📜' },
-  { title: 'Strange Facts', tag: 'Fastest to produce', tagColor: '#fbbf24', emoji: '🤯' },
-  { title: 'Ocean Mysteries', tag: 'Strong hook potential', tagColor: '#a78bfa', emoji: '🌊' },
+const TRUST_POINTS = [
+  'No editing skills needed',
+  'English voiceover + captions included',
+  'Download ready-to-post MP4',
+  'Credits charged only on success',
+  'Works for YouTube Shorts, TikTok and Instagram Reels',
 ]
+
+const HOW_IT_WORKS = [
+  { step: '1', title: 'Enter your video idea', body: 'A single sentence is enough — the AI handles the rest.' },
+  { step: '2', title: 'AI creates hook, scenes, voiceover and captions', body: 'A complete story arc from hook to payoff.' },
+  { step: '3', title: 'Generate your AI Short', body: 'Voiceover, captions and visuals are stitched into a vertical MP4.' },
+  { step: '4', title: 'Download and post', body: 'Ready for YouTube Shorts, TikTok and Instagram Reels.' },
+]
+
+interface LandingExample {
+  key: string
+  title: string
+  description: string
+  prompt: string
+  emoji: string
+}
+
+const LANDING_EXAMPLES: LandingExample[] = [
+  {
+    key: 'space',
+    emoji: '🛸',
+    title: 'Space Mystery',
+    description: 'Dark, cinematic explorations of unexplained signals from deep space.',
+    prompt: 'Create a mysterious cinematic YouTube Short about a strange signal coming from deep space.',
+  },
+  {
+    key: 'history',
+    emoji: '📜',
+    title: 'History Facts',
+    description: 'Strange historical facts that sound fake but really happened.',
+    prompt: 'Create a cinematic YouTube Short about 5 strange history facts that sound fake but are real.',
+  },
+  {
+    key: 'places',
+    emoji: '🌍',
+    title: 'Hidden Places',
+    description: 'Secret locations on Earth that look like they belong on another planet.',
+    prompt: 'Create a cinematic YouTube Short about 5 hidden places on Earth that look impossible.',
+  },
+  {
+    key: 'cold-case',
+    emoji: '🕵️',
+    title: 'Cold Case',
+    description: 'A famous unsolved mystery told as a tight cinematic short.',
+    prompt: 'Create a cinematic YouTube Short about a famous unsolved mystery that was never explained.',
+  },
+  {
+    key: 'animals',
+    emoji: '🦑',
+    title: 'Weird Facts',
+    description: 'Nature’s strangest creatures and their unbelievable abilities.',
+    prompt: "Create a cinematic YouTube Short about 5 animals that look like they shouldn't exist.",
+  },
+  {
+    key: 'money',
+    emoji: '💰',
+    title: 'Money Psychology',
+    description: 'Money truths that change how you think about wealth.',
+    prompt: 'Create a cinematic YouTube Short about 5 money facts that will change how you think about wealth.',
+  },
+]
+
+const STRIPE_LINKS = {
+  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
+  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
+}
+
+function trackHomepageEvent(name: string): void {
+  try {
+    void fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name: name,
+        name,
+        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
 
 export default function HomePage() {
   const router = useRouter()
@@ -46,10 +124,12 @@ export default function HomePage() {
   const [authChecked, setAuthChecked] = useState(false)
 
   const [prompt, setPrompt] = useState('')
-
-  // Staged-loader state — drives the 4-step "feels like it's working"
-  // overlay we show between Analyze click and the /generate redirect.
   const [loaderStep, setLoaderStep] = useState<number>(-1)
+
+  // Push #061 — single homepage_view event on first mount.
+  useEffect(() => {
+    trackHomepageEvent('homepage_view')
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -70,8 +150,6 @@ export default function HomePage() {
     })
   }, [])
 
-  // Autofocus the textarea on mount, but only on viewports where it won't
-  // pop the mobile keyboard the moment the page loads.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.matchMedia('(min-width: 768px)').matches) {
@@ -80,7 +158,7 @@ export default function HomePage() {
   }, [])
 
   function handleAnalyze() {
-    if (loaderStep >= 0) return // already in progress
+    if (loaderStep >= 0) return
     const trimmed = prompt.trim()
     try {
       if (trimmed) sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed)
@@ -90,9 +168,6 @@ export default function HomePage() {
       // redirect anyway so the user can still type their idea on /generate.
     }
 
-    // Staged loader: 4 steps × ~280ms ≈ 1.1s perceived progress before the
-    // actual /generate route takes over. Kept short on purpose so we never
-    // make the app feel slower than it already is.
     setLoaderStep(0)
     const stepMs = 280
     const dest = user ? '/generate' : `/login?redirect=${encodeURIComponent('/generate')}`
@@ -102,14 +177,14 @@ export default function HomePage() {
     setTimeout(() => router.push(dest), LOADING_STEPS.length * stepMs)
   }
 
+  function trackCheckoutClick(tier: 'basic' | 'pro') {
+    trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
+  }
+
   return (
     <div style={{ display: 'flex', background: 'var(--bg)', minHeight: '100vh' }}>
-      {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
 
-      {/* Push #052 — wrapped in `hidden md:block` so the fixed 248px aside
-          no longer overlays the public homepage on iPhone widths. The top
-          <nav> below already provides mobile auth/jump-to-app actions. */}
       <div className="hidden md:block">
         <Sidebar
           userEmail={userEmail}
@@ -149,19 +224,20 @@ export default function HomePage() {
         {/* ─── Hero ─── */}
         <section style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: 'clamp(28px, 6vw, 56px) 20px 18px', maxWidth: 820, margin: '0 auto' }}>
           <h1 style={{ fontSize: 'clamp(2rem, 6.4vw, 3.4rem)', fontWeight: 900, lineHeight: 1.04, letterSpacing: '-0.035em', margin: '0 auto 14px', maxWidth: 760 }}>
-            Turn Any Idea Into a{' '}
+            Create{' '}
             <span style={{ background: 'linear-gradient(135deg, #3B82F6, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Viral Short
-            </span>
+              AI Shorts
+            </span>{' '}
+            with voiceover, captions and visuals.
           </h1>
 
-          <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 560, margin: '0 auto', lineHeight: 1.55 }}>
-            Generate hooks, scripts, scenes, captions and hashtags for faceless YouTube Shorts in seconds.
+          <p style={{ fontSize: '1rem', color: 'var(--muted2)', maxWidth: 580, margin: '0 auto', lineHeight: 1.55 }}>
+            Turn one idea into a ready-to-post vertical video for YouTube Shorts, TikTok and Reels.
           </p>
         </section>
 
         {/* ─── Generate Video Card ─── */}
-        <section style={{ position: 'relative', zIndex: 10, padding: '0 16px 24px', maxWidth: 820, margin: '0 auto' }}>
+        <section style={{ position: 'relative', zIndex: 10, padding: '0 16px 16px', maxWidth: 820, margin: '0 auto' }}>
           <div
             className="hero-card"
             style={{
@@ -257,11 +333,24 @@ export default function HomePage() {
                 letterSpacing: '-0.01em',
               }}
             >
-              {loaderStep >= 0 ? 'Working…' : 'Generate My Short'}
+              {loaderStep >= 0 ? 'Working…' : 'Generate your first AI Short'}
             </button>
-            <p style={{ marginTop: 10, fontSize: '0.78rem', color: 'var(--muted)', textAlign: 'center' }}>
-              No editing skills needed. Start with a simple idea.
-            </p>
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <Link
+                href="/examples"
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#93c5fd',
+                  textDecoration: 'none',
+                }}
+              >
+                See examples →
+              </Link>
+              <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                No editing skills needed.
+              </span>
+            </div>
           </div>
           <style>{`
             .hero-prompt-textarea::placeholder { color: rgba(255,255,255,.40); }
@@ -273,189 +362,255 @@ export default function HomePage() {
           `}</style>
         </section>
 
-        {/* ─── Before / After proof ─── */}
-        <section style={{ position: 'relative', zIndex: 10, padding: '20px 16px 8px', maxWidth: 1080, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 10 }}>
-              Live Example
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>
-              From Simple Idea to Ready-to-Post Short
-            </h2>
-          </div>
-
-          <div className="ba-grid">
-            {/* Input */}
-            <div className="ba-card" style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)', borderRadius: 18, padding: '20px 22px' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: '#93c5fd', textTransform: 'uppercase', marginBottom: 10 }}>
-                Input
-              </div>
-              <p style={{ fontSize: '1.05rem', color: 'var(--text)', lineHeight: 1.5, fontWeight: 600, margin: 0 }}>
-                Ancient ocean mysteries
-              </p>
-            </div>
-
-            {/* Output */}
-            <div className="ba-card" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.10), rgba(124,58,237,.06))', border: '1px solid rgba(99,102,241,.30)', borderRadius: 18, padding: '20px 22px', boxShadow: '0 0 32px rgba(99,102,241,.10)' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: '#a78bfa', textTransform: 'uppercase', marginBottom: 10 }}>
-                Output
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Hook</div>
-                <p style={{ fontSize: '0.92rem', color: 'var(--text)', lineHeight: 1.5, fontWeight: 700, margin: 0 }}>
-                  “Scientists found signals beneath the ocean… and no one can explain them.”
-                </p>
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Script</div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--muted2)', lineHeight: 1.55, margin: 0 }}>
-                  Deep below the ocean, strange sounds have been recorded for decades. Some were linked to ice, others to unknown movement. But a few remain unexplained. The deeper we listen, the less we understand.
-                </p>
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Visual scenes</div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--muted2)', lineHeight: 1.55 }}>
-                  <li>Dark ocean satellite view</li>
-                  <li>Deep-sea sonar animation</li>
-                  <li>Mysterious underwater lights</li>
-                </ul>
-              </div>
-
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>CTA</div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, fontWeight: 600, margin: 0 }}>
-                  “Follow for more hidden mysteries.”
-                </p>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Hashtags</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {['#shorts', '#mystery', '#ocean', '#facts'].map((h) => (
-                    <span
-                      key={h}
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: '#93c5fd',
-                        padding: '3px 10px',
-                        borderRadius: 999,
-                        background: 'rgba(37,99,235,.12)',
-                        border: '1px solid rgba(37,99,235,.30)',
-                      }}
-                    >
-                      {h}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
+        {/* ─── Trust strip ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '12px 16px 4px', maxWidth: 1080, margin: '0 auto' }}>
+          <ul
+            className="trust-grid"
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              display: 'grid',
+              gap: 10,
+            }}
+          >
+            {TRUST_POINTS.map((point) => (
+              <li
+                key={point}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: '0.82rem',
+                  color: 'var(--muted2)',
+                  fontWeight: 600,
+                  background: 'rgba(15,15,30,0.55)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  padding: '8px 12px',
+                  lineHeight: 1.3,
+                }}
+              >
+                <span style={{ color: '#34d399', fontWeight: 900, flexShrink: 0 }}>✓</span>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
           <style>{`
-            .ba-grid {
-              display: grid;
-              grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-              gap: 16px;
-              align-items: stretch;
-            }
-            @media (max-width: 760px) {
-              .ba-grid { grid-template-columns: 1fr; gap: 12px; }
-            }
+            .trust-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            @media (max-width: 980px) { .trust-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            @media (max-width: 460px) { .trust-grid { grid-template-columns: 1fr; } }
           `}</style>
         </section>
 
-        {/* ─── Trending niches / social proof ─── */}
-        <section style={{ position: 'relative', zIndex: 10, padding: '32px 16px 8px', maxWidth: 1080, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 6 }}>
-                Trending Niches This Week
-              </div>
-              <h2 style={{ fontSize: 'clamp(1.2rem, 3.4vw, 1.6rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>
-                What faceless creators are shipping right now
-              </h2>
+        {/* ─── How it works ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '32px 16px 12px', maxWidth: 1080, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 22 }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 8 }}>
+              How it works
             </div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '7px 14px',
-                borderRadius: 999,
-                background: 'rgba(52,211,153,.08)',
-                border: '1px solid rgba(52,211,153,.28)',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                color: '#34d399',
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px rgba(52,211,153,.6)', display: 'inline-block' }} />
-              2,184 shorts generated this week
-            </div>
+            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>
+              One idea → one ready-to-post AI Short.
+            </h2>
           </div>
-
-          <div className="trending-grid">
-            {TRENDING_NICHES.map((n) => (
+          <div
+            className="hiw-grid"
+            style={{
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            {HOW_IT_WORKS.map((step) => (
               <div
-                key={n.title}
+                key={step.step}
                 style={{
                   background: 'rgba(15,15,30,0.85)',
                   border: '1px solid var(--border)',
                   borderRadius: 16,
-                  padding: '16px 18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  minHeight: 110,
+                  padding: '18px 20px',
+                  minHeight: 130,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{n.emoji}</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.01em' }}>{n.title}</span>
-                </div>
-                <span
+                <div
                   style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: n.tagColor,
-                    background: 'rgba(255,255,255,.03)',
-                    border: '1px solid rgba(255,255,255,.08)',
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                    alignSelf: 'flex-start',
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #2563EB, #7c3aed)',
+                    color: '#fff',
+                    fontWeight: 900,
+                    fontSize: '0.95rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 10,
+                    boxShadow: '0 4px 18px rgba(99,102,241,.35)',
                   }}
                 >
-                  {n.tag}
-                </span>
+                  {step.step}
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.01em' }}>
+                  {step.title}
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: 0, lineHeight: 1.5 }}>
+                  {step.body}
+                </p>
               </div>
             ))}
           </div>
-
           <style>{`
-            .trending-grid {
-              display: grid;
-              grid-template-columns: repeat(4, minmax(0, 1fr));
-              gap: 12px;
-            }
-            @media (max-width: 900px) { .trending-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-            @media (max-width: 460px) { .trending-grid { grid-template-columns: 1fr; } }
+            .hiw-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            @media (max-width: 920px) { .hiw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            @media (max-width: 460px) { .hiw-grid { grid-template-columns: 1fr; } }
           `}</style>
         </section>
 
-        {/* ─── Pricing ─── */}
-        <section style={{ position: 'relative', zIndex: 10, padding: '32px 16px 16px', maxWidth: 1100, margin: '0 auto' }}>
-          <PricingCards />
+        {/* ─── Examples ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '32px 16px 12px', maxWidth: 1080, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 22 }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--indigo-light)', textTransform: 'uppercase', marginBottom: 8 }}>
+              Examples you can create
+            </div>
+            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>
+              Pick a style — the AI handles the rest.
+            </h2>
+          </div>
+          <div
+            className="ex-grid"
+            style={{
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            {LANDING_EXAMPLES.map((ex) => (
+              <div
+                key={ex.key}
+                style={{
+                  background: 'rgba(15,15,30,0.85)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  padding: '18px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{ex.emoji}</span>
+                  <span style={{ fontSize: '0.98rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.01em' }}>{ex.title}</span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: 0, lineHeight: 1.5 }}>
+                  {ex.description}
+                </p>
+                <Link
+                  href={`/generate?prompt=${encodeURIComponent(ex.prompt)}`}
+                  style={{
+                    marginTop: 'auto',
+                    alignSelf: 'flex-start',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    color: '#93c5fd',
+                    background: 'rgba(37,99,235,.10)',
+                    border: '1px solid rgba(37,99,235,.30)',
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Use this style →
+                </Link>
+              </div>
+            ))}
+          </div>
+          <style>{`
+            .ex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            @media (max-width: 900px) { .ex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            @media (max-width: 520px) { .ex-grid { grid-template-columns: 1fr; } }
+          `}</style>
+        </section>
+
+        {/* ─── Launch offer ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '32px 16px 16px', maxWidth: 980, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 22 }}>
+            <div
+              style={{
+                display: 'inline-block',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                letterSpacing: '0.14em',
+                color: '#fbbf24',
+                textTransform: 'uppercase',
+                background: 'rgba(251,191,36,.10)',
+                border: '1px solid rgba(251,191,36,.30)',
+                padding: '6px 12px',
+                borderRadius: 999,
+                marginBottom: 12,
+              }}
+            >
+              Limited launch offer
+            </div>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 4.4vw, 2.2rem)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>
+              50% off your first month.
+            </h2>
+            <p style={{ fontSize: '0.92rem', color: 'var(--muted2)', maxWidth: 520, margin: '10px auto 0', lineHeight: 1.5 }}>
+              Two plans. Both include the launch offer. Failed generations never consume credits.
+            </p>
+          </div>
+
+          <div className="lo-grid" style={{ display: 'grid', gap: 16 }}>
+            <PlanOfferCard
+              tier="basic"
+              name="Basic"
+              firstPrice="$4.50"
+              renew="then $9/month"
+              features={[
+                '140 credits / month',
+                '≈9 videos / month',
+                '15 credits per Basic video',
+                'Email support',
+              ]}
+              ctaLabel="Start Basic"
+              href={STRIPE_LINKS.basic}
+              onClick={() => trackCheckoutClick('basic')}
+            />
+            <PlanOfferCard
+              tier="pro"
+              name="Pro"
+              firstPrice="$9.50"
+              renew="then $19/month"
+              features={[
+                '350 credits / month',
+                '≈17 videos / month',
+                '20 credits per Pro video',
+                'Better cinematic prompting',
+                'Priority support',
+              ]}
+              ctaLabel="Start Pro"
+              href={STRIPE_LINKS.pro}
+              onClick={() => trackCheckoutClick('pro')}
+              highlight
+            />
+          </div>
+
           <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', marginTop: 18, maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
             50% off applies to the first month only. Failed generations do not consume credits.
+          </p>
+
+          <style>{`
+            .lo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            @media (max-width: 720px) { .lo-grid { grid-template-columns: 1fr; } }
+          `}</style>
+        </section>
+
+        {/* ─── Social proof ─── */}
+        <section style={{ position: 'relative', zIndex: 10, padding: '12px 16px 32px', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.92rem', color: 'var(--muted2)', margin: 0, lineHeight: 1.55 }}>
+            Built for faceless creators, Shorts channels and AI video workflows.
           </p>
         </section>
 
         {/* ─── Footer ─── */}
-        <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)', padding: '28px 32px', marginTop: 24 }}>
+        <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)', padding: '28px 32px', marginTop: 12 }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #2563EB, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>⚡</div>
@@ -465,6 +620,7 @@ export default function HomePage() {
               {[
                 ['/', 'Home'],
                 ['/generate', 'Generate'],
+                ['/examples', 'Examples'],
                 ['/pricing', 'Pricing'],
                 ['/login', 'Sign In'],
               ].map(([href, label]) => (
@@ -475,6 +631,115 @@ export default function HomePage() {
           </div>
         </footer>
       </div>
+    </div>
+  )
+}
+
+function PlanOfferCard({
+  tier,
+  name,
+  firstPrice,
+  renew,
+  features,
+  ctaLabel,
+  href,
+  onClick,
+  highlight,
+}: {
+  tier: 'basic' | 'pro'
+  name: string
+  firstPrice: string
+  renew: string
+  features: string[]
+  ctaLabel: string
+  href: string
+  onClick: () => void
+  highlight?: boolean
+}) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: highlight
+          ? 'linear-gradient(135deg, rgba(37,99,235,.12), rgba(124,58,237,.08))'
+          : 'rgba(15,15,30,0.85)',
+        border: highlight ? '2px solid rgba(37,99,235,.45)' : '1px solid var(--border)',
+        borderRadius: 20,
+        padding: 22,
+        boxShadow: highlight ? '0 0 50px rgba(37,99,235,.18)' : '0 0 24px rgba(0,0,0,.25)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {highlight && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 14,
+            right: 14,
+            padding: '4px 10px',
+            borderRadius: 999,
+            fontSize: '0.65rem',
+            fontWeight: 900,
+            color: '#fff',
+            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Best Value
+        </div>
+      )}
+
+      <div
+        style={{
+          fontSize: '0.65rem',
+          fontWeight: 900,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: highlight ? '#93C5FD' : 'var(--muted)',
+          marginBottom: 6,
+        }}
+      >
+        {name}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
+        <span style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
+          {firstPrice}
+        </span>
+        <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>first month</span>
+      </div>
+      <p style={{ fontSize: '0.78rem', color: '#93C5FD', fontWeight: 700, margin: 0 }}>{renew}</p>
+
+      <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {features.map((f) => (
+          <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.85rem', color: 'var(--text2)' }}>
+            <span style={{ color: '#34d399', fontWeight: 900, marginTop: 2 }}>✓</span>
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+
+      <a
+        href={href}
+        onClick={onClick}
+        data-tier={tier}
+        style={{
+          marginTop: 'auto',
+          display: 'block',
+          textAlign: 'center',
+          textDecoration: 'none',
+          background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+          color: '#fff',
+          fontWeight: 900,
+          fontSize: '0.95rem',
+          padding: '14px 18px',
+          borderRadius: 14,
+          boxShadow: '0 8px 26px rgba(37,99,235,.35)',
+        }}
+      >
+        {ctaLabel} →
+      </a>
     </div>
   )
 }
