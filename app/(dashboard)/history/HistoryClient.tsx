@@ -96,7 +96,9 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
 
   if (generations.length === 0) {
     return (
-      <div className="px-6 py-7">
+      // Push #052 — tighter horizontal padding on mobile so the empty-state
+      // card fits the viewport edge-to-edge without scroll.
+      <div className="px-4 sm:px-6 py-7">
         <div className="mb-7">
           <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
             Generation History
@@ -105,7 +107,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
             Your <span className="grad-text">History</span>
           </h1>
         </div>
-        <div className="rounded-2xl p-16 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-8 sm:p-16 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
           <div className="text-5xl mb-4">📋</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>Your next viral Short starts here.</h2>
           <p className="text-sm" style={{ color: 'var(--muted)' }}>Head to Creator Hub and generate your first viral Shorts pack!</p>

@@ -220,7 +220,9 @@ function PlanCard({
         <button
           onClick={cta.onClick}
           disabled={cta.loading}
-          className="w-full rounded-xl py-3 text-sm font-black text-white"
+          // Push #052 — bump mobile tap-target above the 44px minimum
+          // (py-3.5 → ~46px tall) without changing desktop density.
+          className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black text-white"
           style={{
             background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
             boxShadow: '0 4px 18px rgba(37,99,235,.28)',
@@ -233,7 +235,7 @@ function PlanCard({
         </button>
       ) : (
         <div
-          className="w-full text-center rounded-xl py-3 text-sm font-bold"
+          className="w-full text-center rounded-xl py-3.5 sm:py-3 text-sm font-bold"
           style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid var(--border)',

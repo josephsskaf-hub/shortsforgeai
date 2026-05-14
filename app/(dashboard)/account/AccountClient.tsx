@@ -123,7 +123,9 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
   const usagePct = planLimit > 0 ? Math.min(100, (usedThisCycle / planLimit) * 100) : 0
 
   return (
-    <div className="px-6 py-7 pb-20">
+    // Push #052 — tighter horizontal padding on mobile so cards don't get
+    // squeezed against the viewport edge on iPhone widths.
+    <div className="px-4 sm:px-6 py-7 pb-20">
       {/* Header */}
       <div className="mb-6">
         <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>

@@ -901,10 +901,10 @@ export default function GenerateClient() {
             placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
             maxLength={1000}
             disabled={phase === 'analyzing'}
-            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
-            // Push #035: textarea sized to exactly 830 × 400 px. `w-full` plus
-            // maxWidth keeps it responsive — it caps at 830 px on wide
-            // viewports and shrinks to fit on smaller screens.
+            // Push #052 — gv-prompt class drives the responsive min-height
+            // so the field doesn't push the Generate button below the fold
+            // on iPhone widths. 220px ≈ 8 visible lines on mobile.
+            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed gv-prompt"
             style={{
               width: '100%',
               maxWidth: '830px',
@@ -913,9 +913,14 @@ export default function GenerateClient() {
               color: 'var(--text)',
               outline: 'none',
               resize: 'none',
-              minHeight: '400px',
             }}
           />
+          <style jsx>{`
+            .gv-prompt { min-height: 220px; }
+            @media (min-width: 640px) {
+              .gv-prompt { min-height: 400px; }
+            }
+          `}</style>
 
           {/* Push #034: duration + quality selectors moved here from the
               post-analyze step so users can pick everything in one screen

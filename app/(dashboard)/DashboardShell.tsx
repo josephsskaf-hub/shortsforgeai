@@ -53,15 +53,20 @@ export default function DashboardShell({
       {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 240 }} />
 
-      {/* Desktop sidebar (always open) */}
-      <Sidebar
-        userEmail={userEmail}
-        isPro={isPro}
-        generationsUsed={generationsUsed}
-        isLoggedIn={isLoggedIn}
-        isOpen={true}
-        onClose={() => {}}
-      />
+      {/* Desktop sidebar (always open).
+          Push #052 — wrapped in `hidden md:block` so the fixed 248px aside
+          no longer overlays mobile content. The mobile-toggle path below
+          inside `md:hidden` is the only one that renders on small screens. */}
+      <div className="hidden md:block">
+        <Sidebar
+          userEmail={userEmail}
+          isPro={isPro}
+          generationsUsed={generationsUsed}
+          isLoggedIn={isLoggedIn}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      </div>
 
       {/* Mobile sidebar overlay (toggle) */}
       {sidebarOpen && (

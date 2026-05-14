@@ -107,14 +107,19 @@ export default function HomePage() {
       {/* Desktop sidebar spacer */}
       <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
 
-      <Sidebar
-        userEmail={userEmail}
-        isPro={isPro}
-        generationsUsed={0}
-        isLoggedIn={!!user}
-        isOpen={true}
-        onClose={() => {}}
-      />
+      {/* Push #052 — wrapped in `hidden md:block` so the fixed 248px aside
+          no longer overlays the public homepage on iPhone widths. The top
+          <nav> below already provides mobile auth/jump-to-app actions. */}
+      <div className="hidden md:block">
+        <Sidebar
+          userEmail={userEmail}
+          isPro={isPro}
+          generationsUsed={0}
+          isLoggedIn={!!user}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      </div>
 
       <div className="flex-1 min-w-0" style={{ color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif' }}>
         {/* Background glows */}
