@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shortsforgeai.vercel.app'
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.vercel.app>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.shortsforgeai.com'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.com>'
 
 export async function POST(request: NextRequest) {
   try {
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
             <td align="center" style="padding-top:24px;">
               <p style="color:#334155;font-size:12px;margin:0;">
                 — The ShortsForgeAI Team<br />
-                <a href="${APP_URL}" style="color:#4f46e5;text-decoration:none;">www.shortsforgeai.vercel.app</a>
+                <a href="${APP_URL}" style="color:#4f46e5;text-decoration:none;">shortsforgeai.com</a>
               </p>
             </td>
           </tr>
@@ -157,7 +157,7 @@ ${dashboardUrl}
 Launch offer — 50% off your first month. Basic from $4.50/mo (140 credits), Pro from $9.50/mo (350 credits).
 
 — The ShortsForgeAI Team
-www.shortsforgeai.vercel.app`
+shortsforgeai.com`
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',

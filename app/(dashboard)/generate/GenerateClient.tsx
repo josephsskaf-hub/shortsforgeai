@@ -1383,7 +1383,7 @@ export default function GenerateClient() {
               <div className="flex flex-wrap items-center justify-center gap-3 mt-7">
                 <a
                   href={finalVideoUrl}
-                  download={`shortsforge-${duration}s.mp4`}
+                  download={`shortsforgeai-${duration}s.mp4`}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-xl px-5 py-2.5 text-sm font-bold text-white"
