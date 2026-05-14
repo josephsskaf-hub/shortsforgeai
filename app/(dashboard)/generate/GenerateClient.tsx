@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PricingCards from '@/components/PricingCards'
+import OnboardingPanel from '@/components/OnboardingPanel'
+import PostVideoPaywall from '@/components/PostVideoPaywall'
 
 interface TaskHandle {
   id: string
@@ -62,8 +64,17 @@ type Phase =
   | 'done'
   | 'failed'
 
-type Duration = 10 | 30 | 50
+// Push #064 — durations bumped to 30 / 45 / 60 so the AI has enough room to
+// build a real story arc (hook → setup → tension → payoff). 45s is the new
+// default; 30s is the "quick" option, 60s is the "deep story" option.
+type Duration = 30 | 45 | 60
 type Quality = 'basic' | 'basic_ai' | 'pro'
+
+const DURATION_OPTIONS: { value: Duration; label: string }[] = [
+  { value: 30, label: '30s — Quick' },
+  { value: 45, label: '45s — Recommended ⭐' },
+  { value: 60, label: '60s — Deep Story' },
+]
 
 const POLL_GENERATING_MS = 4000
 const POLL_COMPOSING_MS = 5000
@@ -141,7 +152,7 @@ export default function GenerateClient() {
   const [tasks, setTasks] = useState<TaskHandle[]>([])
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
-  const [duration, setDuration] = useState<Duration>(30)
+  const [duration, setDuration] = useState<Duration>(45)
   const [quality, setQuality] = useState<Quality>('basic_ai')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
@@ -191,6 +202,13 @@ export default function GenerateClient() {
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
+  }, [])
+
+  // Push #061 — fire a single page-view event on mount. Silently no-ops if
+  // public.events isn't available in this Supabase project.
+  useEffect(() => {
+    trackEvent('generate_page_view')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Push #033: pull a prompt forwarded by the homepage's Generate Video card.
@@ -458,12 +476,17 @@ export default function GenerateClient() {
           setRenderProgress(100)
           setFinalVideoUrl(url)
           setPhase('done')
+          // Push #060 / #061 — fire-and-forget event tracking.
+          trackEvent('generate_completed')
+          trackEvent('video_generation_completed', { duration, quality })
           return
         }
 
         if (data.phase === 'failed') {
           setError(typeof data.error === 'string' ? data.error : GENERIC_ERROR)
           setPhase('failed')
+          trackEvent('generate_failed')
+          trackEvent('video_generation_failed', { duration, quality })
           return
         }
 
@@ -499,6 +522,13 @@ export default function GenerateClient() {
       setError('Please describe your video idea first.')
       return
     }
+    // Push #060 / #061 — fire-and-forget event tracking. Endpoint silently
+    // succeeds if public.events doesn't exist in this DB. We fire both the
+    // legacy name (kept for /admin/metrics dashboards) and the new spec
+    // name used by /admin/funnel.
+    trackEvent('analyze_idea_clicked')
+    trackEvent('generate_started')
+    trackEvent('video_generation_started', { duration, quality })
     if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
@@ -515,7 +545,9 @@ export default function GenerateClient() {
       const res = await fetch('/api/analyze-idea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: source }),
+        // Push #064 — pass duration so analyze-idea can size word count
+        // and scene count to match the user's selection.
+        body: JSON.stringify({ prompt: source, duration }),
         signal: controller.signal,
       })
       if (res.status === 401) {
@@ -852,6 +884,20 @@ export default function GenerateClient() {
         </div>
       )}
 
+      {/* Push #060 — first-user onboarding panel. Only renders when the
+          user has zero rows in public.videos (recentVideos === []) and
+          the dismissed flag is unset in localStorage. We don't show it
+          while loading (recentVideos === null) so it doesn't flash. */}
+      {showStep1 && recentVideos !== null && recentVideos.length === 0 && (
+        <OnboardingPanel
+          hasNoVideos
+          onFillPrompt={(p) => {
+            setPrompt(p)
+            if (fromHome) setFromHome(false)
+          }}
+        />
+      )}
+
       {/* ── STEP 1: Idea ── */}
       {showStep1 && (
         <section
@@ -920,23 +966,26 @@ export default function GenerateClient() {
               Duration
             </div>
             <div className="flex gap-2 flex-wrap">
-              {([10, 30, 50] as Duration[]).map((d) => (
+              {DURATION_OPTIONS.map((opt) => (
                 <button
-                  key={d}
-                  onClick={() => setDuration(d)}
+                  key={opt.value}
+                  onClick={() => setDuration(opt.value)}
                   className="rounded-full px-4 py-1.5 text-sm font-bold"
                   style={{
-                    background: duration === d ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                    border: duration === d ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
-                    color: duration === d ? '#fff' : 'var(--muted)',
+                    background: duration === opt.value ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
+                    border: duration === opt.value ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                    color: duration === opt.value ? '#fff' : 'var(--muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
                 >
-                  {d === 30 ? `${d} seconds (default)` : `${d} seconds`}
+                  {opt.label}
                 </button>
               ))}
             </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+              Longer videos give the AI more room to build a complete story.
+            </p>
           </div>
 
           <div className="mt-5">
@@ -1339,6 +1388,24 @@ export default function GenerateClient() {
                 <p className="text-xs mt-1.5" style={{ color: 'var(--muted)', letterSpacing: '0.04em' }}>
                   {duration}s · YouTube Shorts 9:16
                 </p>
+                {/* Push #065 — show the generated title so the user can see
+                    what the AI named the video. Falls back to a generic
+                    label so the row never disappears. Clamped to two lines
+                    so a long title can't push the player below the fold. */}
+                <p
+                  className="font-semibold text-base sm:text-lg mt-3 mx-auto"
+                  style={{
+                    color: '#fff',
+                    maxWidth: 'min(460px, 90vw)',
+                    lineHeight: 1.3,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {analysis?.title?.trim() || 'Untitled Video'}
+                </p>
               </div>
 
               {/* Push #045A — bigger result-page player. width caps at 460px
@@ -1431,6 +1498,16 @@ export default function GenerateClient() {
               </p>
             </section>
           )}
+
+          {/* Push #060 — smart paywall. Shows below the video result on a
+              successful generation when the user's remaining balance is
+              at or below 30 credits. Failed runs never see it (we're
+              inside the `phase === 'done'` branch). The paywall component
+              re-checks credits itself as a safety net. */}
+          {phase === 'done' &&
+            finalVideoUrl &&
+            credits !== null &&
+            credits <= 30 && <PostVideoPaywall credits={credits} />}
 
           {/* Push #047 — ready-to-post text package. Renders after a
               successful generation, alongside the video player above, so
@@ -2433,9 +2510,32 @@ function buildSceneCaptions(
     // Tighten each line so it fits the caption box.
     return fromPlan.map((s) => trimCaption(s))
   }
-  // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Matches /api/generate-video.
-  const targetCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
+  // 30s → 3 clips, 45s → 5 clips (rounded up from 4.5), 60s → 6 clips.
+  // Matches clipCountForDuration in /api/generate-video.
+  const targetCount = duration === 30 ? 3 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
+}
+
+// Push #060 / #061 — fire-and-forget event tracking. POSTs to /api/events
+// which silently succeeds if public.events doesn't exist in this Supabase
+// project. Errors are swallowed so tracking never affects the user-facing
+// pipeline.
+function trackEvent(name: string, metadata?: Record<string, unknown>): void {
+  try {
+    void fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name: name,
+        name,
+        metadata: metadata ?? {},
+        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
 }
 
 function trimCaption(s: string): string {

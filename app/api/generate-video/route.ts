@@ -12,15 +12,18 @@ export const maxDuration = 60
 
 // Runway only generates clips of 5 or 10 seconds. To produce a longer Short
 // we kick off multiple 10s clips in parallel and let /api/compose stitch
-// them together. Supported total durations: 10s (1 clip), 30s (3 clips),
-// 50s (5 clips). The default 30s lives in the client.
-const SUPPORTED_DURATIONS = [10, 30, 50] as const
+// them together. Push #064 — durations bumped to 30 / 45 / 60 so the AI
+// has enough room to build a real story arc. The default 45s lives in
+// the client.
+const SUPPORTED_DURATIONS = [30, 45, 60] as const
 type Duration = (typeof SUPPORTED_DURATIONS)[number]
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 function clipCountForDuration(d: Duration): number {
-  // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Each Runway clip is 10s.
-  return Math.max(1, Math.round(d / 10))
+  // 30s → 3 clips (30s), 45s → 5 clips (5×10s = 50s, last clip truncated
+  // by compose to land at 45s), 60s → 6 clips (60s). Each Runway clip is
+  // 10s, so we round up to cover the full duration.
+  return Math.max(1, Math.ceil(d / 10))
 }
 
 // Credit cost shown on the Generate screen. Must match QUALITY_OPTIONS in
@@ -95,10 +98,10 @@ export async function POST(req: NextRequest) {
     }
 
     const platform = (body.platform ?? 'YouTube Shorts').toString()
-    const requestedDuration = Number(body.duration) || 30
+    const requestedDuration = Number(body.duration) || 45
     const duration: Duration = SUPPORTED_DURATIONS.includes(requestedDuration as Duration)
       ? (requestedDuration as Duration)
-      : 30
+      : 45
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
       return q === 'basic' || q === 'pro' ? q : 'basic_ai'

@@ -12,7 +12,10 @@ import {
 
 export const maxDuration = 60
 
-const SUPPORTED_DURATIONS = [10, 30, 50] as const
+// Push #064 — durations bumped to 30 / 45 / 60 in lockstep with
+// /api/generate-video. Legacy 10 / 50 kept here for backward
+// compatibility with any in-flight requests from the old client.
+const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60] as const
 type Quality = 'basic' | 'basic_ai' | 'pro'
 
 interface ComposeBody {
@@ -90,10 +93,10 @@ export async function POST(req: NextRequest) {
           .filter((c) => c.length > 0)
       : []
 
-    const requestedDuration = Number(body.duration) || 30
+    const requestedDuration = Number(body.duration) || 45
     const duration = (SUPPORTED_DURATIONS as readonly number[]).includes(requestedDuration)
       ? requestedDuration
-      : 30
+      : 45
 
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()

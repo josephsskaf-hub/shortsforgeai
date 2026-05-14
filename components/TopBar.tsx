@@ -54,7 +54,7 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
-        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>ShortsForge</Link>
+        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>ShortsForgeAI</Link>
         <span style={{ opacity: 0.3 }}>›</span>
         <span className="font-semibold" style={{ color: 'var(--text)' }}>
           {title}

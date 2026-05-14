@@ -5,10 +5,13 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
+import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
+// Push #064 — yellow used for the per-caption highlight word overlay.
+const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
@@ -266,46 +269,68 @@ function round3(v: number): number {
 }
 
 /**
- * Push #031: caption text is now derived from the voiceover script so the
- * on-screen words match what the narrator is saying. Splits on sentence
- * boundaries first, then breaks any over-long sentence into ~80-char word
- * chunks. Empty input returns an empty array — the caller falls back to the
- * scene descriptions in that case.
+ * Push #066 — build the Creatomate text element(s) for a single caption
+ * slot. Renders ONE text element so captions never stack on screen.
+ *
+ * Visual rule (guided captions):
+ *   - If the segment carries a highlight word, the whole caption is
+ *     rendered in yellow (#FFD700). The viewer's eye locks onto
+ *     high-impact moments without us doing fragile per-word positioning.
+ *   - Otherwise the caption renders in white.
+ *
+ * Why not two layers / inline rich text:
+ *   Push #064 used a separate floating yellow accent word above the
+ *   white caption. In practice this read as two stacked subtitle lines
+ *   and the positioning never landed cleanly on top of the matching
+ *   word in the white caption. Per-word inline color via Creatomate
+ *   rich-text markup is feature-gated across versions, so a malformed
+ *   tag would render as literal `[color]` text — unacceptable.
+ *   Whole-line color is the simplest path that's guaranteed to render
+ *   correctly on every Creatomate template.
+ *
+ * Safety: the build is wrapped in try/catch and ALWAYS returns at least
+ * the plain white caption element — a failed highlight decision can
+ * never break the render.
  */
-export function splitScriptIntoCaptionSegments(
-  script: string,
-  maxChars = 80,
-): string[] {
-  const clean = (script ?? '').trim().replace(/\s+/g, ' ')
-  if (!clean) return []
-
-  // Split on sentence-ending punctuation while keeping the boundary char.
-  const sentences = clean
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-
-  const captions: string[] = []
-  for (const sentence of sentences) {
-    if (sentence.length <= maxChars) {
-      captions.push(sentence)
-      continue
-    }
-    // Sentence too long for one caption — break at word boundaries.
-    const words = sentence.split(' ')
-    let buf = ''
-    for (const word of words) {
-      if (buf.length + word.length + 1 > maxChars && buf) {
-        captions.push(buf.trim())
-        buf = word
-      } else {
-        buf = buf ? `${buf} ${word}` : word
-      }
-    }
-    if (buf.trim()) captions.push(buf.trim())
+export function buildCaptionElements({
+  text,
+  time,
+  duration,
+  highlight,
+}: {
+  text: string
+  time: number
+  duration: number
+  highlight?: string | null
+}): CreatomateElement[] {
+  const baseCaption: CreatomateElement = {
+    type: 'text',
+    track: 5,
+    time,
+    duration,
+    text,
+    x: '50%',
+    y: '68%',
+    width: '86%',
+    font_family: 'Montserrat',
+    font_size: 58,
+    font_weight: '800',
+    fill_color: '#ffffff',
+    stroke_color: 'rgba(0,0,0,0.9)',
+    stroke_width: 3,
   }
 
-  return captions
+  try {
+    const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
+    if (candidate && candidate.trim().length > 0) {
+      return [{ ...baseCaption, fill_color: HIGHLIGHT_COLOR }]
+    }
+    return [baseCaption]
+  } catch {
+    // Any failure picking the highlight falls back to plain white —
+    // the render must never depend on the highlight decision.
+    return [baseCaption]
+  }
 }
 
 /**
@@ -343,6 +368,15 @@ export function buildCreatomateSource({
 
   // Track 2 — tile / loop the clips to fill the full duration.
   // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
+  //
+  // Push #065 — fit: 'contain' (not 'cover'). Runway returns 720x1280 clips
+  // (9:16), the output canvas is 1080x1920 (9:16), and the two aspect ratios
+  // match exactly — so 'contain' produces no letterboxing in the matched
+  // case while guaranteeing nothing gets cropped if a clip is ever encoded
+  // slightly off-spec. 'cover' would silently chop the top/bottom of a
+  // landmark whenever a model upscales a clip by a few pixels. Anchors stay
+  // pinned at 50%/50% so any letterbox would be centered, and track 1
+  // already paints a black background under everything as a safety net.
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
@@ -356,7 +390,7 @@ export function buildCreatomateSource({
       time: round3(cursor),
       duration: segLen,
       source: url,
-      fit: 'cover',
+      fit: 'contain',
       x: '50%',
       y: '50%',
       width: '100%',
@@ -391,36 +425,29 @@ export function buildCreatomateSource({
   })
 
   // Track 5 — captions distributed evenly across the duration (minus CTA
-  // tail). Caption text comes from the voiceover script first so it matches
-  // what the narrator says; falls back to the scene descriptions only when
-  // no script is available.
-  const scriptSegments = splitScriptIntoCaptionSegments(voiceoverScript)
-  const captionsClean = (scriptSegments.length > 0
+  // tail). Push #066 — captions are now ≤7-word viral-style segments with
+  // a per-segment highlight word so the renderer can paint the line
+  // yellow when an impactful keyword is present. Caption text comes from
+  // the voiceover script first so it matches what the narrator says;
+  // falls back to scene descriptions only when no script is available.
+  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
     ? scriptSegments
     : sceneCaptions
         .map((c) => (c ?? '').toString().trim())
         .filter((c) => c.length > 0)
-  )
+        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
   if (captionsClean.length > 0) {
     const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
     const perCaption = round3(captionWindow / captionsClean.length)
-    captionsClean.forEach((caption, idx) => {
-      elements.push({
-        type: 'text',
-        track: 5,
+    captionsClean.forEach((segment, idx) => {
+      const elementsForCaption = buildCaptionElements({
+        text: segment.text,
         time: round3(idx * perCaption),
         duration: perCaption,
-        text: caption,
-        x: '50%',
-        y: '68%',
-        width: '86%',
-        font_family: 'Montserrat',
-        font_size: 58,
-        font_weight: '800',
-        fill_color: '#ffffff',
-        stroke_color: 'rgba(0,0,0,0.9)',
-        stroke_width: 3,
+        highlight: segment.highlight,
       })
+      elements.push(...elementsForCaption)
     })
   }
 
