@@ -104,6 +104,52 @@ export function pickHighlightWord(caption: string): string | null {
   return null
 }
 
+// Push #066 — guided captions. A CaptionSegment is one viral-Shorts-sized
+// caption slot: a ≤7-word chunk of the narration with the most impactful
+// word pulled out so the renderer can paint it (or the whole line) yellow.
+export interface CaptionSegment {
+  text: string
+  highlight: string | null
+}
+
+/**
+ * Push #066 — Split a voiceover script into viral-style caption segments.
+ *
+ * Why deterministic (not an LLM call):
+ *   Captions must always render. An LLM call here would add latency, cost,
+ *   and a failure mode in the middle of compose. We instead use a hard
+ *   rule — split on sentence boundaries, then break each sentence into
+ *   ≤maxWords chunks — and pick the highlight word programmatically via
+ *   `pickHighlightWord`. Result: one caption line at a time, max ~7 words,
+ *   with a yellow-eligible keyword identified per slot.
+ *
+ * If the script is empty, returns []. The caller is expected to fall back
+ * to scene captions in that case.
+ */
+export function buildCaptionSegments(script: string, maxWords = 7): CaptionSegment[] {
+  const clean = (script ?? '').trim().replace(/\s+/g, ' ')
+  if (!clean) return []
+
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  const segments: CaptionSegment[] = []
+  for (const sentence of sentences) {
+    const words = sentence.split(/\s+/)
+    for (let i = 0; i < words.length; i += maxWords) {
+      const chunk = words.slice(i, i + maxWords).join(' ').trim()
+      if (!chunk) continue
+      segments.push({
+        text: chunk,
+        highlight: pickHighlightWord(chunk),
+      })
+    }
+  }
+  return segments
+}
+
 const NICHE_CONTEXT: Record<string, string> = {
   // Legacy niches
   mideast: 'Middle East Secrets — hidden stories, geopolitics, untold facts, and shocking truths from the Middle East region (Dubai, Saudi Arabia, Egypt, Iran, etc.)',
