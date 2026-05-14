@@ -74,6 +74,21 @@ export default function PricingClient(props: PricingClientProps) {
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
+  // Push #060 — fire-and-forget event tracking. Silently no-ops when
+  // public.events isn't set up in this DB.
+  useEffect(() => {
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'pricing_view' }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      // ignore
+    }
+  }, [])
+
   useEffect(() => {
     if (!userId) { setCredits(null); setCreditsLoading(false); return }
     let cancelled = false
@@ -108,6 +123,19 @@ export default function PricingClient(props: PricingClientProps) {
     if (!userId) {
       window.location.href = '/login?redirect=/pricing'
       return
+    }
+    // Push #060 — fire-and-forget event tracking before redirect.
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tier === 'basic' ? 'checkout_basic_click' : 'checkout_pro_click',
+        }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      // ignore
     }
     setPurchasing(tier)
     window.location.href = STRIPE_LINKS[tier]

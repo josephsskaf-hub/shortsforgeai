@@ -20,12 +20,14 @@ const pageTitles: Record<string, string> = {
   '/create': 'Create Video',
   '/generate': 'Generate New Short',
   '/my-videos': 'My Videos',
+  '/examples': 'Examples',
   '/history': 'Shorts Packs', // legacy — kept reachable but no longer primary
   '/pricing': 'Pricing',
   '/templates': 'Viral Templates',
   '/account': 'Account',
   '/video': 'Video Studio',
   '/channel': 'Channel Builder',
+  '/admin/metrics': 'Admin · Metrics',
 }
 
 export default function DashboardShell({

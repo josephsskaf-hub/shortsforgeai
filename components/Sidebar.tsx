@@ -295,6 +295,10 @@ export default function Sidebar({
               primary entry point. */}
           <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
           <NavItem href="/my-videos" icon="📼" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Push #060 — examples gallery. Static prompt showcase that
+              routes to /generate?prompt=…  No auth-gated logic; safe for
+              guests too. */}
+          <NavItem href="/examples" icon="✨" label="Examples" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
 

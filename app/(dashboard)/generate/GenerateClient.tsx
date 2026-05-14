@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PricingCards from '@/components/PricingCards'
+import OnboardingPanel from '@/components/OnboardingPanel'
+import PostVideoPaywall from '@/components/PostVideoPaywall'
 
 interface TaskHandle {
   id: string
@@ -458,12 +460,15 @@ export default function GenerateClient() {
           setRenderProgress(100)
           setFinalVideoUrl(url)
           setPhase('done')
+          // Push #060 — fire-and-forget event tracking.
+          trackEvent('generate_completed')
           return
         }
 
         if (data.phase === 'failed') {
           setError(typeof data.error === 'string' ? data.error : GENERIC_ERROR)
           setPhase('failed')
+          trackEvent('generate_failed')
           return
         }
 
@@ -499,6 +504,9 @@ export default function GenerateClient() {
       setError('Please describe your video idea first.')
       return
     }
+    // Push #060 — fire-and-forget event tracking. Endpoint silently
+    // succeeds if public.events doesn't exist in this DB.
+    trackEvent('generate_started')
     if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
@@ -850,6 +858,20 @@ export default function GenerateClient() {
         >
           {error}
         </div>
+      )}
+
+      {/* Push #060 — first-user onboarding panel. Only renders when the
+          user has zero rows in public.videos (recentVideos === []) and
+          the dismissed flag is unset in localStorage. We don't show it
+          while loading (recentVideos === null) so it doesn't flash. */}
+      {showStep1 && recentVideos !== null && recentVideos.length === 0 && (
+        <OnboardingPanel
+          hasNoVideos
+          onFillPrompt={(p) => {
+            setPrompt(p)
+            if (fromHome) setFromHome(false)
+          }}
+        />
       )}
 
       {/* ── STEP 1: Idea ── */}
@@ -1431,6 +1453,16 @@ export default function GenerateClient() {
               </p>
             </section>
           )}
+
+          {/* Push #060 — smart paywall. Shows below the video result on a
+              successful generation when the user's remaining balance is
+              at or below 30 credits. Failed runs never see it (we're
+              inside the `phase === 'done'` branch). The paywall component
+              re-checks credits itself as a safety net. */}
+          {phase === 'done' &&
+            finalVideoUrl &&
+            credits !== null &&
+            credits <= 30 && <PostVideoPaywall credits={credits} />}
 
           {/* Push #047 — ready-to-post text package. Renders after a
               successful generation, alongside the video player above, so
@@ -2436,6 +2468,23 @@ function buildSceneCaptions(
   // 10s → 1 clip, 30s → 3 clips, 50s → 5 clips. Matches /api/generate-video.
   const targetCount = duration === 10 ? 1 : duration === 30 ? 3 : 5
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
+}
+
+// Push #060 — fire-and-forget event tracking. POSTs to /api/events which
+// silently succeeds if public.events doesn't exist in this Supabase
+// project. Errors are swallowed so tracking never affects the user-facing
+// pipeline.
+function trackEvent(name: string): void {
+  try {
+    void fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
 }
 
 function trimCaption(s: string): string {

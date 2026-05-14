@@ -51,6 +51,12 @@ function toRow(r: RawRow): VideoRow {
     duration: numOrNull(r.duration) ?? numOrNull(r.duration_seconds),
     platform: strOrNull(r.platform) ?? 'YouTube Shorts',
     created_at: typeof r.created_at === 'string' ? r.created_at : new Date().toISOString(),
+    // Push #060 — surface the original prompt (so "Generate Similar" can
+    // re-seed /generate) and credits_used (so the card can show what the
+    // render cost). Both are optional — null when the column isn't
+    // present in this staging schema.
+    prompt: strOrNull(r.prompt) ?? strOrNull(r.topic),
+    credits_used: numOrNull(r.credits_used),
   }
 }
 
@@ -63,9 +69,10 @@ export default async function MyVideosPage() {
   if (!user) redirect('/login?redirect=/my-videos')
 
   // Same defensive column-narrowing as /api/videos so this page never
-  // 500s if a column doesn't exist in this staging DB.
+  // 500s if a column doesn't exist in this staging DB. Push #060 adds
+  // credits_used so My Videos can show what each render cost.
   const wideColumns =
-    'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,platform,thumbnail_url,thumb_url,render_id,created_at'
+    'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,platform,thumbnail_url,thumb_url,render_id,credits_used,created_at'
   const narrowColumns = 'id,status,final_video_url,title,created_at'
 
   async function runSelect(columns: string) {
