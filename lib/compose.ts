@@ -74,7 +74,7 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
           },
           {
             role: 'user',
-            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit www.shortsforge.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit shortsforgeai.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,

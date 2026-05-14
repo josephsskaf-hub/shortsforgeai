@@ -38,7 +38,7 @@ const STAGES = [
     range: '32–35s',
     icon: '📣',
     name: 'CTA',
-    desc: 'Channel plug + www.shortsforge.com',
+    desc: 'Channel plug + shortsforgeai.com',
     accent: '#ec4899',
   },
 ]
