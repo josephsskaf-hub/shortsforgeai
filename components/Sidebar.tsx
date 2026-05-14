@@ -245,42 +245,33 @@ export default function Sidebar({
           >
             ⚡
           </div>
-          <div className="flex flex-col gap-1">
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <div className="flex flex-col" style={{ gap: 2 }}>
+            <div
+              className="font-black tracking-tight leading-none"
+              style={{ fontSize: '1.1rem' }}
+            >
+              <span style={{ color: '#f5f5f7' }}>ShortsForge</span>
               <span
-                className="font-black tracking-tight leading-none"
                 style={{
-                  fontSize: '0.95rem',
                   background: 'linear-gradient(135deg, #818cf8, #a78bfa)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
               >
-                ShortsForge
-              </span>
-              {/* Push #045A — tiny version tag, subtle enough not to fight
-                  the wordmark but visible at a glance. */}
-              <span
-                aria-label="version 1.1"
-                style={{
-                  fontSize: '0.6rem',
-                  color: 'rgba(255,255,255,0.4)',
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  lineHeight: 1,
-                }}
-              >
-                V1.1
+                AI
               </span>
             </div>
             <span
+              aria-label="version 1.1"
               style={{
-                fontSize: '0.52rem', fontWeight: 900, letterSpacing: '0.12em',
-                background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.32)',
-                color: '#818cf8', padding: '1px 5px', borderRadius: 4,
+                fontSize: '0.65rem',
+                color: 'rgba(255,255,255,0.4)',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                lineHeight: 1,
               }}
             >
-              AI
+              v1.1
             </span>
           </div>
         </Link>
