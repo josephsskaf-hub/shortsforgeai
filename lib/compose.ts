@@ -7,7 +7,7 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
-const CTA_TEXT = 'www.shortsforge.com'
+const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
