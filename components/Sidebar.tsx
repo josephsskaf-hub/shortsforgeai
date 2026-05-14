@@ -261,7 +261,7 @@ export default function Sidebar({
               {/* Push #045A — tiny version tag, subtle enough not to fight
                   the wordmark but visible at a glance. */}
               <span
-                aria-label="version 1.0"
+                aria-label="version 1.1"
                 style={{
                   fontSize: '0.6rem',
                   color: 'rgba(255,255,255,0.4)',
@@ -270,7 +270,7 @@ export default function Sidebar({
                   lineHeight: 1,
                 }}
               >
-                V1.0
+                V1.1
               </span>
             </div>
             <span
