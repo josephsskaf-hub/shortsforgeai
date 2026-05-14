@@ -43,6 +43,19 @@ export function durationPlanFor(duration: number): DurationPlan {
   return { duration: 45, wordCountRange: [110, 135], sceneCount: 5 }
 }
 
+// Push #065 — safe composition rules. Vertical 9:16 + bottom captions
+// means generators must keep landmarks/faces inside a generous inner
+// frame, otherwise heads, monuments, or readable text get clipped on
+// the top/bottom or sit behind the caption strip. These rules are
+// injected into every visual-prompt-building system prompt.
+export const SAFE_COMPOSITION_RULES = `SAFE COMPOSITION (mandatory for every visual_prompt and provider_prompt):
+- Center the main subject in frame. Keep all important elements within the central 80% of the frame.
+- Avoid placing landmarks, faces, or key subjects near the edges. Ensure the full landmark/subject is visible without cropping.
+- Subject must be fully visible — no part of the landmark, face, or focal object should be clipped by the top, bottom, or sides of the 9:16 frame.
+- The main visual subject must sit in the UPPER 65-75% of the frame so the bottom 25-35% stays clear for captions. Never compose the subject so that captions at the bottom would cover it.
+- Use safe inner-frame composition: center composition, subject fully visible, landmark fully readable.
+- Avoid extreme close-ups that crop a face above the eyebrows or below the chin; avoid wide shots where a landmark touches the frame edges.`
+
 // Push #064 — story arc enforced on every Short. The arc keeps the AI
 // from emitting "5 random facts" without a build-up; the ending samples
 // are deliberately decisive so the closing scene doesn't trail off.
@@ -196,6 +209,8 @@ Generate exactly 5 viral YouTube Shorts scripts. Each short must be designed to 
 
 ${STORY_ARC_SYSTEM_RULES}
 
+${SAFE_COMPOSITION_RULES}
+
 Return ONLY a valid JSON array with exactly 5 objects. No markdown, no code blocks, no extra text — just the raw JSON array.
 
 Each object must have these exact fields:
@@ -222,6 +237,8 @@ Generate ONE viral YouTube Short tailored to this exact topic:
 Tone: ${tone}. Target duration: ${plan.duration} seconds. Target word count: ${minWords}–${maxWords} words. Scene count: ${plan.sceneCount}. Vertical 9:16 format. English language.
 
 ${STORY_ARC_SYSTEM_RULES}
+
+${SAFE_COMPOSITION_RULES}
 
 Return ONLY a valid JSON array containing exactly 1 object — no markdown, no code blocks, no extra text. Just the raw JSON array.
 

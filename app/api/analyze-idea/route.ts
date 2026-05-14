@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openai, durationPlanFor, STORY_ARC_SYSTEM_RULES } from '@/lib/openai'
+import { openai, durationPlanFor, STORY_ARC_SYSTEM_RULES, SAFE_COMPOSITION_RULES } from '@/lib/openai'
 
 export const maxDuration = 30
 
@@ -264,10 +264,13 @@ The brief MUST include: a viral_title, a powerful hook for the first 2 seconds, 
 
 ${STORY_ARC_SYSTEM_RULES}
 
+${SAFE_COMPOSITION_RULES}
+
 QUALITY RULES (non-negotiable):
 - The hook lands in the first 2 seconds and is impossible to scroll past. No "in this video..." or "today we will...". Start mid-scene, mid-question, or mid-revelation.
 - Captions: maximum 6-8 words. Punchy fragments, not full sentences. No periods. Each caption SHOULD include a "highlight" field naming the single most impactful word in the caption (preferred candidates: strange, hidden, vanished, signal, mystery, impossible, forbidden, unknown, discovered, secret, ancient, bizarre, haunted, cursed, lost, found, real). If none of those fit, pick the most striking noun or adjective in the caption.
 - Visual prompts must be EXTREMELY cinematic and specific. Describe camera angle, lighting, color palette, subject, atmosphere, lens feel. BAD: "ocean waves" or "historical ruins". GOOD: "extreme close-up of a sonar screen pulsing with an unknown signal, deep blue glow, underwater facility in soft focus behind, ominous teal atmosphere, slow push-in on the screen". Every visual_prompt should read like a shot list for a cinematographer.
+- Every visual_prompt MUST embed the safe-composition constraints above: keep the main subject centered, fully visible, within the inner 80% of the frame, in the upper 65-75% so the bottom caption strip never covers it. Landmarks must be readable end-to-end without cropping.
 - Every scene is visually distinct from the others — different camera angle, different lighting, different subject framing. No two scenes should feel like the same shot.
 - The final scene ends with a strong payoff — a revelation, cliffhanger, or satisfying conclusion. The voiceover MUST NOT trail off.
 - Output is in English.
@@ -282,7 +285,7 @@ GENRE-SPECIFIC GUIDANCE:
 - Tech / AI: clean futurism, glowing UI, magenta/teal palette, motion in every shot.
 
 PROVIDER PROMPT — important:
-You also produce a separate "provider_prompt": a SHORT cinematic description (200-450 chars, NEVER over 500) that an AI video model can use directly. It must be visual only — no voiceover, no hashtags, no YouTube text, no scene list. Describe overall mood, color palette, lighting, camera language, subject framing. Example: "Cinematic vertical 9:16 video of a deep ocean at night, sonar screens glowing blue, underwater shadows moving slowly, suspenseful scientific monitoring station, realistic lighting, high contrast, mysterious mood, slow camera movement."
+You also produce a separate "provider_prompt": a SHORT cinematic description (200-450 chars, NEVER over 500) that an AI video model can use directly. It must be visual only — no voiceover, no hashtags, no YouTube text, no scene list. Describe overall mood, color palette, lighting, camera language, subject framing. The framing must respect the SAFE COMPOSITION rules above: centered subject, fully visible inside the inner 80%, subject placed in the upper 65-75% so bottom captions never cover it. Example: "Cinematic vertical 9:16 video of a deep ocean at night, sonar screens glowing blue, centered composition with the subject in the upper two-thirds, underwater shadows moving slowly, suspenseful scientific monitoring station, realistic lighting, high contrast, mysterious mood, slow camera movement, full subject visible."
 
 VIRAL INTELLIGENCE — also produce a "viral_intelligence" block scoring the brief you just wrote:
 - viral_score: integer 0-100 estimating how likely this Short is to go viral on YouTube Shorts. Be honest — a generic hook should score 40-55, a specific cinematic one 65-80, a truly scroll-stopping pattern interrupt 80-95.

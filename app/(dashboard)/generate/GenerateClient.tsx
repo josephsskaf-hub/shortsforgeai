@@ -1388,6 +1388,24 @@ export default function GenerateClient() {
                 <p className="text-xs mt-1.5" style={{ color: 'var(--muted)', letterSpacing: '0.04em' }}>
                   {duration}s · YouTube Shorts 9:16
                 </p>
+                {/* Push #065 — show the generated title so the user can see
+                    what the AI named the video. Falls back to a generic
+                    label so the row never disappears. Clamped to two lines
+                    so a long title can't push the player below the fold. */}
+                <p
+                  className="font-semibold text-base sm:text-lg mt-3 mx-auto"
+                  style={{
+                    color: '#fff',
+                    maxWidth: 'min(460px, 90vw)',
+                    lineHeight: 1.3,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {analysis?.title?.trim() || 'Untitled Video'}
+                </p>
               </div>
 
               {/* Push #045A — bigger result-page player. width caps at 460px
