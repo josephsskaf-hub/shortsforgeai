@@ -19,7 +19,8 @@ const pageTitles: Record<string, string> = {
   '/dashboard': 'Creator Hub',
   '/create': 'Create Video',
   '/generate': 'Generate New Short',
-  '/history': 'Viral History',
+  '/my-videos': 'My Videos',
+  '/history': 'Shorts Packs', // legacy — kept reachable but no longer primary
   '/pricing': 'Pricing',
   '/templates': 'Viral Templates',
   '/account': 'Account',

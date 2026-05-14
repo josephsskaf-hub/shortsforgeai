@@ -3,11 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+// Push #053 — primary entry points on mobile. "My Videos" replaces the
+// old "History" item so the bottom bar lines up with the desktop sidebar
+// (the legacy /history Shorts Packs view is still reachable directly).
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: '🏠', label: 'Home',    exact: true  },
-  { href: '/create',    icon: '⚡', label: 'Create',  exact: false },
-  { href: '/history',   icon: '📋', label: 'History', exact: false },
-  { href: '/pricing',   icon: '💎', label: 'Credits', exact: false },
+  { href: '/',           icon: '🏠', label: 'Home',      exact: true  },
+  { href: '/generate',   icon: '⚡', label: 'Generate',  exact: false },
+  { href: '/my-videos',  icon: '📼', label: 'My Videos', exact: false },
+  { href: '/pricing',    icon: '💎', label: 'Credits',   exact: false },
 ]
 
 export default function MobileNav() {

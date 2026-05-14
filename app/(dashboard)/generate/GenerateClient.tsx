@@ -1696,7 +1696,9 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
           </h3>
         </div>
         <a
-          href="/history"
+          // Push #053 — point at the AI video library instead of the
+          // legacy /history Shorts Packs page.
+          href="/my-videos"
           className="text-xs font-bold"
           style={{ color: '#93c5fd', textDecoration: 'none' }}
         >
