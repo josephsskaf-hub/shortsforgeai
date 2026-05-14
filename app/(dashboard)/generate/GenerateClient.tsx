@@ -901,10 +901,11 @@ export default function GenerateClient() {
             placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
             maxLength={1000}
             disabled={phase === 'analyzing'}
-            // Push #052 — gv-prompt class drives the responsive min-height
-            // so the field doesn't push the Generate button below the fold
-            // on iPhone widths. 220px ≈ 8 visible lines on mobile.
-            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed gv-prompt"
+            // Push #052 — Tailwind responsive min-h so the textarea stays
+            // ~220px (≈8 lines) on phones, then expands back to 400px on
+            // sm+ viewports. Keeps the Generate button above the fold on
+            // iPhone heights without changing desktop density.
+            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed min-h-[220px] sm:min-h-[400px]"
             style={{
               width: '100%',
               maxWidth: '830px',
@@ -915,12 +916,6 @@ export default function GenerateClient() {
               resize: 'none',
             }}
           />
-          <style jsx>{`
-            .gv-prompt { min-height: 220px; }
-            @media (min-width: 640px) {
-              .gv-prompt { min-height: 400px; }
-            }
-          `}</style>
 
           {/* Push #034: duration + quality selectors moved here from the
               post-analyze step so users can pick everything in one screen
