@@ -29,7 +29,7 @@ const STYLE_ENHANCERS: Record<string, string> = {
 // Build optimized prompt
 function buildOptimizedPrompt(userPrompt: string, style: string): string {
   const enhancer = STYLE_ENHANCERS[style] ?? STYLE_ENHANCERS['cinematic']
-  const cleanPrompt = userPrompt.trim().replace(/[^\w\s,.'"-!?]/g, ' ').trim()
+  const cleanPrompt = userPrompt.trim().replace(/[^\w\s,.'"!?-]/g, ' ').trim()
 
   return (
     'YouTube thumbnail: ' +
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     )
 
     const results = await Promise.all(tasks)
-    const urls = results.map((r) => r.data[0]?.url).filter(Boolean)
+    const urls = results.map((r) => r.data?.[0]?.url).filter(Boolean)
 
     if (urls.length === 0) {
       return NextResponse.json({ error: 'No images returned from API.' }, { status: 500 })
@@ -97,4 +97,3 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: msg }, { status: 500 })
   }
-}
