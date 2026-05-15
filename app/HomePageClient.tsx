@@ -125,35 +125,38 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       {/* ───────── Top Nav ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#3B82F6" strokeWidth="0.5" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-[15px] font-extrabold tracking-tight">
-                <span className="text-white">Shorts</span>
-                <span className="text-white">Forge</span>
-                <span className="text-cyan-400">AI</span>
-              </span>
-              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.2</span>
-            </div>
-          </Link>
+          {/* LEFT — logo */}
+          <div className="flex items-center justify-start">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#3B82F6" strokeWidth="0.5" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-[15px] font-extrabold tracking-tight">
+                  <span className="text-white">Shorts</span>
+                  <span className="text-white">Forge</span>
+                  <span className="text-cyan-400">AI</span>
+                </span>
+                <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.2</span>
+              </div>
+            </Link>
+          </div>
 
-          {/* Center links — desktop */}
+          {/* CENTER links — desktop */}
           <div className="hidden items-center gap-7 md:flex">
             <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
             <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Generator</Link>
             <a href="#features" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Features</a>
             <Link href={THUMBNAIL_ROUTE} className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
-            <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
+            <Link href="/pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</Link>
           </div>
 
-          {/* Right side */}
+          {/* RIGHT side */}
           <div className="hidden items-center gap-2 md:flex">
             {!authChecked ? (
-              <div aria-hidden className="h-9 w-28" />
+              <div aria-hidden className="h-9 w-44" />
             ) : user ? (
               <Link
                 href="/dashboard"
@@ -219,7 +222,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Generator</Link>
               <a onClick={() => setNavOpen(false)} href="#features" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Features</a>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
-              <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
+              <Link onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</Link>
             </div>
           </div>
         )}
