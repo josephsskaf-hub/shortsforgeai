@@ -1,20 +1,13 @@
 'use client'
 
-// Push #070 — Opus-style public homepage redesign.
-//
-// Replaces the previous landing page (dashboard sidebar + sparse hero) with
-// a self-contained marketing layout: sticky top nav (desktop links + mobile
-// hamburger), hero with idea input, feature strip, social-proof cards,
-// six feature cards, six template cards, four-step "How it works", pricing
-// preview, and a minimal footer. The page lives outside the (dashboard)
-// route group, so it does not share the dashboard chrome.
-//
-// Auth state is hydrated from cookies by the server wrapper in app/page.tsx
-// (see push #066). When signed-in, the nav swaps Sign In / Start Free for
-// Dashboard + Generate; logged-out visitors are sent through /login when
-// submitting the hero idea.
-//
-// All paid-tier Stripe links and the credit logic are unchanged.
+// Push #072 — Targeted cleanup of the #071 redesign.
+// - Top-nav center links: Features / Templates / Examples / Thumbnail / Pricing
+// - Right side: Dashboard (logged in) or Sign In + Start Free
+// - Feature strip trimmed to 3 real, link-driven items
+// - "Everything you need" section rewritten with 6 real, link-driven cards
+// - Accent recolored from purple/blue to amber/gold (#F5B23B) for CTAs,
+//   borders, badges; backgrounds stay dark, the ⚡ logo gradient is kept
+//   as-is.
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -26,13 +19,13 @@ const STRIPE_LINKS = {
   pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
 }
 
+const THUMBNAIL_ROUTE = '/thumbnail-generator'
+
+// Compact 3-item strip: each is a real link to a real route.
 const FEATURE_STRIP = [
-  { icon: '✨', label: 'AI Creative Brief' },
-  { icon: '🎙️', label: 'Voiceover' },
-  { icon: '💬', label: 'Captions' },
-  { icon: '📈', label: 'Viral Intelligence' },
-  { icon: '🎬', label: 'Templates' },
-  { icon: '⬇️', label: 'Download MP4' },
+  { icon: '🎬', label: 'Templates',          href: '/templates' },
+  { icon: '🖼️', label: 'Thumbnail',          href: THUMBNAIL_ROUTE },
+  { icon: '📈', label: 'Viral Intelligence', href: '/generate' },
 ]
 
 const SOCIAL_PROOF = [
@@ -42,37 +35,14 @@ const SOCIAL_PROOF = [
   { title: 'Templates for proven formats', body: 'Start from styles that already perform on Shorts and Reels.' },
 ]
 
-const FEATURES = [
-  {
-    icon: '📈',
-    title: 'Viral Intelligence',
-    body: 'Hook scoring, retention map and pacing analysis before you render.',
-  },
-  {
-    icon: '🎬',
-    title: 'Templates',
-    body: 'Curated formats for Shorts, TikTok and Reels — Space, History, Money and more.',
-  },
-  {
-    icon: '⚙️',
-    title: 'AI Video Pipeline',
-    body: 'Brief → voiceover → captions → scenes → vertical MP4 in one flow.',
-  },
-  {
-    icon: '🗂️',
-    title: 'My Videos',
-    body: 'Every generated short stays in your dashboard, ready to re-download.',
-  },
-  {
-    icon: '🖼️',
-    title: 'Thumbnail Generator',
-    body: 'On-brand AI thumbnails in 8 styles, built for click-through.',
-  },
-  {
-    icon: '🛡️',
-    title: 'Credit Safety',
-    body: 'Failed generations never burn credits. You only pay for finished videos.',
-  },
+// 6 real, link-driven cards — every card points to a live route.
+const FEATURES: { icon: string; title: string; body: string; href: string }[] = [
+  { icon: '📐', title: 'Templates',          body: 'Start from proven video formats.',                  href: '/templates' },
+  { icon: '🖼️', title: 'Thumbnail Generator', body: 'Create AI thumbnails for stronger hooks.',          href: THUMBNAIL_ROUTE },
+  { icon: '⚡', title: 'Viral Intelligence', body: 'Score your idea before spending credits.',          href: '/generate' },
+  { icon: '🎬', title: 'My Videos',          body: 'Save, reopen and download your generated videos.', href: '/my-videos' },
+  { icon: '🎯', title: 'Examples',           body: 'See what others have created with ShortsForgeAI.', href: '/examples' },
+  { icon: '💳', title: 'Pricing',            body: 'Choose the plan that fits your workflow.',         href: '/pricing' },
 ]
 
 const TEMPLATES = [
@@ -211,21 +181,16 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans">
-      {/* Background glows */}
+    <div className="min-h-screen bg-[#080808] text-white font-sans">
+      {/* Subtle dark background — gold accent does the work, not big glows */}
       <div
         aria-hidden
-        className="pointer-events-none fixed -top-[300px] -right-[200px] h-[800px] w-[800px] rounded-full opacity-[0.06]"
-        style={{ background: '#7c3aed', filter: 'blur(120px)' }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed -bottom-[200px] -left-[100px] h-[600px] w-[600px] rounded-full opacity-[0.05]"
-        style={{ background: '#2563EB', filter: 'blur(110px)' }}
+        className="pointer-events-none fixed -top-[300px] -right-[200px] h-[800px] w-[800px] rounded-full opacity-[0.05]"
+        style={{ background: '#F5B23B', filter: 'blur(140px)' }}
       />
 
       {/* ───────── Top Nav ───────── */}
-      <nav className="sticky top-0 z-50 border-b border-[#222] bg-[#0a0a0a]/85 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#080808]/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] text-lg shadow-[0_0_18px_rgba(124,58,237,.55)]">
@@ -237,10 +202,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </Link>
 
           {/* Center links — desktop */}
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center gap-7 md:flex">
             <a href="#features" className="text-sm font-medium text-white/70 hover:text-white transition">Features</a>
-            <a href="#templates" className="text-sm font-medium text-white/70 hover:text-white transition">Templates</a>
+            <Link href="/templates" className="text-sm font-medium text-white/70 hover:text-white transition">Templates</Link>
             <Link href="/examples" className="text-sm font-medium text-white/70 hover:text-white transition">Examples</Link>
+            <Link href={THUMBNAIL_ROUTE} className="text-sm font-medium text-white/70 hover:text-white transition">Thumbnail</Link>
             <a href="#pricing" className="text-sm font-medium text-white/70 hover:text-white transition">Pricing</a>
           </div>
 
@@ -249,20 +215,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {!authChecked ? (
               <div aria-hidden className="h-9 w-36" />
             ) : user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="rounded-lg border border-[#333] px-4 py-2 text-sm font-semibold text-white/85 transition hover:border-[#444] hover:text-white"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/generate"
-                  className="rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,58,237,.45)] transition hover:shadow-[0_6px_24px_rgba(124,58,237,.6)]"
-                >
-                  Generate
-                </Link>
-              </>
+              <Link
+                href="/dashboard"
+                className="rounded-lg bg-[#F5B23B] px-4 py-2 text-sm font-bold text-[#1a1100] shadow-[0_4px_18px_rgba(245,178,59,.35)] transition hover:bg-[#FFD166] hover:shadow-[0_6px_24px_rgba(245,178,59,.5)]"
+              >
+                Dashboard
+              </Link>
             ) : (
               <>
                 <Link
@@ -273,7 +231,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(124,58,237,.45)] transition hover:shadow-[0_6px_24px_rgba(124,58,237,.6)]"
+                  className="rounded-lg bg-[#F5B23B] px-4 py-2 text-sm font-bold text-[#1a1100] shadow-[0_4px_18px_rgba(245,178,59,.35)] transition hover:bg-[#FFD166] hover:shadow-[0_6px_24px_rgba(245,178,59,.5)]"
                 >
                   Start Free
                 </Link>
@@ -285,15 +243,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="flex items-center gap-2 md:hidden">
             {authChecked && user ? (
               <Link
-                href="/generate"
-                className="rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-3 py-2 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,.4)]"
+                href="/dashboard"
+                className="rounded-lg bg-[#F5B23B] px-3 py-2 text-[13px] font-bold text-[#1a1100] shadow-[0_4px_14px_rgba(245,178,59,.35)]"
               >
-                Generate
+                Dashboard
               </Link>
             ) : (
               <Link
                 href="/signup"
-                className="rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-3 py-2 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,.4)]"
+                className="rounded-lg bg-[#F5B23B] px-3 py-2 text-[13px] font-bold text-[#1a1100] shadow-[0_4px_14px_rgba(245,178,59,.35)]"
               >
                 Start Free
               </Link>
@@ -303,7 +261,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               aria-label="Toggle navigation"
               aria-expanded={navOpen}
               onClick={() => setNavOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#333] text-white/80 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.12] text-white/80 hover:text-white"
             >
               <span className="block h-[2px] w-4 bg-current relative">
                 <span className="absolute -top-[5px] left-0 block h-[2px] w-4 bg-current" />
@@ -315,11 +273,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
         {/* Mobile menu panel */}
         {navOpen && (
-          <div className="md:hidden border-t border-[#222] bg-[#0a0a0a]/95 backdrop-blur-xl">
+          <div className="md:hidden border-t border-white/[0.08] bg-[#080808]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
               <a onClick={() => setNavOpen(false)} href="#features" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Features</a>
-              <a onClick={() => setNavOpen(false)} href="#templates" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Templates</a>
+              <Link onClick={() => setNavOpen(false)} href="/templates" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Templates</Link>
               <Link onClick={() => setNavOpen(false)} href="/examples" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Examples</Link>
+              <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Thumbnail</Link>
               <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Pricing</a>
               {authChecked && user ? (
                 <Link onClick={() => setNavOpen(false)} href="/dashboard" className="rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/[.04] hover:text-white">Dashboard</Link>
@@ -333,20 +292,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Hero ───────── */}
       <section className="relative z-10 mx-auto max-w-3xl px-4 pt-14 pb-8 text-center sm:pt-20 sm:pb-12">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#2a1f47] bg-[#7c3aed]/[.08] px-3 py-1.5 text-[12px] font-semibold text-[#c4b5fd]">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#a855f7] shadow-[0_0_8px_#a855f7]" />
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#F5B23B]/30 bg-[#F5B23B]/[.08] px-3 py-1.5 text-[12px] font-semibold text-[#F5B23B]">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#F5B23B] shadow-[0_0_8px_#F5B23B]" />
           AI video generator · YouTube Shorts ready
         </div>
 
         <h1 className="text-balance text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
           Create{' '}
-          <span className="bg-gradient-to-br from-[#a855f7] via-[#7c3aed] to-[#6366f1] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-br from-[#FFD166] via-[#F5B23B] to-[#D9941F] bg-clip-text text-transparent">
             AI Shorts
           </span>{' '}
           from one idea.
         </h1>
 
-        <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-white/65 sm:text-base">
+        <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-[#A1A1AA] sm:text-base">
           Generate vertical videos with voiceover, captions, visuals and
           download-ready MP4s for YouTube Shorts, TikTok and Reels.
         </p>
@@ -357,7 +316,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             e.preventDefault()
             goToGenerate()
           }}
-          className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-[#222] bg-[#111]/85 p-3 shadow-[0_18px_50px_rgba(0,0,0,.5),0_0_0_1px_rgba(124,58,237,.10)_inset] sm:flex-row sm:items-center sm:gap-2 sm:p-2.5"
+          className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/[0.08] bg-[#111111]/85 p-3 shadow-[0_18px_50px_rgba(0,0,0,.5),0_0_0_1px_rgba(245,178,59,.10)_inset] sm:flex-row sm:items-center sm:gap-2 sm:p-2.5"
         >
           <input
             type="text"
@@ -370,7 +329,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="shrink-0 rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,.45)] transition hover:shadow-[0_10px_30px_rgba(124,58,237,.6)] disabled:opacity-60"
+            className="shrink-0 rounded-xl bg-[#F5B23B] px-5 py-3 text-sm font-bold text-[#1a1100] shadow-[0_8px_24px_rgba(245,178,59,.35)] transition hover:bg-[#FFD166] hover:shadow-[0_10px_30px_rgba(245,178,59,.5)] disabled:opacity-60"
           >
             {submitting ? 'Loading…' : 'Analyze Idea →'}
           </button>
@@ -381,32 +340,35 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <button
             type="button"
             onClick={() => goToGenerate()}
-            className="w-full rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_8px_28px_rgba(124,58,237,.5)] transition hover:shadow-[0_10px_36px_rgba(124,58,237,.65)] sm:w-auto"
+            className="w-full rounded-xl bg-[#F5B23B] px-6 py-3.5 text-sm font-extrabold text-[#1a1100] shadow-[0_8px_28px_rgba(245,178,59,.4)] transition hover:bg-[#FFD166] hover:shadow-[0_10px_36px_rgba(245,178,59,.55)] sm:w-auto"
           >
             Generate your first video
           </button>
           <Link
             href="/examples"
-            className="w-full rounded-xl border border-[#333] px-6 py-3.5 text-center text-sm font-bold text-white/85 transition hover:border-[#444] hover:text-white sm:w-auto"
+            className="w-full rounded-xl border border-white/[0.12] px-6 py-3.5 text-center text-sm font-bold text-white/85 transition hover:border-white/[0.2] hover:text-white sm:w-auto"
           >
             See examples
           </Link>
         </div>
       </section>
 
-      {/* ───────── Feature strip ───────── */}
-      <section className="relative z-10 border-y border-[#1a1a1a] bg-[#0c0c0c]/60">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+      {/* ───────── Feature strip (3 compact link tiles) ───────── */}
+      <section className="relative z-10 border-y border-white/[0.06] bg-[#0c0c0c]/60">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {FEATURE_STRIP.map((f) => (
-              <li
-                key={f.label}
-                className="flex items-center gap-2 rounded-lg border border-[#1f1f1f] bg-[#111]/70 px-3 py-2.5"
-              >
-                <span className="text-base">{f.icon}</span>
-                <span className="text-[12.5px] font-semibold text-white/75">
-                  {f.label}
-                </span>
+              <li key={f.label}>
+                <Link
+                  href={f.href}
+                  className="flex items-center gap-2.5 rounded-lg border border-white/[0.08] bg-[#111111]/70 px-4 py-3 transition hover:border-[#F5B23B]/35 hover:bg-[#F5B23B]/[0.04]"
+                >
+                  <span className="text-base">{f.icon}</span>
+                  <span className="text-[13px] font-semibold text-white/80">
+                    {f.label}
+                  </span>
+                  <span className="ml-auto text-[12px] font-bold text-[#F5B23B]">→</span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -415,14 +377,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Social proof ───────── */}
       <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-6 sm:px-6">
-        <p className="text-center text-[15px] font-medium text-white/65">
+        <p className="text-center text-[15px] font-medium text-[#A1A1AA]">
           Built for faceless creators, Shorts channels and AI video workflows.
         </p>
         <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {SOCIAL_PROOF.map((s) => (
             <div
               key={s.title}
-              className="rounded-2xl border border-[#222] bg-[#111]/70 p-5 transition hover:border-[#7c3aed]/40"
+              className="rounded-2xl border border-white/[0.08] bg-[#111111]/70 p-5 transition hover:border-[#F5B23B]/30"
             >
               <div className="text-[14px] font-bold text-white">{s.title}</div>
               <p className="mt-1.5 text-[13px] leading-relaxed text-white/55">
@@ -433,10 +395,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* ───────── Features ───────── */}
+      {/* ───────── Features ("Everything you need") ───────── */}
       <section id="features" className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-8 sm:px-6">
         <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#a78bfa]">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#F5B23B]">
             Features
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -445,18 +407,22 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <div
+            <Link
               key={f.title}
-              className="group rounded-2xl border border-[#222] bg-gradient-to-b from-[#121212] to-[#0e0e0e] p-6 transition hover:border-[#7c3aed]/50 hover:shadow-[0_0_40px_rgba(124,58,237,.12)]"
+              href={f.href}
+              className="group flex flex-col rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#121212] to-[#0e0e0e] p-6 transition hover:border-[#F5B23B]/45 hover:shadow-[0_0_30px_rgba(245,178,59,.12)]"
             >
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#7c3aed]/[.12] text-lg ring-1 ring-[#7c3aed]/30">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5B23B]/[.12] text-lg ring-1 ring-[#F5B23B]/30">
                 {f.icon}
               </div>
               <div className="text-[15px] font-bold text-white">{f.title}</div>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/60">
+              <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-white/60">
                 {f.body}
               </p>
-            </div>
+              <span className="mt-4 inline-flex items-center gap-1 text-[12.5px] font-bold text-[#F5B23B] transition group-hover:text-[#FFD166]">
+                Open <span aria-hidden>→</span>
+              </span>
+            </Link>
           ))}
         </div>
       </section>
@@ -464,7 +430,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       {/* ───────── Templates ───────── */}
       <section id="templates" className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-8 sm:px-6">
         <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#a78bfa]">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#F5B23B]">
             Templates
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -478,7 +444,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           {TEMPLATES.map((t) => (
             <div
               key={t.title}
-              className="flex flex-col rounded-2xl border border-[#222] bg-gradient-to-b from-[#121212] to-[#0e0e0e] p-6 transition hover:border-[#7c3aed]/50 hover:shadow-[0_0_40px_rgba(124,58,237,.12)]"
+              className="flex flex-col rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#121212] to-[#0e0e0e] p-6 transition hover:border-[#F5B23B]/45 hover:shadow-[0_0_30px_rgba(245,178,59,.12)]"
             >
               <div className="mb-3 flex items-center gap-2.5">
                 <span className="text-2xl leading-none">{t.emoji}</span>
@@ -488,7 +454,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <button
                 type="button"
                 onClick={() => goToGenerate(t.prompt)}
-                className="mt-5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[#7c3aed]/35 bg-[#7c3aed]/[.10] px-3.5 py-1.5 text-[12.5px] font-bold text-[#c4b5fd] transition hover:bg-[#7c3aed]/[.18] hover:text-white"
+                className="mt-5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[#F5B23B]/40 bg-[#F5B23B]/[.10] px-3.5 py-1.5 text-[12.5px] font-bold text-[#F5B23B] transition hover:bg-[#F5B23B]/[.18] hover:text-[#FFD166]"
               >
                 Use this style →
               </button>
@@ -500,7 +466,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       {/* ───────── How it works ───────── */}
       <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-8 sm:px-6">
         <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#a78bfa]">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#F5B23B]">
             How it works
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -511,9 +477,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           {HOW_IT_WORKS.map((s) => (
             <div
               key={s.step}
-              className="rounded-2xl border border-[#222] bg-[#111]/70 p-6"
+              className="rounded-2xl border border-white/[0.08] bg-[#111111]/70 p-6"
             >
-              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] text-sm font-black text-white shadow-[0_4px_18px_rgba(124,58,237,.4)]">
+              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5B23B] text-sm font-black text-[#1a1100] shadow-[0_4px_18px_rgba(245,178,59,.35)]">
                 {s.step}
               </div>
               <div className="text-[14.5px] font-bold text-white">{s.title}</div>
@@ -528,7 +494,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       {/* ───────── Pricing ───────── */}
       <section id="pricing" className="relative z-10 mx-auto max-w-5xl px-4 pt-16 pb-8 sm:px-6">
         <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#a78bfa]">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#F5B23B]">
             Pricing
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -544,12 +510,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               key={p.tier}
               className={`relative flex flex-col rounded-2xl border p-6 ${
                 p.highlight
-                  ? 'border-[#7c3aed]/60 bg-gradient-to-b from-[#1a1430] to-[#0f0d1c] shadow-[0_0_60px_rgba(124,58,237,.18)]'
-                  : 'border-[#222] bg-[#111]/70'
+                  ? 'border-[#F5B23B]/55 bg-gradient-to-b from-[#1e1605] to-[#0f0c05] shadow-[0_0_40px_rgba(245,178,59,.15)]'
+                  : 'border-white/[0.08] bg-[#111111]/70'
               }`}
             >
               {p.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a855f7] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(124,58,237,.5)]">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#F5B23B] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-[#1a1100] shadow-[0_4px_18px_rgba(245,178,59,.45)]">
                   Best Value
                 </div>
               )}
@@ -561,13 +527,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   {p.price}
                 </span>
               </div>
-              <div className="mt-1 text-[12.5px] font-semibold text-[#a78bfa]">
+              <div className="mt-1 text-[12.5px] font-semibold text-[#F5B23B]">
                 {p.priceSub}
               </div>
               <ul className="mt-5 mb-6 flex flex-col gap-2.5">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-[13.5px] text-white/75">
-                    <span className="mt-[3px] text-[#a855f7]">✓</span>
+                    <span className="mt-[3px] text-[#F5B23B]">✓</span>
                     <span>{f}</span>
                   </li>
                 ))}
@@ -580,8 +546,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 }}
                 className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
                   p.highlight
-                    ? 'bg-gradient-to-br from-[#7c3aed] to-[#a855f7] text-white shadow-[0_8px_24px_rgba(124,58,237,.5)] hover:shadow-[0_10px_32px_rgba(124,58,237,.7)]'
-                    : 'border border-[#333] text-white hover:border-[#7c3aed]/50'
+                    ? 'bg-[#F5B23B] text-[#1a1100] shadow-[0_8px_24px_rgba(245,178,59,.4)] hover:bg-[#FFD166] hover:shadow-[0_10px_32px_rgba(245,178,59,.55)]'
+                    : 'border border-white/[0.12] text-white hover:border-[#F5B23B]/45 hover:text-[#F5B23B]'
                 }`}
               >
                 {p.cta.label} →
@@ -592,7 +558,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </section>
 
       {/* ───────── Footer ───────── */}
-      <footer className="relative z-10 mt-16 border-t border-[#1a1a1a]">
+      <footer className="relative z-10 mt-16 border-t border-white/[0.06]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#7c3aed] to-[#a855f7] text-sm">
@@ -602,8 +568,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/" className="text-[12.5px] font-medium text-white/55 hover:text-white">Home</Link>
-            <Link href="/generate" className="text-[12.5px] font-medium text-white/55 hover:text-white">Generate</Link>
+            <Link href="/templates" className="text-[12.5px] font-medium text-white/55 hover:text-white">Templates</Link>
             <Link href="/examples" className="text-[12.5px] font-medium text-white/55 hover:text-white">Examples</Link>
+            <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-white/55 hover:text-white">Thumbnail</Link>
             <Link href="/pricing" className="text-[12.5px] font-medium text-white/55 hover:text-white">Pricing</Link>
             <Link href="/login" className="text-[12.5px] font-medium text-white/55 hover:text-white">Sign In</Link>
           </div>

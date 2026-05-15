@@ -130,9 +130,9 @@ export default function CheckoutSuccessPage() {
               borderRadius: 14,
               fontSize: '0.95rem',
               fontWeight: 900,
-              color: '#fff',
-              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 10px 32px rgba(124,58,237,.5)',
+              color: '#1a1100',
+              background: '#F5B23B',
+              boxShadow: '0 10px 32px rgba(245,178,59,.4)',
               letterSpacing: '-0.01em',
             }}
           >

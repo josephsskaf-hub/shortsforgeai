@@ -114,10 +114,11 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
           </p>
           <Link
             href="/generate"
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white"
+            className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-              boxShadow: '0 4px 22px rgba(124,58,237,.35)',
+              background: '#F5B23B',
+              color: '#1a1100',
+              boxShadow: '0 4px 22px rgba(245,178,59,.3)',
               textDecoration: 'none',
             }}
           >
@@ -419,10 +420,11 @@ function Header({ count }: { count: number }) {
         </div>
         <Link
           href="/generate"
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
+          className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-            boxShadow: '0 4px 18px rgba(124,58,237,.35)',
+            background: '#F5B23B',
+            color: '#1a1100',
+            boxShadow: '0 4px 18px rgba(245,178,59,.3)',
             textDecoration: 'none',
           }}
         >

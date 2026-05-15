@@ -77,7 +77,7 @@ export default function TemplatesClient() {
       <header className="mb-9 text-center">
         <div
           className="font-black uppercase tracking-[.16em] mb-2"
-          style={{ fontSize: '0.68rem', color: '#a78bfa' }}
+          style={{ fontSize: '0.68rem', color: '#F5B23B' }}
         >
           Templates
         </div>
@@ -88,7 +88,7 @@ export default function TemplatesClient() {
           Start from a{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #a855f7, #7c3aed, #6366f1)',
+              background: 'linear-gradient(135deg, #FFD166, #F5B23B, #D9941F)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -135,10 +135,11 @@ export default function TemplatesClient() {
             <button
               type="button"
               onClick={() => useTemplate(t.prompt)}
-              className="rounded-xl py-2.5 text-sm font-black text-white mt-auto"
+              className="rounded-xl py-2.5 text-sm font-black mt-auto"
               style={{
-                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                boxShadow: '0 4px 22px rgba(124,58,237,.35)',
+                background: '#F5B23B',
+                color: '#1a1100',
+                boxShadow: '0 4px 22px rgba(245,178,59,.3)',
                 border: 'none',
                 cursor: 'pointer',
               }}

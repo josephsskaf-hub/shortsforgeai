@@ -250,10 +250,11 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl py-3.5 font-bold text-sm text-white transition-all mt-1"
+              className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
-                boxShadow: '0 4px 22px rgba(99,102,241,.3)',
+                background: '#F5B23B',
+                color: '#1a1100',
+                boxShadow: '0 4px 22px rgba(245,178,59,.3)',
                 opacity: loading ? 0.7 : 1,
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
