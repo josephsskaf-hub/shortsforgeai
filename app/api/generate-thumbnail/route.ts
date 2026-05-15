@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// Lazy init — prevents build-time throw when OPENAI_API_KEY is not in env
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? '' })
+}
 
 // ─── Style prompt enhancers ────────────────────────────────────────────────
 const STYLE_ENHANCERS: Record<string, string> = {
@@ -50,6 +53,8 @@ export async function POST(req: NextRequest) {
 
     const validCount = Math.min(Math.max(Number(count) || 1, 1), 3)
     const optimizedPrompt = buildOptimizedPrompt(prompt, style || 'cinematic')
+
+    const openai = getOpenAI()
 
     // Generate thumbnails in parallel
     const tasks = Array.from({ length: validCount }, () =>
