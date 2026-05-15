@@ -7,17 +7,13 @@
 // want to upgrade yet.
 
 import { useState } from 'react'
+import { PLANS } from '@/lib/pricing'
 
 interface PostVideoPaywallProps {
   // Current credit balance after the most recent generation. The parent
   // gates rendering on credits ≤ 30; we still re-check here as a safety
   // net so the card never shows for healthy balances.
   credits: number
-}
-
-const STRIPE_LINKS = {
-  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
-  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
 }
 
 // Push #063 — fire-and-forget checkout click tracking so the paywall feeds
@@ -81,11 +77,14 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
       >
         <PlanCard
           tier="basic"
-          name="Basic"
-          price="$4.50 first month"
-          renew="then $9/month"
-          features={['140 credits / month', '15 credits per Basic video']}
-          href={STRIPE_LINKS.basic}
+          name={PLANS.basic.name}
+          price={`${PLANS.basic.priceLabel} first month`}
+          renew={`then ${PLANS.basic.regularPrice}`}
+          features={[
+            `${PLANS.basic.credits} credits/month`,
+            `${PLANS.basic.videoCredits} credits per Basic video`,
+          ]}
+          href={PLANS.basic.href}
           ctaLabel={selectedPlan === 'basic' ? 'Continue with Basic →' : 'Start Basic →'}
           onClick={() => trackCheckoutClick('basic')}
           selected={selectedPlan === 'basic'}
@@ -93,11 +92,14 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         />
         <PlanCard
           tier="pro"
-          name="Pro"
-          price="$9.50 first month"
-          renew="then $19/month"
-          features={['350 credits / month', '20 credits per Pro video']}
-          href={STRIPE_LINKS.pro}
+          name={PLANS.pro.name}
+          price={`${PLANS.pro.priceLabel} first month`}
+          renew={`then ${PLANS.pro.regularPrice}`}
+          features={[
+            `${PLANS.pro.credits} credits/month`,
+            `${PLANS.pro.videoCredits} credits per Pro video`,
+          ]}
+          href={PLANS.pro.href}
           ctaLabel={selectedPlan === 'pro' ? 'Continue with Pro →' : 'Start Pro →'}
           onClick={() => trackCheckoutClick('pro')}
           highlight

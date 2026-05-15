@@ -1,6 +1,12 @@
 'use client'
 
+// Push #078 — full /pricing redesign. Now reads from lib/pricing.ts so
+// numbers and Stripe links cannot drift from the homepage / paywall.
+// Three-card layout (Free / Basic / Pro), Pro selected by default with
+// the "Recommended" badge, selection swaps the CTA to "Continue with X".
+
 import { useEffect, useState } from 'react'
+import { PLANS, PLAN_LIST, type PlanTier } from '@/lib/pricing'
 
 interface PricingClientProps {
   isPro: boolean
@@ -9,48 +15,40 @@ interface PricingClientProps {
   userId: string
 }
 
-// Push #046: Basic / Pro CTAs redirect straight to Stripe-hosted
-// launch-offer payment links (the links themselves carry the price ID).
-// /api/stripe/checkout is still in the tree but no longer called from
-// this page or from components/PricingCards.tsx — keep both maps in sync.
-const STRIPE_LINKS: Record<'basic' | 'pro', string> = {
-  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
-  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
-}
-
-// Push #033: feature copy aligned with the unified video-first model.
-// One credit cost per video (15 Basic / 20 Pro), no per-Short / per-script
-// split, no Ultra or Creator tiers. Numbers and CTA copy must stay in
-// lockstep with components/PricingCards.tsx — the homepage embeds that
-// component side-by-side with this page's text.
 const FREE_FEATURES = [
-  '2 credits',
-  'Try the platform',
-  'MP4 ready to post',
-  'Community support',
+  `${PLANS.free.credits} credits`,
+  'Analyze ideas before rendering',
+  'Try AI video generation',
+  'Credits charged only on successful video',
 ]
 
 const BASIC_FEATURES = [
-  '140 credits / month',
-  '≈9 videos / month',
-  '15 credits per video',
-  'Launch offer: 50% off first month',
-  'Email support',
+  `${PLANS.basic.credits} credits/month`,
+  `≈9 Basic videos/month (${PLANS.basic.videoCredits} credits each)`,
+  'Voiceover + captions',
+  'Download MP4',
+  'My Videos history',
 ]
 
 const PRO_FEATURES = [
-  '350 credits / month',
-  '≈17 videos / month',
-  '20 credits per video',
-  'Launch offer: 50% off first month',
-  'Better cinematic prompting',
-  'Priority support',
+  `${PLANS.pro.credits} credits/month`,
+  `≈17 Pro videos/month (${PLANS.pro.videoCredits} credits each)`,
+  'Better generation settings',
+  'Voiceover + captions',
+  'Download MP4',
+  'My Videos history',
 ]
+
+function featuresFor(tier: PlanTier): string[] {
+  if (tier === 'free') return FREE_FEATURES
+  if (tier === 'basic') return BASIC_FEATURES
+  return PRO_FEATURES
+}
 
 const FAQS = [
   {
     q: 'How do credits work?',
-    a: 'Each Short uses credits based on the quality mode you pick: Basic = 15 credits, Pro = 20 credits. Failed generations do not consume credits. Credits reset every month based on your plan.',
+    a: `Each Short uses credits based on the quality mode you pick: Basic = ${PLANS.basic.videoCredits} credits, Pro = ${PLANS.pro.videoCredits} credits. Failed generations do not consume credits. Credits reset every month based on your plan.`,
   },
   {
     q: 'Can I switch plans later?',
@@ -71,15 +69,11 @@ export default function PricingClient(props: PricingClientProps) {
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
-  const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [purchasing, setPurchasing] = useState<PlanTier | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
-  // Push #077 — pricing card selected state. Pro is the recommended
-  // default. Card click selects (does NOT trigger Stripe); CTA button
-  // click navigates to Stripe.
+  // Pro is selected by default — matches homepage Recommended cue.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
-  // Push #060 — fire-and-forget event tracking. Silently no-ops when
-  // public.events isn't set up in this DB.
   useEffect(() => {
     try {
       void fetch('/api/events', {
@@ -119,18 +113,11 @@ export default function PricingClient(props: PricingClientProps) {
     setTimeout(() => setToast(null), 2800)
   }
 
-  // Push #046 — go straight to the Stripe-hosted launch-offer payment
-  // link rather than calling /api/stripe/checkout. The link encodes the
-  // price; Stripe handles the rest. Keep the unauthenticated bounce so
-  // returning customers always have a session attached before payment.
   function handleBuy(tier: 'basic' | 'pro') {
     if (!userId) {
       window.location.href = '/login?redirect=/pricing'
       return
     }
-    // Push #060 / #061 — fire-and-forget event tracking before redirect.
-    // Both the legacy name (kept for /admin/metrics) and the new spec name
-    // are emitted so the funnel + metrics dashboards stay in sync.
     try {
       void fetch('/api/events', {
         method: 'POST',
@@ -145,7 +132,15 @@ export default function PricingClient(props: PricingClientProps) {
       // ignore
     }
     setPurchasing(tier)
-    window.location.href = STRIPE_LINKS[tier]
+    window.location.href = PLANS[tier].href
+  }
+
+  function handleFreeCta() {
+    if (userId) {
+      showToast('You already have access — start creating!')
+      return
+    }
+    window.location.href = PLANS.free.href
   }
 
   async function handlePortal() {
@@ -190,23 +185,14 @@ export default function PricingClient(props: PricingClientProps) {
           }}
         />
         <div className="relative z-10">
-          <div className="font-black uppercase tracking-widest mb-2" style={{ fontSize: '0.62rem', color: '#93C5FD' }}>
+          <div className="font-black uppercase tracking-widest mb-2" style={{ fontSize: '0.62rem', color: '#22D3EE' }}>
             Pricing
           </div>
-          <h1 className="font-black tracking-tight mb-2" style={{ fontSize: '1.9rem', color: 'var(--text)' }}>
-            Choose your plan.{' '}
-            <span
-              style={{
-                background: 'linear-gradient(135deg, #60A5FA, #3B82F6, #2563EB)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              Launch offer — 50% off.
-            </span>
+          <h1 className="font-black tracking-tight mb-3" style={{ fontSize: '2rem', color: 'var(--text)' }}>
+            Choose a plan
           </h1>
-          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', maxWidth: 520, margin: '0 auto' }}>
-            Free to start. Upgrade when you&apos;re ready to scale.
+          <p style={{ fontSize: '0.95rem', color: 'var(--muted)', maxWidth: 560, margin: '0 auto' }}>
+            Start creating AI Shorts with credits. Upgrade when you need more videos.
           </p>
         </div>
       </div>
@@ -225,7 +211,7 @@ export default function PricingClient(props: PricingClientProps) {
             {!userId ? 'Sign in to see your balance' : creditsLoading ? 'Loading balance...' : `You have ${credits ?? 0} credit${credits === 1 ? '' : 's'}`}
           </p>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            Basic = 15cr · Pro = 20cr per video · charged only on successful videos
+            Basic = {PLANS.basic.videoCredits}cr · Pro = {PLANS.pro.videoCredits}cr per video · charged only on successful videos
           </p>
         </div>
         {isPro && (
@@ -246,75 +232,73 @@ export default function PricingClient(props: PricingClientProps) {
         )}
       </div>
 
-      {/* 3 plans — push #050: explicit responsive cols so mobile gets a
-          clean single-column stack instead of three crammed cards. */}
+      {/* 3 plans — driven by PLAN_LIST so copy can't drift from the homepage. */}
       <div
         className="grid mx-auto gap-5 grid-cols-1 md:grid-cols-3"
         style={{ maxWidth: '64rem' }}
       >
-        {/* Free */}
-        <PlanCard
-          tier="free"
-          name="Free"
-          price="$0"
-          period="/ month"
-          tagline="Try the platform."
-          features={FREE_FEATURES}
-          cta={null}
-        />
+        {PLAN_LIST.map((plan) => {
+          const isPaid = plan.tier === 'basic' || plan.tier === 'pro'
+          const isSelected = isPaid && selectedPlan === plan.tier
+          const isRecommended = !!plan.recommended
+          const period = plan.tier === 'free' ? '/ month' : 'first month'
+          const renewNote = plan.regularPrice ? `then ${plan.regularPrice}` : undefined
 
-        {/* Basic */}
-        <PlanCard
-          tier="basic"
-          name="Basic"
-          price="$4.50"
-          period="first month"
-          renewNote="then $9/month"
-          tagline="140 credits / month. ≈9 videos."
-          features={BASIC_FEATURES}
-          selected={selectedPlan === 'basic'}
-          onSelect={() => setSelectedPlan('basic')}
-          cta={{
-            label:
-              purchasing === 'basic'
-                ? 'Loading...'
-                : selectedPlan === 'basic'
-                  ? 'Continue with Basic'
-                  : 'Get Basic — $4.50',
-            onClick: () => handleBuy('basic'),
-            loading: purchasing === 'basic',
-          }}
-        />
+          let cta:
+            | { label: string; onClick: () => void; loading?: boolean }
+            | null = null
+          if (plan.tier === 'free') {
+            cta = userId
+              ? null
+              : { label: 'Start Free', onClick: handleFreeCta }
+          } else if (plan.tier === 'basic') {
+            cta = {
+              label:
+                purchasing === 'basic'
+                  ? 'Loading...'
+                  : selectedPlan === 'basic'
+                    ? 'Continue with Basic'
+                    : plan.cta,
+              onClick: () => handleBuy('basic'),
+              loading: purchasing === 'basic',
+            }
+          } else {
+            cta = {
+              label:
+                purchasing === 'pro'
+                  ? 'Loading...'
+                  : selectedPlan === 'pro'
+                    ? 'Continue with Pro'
+                    : plan.cta,
+              onClick: () => handleBuy('pro'),
+              loading: purchasing === 'pro',
+            }
+          }
 
-        {/* Pro - Recommended (gold highlight — push #072) */}
-        <PlanCard
-          tier="pro"
-          name="Pro"
-          price="$9.50"
-          period="first month"
-          renewNote="then $19/month"
-          tagline="350 credits / month. ≈17 videos."
-          features={PRO_FEATURES}
-          badge={{ label: 'Recommended', color: '#3B82F6' }}
-          highlight
-          selected={selectedPlan === 'pro'}
-          onSelect={() => setSelectedPlan('pro')}
-          cta={{
-            label:
-              purchasing === 'pro'
-                ? 'Loading...'
-                : selectedPlan === 'pro'
-                  ? 'Continue with Pro'
-                  : 'Get Pro — $9.50',
-            onClick: () => handleBuy('pro'),
-            loading: purchasing === 'pro',
-          }}
-        />
+          return (
+            <PlanCard
+              key={plan.tier}
+              tier={plan.tier}
+              name={plan.name}
+              price={plan.priceLabel}
+              period={period}
+              renewNote={renewNote}
+              features={featuresFor(plan.tier)}
+              badge={isRecommended ? { label: 'Recommended', color: '#3B82F6' } : undefined}
+              highlight={isRecommended}
+              selected={isSelected}
+              onSelect={isPaid ? () => setSelectedPlan(plan.tier as 'basic' | 'pro') : undefined}
+              cta={cta}
+            />
+          )
+        })}
       </div>
 
-      <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
-        Credits charged only on successful videos. 50% off applies to the first month only.
-        Plans renew at the regular monthly price. Refund within 7 days if unused.
+      <p className="max-w-3xl mx-auto text-center text-xs mt-6" style={{ color: 'var(--muted)' }}>
+        50% off applies to the first month only. Plans renew at the regular monthly price.
+      </p>
+      <p className="max-w-3xl mx-auto text-center text-xs mt-2" style={{ color: 'var(--muted)' }}>
+        Credits are charged only when your final video is successfully generated.
       </p>
 
       {/* How credits work */}
@@ -323,15 +307,15 @@ export default function PricingClient(props: PricingClientProps) {
           How credits work
         </h2>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          <CreditTier name="Basic" cost="15 credits" desc="Standard video generation for short-form creators." />
-          <CreditTier name="Pro" cost="20 credits" desc="Better cinematic prompting and higher-quality generation settings." />
+          <CreditTier name="Basic" cost={`${PLANS.basic.videoCredits} credits`} desc="Standard video generation for short-form creators." />
+          <CreditTier name="Pro" cost={`${PLANS.pro.videoCredits} credits`} desc="Better cinematic prompting and higher-quality generation settings." />
         </div>
         <ul
           className="mt-5 text-xs space-y-2"
           style={{ color: 'var(--muted2)', paddingLeft: 20 }}
         >
-          <li>Basic video = <strong style={{ color: 'var(--text)' }}>15 credits</strong></li>
-          <li>Pro video = <strong style={{ color: 'var(--text)' }}>20 credits</strong></li>
+          <li>Basic video = <strong style={{ color: 'var(--text)' }}>{PLANS.basic.videoCredits} credits</strong></li>
+          <li>Pro video = <strong style={{ color: 'var(--text)' }}>{PLANS.pro.videoCredits} credits</strong></li>
           <li>Failed generations do not consume credits</li>
           <li>Credits reset every month based on your plan</li>
         </ul>
@@ -368,7 +352,6 @@ function PlanCard({
   price,
   period,
   renewNote,
-  tagline,
   features,
   badge,
   highlight,
@@ -381,7 +364,6 @@ function PlanCard({
   price: string
   period: string
   renewNote?: string
-  tagline: string
   features: string[]
   badge?: { label: string; color: string }
   highlight?: boolean
@@ -446,7 +428,7 @@ function PlanCard({
       {badge && !isSelected && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: badge.color, color: highlight ? '#FFFFFF' : 'white' }}
+          style={{ background: badge.color, color: '#FFFFFF' }}
         >
           {badge.label}
         </div>
@@ -471,7 +453,7 @@ function PlanCard({
       <div className="mb-5">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#3B82F6' : 'var(--muted)' }}
+          style={{ color: highlight ? '#22D3EE' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -480,15 +462,14 @@ function PlanCard({
           <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>{period}</span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: highlight ? '#3B82F6' : '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
+          <p className="text-xs mb-1" style={{ color: '#22D3EE', fontWeight: 700 }}>{renewNote}</p>
         )}
-        <p className="text-xs" style={{ color: 'var(--muted)' }}>{tagline}</p>
       </div>
 
       <div className="flex flex-col gap-2.5 mb-7 flex-1">
         {features.map((f) => (
           <div key={f} className="flex items-start gap-2.5 text-sm">
-            <span style={{ color: '#34d399', fontSize: '0.8rem', marginTop: 2 }}>✓</span>
+            <span style={{ color: '#22D3EE', fontSize: '0.8rem', marginTop: 2 }}>✓</span>
             <span style={{ color: 'var(--text2)' }}>{f}</span>
           </div>
         ))}
@@ -543,7 +524,7 @@ function CreditTier({ name, cost, desc }: { name: string; cost: string; desc: st
         border: '1px solid var(--border)',
       }}
     >
-      <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#93C5FD' }}>
+      <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#22D3EE' }}>
         {name}
       </div>
       <div className="font-black text-lg mb-1" style={{ color: 'var(--text)' }}>{cost}</div>

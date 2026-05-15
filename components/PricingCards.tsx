@@ -15,38 +15,33 @@
 //   - Pro   → buy.stripe.com pro launch link
 
 import { useState } from 'react'
+import { PLANS } from '@/lib/pricing'
 
-const STRIPE_LINKS: Record<'basic' | 'pro', string> = {
-  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
-  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
-}
-
-// Push #033: keep this in lockstep with the matching FREE_FEATURES /
-// BASIC_FEATURES / PRO_FEATURES arrays in
-// app/(dashboard)/pricing/PricingClient.tsx — the homepage embeds this
-// component side-by-side with that page's copy.
+// Push #078 — feature copy now derives from lib/pricing.ts so credit
+// counts can't drift between the homepage, /pricing, and this in-flow
+// upgrade card.
 const FREE_FEATURES = [
-  '2 credits',
-  'Try the platform',
-  'MP4 ready to post',
-  'Community support',
+  `${PLANS.free.credits} credits`,
+  'Analyze ideas before rendering',
+  'Try AI video generation',
+  'Credits charged only on successful video',
 ]
 
 const BASIC_FEATURES = [
-  '140 credits / month',
-  '≈9 videos / month',
-  '15 credits per Basic video',
-  'Launch offer: 50% off first month',
-  'Email support',
+  `${PLANS.basic.credits} credits/month`,
+  `≈9 Basic videos/month (${PLANS.basic.videoCredits} credits each)`,
+  'Voiceover + captions',
+  'Download MP4',
+  'My Videos history',
 ]
 
 const PRO_FEATURES = [
-  '350 credits / month',
-  '≈17 videos / month',
-  '20 credits per Pro video',
-  'Launch offer: 50% off first month',
-  'Better cinematic prompting',
-  'Priority support',
+  `${PLANS.pro.credits} credits/month`,
+  `≈17 Pro videos/month (${PLANS.pro.videoCredits} credits each)`,
+  'Better generation settings',
+  'Voiceover + captions',
+  'Download MP4',
+  'My Videos history',
 ]
 
 export default function PricingCards() {
@@ -77,7 +72,7 @@ export default function PricingCards() {
       // ignore
     }
     // Direct Stripe-hosted launch-offer link — no server round-trip.
-    window.location.href = STRIPE_LINKS[tier]
+    window.location.href = PLANS[tier].href
   }
 
   return (
@@ -119,8 +114,8 @@ export default function PricingCards() {
       <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '64rem' }}>
         <PlanCard
           tier="free"
-          name="Free"
-          price="$0"
+          name={PLANS.free.name}
+          price={PLANS.free.priceLabel}
           period="/ month"
           tagline="Try the platform."
           features={FREE_FEATURES}
@@ -129,14 +124,12 @@ export default function PricingCards() {
 
         <PlanCard
           tier="basic"
-          name="Basic"
-          price="$4.50"
+          name={PLANS.basic.name}
+          price={PLANS.basic.priceLabel}
           period="first month"
-          renewNote="then $9/month"
-          tagline="140 credits / month. ≈9 videos."
+          renewNote={`then ${PLANS.basic.regularPrice}`}
+          tagline={`${PLANS.basic.credits} credits / month. ≈9 videos.`}
           features={BASIC_FEATURES}
-          badge="Most Popular"
-          highlight
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
           cta={{
@@ -145,7 +138,7 @@ export default function PricingCards() {
                 ? 'Loading…'
                 : selectedPlan === 'basic'
                   ? 'Continue with Basic'
-                  : 'Get Basic — $4.50',
+                  : PLANS.basic.cta,
             onClick: () => handleBuy('basic'),
             loading: purchasing === 'basic',
           }}
@@ -153,13 +146,14 @@ export default function PricingCards() {
 
         <PlanCard
           tier="pro"
-          name="Pro"
-          price="$9.50"
+          name={PLANS.pro.name}
+          price={PLANS.pro.priceLabel}
           period="first month"
-          renewNote="then $19/month"
-          tagline="350 credits / month. ≈17 videos."
+          renewNote={`then ${PLANS.pro.regularPrice}`}
+          tagline={`${PLANS.pro.credits} credits / month. ≈17 videos.`}
           features={PRO_FEATURES}
-          badge="Best Value"
+          badge="Recommended"
+          highlight
           selected={selectedPlan === 'pro'}
           onSelect={() => setSelectedPlan('pro')}
           cta={{
@@ -168,7 +162,7 @@ export default function PricingCards() {
                 ? 'Loading…'
                 : selectedPlan === 'pro'
                   ? 'Continue with Pro'
-                  : 'Get Pro — $9.50',
+                  : PLANS.pro.cta,
             onClick: () => handleBuy('pro'),
             loading: purchasing === 'pro',
           }}
