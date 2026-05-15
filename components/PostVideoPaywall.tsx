@@ -41,6 +41,8 @@ function trackCheckoutClick(tier: 'basic' | 'pro'): void {
 
 export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   const [dismissed, setDismissed] = useState(false)
+  // Push #077 — Pro selected by default. Card click selects, CTA navigates.
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
   if (dismissed) return null
   if (credits > 30) return null
 
@@ -78,23 +80,29 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
       >
         <PlanCard
+          tier="basic"
           name="Basic"
           price="$4.50 first month"
           renew="then $9/month"
           features={['140 credits / month', '15 credits per Basic video']}
           href={STRIPE_LINKS.basic}
-          ctaLabel="Start Basic →"
+          ctaLabel={selectedPlan === 'basic' ? 'Continue with Basic →' : 'Start Basic →'}
           onClick={() => trackCheckoutClick('basic')}
+          selected={selectedPlan === 'basic'}
+          onSelect={() => setSelectedPlan('basic')}
         />
         <PlanCard
+          tier="pro"
           name="Pro"
           price="$9.50 first month"
           renew="then $19/month"
           features={['350 credits / month', '20 credits per Pro video']}
           href={STRIPE_LINKS.pro}
-          ctaLabel="Start Pro →"
+          ctaLabel={selectedPlan === 'pro' ? 'Continue with Pro →' : 'Start Pro →'}
           onClick={() => trackCheckoutClick('pro')}
           highlight
+          selected={selectedPlan === 'pro'}
+          onSelect={() => setSelectedPlan('pro')}
         />
       </div>
 
@@ -119,6 +127,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
 }
 
 function PlanCard({
+  tier,
   name,
   price,
   renew,
@@ -127,7 +136,10 @@ function PlanCard({
   ctaLabel,
   highlight,
   onClick,
+  selected,
+  onSelect,
 }: {
+  tier: 'basic' | 'pro'
   name: string
   price: string
   renew: string
@@ -136,20 +148,78 @@ function PlanCard({
   ctaLabel: string
   highlight?: boolean
   onClick?: () => void
+  selected?: boolean
+  onSelect?: () => void
 }) {
+  const isSelected = !!selected
+
+  function background(): string {
+    if (isSelected) return '#0D1830'
+    if (highlight) return 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+    return 'rgba(15,15,30,0.85)'
+  }
+  function border(): string {
+    if (isSelected) return '2px solid #3B82F6'
+    if (highlight) return '2px solid rgba(37, 99, 235,.55)'
+    return '1px solid var(--border)'
+  }
+  function shadow(): string {
+    if (isSelected) return '0 0 28px rgba(59,130,246,0.3)'
+    if (highlight) return '0 0 24px rgba(37, 99, 235,.18)'
+    return 'none'
+  }
+
   return (
     <div
-      className="rounded-xl p-4 flex flex-col"
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      onClick={() => {
+        if (onSelect) onSelect()
+      }}
+      onKeyDown={(e) => {
+        if (!onSelect) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className="rounded-xl p-4 flex flex-col relative transition-all duration-200"
       style={{
-        background: highlight
-          ? 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
-          : 'rgba(15,15,30,0.85)',
-        border: highlight
-          ? '2px solid rgba(37, 99, 235,.55)'
-          : '1px solid var(--border)',
-        boxShadow: highlight ? '0 0 24px rgba(37, 99, 235,.18)' : 'none',
+        background: background(),
+        border: border(),
+        boxShadow: shadow(),
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(e) => {
+        if (isSelected) return
+        e.currentTarget.style.borderColor = '#3B82F6'
+        e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
+        e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
+      }}
+      onMouseLeave={(e) => {
+        if (isSelected) return
+        e.currentTarget.style.background = background()
+        e.currentTarget.style.border = border()
+        e.currentTarget.style.boxShadow = shadow()
       }}
     >
+      {isSelected && (
+        <div
+          className="absolute top-3 right-3 flex items-center justify-center rounded-full"
+          style={{
+            width: 22, height: 22,
+            background: '#22C55E',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 14px rgba(34,197,94,.45)',
+          }}
+          aria-label="Selected"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      )}
       <div
         className="text-xs font-black uppercase tracking-widest mb-1"
         style={{ color: highlight ? '#22D3EE' : 'var(--muted)' }}
@@ -179,11 +249,19 @@ function PlanCard({
       </ul>
       <a
         href={href}
-        onClick={onClick}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => {
+          e.stopPropagation()
+          if (onSelect) onSelect()
+          if (onClick) onClick()
+        }}
         className="rounded-xl py-2.5 text-sm font-black text-center text-white"
         style={{
-          background: 'linear-gradient(135deg, #2563EB, #2563EB)',
-          boxShadow: '0 6px 22px rgba(37, 99, 235,.32)',
+          background: isSelected ? '#3B82F6' : 'linear-gradient(135deg, #2563EB, #2563EB)',
+          boxShadow: isSelected
+            ? '0 4px 22px rgba(59, 130, 246,.35)'
+            : '0 6px 22px rgba(37, 99, 235,.32)',
           textDecoration: 'none',
         }}
       >
