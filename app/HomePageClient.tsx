@@ -143,9 +143,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
           {/* Center links — desktop */}
           <div className="hidden items-center gap-7 md:flex">
+            <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
+            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Generator</Link>
+            <a href="#features" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Features</a>
+            <Link href={THUMBNAIL_ROUTE} className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
-            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Generate</Link>
-            <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Features</a>
           </div>
 
           {/* Right side */}
@@ -205,9 +207,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {navOpen && (
           <div className="md:hidden border-t border-white/[0.08] bg-[#0B1120]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
+              <Link onClick={() => setNavOpen(false)} href="/" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Home</Link>
+              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Generator</Link>
+              <a onClick={() => setNavOpen(false)} href="#features" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Features</a>
+              <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
               <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
-              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Generate</Link>
-              <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Features</a>
             </div>
           </div>
         )}
@@ -226,13 +230,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           from one idea.
         </h1>
 
-        {/* Single clean prompt card — width aligned with nav container */}
+        {/* Single clean prompt card — fixed 770×350 */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
             goToGenerate()
           }}
-          className="mx-auto mt-10 flex min-h-[360px] w-full max-w-5xl flex-col justify-center gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-8 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-10"
+          className="mx-auto mt-10 flex h-[350px] w-full max-w-[770px] flex-col justify-center gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-8 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-8"
         >
           <textarea
             value={prompt}
@@ -252,8 +256,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </form>
       </section>
 
-      {/* ───────── Pricing ───────── */}
+      {/* ───────── Pricing (also anchors Features) ───────── */}
       <section id="pricing" className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-8 sm:px-6">
+        <span id="features" className="absolute -mt-20" aria-hidden />
         <div className="mb-10 text-center">
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             Pricing
@@ -333,11 +338,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Home</Link>
-            <Link href="/templates" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Templates</Link>
-            <Link href="/examples" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Examples</Link>
+            <Link href="/generate" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Generator</Link>
+            <Link href="/#features" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Features</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
-            <Link href="/pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
-            <Link href="/login" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Sign In</Link>
+            <Link href="/#pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
           <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI</p>
         </div>
