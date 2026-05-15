@@ -162,12 +162,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 Dashboard
               </Link>
             ) : (
-              <Link
-                href="/login"
-                className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(59,130,246,.35)] transition hover:bg-blue-500 hover:shadow-[0_6px_24px_rgba(34,211,238,.4)]"
-              >
-                Sign In
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/5"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(59,130,246,.35)] transition hover:bg-blue-700 hover:shadow-[0_6px_24px_rgba(34,211,238,.4)]"
+                >
+                  Get Started
+                </Link>
+              </>
             )}
           </div>
 
@@ -254,6 +262,24 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate Video →'}
           </button>
         </form>
+
+        {authChecked && !user && (
+          <p className="mx-auto mt-5 max-w-[770px] text-sm text-[#64748B]">
+            Already have an account?{' '}
+            <Link href="/login" className="text-[#3B82F6] hover:underline">
+              Sign In
+            </Link>{' '}
+            ·{' '}
+            New here?{' '}
+            <Link href="/signup" className="text-[#3B82F6] hover:underline">
+              Create Account
+            </Link>{' '}
+            ·{' '}
+            <Link href="/forgot-password" className="text-[#3B82F6] hover:underline">
+              Forgot Password?
+            </Link>
+          </p>
+        )}
       </section>
 
       {/* ───────── Pricing (also anchors Features) ───────── */}
