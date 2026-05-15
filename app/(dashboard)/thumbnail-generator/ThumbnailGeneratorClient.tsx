@@ -1,0 +1,828 @@
+'use client'
+
+import { useState, useRef, useCallback } from 'react'
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+const FREE_DAILY_LIMIT = 2
+const STORAGE_KEY = 'sfai_thumb_daily'
+
+const STYLES = [
+  { id: 'mrbeast',    label: 'MrBeast',     emoji: '🤯', desc: 'Extreme reaction, bold colors' },
+  { id: 'mystery',    label: 'Mystery/Dark', emoji: '🌑', desc: 'Eerie, shadowy atmosphere' },
+  { id: 'finance',    label: 'Finance',      emoji: '💰', desc: 'Professional, Wall Street' },
+  { id: 'documentary',label: 'Documentary',  emoji: '🎥', desc: 'Photojournalistic, authentic' },
+  { id: 'viral-facts',label: 'Viral Facts',  emoji: '🤯', desc: 'Bold numbers, shocking stats' },
+  { id: 'gaming',     label: 'Gaming',       emoji: '🎮', desc: 'Epic action, neon lighting' },
+  { id: 'minimal',    label: 'Minimal',      emoji: '⬜', desc: 'Clean, elegant, premium' },
+  { id: 'cinematic',  label: 'Cinematic',    emoji: '🎬', desc: 'Movie poster quality' },
+]
+
+// ─── Daily limit helpers (localStorage) ───────────────────────────────────
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10) // "2025-01-15"
+}
+
+function getDailyUsage(): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    if (parsed.date !== getTodayKey()) return 0
+    return typeof parsed.count === 'number' ? parsed.count : 0
+  } catch { return 0 }
+}
+
+function incrementDailyUsage(): number {
+  if (typeof window === 'undefined') return 0
+  const current = getDailyUsage()
+  const next = current + 1
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: getTodayKey(), count: next }))
+  return next
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────
+function Skeleton() {
+  return (
+    <div
+      style={{
+        width: '100%',
+        aspectRatio: '16/9',
+        borderRadius: 12,
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)',
+          animation: 'shimmer 2s infinite',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+        }}
+      >
+        <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>🖼️</div>
+        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.82rem', fontWeight: 600 }}>
+          Generating thumbnail…
+        </p>
+      </div>
+    </div>
+  )
+}
+
+interface ThumbnailCardProps {
+  url: string
+  index: number
+  selected: boolean
+  onSelect: () => void
+}
+
+function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
+  const [hovered, setHovered] = useState(false)
+
+  async function handleDownload() {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `thumbnail-${index + 1}-${Date.now()}.png`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {
+      window.open(url, '_blank')
+    }
+  }
+
+  return (
+    <div
+      onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        borderRadius: 12,
+        cursor: 'pointer',
+        border: selected
+          ? '2px solid #818cf8'
+          : hovered
+          ? '2px solid rgba(129,140,248,0.5)'
+          : '2px solid rgba(255,255,255,0.08)',
+        boxShadow: selected
+          ? '0 0 32px rgba(99,102,241,0.45)'
+          : hovered
+          ? '0 0 20px rgba(99,102,241,0.2)'
+          : 'none',
+        transition: 'all 0.18s ease',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Thumbnail image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={`Thumbnail variation ${index + 1}`}
+        style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
+      />
+
+      {/* Overlay with actions */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: hovered
+            ? 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)'
+            : 'transparent',
+          transition: 'background 0.2s ease',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          padding: '12px 14px',
+        }}
+      >
+        {hovered && (
+          <>
+            <span
+              style={{
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                color: '#a5b4fc',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(129,140,248,0.3)',
+              }}
+            >
+              #{index + 1}
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownload() }}
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '6px 14px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 0 16px rgba(99,102,241,0.4)',
+              }}
+            >
+              ⬇ Download
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Selected indicator */}
+      {selected && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.9rem',
+            boxShadow: '0 0 12px rgba(99,102,241,0.5)',
+          }}
+        >
+          ✓
+        </div>
+      )}
+    </div>
+  )
+}
+
+// YouTube feed preview mockup
+function YouTubeFeedPreview({ url }: { url: string }) {
+  return (
+    <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 14, textTransform: 'uppercase' }}>
+        📺 YouTube Feed Preview
+      </p>
+      {/* Fake YouTube UI */}
+      <div style={{ background: '#0f0f0f', borderRadius: 10, padding: 16, maxWidth: 380 }}>
+        {/* Thumbnail */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt="YouTube feed preview"
+          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 8 }}
+        />
+        {/* Video info */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+          {/* Avatar */}
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ height: 12, background: 'rgba(255,255,255,0.12)', borderRadius: 4, marginBottom: 6, width: '85%' }} />
+            <div style={{ height: 10, background: 'rgba(255,255,255,0.07)', borderRadius: 4, marginBottom: 4, width: '60%' }} />
+            <div style={{ height: 9, background: 'rgba(255,255,255,0.05)', borderRadius: 4, width: '45%' }} />
+          </div>
+        </div>
+        {/* After card */}
+        <div style={{ marginTop: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 70, height: 40, background: 'rgba(255,255,255,0.05)', borderRadius: 4, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ height: 9, background: 'rgba(255,255,255,0.07)', borderRadius: 3, marginBottom: 4 }} />
+            <div style={{ height: 8, background: 'rgba(255,255,255,0.04)', borderRadius: 3, width: '70%' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ────────────────────────────────────────────────────────
+export default function ThumbnailGeneratorClient() {
+  const [prompt, setPrompt] = useState('')
+  const [selectedStyle, setSelectedStyle] = useState('cinematic')
+  const [generateCount, setGenerateCount] = useState<1 | 3>(1)
+  const [loading, setLoading] = useState(false)
+  const [images, setImages] = useState<string[]>([])
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const [error, setError] = useState('')
+  const [optimizedPrompt, setOptimizedPrompt] = useState('')
+  const [showOptimized, setShowOptimized] = useState(false)
+  const [dailyUsed, setDailyUsed] = useState(() => getDailyUsage())
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const remainingFree = Math.max(FREE_DAILY_LIMIT - dailyUsed, 0)
+  const isLimitReached = remainingFree <= 0
+
+  const handleGenerate = useCallback(async () => {
+    if (!prompt.trim()) { setError('Enter a prompt first.'); return }
+    if (isLimitReached) { setError('Daily free limit reached. Upgrade to Pro for unlimited thumbnails.'); return }
+    setError('')
+    setImages([])
+    setOptimizedPrompt('')
+    setShowOptimized(false)
+    setLoading(true)
+
+    try {
+      const res = await fetch('/api/generate-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt.trim(), style: selectedStyle, count: generateCount }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error ?? 'Generation failed. Try again.')
+        return
+      }
+
+      setImages(data.images ?? [])
+      setOptimizedPrompt(data.optimizedPrompt ?? '')
+      setSelectedIdx(0)
+
+      // Increment daily usage
+      const newCount = incrementDailyUsage()
+      setDailyUsed(newCount)
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [prompt, selectedStyle, generateCount, isLimitReached])
+
+  async function handleDownloadSelected() {
+    const url = images[selectedIdx]
+    if (!url) return
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `thumbnail-selected-${Date.now()}.png`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {
+      window.open(url, '_blank')
+    }
+  }
+
+  const selectedImage = images[selectedIdx] ?? null
+
+  return (
+    <div style={{ padding: '28px 28px 48px', maxWidth: 1100, margin: '0 auto' }}>
+
+      {/* ── Page header ────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 13,
+              background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              boxShadow: '0 0 28px rgba(99,102,241,0.45)',
+              flexShrink: 0,
+            }}
+          >
+            🖼️
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: '1.45rem',
+                fontWeight: 900,
+                background: 'linear-gradient(135deg, #f1f5f9, #a5b4fc)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                lineHeight: 1.1,
+                margin: 0,
+              }}
+            >
+              AI Thumbnail Generator
+            </h1>
+            <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '4px 0 0' }}>
+              Generate viral YouTube thumbnails with AI
+            </p>
+          </div>
+
+          {/* Free tier badge */}
+          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+            {isLimitReached ? (
+              <span
+                style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#f87171',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                }}
+              >
+                ⚠️ Free limit reached · Upgrade for unlimited
+              </span>
+            ) : (
+              <span
+                style={{
+                  background: 'rgba(99,102,241,0.1)',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  color: '#a5b4fc',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                }}
+              >
+                ⚡ {remainingFree} free {remainingFree === 1 ? 'generation' : 'generations'} left today
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Layout: left panel + right preview ─────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: 24, alignItems: 'start' }}>
+
+        {/* ── LEFT: Input panel ──────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Prompt */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              📝 Describe your thumbnail
+            </label>
+            <textarea
+              ref={textareaRef}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleGenerate() }}
+              placeholder="e.g. Pyramid mystery, money secrets exposed, gaming world record..."
+              rows={4}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                color: 'var(--text)',
+                fontSize: '0.9rem',
+                lineHeight: 1.6,
+                resize: 'none',
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+              maxLength={400}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+              <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)' }}>
+                ⌘↵ to generate
+              </span>
+              <span style={{ fontSize: '0.68rem', color: prompt.length > 350 ? '#f87171' : 'rgba(255,255,255,0.25)' }}>
+                {prompt.length}/400
+              </span>
+            </div>
+          </div>
+
+          {/* Style selector */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 12, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              🎨 Thumbnail style
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedStyle(s.id)}
+                  style={{
+                    background:
+                      selectedStyle === s.id
+                        ? 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(124,58,237,0.14))'
+                        : 'rgba(255,255,255,0.03)',
+                    border:
+                      selectedStyle === s.id
+                        ? '1px solid rgba(99,102,241,0.45)'
+                        : '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    boxShadow: selectedStyle === s.id ? '0 0 16px rgba(99,102,241,0.2)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ fontSize: '1.1rem', marginBottom: 3 }}>{s.emoji}</div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: selectedStyle === s.id ? '#a5b4fc' : 'var(--text)', lineHeight: 1.1 }}>
+                    {s.label}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 2 }}>
+                    {s.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Variation count */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 12, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              🎲 Variations
+            </label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {([1, 3] as const).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setGenerateCount(n)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 0',
+                    borderRadius: 10,
+                    border: generateCount === n ? '1px solid rgba(99,102,241,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                    background: generateCount === n ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                    color: generateCount === n ? '#a5b4fc' : 'var(--muted)',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {n === 1 ? '1 thumbnail' : '3 variations'}
+                  {n === 3 && (
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: '0.6rem',
+                        marginTop: 2,
+                        color: 'rgba(165,180,252,0.7)',
+                      }}
+                    >
+                      counts as 1
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Generate button */}
+          <button
+            onClick={handleGenerate}
+            disabled={loading || !prompt.trim() || isLimitReached}
+            style={{
+              width: '100%',
+              padding: '15px 0',
+              borderRadius: 13,
+              border: 'none',
+              fontSize: '0.95rem',
+              fontWeight: 900,
+              color: '#fff',
+              cursor: loading || !prompt.trim() || isLimitReached ? 'not-allowed' : 'pointer',
+              background:
+                loading || !prompt.trim() || isLimitReached
+                  ? 'rgba(99,102,241,0.25)'
+                  : 'linear-gradient(135deg, #6366f1, #7c3aed)',
+              boxShadow:
+                loading || !prompt.trim() || isLimitReached
+                  ? 'none'
+                  : '0 0 32px rgba(99,102,241,0.4)',
+              transition: 'all 0.2s ease',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {loading
+              ? '✨ Generating…'
+              : isLimitReached
+              ? '🔒 Upgrade for unlimited'
+              : generateCount === 3
+              ? '🖼️ Generate 3 Variations'
+              : '🖼️ Generate Thumbnail'}
+          </button>
+
+          {/* Upgrade CTA if limit reached */}
+          {isLimitReached && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(124,58,237,0.08))',
+                border: '1px solid rgba(99,102,241,0.25)',
+                borderRadius: 13,
+                padding: 16,
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '0.88rem', marginBottom: 6 }}>
+                🚀 Unlock Unlimited Thumbnails
+              </p>
+              <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 12, lineHeight: 1.5 }}>
+                Pro users get unlimited HD thumbnails, premium styles, and priority generation.
+              </p>
+              <a
+                href="/pricing"
+                style={{
+                  display: 'inline-block',
+                  background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  borderRadius: 9,
+                  padding: '9px 24px',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+                }}
+              >
+                ⚡ Upgrade to Pro →
+              </a>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 10,
+                padding: '12px 16px',
+                color: '#f87171',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+              }}
+            >
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Optimized prompt disclosure */}
+          {optimizedPrompt && !loading && (
+            <button
+              onClick={() => setShowOptimized((v) => !v)}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 9,
+                padding: '8px 14px',
+                color: 'var(--muted)',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span>{showOptimized ? '▲' : '▼'}</span>
+              <span>AI-optimized prompt</span>
+            </button>
+          )}
+          {showOptimized && optimizedPrompt && (
+            <div
+              style={{
+                background: 'rgba(99,102,241,0.06)',
+                border: '1px solid rgba(99,102,241,0.18)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                color: 'rgba(165,180,252,0.85)',
+                fontSize: '0.73rem',
+                lineHeight: 1.6,
+                fontStyle: 'italic',
+              }}
+            >
+              {optimizedPrompt}
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT: Preview panel ───────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Main preview area */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 16,
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--muted2)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                🖼️ Preview
+              </span>
+              {selectedImage && !loading && (
+                <button
+                  onClick={handleDownloadSelected}
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '6px 16px',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 0 14px rgba(99,102,241,0.35)',
+                  }}
+                >
+                  ⬇ Download HD
+                </button>
+              )}
+            </div>
+
+            {/* Loading skeleton */}
+            {loading && <Skeleton />}
+
+            {/* Empty state */}
+            {!loading && images.length === 0 && (
+              <div
+                style={{
+                  aspectRatio: '16/9',
+                  borderRadius: 12,
+                  border: '1.5px dashed rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  color: 'rgba(255,255,255,0.25)',
+                }}
+              >
+                <span style={{ fontSize: '3rem', opacity: 0.4 }}>🖼️</span>
+                <p style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                  Your thumbnail will appear here
+                </p>
+                <p style={{ fontSize: '0.72rem', opacity: 0.7 }}>
+                  Enter a prompt and click Generate
+                </p>
+              </div>
+            )}
+
+            {/* Selected image (large) */}
+            {!loading && selectedImage && (
+              <div style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedImage}
+                  alt="Generated thumbnail"
+                  style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Variations grid (if multiple) */}
+          {!loading && images.length > 1 && (
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 14,
+                padding: 18,
+              }}
+            >
+              <p style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--muted2)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 12 }}>
+                ✨ Variations — click to select
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${images.length}, 1fr)`, gap: 10 }}>
+                {images.map((url, i) => (
+                  <ThumbnailCard
+                    key={url}
+                    url={url}
+                    index={i}
+                    selected={selectedIdx === i}
+                    onSelect={() => setSelectedIdx(i)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* YouTube Feed Preview */}
+          {!loading && selectedImage && (
+            <YouTubeFeedPreview url={selectedImage} />
+          )}
+
+          {/* Pro features teaser */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(124,58,237,0.06))',
+              border: '1px solid rgba(99,102,241,0.2)',
+              borderRadius: 14,
+              padding: 18,
+            }}
+          >
+            <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#a5b4fc', marginBottom: 10 }}>
+              ⚡ Pro Features
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {[
+                { icon: '♾️', text: 'Unlimited thumbnails per day' },
+                { icon: '🎨', text: 'HD quality (1792×1024)' },
+                { icon: '🚀', text: 'Priority generation queue' },
+                { icon: '🎲', text: '3 variations per generation' },
+                { icon: '🖼️', text: 'Premium style presets' },
+              ].map((f) => (
+                <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ fontSize: '0.9rem' }}>{f.icon}</span>
+                  <span style={{ fontSize: '0.76rem', color: 'rgba(165,180,252,0.85)' }}>{f.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Shimmer keyframe */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+    </div>
+  )
+}

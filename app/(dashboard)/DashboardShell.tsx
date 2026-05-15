@@ -28,6 +28,7 @@ const pageTitles: Record<string, string> = {
   '/video': 'Video Studio',
   '/channel': 'Channel Builder',
   '/admin/metrics': 'Admin · Metrics',
+  '/thumbnail-generator': 'AI Thumbnail Generator',
 }
 
 export default function DashboardShell({

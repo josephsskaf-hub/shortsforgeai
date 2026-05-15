@@ -290,6 +290,8 @@ export default function Sidebar({
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}
           <NavItem href="/examples" icon="✨" label="Examples" exact={false} pathname={pathname} onClick={onClose} />
+          {/* AI Thumbnail Generator — DALL-E 3 powered thumbnail creation */}
+          <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
 
         </nav>
 
