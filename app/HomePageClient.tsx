@@ -1,11 +1,12 @@
 'use client'
 
-// Push #078 — Large homepage UI polish.
-// - Top-nav center reduced to Home / Generator / Thumbnail (NEW) / Pricing
-// - Right side: guest sees Sign In + Start Free, signed-in sees Dashboard + Sign Out
-// - Hero copy refreshed ("Create videos 10x faster with AI") with new CTA copy
-// - New AI Video Showcase section: 6 static category cards above pricing
-// - Pricing section reads from lib/pricing.ts (single source of truth)
+// Push #079 — Fix top header auth buttons.
+// - Auth state now reactive via supabase.auth.onAuthStateChange in addition to
+//   the initial getSession() check, so the header updates immediately on
+//   login/logout without a full page reload.
+// - Right side (desktop + mobile): guest = Sign In + Sign Up, signed-in =
+//   Dashboard (→ /generate) + Sign Out. Sign Out hits supabase.auth.signOut()
+//   then router.push('/').
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -101,13 +102,19 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   }, [])
 
   useEffect(() => {
-    if (initialUser) return
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user ? { id: user.id } : null)
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ? { id: data.session.user.id } : null)
       setAuthChecked(true)
     })
-  }, [initialUser])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? { id: session.user.id } : null)
+      setAuthChecked(true)
+    })
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
   function goToGenerate(text?: string) {
     const trimmed = (text ?? prompt).trim()
@@ -191,16 +198,18 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
-          {/* Right side — desktop. Push #078: guest = Sign In + Start Free,
-              signed-in = Dashboard + Sign Out. */}
+          {/* Right side — desktop. Push #079: guest = Sign In (ghost) +
+              Sign Up (solid blue), signed-in = Dashboard (ghost, → /generate)
+              + Sign Out (outline). Buttons are only rendered after the auth
+              check completes so we don't flash the wrong state on hydration. */}
           <div className="hidden items-center gap-2 md:flex">
             {!authChecked ? (
               <div aria-hidden className="h-9 w-40" />
             ) : user ? (
               <>
                 <Link
-                  href="/dashboard"
-                  className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(59,130,246,.35)] transition hover:bg-blue-500 hover:shadow-[0_6px_24px_rgba(34,211,238,.4)]"
+                  href="/generate"
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Dashboard
                 </Link>
@@ -208,7 +217,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   type="button"
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="rounded-lg border border-white/[0.08] bg-transparent px-4 py-2 text-sm font-bold text-[#F1F5F9] transition hover:border-blue-500/40 hover:bg-white/[0.04] disabled:opacity-60"
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
@@ -217,35 +226,40 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <>
                 <Link
                   href="/login"
-                  className="rounded-lg border border-white/[0.08] bg-transparent px-4 py-2 text-sm font-bold text-[#F1F5F9] transition hover:border-blue-500/40 hover:bg-white/[0.04]"
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_18px_rgba(59,130,246,.35)] transition hover:bg-blue-500 hover:shadow-[0_6px_24px_rgba(34,211,238,.4)]"
+                  className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                 >
-                  Start Free
+                  Sign Up
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile right side: persistent CTA + hamburger */}
+          {/* Mobile right side: persistent CTA + hamburger. Push #079 mirrors
+              the desktop auth split — Dashboard (ghost, → /generate) when
+              signed in, Sign Up (solid blue) when signed out. Sign In and
+              Sign Out live in the dropdown panel below to keep the bar tight. */}
           <div className="flex items-center gap-2 md:hidden">
-            {authChecked && user ? (
+            {!authChecked ? (
+              <div aria-hidden className="h-9 w-20" />
+            ) : user ? (
               <Link
-                href="/dashboard"
-                className="rounded-lg bg-[#2563EB] px-3 py-2 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(59,130,246,.35)]"
+                href="/generate"
+                className="rounded-lg border border-white/20 px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-white/5"
               >
                 Dashboard
               </Link>
             ) : (
               <Link
                 href="/signup"
-                className="rounded-lg bg-[#2563EB] px-3 py-2 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(59,130,246,.35)]"
+                className="rounded-lg bg-[#2563EB] px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
               >
-                Start Free
+                Sign Up
               </Link>
             )}
             <button
@@ -263,8 +277,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Mobile menu panel — Push #078: same nav items as desktop plus
-            Sign In/Sign Out tail. NEW badge mirrors desktop. */}
+        {/* Mobile menu panel — Push #079: nav items + auth tail. Guests get
+            both Sign In (ghost) and Sign Up (solid blue) so the full auth
+            choice is visible from one tap. Signed-in users get Sign Out. */}
         {navOpen && (
           <div className="md:hidden border-t border-white/[0.08] bg-[#0B1120]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
@@ -292,18 +307,27 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     await handleSignOut()
                   }}
                   disabled={signingOut}
-                  className="text-left rounded-md px-3 py-2 text-sm font-bold text-[#F1F5F9] hover:bg-white/[.04] disabled:opacity-60"
+                  className="text-left rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
               ) : (
-                <Link
-                  onClick={() => setNavOpen(false)}
-                  href="/login"
-                  className="rounded-md px-3 py-2 text-sm font-bold text-[#F1F5F9] hover:bg-white/[.04]"
-                >
-                  Sign In
-                </Link>
+                <>
+                  <Link
+                    onClick={() => setNavOpen(false)}
+                    href="/login"
+                    className="rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    onClick={() => setNavOpen(false)}
+                    href="/signup"
+                    className="rounded-md bg-[#2563EB] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  >
+                    Sign Up
+                  </Link>
+                </>
               )}
             </div>
           </div>
