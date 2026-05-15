@@ -107,7 +107,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         >
           <div className="text-5xl mb-4">🎬</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            No videos yet. Create your first Short.
+            No videos yet. Create your first AI Short.
           </h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
             Generated AI videos will show up here as soon as a render finishes.
@@ -116,12 +116,12 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white"
             style={{
-              background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-              boxShadow: '0 4px 22px rgba(37,99,235,.3)',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              boxShadow: '0 4px 22px rgba(124,58,237,.35)',
               textDecoration: 'none',
             }}
           >
-            ⚡ Generate a Short
+            ⚡ Generate Video
           </Link>
         </div>
       </div>
@@ -421,11 +421,12 @@ function Header({ count }: { count: number }) {
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+            background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+            boxShadow: '0 4px 18px rgba(124,58,237,.35)',
             textDecoration: 'none',
           }}
         >
-          ⚡ New Short
+          ⚡ Generate Video
         </Link>
       </div>
     </div>

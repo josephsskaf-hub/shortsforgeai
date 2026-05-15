@@ -166,7 +166,7 @@ function LoginForm() {
             Welcome back
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-            Sign in to keep creating AI Shorts.
+            Sign in to keep generating videos.
           </p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">

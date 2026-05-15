@@ -126,7 +126,7 @@ export default function CheckoutSuccessPage() {
               letterSpacing: '-0.01em',
             }}
           >
-            Go to Generate Video
+            Generate Video
           </Link>
           <Link
             href="/my-videos"

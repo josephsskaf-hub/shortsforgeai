@@ -850,12 +850,12 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(37,99,235,.15)',
-                  border: '1px solid rgba(37,99,235,.35)',
-                  color: '#93c5fd',
+                  background: 'rgba(124,58,237,.15)',
+                  border: '1px solid rgba(124,58,237,.35)',
+                  color: '#c4b5fd',
                 }}
               >
-                AI Video
+                {showStep1 ? 'Step 1 — Your Idea' : showStep2 ? 'Step 2 — Creative Brief' : 'Step 3 — Generate'}
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
@@ -1925,7 +1925,7 @@ function PipelineStages({
 
   const stages: { label: string; sub: string; status: StageStatus }[] = [
     {
-      label: 'Creating cinematic visuals',
+      label: 'Creating visuals',
       sub: 'AI scene model',
       status: visualsDone ? 'done' : visualsActive ? 'active' : 'queued',
     },

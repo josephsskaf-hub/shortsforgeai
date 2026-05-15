@@ -258,7 +258,7 @@ export default function PricingClient(props: PricingClientProps) {
           cta={null}
         />
 
-        {/* Basic - Most Popular */}
+        {/* Basic */}
         <PlanCard
           name="Basic"
           price="$4.50"
@@ -266,8 +266,6 @@ export default function PricingClient(props: PricingClientProps) {
           renewNote="then $9/month"
           tagline="140 credits / month. ≈9 videos."
           features={BASIC_FEATURES}
-          badge={{ label: 'Most Popular', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
-          highlight
           cta={{
             label: purchasing === 'basic' ? 'Loading...' : 'Get Basic — $4.50',
             onClick: () => handleBuy('basic'),
@@ -275,7 +273,7 @@ export default function PricingClient(props: PricingClientProps) {
           }}
         />
 
-        {/* Pro - Best Value */}
+        {/* Pro - Recommended (purple highlight) */}
         <PlanCard
           name="Pro"
           price="$9.50"
@@ -283,7 +281,8 @@ export default function PricingClient(props: PricingClientProps) {
           renewNote="then $19/month"
           tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
-          badge={{ label: 'Best Value', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
+          badge={{ label: 'Recommended', color: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
+          highlight
           cta={{
             label: purchasing === 'pro' ? 'Loading...' : 'Get Pro — $9.50',
             onClick: () => handleBuy('pro'),
@@ -293,8 +292,8 @@ export default function PricingClient(props: PricingClientProps) {
       </div>
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
-        50% off applies to the first month only. Plans renew at the regular monthly price.
-        Failed generations do not consume credits. Refund within 7 days if unused.
+        Credits charged only on successful videos. 50% off applies to the first month only.
+        Plans renew at the regular monthly price. Refund within 7 days if unused.
       </p>
 
       {/* How credits work */}
@@ -368,10 +367,10 @@ function PlanCard({
       className="rounded-[20px] p-7 relative overflow-hidden transition-all flex flex-col"
       style={{
         background: highlight
-          ? 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+          ? 'linear-gradient(135deg, rgba(124,58,237,.10), rgba(168,85,247,.05))'
           : 'rgba(15,15,30,0.85)',
-        border: highlight ? '2px solid rgba(37,99,235,.45)' : '1px solid var(--border2)',
-        boxShadow: highlight ? '0 0 60px rgba(37,99,235,.2)' : '0 0 30px rgba(37,99,235,.06)',
+        border: highlight ? '2px solid rgba(124,58,237,.55)' : '1px solid var(--border2)',
+        boxShadow: highlight ? '0 0 60px rgba(124,58,237,.25)' : '0 0 30px rgba(99,102,241,.06)',
       }}
     >
       {badge && (
@@ -386,7 +385,7 @@ function PlanCard({
       <div className="mb-5">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#93C5FD' : 'var(--muted)' }}
+          style={{ color: highlight ? '#c4b5fd' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -395,7 +394,7 @@ function PlanCard({
           <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>{period}</span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
+          <p className="text-xs mb-1" style={{ color: highlight ? '#c4b5fd' : '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
         )}
         <p className="text-xs" style={{ color: 'var(--muted)' }}>{tagline}</p>
       </div>
@@ -415,8 +414,12 @@ function PlanCard({
           disabled={cta.loading}
           className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-            boxShadow: '0 4px 22px rgba(37,99,235,.32)',
+            background: highlight
+              ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
+              : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            boxShadow: highlight
+              ? '0 4px 22px rgba(124,58,237,.4)'
+              : '0 4px 22px rgba(37,99,235,.32)',
             border: 'none',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,

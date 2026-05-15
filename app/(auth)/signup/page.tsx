@@ -170,7 +170,7 @@ export default function SignupPage() {
                 className="text-2xl font-black mb-1 tracking-tight"
                 style={{ color: 'var(--text)' }}
               >
-                Join The Next Generation Of Creators
+                Create your first AI Short
               </h1>
               <p className="text-sm mb-2" style={{ color: 'var(--muted)' }}>
                 Generate viral-ready YouTube Shorts in seconds. Start free.
