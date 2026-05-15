@@ -23,8 +23,8 @@ export default function MobileNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: 'linear-gradient(180deg, rgba(8,8,16,0.97) 0%, rgba(6,6,12,0.99) 100%)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
+        background: '#0B1020',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 6px)',
@@ -51,7 +51,7 @@ export default function MobileNav() {
                     left: '22%',
                     right: '22%',
                     height: 2,
-                    background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                    background: 'linear-gradient(90deg, #3B82F6, #22D3EE)',
                     borderRadius: '0 0 4px 4px',
                   }}
                 />
@@ -63,7 +63,7 @@ export default function MobileNav() {
                   fontSize: '1.2rem',
                   lineHeight: 1,
                   filter: active
-                    ? 'drop-shadow(0 0 7px rgba(129,140,248,0.65))'
+                    ? 'drop-shadow(0 0 7px rgba(34,211,238,0.65))'
                     : 'none',
                   transition: 'filter 0.18s ease',
                 }}
@@ -78,7 +78,7 @@ export default function MobileNav() {
                   fontWeight: 800,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase' as const,
-                  color: active ? '#a5b4fc' : 'rgba(100,116,139,0.85)',
+                  color: active ? '#60A5FA' : '#94A3B8',
                   transition: 'color 0.18s ease',
                 }}
               >

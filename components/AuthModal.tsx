@@ -129,21 +129,21 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
         className="w-full max-w-md rounded-2xl relative overflow-hidden"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(99,102,241,.25)',
-          boxShadow: '0 0 100px rgba(99,102,241,.22), 0 30px 80px rgba(0,0,0,.5)',
+          border: '1px solid rgba(59, 130, 246,.25)',
+          boxShadow: '0 0 100px rgba(59, 130, 246,.22), 0 30px 80px rgba(0,0,0,.5)',
         }}
       >
         {/* Top accent */}
         <div
           className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, #6366f1, #a855f7, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, #3B82F6, #22D3EE, transparent)' }}
         />
         {/* Glow orb */}
         <div
           className="absolute pointer-events-none"
           style={{
             width: 300, height: 300,
-            background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(59, 130, 246,0.12) 0%, transparent 70%)',
             top: -100, right: -80, borderRadius: '50%',
           }}
         />
@@ -162,12 +162,12 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
           <div className="flex items-center gap-3 mb-6">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(99,102,241,.45)' }}
+              style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(59, 130, 246,.45)' }}
             >
               ⚡
             </div>
             <div>
-              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 ShortsForgeAI
               </div>
               <div className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>
@@ -217,8 +217,8 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     onClick={() => switchTab(t)}
                     className="flex-1 rounded-lg py-2 text-xs font-bold transition-all"
                     style={{
-                      background: tab === t ? 'linear-gradient(135deg, rgba(99,102,241,.25), rgba(124,58,237,.2))' : 'transparent',
-                      border: tab === t ? '1px solid rgba(99,102,241,.25)' : '1px solid transparent',
+                      background: tab === t ? 'linear-gradient(135deg, rgba(59, 130, 246,.25), rgba(37, 99, 235,.2))' : 'transparent',
+                      border: tab === t ? '1px solid rgba(59, 130, 246,.25)' : '1px solid transparent',
                       color: tab === t ? 'var(--indigo-light)' : 'var(--muted)',
                       cursor: 'pointer',
                     }}
@@ -254,7 +254,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     placeholder="you@example.com"
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(99,102,241,.5)'; e.target.style.background = 'rgba(99,102,241,.04)' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(59, 130, 246,.5)'; e.target.style.background = 'rgba(59, 130, 246,.04)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'var(--border2)'; e.target.style.background = 'rgba(255,255,255,.03)' }}
                   />
                 </div>
@@ -284,7 +284,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     placeholder={tab === 'signup' ? 'Min. 6 characters' : '••••••••'}
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(99,102,241,.5)'; e.target.style.background = 'rgba(99,102,241,.04)' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(59, 130, 246,.5)'; e.target.style.background = 'rgba(59, 130, 246,.04)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'var(--border2)'; e.target.style.background = 'rgba(255,255,255,.03)' }}
                   />
                 </div>
@@ -293,14 +293,14 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                 {emailAlreadyExists && (
                   <div
                     className="rounded-xl px-4 py-3 text-xs"
-                    style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: '#fbbf24' }}
+                    style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: '#22D3EE' }}
                   >
                     <span className="font-bold">Email already registered.</span>{' '}
                     <button
                       type="button"
                       onClick={() => switchTab('login')}
                       className="font-bold underline"
-                      style={{ color: '#fbbf24', background: 'none', border: 'none', cursor: 'pointer' }}
+                      style={{ color: '#22D3EE', background: 'none', border: 'none', cursor: 'pointer' }}
                     >
                       Sign in →
                     </button>
@@ -322,8 +322,8 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-black text-sm text-white transition-all mt-1 flex items-center justify-center gap-2"
                   style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-                    boxShadow: loading ? 'none' : '0 4px 28px rgba(99,102,241,.45)',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+                    boxShadow: loading ? 'none' : '0 4px 28px rgba(59, 130, 246,.45)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
                     animation: loading ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',

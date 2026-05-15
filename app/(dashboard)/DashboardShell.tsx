@@ -47,11 +47,11 @@ export default function DashboardShell({
       {/* Glow orbs */}
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{ width: 600, height: 600, background: 'var(--indigo)', top: -200, right: -150, opacity: 0.04, filter: 'blur(90px)', zIndex: 0 }}
+        style={{ width: 600, height: 600, background: '#22D3EE', top: -200, right: -150, opacity: 0.05, filter: 'blur(120px)', zIndex: 0 }}
       />
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{ width: 500, height: 500, background: 'var(--purple)', bottom: -150, left: 300, opacity: 0.035, filter: 'blur(90px)', zIndex: 0 }}
+        style={{ width: 500, height: 500, background: '#3B82F6', bottom: -150, left: 300, opacity: 0.04, filter: 'blur(110px)', zIndex: 0 }}
       />
 
       {/* Desktop sidebar spacer */}

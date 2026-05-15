@@ -56,7 +56,7 @@ export default function CheckoutCancelledPage() {
           border: '1px solid var(--border)',
           borderRadius: 22,
           padding: 'clamp(24px, 5vw, 36px)',
-          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,0.08) inset',
+          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(59, 130, 246,0.08) inset',
         }}
       >
         <div style={{ textAlign: 'center' }}>
@@ -85,8 +85,8 @@ export default function CheckoutCancelledPage() {
         <div
           style={{
             marginTop: 22,
-            background: 'linear-gradient(135deg, rgba(124,58,237,.12), rgba(168,85,247,.06))',
-            border: '1px solid rgba(124,58,237,.32)',
+            background: 'linear-gradient(135deg, rgba(37, 99, 235,.12), rgba(34, 211, 238,.06))',
+            border: '1px solid rgba(37, 99, 235,.32)',
             borderRadius: 16,
             padding: 18,
           }}
@@ -96,7 +96,7 @@ export default function CheckoutCancelledPage() {
               fontSize: '0.65rem',
               fontWeight: 900,
               letterSpacing: '0.14em',
-              color: '#c4b5fd',
+              color: '#22D3EE',
               textTransform: 'uppercase',
               marginBottom: 8,
             }}
@@ -122,8 +122,8 @@ export default function CheckoutCancelledPage() {
                 fontSize: '0.88rem',
                 fontWeight: 900,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
-                boxShadow: '0 6px 22px rgba(99,102,241,.4)',
+                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                boxShadow: '0 6px 22px rgba(59, 130, 246,.4)',
               }}
             >
               Try Basic — $4.50 →
@@ -140,8 +140,8 @@ export default function CheckoutCancelledPage() {
                 fontSize: '0.88rem',
                 fontWeight: 900,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                boxShadow: '0 6px 22px rgba(124,58,237,.32)',
+                background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                boxShadow: '0 6px 22px rgba(37, 99, 235,.32)',
               }}
             >
               Try Pro — $9.50 →
@@ -162,7 +162,7 @@ export default function CheckoutCancelledPage() {
         >
           <Link
             href="/pricing"
-            style={{ color: '#c4b5fd', textDecoration: 'none', fontWeight: 700 }}
+            style={{ color: '#22D3EE', textDecoration: 'none', fontWeight: 700 }}
           >
             ← Go back to pricing
           </Link>

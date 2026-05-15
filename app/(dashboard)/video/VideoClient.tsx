@@ -49,17 +49,17 @@ function StepCircle({
         background: isDone
           ? 'linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.18))'
           : isActive
-          ? 'linear-gradient(135deg, rgba(99,102,241,.4), rgba(168,85,247,.25))'
+          ? 'linear-gradient(135deg, rgba(59, 130, 246,.4), rgba(34, 211, 238,.25))'
           : 'rgba(255,255,255,.04)',
         border: isDone
           ? '1px solid rgba(16,185,129,.5)'
           : isActive
-          ? '1px solid rgba(168,85,247,.55)'
+          ? '1px solid rgba(34, 211, 238,.55)'
           : '1px solid var(--border)',
-        color: isDone ? '#34d399' : isActive ? '#c4b5fd' : 'var(--muted)',
+        color: isDone ? '#34d399' : isActive ? '#22D3EE' : 'var(--muted)',
         fontSize: isDone ? '1.25rem' : '1.1rem',
         boxShadow: isActive
-          ? '0 0 24px rgba(168,85,247,.35)'
+          ? '0 0 24px rgba(34, 211, 238,.35)'
           : isDone
           ? '0 0 14px rgba(16,185,129,.25)'
           : 'none',
@@ -77,8 +77,8 @@ function Spinner() {
       style={{
         width: 18,
         height: 18,
-        border: '2px solid rgba(168,85,247,.25)',
-        borderTopColor: '#c4b5fd',
+        border: '2px solid rgba(34, 211, 238,.25)',
+        borderTopColor: '#22D3EE',
         animation: 'spin 0.9s linear infinite',
       }}
     />
@@ -396,7 +396,7 @@ export default function VideoClient() {
         >
           <p className="text-sm leading-relaxed" style={{ color: 'var(--muted2)' }}>
             No script loaded yet. Generate a viral script first, then click{' '}
-            <span style={{ color: '#c4b5fd', fontWeight: 700 }}>🎬 Create Video</span> on
+            <span style={{ color: '#22D3EE', fontWeight: 700 }}>🎬 Create Video</span> on
             any result card to start the pipeline.
           </p>
           <button
@@ -437,9 +437,9 @@ export default function VideoClient() {
           <span
             className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
             style={{
-              background: 'linear-gradient(135deg, rgba(168,85,247,.2), rgba(124,58,237,.15))',
-              border: '1px solid rgba(168,85,247,.3)',
-              color: '#c4b5fd',
+              background: 'linear-gradient(135deg, rgba(34, 211, 238,.2), rgba(37, 99, 235,.15))',
+              border: '1px solid rgba(34, 211, 238,.3)',
+              color: '#22D3EE',
             }}
           >
             Beta · Video Studio
@@ -520,11 +520,11 @@ export default function VideoClient() {
                   ? 'rgba(15,15,30,0.7)'
                   : 'rgba(15,15,30,0.5)',
                 border: isActive
-                  ? '1px solid rgba(168,85,247,.45)'
+                  ? '1px solid rgba(34, 211, 238,.45)'
                   : isDone
                   ? '1px solid rgba(16,185,129,.25)'
                   : '1px solid var(--border)',
-                boxShadow: isActive ? '0 12px 48px rgba(168,85,247,.18)' : 'none',
+                boxShadow: isActive ? '0 12px 48px rgba(34, 211, 238,.18)' : 'none',
                 opacity: status === 'pending' ? 0.55 : 1,
               }}
             >
@@ -655,8 +655,8 @@ function Step1Review({
           <div
             className="rounded-xl px-4 py-3 text-sm font-bold italic leading-snug"
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,.09), rgba(124,58,237,.05))',
-              border: '1px solid rgba(99,102,241,.2)',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246,.09), rgba(37, 99, 235,.05))',
+              border: '1px solid rgba(59, 130, 246,.2)',
               borderLeft: '3px solid var(--indigo-light)',
               color: 'var(--text)',
             }}
@@ -744,8 +744,8 @@ function Step2Scenes({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(99,102,241,.12)',
-            border: '1px solid rgba(99,102,241,.3)',
+            background: 'rgba(59, 130, 246,.12)',
+            border: '1px solid rgba(59, 130, 246,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -768,8 +768,8 @@ function Step2Scenes({
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center font-black flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,.3), rgba(124,58,237,.18))',
-                border: '1px solid rgba(99,102,241,.4)',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246,.3), rgba(37, 99, 235,.18))',
+                border: '1px solid rgba(59, 130, 246,.4)',
                 color: 'var(--indigo-light)',
                 fontSize: '0.85rem',
               }}
@@ -780,7 +780,7 @@ function Step2Scenes({
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span
                   className="font-bold px-2 py-0.5 rounded"
-                  style={{ background: 'rgba(168,85,247,.12)', color: '#c4b5fd' }}
+                  style={{ background: 'rgba(34, 211, 238,.12)', color: '#22D3EE' }}
                 >
                   {s.duration}s
                 </span>
@@ -857,8 +857,8 @@ function Step3Voiceover({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(99,102,241,.12)',
-            border: '1px solid rgba(99,102,241,.3)',
+            background: 'rgba(59, 130, 246,.12)',
+            border: '1px solid rgba(59, 130, 246,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -949,8 +949,8 @@ function Step4Stock({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(99,102,241,.12)',
-            border: '1px solid rgba(99,102,241,.3)',
+            background: 'rgba(59, 130, 246,.12)',
+            border: '1px solid rgba(59, 130, 246,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -988,8 +988,8 @@ function Step4Stock({
                     className="relative rounded-lg overflow-hidden transition-all"
                     style={{
                       aspectRatio: '9 / 16',
-                      border: isSelected ? '2px solid #c4b5fd' : '1px solid var(--border)',
-                      boxShadow: isSelected ? '0 0 16px rgba(168,85,247,.4)' : 'none',
+                      border: isSelected ? '2px solid #22D3EE' : '1px solid var(--border)',
+                      boxShadow: isSelected ? '0 0 16px rgba(34, 211, 238,.4)' : 'none',
                       background: 'rgba(0,0,0,.4)',
                       cursor: 'pointer',
                       padding: 0,
@@ -1013,7 +1013,7 @@ function Step4Stock({
                     {isSelected && (
                       <div
                         className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black"
-                        style={{ background: '#c4b5fd', color: '#1e1b4b' }}
+                        style={{ background: '#22D3EE', color: '#1e1b4b' }}
                       >
                         ✓
                       </div>
@@ -1086,8 +1086,8 @@ function ProgressBar({ progress }: { progress: number }) {
         className="h-full transition-all"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(99,102,241,.85), rgba(168,85,247,1))',
-          boxShadow: '0 0 16px rgba(168,85,247,.55)',
+          background: 'linear-gradient(90deg, rgba(59, 130, 246,.85), rgba(34, 211, 238,1))',
+          boxShadow: '0 0 16px rgba(34, 211, 238,.55)',
           transitionDuration: '600ms',
         }}
       />
@@ -1118,8 +1118,8 @@ function CopyChip({ label, value }: { label: string; value: string }) {
       style={{
         background: copied
           ? 'linear-gradient(135deg, rgba(16,185,129,.25), rgba(52,211,153,.15))'
-          : 'rgba(99,102,241,.12)',
-        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(99,102,241,.3)',
+          : 'rgba(59, 130, 246,.12)',
+        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(59, 130, 246,.3)',
         color: copied ? '#34d399' : 'var(--indigo-light)',
         cursor: 'pointer',
       }}
@@ -1174,9 +1174,9 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(168,85,247,.3), rgba(99,102,241,.18))',
-            border: '1px solid rgba(168,85,247,.45)',
-            boxShadow: '0 0 32px rgba(168,85,247,.35)',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(59, 130, 246,.18))',
+            border: '1px solid rgba(34, 211, 238,.45)',
+            boxShadow: '0 0 32px rgba(34, 211, 238,.35)',
             fontSize: '2.4rem',
           }}
         >
@@ -1197,7 +1197,7 @@ function Step5Export({
             style={{
               background: 'rgba(245,158,11,.08)',
               border: '1px solid rgba(245,158,11,.3)',
-              color: '#fbbf24',
+              color: '#22D3EE',
             }}
           >
             ⚠ Select at least one stock clip in Step 4
@@ -1214,7 +1214,7 @@ function Step5Export({
                 : 'linear-gradient(135deg, var(--indigo), var(--purple))',
             border: 'none',
             boxShadow:
-              selectedClipsCount === 0 ? 'none' : '0 8px 28px rgba(168,85,247,.35)',
+              selectedClipsCount === 0 ? 'none' : '0 8px 28px rgba(34, 211, 238,.35)',
             cursor: selectedClipsCount === 0 ? 'not-allowed' : 'pointer',
             color: selectedClipsCount === 0 ? 'var(--muted)' : '#fff',
           }}
@@ -1232,9 +1232,9 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(168,85,247,.3), rgba(99,102,241,.18))',
-            border: '1px solid rgba(168,85,247,.45)',
-            boxShadow: '0 0 32px rgba(168,85,247,.45)',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(59, 130, 246,.18))',
+            border: '1px solid rgba(34, 211, 238,.45)',
+            boxShadow: '0 0 32px rgba(34, 211, 238,.45)',
             fontSize: '2.4rem',
             animation: 'pulse 1.6s ease-in-out infinite',
           }}
@@ -1256,8 +1256,8 @@ function Step5Export({
         </div>
         <style jsx>{`
           @keyframes pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 32px rgba(168,85,247,.45); }
-            50% { transform: scale(1.04); box-shadow: 0 0 48px rgba(168,85,247,.65); }
+            0%, 100% { transform: scale(1); box-shadow: 0 0 32px rgba(34, 211, 238,.45); }
+            50% { transform: scale(1.04); box-shadow: 0 0 48px rgba(34, 211, 238,.65); }
           }
         `}</style>
       </div>
@@ -1354,8 +1354,8 @@ function Step5Export({
         <div
           className="rounded-2xl overflow-hidden w-full max-w-[280px]"
           style={{
-            border: '1px solid rgba(168,85,247,.35)',
-            boxShadow: '0 12px 48px rgba(168,85,247,.18)',
+            border: '1px solid rgba(34, 211, 238,.35)',
+            boxShadow: '0 12px 48px rgba(34, 211, 238,.18)',
             background: '#000',
           }}
         >
@@ -1370,13 +1370,13 @@ function Step5Export({
         <div
           className="rounded-2xl px-5 py-4 max-w-md w-full text-left"
           style={{
-            background: 'linear-gradient(135deg, rgba(168,85,247,.1), rgba(99,102,241,.06))',
-            border: '1px solid rgba(168,85,247,.3)',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.1), rgba(59, 130, 246,.06))',
+            border: '1px solid rgba(34, 211, 238,.3)',
           }}
         >
           <div
             className="text-xs font-black uppercase tracking-widest mb-1"
-            style={{ color: '#c4b5fd' }}
+            style={{ color: '#22D3EE' }}
           >
             🛠 Setup required
           </div>

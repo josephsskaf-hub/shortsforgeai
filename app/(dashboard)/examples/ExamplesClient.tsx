@@ -87,7 +87,7 @@ export default function ExamplesClient() {
       <header className="mb-7">
         <div
           className="font-black uppercase tracking-[.16em] mb-1"
-          style={{ fontSize: '0.68rem', color: '#F5B23B' }}
+          style={{ fontSize: '0.68rem', color: '#3B82F6' }}
         >
           Examples
         </div>
@@ -133,8 +133,8 @@ function ExampleCard({ example }: { example: Example }) {
             height: 40,
             borderRadius: 12,
             background:
-              'linear-gradient(135deg, rgba(99,102,241,.18), rgba(124,58,237,.12))',
-            border: '1px solid rgba(99,102,241,.28)',
+              'linear-gradient(135deg, rgba(59, 130, 246,.18), rgba(37, 99, 235,.12))',
+            border: '1px solid rgba(59, 130, 246,.28)',
             fontSize: '1.3rem',
           }}
         >
@@ -179,9 +179,9 @@ function ExampleCard({ example }: { example: Example }) {
         href={href}
         className="rounded-xl py-2.5 text-sm font-black text-center mt-auto"
         style={{
-          background: '#F5B23B',
-          color: '#1a1100',
-          boxShadow: '0 4px 18px rgba(245,178,59,.3)',
+          background: '#3B82F6',
+          color: '#FFFFFF',
+          boxShadow: '0 4px 18px rgba(59, 130, 246,.3)',
           textDecoration: 'none',
         }}
       >
@@ -196,9 +196,9 @@ function Badge({ children }: { children: React.ReactNode }) {
     <span
       className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
       style={{
-        background: 'rgba(245,178,59,.10)',
-        border: '1px solid rgba(245,178,59,.32)',
-        color: '#F5B23B',
+        background: 'rgba(59, 130, 246,.10)',
+        border: '1px solid rgba(59, 130, 246,.32)',
+        color: '#3B82F6',
       }}
     >
       {children}

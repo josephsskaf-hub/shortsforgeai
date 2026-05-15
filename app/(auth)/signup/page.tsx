@@ -108,7 +108,7 @@ export default function SignupPage() {
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
             style={{
               background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
-              boxShadow: '0 0 24px rgba(99,102,241,.45)',
+              boxShadow: '0 0 24px rgba(59, 130, 246,.45)',
             }}
           >
             ⚡
@@ -117,7 +117,7 @@ export default function SignupPage() {
             <div
               className="font-black text-sm tracking-tight"
               style={{
-                background: 'linear-gradient(135deg, #818cf8, #a78bfa)',
+                background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -127,8 +127,8 @@ export default function SignupPage() {
             <div
               className="text-xs font-bold tracking-widest px-1.5 py-0.5 rounded w-fit"
               style={{
-                background: 'rgba(99,102,241,.15)',
-                border: '1px solid rgba(99,102,241,.3)',
+                background: 'rgba(59, 130, 246,.15)',
+                border: '1px solid rgba(59, 130, 246,.3)',
                 color: 'var(--indigo-light)',
                 fontSize: '0.52rem',
               }}
@@ -144,7 +144,7 @@ export default function SignupPage() {
           style={{
             background: 'var(--card)',
             border: '1px solid var(--border2)',
-            boxShadow: '0 0 80px rgba(99,102,241,.08)',
+            boxShadow: '0 0 80px rgba(59, 130, 246,.08)',
           }}
         >
           {success ? (
@@ -212,8 +212,8 @@ export default function SignupPage() {
                       fontFamily: 'inherit',
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = 'rgba(99,102,241,.5)'
-                      e.target.style.background = 'rgba(99,102,241,.04)'
+                      e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
+                      e.target.style.background = 'rgba(59, 130, 246,.04)'
                     }}
                     onBlur={(e) => {
                       e.target.style.borderColor = 'var(--border2)'
@@ -244,8 +244,8 @@ export default function SignupPage() {
                       fontFamily: 'inherit',
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = 'rgba(99,102,241,.5)'
-                      e.target.style.background = 'rgba(99,102,241,.04)'
+                      e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
+                      e.target.style.background = 'rgba(59, 130, 246,.04)'
                     }}
                     onBlur={(e) => {
                       e.target.style.borderColor = 'var(--border2)'
@@ -272,9 +272,9 @@ export default function SignupPage() {
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                   style={{
-                    background: '#F5B23B',
-                    color: '#1a1100',
-                    boxShadow: '0 4px 22px rgba(245,178,59,.3)',
+                    background: '#3B82F6',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
                   }}

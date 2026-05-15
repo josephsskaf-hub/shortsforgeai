@@ -114,9 +114,9 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
         <div
           className="rounded-xl px-4 py-3 mb-6"
           style={{
-            background: 'rgba(251,191,36,.08)',
-            border: '1px solid rgba(251,191,36,.25)',
-            color: '#fbbf24',
+            background: 'rgba(34, 211, 238,.08)',
+            border: '1px solid rgba(34, 211, 238,.25)',
+            color: '#22D3EE',
             fontSize: '0.82rem',
           }}
         >
@@ -222,9 +222,9 @@ function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
             href={t.href}
             className="text-xs font-bold rounded-lg px-3 py-1.5"
             style={{
-              background: isActive ? 'rgba(124,58,237,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(124,58,237,.45)' : 'var(--border)'}`,
-              color: isActive ? '#c4b5fd' : 'var(--muted2)',
+              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
+              color: isActive ? '#22D3EE' : 'var(--muted2)',
               textDecoration: 'none',
             }}
           >

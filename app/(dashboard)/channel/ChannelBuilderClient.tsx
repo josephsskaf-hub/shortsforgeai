@@ -30,9 +30,9 @@ const CHANNEL_NICHES = [
     posting: '2–3x daily',
     style: 'Fast cuts, dramatic music, text on screen',
     hooks: ['Your brain does THIS without you knowing', 'Scientists JUST discovered something terrifying', 'The human mind can do things you never imagined'],
-    color: 'rgba(99,102,241,.1)',
-    border: 'rgba(99,102,241,.25)',
-    accent: '#818cf8',
+    color: 'rgba(59, 130, 246,.1)',
+    border: 'rgba(59, 130, 246,.25)',
+    accent: '#60A5FA',
   },
   {
     id: 'dark',
@@ -61,9 +61,9 @@ const CHANNEL_NICHES = [
     posting: '1–2x daily',
     style: 'Cinematic space visuals, dramatic narration',
     hooks: ['NASA REFUSES to explain this', 'What they found in deep space will terrify you', 'This planet should not exist'],
-    color: 'rgba(99,102,241,.08)',
-    border: 'rgba(99,102,241,.2)',
-    accent: '#a78bfa',
+    color: 'rgba(59, 130, 246,.08)',
+    border: 'rgba(59, 130, 246,.2)',
+    accent: '#22D3EE',
   },
 ]
 
@@ -97,7 +97,7 @@ export default function ChannelBuilderClient() {
           <div>
             <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.45rem', color: 'var(--text)', lineHeight: 1.1 }}>
               Build Your{' '}
-              <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Viral Channel
               </span>
             </h1>
@@ -164,7 +164,7 @@ export default function ChannelBuilderClient() {
                 onClick={() => setActiveTab(tab)}
                 className="px-4 py-2 rounded-lg text-xs font-bold transition-all capitalize"
                 style={{
-                  background: activeTab === tab ? 'rgba(99,102,241,.18)' : 'transparent',
+                  background: activeTab === tab ? 'rgba(59, 130, 246,.18)' : 'transparent',
                   color: activeTab === tab ? 'var(--indigo-light)' : 'var(--muted)',
                   border: 'none',
                   cursor: 'pointer',
@@ -268,7 +268,7 @@ export default function ChannelBuilderClient() {
                     <div
                       key={slot.time}
                       className="flex items-center gap-4 rounded-xl px-4 py-3"
-                      style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.14)' }}
+                      style={{ background: 'rgba(59, 130, 246,.06)', border: '1px solid rgba(59, 130, 246,.14)' }}
                     >
                       <div className="font-black text-sm" style={{ color: 'var(--indigo-light)', minWidth: 70 }}>{slot.time}</div>
                       <div>
@@ -323,7 +323,7 @@ export default function ChannelBuilderClient() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-black text-xs" style={{ color: 'var(--text)' }}>{m.subs}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,.1)', color: 'var(--indigo-light)' }}>{m.timeframe}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(59, 130, 246,.1)', color: 'var(--indigo-light)' }}>{m.timeframe}</span>
                         </div>
                         <div className="text-xs" style={{ color: 'var(--muted)' }}>{m.key}</div>
                       </div>
@@ -360,7 +360,7 @@ export default function ChannelBuilderClient() {
           {/* Bottom CTA */}
           <div
             className="mt-6 rounded-2xl p-5 text-center"
-            style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.07))', border: '1px solid rgba(99,102,241,.22)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246,.1), rgba(37, 99, 235,.07))', border: '1px solid rgba(59, 130, 246,.22)' }}
           >
             <p className="font-black text-sm mb-1" style={{ color: 'var(--text)' }}>
               Ready to start your {selected.name} channel?
@@ -372,8 +372,8 @@ export default function ChannelBuilderClient() {
               href={`/dashboard?niche=${selected.id}`}
               className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white"
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-                boxShadow: '0 4px 22px rgba(99,102,241,.4)',
+                background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+                boxShadow: '0 4px 22px rgba(59, 130, 246,.4)',
                 textDecoration: 'none',
               }}
             >

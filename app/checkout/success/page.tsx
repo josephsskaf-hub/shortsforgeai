@@ -48,7 +48,7 @@ export default function CheckoutSuccessPage() {
           border: '1px solid var(--border)',
           borderRadius: 22,
           padding: 'clamp(24px, 5vw, 36px)',
-          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,0.08) inset',
+          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(59, 130, 246,0.08) inset',
           textAlign: 'center',
         }}
       >
@@ -130,9 +130,9 @@ export default function CheckoutSuccessPage() {
               borderRadius: 14,
               fontSize: '0.95rem',
               fontWeight: 900,
-              color: '#1a1100',
-              background: '#F5B23B',
-              boxShadow: '0 10px 32px rgba(245,178,59,.4)',
+              color: '#FFFFFF',
+              background: '#3B82F6',
+              boxShadow: '0 10px 32px rgba(59, 130, 246,.4)',
               letterSpacing: '-0.01em',
             }}
           >

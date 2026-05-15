@@ -29,7 +29,7 @@ const THUMBNAILS = [
     icon: '💀',
     style: 'The Warning',
     text: 'STOP Doing This — It\'s Ruining Your Channel',
-    accent: '#a855f7',
+    accent: '#22D3EE',
   },
 ]
 
@@ -52,12 +52,12 @@ export default function ThumbnailGenerator() {
             gap: 8,
             padding: '5px 14px',
             borderRadius: 999,
-            background: 'rgba(168,85,247,.1)',
-            border: '1px solid rgba(168,85,247,.25)',
+            background: 'rgba(34, 211, 238,.1)',
+            border: '1px solid rgba(34, 211, 238,.25)',
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#22D3EE', letterSpacing: '0.04em' }}>
             🖼️ THUMBNAIL TEXT GENERATOR
           </span>
           <span
@@ -67,7 +67,7 @@ export default function ThumbnailGenerator() {
               fontSize: '0.6rem',
               fontWeight: 900,
               color: '#fff',
-              background: 'linear-gradient(135deg, #f59e0b, #ec4899)',
+              background: 'linear-gradient(135deg, #f59e0b, #22D3EE)',
               letterSpacing: '0.05em',
             }}
           >
@@ -84,7 +84,7 @@ export default function ThumbnailGenerator() {
           }}
         >
           🖼️{' '}
-          <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Thumbnail Text Generator
           </span>
         </h2>
@@ -201,17 +201,17 @@ export default function ThumbnailGenerator() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #f59e0b 0%, #ec4899 55%, #a855f7 100%)',
-            boxShadow: '0 6px 28px rgba(236,72,153,.4)',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #22D3EE 55%, #22D3EE 100%)',
+            boxShadow: '0 6px 28px rgba(34, 211, 238,.4)',
             transition: 'transform .2s ease, box-shadow .2s ease',
           }}
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 36px rgba(236,72,153,.55)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 36px rgba(34, 211, 238,.55)'
           }}
           onMouseLeave={(e) => {
             ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px rgba(236,72,153,.4)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px rgba(34, 211, 238,.4)'
           }}
         >
           🔒 Generate Thumbnail Text — Pro Only →

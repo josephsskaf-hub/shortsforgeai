@@ -281,7 +281,7 @@ export default function PricingClient(props: PricingClientProps) {
           renewNote="then $19/month"
           tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
-          badge={{ label: 'Recommended', color: '#F5B23B' }}
+          badge={{ label: 'Recommended', color: '#3B82F6' }}
           highlight
           cta={{
             label: purchasing === 'pro' ? 'Loading...' : 'Get Pro — $9.50',
@@ -367,16 +367,16 @@ function PlanCard({
       className="rounded-[20px] p-7 relative overflow-hidden transition-all flex flex-col"
       style={{
         background: highlight
-          ? 'linear-gradient(135deg, rgba(245,178,59,.10), rgba(255,209,102,.05))'
+          ? 'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(96, 165, 250,.05))'
           : 'rgba(15,15,30,0.85)',
-        border: highlight ? '2px solid rgba(245,178,59,.55)' : '1px solid var(--border2)',
-        boxShadow: highlight ? '0 0 60px rgba(245,178,59,.18)' : '0 0 30px rgba(99,102,241,.06)',
+        border: highlight ? '2px solid rgba(59, 130, 246,.55)' : '1px solid var(--border2)',
+        boxShadow: highlight ? '0 0 60px rgba(59, 130, 246,.18)' : '0 0 30px rgba(59, 130, 246,.06)',
       }}
     >
       {badge && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: badge.color, color: highlight ? '#1a1100' : 'white' }}
+          style={{ background: badge.color, color: highlight ? '#FFFFFF' : 'white' }}
         >
           {badge.label}
         </div>
@@ -385,7 +385,7 @@ function PlanCard({
       <div className="mb-5">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#F5B23B' : 'var(--muted)' }}
+          style={{ color: highlight ? '#3B82F6' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -394,7 +394,7 @@ function PlanCard({
           <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>{period}</span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: highlight ? '#F5B23B' : '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
+          <p className="text-xs mb-1" style={{ color: highlight ? '#3B82F6' : '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
         )}
         <p className="text-xs" style={{ color: 'var(--muted)' }}>{tagline}</p>
       </div>
@@ -415,13 +415,13 @@ function PlanCard({
           className="w-full rounded-xl py-3.5 text-sm font-black transition-all"
           style={{
             background: highlight
-              ? '#F5B23B'
+              ? '#3B82F6'
               : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
             boxShadow: highlight
-              ? '0 4px 22px rgba(245,178,59,.35)'
+              ? '0 4px 22px rgba(59, 130, 246,.35)'
               : '0 4px 22px rgba(37,99,235,.32)',
             border: 'none',
-            color: highlight ? '#1a1100' : '#fff',
+            color: highlight ? '#FFFFFF' : '#fff',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,
           }}

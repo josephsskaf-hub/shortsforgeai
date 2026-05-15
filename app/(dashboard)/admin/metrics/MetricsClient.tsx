@@ -199,9 +199,9 @@ function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
             href={t.href}
             className="text-xs font-bold rounded-lg px-3 py-1.5"
             style={{
-              background: isActive ? 'rgba(124,58,237,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(124,58,237,.45)' : 'var(--border)'}`,
-              color: isActive ? '#c4b5fd' : 'var(--muted2)',
+              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
+              color: isActive ? '#22D3EE' : 'var(--muted2)',
               textDecoration: 'none',
             }}
           >

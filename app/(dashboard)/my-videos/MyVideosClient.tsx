@@ -44,9 +44,9 @@ function statusChip(s: VideoRow['status']) {
   return {
     label: 'Processing',
     emoji: '⏳',
-    fg: '#fbbf24',
-    bg: 'rgba(251,191,36,.10)',
-    border: 'rgba(251,191,36,.32)',
+    fg: '#22D3EE',
+    bg: 'rgba(34, 211, 238,.10)',
+    border: 'rgba(34, 211, 238,.32)',
   }
 }
 
@@ -116,9 +116,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: '#F5B23B',
-              color: '#1a1100',
-              boxShadow: '0 4px 22px rgba(245,178,59,.3)',
+              background: '#3B82F6',
+              color: '#FFFFFF',
+              boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
               textDecoration: 'none',
             }}
           >
@@ -164,7 +164,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
                   style={{
                     background: v.thumbnail_url
                       ? `center / cover no-repeat url(${v.thumbnail_url})`
-                      : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12))',
+                      : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
                     aspectRatio: '9 / 16',
                   }}
                 >
@@ -303,9 +303,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
                           href={generateSimilarHref}
                           className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
                           style={{
-                            background: 'rgba(99,102,241,.10)',
-                            border: '1px solid rgba(99,102,241,.32)',
-                            color: '#a5b4fc',
+                            background: 'rgba(59, 130, 246,.10)',
+                            border: '1px solid rgba(59, 130, 246,.32)',
+                            color: '#60A5FA',
                             textDecoration: 'none',
                           }}
                         >
@@ -422,9 +422,9 @@ function Header({ count }: { count: number }) {
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold flex-shrink-0"
           style={{
-            background: '#F5B23B',
-            color: '#1a1100',
-            boxShadow: '0 4px 18px rgba(245,178,59,.3)',
+            background: '#3B82F6',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 18px rgba(59, 130, 246,.3)',
             textDecoration: 'none',
           }}
         >

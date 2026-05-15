@@ -44,8 +44,8 @@ export default function FullscreenLoader() {
         className="rounded-[26px] p-10 text-center mx-4"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(99,102,241,.22)',
-          boxShadow: '0 0 100px rgba(99,102,241,.18)',
+          border: '1px solid rgba(59, 130, 246,.22)',
+          boxShadow: '0 0 100px rgba(59, 130, 246,.18)',
           minWidth: 320,
           maxWidth: 420,
           width: '100%',
@@ -83,8 +83,8 @@ export default function FullscreenLoader() {
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, var(--indigo), var(--purple), #a855f7)',
-              boxShadow: '0 0 12px rgba(99,102,241,.6)',
+              background: 'linear-gradient(90deg, var(--indigo), var(--purple), #22D3EE)',
+              boxShadow: '0 0 12px rgba(59, 130, 246,.6)',
             }}
           />
         </div>
@@ -117,12 +117,12 @@ export default function FullscreenLoader() {
                     background: done
                       ? 'rgba(16,185,129,.2)'
                       : active
-                      ? 'rgba(99,102,241,.2)'
+                      ? 'rgba(59, 130, 246,.2)'
                       : 'transparent',
                     border: done
                       ? '1px solid rgba(16,185,129,.3)'
                       : active
-                      ? '1px solid rgba(99,102,241,.35)'
+                      ? '1px solid rgba(59, 130, 246,.35)'
                       : '1px solid rgba(255,255,255,.08)',
                   }}
                 >

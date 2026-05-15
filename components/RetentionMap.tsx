@@ -7,7 +7,7 @@ const STAGES = [
     icon: '🎯',
     name: 'HOOK',
     desc: 'Stop the scroll. Make them stay.',
-    accent: '#818cf8',
+    accent: '#60A5FA',
   },
   {
     id: 'curiosity',
@@ -39,7 +39,7 @@ const STAGES = [
     icon: '📣',
     name: 'CTA',
     desc: 'Channel plug + shortsforgeai.com',
-    accent: '#ec4899',
+    accent: '#22D3EE',
   },
 ]
 
@@ -59,9 +59,9 @@ export default function RetentionMap() {
           position: 'relative',
           borderRadius: 24,
           padding: '44px 28px 48px',
-          background: 'linear-gradient(135deg, rgba(99,102,241,.08), rgba(236,72,153,.05) 60%, rgba(245,158,11,.06))',
-          border: '1px solid rgba(99,102,241,.18)',
-          boxShadow: '0 0 80px rgba(99,102,241,.10)',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246,.08), rgba(34, 211, 238,.05) 60%, rgba(245,158,11,.06))',
+          border: '1px solid rgba(59, 130, 246,.18)',
+          boxShadow: '0 0 80px rgba(59, 130, 246,.10)',
           overflow: 'hidden',
         }}
       >
@@ -72,7 +72,7 @@ export default function RetentionMap() {
             right: -80,
             width: 380,
             height: 380,
-            background: 'radial-gradient(ellipse, rgba(168,85,247,.18) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(34, 211, 238,.18) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -104,7 +104,7 @@ export default function RetentionMap() {
             }}
           >
             Script Built For{' '}
-            <span style={{ background: 'linear-gradient(135deg, #34d399, #818cf8, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg, #34d399, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Retention
             </span>
             , Not Just Views

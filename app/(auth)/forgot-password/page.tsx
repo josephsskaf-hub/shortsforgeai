@@ -40,17 +40,17 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center gap-3 mb-8" style={{ textDecoration: 'none' }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(99,102,241,.45)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(59, 130, 246,.45)' }}>
             ⚡
           </div>
           <div>
-            <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               ShortsForgeAI
             </div>
           </div>
         </Link>
 
-        <div className="rounded-2xl p-8" style={{ background: 'var(--card)', border: '1px solid var(--border2)', boxShadow: '0 0 80px rgba(99,102,241,.08)' }}>
+        <div className="rounded-2xl p-8" style={{ background: 'var(--card)', border: '1px solid var(--border2)', boxShadow: '0 0 80px rgba(59, 130, 246,.08)' }}>
           {sent ? (
             <div className="text-center py-4">
               <div className="text-4xl mb-4">📧</div>
@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
                     placeholder="you@example.com"
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border2)', color: 'var(--text)', fontFamily: 'inherit' }}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(99,102,241,.5)'; e.target.style.background = 'rgba(99,102,241,.04)' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(59, 130, 246,.5)'; e.target.style.background = 'rgba(59, 130, 246,.04)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'var(--border2)'; e.target.style.background = 'rgba(255,255,255,.03)' }}
                   />
                 </div>
@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
                   type="submit"
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
-                  style={{ background: '#F5B23B', color: '#1a1100', boxShadow: '0 4px 22px rgba(245,178,59,.3)', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                  style={{ background: '#3B82F6', color: '#FFFFFF', boxShadow: '0 4px 22px rgba(59, 130, 246,.3)', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
                 >
                   {loading ? 'Sending...' : '📧 Send Reset Link'}
                 </button>

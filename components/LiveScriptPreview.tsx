@@ -18,10 +18,10 @@ const EXAMPLES = [
   },
   {
     niche: '😱 Dark Mysteries',
-    color: '#a78bfa',
-    glow: 'rgba(167,139,250,0.25)',
+    color: '#22D3EE',
+    glow: 'rgba(34, 211, 238,0.25)',
     badge: '#2e1065',
-    badgeText: '#c4b5fd',
+    badgeText: '#22D3EE',
     hook: 'This was erased from history books... 😱',
     script:
       'In 1908, a massive explosion in Siberia leveled 800 square miles of forest. No crater was ever found. Scientists still debate the cause 100 years later. Some say comet. Some say meteor. Others say something else entirely...',
@@ -200,7 +200,7 @@ export default function LiveScriptPreview() {
           Watch it generate{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #818cf8, #a855f7)',
+              background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -426,8 +426,8 @@ export default function LiveScriptPreview() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-            boxShadow: '0 6px 30px rgba(99,102,241,0.45)',
+            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+            boxShadow: '0 6px 30px rgba(59, 130, 246,0.45)',
           }}
         >
           ⚡ Generate yours →
