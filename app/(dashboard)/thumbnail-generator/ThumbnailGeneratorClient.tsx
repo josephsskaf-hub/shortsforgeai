@@ -7,14 +7,14 @@ const FREE_DAILY_LIMIT = 2
 const STORAGE_KEY = 'sfai_thumb_daily'
 
 const STYLES = [
-  { id: 'mrbeast',    label: 'MrBeast',     emoji: '🤯', desc: 'Extreme reaction, bold colors' },
-  { id: 'mystery',    label: 'Mystery/Dark', emoji: '🌑', desc: 'Eerie, shadowy atmosphere' },
-  { id: 'finance',    label: 'Finance',      emoji: '💰', desc: 'Professional, Wall Street' },
-  { id: 'documentary',label: 'Documentary',  emoji: '🎥', desc: 'Photojournalistic, authentic' },
-  { id: 'viral-facts',label: 'Viral Facts',  emoji: '🤯', desc: 'Bold numbers, shocking stats' },
-  { id: 'gaming',     label: 'Gaming',       emoji: '🎮', desc: 'Epic action, neon lighting' },
-  { id: 'minimal',    label: 'Minimal',      emoji: '⬜', desc: 'Clean, elegant, premium' },
-  { id: 'cinematic',  label: 'Cinematic',    emoji: '🎬', desc: 'Movie poster quality' },
+  { id: 'mrbeast',     label: 'MrBeast',      emoji: '🤯', desc: 'Extreme reaction, bold colors',       sample: 'Extreme challenge reveal, winner takes $100,000 prize' },
+  { id: 'mystery',     label: 'Mystery/Dark',  emoji: '🌑', desc: 'Eerie, shadowy atmosphere',           sample: 'Ancient secret hidden for 3,000 years finally exposed' },
+  { id: 'finance',     label: 'Finance',       emoji: '💰', desc: 'Professional, Wall Street',           sample: 'How billionaires hide their money from taxes revealed' },
+  { id: 'documentary', label: 'Documentary',   emoji: '🎥', desc: 'Photojournalistic, authentic',        sample: 'The last untouched tribe on Earth discovered in 2024' },
+  { id: 'viral-facts', label: 'Viral Facts',   emoji: '🤯', desc: 'Bold numbers, shocking stats',        sample: '99% of people do not know these shocking money facts' },
+  { id: 'gaming',      label: 'Gaming',        emoji: '🎮', desc: 'Epic action, neon lighting',          sample: 'World record broken in 30 seconds, impossible speedrun' },
+  { id: 'minimal',     label: 'Minimal',       emoji: '⬜', desc: 'Clean, elegant, premium',             sample: 'The simple habit that changed everything in 30 days' },
+  { id: 'cinematic',   label: 'Cinematic',     emoji: '🎬', desc: 'Movie poster quality',                sample: 'The untold story that shook the entire world in 2024' },
 ]
 
 // ─── Daily limit helpers (localStorage) ───────────────────────────────────
@@ -471,7 +471,7 @@ export default function ThumbnailGeneratorClient() {
               {STYLES.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => setSelectedStyle(s.id)}
+                  onClick={() => { setSelectedStyle(s.id); setPrompt(s.sample) }}
                   style={{
                     background:
                       selectedStyle === s.id

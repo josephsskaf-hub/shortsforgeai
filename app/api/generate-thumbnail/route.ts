@@ -29,7 +29,7 @@ const STYLE_ENHANCERS: Record<string, string> = {
 // Build optimized prompt
 function buildOptimizedPrompt(userPrompt: string, style: string): string {
   const enhancer = STYLE_ENHANCERS[style] ?? STYLE_ENHANCERS['cinematic']
-  const cleanPrompt = userPrompt.trim().replace(/[^\w\s,.'"-!?]/g, ' ').trim()
+  const cleanPrompt = userPrompt.trim().replace(/[^\w\s,.'"!?-]/g, ' ').trim()
 
   return (
     'YouTube thumbnail: ' +
@@ -62,17 +62,23 @@ export async function POST(req: NextRequest) {
     // Generate thumbnails in parallel
     const tasks = Array.from({ length: validCount }, () =>
       openai.images.generate({
-        model: 'dall-e-3',
+        model: 'gpt-image-2',
         prompt: optimizedPrompt,
         n: 1,
-        size: '1792x1024',
-        quality: 'standard',
-        response_format: 'url',
+        size: '1536x1024',
+        quality: 'high',
       })
     )
 
     const results = await Promise.all(tasks)
-    const urls = results.map((r) => r.data[0]?.url).filter(Boolean)
+    const urls = results
+      .map((r) => {
+        const item = r.data?.[0]
+        if (item?.url) return item.url
+        if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`
+        return null
+      })
+      .filter(Boolean) as string[]
 
     if (urls.length === 0) {
       return NextResponse.json({ error: 'No images returned from API.' }, { status: 500 })
