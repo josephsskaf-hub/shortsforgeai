@@ -173,7 +173,7 @@ export default function SignupPage() {
                 Create your first AI Short
               </h1>
               <p className="text-sm mb-2" style={{ color: 'var(--muted)' }}>
-                Generate viral-ready YouTube Shorts in seconds. Start free.
+                Sign up free and generate vertical YouTube Shorts in minutes.
               </p>
               <div
                 className="flex items-center gap-2 mb-7 px-3 py-2 rounded-lg text-xs font-semibold"

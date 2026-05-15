@@ -33,7 +33,7 @@ const FREE_FEATURES = [
 const BASIC_FEATURES = [
   '140 credits / month',
   '≈9 videos / month',
-  '15 credits per Basic video',
+  '15 credits per video',
   'Launch offer: 50% off first month',
   'Email support',
 ]
@@ -41,7 +41,7 @@ const BASIC_FEATURES = [
 const PRO_FEATURES = [
   '350 credits / month',
   '≈17 videos / month',
-  '20 credits per Pro video',
+  '20 credits per video',
   'Launch offer: 50% off first month',
   'Better cinematic prompting',
   'Priority support',
@@ -221,7 +221,7 @@ export default function PricingClient(props: PricingClientProps) {
             {!userId ? 'Sign in to see your balance' : creditsLoading ? 'Loading balance...' : `You have ${credits ?? 0} credit${credits === 1 ? '' : 's'}`}
           </p>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            Basic = 15cr · Pro = 20cr per Short
+            Basic = 15cr · Pro = 20cr per video · charged only on successful videos
           </p>
         </div>
         {isPro && (

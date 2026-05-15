@@ -556,7 +556,7 @@ export default function CreateClient() {
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              ShortsForgeAI v1.1
+              ShortsForgeAI v1.2
             </div>
             <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Generate a Short in <span className="grad-text">one click</span>

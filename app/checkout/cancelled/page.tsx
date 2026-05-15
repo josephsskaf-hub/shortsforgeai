@@ -85,8 +85,8 @@ export default function CheckoutCancelledPage() {
         <div
           style={{
             marginTop: 22,
-            background: 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(124,58,237,.06))',
-            border: '1px solid rgba(37,99,235,.30)',
+            background: 'linear-gradient(135deg, rgba(124,58,237,.12), rgba(168,85,247,.06))',
+            border: '1px solid rgba(124,58,237,.32)',
             borderRadius: 16,
             padding: 18,
           }}
@@ -96,7 +96,7 @@ export default function CheckoutCancelledPage() {
               fontSize: '0.65rem',
               fontWeight: 900,
               letterSpacing: '0.14em',
-              color: '#93C5FD',
+              color: '#c4b5fd',
               textTransform: 'uppercase',
               marginBottom: 8,
             }}
@@ -122,8 +122,8 @@ export default function CheckoutCancelledPage() {
                 fontSize: '0.88rem',
                 fontWeight: 900,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+                background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                boxShadow: '0 6px 22px rgba(99,102,241,.4)',
               }}
             >
               Try Basic — $4.50 →
@@ -162,7 +162,7 @@ export default function CheckoutCancelledPage() {
         >
           <Link
             href="/pricing"
-            style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700 }}
+            style={{ color: '#c4b5fd', textDecoration: 'none', fontWeight: 700 }}
           >
             ← Go back to pricing
           </Link>

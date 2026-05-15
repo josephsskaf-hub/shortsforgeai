@@ -93,6 +93,16 @@ export default function CheckoutSuccessPage() {
         </p>
         <p
           style={{
+            marginTop: 6,
+            fontSize: '0.9rem',
+            color: 'var(--muted2)',
+            lineHeight: 1.55,
+          }}
+        >
+          Credits charged only on successful videos.
+        </p>
+        <p
+          style={{
             marginTop: 8,
             fontSize: '0.85rem',
             color: 'var(--muted)',
@@ -121,8 +131,8 @@ export default function CheckoutSuccessPage() {
               fontSize: '0.95rem',
               fontWeight: 900,
               color: '#fff',
-              background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 10px 32px rgba(99,102,241,.45)',
+              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+              boxShadow: '0 10px 32px rgba(124,58,237,.5)',
               letterSpacing: '-0.01em',
             }}
           >
