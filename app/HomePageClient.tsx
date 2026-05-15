@@ -84,6 +84,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [prompt, setPromptText] = useState('')
   const [navOpen, setNavOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // Push #077 — pricing card selected state. Pro is selected by default
+  // (Recommended). Card click toggles selection; CTA still drives the
+  // Stripe link so users can either click-then-confirm or click-CTA-direct.
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -300,55 +304,91 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {PRICING.map((p) => (
-            <div
-              key={p.tier}
-              className={`relative flex flex-col rounded-2xl border p-6 ${
-                p.highlight
-                  ? 'border-blue-500 bg-[#0B1120] shadow-[0_0_30px_rgba(59,130,246,0.15)]'
-                  : 'border-white/[0.08] bg-[#0B1120]'
-              }`}
-            >
-              {p.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2563EB] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(59,130,246,.45)]">
-                  Best Value
-                </div>
-              )}
-              <div className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
-                {p.name}
-              </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#F1F5F9]">
-                  {p.price}
-                </span>
-              </div>
-              <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
-                {p.priceSub}
-              </div>
-              <ul className="mt-5 mb-6 flex flex-col gap-2.5">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-[13.5px] text-[#F1F5F9]">
-                    <span className="mt-[3px] text-cyan-400">✓</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href={p.cta.href}
+          {PRICING.map((p) => {
+            const isPaid = p.tier === 'basic' || p.tier === 'pro'
+            const isSelected = isPaid && selectedPlan === p.tier
+            const ctaLabel = isSelected
+              ? p.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
+              : p.cta.label
+            const isExternal = p.cta.href.startsWith('http')
+            return (
+              <div
+                key={p.tier}
+                role={isPaid ? 'button' : undefined}
+                tabIndex={isPaid ? 0 : undefined}
+                aria-pressed={isPaid ? isSelected : undefined}
                 onClick={() => {
-                  if (p.tier === 'basic') trackHomepageEvent('basic_checkout_clicked')
-                  if (p.tier === 'pro') trackHomepageEvent('pro_checkout_clicked')
+                  if (isPaid) setSelectedPlan(p.tier as 'basic' | 'pro')
                 }}
-                className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
-                  p.highlight
-                    ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                    : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                onKeyDown={(e) => {
+                  if (!isPaid) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedPlan(p.tier as 'basic' | 'pro')
+                  }
+                }}
+                className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
+                  isPaid ? 'cursor-pointer' : ''
+                } ${
+                  isSelected
+                    ? 'border-2 border-[#3B82F6] bg-[#0D1830] shadow-[0_0_28px_rgba(59,130,246,0.3)]'
+                    : p.highlight
+                      ? 'border-blue-500 bg-[#0B1120] shadow-[0_0_30px_rgba(59,130,246,0.15)] hover:border-[#3B82F6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#0B1120] hover:border-[#3B82F6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
-                {p.cta.label} →
-              </a>
-            </div>
-          ))}
+                {p.highlight && !isSelected && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2563EB] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(59,130,246,.45)]">
+                    Best Value
+                  </div>
+                )}
+                {isSelected && (
+                  <div className="absolute -top-3 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_4px_14px_rgba(34,197,94,.45)]" aria-label="Selected">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+                <div className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                  {p.name}
+                </div>
+                <div className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#F1F5F9]">
+                    {p.price}
+                  </span>
+                </div>
+                <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
+                  {p.priceSub}
+                </div>
+                <ul className="mt-5 mb-6 flex flex-col gap-2.5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-[13.5px] text-[#F1F5F9]">
+                      <span className="mt-[3px] text-cyan-400">✓</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href={p.cta.href}
+                  target={isExternal ? '_blank' : undefined}
+                  rel={isExternal ? 'noopener noreferrer' : undefined}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (isPaid) setSelectedPlan(p.tier as 'basic' | 'pro')
+                    if (p.tier === 'basic') trackHomepageEvent('basic_checkout_clicked')
+                    if (p.tier === 'pro') trackHomepageEvent('pro_checkout_clicked')
+                  }}
+                  className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
+                    p.highlight || isSelected
+                      ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                  }`}
+                >
+                  {ctaLabel} →
+                </a>
+              </div>
+            )
+          })}
         </div>
       </section>
 

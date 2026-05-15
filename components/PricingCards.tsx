@@ -52,6 +52,10 @@ const PRO_FEATURES = [
 export default function PricingCards() {
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Push #077 — pricing card selected state. Pro is the recommended
+  // default. Card click selects (does NOT trigger Stripe); CTA button
+  // click navigates to Stripe.
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
   function handleBuy(tier: 'basic' | 'pro') {
     setError(null)
@@ -114,6 +118,7 @@ export default function PricingCards() {
           predictable. */}
       <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '64rem' }}>
         <PlanCard
+          tier="free"
           name="Free"
           price="$0"
           period="/ month"
@@ -123,6 +128,7 @@ export default function PricingCards() {
         />
 
         <PlanCard
+          tier="basic"
           name="Basic"
           price="$4.50"
           period="first month"
@@ -131,14 +137,22 @@ export default function PricingCards() {
           features={BASIC_FEATURES}
           badge="Most Popular"
           highlight
+          selected={selectedPlan === 'basic'}
+          onSelect={() => setSelectedPlan('basic')}
           cta={{
-            label: purchasing === 'basic' ? 'Loading…' : 'Get Basic — $4.50',
+            label:
+              purchasing === 'basic'
+                ? 'Loading…'
+                : selectedPlan === 'basic'
+                  ? 'Continue with Basic'
+                  : 'Get Basic — $4.50',
             onClick: () => handleBuy('basic'),
             loading: purchasing === 'basic',
           }}
         />
 
         <PlanCard
+          tier="pro"
           name="Pro"
           price="$9.50"
           period="first month"
@@ -146,8 +160,15 @@ export default function PricingCards() {
           tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
           badge="Best Value"
+          selected={selectedPlan === 'pro'}
+          onSelect={() => setSelectedPlan('pro')}
           cta={{
-            label: purchasing === 'pro' ? 'Loading…' : 'Get Pro — $9.50',
+            label:
+              purchasing === 'pro'
+                ? 'Loading…'
+                : selectedPlan === 'pro'
+                  ? 'Continue with Pro'
+                  : 'Get Pro — $9.50',
             onClick: () => handleBuy('pro'),
             loading: purchasing === 'pro',
           }}
@@ -158,6 +179,7 @@ export default function PricingCards() {
 }
 
 function PlanCard({
+  tier,
   name,
   price,
   period,
@@ -166,8 +188,11 @@ function PlanCard({
   features,
   badge,
   highlight,
+  selected,
+  onSelect,
   cta,
 }: {
+  tier: 'free' | 'basic' | 'pro'
   name: string
   price: string
   period: string
@@ -176,25 +201,86 @@ function PlanCard({
   features: string[]
   badge?: string
   highlight?: boolean
+  selected?: boolean
+  onSelect?: () => void
   cta: { label: string; onClick: () => void; loading?: boolean } | null
 }) {
+  const isPaid = tier === 'basic' || tier === 'pro'
+  const isSelected = !!selected
+
+  function background(): string {
+    if (isSelected) return '#0D1830'
+    if (highlight) return 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+    return 'rgba(15,15,30,0.85)'
+  }
+  function border(): string {
+    if (isSelected) return '2px solid #3B82F6'
+    if (highlight) return '2px solid rgba(37,99,235,.45)'
+    return '1px solid var(--border)'
+  }
+  function shadow(): string {
+    if (isSelected) return '0 0 28px rgba(59,130,246,0.3)'
+    if (highlight) return '0 0 40px rgba(37,99,235,.18)'
+    return '0 0 20px rgba(37,99,235,.04)'
+  }
+
   return (
     <div
-      className="rounded-2xl p-6 relative overflow-hidden flex flex-col"
+      role={isPaid ? 'button' : undefined}
+      tabIndex={isPaid ? 0 : undefined}
+      aria-pressed={isPaid ? isSelected : undefined}
+      onClick={() => {
+        if (isPaid && onSelect) onSelect()
+      }}
+      onKeyDown={(e) => {
+        if (!isPaid || !onSelect) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className="rounded-2xl p-6 relative overflow-hidden flex flex-col transition-all duration-200"
       style={{
-        background: highlight
-          ? 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
-          : 'rgba(15,15,30,0.85)',
-        border: highlight ? '2px solid rgba(37,99,235,.45)' : '1px solid var(--border)',
-        boxShadow: highlight ? '0 0 40px rgba(37,99,235,.18)' : '0 0 20px rgba(37,99,235,.04)',
+        background: background(),
+        border: border(),
+        boxShadow: shadow(),
+        cursor: isPaid ? 'pointer' : 'default',
+      }}
+      onMouseEnter={(e) => {
+        if (!isPaid || isSelected) return
+        e.currentTarget.style.borderColor = '#3B82F6'
+        e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
+        e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
+      }}
+      onMouseLeave={(e) => {
+        if (!isPaid || isSelected) return
+        e.currentTarget.style.background = background()
+        e.currentTarget.style.border = border()
+        e.currentTarget.style.boxShadow = shadow()
       }}
     >
-      {badge && (
+      {badge && !isSelected && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
           style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', color: '#fff' }}
         >
           {badge}
+        </div>
+      )}
+      {isSelected && (
+        <div
+          className="absolute top-4 right-4 flex items-center justify-center rounded-full"
+          style={{
+            width: 26, height: 26,
+            background: '#22C55E',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 14px rgba(34,197,94,.45)',
+          }}
+          aria-label="Selected"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       )}
 
@@ -234,14 +320,22 @@ function PlanCard({
 
       {cta ? (
         <button
-          onClick={cta.onClick}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (isPaid && onSelect) onSelect()
+            cta.onClick()
+          }}
           disabled={cta.loading}
           // Push #052 — bump mobile tap-target above the 44px minimum
           // (py-3.5 → ~46px tall) without changing desktop density.
           className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-            boxShadow: '0 4px 18px rgba(37,99,235,.28)',
+            background: isSelected
+              ? '#3B82F6'
+              : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            boxShadow: isSelected
+              ? '0 4px 22px rgba(59, 130, 246,.35)'
+              : '0 4px 18px rgba(37,99,235,.28)',
             border: 'none',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,
