@@ -214,22 +214,25 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </nav>
 
       {/* ───────── Hero ───────── */}
-      <section className="relative z-10 mx-auto max-w-3xl px-4 pt-16 pb-12 text-center sm:pt-24 sm:pb-16">
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
         <h1 className="text-balance text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-6xl text-[#F1F5F9]">
           Create{' '}
-          <span className="bg-gradient-to-br from-cyan-300 via-blue-400 to-blue-600 bg-clip-text text-transparent">
+          <span
+            className="text-[#22D3EE]"
+            style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
+          >
             AI Shorts
           </span>{' '}
           from one idea.
         </h1>
 
-        {/* Single clean prompt card */}
+        {/* Single clean prompt card — width aligned with nav container */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
             goToGenerate()
           }}
-          className="mx-auto mt-10 flex min-h-[360px] w-full max-w-2xl flex-col justify-center gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-8 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-10"
+          className="mx-auto mt-10 flex min-h-[360px] w-full max-w-5xl flex-col justify-center gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-8 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-10"
         >
           <textarea
             value={prompt}
