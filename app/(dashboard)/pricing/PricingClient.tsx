@@ -33,7 +33,7 @@ const FREE_FEATURES = [
 const BASIC_FEATURES = [
   '140 credits / month',
   '≈9 videos / month',
-  '15 credits per Basic video',
+  '15 credits per video',
   'Launch offer: 50% off first month',
   'Email support',
 ]
@@ -41,7 +41,7 @@ const BASIC_FEATURES = [
 const PRO_FEATURES = [
   '350 credits / month',
   '≈17 videos / month',
-  '20 credits per Pro video',
+  '20 credits per video',
   'Launch offer: 50% off first month',
   'Better cinematic prompting',
   'Priority support',
@@ -221,7 +221,7 @@ export default function PricingClient(props: PricingClientProps) {
             {!userId ? 'Sign in to see your balance' : creditsLoading ? 'Loading balance...' : `You have ${credits ?? 0} credit${credits === 1 ? '' : 's'}`}
           </p>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            Basic = 15cr · Pro = 20cr per Short
+            Basic = 15cr · Pro = 20cr per video · charged only on successful videos
           </p>
         </div>
         {isPro && (
@@ -258,7 +258,7 @@ export default function PricingClient(props: PricingClientProps) {
           cta={null}
         />
 
-        {/* Basic - Most Popular */}
+        {/* Basic */}
         <PlanCard
           name="Basic"
           price="$4.50"
@@ -266,8 +266,6 @@ export default function PricingClient(props: PricingClientProps) {
           renewNote="then $9/month"
           tagline="140 credits / month. ≈9 videos."
           features={BASIC_FEATURES}
-          badge={{ label: 'Most Popular', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
-          highlight
           cta={{
             label: purchasing === 'basic' ? 'Loading...' : 'Get Basic — $4.50',
             onClick: () => handleBuy('basic'),
@@ -275,7 +273,7 @@ export default function PricingClient(props: PricingClientProps) {
           }}
         />
 
-        {/* Pro - Best Value */}
+        {/* Pro - Recommended (gold highlight — push #072) */}
         <PlanCard
           name="Pro"
           price="$9.50"
@@ -283,7 +281,8 @@ export default function PricingClient(props: PricingClientProps) {
           renewNote="then $19/month"
           tagline="350 credits / month. ≈17 videos."
           features={PRO_FEATURES}
-          badge={{ label: 'Best Value', color: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}
+          badge={{ label: 'Recommended', color: '#3B82F6' }}
+          highlight
           cta={{
             label: purchasing === 'pro' ? 'Loading...' : 'Get Pro — $9.50',
             onClick: () => handleBuy('pro'),
@@ -293,8 +292,8 @@ export default function PricingClient(props: PricingClientProps) {
       </div>
 
       <p className="max-w-3xl mx-auto text-center text-xs mt-4" style={{ color: 'var(--muted)' }}>
-        50% off applies to the first month only. Plans renew at the regular monthly price.
-        Failed generations do not consume credits. Refund within 7 days if unused.
+        Credits charged only on successful videos. 50% off applies to the first month only.
+        Plans renew at the regular monthly price. Refund within 7 days if unused.
       </p>
 
       {/* How credits work */}
@@ -368,16 +367,16 @@ function PlanCard({
       className="rounded-[20px] p-7 relative overflow-hidden transition-all flex flex-col"
       style={{
         background: highlight
-          ? 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+          ? 'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(96, 165, 250,.05))'
           : 'rgba(15,15,30,0.85)',
-        border: highlight ? '2px solid rgba(37,99,235,.45)' : '1px solid var(--border2)',
-        boxShadow: highlight ? '0 0 60px rgba(37,99,235,.2)' : '0 0 30px rgba(37,99,235,.06)',
+        border: highlight ? '2px solid rgba(59, 130, 246,.55)' : '1px solid var(--border2)',
+        boxShadow: highlight ? '0 0 60px rgba(59, 130, 246,.18)' : '0 0 30px rgba(59, 130, 246,.06)',
       }}
     >
       {badge && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: badge.color, color: 'white' }}
+          style={{ background: badge.color, color: highlight ? '#FFFFFF' : 'white' }}
         >
           {badge.label}
         </div>
@@ -386,7 +385,7 @@ function PlanCard({
       <div className="mb-5">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#93C5FD' : 'var(--muted)' }}
+          style={{ color: highlight ? '#3B82F6' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -395,7 +394,7 @@ function PlanCard({
           <span className="text-sm pb-1" style={{ color: 'var(--muted)' }}>{period}</span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
+          <p className="text-xs mb-1" style={{ color: highlight ? '#3B82F6' : '#93C5FD', fontWeight: 700 }}>{renewNote}</p>
         )}
         <p className="text-xs" style={{ color: 'var(--muted)' }}>{tagline}</p>
       </div>
@@ -413,11 +412,16 @@ function PlanCard({
         <button
           onClick={cta.onClick}
           disabled={cta.loading}
-          className="w-full rounded-xl py-3.5 text-sm font-black text-white transition-all"
+          className="w-full rounded-xl py-3.5 text-sm font-black transition-all"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-            boxShadow: '0 4px 22px rgba(37,99,235,.32)',
+            background: highlight
+              ? '#3B82F6'
+              : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            boxShadow: highlight
+              ? '0 4px 22px rgba(59, 130, 246,.35)'
+              : '0 4px 22px rgba(37,99,235,.32)',
             border: 'none',
+            color: highlight ? '#FFFFFF' : '#fff',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,
           }}

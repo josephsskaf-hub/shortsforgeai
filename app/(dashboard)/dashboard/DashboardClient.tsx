@@ -70,16 +70,16 @@ export default function DashboardClient({
       <div
         className="relative rounded-[20px] overflow-hidden mb-7 px-6 md:px-8 py-8 text-center"
         style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,.12) 0%, rgba(124,58,237,.08) 50%, rgba(168,85,247,.07) 100%)',
-          border: '1px solid rgba(99,102,241,.2)',
-          boxShadow: '0 0 80px rgba(99,102,241,.1)',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246,.12) 0%, rgba(37, 99, 235,.08) 50%, rgba(34, 211, 238,.07) 100%)',
+          border: '1px solid rgba(59, 130, 246,.2)',
+          boxShadow: '0 0 80px rgba(59, 130, 246,.1)',
         }}
       >
         <div
           className="absolute pointer-events-none"
           style={{
             width: 520, height: 360,
-            background: 'radial-gradient(ellipse, rgba(99,102,241,.22) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(59, 130, 246,.22) 0%, transparent 70%)',
             top: -100, left: '50%', transform: 'translateX(-50%)',
           }}
         />
@@ -104,7 +104,7 @@ export default function DashboardClient({
           Your next{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #3B82F6, #c4b5fd, #a855f7)',
+              background: 'linear-gradient(135deg, #3B82F6, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -125,8 +125,8 @@ export default function DashboardClient({
           href="/create"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
-            boxShadow: '0 4px 32px rgba(99,102,241,.5)',
+            background: 'linear-gradient(135deg, #2563EB 0%, #2563EB 55%, #22D3EE 100%)',
+            boxShadow: '0 4px 32px rgba(59, 130, 246,.5)',
             textDecoration: 'none',
           }}
         >
@@ -138,18 +138,18 @@ export default function DashboardClient({
       <div
         className="relative rounded-[20px] overflow-hidden mb-7 px-5 md:px-6 py-5 md:py-6"
         style={{
-          background: 'linear-gradient(135deg, rgba(168,85,247,.12) 0%, rgba(236,72,153,.06) 100%)',
-          border: '1px solid rgba(168,85,247,.32)',
-          boxShadow: '0 0 60px rgba(168,85,247,.12)',
+          background: 'linear-gradient(135deg, rgba(34, 211, 238,.12) 0%, rgba(34, 211, 238,.06) 100%)',
+          border: '1px solid rgba(34, 211, 238,.32)',
+          boxShadow: '0 0 60px rgba(34, 211, 238,.12)',
         }}
       >
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span
             className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
             style={{
-              background: 'rgba(168,85,247,.18)',
-              border: '1px solid rgba(168,85,247,.32)',
-              color: '#c4b5fd',
+              background: 'rgba(34, 211, 238,.18)',
+              border: '1px solid rgba(34, 211, 238,.32)',
+              color: '#22D3EE',
             }}
           >
             🎬 Beta · AI Video
@@ -180,7 +180,7 @@ export default function DashboardClient({
             padding: 8,
             borderRadius: 14,
             background: 'rgba(13,13,28,.85)',
-            border: '1px solid rgba(168,85,247,.3)',
+            border: '1px solid rgba(34, 211, 238,.3)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.04)',
             display: 'flex',
             flexDirection: 'column',
@@ -220,10 +220,10 @@ export default function DashboardClient({
               onClick={handleVideoGenerate}
               className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
               style={{
-                background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                background: 'linear-gradient(135deg, #22D3EE, #22D3EE)',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 4px 22px rgba(168,85,247,.45)',
+                boxShadow: '0 4px 22px rgba(34, 211, 238,.45)',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -242,8 +242,8 @@ export default function DashboardClient({
           className="rounded-[20px] px-5 py-4 mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
           style={{
             background: creditsZero ? 'rgba(239,68,68,.06)' : 'rgba(15,15,30,0.85)',
-            border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(99,102,241,.22)',
-            boxShadow: '0 0 30px rgba(99,102,241,.08)',
+            border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(59, 130, 246,.22)',
+            boxShadow: '0 0 30px rgba(59, 130, 246,.08)',
           }}
         >
           <div className="flex items-center gap-4">
@@ -299,7 +299,7 @@ export default function DashboardClient({
                 : 'linear-gradient(135deg, var(--indigo), var(--purple))',
               boxShadow: creditsZero
                 ? '0 4px 18px rgba(239,68,68,.35)'
-                : '0 4px 18px rgba(99,102,241,.32)',
+                : '0 4px 18px rgba(59, 130, 246,.32)',
               textDecoration: 'none',
             }}
           >
@@ -336,7 +336,7 @@ export default function DashboardClient({
       {!isLoggedIn && (
         <div
           className="rounded-[20px] px-6 py-7 text-center"
-          style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid rgba(99,102,241,.22)' }}
+          style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid rgba(59, 130, 246,.22)' }}
         >
           <p className="font-bold text-base mb-2" style={{ color: 'var(--text)' }}>
             🔑 Create your account to start

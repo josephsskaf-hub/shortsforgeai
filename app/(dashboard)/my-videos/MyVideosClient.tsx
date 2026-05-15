@@ -44,9 +44,9 @@ function statusChip(s: VideoRow['status']) {
   return {
     label: 'Processing',
     emoji: '⏳',
-    fg: '#fbbf24',
-    bg: 'rgba(251,191,36,.10)',
-    border: 'rgba(251,191,36,.32)',
+    fg: '#22D3EE',
+    bg: 'rgba(34, 211, 238,.10)',
+    border: 'rgba(34, 211, 238,.32)',
   }
 }
 
@@ -107,21 +107,22 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         >
           <div className="text-5xl mb-4">🎬</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            No videos yet. Create your first Short.
+            No videos yet. Create your first AI Short.
           </h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
             Generated AI videos will show up here as soon as a render finishes.
           </p>
           <Link
             href="/generate"
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white"
+            className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-              boxShadow: '0 4px 22px rgba(37,99,235,.3)',
+              background: '#3B82F6',
+              color: '#FFFFFF',
+              boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
               textDecoration: 'none',
             }}
           >
-            ⚡ Generate a Short
+            ⚡ Generate Video
           </Link>
         </div>
       </div>
@@ -163,7 +164,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
                   style={{
                     background: v.thumbnail_url
                       ? `center / cover no-repeat url(${v.thumbnail_url})`
-                      : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12))',
+                      : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
                     aspectRatio: '9 / 16',
                   }}
                 >
@@ -302,9 +303,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
                           href={generateSimilarHref}
                           className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
                           style={{
-                            background: 'rgba(99,102,241,.10)',
-                            border: '1px solid rgba(99,102,241,.32)',
-                            color: '#a5b4fc',
+                            background: 'rgba(59, 130, 246,.10)',
+                            border: '1px solid rgba(59, 130, 246,.32)',
+                            color: '#60A5FA',
                             textDecoration: 'none',
                           }}
                         >
@@ -419,13 +420,15 @@ function Header({ count }: { count: number }) {
         </div>
         <Link
           href="/generate"
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
+          className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+            background: '#3B82F6',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 18px rgba(59, 130, 246,.3)',
             textDecoration: 'none',
           }}
         >
-          ⚡ New Short
+          ⚡ Generate Video
         </Link>
       </div>
     </div>

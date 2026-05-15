@@ -57,7 +57,7 @@ export default function ComingSoonPage() {
           position: 'absolute',
           width: 700,
           height: 700,
-          background: 'radial-gradient(circle, rgba(124,58,237,0.16), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(37, 99, 235,0.16), transparent 65%)',
           bottom: -240,
           left: -160,
           filter: 'blur(100px)',
@@ -92,12 +92,12 @@ export default function ComingSoonPage() {
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'linear-gradient(135deg, #2563EB, #7c3aed)',
+              background: 'linear-gradient(135deg, #2563EB, #2563EB)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.3rem',
-              boxShadow: '0 0 28px rgba(99,102,241,.55)',
+              boxShadow: '0 0 28px rgba(59, 130, 246,.55)',
             }}
           >
             ⚡
@@ -106,7 +106,7 @@ export default function ComingSoonPage() {
             style={{
               fontWeight: 900,
               fontSize: '1.15rem',
-              background: 'linear-gradient(135deg, #3B82F6, #a78bfa)',
+              background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               letterSpacing: '-0.02em',
@@ -158,7 +158,7 @@ export default function ComingSoonPage() {
           Estamos preparando algo{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #3B82F6, #a855f7, #ec4899)',
+              background: 'linear-gradient(135deg, #3B82F6, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -223,10 +223,10 @@ export default function ComingSoonPage() {
                 fontSize: '0.9rem',
                 fontWeight: 800,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #2563EB, #7c3aed)',
+                background: 'linear-gradient(135deg, #2563EB, #2563EB)',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 6px 24px rgba(99,102,241,.4)',
+                boxShadow: '0 6px 24px rgba(59, 130, 246,.4)',
                 whiteSpace: 'nowrap',
                 fontFamily: 'inherit',
               }}

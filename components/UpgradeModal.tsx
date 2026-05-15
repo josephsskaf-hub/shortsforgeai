@@ -20,8 +20,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         className="w-full max-w-md rounded-2xl p-8 animate-fade-in text-center relative"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(99,102,241,.25)',
-          boxShadow: '0 0 80px rgba(99,102,241,.18)',
+          border: '1px solid rgba(59, 130, 246,.25)',
+          boxShadow: '0 0 80px rgba(59, 130, 246,.18)',
         }}
       >
         {/* Close */}
@@ -41,8 +41,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,.2), rgba(124,58,237,.15))',
-            border: '1px solid rgba(99,102,241,.3)',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246,.2), rgba(37, 99, 235,.15))',
+            border: '1px solid rgba(59, 130, 246,.3)',
           }}
         >
           ⚡
@@ -53,7 +53,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           style={{
             background: 'rgba(245,158,11,.12)',
             border: '1px solid rgba(245,158,11,.25)',
-            color: '#fbbf24',
+            color: '#22D3EE',
           }}
         >
           🔒 Free Limit Reached
@@ -74,8 +74,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <div
           className="rounded-xl p-4 mb-6 text-left"
           style={{
-            background: 'rgba(99,102,241,.05)',
-            border: '1px solid rgba(99,102,241,.12)',
+            background: 'rgba(59, 130, 246,.05)',
+            border: '1px solid rgba(59, 130, 246,.12)',
           }}
         >
           {[
@@ -101,8 +101,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           onClick={() => router.push('/pricing')}
           className="w-full rounded-xl py-4 font-black text-base text-white mb-3 transition-all"
           style={{
-            background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-            boxShadow: '0 4px 28px rgba(99,102,241,.45)',
+            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+            boxShadow: '0 4px 28px rgba(59, 130, 246,.45)',
             animation: 'btn-pulse 2.8s ease-in-out infinite',
             cursor: 'pointer',
           }}

@@ -134,16 +134,16 @@ export default function V2PrototypePage() {
       <div
         className="rounded-xl px-4 py-3 mb-5 flex items-center gap-3 flex-wrap"
         style={{
-          background: 'linear-gradient(135deg, rgba(251,191,36,.10), rgba(245,158,11,.06))',
-          border: '1px solid rgba(251,191,36,.40)',
-          color: '#fbbf24',
+          background: 'linear-gradient(135deg, rgba(34, 211, 238,.10), rgba(245,158,11,.06))',
+          border: '1px solid rgba(34, 211, 238,.40)',
+          color: '#22D3EE',
         }}
       >
         <span
           className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded"
           style={{
-            background: 'rgba(251,191,36,.18)',
-            border: '1px solid rgba(251,191,36,.50)',
+            background: 'rgba(34, 211, 238,.18)',
+            border: '1px solid rgba(34, 211, 238,.50)',
             color: '#fde68a',
           }}
         >
@@ -422,8 +422,8 @@ function DurationSelector({
                   style={{
                     padding: '1px 6px',
                     borderRadius: 999,
-                    background: 'rgba(251,191,36,.18)',
-                    border: '1px solid rgba(251,191,36,.45)',
+                    background: 'rgba(34, 211, 238,.18)',
+                    border: '1px solid rgba(34, 211, 238,.45)',
                     color: '#fde68a',
                     letterSpacing: '0.08em',
                   }}
@@ -479,8 +479,8 @@ function EngineSelector({
                     style={{
                       padding: '1px 6px',
                       borderRadius: 999,
-                      background: 'rgba(251,191,36,.18)',
-                      border: '1px solid rgba(251,191,36,.45)',
+                      background: 'rgba(34, 211, 238,.18)',
+                      border: '1px solid rgba(34, 211, 238,.45)',
                       color: '#fde68a',
                       letterSpacing: '0.08em',
                     }}

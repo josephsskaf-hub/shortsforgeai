@@ -15,7 +15,7 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
       className="flex items-center gap-4 flex-shrink-0 sticky top-0 z-30 px-6"
       style={{
         height: 64,
-        background: 'rgba(8,8,15,.88)',
+        background: 'rgba(11,16,32,0.9)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderBottom: '1px solid var(--border)',
@@ -43,13 +43,15 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         className="md:hidden flex items-center justify-center flex-shrink-0"
         style={{
           width: 32, height: 32, borderRadius: 10, textDecoration: 'none',
-          background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
-          boxShadow: '0 0 16px rgba(99,102,241,.4)',
-          fontSize: '1rem',
+          background: '#151C2F',
+          border: '1px solid rgba(59,130,246,0.4)',
+          boxShadow: '0 0 14px rgba(34,211,238,0.3)',
         }}
         aria-label="Home"
       >
-        ⚡
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
+        </svg>
       </Link>
 
       {/* Breadcrumb */}

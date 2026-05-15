@@ -16,7 +16,7 @@ const TRENDING = [
     id: 'brain',
     emoji: '🧠',
     niche: 'Psychology',
-    nicheColor: '#a78bfa',
+    nicheColor: '#22D3EE',
     title: 'This Is How Your Brain Lies To You',
     views: '1.8M views',
     accent: '#ef4444',
@@ -192,15 +192,15 @@ export default function TrendingSection() {
                   fontWeight: 800,
                   color: '#fff',
                   textDecoration: 'none',
-                  background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
-                  boxShadow: '0 4px 18px rgba(99,102,241,.35)',
+                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                  boxShadow: '0 4px 18px rgba(59, 130, 246,.35)',
                   transition: 'transform .2s ease, box-shadow .2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 26px rgba(99,102,241,.55)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 26px rgba(59, 130, 246,.55)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(99,102,241,.35)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(59, 130, 246,.35)'
                 }}
               >
                 Generate Similar →
@@ -218,8 +218,8 @@ export default function TrendingSection() {
         }
         .trending-card:hover {
           transform: translateY(-3px) scale(1.02);
-          border-color: rgba(99,102,241,.35) !important;
-          box-shadow: 0 14px 44px rgba(99,102,241,.18);
+          border-color: rgba(59, 130, 246,.35) !important;
+          box-shadow: 0 14px 44px rgba(59, 130, 246,.18);
         }
         @media (max-width: 900px) { .trending-grid { grid-template-columns: 1fr; } }
         @keyframes pulse-trend { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(0.85)} }

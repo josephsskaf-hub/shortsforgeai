@@ -49,16 +49,16 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
       className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
       style={{
         background:
-          'linear-gradient(135deg, rgba(99,102,241,.10), rgba(124,58,237,.06))',
-        border: '1px solid rgba(124,58,237,.45)',
+          'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(37, 99, 235,.06))',
+        border: '1px solid rgba(37, 99, 235,.45)',
         boxShadow:
-          '0 0 32px rgba(124,58,237,.18), inset 0 1px 0 rgba(255,255,255,.04)',
+          '0 0 32px rgba(37, 99, 235,.18), inset 0 1px 0 rgba(255,255,255,.04)',
       }}
     >
       <div className="text-center mb-5">
         <div
           className="text-[10px] font-black uppercase tracking-widest mb-1"
-          style={{ color: '#a78bfa' }}
+          style={{ color: '#22D3EE' }}
         >
           Keep creating
         </div>
@@ -145,14 +145,14 @@ function PlanCard({
           ? 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
           : 'rgba(15,15,30,0.85)',
         border: highlight
-          ? '2px solid rgba(124,58,237,.55)'
+          ? '2px solid rgba(37, 99, 235,.55)'
           : '1px solid var(--border)',
-        boxShadow: highlight ? '0 0 24px rgba(124,58,237,.18)' : 'none',
+        boxShadow: highlight ? '0 0 24px rgba(37, 99, 235,.18)' : 'none',
       }}
     >
       <div
         className="text-xs font-black uppercase tracking-widest mb-1"
-        style={{ color: highlight ? '#a78bfa' : 'var(--muted)' }}
+        style={{ color: highlight ? '#22D3EE' : 'var(--muted)' }}
       >
         {name}
       </div>
@@ -182,8 +182,8 @@ function PlanCard({
         onClick={onClick}
         className="rounded-xl py-2.5 text-sm font-black text-center text-white"
         style={{
-          background: 'linear-gradient(135deg, #2563EB, #7c3aed)',
-          boxShadow: '0 6px 22px rgba(124,58,237,.32)',
+          background: 'linear-gradient(135deg, #2563EB, #2563EB)',
+          boxShadow: '0 6px 22px rgba(37, 99, 235,.32)',
           textDecoration: 'none',
         }}
       >

@@ -132,7 +132,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
           My Account
         </div>
         <h1 className="font-black tracking-tight mb-2" style={{ fontSize: '1.45rem', color: 'var(--text)', lineHeight: 1.15 }}>
-          Account <span style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Settings</span>
+          Account <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Settings</span>
         </h1>
         <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
           Signed in as <span style={{ color: 'var(--text2)' }}>{email}</span>
@@ -153,9 +153,9 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               scroll={false}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold flex-shrink-0"
               style={{
-                background: active ? 'linear-gradient(135deg, rgba(99,102,241,.25), rgba(124,58,237,.18))' : 'transparent',
-                border: active ? '1px solid rgba(99,102,241,.32)' : '1px solid transparent',
-                color: active ? '#a5b4fc' : 'var(--muted2)',
+                background: active ? 'linear-gradient(135deg, rgba(59, 130, 246,.25), rgba(37, 99, 235,.18))' : 'transparent',
+                border: active ? '1px solid rgba(59, 130, 246,.32)' : '1px solid transparent',
+                color: active ? '#60A5FA' : 'var(--muted2)',
                 textDecoration: 'none',
                 transition: 'all 0.15s ease',
               }}
@@ -176,7 +176,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <div className="flex items-center gap-4">
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-white flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}
+                  style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 4px 18px rgba(59, 130, 246,.4)' }}
                 >
                   {initial}
                 </div>
@@ -201,7 +201,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
             <div
               className="rounded-2xl p-6"
-              style={{ background: 'rgba(99,102,241,.05)', border: '1px dashed rgba(99,102,241,.25)' }}
+              style={{ background: 'rgba(59, 130, 246,.05)', border: '1px dashed rgba(59, 130, 246,.25)' }}
             >
               <p className="text-sm" style={{ color: 'var(--text2)' }}>
                 Team members will be available soon.
@@ -220,7 +220,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
             <div className="flex items-center gap-4 mb-6">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 18px rgba(99,102,241,.4)' }}
+                style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 4px 18px rgba(59, 130, 246,.4)' }}
               >
                 {initial}
               </div>
@@ -282,8 +282,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                   href="/pricing"
                   className="block w-full text-center rounded-xl py-3 text-sm font-black text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-                    boxShadow: '0 4px 22px rgba(99,102,241,.35)',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+                    boxShadow: '0 4px 22px rgba(59, 130, 246,.35)',
                     textDecoration: 'none',
                   }}
                 >
@@ -332,11 +332,11 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <h2 className="font-bold mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Credits</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-5">
-                <div className="rounded-xl p-4" style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.12)' }}>
+                <div className="rounded-xl p-4" style={{ background: 'rgba(59, 130, 246,.06)', border: '1px solid rgba(59, 130, 246,.12)' }}>
                   <div className="font-black text-xl" style={{ color: 'var(--text)' }}>{creditsRemaining}</div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Available credits</div>
                 </div>
-                <div className="rounded-xl p-4" style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.12)' }}>
+                <div className="rounded-xl p-4" style={{ background: 'rgba(59, 130, 246,.06)', border: '1px solid rgba(59, 130, 246,.12)' }}>
                   <div className="font-black text-xl" style={{ color: 'var(--text)' }}>{planLimit}</div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
                     {tier === 'free' ? 'Free plan credits' : 'Monthly included'}
@@ -360,7 +360,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                       width: `${usagePct}%`,
                       background: usagePct >= 90
                         ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                        : 'linear-gradient(90deg, #6366f1, #7c3aed)',
+                        : 'linear-gradient(90deg, #3B82F6, #2563EB)',
                       transition: 'width .4s ease',
                     }}
                   />

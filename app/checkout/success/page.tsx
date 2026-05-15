@@ -48,7 +48,7 @@ export default function CheckoutSuccessPage() {
           border: '1px solid var(--border)',
           borderRadius: 22,
           padding: 'clamp(24px, 5vw, 36px)',
-          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,0.08) inset',
+          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(59, 130, 246,0.08) inset',
           textAlign: 'center',
         }}
       >
@@ -93,6 +93,16 @@ export default function CheckoutSuccessPage() {
         </p>
         <p
           style={{
+            marginTop: 6,
+            fontSize: '0.9rem',
+            color: 'var(--muted2)',
+            lineHeight: 1.55,
+          }}
+        >
+          Credits charged only on successful videos.
+        </p>
+        <p
+          style={{
             marginTop: 8,
             fontSize: '0.85rem',
             color: 'var(--muted)',
@@ -120,13 +130,13 @@ export default function CheckoutSuccessPage() {
               borderRadius: 14,
               fontSize: '0.95rem',
               fontWeight: 900,
-              color: '#fff',
-              background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 10px 32px rgba(99,102,241,.45)',
+              color: '#FFFFFF',
+              background: '#3B82F6',
+              boxShadow: '0 10px 32px rgba(59, 130, 246,.4)',
               letterSpacing: '-0.01em',
             }}
           >
-            Go to Generate Video
+            Generate Video
           </Link>
           <Link
             href="/my-videos"

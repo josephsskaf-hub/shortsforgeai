@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
           <tr>
             <td align="center" style="padding-bottom:32px;">
               <div style="display:inline-flex;align-items:center;gap:12px;">
-                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#7c3aed);display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:40px;text-align:center;">⚡</div>
-                <span style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;">ShortsForgeAI</span>
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3B82F6,#2563EB);display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:40px;text-align:center;">⚡</div>
+                <span style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#60A5FA,#22D3EE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;">ShortsForgeAI</span>
               </div>
             </td>
           </tr>
@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
               <p style="color:#94a3b8;font-size:15px;margin:0 0 28px;line-height:1.6;">Welcome to <strong style="color:#c7d2fe;">ShortsForgeAI</strong> 🎬</p>
 
               <!-- Free generations badge -->
-              <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-                <p style="color:#818cf8;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
+              <div style="background:rgba(59, 130, 246,0.12);border:1px solid rgba(59, 130, 246,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+                <p style="color:#60A5FA;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
                 <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free video credits</p>
                 <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to try ShortsForgeAI before upgrading — vertical 9:16 Shorts, ready to upload.</p>
               </div>
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
                 <tr>
                   <td align="center">
                     <a href="${dashboardUrl}"
-                       style="display:inline-block;background:linear-gradient(135deg,#6366f1,#7c3aed);color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:16px 40px;border-radius:12px;letter-spacing:0.01em;box-shadow:0 4px 22px rgba(99,102,241,0.4);">
+                       style="display:inline-block;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:16px 40px;border-radius:12px;letter-spacing:0.01em;box-shadow:0 4px 22px rgba(59, 130, 246,0.4);">
                       👉 Start generating now
                     </a>
                   </td>
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
               <!-- Upgrade note -->
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
-                  Launch offer — 50% off your first month. Basic from <strong style="color:#818cf8;">$4.50</strong> (140 credits / mo), Pro from <strong style="color:#818cf8;">$9.50</strong> (350 credits / mo).
+                  Launch offer — 50% off your first month. Basic from <strong style="color:#60A5FA;">$4.50</strong> (140 credits / mo), Pro from <strong style="color:#60A5FA;">$9.50</strong> (350 credits / mo).
                 </p>
               </div>
 

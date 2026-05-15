@@ -114,7 +114,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
           <a
             href="/dashboard"
             className="inline-flex items-center gap-2 mt-6 rounded-xl px-5 py-2.5 text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 4px 22px rgba(99,102,241,.3)', textDecoration: 'none' }}
+            style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 4px 22px rgba(59, 130, 246,.3)', textDecoration: 'none' }}
           >
             ⚡ Generate Your First Pack
           </a>
@@ -156,8 +156,8 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
             onClick={() => setFilterNiche('all')}
             className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={{
-              background: filterNiche === 'all' ? 'rgba(99,102,241,.18)' : 'rgba(255,255,255,.04)',
-              border: filterNiche === 'all' ? '1px solid rgba(99,102,241,.4)' : '1px solid var(--border)',
+              background: filterNiche === 'all' ? 'rgba(59, 130, 246,.18)' : 'rgba(255,255,255,.04)',
+              border: filterNiche === 'all' ? '1px solid rgba(59, 130, 246,.4)' : '1px solid var(--border)',
               color: filterNiche === 'all' ? 'var(--indigo-light)' : 'var(--muted)',
               cursor: 'pointer',
             }}
@@ -173,8 +173,8 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                 onClick={() => setFilterNiche(niche)}
                 className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
                 style={{
-                  background: filterNiche === niche ? 'rgba(99,102,241,.18)' : 'rgba(255,255,255,.04)',
-                  border: filterNiche === niche ? '1px solid rgba(99,102,241,.4)' : '1px solid var(--border)',
+                  background: filterNiche === niche ? 'rgba(59, 130, 246,.18)' : 'rgba(255,255,255,.04)',
+                  border: filterNiche === niche ? '1px solid rgba(59, 130, 246,.4)' : '1px solid var(--border)',
                   color: filterNiche === niche ? 'var(--indigo-light)' : 'var(--muted)',
                   cursor: 'pointer',
                 }}
@@ -210,8 +210,8 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
               className="rounded-2xl overflow-hidden"
               style={{
                 background: 'var(--card)',
-                border: isOpen ? '1px solid rgba(99,102,241,.3)' : '1px solid var(--border)',
-                boxShadow: isOpen ? '0 4px 28px rgba(99,102,241,.08)' : 'none',
+                border: isOpen ? '1px solid rgba(59, 130, 246,.3)' : '1px solid var(--border)',
+                boxShadow: isOpen ? '0 4px 28px rgba(59, 130, 246,.08)' : 'none',
                 opacity: isDeleting ? 0.5 : 1,
                 transition: 'opacity .3s, border .2s, box-shadow .2s',
               }}
@@ -225,7 +225,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                 >
                   <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.14), rgba(124,58,237,.09))', border: '1px solid rgba(99,102,241,.18)' }}
+                    style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246,.14), rgba(37, 99, 235,.09))', border: '1px solid rgba(59, 130, 246,.18)' }}
                   >
                     {meta.emoji}
                   </div>
@@ -243,8 +243,8 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                     onClick={() => handleGenerateAgain(gen.niche)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
                     style={{
-                      background: 'rgba(99,102,241,.08)',
-                      border: '1px solid rgba(99,102,241,.18)',
+                      background: 'rgba(59, 130, 246,.08)',
+                      border: '1px solid rgba(59, 130, 246,.18)',
                       color: 'var(--indigo-light)',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
@@ -295,10 +295,10 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                     onClick={() => handleGenerateAgain(gen.niche)}
                     className="w-full rounded-xl py-3 text-sm font-black text-white transition-all"
                     style={{
-                      background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+                      background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
                       border: 'none',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 22px rgba(99,102,241,.3)',
+                      boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
                     }}
                   >
                     ⚡ Generate New {meta.name} Pack →

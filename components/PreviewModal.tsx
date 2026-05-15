@@ -57,8 +57,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
         className="w-full max-w-lg rounded-[22px] overflow-hidden animate-fade-in relative"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(99,102,241,.28)',
-          boxShadow: '0 0 100px rgba(99,102,241,.18)',
+          border: '1px solid rgba(59, 130, 246,.28)',
+          boxShadow: '0 0 100px rgba(59, 130, 246,.18)',
         }}
       >
         {/* Close */}
@@ -84,8 +84,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,.2), rgba(124,58,237,.14))',
-                border: '1px solid rgba(99,102,241,.28)',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246,.2), rgba(37, 99, 235,.14))',
+                border: '1px solid rgba(59, 130, 246,.28)',
               }}
             >
               {niche.emoji}
@@ -121,8 +121,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(99,102,241,.1)',
-                border: '1px solid rgba(99,102,241,.2)',
+                background: 'rgba(59, 130, 246,.1)',
+                border: '1px solid rgba(59, 130, 246,.2)',
                 color: 'var(--indigo-light)',
               }}
             >
@@ -143,8 +143,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
           <div
             className="rounded-[14px] p-4"
             style={{
-              background: 'rgba(99,102,241,.05)',
-              border: '1px solid rgba(99,102,241,.15)',
+              background: 'rgba(59, 130, 246,.05)',
+              border: '1px solid rgba(59, 130, 246,.15)',
             }}
           >
             {/* Hook */}
@@ -195,8 +195,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                     key={tag}
                     className="px-2 py-0.5 rounded-md text-xs font-medium"
                     style={{
-                      background: 'rgba(99,102,241,.1)',
-                      border: '1px solid rgba(99,102,241,.2)',
+                      background: 'rgba(59, 130, 246,.1)',
+                      border: '1px solid rgba(59, 130, 246,.2)',
                       color: 'var(--indigo-light)',
                     }}
                   >
@@ -224,8 +224,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             onClick={onConfirm}
             className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-black text-white mb-3 transition-all"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 6px 28px rgba(99,102,241,.45)',
+              background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+              boxShadow: '0 6px 28px rgba(59, 130, 246,.45)',
               animation: 'btn-pulse 2.8s ease-in-out infinite',
               border: 'none',
               cursor: 'pointer',

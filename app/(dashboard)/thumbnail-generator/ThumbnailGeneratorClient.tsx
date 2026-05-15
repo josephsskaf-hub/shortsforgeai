@@ -118,14 +118,14 @@ function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
         borderRadius: 12,
         cursor: 'pointer',
         border: selected
-          ? '2px solid #818cf8'
+          ? '2px solid #60A5FA'
           : hovered
-          ? '2px solid rgba(129,140,248,0.5)'
+          ? '2px solid rgba(96, 165, 250,0.5)'
           : '2px solid rgba(255,255,255,0.08)',
         boxShadow: selected
-          ? '0 0 32px rgba(99,102,241,0.45)'
+          ? '0 0 32px rgba(59, 130, 246,0.45)'
           : hovered
-          ? '0 0 20px rgba(99,102,241,0.2)'
+          ? '0 0 20px rgba(59, 130, 246,0.2)'
           : 'none',
         transition: 'all 0.18s ease',
         overflow: 'hidden',
@@ -160,12 +160,12 @@ function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
               style={{
                 background: 'rgba(0,0,0,0.6)',
                 backdropFilter: 'blur(8px)',
-                color: '#a5b4fc',
+                color: '#60A5FA',
                 fontSize: '0.72rem',
                 fontWeight: 700,
                 padding: '4px 10px',
                 borderRadius: 8,
-                border: '1px solid rgba(129,140,248,0.3)',
+                border: '1px solid rgba(96, 165, 250,0.3)',
               }}
             >
               #{index + 1}
@@ -173,7 +173,7 @@ function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
             <button
               onClick={(e) => { e.stopPropagation(); handleDownload() }}
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,
@@ -181,7 +181,7 @@ function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
                 fontSize: '0.76rem',
                 fontWeight: 800,
                 cursor: 'pointer',
-                boxShadow: '0 0 16px rgba(99,102,241,0.4)',
+                boxShadow: '0 0 16px rgba(59, 130, 246,0.4)',
               }}
             >
               ⬇ Download
@@ -200,12 +200,12 @@ function ThumbnailCard({ url, index, selected, onSelect }: ThumbnailCardProps) {
             width: 26,
             height: 26,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+            background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '0.9rem',
-            boxShadow: '0 0 12px rgba(99,102,241,0.5)',
+            boxShadow: '0 0 12px rgba(59, 130, 246,0.5)',
           }}
         >
           ✓
@@ -234,7 +234,7 @@ function YouTubeFeedPreview({ url }: { url: string }) {
         {/* Video info */}
         <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
           {/* Avatar */}
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', flexShrink: 0 }} />
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #2563EB)', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ height: 12, background: 'rgba(255,255,255,0.12)', borderRadius: 4, marginBottom: 6, width: '85%' }} />
             <div style={{ height: 10, background: 'rgba(255,255,255,0.07)', borderRadius: 4, marginBottom: 4, width: '60%' }} />
@@ -336,12 +336,12 @@ export default function ThumbnailGeneratorClient() {
               width: 44,
               height: 44,
               borderRadius: 13,
-              background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+              background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              boxShadow: '0 0 28px rgba(99,102,241,0.45)',
+              boxShadow: '0 0 28px rgba(59, 130, 246,0.45)',
               flexShrink: 0,
             }}
           >
@@ -352,7 +352,7 @@ export default function ThumbnailGeneratorClient() {
               style={{
                 fontSize: '1.45rem',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #f1f5f9, #a5b4fc)',
+                background: 'linear-gradient(135deg, #f1f5f9, #60A5FA)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 lineHeight: 1.1,
@@ -385,9 +385,9 @@ export default function ThumbnailGeneratorClient() {
             ) : (
               <span
                 style={{
-                  background: 'rgba(99,102,241,0.1)',
-                  border: '1px solid rgba(99,102,241,0.25)',
-                  color: '#a5b4fc',
+                  background: 'rgba(59, 130, 246,0.1)',
+                  border: '1px solid rgba(59, 130, 246,0.25)',
+                  color: '#60A5FA',
                   fontSize: '0.72rem',
                   fontWeight: 700,
                   padding: '5px 12px',
@@ -441,7 +441,7 @@ export default function ThumbnailGeneratorClient() {
                 boxSizing: 'border-box',
                 transition: 'border-color 0.15s',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(59, 130, 246,0.5)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
               maxLength={400}
             />
@@ -475,22 +475,22 @@ export default function ThumbnailGeneratorClient() {
                   style={{
                     background:
                       selectedStyle === s.id
-                        ? 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(124,58,237,0.14))'
+                        ? 'linear-gradient(135deg, rgba(59, 130, 246,0.2), rgba(37, 99, 235,0.14))'
                         : 'rgba(255,255,255,0.03)',
                     border:
                       selectedStyle === s.id
-                        ? '1px solid rgba(99,102,241,0.45)'
+                        ? '1px solid rgba(59, 130, 246,0.45)'
                         : '1px solid rgba(255,255,255,0.07)',
                     borderRadius: 10,
                     padding: '10px 12px',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    boxShadow: selectedStyle === s.id ? '0 0 16px rgba(99,102,241,0.2)' : 'none',
+                    boxShadow: selectedStyle === s.id ? '0 0 16px rgba(59, 130, 246,0.2)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                 >
                   <div style={{ fontSize: '1.1rem', marginBottom: 3 }}>{s.emoji}</div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: selectedStyle === s.id ? '#a5b4fc' : 'var(--text)', lineHeight: 1.1 }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: selectedStyle === s.id ? '#60A5FA' : 'var(--text)', lineHeight: 1.1 }}>
                     {s.label}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 2 }}>
@@ -522,9 +522,9 @@ export default function ThumbnailGeneratorClient() {
                     flex: 1,
                     padding: '10px 0',
                     borderRadius: 10,
-                    border: generateCount === n ? '1px solid rgba(99,102,241,0.45)' : '1px solid rgba(255,255,255,0.08)',
-                    background: generateCount === n ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
-                    color: generateCount === n ? '#a5b4fc' : 'var(--muted)',
+                    border: generateCount === n ? '1px solid rgba(59, 130, 246,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                    background: generateCount === n ? 'rgba(59, 130, 246,0.15)' : 'rgba(255,255,255,0.03)',
+                    color: generateCount === n ? '#60A5FA' : 'var(--muted)',
                     fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -538,7 +538,7 @@ export default function ThumbnailGeneratorClient() {
                         display: 'block',
                         fontSize: '0.6rem',
                         marginTop: 2,
-                        color: 'rgba(165,180,252,0.7)',
+                        color: 'rgba(96, 165, 250,0.7)',
                       }}
                     >
                       counts as 1
@@ -564,12 +564,12 @@ export default function ThumbnailGeneratorClient() {
               cursor: loading || !prompt.trim() || isLimitReached ? 'not-allowed' : 'pointer',
               background:
                 loading || !prompt.trim() || isLimitReached
-                  ? 'rgba(99,102,241,0.25)'
-                  : 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                  ? 'rgba(59, 130, 246,0.25)'
+                  : 'linear-gradient(135deg, #3B82F6, #2563EB)',
               boxShadow:
                 loading || !prompt.trim() || isLimitReached
                   ? 'none'
-                  : '0 0 32px rgba(99,102,241,0.4)',
+                  : '0 0 32px rgba(59, 130, 246,0.4)',
               transition: 'all 0.2s ease',
               letterSpacing: '0.02em',
             }}
@@ -587,8 +587,8 @@ export default function ThumbnailGeneratorClient() {
           {isLimitReached && (
             <div
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(124,58,237,0.08))',
-                border: '1px solid rgba(99,102,241,0.25)',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246,0.12), rgba(37, 99, 235,0.08))',
+                border: '1px solid rgba(59, 130, 246,0.25)',
                 borderRadius: 13,
                 padding: 16,
                 textAlign: 'center',
@@ -604,14 +604,14 @@ export default function ThumbnailGeneratorClient() {
                 href="/pricing"
                 style={{
                   display: 'inline-block',
-                  background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
                   color: '#fff',
                   textDecoration: 'none',
                   borderRadius: 9,
                   padding: '9px 24px',
                   fontSize: '0.82rem',
                   fontWeight: 800,
-                  boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+                  boxShadow: '0 0 20px rgba(59, 130, 246,0.3)',
                 }}
               >
                 ⚡ Upgrade to Pro →
@@ -662,11 +662,11 @@ export default function ThumbnailGeneratorClient() {
           {showOptimized && optimizedPrompt && (
             <div
               style={{
-                background: 'rgba(99,102,241,0.06)',
-                border: '1px solid rgba(99,102,241,0.18)',
+                background: 'rgba(59, 130, 246,0.06)',
+                border: '1px solid rgba(59, 130, 246,0.18)',
                 borderRadius: 10,
                 padding: '12px 14px',
-                color: 'rgba(165,180,252,0.85)',
+                color: 'rgba(96, 165, 250,0.85)',
                 fontSize: '0.73rem',
                 lineHeight: 1.6,
                 fontStyle: 'italic',
@@ -697,7 +697,7 @@ export default function ThumbnailGeneratorClient() {
                 <button
                   onClick={handleDownloadSelected}
                   style={{
-                    background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
@@ -705,7 +705,7 @@ export default function ThumbnailGeneratorClient() {
                     fontSize: '0.76rem',
                     fontWeight: 800,
                     cursor: 'pointer',
-                    boxShadow: '0 0 14px rgba(99,102,241,0.35)',
+                    boxShadow: '0 0 14px rgba(59, 130, 246,0.35)',
                   }}
                 >
                   ⬇ Download HD
@@ -789,13 +789,13 @@ export default function ThumbnailGeneratorClient() {
           {/* Pro features teaser */}
           <div
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(124,58,237,0.06))',
-              border: '1px solid rgba(99,102,241,0.2)',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246,0.08), rgba(37, 99, 235,0.06))',
+              border: '1px solid rgba(59, 130, 246,0.2)',
               borderRadius: 14,
               padding: 18,
             }}
           >
-            <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#a5b4fc', marginBottom: 10 }}>
+            <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#60A5FA', marginBottom: 10 }}>
               ⚡ Pro Features
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -808,7 +808,7 @@ export default function ThumbnailGeneratorClient() {
               ].map((f) => (
                 <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <span style={{ fontSize: '0.9rem' }}>{f.icon}</span>
-                  <span style={{ fontSize: '0.76rem', color: 'rgba(165,180,252,0.85)' }}>{f.text}</span>
+                  <span style={{ fontSize: '0.76rem', color: 'rgba(96, 165, 250,0.85)' }}>{f.text}</span>
                 </div>
               ))}
             </div>

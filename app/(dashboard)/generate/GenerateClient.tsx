@@ -134,8 +134,8 @@ const TRENDING_HOOKS: { text: string; category: string }[] = [
 ]
 
 const HOOK_CATEGORY_COLOR: Record<string, { fg: string; bg: string; border: string }> = {
-  Mystery: { fg: '#a78bfa', bg: 'rgba(167,139,250,.10)', border: 'rgba(167,139,250,.30)' },
-  History: { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.30)' },
+  Mystery: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
+  History: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
   Facts: { fg: '#93c5fd', bg: 'rgba(147,197,253,.10)', border: 'rgba(147,197,253,.30)' },
   Nature: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
 }
@@ -850,12 +850,12 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(37,99,235,.15)',
-                  border: '1px solid rgba(37,99,235,.35)',
-                  color: '#93c5fd',
+                  background: 'rgba(59, 130, 246,.10)',
+                  border: '1px solid rgba(59, 130, 246,.35)',
+                  color: '#3B82F6',
                 }}
               >
-                AI Video
+                {showStep1 ? 'Step 1 — Your Idea' : showStep2 ? 'Step 2 — Creative Brief' : 'Step 3 — Generate'}
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
@@ -972,9 +972,9 @@ export default function GenerateClient() {
                   onClick={() => setDuration(opt.value)}
                   className="rounded-full px-4 py-1.5 text-sm font-bold"
                   style={{
-                    background: duration === opt.value ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                    border: duration === opt.value ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
-                    color: duration === opt.value ? '#fff' : 'var(--muted)',
+                    background: duration === opt.value ? '#3B82F6' : 'rgba(255,255,255,.04)',
+                    border: duration === opt.value ? '1px solid rgba(59, 130, 246,.65)' : '1px solid var(--border)',
+                    color: duration === opt.value ? '#FFFFFF' : 'var(--muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
@@ -1004,27 +1004,27 @@ export default function GenerateClient() {
                     onClick={() => setQuality(q.key)}
                     className="rounded-xl p-4 text-left"
                     style={{
-                      background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
-                      border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+                      background: selected ? 'rgba(59, 130, 246,.10)' : 'rgba(255,255,255,.03)',
+                      border: selected ? '1px solid rgba(59, 130, 246,.55)' : '1px solid var(--border)',
                       cursor: 'pointer',
                       transition: 'all 0.15s',
-                      boxShadow: selected ? '0 0 22px rgba(37,99,235,.18)' : 'none',
+                      boxShadow: selected ? '0 0 22px rgba(59, 130, 246,.15)' : 'none',
                     }}
                   >
                     <div className="flex items-center gap-1.5 mb-1">
                       <span>{q.icon}</span>
                       <span
                         className="text-sm font-black"
-                        style={{ color: selected ? '#93c5fd' : 'var(--text)' }}
+                        style={{ color: selected ? '#3B82F6' : 'var(--text)' }}
                       >
                         {q.title}
                       </span>
                       <span
                         className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
                         style={{
-                          background: 'rgba(37,99,235,.18)',
-                          color: '#93c5fd',
-                          border: '1px solid rgba(37,99,235,.3)',
+                          background: 'rgba(59, 130, 246,.14)',
+                          color: '#3B82F6',
+                          border: '1px solid rgba(59, 130, 246,.3)',
                         }}
                       >
                         {q.credits} credit{q.credits > 1 ? 's' : ''}
@@ -1046,19 +1046,19 @@ export default function GenerateClient() {
             <button
               onClick={() => handleAnalyze()}
               disabled={phase === 'analyzing' || !prompt.trim()}
-              className="rounded-xl px-6 py-2.5 text-sm font-black text-white flex items-center gap-2"
+              className="rounded-xl px-6 py-2.5 text-sm font-black flex items-center gap-2"
               style={{
                 background:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
-                    : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                    : '#3B82F6',
                 border: 'none',
                 cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
-                color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#fff',
+                color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'none'
-                    : '0 8px 28px rgba(37,99,235,.4)',
+                    : '0 8px 28px rgba(59, 130, 246,.35)',
               }}
             >
               {phase === 'analyzing' ? (
@@ -1251,12 +1251,13 @@ export default function GenerateClient() {
               </div>
               <button
                 onClick={handleGenerate}
-                className="rounded-xl px-6 py-3 text-sm font-black text-white flex items-center gap-2"
+                className="rounded-xl px-6 py-3 text-sm font-black flex items-center gap-2"
                 style={{
-                  background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                  background: '#3B82F6',
+                  color: '#FFFFFF',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 28px rgba(37,99,235,.4)',
+                  boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
                 }}
               >
                 Generate • {selectedCost} credits
@@ -1307,8 +1308,8 @@ export default function GenerateClient() {
               <div
                 className="rounded-xl px-3 py-2 mt-4 text-xs"
                 style={{
-                  background: 'rgba(99,102,241,.06)',
-                  border: '1px solid rgba(99,102,241,.20)',
+                  background: 'rgba(59, 130, 246,.06)',
+                  border: '1px solid rgba(59, 130, 246,.20)',
                   color: 'var(--muted2)',
                   lineHeight: 1.55,
                 }}
@@ -1721,7 +1722,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
       return { label: 'Completed', fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)' }
     if (s === 'failed' || s === 'cancelled')
       return { label: 'Failed', fg: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)' }
-    return { label: 'Processing', fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.32)' }
+    return { label: 'Processing', fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)' }
   }
 
   function formatDate(iso: string): string {
@@ -1784,7 +1785,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
                 style={{
                   background: v.thumbnail_url
                     ? `center / cover no-repeat url(${v.thumbnail_url})`
-                    : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12))',
+                    : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
                   aspectRatio: '9 / 16',
                   position: 'relative',
                 }}
@@ -1925,7 +1926,7 @@ function PipelineStages({
 
   const stages: { label: string; sub: string; status: StageStatus }[] = [
     {
-      label: 'Creating cinematic visuals',
+      label: 'Creating visuals',
       sub: 'AI scene model',
       status: visualsDone ? 'done' : visualsActive ? 'active' : 'queued',
     },
@@ -2044,7 +2045,7 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
     viralScore >= 75
       ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong viral signal' }
       : viralScore >= 50
-      ? { color: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.32)', label: 'Could be sharper' }
+      ? { color: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)', label: 'Could be sharper' }
       : { color: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)', label: 'Needs work' }
   const ratingLabel: Record<HookRating, string> = {
     weak: 'Weak',
@@ -2188,20 +2189,20 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
         <div
           className="rounded-xl p-4 mt-3"
           style={{
-            background: 'rgba(251,191,36,.06)',
-            border: '1px solid rgba(251,191,36,.30)',
+            background: 'rgba(34, 211, 238,.06)',
+            border: '1px solid rgba(34, 211, 238,.30)',
           }}
         >
           <div
             className="text-[10px] font-black uppercase tracking-widest mb-2"
-            style={{ color: '#fbbf24' }}
+            style={{ color: '#22D3EE' }}
           >
             How to push the score higher
           </div>
           <ul className="space-y-1.5 text-xs" style={{ color: 'var(--text2)', paddingLeft: 0, listStyle: 'none' }}>
             {improvementSuggestions.map((n, i) => (
               <li key={i} style={{ display: 'flex', gap: 6 }}>
-                <span style={{ color: '#fbbf24', fontWeight: 800 }}>→</span>
+                <span style={{ color: '#22D3EE', fontWeight: 800 }}>→</span>
                 <span style={{ lineHeight: 1.5 }}>{n}</span>
               </li>
             ))}
@@ -2258,9 +2259,9 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
       <div
         className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
         style={{
-          background: low ? 'rgba(251,191,36,.10)' : 'rgba(52,211,153,.08)',
-          border: low ? '1px solid rgba(251,191,36,.35)' : '1px solid rgba(52,211,153,.30)',
-          color: low ? '#fbbf24' : '#34d399',
+          background: low ? 'rgba(34, 211, 238,.10)' : 'rgba(52,211,153,.08)',
+          border: low ? '1px solid rgba(34, 211, 238,.35)' : '1px solid rgba(52,211,153,.30)',
+          color: low ? '#22D3EE' : '#34d399',
         }}
       >
         <span
@@ -2269,16 +2270,16 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: low ? '#fbbf24' : '#34d399',
-            boxShadow: low ? '0 0 8px rgba(251,191,36,.5)' : '0 0 8px rgba(52,211,153,.5)',
+            background: low ? '#22D3EE' : '#34d399',
+            boxShadow: low ? '0 0 8px rgba(34, 211, 238,.5)' : '0 0 8px rgba(52,211,153,.5)',
             display: 'inline-block',
           }}
         />
         You have {credits} credit{credits === 1 ? '' : 's'} left
       </div>
       {low && (
-        <p className="text-[11px] mt-1.5" style={{ color: '#fbbf24', fontWeight: 600 }}>
-          Low credits. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Upgrade to keep generating.</a>
+        <p className="text-[11px] mt-1.5" style={{ color: '#22D3EE', fontWeight: 600 }}>
+          Low credits. <a href="/pricing" style={{ color: '#22D3EE', textDecoration: 'underline' }}>Upgrade to keep generating.</a>
         </p>
       )}
     </div>
@@ -2443,8 +2444,8 @@ function NextActionSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
       style={{
-        background: 'linear-gradient(135deg, rgba(99,102,241,.10), rgba(124,58,237,.06))',
-        border: '1px solid rgba(99,102,241,.28)',
+        background: 'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(37, 99, 235,.06))',
+        border: '1px solid rgba(59, 130, 246,.28)',
       }}
     >
       <h3 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
@@ -2459,10 +2460,10 @@ function NextActionSection({
           onClick={onAnother}
           className="rounded-xl px-5 py-3 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #2563EB 0%, #2563EB 55%, #22D3EE 100%)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 6px 22px rgba(99,102,241,.4)',
+            boxShadow: '0 6px 22px rgba(59, 130, 246,.4)',
           }}
         >
           ⚡ Generate Another Short

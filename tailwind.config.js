@@ -11,28 +11,36 @@ module.exports = {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
-        bg: '#08080f',
-        bg2: '#0b0b18',
-        bg3: '#0e0e1c',
-        card: '#0f0f1e',
-        card2: '#13132a',
-        sidebar: '#09091a',
+        bg: '#05070D',
+        bg2: '#0B1020',
+        bg3: '#0B1020',
+        card: '#151C2F',
+        card2: '#151C2F',
+        sidebar: '#0B1020',
+        cyberBlue: {
+          bg: '#05070D',
+          bgSecondary: '#0B1020',
+          card: '#151C2F',
+          accent: '#3B82F6',
+          glow: '#22D3EE',
+          cta: '#2563EB',
+        },
         indigo: {
-          DEFAULT: '#6366f1',
-          light: '#818cf8',
-          dark: '#4338ca',
+          DEFAULT: '#3B82F6',
+          light: '#60A5FA',
+          dark: '#1D4ED8',
         },
         purple: {
-          DEFAULT: '#7c3aed',
-          light: '#a78bfa',
+          DEFAULT: '#3B82F6',
+          light: '#22D3EE',
         },
       },
       backgroundImage: {
-        'gradient-brand': 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
+        'gradient-brand': 'linear-gradient(135deg, #2563EB 0%, #3B82F6 55%, #22D3EE 100%)',
       },
       boxShadow: {
-        glow: '0 0 40px rgba(99,102,241,.3)',
-        'glow-lg': '0 0 80px rgba(99,102,241,.4), 0 0 160px rgba(99,102,241,.1)',
+        glow: '0 0 40px rgba(34,211,238,.18)',
+        'glow-lg': '0 0 80px rgba(59,130,246,.25), 0 0 160px rgba(34,211,238,.08)',
       },
       animation: {
         'btn-pulse': 'btn-pulse 2.8s ease-in-out infinite',
@@ -41,8 +49,8 @@ module.exports = {
       },
       keyframes: {
         'btn-pulse': {
-          '0%, 100%': { boxShadow: '0 4px 22px rgba(99,102,241,.28), 0 0 0px rgba(124,58,237,0)' },
-          '50%': { boxShadow: '0 4px 38px rgba(99,102,241,.6), 0 0 32px rgba(124,58,237,.38)' },
+          '0%, 100%': { boxShadow: '0 4px 22px rgba(59,130,246,.28), 0 0 0px rgba(34,211,238,0)' },
+          '50%': { boxShadow: '0 4px 38px rgba(59,130,246,.6), 0 0 32px rgba(34,211,238,.38)' },
         },
         fadeIn: {
           from: { opacity: '0', transform: 'translateY(12px)' },

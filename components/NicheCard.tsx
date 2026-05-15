@@ -30,18 +30,18 @@ export default function NicheCard({
     <div
       className="rounded-2xl p-6 cursor-pointer transition-all duration-200 relative overflow-hidden group"
       style={{
-        background: selected ? 'rgba(99,102,241,.13)' : 'rgba(15,15,30,0.6)',
+        background: selected ? 'rgba(59, 130, 246,.13)' : 'rgba(15,15,30,0.6)',
         backdropFilter: 'blur(16px) saturate(140%)',
         WebkitBackdropFilter: 'blur(16px) saturate(140%)',
-        border: selected ? '1.5px solid rgba(99,102,241,.65)' : '1px solid rgba(255,255,255,0.08)',
-        boxShadow: selected ? '0 0 0 1px rgba(99,102,241,.25) inset, 0 8px 36px rgba(99,102,241,.22)' : 'none',
+        border: selected ? '1.5px solid rgba(59, 130, 246,.65)' : '1px solid rgba(255,255,255,0.08)',
+        boxShadow: selected ? '0 0 0 1px rgba(59, 130, 246,.25) inset, 0 8px 36px rgba(59, 130, 246,.22)' : 'none',
       }}
       onMouseEnter={(e) => {
         if (selected) return
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,.45)'
+        el.style.borderColor = 'rgba(59, 130, 246,.45)'
         el.style.transform = 'scale(1.02) translateY(-2px)'
-        el.style.boxShadow = '0 12px 40px rgba(99,102,241,.18)'
+        el.style.boxShadow = '0 12px 40px rgba(59, 130, 246,.18)'
       }}
       onMouseLeave={(e) => {
         if (selected) return
@@ -55,7 +55,7 @@ export default function NicheCard({
       {selected && (
         <div
           className="absolute inset-0 pointer-events-none rounded-2xl"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.1), rgba(124,58,237,.06) 70%)', zIndex: 0 }}
+          style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246,.1), rgba(37, 99, 235,.06) 70%)', zIndex: 0 }}
         />
       )}
 
@@ -63,7 +63,7 @@ export default function NicheCard({
       {!selected && (
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,.08), transparent 70%)' }}
+          style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246,.08), transparent 70%)' }}
         />
       )}
 
@@ -73,9 +73,9 @@ export default function NicheCard({
           className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-all duration-300 group-hover:scale-110"
           style={{
             background: selected
-              ? 'linear-gradient(135deg, rgba(99,102,241,.25), rgba(124,58,237,.18))'
-              : 'linear-gradient(135deg, rgba(99,102,241,.14), rgba(124,58,237,.09))',
-            border: selected ? '1px solid rgba(99,102,241,.4)' : '1px solid rgba(99,102,241,.18)',
+              ? 'linear-gradient(135deg, rgba(59, 130, 246,.25), rgba(37, 99, 235,.18))'
+              : 'linear-gradient(135deg, rgba(59, 130, 246,.14), rgba(37, 99, 235,.09))',
+            border: selected ? '1px solid rgba(59, 130, 246,.4)' : '1px solid rgba(59, 130, 246,.18)',
           }}
         >
           {emoji}
@@ -83,16 +83,16 @@ export default function NicheCard({
         {selected ? (
           <div
             className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
-            style={{ background: 'rgba(99,102,241,.18)', border: '1px solid rgba(99,102,241,.35)' }}
+            style={{ background: 'rgba(59, 130, 246,.18)', border: '1px solid rgba(59, 130, 246,.35)' }}
           >
             <span className="text-xs font-black" style={{ color: 'var(--indigo-light)', fontSize: '0.6rem' }}>✓ Selected</span>
           </div>
         ) : badge && badge !== 'Live' ? (
           <div
             className="flex items-center px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)' }}
+            style={{ background: 'rgba(59, 130, 246,.15)', border: '1px solid rgba(59, 130, 246,.3)' }}
           >
-            <span className="text-xs font-black uppercase tracking-wide" style={{ color: '#818cf8', fontSize: '0.55rem' }}>{badge}</span>
+            <span className="text-xs font-black uppercase tracking-wide" style={{ color: '#60A5FA', fontSize: '0.55rem' }}>{badge}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -117,8 +117,8 @@ export default function NicheCard({
             key={tag}
             className="text-xs font-semibold px-2 py-0.5 rounded-md"
             style={{
-              background: selected ? 'rgba(99,102,241,.15)' : 'rgba(99,102,241,.09)',
-              border: selected ? '1px solid rgba(99,102,241,.28)' : '1px solid rgba(99,102,241,.14)',
+              background: selected ? 'rgba(59, 130, 246,.15)' : 'rgba(59, 130, 246,.09)',
+              border: selected ? '1px solid rgba(59, 130, 246,.28)' : '1px solid rgba(59, 130, 246,.14)',
               color: 'var(--indigo-light)',
               fontSize: '0.58rem',
             }}
@@ -136,9 +136,9 @@ export default function NicheCard({
         style={{
           background:
             disabled || loading
-              ? 'rgba(99,102,241,.3)'
-              : 'linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #a855f7 100%)',
-          boxShadow: disabled || loading ? 'none' : selected ? '0 6px 28px rgba(99,102,241,.45)' : '0 4px 22px rgba(99,102,241,.28)',
+              ? 'rgba(59, 130, 246,.3)'
+              : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+          boxShadow: disabled || loading ? 'none' : selected ? '0 6px 28px rgba(59, 130, 246,.45)' : '0 4px 22px rgba(59, 130, 246,.28)',
           animation: disabled || loading ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
           cursor: disabled || loading ? 'not-allowed' : 'pointer',
           letterSpacing: '-0.01em',
