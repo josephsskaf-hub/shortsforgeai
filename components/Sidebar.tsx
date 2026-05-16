@@ -256,7 +256,7 @@ export default function Sidebar({
               <span style={{ color: '#22D3EE' }}>AI</span>
             </div>
             <span
-              aria-label="version 1.2"
+              aria-label="version 1.5"
               style={{
                 fontSize: '0.65rem',
                 color: '#94A3B8',
@@ -265,7 +265,7 @@ export default function Sidebar({
                 lineHeight: 1,
               }}
             >
-              v1.2
+              v1.5
             </span>
           </div>
         </Link>

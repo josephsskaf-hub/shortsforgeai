@@ -23,44 +23,57 @@ interface ShowcaseCard {
   title: string
   prompt: string
   accent: string
+  videoUrl: string
 }
 
+// Push #082 — real video showcase. Each card loops a short royalty-free
+// clip from Mixkit's free preview CDN as the poster. The clip is muted +
+// autoplay + playsInline so it works on mobile without user gesture, and
+// preload="metadata" keeps the page from downloading 6 full MP4s up front.
+// If the video errors out (CDN blocked, offline, etc.), we fall back to
+// the original gradient poster.
 const SHOWCASE: ShowcaseCard[] = [
   {
     category: 'Space Mystery',
     title: 'What NASA hides about the Moon',
     prompt: 'Cinematic space mystery short about unexplained Moon anomalies that NASA never explained',
     accent: '#22D3EE',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-1610-large.mp4',
   },
   {
     category: 'History Facts',
     title: 'The Roman invention we still use',
     prompt: 'Fast-paced history facts short about a Roman invention that still powers daily life today',
     accent: '#F59E0B',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-closeup-of-pavement-taken-in-an-overhead-view-19088-large.mp4',
   },
   {
     category: 'Hidden Places',
     title: 'Cities erased from every map',
     prompt: 'Dark cinematic short about real hidden cities that governments removed from world maps',
     accent: '#A78BFA',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-top-aerial-shot-of-seashore-with-rocks-1090-large.mp4',
   },
   {
     category: 'Cold Case',
     title: 'The case that broke the FBI',
     prompt: 'Suspenseful cold case short about an unsolved FBI investigation with chilling details',
     accent: '#F87171',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-going-down-a-curved-highway-through-a-mountain-range-41576-large.mp4',
   },
   {
     category: 'Weird Facts',
     title: 'Facts your brain refuses to believe',
     prompt: 'Punchy weird facts short with 5 facts that sound fake but are 100% true',
     accent: '#34D399',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4',
   },
   {
     category: 'Money Psychology',
     title: 'Why the rich think differently',
     prompt: 'Money psychology short about the mental habits that separate the wealthy from everyone else',
     accent: '#60A5FA',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-white-sand-beach-and-palm-trees-1564-large.mp4',
   },
 ]
 
@@ -212,7 +225,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 <span className="text-white">Forge</span>
                 <span className="text-cyan-400">AI</span>
               </span>
-              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.2</span>
+              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.5</span>
             </div>
           </Link>
 
@@ -445,75 +458,17 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </p>
         </div>
 
-        {/* Push #081 — 2 cols on mobile, 3 cols on desktop. Removed
-            horizontal scroll so all six cards are visible without a
-            swipe; broken/blank cards are impossible because each card
-            paints its own gradient poster from the accent color. */}
+        {/* Push #082 — real playable previews. Cards are now 9:16 (YouTube
+            Shorts) with a muted autoplay loop sourced from a royalty-free
+            CDN. The gradient poster stays as a fallback for slow networks
+            and as a paint target before the video's first frame lands. */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
           {SHOWCASE.map((card) => (
-            <div
+            <ShowcaseVideoCard
               key={card.title}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]"
-            >
-              {/* Static "thumbnail" — no autoplay video, just a gradient
-                  block tinted with the card's accent so the grid reads as
-                  a video-thumbnail wall without the perf cost. */}
-              <div
-                aria-hidden
-                className="relative aspect-video w-full overflow-hidden"
-                style={{
-                  background: `linear-gradient(135deg, ${card.accent}22 0%, #0B1120 70%)`,
-                }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: `radial-gradient(circle at 30% 30%, ${card.accent}33, transparent 60%)`,
-                  }}
-                />
-                <div className="absolute left-3 top-3">
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em]"
-                    style={{
-                      background: `${card.accent}22`,
-                      color: card.accent,
-                      border: `1px solid ${card.accent}55`,
-                    }}
-                  >
-                    {card.category}
-                  </span>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-md"
-                    style={{
-                      background: 'rgba(11,17,32,.55)',
-                      border: `1px solid ${card.accent}66`,
-                      boxShadow: `0 0 24px ${card.accent}44`,
-                    }}
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M8 5v14l11-7z" fill={card.accent} />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
-                <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title}</h3>
-                <p className="hidden text-[12px] text-[#94A3B8] line-clamp-2 sm:block">
-                  {card.prompt}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => goToShowcase(card.prompt)}
-                  className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
-                >
-                  <span>Generate similar</span>
-                  <span style={{ color: card.accent }}>→</span>
-                </button>
-              </div>
-            </div>
+              card={card}
+              onGenerate={() => goToShowcase(card.prompt)}
+            />
           ))}
         </div>
       </section>
@@ -660,6 +615,135 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI</p>
         </div>
       </footer>
+    </div>
+  )
+}
+
+// Showcase card with an embedded looping video poster. The video element
+// is the visual heart of the card; the gradient backdrop is both the
+// initial paint (before the first frame) and the fallback if the CDN
+// fails. We fade the video in on `canplay` to avoid the harsh swap from
+// gradient to first-frame-black that some browsers do.
+function ShowcaseVideoCard({
+  card,
+  onGenerate,
+}: {
+  card: ShowcaseCard
+  onGenerate: () => void
+}) {
+  const [videoReady, setVideoReady] = useState(false)
+  const [videoFailed, setVideoFailed] = useState(false)
+
+  return (
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
+      {/* 9:16 vertical preview — matches the YouTube Shorts format the
+          rest of the product is built around. */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{
+          aspectRatio: '9 / 16',
+          background: `linear-gradient(135deg, ${card.accent}22 0%, #0B1120 70%)`,
+        }}
+      >
+        {/* Gradient poster — always painted, sits behind the video so we
+            never show a black box during load and so a failed CDN load
+            falls back to the original look. */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(circle at 30% 30%, ${card.accent}33, transparent 60%)`,
+          }}
+        />
+
+        {!videoFailed && (
+          <video
+            src={card.videoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onCanPlay={() => setVideoReady(true)}
+            onError={() => setVideoFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-out group-hover:scale-[1.02]"
+            style={{ opacity: videoReady ? 1 : 0, transform: 'translateZ(0)' }}
+          />
+        )}
+
+        {/* Subtle dark gradient overlay so the category chip + play badge
+            stay legible against bright frames. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(11,17,32,0.55) 0%, rgba(11,17,32,0) 35%, rgba(11,17,32,0) 65%, rgba(11,17,32,0.65) 100%)',
+          }}
+        />
+
+        <div className="absolute left-3 top-3 z-10">
+          <span
+            className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-md"
+            style={{
+              background: `${card.accent}22`,
+              color: card.accent,
+              border: `1px solid ${card.accent}55`,
+            }}
+          >
+            {card.category}
+          </span>
+        </div>
+
+        {/* Format badge — bottom-left, matches the 9:16 product spec. */}
+        <div className="absolute bottom-3 left-3 z-10">
+          <span
+            className="rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] backdrop-blur-md"
+            style={{
+              background: 'rgba(11,17,32,.55)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: '#F1F5F9',
+            }}
+          >
+            9:16
+          </span>
+        </div>
+
+        {/* Only show the central play affordance while the video isn't
+            playing yet (or has failed) — once it's looping we get out of
+            the way. */}
+        {!videoReady && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-md transition-transform duration-200 group-hover:scale-110"
+              style={{
+                background: 'rgba(11,17,32,.55)',
+                border: `1px solid ${card.accent}66`,
+                boxShadow: `0 0 24px ${card.accent}44`,
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 5v14l11-7z" fill={card.accent} />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
+        <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title}</h3>
+        <p className="hidden text-[12px] text-[#94A3B8] line-clamp-2 sm:block">
+          {card.prompt}
+        </p>
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
+        >
+          <span>Generate similar</span>
+          <span style={{ color: card.accent }}>→</span>
+        </button>
+      </div>
     </div>
   )
 }

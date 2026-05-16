@@ -65,7 +65,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/`,
       },
     })
 
@@ -102,10 +102,12 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
       body: JSON.stringify({ email }),
     }).catch(() => {/* ignore email errors */})
 
-    // Try immediate sign-in (if email confirmation is disabled)
+    // Try immediate sign-in (if email confirmation is disabled).
+    // After signup we send users to the home page so they land in the marketing
+    // funnel — not straight into the generator.
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (!signInError) {
-      window.location.assign('/generate')
+      window.location.assign('/')
     } else {
       setEmailSent(true)
       setLoading(false)
