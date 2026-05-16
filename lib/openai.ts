@@ -81,6 +81,9 @@ const HIGHLIGHT_CANDIDATES = [
   'strange', 'hidden', 'vanished', 'signal', 'mystery', 'impossible',
   'forbidden', 'unknown', 'discovered', 'secret', 'ancient', 'bizarre',
   'haunted', 'cursed', 'lost', 'found', 'real',
+  // Push #081 — broaden the keyword pool so finance/luxury topics also
+  // get a colored caption word, not just mystery scripts.
+  'wealth', 'rare', 'shocking', 'banned', 'leaked', 'exposed',
 ]
 
 const STOPWORDS = new Set([
