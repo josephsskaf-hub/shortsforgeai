@@ -1,8 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
@@ -13,18 +12,16 @@ function safeRedirect(raw: string | null): string {
   return raw
 }
 
-// Wrap the searchParams-consuming form in a Suspense boundary — Next.js 14
-// requires this when a client page reads useSearchParams during prerender.
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
-  )
+// Read the ?redirect= param at call time from window.location. Avoiding
+// useSearchParams keeps the page out of Next.js' prerender Suspense path —
+// otherwise the form renders as an empty body on first paint.
+function getRedirect(): string {
+  if (typeof window === 'undefined') return '/dashboard'
+  const params = new URLSearchParams(window.location.search)
+  return safeRedirect(params.get('redirect'))
 }
 
-function LoginForm() {
-  const searchParams = useSearchParams()
+export default function LoginPage() {
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -42,7 +39,7 @@ function LoginForm() {
     let cancelled = false
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled || !session) return
-      window.location.replace(safeRedirect(searchParams.get('redirect')))
+      window.location.replace(getRedirect())
     })
     return () => {
       cancelled = true
@@ -76,8 +73,7 @@ function LoginForm() {
     // Hard navigate so the Next.js middleware sees the freshly-set Supabase
     // auth cookies on the next request. router.push + router.refresh used to
     // race the cookie sync and leave the UI stuck on "Signing in...".
-    const dest = safeRedirect(searchParams.get('redirect'))
-    window.location.assign(dest)
+    window.location.assign(getRedirect())
   }
 
   return (
