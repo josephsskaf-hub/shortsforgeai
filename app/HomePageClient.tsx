@@ -693,8 +693,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     above and the 50% off launch strip on the headline. */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
                   {plan.tier === 'free' && 'No credit card required'}
-                  {plan.tier === 'basic' && '50 Fast Mode videos / month'}
-                  {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic / month'}
+                  {plan.tier === 'basic' && '50 Fast Mode videos/month'}
+                  {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic/month'}
                 </p>
               </div>
             )
@@ -914,22 +914,23 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   if (tier === 'free') {
     return [
       `${PLANS.free.credits} Fast Mode videos`,
-      'Analyze ideas before rendering',
-      'Try AI video generation',
-      'Credits charged only on successful video',
+      'Pexels footage + AI voiceover',
+      'Watermark-free MP4',
+      'Try the platform',
     ]
   }
   if (tier === 'basic') {
     return [
-      `${PLANS.basic.credits} Fast Mode videos / month`,
+      `${PLANS.basic.credits} Fast Mode videos/month`,
+      'Pexels footage + AI voiceover',
       'Voiceover + captions',
       'Download MP4',
       'My Videos history',
     ]
   }
   return [
-    `${PLANS.pro.credits} Fast Mode videos / month`,
-    '1 Cinematic (Runway AI) video / month',
+    `${PLANS.pro.credits} Fast Mode videos/month`,
+    '1 Cinematic (Runway AI) video/month',
     'Better generation settings',
     'Voiceover + captions',
     'Download MP4',

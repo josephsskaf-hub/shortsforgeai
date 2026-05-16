@@ -21,22 +21,23 @@ import { PLANS } from '@/lib/pricing'
 // counts can't drift between the homepage, /pricing, and this in-flow
 // upgrade card.
 const FREE_FEATURES = [
-  `${PLANS.free.credits} credits`,
-  'Analyze ideas before rendering',
-  'Try AI video generation',
-  'Credits charged only on successful video',
+  `${PLANS.free.credits} Fast Mode videos`,
+  'Pexels footage + AI voiceover',
+  'Watermark-free MP4',
+  'Try the platform',
 ]
 
 const BASIC_FEATURES = [
-  `${PLANS.basic.credits} Fast Mode videos / month`,
+  `${PLANS.basic.credits} Fast Mode videos/month`,
+  'Pexels footage + AI voiceover',
   'Voiceover + captions',
   'Download MP4',
   'My Videos history',
 ]
 
 const PRO_FEATURES = [
-  `${PLANS.pro.credits} Fast Mode videos / month`,
-  '1 Cinematic (Runway AI) video / month',
+  `${PLANS.pro.credits} Fast Mode videos/month`,
+  '1 Cinematic (Runway AI) video/month',
   'Better generation settings',
   'Voiceover + captions',
   'Download MP4',
@@ -127,7 +128,7 @@ export default function PricingCards() {
           price={PLANS.basic.priceLabel}
           period="first month"
           renewNote={`then ${PLANS.basic.regularPrice}`}
-          tagline={`${PLANS.basic.credits} Fast Mode videos / month.`}
+          tagline={`${PLANS.basic.credits} Fast Mode videos/month.`}
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
@@ -149,7 +150,7 @@ export default function PricingCards() {
           price={PLANS.pro.priceLabel}
           period="first month"
           renewNote={`then ${PLANS.pro.regularPrice}`}
-          tagline={`${PLANS.pro.credits} Fast Mode + 1 Cinematic / month.`}
+          tagline={`${PLANS.pro.credits} Fast Mode + 1 Cinematic/month.`}
           features={PRO_FEATURES}
           badge="Recommended"
           highlight
