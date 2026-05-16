@@ -9,7 +9,7 @@
 // that don't have a video_url yet.
 
 import Link from 'next/link'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 export interface VideoRow {
   id: string
@@ -81,6 +81,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  // Push #100 — mobile tap-to-play: only one card pinned at a time so
+  // tapping a new card auto-pauses the previously playing one.
+  const [playingId, setPlayingId] = useState<string | null>(null)
 
   const counts = useMemo(() => {
     const c = { all: videos.length, completed: 0, processing: 0, failed: 0 }
@@ -200,6 +203,10 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
               onCopy={() => handleCopyLink(v)}
               onDownload={() => handleDownload(v)}
               isDownloading={downloadingId === v.id}
+              isPinned={playingId === v.id}
+              onTogglePin={() =>
+                setPlayingId((curr) => (curr === v.id ? null : v.id))
+              }
             />
           ))}
         </div>
@@ -228,12 +235,16 @@ function VideoCard({
   onCopy,
   onDownload,
   isDownloading,
+  isPinned,
+  onTogglePin,
 }: {
   video: VideoRow
   isCopied: boolean
   onCopy: () => void
   onDownload: () => void
   isDownloading: boolean
+  isPinned: boolean
+  onTogglePin: () => void
 }) {
   const chip = statusChip(v.status)
   const playable = v.status === 'completed' && !!v.video_url
@@ -245,21 +256,32 @@ function VideoCard({
   const [hovered, setHovered] = useState(false)
   const [previewFailed, setPreviewFailed] = useState(false)
 
-  function handlePointerEnter() {
-    setHovered(true)
-    if (!playable || previewFailed) return
-    const el = videoRef.current
-    if (!el) return
-    el.muted = true
-    el.currentTime = 0
-    el.play().catch(() => {/* autoplay blocked — silent */})
-  }
+  // Push #100 — single source of truth for "should the preview be playing".
+  // Hover handles desktop, isPinned handles mobile tap. preload="none" +
+  // dynamic src means cards don't fetch any bytes until the user interacts.
+  const shouldPlay = (hovered || isPinned) && playable && !previewFailed
 
-  function handlePointerLeave() {
-    setHovered(false)
+  useEffect(() => {
     const el = videoRef.current
     if (!el) return
-    el.pause()
+    if (shouldPlay) {
+      if (!el.src && v.video_url) el.src = v.video_url
+      el.muted = true
+      el.play().catch(() => {/* autoplay blocked — silent */})
+    } else {
+      el.pause()
+      try { el.currentTime = 0 } catch { /* not seekable yet */ }
+      // Drop the src so an idle, off-screen card doesn't hold a decoder.
+      if (el.src) {
+        el.removeAttribute('src')
+        el.load()
+      }
+    }
+  }, [shouldPlay, v.video_url])
+
+  function handlePreviewClick() {
+    if (!playable || previewFailed) return
+    onTogglePin()
   }
 
   // Duration label — show the real seconds when known, otherwise the
@@ -276,62 +298,95 @@ function VideoCard({
       ? v.quality.toUpperCase()
       : 'HD'
 
+  const isActive = hovered || isPinned
+
   return (
     <div
-      onPointerEnter={handlePointerEnter}
-      onPointerLeave={handlePointerLeave}
+      onPointerEnter={(e) => { if (e.pointerType !== 'touch') setHovered(true) }}
+      onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
         background: 'linear-gradient(180deg, #0F1424 0%, #0B1020 100%)',
-        border: hovered
+        border: isActive
           ? '1px solid rgba(59,130,246,0.55)'
           : '1px solid rgba(255,255,255,0.06)',
-        boxShadow: hovered
+        boxShadow: isActive
           ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
           : '0 8px 22px rgba(0,0,0,0.35)',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
       }}
     >
       <div
         className="relative"
+        onClick={handlePreviewClick}
         style={{
           background: v.thumbnail_url
             ? `center / cover no-repeat url(${v.thumbnail_url})`
             : 'linear-gradient(135deg, rgba(37,99,235,.22), rgba(34,211,238,.10))',
           aspectRatio: '9 / 16',
           overflow: 'hidden',
+          cursor: playable && !previewFailed ? 'pointer' : 'default',
         }}
       >
-        {/* Hover preview — the rendered MP4 plays muted while the user is
-            on top of the card. We only mount the <video> for playable rows
-            so the page doesn't spin up six idle decoders. */}
+        {/* Hover/tap preview — the rendered MP4 plays muted while the user
+            is on (desktop) or has tapped (mobile) the card. preload="none"
+            and dynamic src mean nothing is fetched until interaction. */}
         {playable && !previewFailed && (
           <video
             ref={videoRef}
-            src={v.video_url ?? undefined}
             poster={v.thumbnail_url ?? undefined}
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             onError={() => setPreviewFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
-            style={{ opacity: hovered ? 1 : 0 }}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
+            style={{ opacity: shouldPlay ? 1 : 0 }}
           />
         )}
 
-        {/* Center placeholder — only when there's no thumbnail to show. */}
-        {!v.thumbnail_url && (
+        {/* Center play-circle overlay — visible on completed cards, fades
+            out while the preview is playing. Matches the Canva/InVideo
+            pattern. */}
+        {playable && !previewFailed && (
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
-              color: 'rgba(147,197,253,.7)',
-              fontSize: '2.6rem',
-              opacity: hovered && playable && !previewFailed ? 0 : 1,
+              opacity: shouldPlay ? 0 : 1,
               transition: 'opacity 0.25s ease',
             }}
+            aria-hidden="true"
           >
-            {playable ? '▶' : '🎬'}
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: 'rgba(11,17,32,.55)',
+                backdropFilter: 'blur(8px)',
+                border: '2px solid rgba(255,255,255,.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontSize: '1.35rem',
+                paddingLeft: 4,
+                boxShadow: '0 6px 22px rgba(0,0,0,.45)',
+              }}
+            >
+              ▶
+            </div>
+          </div>
+        )}
+
+        {/* Fallback glyph for rows without a thumbnail and not playable
+            (processing/failed). Hidden once the preview is up. */}
+        {!v.thumbnail_url && !playable && (
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ color: 'rgba(147,197,253,.7)', fontSize: '2.6rem' }}
+          >
+            🎬
           </div>
         )}
 
