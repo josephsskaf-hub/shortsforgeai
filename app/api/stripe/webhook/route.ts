@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
         const tier = session.metadata?.tier === 'pro' ? 'pro' : 'basic'
-        const planCredits = tier === 'pro' ? 350 : 140
+        const planCredits = tier === 'pro' ? 100 : 50
 
         if (!userId) break
 
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
 
         // Push #088 — Pro plan also includes 1 cinematic token / month.
         // Basic stays at 0 (Cinematic is Pro-exclusive). We use a separate
-        // column so the user can't accidentally drain their 350 Fast
+        // column so the user can't accidentally drain their 100 Fast Mode
         // credits on Runway renders.
         const cinematicTokensForTier = tier === 'pro' ? 1 : 0
 
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
 
         const renewalUserId = subscription.metadata?.supabase_user_id
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : 'basic'
-        const renewalCredits = renewalTier === 'pro' ? 350 : 140
+        const renewalCredits = renewalTier === 'pro' ? 100 : 50
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,

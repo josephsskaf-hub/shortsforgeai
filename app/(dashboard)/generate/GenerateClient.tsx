@@ -108,8 +108,9 @@ const LOADER_MESSAGES = [
 ]
 
 // Threshold at which we show the "Low credits" upsell line below the
-// credits chip. Tuned to ~1 Pro-quality generation worth (20 credits).
-const LOW_CREDITS_THRESHOLD = 20
+// credits chip. With 1 credit = 1 Fast Mode video, this triggers when the
+// user is down to their last handful of videos for the month.
+const LOW_CREDITS_THRESHOLD = 5
 
 // Push #048 — Visual History row shape returned by GET /api/videos.
 interface RecentVideo {

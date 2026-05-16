@@ -286,7 +286,7 @@ export default function DashboardClient({
                 </div>
               )}
               <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                Basic Short = 15 credits · Pro Short = 20 credits.
+                1 credit = 1 Fast Mode video.
               </div>
             </div>
           </div>

@@ -81,8 +81,8 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           price={`${PLANS.basic.priceLabel} first month`}
           renew={`then ${PLANS.basic.regularPrice}`}
           features={[
-            `${PLANS.basic.credits} credits/month`,
-            `${PLANS.basic.videoCredits} credits per Basic video`,
+            `${PLANS.basic.credits} Fast Mode videos / month`,
+            'Email support',
           ]}
           href={PLANS.basic.href}
           ctaLabel={selectedPlan === 'basic' ? 'Continue with Basic →' : 'Start Basic →'}
@@ -96,8 +96,8 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           price={`${PLANS.pro.priceLabel} first month`}
           renew={`then ${PLANS.pro.regularPrice}`}
           features={[
-            `${PLANS.pro.credits} credits/month`,
-            `${PLANS.pro.videoCredits} credits per Pro video`,
+            `${PLANS.pro.credits} Fast Mode videos / month`,
+            '1 Cinematic (Runway AI) video / month',
           ]}
           href={PLANS.pro.href}
           ctaLabel={selectedPlan === 'pro' ? 'Continue with Pro →' : 'Start Pro →'}

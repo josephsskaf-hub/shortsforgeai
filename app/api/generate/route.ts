@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     if (!isTopicMode && !isPro && generationsUsed >= FREE_LIMIT) {
       return NextResponse.json(
         {
-          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Basic ($9/mo, 140 credits) or Pro ($19/mo, 350 credits).`,
+          error: `You've used all ${FREE_LIMIT} free generations. Upgrade to Basic ($9/mo, 50 videos) or Pro ($19/mo, 100 videos).`,
         },
         { status: 402 }
       )

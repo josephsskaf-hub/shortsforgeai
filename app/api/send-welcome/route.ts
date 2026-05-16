@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
               <!-- Upgrade note -->
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
-                  Launch offer — 50% off your first month. Basic from <strong style="color:#60A5FA;">$4.50</strong> (140 credits / mo), Pro from <strong style="color:#60A5FA;">$9.50</strong> (350 credits / mo).
+                  Launch offer — 50% off your first month. Basic from <strong style="color:#60A5FA;">$4.50</strong> (50 videos / mo), Pro from <strong style="color:#60A5FA;">$9.50</strong> (100 videos / mo + 1 Cinematic).
                 </p>
               </div>
 
@@ -154,7 +154,7 @@ Every Short comes with:
 👉 Start generating now:
 ${dashboardUrl}
 
-Launch offer — 50% off your first month. Basic from $4.50/mo (140 credits), Pro from $9.50/mo (350 credits).
+Launch offer — 50% off your first month. Basic from $4.50/mo (50 videos), Pro from $9.50/mo (100 videos + 1 Cinematic).
 
 — The ShortsForgeAI Team
 shortsforgeai.com`

@@ -27,9 +27,9 @@ function isTabKey(v: string | null | undefined): v is TabKey {
   return v === 'members' || v === 'profile' || v === 'manage' || v === 'usage'
 }
 
-// Plan credit caps for the usage card. Kept in sync with the pricing page
-// (push #020): Free = 2, Basic = 140/mo, Pro = 350/mo.
-const PLAN_LIMITS = { free: 2, basic: 140, pro: 350 } as const
+// Plan credit caps for the usage card. Kept in sync with lib/pricing.ts:
+// Free = 2, Basic = 50/mo, Pro = 100/mo.
+const PLAN_LIMITS = { free: 2, basic: 50, pro: 100 } as const
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return 'N/A'
@@ -368,8 +368,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </div>
 
               <ul className="text-xs mt-5 space-y-1.5" style={{ color: 'var(--muted2)', paddingLeft: 18 }}>
-                <li>Basic video = <strong style={{ color: 'var(--text)' }}>15 credits</strong></li>
-                <li>Pro video = <strong style={{ color: 'var(--text)' }}>20 credits</strong></li>
+                <li>Basic = <strong style={{ color: 'var(--text)' }}>50 Fast Mode videos / month</strong></li>
+                <li>Pro = <strong style={{ color: 'var(--text)' }}>100 Fast Mode videos + 1 Cinematic / month</strong></li>
               </ul>
 
               <p className="text-xs mt-4" style={{ color: 'var(--muted)' }}>

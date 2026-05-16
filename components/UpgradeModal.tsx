@@ -79,7 +79,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           }}
         >
           {[
-            '⚡ Up to 350 credits / month',
+            '⚡ Up to 100 Fast Mode videos / month',
             '🎯 All trending niches',
             '📋 Full copy-paste scripts',
             '🎬 AI video prompts',

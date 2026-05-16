@@ -693,8 +693,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     above and the 50% off launch strip on the headline. */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
                   {plan.tier === 'free' && 'No credit card required'}
-                  {plan.tier === 'basic' && '140 Fast videos/month = $0.032/video'}
-                  {plan.tier === 'pro' && '350 Fast videos/month = $0.027/video'}
+                  {plan.tier === 'basic' && '50 Fast Mode videos / month'}
+                  {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic / month'}
                 </p>
               </div>
             )
@@ -913,7 +913,7 @@ function ShowcaseVideoCard({
 function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   if (tier === 'free') {
     return [
-      `${PLANS.free.credits} credits`,
+      `${PLANS.free.credits} Fast Mode videos`,
       'Analyze ideas before rendering',
       'Try AI video generation',
       'Credits charged only on successful video',
@@ -921,16 +921,15 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   }
   if (tier === 'basic') {
     return [
-      `${PLANS.basic.credits} credits/month`,
-      `≈9 Basic videos/month (${PLANS.basic.videoCredits} credits each)`,
+      `${PLANS.basic.credits} Fast Mode videos / month`,
       'Voiceover + captions',
       'Download MP4',
       'My Videos history',
     ]
   }
   return [
-    `${PLANS.pro.credits} credits/month`,
-    `≈17 Pro videos/month (${PLANS.pro.videoCredits} credits each)`,
+    `${PLANS.pro.credits} Fast Mode videos / month`,
+    '1 Cinematic (Runway AI) video / month',
     'Better generation settings',
     'Voiceover + captions',
     'Download MP4',

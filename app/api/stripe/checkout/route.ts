@@ -5,22 +5,22 @@ import Stripe from 'stripe'
 
 type Tier = 'basic' | 'pro'
 
-// Plan definitions (push #020):
-//   Basic = $9/month, 140 credits/month, 15 cr per Basic Short.
-//   Pro   = $19/month, 350 credits/month, 20 cr per Pro Short.
+// Plan definitions:
+//   Basic = $9/month, 50 Fast Mode videos/month.
+//   Pro   = $19/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
 const TIERS: Record<Tier, { name: string; description: string; amount: number; credits: number }> = {
   basic: {
     name: 'ShortsForgeAI — Basic',
-    description: '140 credits/month · ≈9 Shorts of 30–35s · 15 credits per Basic Short',
+    description: '50 Fast Mode videos / month',
     amount: 900, // $9.00
-    credits: 140,
+    credits: 50,
   },
   pro: {
     name: 'ShortsForgeAI — Pro',
-    description: '350 credits/month · ≈17 Shorts of 30–35s · 20 credits per Pro Short',
+    description: '100 Fast Mode videos / month + 1 Cinematic (Runway AI) video / month',
     amount: 1900, // $19.00
-    credits: 350,
+    credits: 100,
   },
 }
 

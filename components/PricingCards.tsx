@@ -28,16 +28,15 @@ const FREE_FEATURES = [
 ]
 
 const BASIC_FEATURES = [
-  `${PLANS.basic.credits} credits/month`,
-  `≈9 Basic videos/month (${PLANS.basic.videoCredits} credits each)`,
+  `${PLANS.basic.credits} Fast Mode videos / month`,
   'Voiceover + captions',
   'Download MP4',
   'My Videos history',
 ]
 
 const PRO_FEATURES = [
-  `${PLANS.pro.credits} credits/month`,
-  `≈17 Pro videos/month (${PLANS.pro.videoCredits} credits each)`,
+  `${PLANS.pro.credits} Fast Mode videos / month`,
+  '1 Cinematic (Runway AI) video / month',
   'Better generation settings',
   'Voiceover + captions',
   'Download MP4',
@@ -128,7 +127,7 @@ export default function PricingCards() {
           price={PLANS.basic.priceLabel}
           period="first month"
           renewNote={`then ${PLANS.basic.regularPrice}`}
-          tagline={`${PLANS.basic.credits} credits / month. ≈9 videos.`}
+          tagline={`${PLANS.basic.credits} Fast Mode videos / month.`}
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
@@ -150,7 +149,7 @@ export default function PricingCards() {
           price={PLANS.pro.priceLabel}
           period="first month"
           renewNote={`then ${PLANS.pro.regularPrice}`}
-          tagline={`${PLANS.pro.credits} credits / month. ≈17 videos.`}
+          tagline={`${PLANS.pro.credits} Fast Mode + 1 Cinematic / month.`}
           features={PRO_FEATURES}
           badge="Recommended"
           highlight

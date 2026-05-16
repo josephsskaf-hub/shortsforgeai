@@ -1,7 +1,7 @@
 -- Push #088 — Cinematic Tokens
 -- Separates Runway/Cinematic usage from the regular `video_credits` pool
 -- so the Pro plan can include exactly 1 Cinematic video / month without
--- making it possible to "cinema-spend" the regular 350 credits.
+-- making it possible to "cinema-spend" the regular 100 Fast Mode credits.
 --
 -- Run this in the Supabase SQL editor for the active project (staging or
 -- production). Idempotent — safe to re-run.

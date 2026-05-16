@@ -26,7 +26,7 @@ const PRICING = [
     price: '$4.50',
     priceSub: 'first month, then $9/mo',
     features: [
-      '140 Fast videos / month',
+      '50 Fast Mode videos / month',
       'Pexels + AI voiceover pipeline',
       'Watermark-free MP4',
       'Email support',
@@ -39,9 +39,8 @@ const PRICING = [
     price: '$9.50',
     priceSub: 'first month, then $19/mo',
     features: [
-      '350 Fast videos / month',
+      '100 Fast Mode videos / month',
       '1 Cinematic (Runway AI) video / month',
-      'Fast: ~$0.03 each · Cinematic: included',
       'Cinematic prompting + premium models',
       'Priority support',
     ],
@@ -254,20 +253,14 @@ export default function PricingPage() {
                   {
                     label: 'Fast Mode (Pexels + AI voiceover)',
                     free: '✅ 2 videos',
-                    basic: '✅ ~140/mo',
-                    pro: '✅ ~350/mo',
+                    basic: '✅ 50 / month',
+                    pro: '✅ 100 / month',
                   },
                   {
                     label: 'Cinematic Mode (Runway AI)',
                     free: '—',
                     basic: '—',
                     pro: '✅ 1 / month',
-                  },
-                  {
-                    label: 'Cost per Fast video',
-                    free: '~$0.03',
-                    basic: '~$0.032',
-                    pro: '~$0.027',
                   },
                   {
                     label: 'Render time',
