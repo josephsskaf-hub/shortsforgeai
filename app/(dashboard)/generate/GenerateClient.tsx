@@ -82,6 +82,16 @@ const DURATION_OPTIONS: { value: Duration; label: string }[] = [
 const POLL_GENERATING_MS = 4000
 const POLL_COMPOSING_MS = 5000
 
+// Push #095 — player resilience tuning.
+//  PLAYER_INITIAL_WAIT_MS: how long to wait for the first byte/frame before
+//   we assume the CDN stalled. Matches the user-visible spinner budget.
+//  PLAYER_RETRY_BACKOFFS: delay before each successive retry. Sums with the
+//   initial wait to ~38s total budget (8 + 2 + 4 + 8 + 16) before we give
+//   up and show the friendly fallback. Backblaze B2's 503 storm during
+//   propagation usually clears in <20s, so 4 retries is generous.
+const PLAYER_INITIAL_WAIT_MS = 8000
+const PLAYER_RETRY_BACKOFFS = [2000, 4000, 8000, 16000] as const
+
 const QUALITY_OPTIONS: {
   key: Quality
   title: string
@@ -209,6 +219,14 @@ export default function GenerateClient() {
   // Push #048 — transient "Copied!" feedback on trending-hook chips.
   const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null)
 
+  // Push #095 — player resilience. When the B2/Creatomate CDN returns a 503
+  // or hasn't propagated yet, the <video> element used to spin forever in
+  // readyState 0. playerFailed flips true after the full retry budget is
+  // spent so the UI can swap in a friendly fallback instead of an empty
+  // spinner. The refs hold retry bookkeeping outside React state so timers
+  // don't trigger re-renders mid-backoff.
+  const [playerFailed, setPlayerFailed] = useState(false)
+
   // Idempotency flag for /api/compose/status — once we see `done` we tell the
   // server not to deduct credits again on subsequent polls.
   const deductedRef = useRef<boolean>(false)
@@ -216,6 +234,12 @@ export default function GenerateClient() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
+  // Push #095 — player retry bookkeeping. attempt counts how many retries
+  // have fired (0..4); the two timer refs hold the in-flight setTimeout
+  // handles so we can cancel them on canplay/cleanup.
+  const playerRetryAttemptRef = useRef<number>(0)
+  const playerWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playerRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
@@ -945,13 +969,136 @@ export default function GenerateClient() {
     setError(null)
   }
 
+  // Push #095 — reset the failure flag whenever a new finalVideoUrl arrives
+  // (or it's cleared by Back / Start over). Without this, a previous run
+  // that hit the failure UI would carry the flag forward and immediately
+  // show the fallback for the next, perfectly fine, video.
   useEffect(() => {
+    setPlayerFailed(false)
+    playerRetryAttemptRef.current = 0
+  }, [finalVideoUrl])
+
+  // Push #095 — robust player startup with retry + backoff.
+  //
+  //   Symptom we are fixing: when Creatomate's Backblaze B2 CDN hasn't
+  //   propagated the freshly composed MP4 yet, the CDN returns 503 (or
+  //   just stalls). Per Push #094 the player loads the file directly from
+  //   the CDN (no Node.js proxy), so we need to handle those CDN-side
+  //   hiccups in the browser instead of upstream. Without that, the
+  //   <video> element gets stuck at readyState 0 and spins indefinitely
+  //   with zero feedback to the user.
+  //
+  //   Strategy:
+  //     1. Start an 8s wait timer. If we haven't reached readyState >= 2 by
+  //        then, kick off the retry chain.
+  //     2. Retry chain: up to 4 retries, with delays 2s, 4s, 8s, 16s
+  //        between them. Each retry rewrites el.src with a cache-busting
+  //        suffix and calls .load() + .play().
+  //     3. If the <video> emits an `error` event, jump straight into the
+  //        retry chain instead of waiting out the 8s timer.
+  //     4. canplay / loadeddata / playing all mean "we're good" — clear
+  //        every timer and reset bookkeeping.
+  //     5. After the final retry's backoff elapses without success, flip
+  //        playerFailed so the UI swaps to the fallback message.
+  useEffect(() => {
+    if (phase !== 'done' || !finalVideoUrl || playerFailed) return
     const el = videoRef.current
-    if (el && phase === 'done' && finalVideoUrl) {
-      el.load()
-      el.play().catch(() => {})
+    if (!el) return
+
+    // Pick the right query separator so cache-busting works whether the
+    // CDN URL already carries a query string or not.
+    const cacheBustJoin = finalVideoUrl.includes('?') ? '&' : '?'
+
+    const clearTimers = () => {
+      if (playerWaitTimerRef.current) {
+        clearTimeout(playerWaitTimerRef.current)
+        playerWaitTimerRef.current = null
+      }
+      if (playerRetryTimerRef.current) {
+        clearTimeout(playerRetryTimerRef.current)
+        playerRetryTimerRef.current = null
+      }
     }
-  }, [phase, finalVideoUrl])
+
+    const scheduleNextRetry = () => {
+      if (playerRetryTimerRef.current) return // already scheduled
+      const attempt = playerRetryAttemptRef.current
+      if (attempt >= PLAYER_RETRY_BACKOFFS.length) {
+        clearTimers()
+        setPlayerFailed(true)
+        return
+      }
+      const delay = PLAYER_RETRY_BACKOFFS[attempt]
+      playerRetryAttemptRef.current = attempt + 1
+      playerRetryTimerRef.current = setTimeout(() => {
+        playerRetryTimerRef.current = null
+        const v = videoRef.current
+        if (!v) return
+        // Cache-bust on every retry so the browser (and any intermediate
+        // cache) actually re-fetches instead of replaying the prior 503.
+        v.src = `${finalVideoUrl}${cacheBustJoin}_r=${playerRetryAttemptRef.current}`
+        try { v.load() } catch { /* noop */ }
+        v.play().catch(() => {})
+        scheduleNextRetry()
+      }, delay)
+    }
+
+    const scheduleInitialWait = () => {
+      if (playerWaitTimerRef.current) clearTimeout(playerWaitTimerRef.current)
+      playerWaitTimerRef.current = setTimeout(() => {
+        playerWaitTimerRef.current = null
+        const v = videoRef.current
+        if (!v) return
+        if (v.readyState < 2 && playerRetryAttemptRef.current === 0) {
+          scheduleNextRetry()
+        }
+      }, PLAYER_INITIAL_WAIT_MS)
+    }
+
+    const onWaiting = () => {
+      // Only re-arm the initial wait timer while we haven't started retries
+      // yet; once retries are in-flight, scheduleNextRetry drives the loop.
+      if (
+        el.readyState < 2 &&
+        playerRetryAttemptRef.current === 0 &&
+        !playerWaitTimerRef.current &&
+        !playerRetryTimerRef.current
+      ) {
+        scheduleInitialWait()
+      }
+    }
+    const onError = () => {
+      if (playerWaitTimerRef.current) {
+        clearTimeout(playerWaitTimerRef.current)
+        playerWaitTimerRef.current = null
+      }
+      scheduleNextRetry()
+    }
+    const onLoaded = () => {
+      clearTimers()
+      playerRetryAttemptRef.current = 0
+    }
+
+    el.addEventListener('waiting', onWaiting)
+    el.addEventListener('stalled', onWaiting)
+    el.addEventListener('error', onError)
+    el.addEventListener('canplay', onLoaded)
+    el.addEventListener('loadeddata', onLoaded)
+    el.addEventListener('playing', onLoaded)
+
+    el.play().catch(() => {})
+    scheduleInitialWait()
+
+    return () => {
+      clearTimers()
+      el.removeEventListener('waiting', onWaiting)
+      el.removeEventListener('stalled', onWaiting)
+      el.removeEventListener('error', onError)
+      el.removeEventListener('canplay', onLoaded)
+      el.removeEventListener('loadeddata', onLoaded)
+      el.removeEventListener('playing', onLoaded)
+    }
+  }, [phase, finalVideoUrl, playerFailed])
 
 
   // Push #084 — Fast Mode is a flat 1 credit; Cinematic Mode uses the
@@ -1633,23 +1780,82 @@ export default function GenerateClient() {
                   background: '#000',
                 }}
               >
-                {/* Bug fix — load the MP4 directly from the CDN. The old
+                {/* Push #094 — load the MP4 directly from the CDN. The old
                     proxy path buffered the entire ~28MB body through a
                     Node.js serverless function and timed out before the
                     <video> element ever saw the first byte. Without
                     crossOrigin="anonymous" the browser does not enforce
                     CORS on media playback, so the direct cross-origin
-                    src= works on Backblaze and Creatomate alike. */}
-                <video
-                  ref={videoRef}
-                  key={finalVideoUrl}
-                  src={finalVideoUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                />
+                    src= works on Backblaze and Creatomate alike.
+
+                    Push #095 — Backblaze still returns 503 while the new
+                    MP4 propagates, so we wrap the player in a retry chain
+                    (see useEffect above). When the full retry budget is
+                    spent, playerFailed flips and we swap the <video> for
+                    a Portuguese fallback with a reload button so the user
+                    never stares at an empty spinner. */}
+                {playerFailed ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '24px',
+                      textAlign: 'center',
+                      background: '#0b0b1a',
+                      color: 'var(--text)',
+                      gap: '14px',
+                    }}
+                  >
+                    <div style={{ fontSize: '38px', lineHeight: 1 }} aria-hidden>⏳</div>
+                    <p
+                      style={{
+                        color: '#fff',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        lineHeight: 1.45,
+                        maxWidth: '320px',
+                        margin: 0,
+                      }}
+                    >
+                      Vídeo ainda processando. Aguarde alguns instantes e atualize a página.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { if (typeof window !== 'undefined') window.location.reload() }}
+                      style={{
+                        marginTop: '4px',
+                        background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                        border: 'none',
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        padding: '10px 22px',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+                      }}
+                    >
+                      Atualizar
+                    </button>
+                  </div>
+                ) : (
+                  <video
+                    ref={videoRef}
+                    key={finalVideoUrl}
+                    src={finalVideoUrl}
+                    controls
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                  />
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-3 mt-7">
