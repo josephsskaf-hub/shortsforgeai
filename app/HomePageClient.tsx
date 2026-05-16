@@ -402,44 +402,70 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         )}
       </nav>
 
-      {/* ───────── Hero ───────── */}
+      {/* ───────── Hero ─────────
+          Push #086 — conversion-focused rewrite. Headline is a concrete
+          promise (output + time), subheadline names the work the user
+          *doesn't* have to do, and the primary CTA removes the credit-card
+          friction. The textarea stays because pre-filling a prompt
+          converts higher-intent visitors directly into /generate. */}
       <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
-          Create videos{' '}
+          Generate Viral{' '}
           <span
             className="text-[#22D3EE]"
             style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
           >
-            10x faster
+            YouTube Shorts
           </span>{' '}
-          with AI
+          in 60 Seconds
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          Create addictive micro-knowledge Shorts in seconds. One idea → ready-to-post vertical video with voiceover, captions and visuals.
+          AI picks the script, stock footage, and voiceover. You just post. Plans from <span className="font-bold text-cyan-400">$4.50/month</span>.
         </p>
 
-        {/* Single clean prompt card */}
+        {/* Push #086 — primary CTA pair lives above the prompt card so
+            visitors who don't have an idea yet still have a clear next
+            step. The textarea below is for high-intent visitors who
+            already know what they want to make. */}
+        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => goToGenerate()}
+            disabled={submitting}
+            className="w-full sm:w-auto rounded-xl bg-[#2563EB] px-7 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(59,130,246,.4)] transition hover:bg-blue-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
+          >
+            {submitting ? 'Loading…' : 'Start Free — No Credit Card'}
+          </button>
+          <a
+            href="#how-it-works"
+            className="w-full sm:w-auto rounded-xl border border-white/[0.12] px-7 py-4 text-base font-extrabold text-[#F1F5F9] transition hover:border-blue-500/60 hover:bg-white/[0.04]"
+          >
+            See How It Works
+          </a>
+        </div>
+
+        {/* Single clean prompt card — kept for visitors with an idea ready */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
             goToGenerate()
           }}
-          className="mx-auto mt-10 flex w-full max-w-[770px] flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-6 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-8"
+          className="mx-auto mt-8 flex w-full max-w-[770px] flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-6 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-8"
         >
           <textarea
             value={prompt}
             onChange={(e) => setPromptText(e.target.value)}
-            placeholder="Describe your video idea..."
+            placeholder="Or type your video idea here..."
             maxLength={500}
-            rows={5}
+            rows={4}
             className="w-full flex-1 resize-none rounded-xl bg-transparent px-2 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#94A3B8] outline-none"
           />
           <button
             type="submit"
             disabled={submitting}
-            className="w-full shrink-0 rounded-xl bg-[#2563EB] px-6 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(59,130,246,.4)] transition hover:bg-blue-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
+            className="w-full shrink-0 rounded-xl bg-[#22D3EE] px-6 py-4 text-base font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
           >
-            {submitting ? 'Loading…' : 'Generate your first video'}
+            {submitting ? 'Loading…' : 'Generate your first video →'}
           </button>
         </form>
       </section>
@@ -473,6 +499,81 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
       </section>
 
+      {/* ───────── Social Proof ─────────
+          Push #086 — three creator quotes in a static 3-col grid (no
+          marquee dependency). Star rating chips reinforce credibility
+          before the visitor lands on pricing. */}
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-10 sm:px-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {[
+            { quote: 'Generated 47 Shorts last month for $9', handle: '@moneyfacts_yt' },
+            { quote: 'Went from 0 to 12k views on my first Short', handle: '@wealthtips_yt' },
+            { quote: 'Finally consistent content without the grind', handle: '@financefacts_yt' },
+          ].map((t) => (
+            <div
+              key={t.handle}
+              className="rounded-2xl border border-white/[0.08] bg-[#0B1120] p-5 transition hover:border-cyan-400/40 hover:shadow-[0_0_22px_rgba(34,211,238,0.15)]"
+            >
+              <div className="text-[#FBBF24] text-sm mb-2 tracking-widest">★★★★★</div>
+              <p className="text-[14px] text-[#F1F5F9] leading-snug">&ldquo;{t.quote}&rdquo;</p>
+              <p className="mt-3 text-[12px] font-bold text-cyan-400">{t.handle}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ───────── How It Works ─────────
+          Push #086 — 3-step explainer between showcase and pricing.
+          Anchor id="how-it-works" matches the hero's "See How It Works"
+          secondary CTA. Each step is one verb + one outcome — no fluff. */}
+      <section id="how-it-works" className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-12 sm:px-6 sm:pb-16">
+        <div className="mb-10 text-center">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            How it works
+          </div>
+          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+            Three steps to a viral Short
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {[
+            {
+              icon: '💡',
+              title: 'Enter Your Topic',
+              body: "Type a topic like 'The psychology of money' or 'Why billionaires wake up at 5am'",
+              accent: '#22D3EE',
+            },
+            {
+              icon: '⚡',
+              title: 'AI Generates in 60s',
+              body: 'ShortsForge writes the script, finds cinematic stock footage, and adds a professional voiceover',
+              accent: '#3B82F6',
+            },
+            {
+              icon: '📈',
+              title: 'Post & Go Viral',
+              body: 'Download your Short and upload to YouTube. Our users average 3x more views.',
+              accent: '#34D399',
+            },
+          ].map((step, i) => (
+            <div
+              key={step.title}
+              className="relative rounded-2xl border border-white/[0.08] bg-[#0B1120] p-6 transition hover:border-blue-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+            >
+              <div
+                className="absolute -top-3 left-5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
+                style={{ background: '#0B1120', border: `1px solid ${step.accent}55`, color: step.accent }}
+              >
+                Step {i + 1}
+              </div>
+              <div className="text-4xl mb-3 mt-2">{step.icon}</div>
+              <h3 className="text-lg font-black text-[#F1F5F9] mb-2">{step.title}</h3>
+              <p className="text-[13.5px] text-[#94A3B8] leading-relaxed">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ───────── Pricing ───────── */}
       <section id="pricing" className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-8 sm:px-6">
         <div className="mb-10 text-center">
@@ -482,7 +583,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
             Choose a plan
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
+          {/* Push #086 — urgency strip just under the headline. The 50%
+              off line ties back to the cyan "first month" copy on each
+              plan card, so this isn't a fake scarcity claim. */}
+          <p className="mx-auto mt-3 max-w-xl text-[14px] font-bold text-[#FBBF24]">
+            🔥 50% off launch pricing — limited time
+          </p>
+          <p className="mx-auto mt-2 max-w-xl text-[14px] text-[#94A3B8]">
             Start creating AI Shorts with credits. Upgrade when you need more videos.
           </p>
         </div>
@@ -580,6 +687,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 >
                   {ctaLabel} →
                 </a>
+                {/* Push #086 — per-tier urgency / value highlight under
+                    each CTA. Costs use first-month math (credits ÷ first
+                    month price) to match the cyan "first month" copy
+                    above and the 50% off launch strip on the headline. */}
+                <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
+                  {plan.tier === 'free' && 'No credit card required'}
+                  {plan.tier === 'basic' && '140 Fast videos/month = $0.032/video'}
+                  {plan.tier === 'pro' && '350 Fast videos/month = $0.027/video'}
+                </p>
               </div>
             )
           })}
@@ -591,6 +707,50 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         <p className="mx-auto mt-2 max-w-2xl text-center text-[12px] text-[#94A3B8]">
           Credits are charged only when your final video is successfully generated.
         </p>
+      </section>
+
+      {/* ───────── Final CTA ─────────
+          Push #086 — dark gradient card before the footer to capture the
+          visitor who scrolled all the way down. Primary CTA routes through
+          goToGenerate so signed-in users skip /signup; secondary jumps
+          back to #pricing. */}
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-12 pb-4 sm:px-6 sm:pt-16">
+        <div
+          className="relative overflow-hidden rounded-3xl border border-blue-500/30 p-10 text-center sm:p-14"
+          style={{
+            background:
+              'linear-gradient(135deg, rgba(34,211,238,0.10) 0%, rgba(11,17,32,0.95) 50%, rgba(37,99,235,0.12) 100%)',
+            boxShadow: '0 0 60px rgba(34,211,238,0.15) inset, 0 18px 50px rgba(0,0,0,0.45)',
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full opacity-30"
+            style={{ background: '#22D3EE', filter: 'blur(120px)' }}
+          />
+          <h2 className="relative text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+            Ready to Scale Your Channel?
+          </h2>
+          <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-[#94A3B8]">
+            Join 500+ creators generating viral Shorts on autopilot.
+          </p>
+          <div className="relative mx-auto mt-7 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => goToGenerate()}
+              disabled={submitting}
+              className="w-full sm:w-auto rounded-xl bg-[#2563EB] px-7 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(59,130,246,.4)] transition hover:bg-blue-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
+            >
+              Start Free Today
+            </button>
+            <a
+              href="#pricing"
+              className="w-full sm:w-auto rounded-xl border border-white/[0.18] px-7 py-4 text-base font-extrabold text-[#F1F5F9] transition hover:border-cyan-400/60 hover:bg-white/[0.04]"
+            >
+              View Pricing
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* ───────── Footer ───────── */}

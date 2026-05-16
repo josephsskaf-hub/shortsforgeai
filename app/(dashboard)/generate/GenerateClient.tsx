@@ -1024,7 +1024,7 @@ export default function GenerateClient() {
                     icon: '⚡',
                     title: 'Fast Mode',
                     badge: 'DEFAULT',
-                    desc: 'Stock footage + TTS. ~30s render.',
+                    desc: '~1 credit · $0.03/video · ready in 60s. Stock footage + AI voiceover.',
                     cost: '~1 credit',
                   },
                   {
@@ -1032,7 +1032,7 @@ export default function GenerateClient() {
                     icon: '🎬',
                     title: 'Cinematic Mode',
                     badge: 'PRO',
-                    desc: 'AI-generated scenes via Runway + TTS. ~3-5min render.',
+                    desc: `~${QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15} credits · Pro only · 5-10 min render. AI-generated scenes via Runway.`,
                     cost: `~${QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15} credits`,
                   },
                 ]
@@ -1183,8 +1183,8 @@ export default function GenerateClient() {
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
               {mode === 'fast'
-                ? `⚡ ${selectedCost} credit • ~30s render — stock footage + AI voiceover.`
-                : `🎬 ${selectedCost} credits • ~5min render — AI-generated cinematic scenes.`}
+                ? `⚡ ${selectedCost} credit • ~$0.03/video • ready in 60s — stock footage + AI voiceover.`
+                : `🎬 ${selectedCost} credits • 5-10 min render — AI-generated cinematic scenes (Pro only).`}
             </p>
             <button
               onClick={() => handleAnalyze()}
