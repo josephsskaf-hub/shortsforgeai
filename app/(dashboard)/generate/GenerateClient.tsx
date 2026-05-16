@@ -1098,7 +1098,7 @@ export default function GenerateClient() {
               if (fromHome) setFromHome(false)
             }}
             placeholder="Drop your topic — we'll turn it into an addictive micro-knowledge Short with real facts, escalation, and a satisfying payoff."
-            maxLength={1000}
+            maxLength={5000}
             disabled={phase === 'analyzing'}
             // Push #052 — Tailwind responsive min-h so the textarea stays
             // ~220px (≈8 lines) on phones, then expands back to 400px on

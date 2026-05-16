@@ -179,7 +179,7 @@ export default function V2PrototypePage() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe the video you want. e.g. A faceless 90s YouTube explainer about why time slows down near a black hole."
-          maxLength={1000}
+          maxLength={5000}
           className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed"
           style={{
             width: '100%',

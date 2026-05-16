@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
-    if (prompt.length > 1500) {
-      return NextResponse.json({ error: 'Prompt is too long (1500 chars max).' }, { status: 400 })
+    if (prompt.length > 5000) {
+      return NextResponse.json({ error: 'Prompt is too long (5000 chars max).' }, { status: 400 })
     }
 
     const requestedDuration = Number(body.duration) || 45

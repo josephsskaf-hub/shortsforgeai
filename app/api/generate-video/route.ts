@@ -90,12 +90,12 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
-    // Push #041: the user idea field can carry a full creative brief — only
-    // the visual prompts that actually reach Runway need the 500-char cap,
-    // not this top-level user text. Bump to 1500 to match the textarea
-    // maxLength on the client.
-    if (prompt.length > 1500) {
-      return NextResponse.json({ error: 'Prompt is too long (1500 chars max).' }, { status: 400 })
+    // The user idea field can carry a full pasted script — only the visual
+    // prompts that actually reach Runway need the 500-char cap, not this
+    // top-level user text. Cap at 5000 to match the textarea maxLength on
+    // the client (room for a 300-600 word Shorts script).
+    if (prompt.length > 5000) {
+      return NextResponse.json({ error: 'Prompt is too long (5000 chars max).' }, { status: 400 })
     }
 
     const platform = (body.platform ?? 'YouTube Shorts').toString()

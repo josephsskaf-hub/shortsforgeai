@@ -456,7 +456,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             value={prompt}
             onChange={(e) => setPromptText(e.target.value)}
             placeholder="Or type your video idea here..."
-            maxLength={500}
+            maxLength={5000}
             rows={4}
             className="w-full flex-1 resize-none rounded-xl bg-transparent px-2 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#94A3B8] outline-none"
           />
