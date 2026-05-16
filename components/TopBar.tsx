@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 interface TopBarProps {
   title: string
@@ -76,8 +77,11 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         )}
       </div>
 
-      {/* Right side — Pro badge only. Auth controls live in the Sidebar. */}
+      {/* Right side — credits badge + Pro badge. Auth controls live in the Sidebar. */}
       <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        {/* Push #098 — header credits badge. Red link to /pricing when 0,
+            amber when <=5 and not Pro, neutral otherwise. */}
+        <CreditsBadge isPro={isPro} />
         {isPro && (
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
@@ -97,4 +101,75 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
       </div>
     </div>
   )
+}
+
+// ─── Push #098 — Credits badge ──────────────────────────────────────────────
+// Fetches /api/credits (same endpoint the Sidebar uses) and listens for the
+// `creditsChanged` event so it stays in sync after every generation. Three
+// visual states: empty (red, links to /pricing), low (amber, not-Pro), and
+// neutral (subtle slate chip).
+function CreditsBadge({ isPro }: { isPro: boolean }) {
+  const [credits, setCredits] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchCredits() {
+      try {
+        const res = await fetch('/api/credits', { cache: 'no-store' })
+        if (res.status === 401) {
+          if (!cancelled) setCredits(null)
+          return
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        }
+      } catch {
+        if (!cancelled) setCredits(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchCredits()
+    window.addEventListener('creditsChanged', fetchCredits)
+    return () => {
+      cancelled = true
+      window.removeEventListener('creditsChanged', fetchCredits)
+    }
+  }, [])
+
+  if (loading || credits === null) return null
+
+  const isZero = credits <= 0
+  const isLow = !isZero && credits <= 5 && !isPro
+
+  const colors = isZero
+    ? { fg: '#f87171', bg: 'rgba(239,68,68,.10)', border: 'rgba(239,68,68,.35)' }
+    : isLow
+    ? { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.35)' }
+    : { fg: '#cbd5e1', bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)' }
+
+  const label = (
+    <span
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        color: colors.fg,
+      }}
+    >
+      <span aria-hidden="true">⚡</span>
+      {credits} credit{credits === 1 ? '' : 's'}
+    </span>
+  )
+
+  if (isZero) {
+    return (
+      <Link href="/pricing" style={{ textDecoration: 'none' }} aria-label="Out of credits — view pricing">
+        {label}
+      </Link>
+    )
+  }
+  return label
 }

@@ -212,6 +212,23 @@ export default function GenerateClient() {
   // a timer so the wait feels intentional.
   const [fastStep, setFastStep] = useState<number>(0)
 
+  // Push #098 — out-of-credits upgrade modal. Opened when the user clicks
+  // any Generate/Analyze/Generate-Similar CTA while credits <= 0. Routes
+  // through POST /api/stripe/checkout {tier:'basic'} to the launch-offer
+  // checkout session.
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeLoading, setUpgradeLoading] = useState(false)
+
+  // Push #098 — welcome banner shown to brand-new users (credits >= 2 and
+  // the `sf_welcomed` localStorage flag not yet set). Dismissed via the X
+  // button, which writes the flag so we never show it again.
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  // Push #098 — 4-step generation progress text shown below the spinner
+  // while the pipeline is running. Auto-advances on a setInterval driven
+  // by elapsed seconds since the phase entered the loading bucket.
+  const [progressStep, setProgressStep] = useState<number>(0)
+
   // Push #048 — Visual History. List of the user's recent videos fetched
   // from /api/videos. Empty array = empty state; null only during initial
   // load. We never block the page on this — failures degrade to empty.
@@ -382,6 +399,49 @@ export default function GenerateClient() {
     }, 8000)
     return () => clearInterval(interval)
   }, [mode, phase])
+
+  // Push #098 — generic 4-step generation progress indicator. Time-based
+  // so it stays useful even when the backend phase doesn't change for a
+  // while (the Pexels + TTS fast pipeline can sit in one phase for 30s+).
+  //   0-8s   : ✍️ Writing your script...
+  //   8-20s  : 🎙️ Generating voiceover...
+  //   20-40s : 🎬 Finding footage...
+  //   40s+   : ⚡ Rendering your Short...
+  useEffect(() => {
+    const isGenerating =
+      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
+    if (!isGenerating) {
+      setProgressStep(0)
+      return
+    }
+    setProgressStep(0)
+    const startedAt = Date.now()
+    const interval = setInterval(() => {
+      const elapsedSec = (Date.now() - startedAt) / 1000
+      if (elapsedSec >= 40) setProgressStep(3)
+      else if (elapsedSec >= 20) setProgressStep(2)
+      else if (elapsedSec >= 8) setProgressStep(1)
+      else setProgressStep(0)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [phase])
+
+  // Push #098 — welcome banner gating. Only shown on first visit when the
+  // user still has >=2 credits and hasn't dismissed it. localStorage write
+  // happens in the dismiss handler so a refresh between mount and dismiss
+  // re-shows the banner (intentional — they didn't acknowledge yet).
+  useEffect(() => {
+    if (credits === null || credits < 2) {
+      setShowWelcome(false)
+      return
+    }
+    try {
+      const dismissed = localStorage.getItem('sf_welcomed')
+      if (!dismissed) setShowWelcome(true)
+    } catch {
+      // localStorage can be denied (Safari private, etc.) — silent no-op.
+    }
+  }, [credits])
 
   // Push #048 — pull the user's recent videos for the Visual History
   // section. We listen on `creditsChanged` (fired after every successful
@@ -969,6 +1029,66 @@ export default function GenerateClient() {
     setError(null)
   }
 
+  // Push #098 — out-of-credits guard. Wraps every Generate/Analyze/
+  // Generate-Similar entry point so a click with credits<=0 opens the
+  // upgrade modal instead of either silently failing or hitting the API
+  // for a 402. We still allow Cinematic-with-tokens through (Pro users
+  // can have 0 credits but a remaining cinematic token).
+  function outOfCredits(): boolean {
+    if (credits === null) return false
+    if (credits > 0) return false
+    if (mode === 'cinematic' && cinematicTokens > 0) return false
+    return true
+  }
+
+  function handleAnalyzeGuarded() {
+    if (outOfCredits()) {
+      setShowUpgradeModal(true)
+      return
+    }
+    handleAnalyze()
+  }
+
+  function handleGenerateGuarded() {
+    if (outOfCredits()) {
+      setShowUpgradeModal(true)
+      return
+    }
+    handleGenerate()
+  }
+
+  async function handleUpgradeNow() {
+    setUpgradeLoading(true)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: 'basic' }),
+      })
+      const data = await res.json().catch(() => null)
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      // Fallback — server returned an error, just send the user to /pricing
+      // so the upgrade intent isn't lost.
+      router.push('/pricing')
+    } catch {
+      router.push('/pricing')
+    } finally {
+      setUpgradeLoading(false)
+    }
+  }
+
+  function dismissWelcome() {
+    setShowWelcome(false)
+    try {
+      localStorage.setItem('sf_welcomed', '1')
+    } catch {
+      // ignore
+    }
+  }
+
   // Push #095 — reset the failure flag whenever a new finalVideoUrl arrives
   // (or it's cleared by Back / Start over). Without this, a previous run
   // that hit the failure UI would carry the flag forward and immediately
@@ -1193,6 +1313,23 @@ export default function GenerateClient() {
         </div>
       )}
 
+      {/* Push #098 — first-visit welcome banner. Only shown on Step 1 and
+          only when credits >= 2 AND the sf_welcomed localStorage flag is
+          unset. Dismissing writes the flag so it never shows again. */}
+      {showStep1 && showWelcome && (
+        <WelcomeBanner onDismiss={dismissWelcome} />
+      )}
+
+      {/* Push #098 — out-of-credits upgrade modal. Opened by any Generate /
+          Analyze / Generate-Similar click when credits <= 0. */}
+      {showUpgradeModal && (
+        <UpgradeModal
+          loading={upgradeLoading}
+          onUpgrade={handleUpgradeNow}
+          onClose={() => setShowUpgradeModal(false)}
+        />
+      )}
+
       {/* Push #060 — first-user onboarding panel. Only renders when the
           user has zero rows in public.videos (recentVideos === []) and
           the dismissed flag is unset in localStorage. We don't show it
@@ -1388,19 +1525,19 @@ export default function GenerateClient() {
               )}
             </div>
             <button
-              onClick={() => handleAnalyze()}
-              disabled={phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))}
+              onClick={handleAnalyzeGuarded}
+              disabled={phase === 'analyzing' || !prompt.trim()}
               className="rounded-xl px-6 py-2.5 text-sm font-black flex items-center gap-2"
               style={{
                 background:
-                  phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))
+                  phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
                     : '#3B82F6',
                 border: 'none',
-                cursor: phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'not-allowed' : 'pointer',
-                color: phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'var(--muted)' : '#FFFFFF',
+                cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
+                color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
-                  phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))
+                  phase === 'analyzing' || !prompt.trim()
                     ? 'none'
                     : '0 8px 28px rgba(59, 130, 246,.35)',
               }}
@@ -1410,8 +1547,6 @@ export default function GenerateClient() {
                   <Spinner />
                   Analyzing…
                 </>
-              ) : (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? (
-                'No credits left'
               ) : (
                 'Generate Short'
               )}
@@ -1598,7 +1733,7 @@ export default function GenerateClient() {
                   : `🎬 Cinematic Mode · ${duration}s · ${QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts (9:16)`}
               </div>
               <button
-                onClick={handleGenerate}
+                onClick={handleGenerateGuarded}
                 className="rounded-xl px-6 py-3 text-sm font-black flex items-center gap-2"
                 style={{
                   background: '#3B82F6',
@@ -1644,6 +1779,12 @@ export default function GenerateClient() {
               <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {statusMessage}
               </div>
+
+              {/* Push #098 — 4-step generation text below the spinner.
+                  Time-driven (see progressStep useEffect) so it advances
+                  even when the API phase doesn't change for a stretch. */}
+              <GenerationProgressSteps step={progressStep} />
+
 
               {/* Push #087 — Fast Mode gets its own 4-step indicator that
                   matches the actual Pexels + TTS + assemble pipeline.
@@ -1925,15 +2066,15 @@ export default function GenerateClient() {
               <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
                 <button
                   type="button"
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))}
+                  onClick={handleGenerateGuarded}
+                  disabled={!prompt.trim()}
                   className="rounded-xl px-4 py-2 text-xs font-bold"
                   style={{
                     background: 'rgba(37,99,235,.10)',
                     border: '1px solid rgba(37,99,235,.35)',
                     color: '#93c5fd',
-                    cursor: !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'not-allowed' : 'pointer',
-                    opacity: !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 0.5 : 1,
+                    cursor: !prompt.trim() ? 'not-allowed' : 'pointer',
+                    opacity: !prompt.trim() ? 0.5 : 1,
                   }}
                 >
                   🔁 Generate Similar
@@ -3375,6 +3516,240 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
             >
               {isDone ? 'Done' : isActive ? 'Active' : 'Queued'}
             </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// ─── Push #098 — out-of-credits upgrade modal ───────────────────────────────
+// Dark overlay + centered card. Green CTA hits POST /api/stripe/checkout
+// with the basic tier, then redirects to the returned Stripe URL. Secondary
+// "Maybe later" closes the modal without leaving the page.
+function UpgradeModal({
+  loading,
+  onUpgrade,
+  onClose,
+}: {
+  loading: boolean
+  onUpgrade: () => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upgrade-modal-title"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.78)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          background: '#0f0f1e',
+          border: '1px solid rgba(52,211,153,0.35)',
+          borderRadius: 20,
+          padding: '32px 28px',
+          textAlign: 'center',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(52,211,153,0.18)',
+        }}
+      >
+        <h2
+          id="upgrade-modal-title"
+          style={{
+            fontSize: '1.45rem',
+            fontWeight: 900,
+            color: '#fff',
+            lineHeight: 1.25,
+            margin: 0,
+            marginBottom: 12,
+          }}
+        >
+          You&apos;ve used your free videos 🎉
+        </h2>
+        <p
+          style={{
+            fontSize: '0.95rem',
+            color: '#cbd5e1',
+            lineHeight: 1.5,
+            margin: 0,
+            marginBottom: 24,
+          }}
+        >
+          Upgrade to Basic for 50 videos/month — just $4.50/mo
+        </p>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onUpgrade}
+          style={{
+            width: '100%',
+            padding: '14px 20px',
+            borderRadius: 12,
+            border: 'none',
+            background: loading
+              ? 'rgba(52,211,153,0.5)'
+              : 'linear-gradient(135deg, #10b981, #059669)',
+            color: '#fff',
+            fontSize: '0.95rem',
+            fontWeight: 900,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: '0 10px 30px rgba(16,185,129,0.35)',
+            transition: 'transform 0.15s ease',
+          }}
+        >
+          {loading ? 'Opening checkout…' : 'Upgrade Now — 50% Off Today'}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            display: 'block',
+            margin: '14px auto 0',
+            background: 'transparent',
+            border: 'none',
+            color: '#94a3b8',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            padding: '4px 8px',
+          }}
+        >
+          Maybe later
+        </button>
+        <p
+          style={{
+            marginTop: 18,
+            fontSize: '0.78rem',
+            color: '#fbbf24',
+            fontWeight: 700,
+          }}
+        >
+          🔥 Launch offer ends soon
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Push #098 — first-visit welcome banner ─────────────────────────────────
+// Dismissible green banner shown above Step 1. The dismiss handler writes
+// the sf_welcomed flag to localStorage so the banner never returns.
+function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div
+      role="status"
+      className="rounded-xl px-4 py-3 mb-6 flex items-center gap-3"
+      style={{
+        background: 'rgba(52,211,153,0.10)',
+        border: '1px solid rgba(52,211,153,0.35)',
+        color: '#34d399',
+      }}
+    >
+      <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
+        🎉 Welcome! You have 2 free videos. Generate your first Short now!
+      </span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss welcome message"
+        style={{
+          background: 'transparent',
+          border: '1px solid rgba(52,211,153,0.35)',
+          borderRadius: 8,
+          color: '#34d399',
+          width: 28,
+          height: 28,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          fontSize: '0.9rem',
+          fontWeight: 900,
+          flexShrink: 0,
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+// ─── Push #098 — 4-step generation progress text ────────────────────────────
+// Sits below the spinner. Active step is bold green; completed steps stay
+// visible in muted green; upcoming steps are dimmed. The step index is
+// time-driven (see useEffect in the parent) so the user always feels
+// forward motion even when the API phase doesn't change for a while.
+function GenerationProgressSteps({ step }: { step: number }) {
+  const items = [
+    { icon: '✍️', label: 'Writing your script...' },
+    { icon: '🎙️', label: 'Generating voiceover...' },
+    { icon: '🎬', label: 'Finding footage...' },
+    { icon: '⚡', label: 'Rendering your Short...' },
+  ]
+  return (
+    <ol
+      style={{
+        marginTop: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+      }}
+    >
+      {items.map((it, i) => {
+        const isActive = i === step
+        const isDone = i < step
+        const color = isActive ? '#34d399' : isDone ? '#6ee7b7' : 'var(--muted)'
+        return (
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              opacity: isActive || isDone ? 1 : 0.55,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{ fontSize: '1.1rem', width: 22, textAlign: 'center' }}
+            >
+              {it.icon}
+            </span>
+            <span
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 800 : isDone ? 600 : 500,
+                color,
+              }}
+            >
+              {it.label}
+            </span>
+            {isDone && (
+              <span
+                aria-hidden="true"
+                style={{ marginLeft: 'auto', color: '#6ee7b7', fontSize: '0.85rem' }}
+              >
+                ✓
+              </span>
+            )}
           </li>
         )
       })}
