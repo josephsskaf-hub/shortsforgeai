@@ -24,7 +24,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'}/`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'}/generate`,
       },
     })
 
@@ -64,7 +64,7 @@ export default function SignupPage() {
       body: JSON.stringify({ email }),
     }).catch(() => {/* non-blocking — never fail signup on email failure */})
 
-    router.push('/')
+    router.push('/generate')
     router.refresh()
   }
 

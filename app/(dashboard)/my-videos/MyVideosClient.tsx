@@ -80,6 +80,7 @@ function starsFor(score: number): string {
 export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const counts = useMemo(() => {
     const c = { all: videos.length, completed: 0, processing: 0, failed: 0 }
@@ -108,6 +109,33 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       setTimeout(() => setCopiedId((c) => (c === v.id ? null : c)), 1800)
     } catch {
       // clipboard denied — silent no-op
+    }
+  }
+
+  // Native <a download> doesn't work for cross-origin CDN URLs — the browser
+  // ignores the attribute and opens the MP4 in a new tab. Fetch the bytes
+  // ourselves and trigger a blob download so the file actually saves locally.
+  async function handleDownload(v: VideoRow) {
+    if (!v.video_url || downloadingId) return
+    setDownloadingId(v.id)
+    try {
+      const res = await fetch(v.video_url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = `shortsforge-${v.id.slice(0, 8)}.mp4`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Give the browser a tick to start the download before revoking.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    } catch {
+      // Fall back to opening the URL in a new tab so the user isn't stranded.
+      window.open(v.video_url, '_blank', 'noopener,noreferrer')
+    } finally {
+      setDownloadingId(null)
     }
   }
 
@@ -170,6 +198,8 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
               video={v}
               isCopied={copiedId === v.id}
               onCopy={() => handleCopyLink(v)}
+              onDownload={() => handleDownload(v)}
+              isDownloading={downloadingId === v.id}
             />
           ))}
         </div>
@@ -196,10 +226,14 @@ function VideoCard({
   video: v,
   isCopied,
   onCopy,
+  onDownload,
+  isDownloading,
 }: {
   video: VideoRow
   isCopied: boolean
   onCopy: () => void
+  onDownload: () => void
+  isDownloading: boolean
 }) {
   const chip = statusChip(v.status)
   const playable = v.status === 'completed' && !!v.video_url
@@ -431,22 +465,22 @@ function VideoCard({
               >
                 ▶ Open
               </a>
-              <a
-                href={v.video_url}
-                download={`shortsforge-${v.id.slice(0, 8)}.mp4`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={onDownload}
+                disabled={isDownloading}
                 title="Download MP4"
                 className="rounded-lg px-3 py-2 text-xs font-bold"
                 style={{
                   background: 'rgba(255,255,255,.04)',
                   border: '1px solid var(--border)',
                   color: 'var(--text2)',
-                  textDecoration: 'none',
+                  cursor: isDownloading ? 'wait' : 'pointer',
+                  opacity: isDownloading ? 0.6 : 1,
                 }}
               >
-                ⬇ Download
-              </a>
+                {isDownloading ? '…' : '⬇ Download'}
+              </button>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button

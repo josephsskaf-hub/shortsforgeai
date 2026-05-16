@@ -251,9 +251,21 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
 
-        // Optionally downgrade on payment failure
-        // For now, we keep the subscription active until Stripe retries
-        console.log('Payment failed for customer:', customerId)
+        if (!customerId) {
+          console.warn('[stripe webhook] payment_failed without customer id')
+          break
+        }
+
+        const { error: revokeErr } = await supabase
+          .from('profiles')
+          .update({ is_pro: false, plan: 'free' })
+          .eq('stripe_customer_id', customerId)
+
+        if (revokeErr) {
+          console.error('[stripe webhook] failed to revoke access on payment_failed:', revokeErr.message, customerId)
+        } else {
+          console.log('[stripe webhook] revoked access for customer:', customerId)
+        }
         break
       }
 

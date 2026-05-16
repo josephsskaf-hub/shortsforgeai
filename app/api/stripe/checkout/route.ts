@@ -107,24 +107,36 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Launch-offer discount ────────────────────────────────────────────────
-    // Push #020 advertises "50% off first month" as $4.50 / $9.50. We prefer
-    // attaching the LAUNCH50 coupon (duration: once) directly so the discount
-    // is guaranteed regardless of whether the user pastes a promo code. If the
-    // coupon doesn't exist in this Stripe account yet we silently fall back to
-    // allow_promotion_codes so the checkout still works.
-    //
-    // TODO (ops): create coupon LAUNCH50 in Stripe Dashboard:
-    //   percent_off: 50, duration: once, redeem_by: <launch end date>
-    // until the coupon exists, customers must paste a promo code at checkout
-    // OR the displayed first-month price will not be applied.
+    // Push #020 advertises "50% off first month" as $4.50 / $9.50. We attach
+    // the LAUNCH50 coupon (duration: once) directly so the discount is
+    // guaranteed regardless of whether the user pastes a promo code. If the
+    // coupon doesn't exist in this Stripe account yet, we create it on the
+    // fly so the advertised first-month price is always honored.
     let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
     let allowPromotionCodes = false
     try {
       await stripe.coupons.retrieve(LAUNCH_COUPON)
       discounts = [{ coupon: LAUNCH_COUPON }]
     } catch {
-      // Coupon missing — fall back to user-entered promo codes.
-      allowPromotionCodes = true
+      try {
+        await stripe.coupons.create({
+          id: LAUNCH_COUPON,
+          percent_off: 50,
+          duration: 'once',
+          name: '50% off first month',
+        })
+        discounts = [{ coupon: LAUNCH_COUPON }]
+      } catch (createErr) {
+        const stripeErr = createErr as { code?: string; message?: string }
+        // `resource_already_exists` means a concurrent request just created it
+        // — safe to attach. Anything else, fall back to user-entered codes.
+        if (stripeErr?.code === 'resource_already_exists') {
+          discounts = [{ coupon: LAUNCH_COUPON }]
+        } else {
+          console.error('[stripe/checkout] LAUNCH50 create failed:', stripeErr?.code, stripeErr?.message)
+          allowPromotionCodes = true
+        }
+      }
     }
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {

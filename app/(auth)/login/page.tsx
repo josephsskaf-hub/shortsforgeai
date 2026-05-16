@@ -7,8 +7,8 @@ import Link from 'next/link'
 // Only honor redirects that stay on our own site, so a malicious referrer
 // can't bounce a logged-in user out to an external phishing page.
 function safeRedirect(raw: string | null): string {
-  if (!raw) return '/dashboard'
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
+  if (!raw) return '/generate'
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/generate'
   return raw
 }
 

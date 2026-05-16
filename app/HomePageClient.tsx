@@ -115,6 +115,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // when logged out. We only fetch once auth is confirmed so we don't
   // hammer the credits route during the unauth flash.
   const [credits, setCredits] = useState<number | null>(null)
+  const [checkoutTier, setCheckoutTier] = useState<'basic' | 'pro' | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -193,6 +195,37 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       setSigningOut(false)
       router.push('/')
       router.refresh()
+    }
+  }
+
+  async function handleStartPlan(tier: 'basic' | 'pro') {
+    trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
+    setCheckoutError(null)
+
+    // Guests can't be linked to a Stripe customer with a supabase_user_id yet,
+    // so the webhook would have no one to credit. Route them through login first.
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent('/pricing')}`)
+      return
+    }
+
+    setCheckoutTier(tier)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.url) {
+        setCheckoutError(data?.error ?? 'Could not start checkout. Please try again.')
+        setCheckoutTier(null)
+        return
+      }
+      window.location.assign(data.url)
+    } catch {
+      setCheckoutError('Network error. Please try again.')
+      setCheckoutTier(null)
     }
   }
 
@@ -669,24 +702,40 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href={planHref}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (isPaid) setSelectedPlan(plan.tier as 'basic' | 'pro')
-                    if (plan.tier === 'basic') trackHomepageEvent('basic_checkout_clicked')
-                    if (plan.tier === 'pro') trackHomepageEvent('pro_checkout_clicked')
-                  }}
-                  className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
-                    isRecommended || isSelected
-                      ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
-                  }`}
-                >
-                  {ctaLabel} →
-                </a>
+                {isPaid ? (
+                  <button
+                    type="button"
+                    disabled={checkoutTier !== null && checkoutTier !== plan.tier}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedPlan(plan.tier as 'basic' | 'pro')
+                      handleStartPlan(plan.tier as 'basic' | 'pro')
+                    }}
+                    className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
+                      isRecommended || isSelected
+                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                    }`}
+                  >
+                    {checkoutTier === plan.tier ? 'Starting…' : `${ctaLabel} →`}
+                  </button>
+                ) : (
+                  <a
+                    href={planHref}
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
+                      isRecommended || isSelected
+                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                    }`}
+                  >
+                    {ctaLabel} →
+                  </a>
+                )}
                 {/* Push #086 — per-tier urgency / value highlight under
                     each CTA. Costs use first-month math (credits ÷ first
                     month price) to match the cyan "first month" copy
@@ -700,6 +749,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             )
           })}
         </div>
+
+        {checkoutError && (
+          <p className="mx-auto mt-4 max-w-2xl text-center text-[13px] font-semibold text-[#f87171]">
+            {checkoutError}
+          </p>
+        )}
 
         <p className="mx-auto mt-6 max-w-2xl text-center text-[12px] text-[#94A3B8]">
           50% off applies to the first month only. Plans renew at the regular monthly price.
