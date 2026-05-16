@@ -1278,6 +1278,50 @@ export default function GenerateClient() {
         .gv-card { animation: fadeUp 0.35s ease both; }
       `}</style>
 
+      {/* Push #103 — sticky low-credits upgrade banner. Sits above every
+          other piece of the page so a free user who's about to be locked
+          out always sees the 50% off offer. Hits the existing
+          /api/stripe/checkout flow via handleUpgradeNow. */}
+      {planTier === 'free' && credits !== null && credits <= 1 && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg, rgba(251,191,36,.12), rgba(245,158,11,.08))',
+            border: '1px solid rgba(251,191,36,.3)',
+            borderRadius: 12,
+            padding: '10px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
+            ⚠️ {credits === 0 ? "You're out of credits" : '1 credit left'} — upgrade to keep creating
+          </span>
+          <button
+            type="button"
+            onClick={handleUpgradeNow}
+            disabled={upgradeLoading}
+            style={{
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              border: 'none',
+              borderRadius: 8,
+              padding: '6px 16px',
+              color: '#000',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: upgradeLoading ? 'wait' : 'pointer',
+              whiteSpace: 'nowrap',
+              opacity: upgradeLoading ? 0.7 : 1,
+            }}
+          >
+            {upgradeLoading ? 'Loading…' : 'Upgrade — 50% Off →'}
+          </button>
+        </div>
+      )}
+
       {/* Header — push #047 conversion polish.
           Step 1 uses the "Build Your Viral Short" headline + a credits chip
           on the right. Later phases keep a tighter header so the screen
@@ -1298,10 +1342,10 @@ export default function GenerateClient() {
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-              {showStep1 ? 'Build Your Addictive Micro-Knowledge Short' : '🎬 Generate a Real AI Short'}
+              {showStep1 ? 'Create Your Short ⚡' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-              {showStep1 && 'Create addictive micro-knowledge Shorts in seconds — brutal hook, real facts, satisfying payoff.'}
+              {showStep1 && 'Type any topic → AI writes, voices & edits your Short in ~60 seconds'}
               {showStep2 && 'Pick duration and quality, then generate.'}
               {showRender && 'Rendering your vertical 9:16 Short.'}
             </p>

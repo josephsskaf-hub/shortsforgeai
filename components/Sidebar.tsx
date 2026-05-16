@@ -316,6 +316,11 @@ export default function Sidebar({
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}
           <NavItem href="/examples" icon="✨" label="Examples" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Push #103 — Pricing surfaced inside the dashboard nav so users
+              don't have to leave the app to find the upgrade page. The
+              bottom credits card also links here, but that one is gated on
+              `isLoggedIn` — this stays visible for guests too. */}
+          <NavItem href="/pricing" icon="💎" label="Pricing" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
 
