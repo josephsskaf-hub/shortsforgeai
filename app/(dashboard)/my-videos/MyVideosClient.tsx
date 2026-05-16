@@ -1,12 +1,15 @@
 'use client'
 
-// Push #053 — AI video library client.
-// Push #060 — upgraded with status filters, expanded card actions
-// (Copy Link, Generate Similar), full date formatting, and a play-icon
-// placeholder when the row has a final MP4 but no thumbnail.
+// Push #082 — My Videos premium library.
+// Each card now hover-previews the rendered MP4 (muted autoplay on
+// pointer-enter, pause on leave) and shows a richer set of badges:
+// status, format (YouTube Shorts 9:16), duration, quality (or "HD"
+// fallback), credits used, and a numeric quality_score star rating
+// when present. The grid still falls back gracefully on staging rows
+// that don't have a video_url yet.
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 export interface VideoRow {
   id: string
@@ -17,9 +20,12 @@ export interface VideoRow {
   duration: number | null
   platform: string
   created_at: string
-  // Push #060 — optional fields. Surfaced when the column exists.
   prompt: string | null
   credits_used: number | null
+  // Push #082 — quality text (e.g. "HD", "4K") + optional numeric
+  // quality_score (e.g. 4.2 → ★★★★☆). Either can be null on staging.
+  quality: string | null
+  quality_score: number | null
 }
 
 type FilterKey = 'all' | 'completed' | 'processing' | 'failed'
@@ -54,13 +60,21 @@ function formatFullDate(iso: string): string {
   try {
     const d = new Date(iso)
     return d.toLocaleDateString('en-US', {
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       year: 'numeric',
     })
   } catch {
     return 'Recent'
   }
+}
+
+// Render a 0–5 quality_score as filled/empty star glyphs. We round to the
+// nearest half so 4.2 → ★★★★☆ and 4.7 → ★★★★★.
+function starsFor(score: number): string {
+  const clamped = Math.max(0, Math.min(5, score))
+  const full = Math.round(clamped)
+  return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full)
 }
 
 export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
@@ -103,26 +117,30 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         <Header count={0} />
         <div
           className="rounded-2xl p-8 sm:p-14 text-center"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+          style={{
+            background: 'linear-gradient(180deg, rgba(15,15,30,.85), rgba(11,16,32,.65))',
+            border: '1px solid rgba(59, 130, 246,.18)',
+            boxShadow: '0 0 80px rgba(59,130,246,.08)',
+          }}
         >
           <div className="text-5xl mb-4">🎬</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            No videos yet. Create your first AI Short.
+            Your generated videos will appear here.
           </h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-            Generated AI videos will show up here as soon as a render finishes.
+            Create your first video and we'll keep every render here, ready to download.
           </p>
           <Link
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: '#3B82F6',
+              background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
               color: '#FFFFFF',
-              boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
+              boxShadow: '0 4px 22px rgba(59, 130, 246,.4)',
               textDecoration: 'none',
             }}
           >
-            ⚡ Generate Video
+            Create your first video →
           </Link>
         </div>
       </div>
@@ -146,185 +164,14 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         </div>
       ) : (
         <div className="mv-grid">
-          {filtered.map((v) => {
-            const chip = statusChip(v.status)
-            const playable = v.status === 'completed' && !!v.video_url
-            const isCopied = copiedId === v.id
-            const generateSimilarHref = v.prompt
-              ? `/generate?prompt=${encodeURIComponent(v.prompt)}`
-              : '/generate'
-            return (
-              <div
-                key={v.id}
-                className="rounded-2xl overflow-hidden flex flex-col"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-              >
-                <div
-                  className="relative"
-                  style={{
-                    background: v.thumbnail_url
-                      ? `center / cover no-repeat url(${v.thumbnail_url})`
-                      : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
-                    aspectRatio: '9 / 16',
-                  }}
-                >
-                  {/* Play-icon placeholder for completed videos that have an
-                      MP4 but no thumbnail — most staging rows are in this
-                      state. Falls back to a film emoji for everything else. */}
-                  {!v.thumbnail_url && (
-                    <div
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ color: 'rgba(147,197,253,.7)', fontSize: '2.6rem' }}
-                    >
-                      {playable ? '▶' : '🎬'}
-                    </div>
-                  )}
-                  <span
-                    className="absolute"
-                    style={{
-                      top: 8,
-                      left: 8,
-                      padding: '3px 9px',
-                      borderRadius: 999,
-                      background: chip.bg,
-                      border: `1px solid ${chip.border}`,
-                      color: chip.fg,
-                      fontSize: '0.62rem',
-                      fontWeight: 900,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {chip.emoji} {chip.label}
-                  </span>
-                  {v.duration ? (
-                    <span
-                      className="absolute"
-                      style={{
-                        bottom: 8,
-                        right: 8,
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        background: 'rgba(0,0,0,.6)',
-                        color: '#fff',
-                        fontSize: '0.62rem',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {Math.round(v.duration)}s
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="p-3 flex flex-col gap-2 flex-1">
-                  <p
-                    className="text-sm font-bold"
-                    style={{
-                      color: 'var(--text)',
-                      lineHeight: 1.4,
-                      margin: 0,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {v.title}
-                  </p>
-
-                  <div
-                    className="text-[11px] flex flex-wrap items-center gap-x-1.5 gap-y-1"
-                    style={{ color: 'var(--muted)' }}
-                  >
-                    <span>{formatFullDate(v.created_at)}</span>
-                    <span>·</span>
-                    <span>{v.platform}</span>
-                    {v.credits_used != null && (
-                      <>
-                        <span>·</span>
-                        <span>{v.credits_used} credits</span>
-                      </>
-                    )}
-                  </div>
-
-                  {playable && v.video_url ? (
-                    <div className="flex flex-col gap-2 mt-auto pt-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <a
-                          href={v.video_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
-                          style={{
-                            background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-                            color: '#fff',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Open ↗
-                        </a>
-                        <a
-                          href={v.video_url}
-                          download={`shortsforge-${v.id.slice(0, 8)}.mp4`}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Download MP4"
-                          className="rounded-lg px-3 py-2 text-xs font-bold"
-                          style={{
-                            background: 'rgba(255,255,255,.04)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text2)',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          ⬇
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyLink(v)}
-                          className="rounded-lg px-3 py-2 text-xs font-bold flex-1"
-                          style={{
-                            background: isCopied
-                              ? 'rgba(52,211,153,.12)'
-                              : 'rgba(255,255,255,.04)',
-                            border: isCopied
-                              ? '1px solid rgba(52,211,153,.45)'
-                              : '1px solid var(--border)',
-                            color: isCopied ? '#34d399' : 'var(--text2)',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          {isCopied ? '✓ Copied!' : '🔗 Copy Link'}
-                        </button>
-                        <Link
-                          href={generateSimilarHref}
-                          className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
-                          style={{
-                            background: 'rgba(59, 130, 246,.10)',
-                            border: '1px solid rgba(59, 130, 246,.32)',
-                            color: '#60A5FA',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          ⚡ Generate Similar
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="text-[11px] mt-auto pt-2"
-                      style={{ color: 'var(--muted)' }}
-                    >
-                      {v.status === 'processing' ? 'Rendering…' : 'Not available'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {filtered.map((v) => (
+            <VideoCard
+              key={v.id}
+              video={v}
+              isCopied={copiedId === v.id}
+              onCopy={() => handleCopyLink(v)}
+            />
+          ))}
         </div>
       )}
 
@@ -332,15 +179,317 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         .mv-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
+          gap: 18px;
         }
         @media (max-width: 900px) {
           .mv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 540px) {
           .mv-grid { grid-template-columns: 1fr; }
         }
       `}</style>
+    </div>
+  )
+}
+
+function VideoCard({
+  video: v,
+  isCopied,
+  onCopy,
+}: {
+  video: VideoRow
+  isCopied: boolean
+  onCopy: () => void
+}) {
+  const chip = statusChip(v.status)
+  const playable = v.status === 'completed' && !!v.video_url
+  const generateSimilarHref = v.prompt
+    ? `/generate?prompt=${encodeURIComponent(v.prompt)}`
+    : '/generate'
+
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [hovered, setHovered] = useState(false)
+  const [previewFailed, setPreviewFailed] = useState(false)
+
+  function handlePointerEnter() {
+    setHovered(true)
+    if (!playable || previewFailed) return
+    const el = videoRef.current
+    if (!el) return
+    el.muted = true
+    el.currentTime = 0
+    el.play().catch(() => {/* autoplay blocked — silent */})
+  }
+
+  function handlePointerLeave() {
+    setHovered(false)
+    const el = videoRef.current
+    if (!el) return
+    el.pause()
+  }
+
+  // Duration label — show the real seconds when known, otherwise the
+  // expected ~35s for a Shorts render so the card never reads "0s".
+  const durationLabel = v.duration && v.duration > 0 ? `${Math.round(v.duration)}s` : '~35s'
+
+  // Quality badge — prefer the numeric quality_score (rendered as stars),
+  // fall back to the `quality` text column, finally show "HD" so every
+  // completed card carries some kind of quality signal.
+  const hasScore = typeof v.quality_score === 'number' && v.quality_score > 0
+  const qualityText = hasScore
+    ? `${(v.quality_score as number).toFixed(1)} ${starsFor(v.quality_score as number)}`
+    : v.quality && v.quality.trim().length > 0
+      ? v.quality.toUpperCase()
+      : 'HD'
+
+  return (
+    <div
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
+      style={{
+        background: 'linear-gradient(180deg, #0F1424 0%, #0B1020 100%)',
+        border: hovered
+          ? '1px solid rgba(59,130,246,0.55)'
+          : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: hovered
+          ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
+          : '0 8px 22px rgba(0,0,0,0.35)',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+      }}
+    >
+      <div
+        className="relative"
+        style={{
+          background: v.thumbnail_url
+            ? `center / cover no-repeat url(${v.thumbnail_url})`
+            : 'linear-gradient(135deg, rgba(37,99,235,.22), rgba(34,211,238,.10))',
+          aspectRatio: '9 / 16',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Hover preview — the rendered MP4 plays muted while the user is
+            on top of the card. We only mount the <video> for playable rows
+            so the page doesn't spin up six idle decoders. */}
+        {playable && !previewFailed && (
+          <video
+            ref={videoRef}
+            src={v.video_url ?? undefined}
+            poster={v.thumbnail_url ?? undefined}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onError={() => setPreviewFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
+            style={{ opacity: hovered ? 1 : 0 }}
+          />
+        )}
+
+        {/* Center placeholder — only when there's no thumbnail to show. */}
+        {!v.thumbnail_url && (
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              color: 'rgba(147,197,253,.7)',
+              fontSize: '2.6rem',
+              opacity: hovered && playable && !previewFailed ? 0 : 1,
+              transition: 'opacity 0.25s ease',
+            }}
+          >
+            {playable ? '▶' : '🎬'}
+          </div>
+        )}
+
+        {/* Top-left: status chip */}
+        <span
+          className="absolute"
+          style={{
+            top: 8,
+            left: 8,
+            padding: '3px 9px',
+            borderRadius: 999,
+            background: chip.bg,
+            border: `1px solid ${chip.border}`,
+            color: chip.fg,
+            fontSize: '0.62rem',
+            fontWeight: 900,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          {chip.emoji} {chip.label}
+        </span>
+
+        {/* Top-right: quality badge */}
+        {playable && (
+          <span
+            className="absolute"
+            style={{
+              top: 8,
+              right: 8,
+              padding: '3px 9px',
+              borderRadius: 6,
+              background: 'rgba(11,17,32,.7)',
+              border: '1px solid rgba(34,211,238,.45)',
+              color: '#22D3EE',
+              fontSize: '0.6rem',
+              fontWeight: 900,
+              letterSpacing: '0.06em',
+              backdropFilter: 'blur(8px)',
+            }}
+            title="Output quality"
+          >
+            {qualityText}
+          </span>
+        )}
+
+        {/* Bottom-left: format badge */}
+        <span
+          className="absolute"
+          style={{
+            bottom: 8,
+            left: 8,
+            padding: '3px 8px',
+            borderRadius: 6,
+            background: 'rgba(11,17,32,.7)',
+            border: '1px solid rgba(255,255,255,.12)',
+            color: '#F1F5F9',
+            fontSize: '0.58rem',
+            fontWeight: 800,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          YouTube Shorts · 9:16
+        </span>
+
+        {/* Bottom-right: duration */}
+        <span
+          className="absolute"
+          style={{
+            bottom: 8,
+            right: 8,
+            padding: '3px 8px',
+            borderRadius: 6,
+            background: 'rgba(0,0,0,.65)',
+            color: '#fff',
+            fontSize: '0.62rem',
+            fontWeight: 800,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          {durationLabel}
+        </span>
+      </div>
+
+      <div className="p-3.5 flex flex-col gap-2 flex-1">
+        <p
+          className="text-[14px] font-bold tracking-tight"
+          style={{
+            color: 'var(--text)',
+            lineHeight: 1.35,
+            margin: 0,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {v.title}
+        </p>
+
+        <div
+          className="text-[11px] flex flex-wrap items-center gap-x-1.5 gap-y-1"
+          style={{ color: 'var(--muted)' }}
+        >
+          <span>{formatFullDate(v.created_at)}</span>
+          {v.credits_used != null && (
+            <>
+              <span>·</span>
+              <span>{v.credits_used} credits</span>
+            </>
+          )}
+        </div>
+
+        {playable && v.video_url ? (
+          <div className="flex flex-col gap-2 mt-auto pt-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href={v.video_url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 18px rgba(59,130,246,.35)',
+                }}
+              >
+                ▶ Open
+              </a>
+              <a
+                href={v.video_url}
+                download={`shortsforge-${v.id.slice(0, 8)}.mp4`}
+                target="_blank"
+                rel="noreferrer"
+                title="Download MP4"
+                className="rounded-lg px-3 py-2 text-xs font-bold"
+                style={{
+                  background: 'rgba(255,255,255,.04)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text2)',
+                  textDecoration: 'none',
+                }}
+              >
+                ⬇ Download
+              </a>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={onCopy}
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1"
+                style={{
+                  background: isCopied
+                    ? 'rgba(52,211,153,.12)'
+                    : 'rgba(255,255,255,.04)',
+                  border: isCopied
+                    ? '1px solid rgba(52,211,153,.45)'
+                    : '1px solid var(--border)',
+                  color: isCopied ? '#34d399' : 'var(--text2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {isCopied ? '✓ Copied!' : '🔗 Copy Link'}
+              </button>
+              <Link
+                href={generateSimilarHref}
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
+                style={{
+                  background: 'rgba(59, 130, 246,.10)',
+                  border: '1px solid rgba(59, 130, 246,.32)',
+                  color: '#60A5FA',
+                  textDecoration: 'none',
+                }}
+              >
+                ⚡ Generate Similar
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="text-[11px] mt-auto pt-2"
+            style={{ color: 'var(--muted)' }}
+          >
+            {v.status === 'processing' ? 'Rendering…' : 'Not available'}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -404,27 +553,27 @@ function Header({ count }: { count: number }) {
         className="font-black uppercase tracking-widest mb-1"
         style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}
       >
-        My Videos
+        Library
       </div>
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1
             className="font-black tracking-tight mb-1"
-            style={{ fontSize: '1.45rem', color: 'var(--text)' }}
+            style={{ fontSize: '1.65rem', color: 'var(--text)', letterSpacing: '-0.02em' }}
           >
-            Your <span className="grad-text">AI Shorts</span>
+            My <span className="grad-text">Videos</span>
           </h1>
-          <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-            {count} video{count === 1 ? '' : 's'} generated
+          <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+            {count} video{count === 1 ? '' : 's'} in your library
           </p>
         </div>
         <Link
           href="/generate"
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold flex-shrink-0"
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold flex-shrink-0"
           style={{
-            background: '#3B82F6',
+            background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
             color: '#FFFFFF',
-            boxShadow: '0 4px 18px rgba(59, 130, 246,.3)',
+            boxShadow: '0 4px 18px rgba(59, 130, 246,.35)',
             textDecoration: 'none',
           }}
         >
