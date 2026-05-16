@@ -136,21 +136,31 @@ interface RecentVideo {
 
 // Push #048 — Trending Hooks. Static templates the user can drop into the
 // prompt box (or just copy). Categories drive the colored tag on the chip.
+// Push #101 — retuned for the Money Facts channel: money, mindset,
+// investing topics plus a few history/facts hooks that already proved
+// they convert.
 const TRENDING_HOOKS: { text: string; category: string }[] = [
-  { text: "This sounds fake, but it's real…", category: 'Mystery' },
-  { text: 'Nobody talks about this part of history…', category: 'History' },
-  { text: "Scientists still can't explain this…", category: 'Mystery' },
-  { text: 'This signal appeared once… then vanished.', category: 'Mystery' },
-  { text: 'What if everything you know about this is wrong?', category: 'Facts' },
-  { text: 'This place looks impossible, but it exists.', category: 'Nature' },
-  { text: 'They built this thousands of years ago.', category: 'History' },
-  { text: 'The ocean recorded something strange.', category: 'Nature' },
+  { text: '10 money facts that will blow your mind', category: 'Money' },
+  { text: 'Why billionaires wake up at 4am', category: 'Mindset' },
+  { text: 'The dark side of credit cards no one talks about', category: 'Money' },
+  { text: 'Why 90% of people will never be rich', category: 'Mindset' },
+  { text: 'Hidden secrets of the Federal Reserve', category: 'Money' },
+  { text: 'The most expensive mistake Warren Buffett ever made', category: 'Investing' },
+  { text: 'Why you should never put money in a savings account', category: 'Money' },
+  { text: 'The truth about passive income', category: 'Investing' },
+  { text: 'How the Rothschild family built their empire', category: 'History' },
+  { text: '5 countries where money does not exist', category: 'Facts' },
+  { text: 'The Roman invention we still use today', category: 'History' },
+  { text: 'What NASA discovered that they kept secret', category: 'Facts' },
 ]
 
 const HOOK_CATEGORY_COLOR: Record<string, { fg: string; bg: string; border: string }> = {
-  Mystery: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
+  Money: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
+  Mindset: { fg: '#a78bfa', bg: 'rgba(167,139,250,.10)', border: 'rgba(167,139,250,.30)' },
+  Investing: { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.30)' },
   History: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
   Facts: { fg: '#93c5fd', bg: 'rgba(147,197,253,.10)', border: 'rgba(147,197,253,.30)' },
+  Mystery: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
   Nature: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
 }
 
@@ -2058,6 +2068,23 @@ export default function GenerateClient() {
                 >
                   📤 Share
                 </button>
+                {/* Push #101 — one-click X intent for organic distribution.
+                    Opens in a new tab with prefilled copy + hashtags. */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at shortsforgeai.com %23YouTubeShorts %23AIVideo`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.05)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  𝕏 Share on X
+                </a>
               </div>
 
               {/* Push #099 — Post-generation upgrade upsell. Shows under the

@@ -154,24 +154,24 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             boxShadow: '0 0 80px rgba(59,130,246,.08)',
           }}
         >
-          <div className="text-5xl mb-4">🎬</div>
+          <div className="text-5xl mb-4">⚡</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            Your generated videos will appear here.
+            No videos yet — let&apos;s make your first Short!
           </h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-            Create your first video and we'll keep every render here, ready to download.
+            Generate your first AI Short in 60 seconds. It&apos;s free.
           </p>
           <Link
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
               color: '#FFFFFF',
-              boxShadow: '0 4px 22px rgba(59, 130, 246,.4)',
+              boxShadow: '0 4px 22px rgba(16,185,129,.4)',
               textDecoration: 'none',
             }}
           >
-            Create your first video →
+            Generate Now →
           </Link>
         </div>
       </div>
