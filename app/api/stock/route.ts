@@ -40,17 +40,38 @@ interface PexelsVideosResponse {
   videos?: PexelsVideo[]
 }
 
+// Pick the best Pexels file for a 1080x1920 (9:16) Short.
+//
+// Black-screen bug fix: the previous version fell back to landscape clips
+// when no portrait was available, which the Creatomate `fit: contain` path
+// rendered as a tiny strip on a black canvas. The new version is strict —
+// it ONLY accepts true portrait HD/FullHD MP4 files, and returns null
+// otherwise so the caller drops to the next keyword or the curated library
+// (which is verified hotlink-friendly).
+//
+// Rules:
+//   - file_type must be video/mp4 (no HLS, no other containers)
+//   - height > width (true portrait — square clips are rejected too)
+//   - 720 <= height <= 1920 (SD looks awful on a 1920 canvas; 4K causes
+//     Creatomate decoder timeouts and sporadic black-frame renders)
+//   - https link only (no http to avoid mixed-content issues)
 function pickFile(video: PexelsVideo): PexelsVideoFile | null {
   const usable = video.video_files.filter(
-    (f) => f.file_type === 'video/mp4' && f.quality !== 'hls'
+    (f) =>
+      f.file_type === 'video/mp4' &&
+      f.quality !== 'hls' &&
+      f.height > f.width &&
+      f.height >= 720 &&
+      f.height <= 1920 &&
+      typeof f.link === 'string' &&
+      f.link.startsWith('https://')
   )
   if (usable.length === 0) return null
-  const portrait = usable.filter((f) => f.height > f.width)
-  const pool = portrait.length > 0 ? portrait : usable
-  const sorted = pool.slice().sort((a, b) => {
-    const aGood = a.height <= 1920 ? 0 : 1
-    const bGood = b.height <= 1920 ? 0 : 1
-    if (aGood !== bGood) return aGood - bGood
+  const sorted = usable.slice().sort((a, b) => {
+    // Smallest distance from the 1920-tall ideal first, then largest height.
+    const aDist = Math.abs(a.height - 1920)
+    const bDist = Math.abs(b.height - 1920)
+    if (aDist !== bDist) return aDist - bDist
     return b.height - a.height
   })
   return sorted[0] ?? null

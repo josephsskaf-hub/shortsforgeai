@@ -51,32 +51,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     }
 
-    // The point of searchKeywords is to fix a long-standing bug where
-    // generic 2-3-word queries ("ranking", "list", "facts") matched random
-    // Pexels footage that had nothing to do with the narration. We now ask
-    // the model to emit a priority list of CONCRETE, VISUAL noun phrases
-    // tied to what's literally being said in that scene's narration — and
-    // /api/stock tries each one in order before falling back, so a Pexels
-    // miss on the most-specific keyword still has cheaper fallbacks before
-    // hitting the curated library.
-    const prompt = `Parse this short-form video script into 4-6 cinematic scenes for a 35-second YouTube Short in the "${niche}" niche.
+    // searchKeywords fixes a long-standing bug where generic 2-3-word queries
+    // ("ranking", "list", "facts") matched random Pexels footage that had
+    // nothing to do with the narration. The model emits a priority list of
+    // CONCRETE, VISUAL noun phrases per scene, and /api/stock tries each one
+    // in order before falling back to broadening + the curated library.
+    //
+    // STEP 1 (theme anchoring) is a second-layer fix for ABSTRACT narration
+    // lines ("to recover", "the lesson", "imagine this"). The model first
+    // identifies the SCRIPT-WIDE theme, then every per-scene keyword carries
+    // a concrete noun from that theme — so a Mansa Musa script's "to recover"
+    // line gets "ancient african empire" instead of generic wellness clips.
+    const prompt = `You are planning the visuals for a 35-second YouTube Short in the "${niche}" niche.
 
-Script:
+SCRIPT:
 """
 ${script}
 """
 
-You are also acting as a STOCK FOOTAGE DIRECTOR. For each scene, output 3 concrete visual search phrases (\`searchKeywords\`) that a stock-video site like Pexels would actually return matching footage for. Each phrase MUST describe what the viewer should literally see while that narration plays — never the abstract idea behind it.
+STEP 1 — Identify the SCRIPT-WIDE THEME in 2-4 concrete nouns BEFORE writing any scene. Examples:
+  - A script about Mansa Musa → theme: "ancient mali kingdom gold"
+  - A script about Wall Street crash → theme: "wall street stock market crash"
+  - A script about overcoming addiction → theme: "addiction recovery brain"
+  - A script about Mount Everest → theme: "mount everest snow mountain"
+Every scene's keywords MUST stay anchored to this theme, even when the narration is abstract.
 
-Rules for searchKeywords:
-- Use concrete visual nouns: places, objects, landscapes, people doing something specific.
-- Be specific FIRST, broader LAST. Example for narration "The highest mountain in the world stands 8,849 meters tall":
-    ["mount everest summit", "snow mountain peak", "alpine landscape"]
-- Example for narration "Jeff Bezos earned 75 billion dollars in one year":
-    ["jeff bezos portrait", "amazon headquarters building", "stacks of cash money"]
-- NEVER use abstract words alone like: "ranking", "list", "top 5", "facts", "secret", "amazing".
-- NEVER use words from the script that aren't visually depictable (e.g. "remarkable", "shocking", "truth").
-- All phrases lowercase, 2-4 words each, no punctuation, no hashtags.
+STEP 2 — You are now a STOCK FOOTAGE DIRECTOR. Split the script into 4-6 cinematic scenes (durations sum to ~35s). For EACH scene output 3 concrete visual search phrases (\`searchKeywords\`) that a stock-video site like Pexels would actually return matching footage for. Each phrase MUST describe what the viewer should literally see while that narration plays — never the abstract idea behind it.
+
+Rules for searchKeywords (CRITICAL — this is the most important field):
+  1. EXACTLY 3 phrases per scene, lowercase, 2-4 words each, no punctuation, no hashtags.
+  2. Order: most specific FIRST, broader LAST.
+  3. Every phrase MUST contain at least one CONCRETE VISUAL NOUN (a place, object, person, landscape). Without a concrete noun, Pexels returns generic wellness/lifestyle clips and ruins the video.
+  4. For ABSTRACT narration ("to recover", "the lesson", "imagine this", "the truth", "what happened next", "the secret"), DO NOT search the abstract phrase alone — anchor every phrase to the STEP 1 theme. Examples:
+       narration "to recover"     + theme "wall street crash"        → ["stock market recovery", "trader celebrating", "wall street bull"]
+       narration "the lesson"     + theme "ancient mali kingdom"     → ["ancient african empire", "gold coins pile", "desert caravan"]
+       narration "imagine this"   + theme "mount everest"            → ["mount everest summit", "snow mountain peak", "alpine landscape"]
+  5. NEVER emit these as standalone phrases: "recover", "lesson", "imagine", "truth", "secret", "story", "people", "thing", "happen", "moment", "feeling", "ranking", "list", "top 5", "facts", "amazing", "remarkable", "shocking".
+  6. Good concrete examples for narration "The highest mountain in the world stands 8,849 meters tall":
+       ["mount everest summit", "snow mountain peak", "alpine landscape"]
+  7. Good concrete examples for narration "Jeff Bezos earned 75 billion dollars in one year":
+       ["jeff bezos portrait", "amazon headquarters building", "stacks of cash money"]
 
 Return ONLY a JSON array. Each object MUST contain:
 - sceneNumber (int, starting at 1)

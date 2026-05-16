@@ -369,14 +369,14 @@ export function buildCreatomateSource({
   // Track 2 — tile / loop the clips to fill the full duration.
   // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
   //
-  // Push #065 — fit: 'contain' (not 'cover'). Runway returns 720x1280 clips
-  // (9:16), the output canvas is 1080x1920 (9:16), and the two aspect ratios
-  // match exactly — so 'contain' produces no letterboxing in the matched
-  // case while guaranteeing nothing gets cropped if a clip is ever encoded
-  // slightly off-spec. 'cover' would silently chop the top/bottom of a
-  // landmark whenever a model upscales a clip by a few pixels. Anchors stay
-  // pinned at 50%/50% so any letterbox would be centered, and track 1
-  // already paints a black background under everything as a safety net.
+  // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
+  // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
+  // 'cover' and 'contain' produce identical output. The case that matters
+  // is the curated stock-library fallback, which contains landscape clips
+  // (Cloudinary 1280x720 etc.) — 'contain' would render those as a small
+  // strip on a black canvas (the black-screen bug); 'cover' fills the
+  // frame with a centered crop. Track 1 still paints a dark background as
+  // a safety net for any decode failure.
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
@@ -390,7 +390,7 @@ export function buildCreatomateSource({
       time: round3(cursor),
       duration: segLen,
       source: url,
-      fit: 'contain',
+      fit: 'cover',
       x: '50%',
       y: '50%',
       width: '100%',
