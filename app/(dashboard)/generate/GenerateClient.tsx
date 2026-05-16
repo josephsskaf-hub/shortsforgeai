@@ -1633,23 +1633,21 @@ export default function GenerateClient() {
                   background: '#000',
                 }}
               >
-                {/* Push #050 — load through /api/video-proxy so the <video>
-                    element gets the file from the same origin. Creatomate's
-                    CDN doesn't return Access-Control-Allow-Origin on its
-                    MP4 responses, so a direct cross-origin src= used to
-                    spin forever in the player even though Download worked.
-                    The Download anchor below still points at the original
-                    URL (anchor downloads aren't subject to the same CORS
-                    rules as <video> playback). */}
+                {/* Bug fix — load the MP4 directly from the CDN. The old
+                    proxy path buffered the entire ~28MB body through a
+                    Node.js serverless function and timed out before the
+                    <video> element ever saw the first byte. Without
+                    crossOrigin="anonymous" the browser does not enforce
+                    CORS on media playback, so the direct cross-origin
+                    src= works on Backblaze and Creatomate alike. */}
                 <video
                   ref={videoRef}
                   key={finalVideoUrl}
-                  src={`/api/video-proxy?url=${encodeURIComponent(finalVideoUrl)}`}
+                  src={finalVideoUrl}
                   controls
                   autoPlay
                   playsInline
                   preload="metadata"
-                  crossOrigin="anonymous"
                   style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
               </div>

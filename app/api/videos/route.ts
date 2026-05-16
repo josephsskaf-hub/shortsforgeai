@@ -100,7 +100,14 @@ export async function GET() {
     // the universally-present columns.
     const wideColumns =
       'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,platform,thumbnail_url,thumb_url,render_id,created_at'
-    const narrowColumns = 'id,status,final_video_url,title,created_at'
+    // Bug fix — narrow fallback used to ask for `final_video_url` and
+    // `title`, which do not exist on every environment (migration 004
+    // baseline only adds `video_url` / `topic`). When those columns
+    // were missing, both wide AND narrow selects failed → the route
+    // silently returned an empty list. Narrow now uses only columns
+    // guaranteed by migration 004 baseline so the read path is
+    // universally safe.
+    const narrowColumns = 'id,status,video_url,topic,created_at'
 
     // Helper: run the videos SELECT with whichever column list works.
     // We hoist user.id to a local so the inner function doesn't need

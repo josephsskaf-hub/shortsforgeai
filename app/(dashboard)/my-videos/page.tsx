@@ -70,12 +70,18 @@ export default async function MyVideosPage() {
 
   if (!user) redirect('/login?redirect=/my-videos')
 
-  // Same defensive column-narrowing as /api/videos so this page never
-  // 500s if a column doesn't exist in this staging DB. Push #060 adds
-  // credits_used so My Videos can show what each render cost.
+  // Defensive column-narrowing. wideColumns asks for every name we have
+  // ever used (both the legacy `video_url`/`topic` schema and the
+  // staging `final_video_url`/`title` schema). If any single column in
+  // that list does not exist on this database, the whole select fails
+  // with 42703 — we then retry with `narrowColumns`, which contains
+  // ONLY columns guaranteed by migration 004 baseline. The original
+  // narrow list still required `final_video_url`/`title`, which is why
+  // My Videos came up empty on environments where those columns were
+  // never added.
   const wideColumns =
     'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,quality_score,platform,thumbnail_url,thumb_url,render_id,credits_used,created_at'
-  const narrowColumns = 'id,status,final_video_url,title,created_at'
+  const narrowColumns = 'id,status,video_url,topic,created_at'
 
   async function runSelect(columns: string) {
     return supabase
@@ -88,7 +94,11 @@ export default async function MyVideosPage() {
 
   let query = await runSelect(wideColumns)
   if (query.error && /column .* does not exist|42703/.test(query.error.message ?? '')) {
+    console.warn('[my-videos] wide select failed, retrying narrow:', query.error.message)
     query = await runSelect(narrowColumns)
+  }
+  if (query.error) {
+    console.warn('[my-videos] narrow select also failed:', query.error.message)
   }
 
   const rows: RawRow[] = !query.error && Array.isArray(query.data)

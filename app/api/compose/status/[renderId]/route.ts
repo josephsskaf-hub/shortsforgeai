@@ -51,7 +51,7 @@ async function persistCompletedVideo(args: {
   duration: number
   topic: string
   creditsUsed: number
-}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy'; error?: string }> {
+}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy' | 'minimal'; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
@@ -62,10 +62,12 @@ async function persistCompletedVideo(args: {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // Schema #1 — the actual staging `public.videos` schema:
-  //   id, user_id, title, final_video_url, status, duration, quality,
-  //   platform, render_id, created_at.
-  // This is the one we expect to succeed on staging.
+  // Bug fix — the previous version bailed out on any non-column error
+  // from the staging insert, which masked schema/constraint mismatches
+  // and left the user with no row. We now try three progressively
+  // smaller row shapes; the first one that succeeds wins.
+
+  // Schema #1 — staging (title + final_video_url + extended columns).
   const stagingRow = {
     user_id: args.userId,
     title: args.topic.slice(0, 200) || 'Untitled Short',
@@ -98,8 +100,6 @@ async function persistCompletedVideo(args: {
     return { ok: true, id: String(id), schema: 'staging' }
   }
 
-  const stagingMsg = stagingInsert.error.message ?? ''
-  const isColumnMissing = /column .* does not exist|42703/.test(stagingMsg)
   console.warn('[history] insert (staging schema) failed:', JSON.stringify({
     message: stagingInsert.error.message,
     code: (stagingInsert.error as { code?: string }).code,
@@ -107,15 +107,10 @@ async function persistCompletedVideo(args: {
     hint: (stagingInsert.error as { hint?: string }).hint,
   }))
 
-  // If staging columns exist but the insert failed for a non-schema
-  // reason (RLS, type mismatch, FK), we don't retry — that just hides
-  // the real cause behind a second failure. Only retry on column-not-
-  // exist, which means we're on an environment that still has the
-  // legacy schema from my push #050 migration.
-  if (!isColumnMissing) {
-    return { ok: false, error: stagingInsert.error.message }
-  }
-
+  // Schema #2 — legacy (video_url + topic + credits_used + extras from
+  // migration 004). Try unconditionally now: even non-column errors
+  // (NOT NULL, CHECK constraints unique to the staging shape) should
+  // not stop us from attempting the legacy row.
   const legacyRow = {
     user_id: args.userId,
     status: 'completed',
@@ -137,12 +132,37 @@ async function persistCompletedVideo(args: {
     console.log(`[history] insert OK (legacy schema) id=${id}`)
     return { ok: true, id: String(id), schema: 'legacy' }
   }
-  console.warn('[history] insert (legacy schema) also failed:', JSON.stringify({
+  console.warn('[history] insert (legacy schema) failed:', JSON.stringify({
     message: legacyInsert.error.message,
     code: (legacyInsert.error as { code?: string }).code,
     details: (legacyInsert.error as { details?: string }).details,
   }))
-  return { ok: false, error: legacyInsert.error.message }
+
+  // Schema #3 — minimal. Only columns guaranteed by migration 004
+  // baseline. Last-resort attempt so the row always lands in My Videos.
+  const minimalRow = {
+    user_id: args.userId,
+    status: 'completed',
+    video_url: args.videoUrl,
+    topic: args.topic.slice(0, 500) || 'Untitled Short',
+  }
+  console.log('[history] retrying with minimal schema (user_id/status/video_url/topic)…')
+  const minimalInsert = await admin
+    .from('videos')
+    .insert(minimalRow)
+    .select('id')
+    .maybeSingle()
+  if (!minimalInsert.error) {
+    const id = minimalInsert.data?.id ?? '?'
+    console.log(`[history] insert OK (minimal schema) id=${id}`)
+    return { ok: true, id: String(id), schema: 'minimal' }
+  }
+  console.warn('[history] insert (minimal schema) also failed:', JSON.stringify({
+    message: minimalInsert.error.message,
+    code: (minimalInsert.error as { code?: string }).code,
+    details: (minimalInsert.error as { details?: string }).details,
+  }))
+  return { ok: false, error: minimalInsert.error.message }
 }
 
 function safeUrlHost(u: string): string {
