@@ -1,12 +1,14 @@
 'use client'
 
-// Push #079 — Fix top header auth buttons.
-// - Auth state now reactive via supabase.auth.onAuthStateChange in addition to
-//   the initial getSession() check, so the header updates immediately on
+// Push #080 — Top auth buttons polish.
+// - Auth state stays reactive via supabase.auth.onAuthStateChange + the
+//   initial getSession() check, so the header updates immediately on
 //   login/logout without a full page reload.
-// - Right side (desktop + mobile): guest = Sign In + Sign Up, signed-in =
-//   Dashboard (→ /generate) + Sign Out. Sign Out hits supabase.auth.signOut()
-//   then router.push('/').
+// - Right side (desktop + mobile): guest = Sign In (ghost) + Sign Up (cyan
+//   filled), signed-in = Dashboard (ghost, → /generate) + Sign Out (ghost).
+//   Sign Out hits supabase.auth.signOut() then router.push('/').
+// - Buttons render only after the auth check completes so we don't flash
+//   the wrong state during hydration.
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -217,7 +219,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   type="button"
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5 disabled:opacity-60"
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
@@ -232,7 +234,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
                 >
                   Sign Up
                 </Link>
@@ -257,7 +259,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ) : (
               <Link
                 href="/signup"
-                className="rounded-lg bg-[#2563EB] px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
+                className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
               >
                 Sign Up
               </Link>
@@ -307,7 +309,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     await handleSignOut()
                   }}
                   disabled={signingOut}
-                  className="text-left rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5 disabled:opacity-60"
+                  className="text-left rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
@@ -323,7 +325,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   <Link
                     onClick={() => setNavOpen(false)}
                     href="/signup"
-                    className="rounded-md bg-[#2563EB] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300"
                   >
                     Sign Up
                   </Link>
