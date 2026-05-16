@@ -189,6 +189,13 @@ export default function GenerateClient() {
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [loaderTick, setLoaderTick] = useState(0)
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
+  // Push #087 — user plan tier ('free' | 'basic' | 'pro'). Drives the
+  // Cinematic-mode lock UI; null while we're loading the value.
+  const [planTier, setPlanTier] = useState<'free' | 'basic' | 'pro' | null>(null)
+  // Fast-mode-specific staged progress index (0..3). The real backend is
+  // a single roundtrip; this drives a 4-step visual that auto-advances on
+  // a timer so the wait feels intentional.
+  const [fastStep, setFastStep] = useState<number>(0)
 
   // Push #048 — Visual History. List of the user's recent videos fetched
   // from /api/videos. Empty array = empty state; null only during initial
@@ -273,6 +280,60 @@ export default function GenerateClient() {
       window.removeEventListener('creditsChanged', fetchCredits)
     }
   }, [])
+
+  // Push #087 — fetch the user's plan tier so we can lock Cinematic mode
+  // for Free + Basic users. The server enforces the gate too — this only
+  // controls the UI affordance.
+  useEffect(() => {
+    let cancelled = false
+    async function fetchPlan() {
+      try {
+        const res = await fetch('/api/me/plan', { cache: 'no-store' })
+        if (!res.ok) {
+          if (!cancelled) setPlanTier('free')
+          return
+        }
+        const data = await res.json()
+        if (cancelled) return
+        const t = typeof data.plan === 'string' ? data.plan.toLowerCase() : 'free'
+        setPlanTier(t === 'pro' || t === 'basic' || t === 'free' ? t : 'free')
+      } catch {
+        if (!cancelled) setPlanTier('free')
+      }
+    }
+    fetchPlan()
+    window.addEventListener('creditsChanged', fetchPlan)
+    return () => {
+      cancelled = true
+      window.removeEventListener('creditsChanged', fetchPlan)
+    }
+  }, [])
+
+  // Push #087 — Force Fast Mode for non-Pro users. If the user had already
+  // selected Cinematic before the plan loaded (or downgraded mid-session),
+  // snap them back to Fast.
+  useEffect(() => {
+    if (planTier && planTier !== 'pro' && mode === 'cinematic') {
+      setMode('fast')
+    }
+  }, [planTier, mode])
+
+  // Push #087 — Fast Mode 4-step staged progress. Auto-advances every
+  // ~8s while Fast Mode is mid-generation so the long single roundtrip
+  // feels like progress instead of a stalled spinner.
+  useEffect(() => {
+    if (mode !== 'fast') return
+    const inFastLoading =
+      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
+    if (!inFastLoading) {
+      setFastStep(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setFastStep((s) => Math.min(3, s + 1))
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [mode, phase])
 
   // Push #048 — pull the user's recent videos for the Visual History
   // section. We listen on `creditsChanged` (fired after every successful
@@ -736,6 +797,16 @@ export default function GenerateClient() {
         return
       }
 
+      // Push #087 — server-side cinematic gate. Snap UI back to Fast Mode
+      // and surface an upgrade-aware error. Defense in depth: the client
+      // already locks the Cinematic card for non-Pro users.
+      if (res.status === 403) {
+        setMode('fast')
+        setError('Cinematic mode requires the Pro plan. Switched to Fast Mode — try again, or upgrade at /pricing.')
+        setPhase('failed')
+        return
+      }
+
       if (!res.ok) {
         console.error('[generate] generate-video error:', data?.error)
         setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
@@ -1006,90 +1077,17 @@ export default function GenerateClient() {
             }}
           />
 
-          {/* Push #084 — Generation mode selector. Fast Mode (Pexels + TTS,
-              1 credit, ~30s) is the default. Cinematic Mode runs the Runway
-              path. The quality cards below only apply to Cinematic Mode. */}
-          <div className="mt-5">
-            <div
-              className="text-xs font-black uppercase tracking-widest mb-2"
-              style={{ color: 'var(--muted)' }}
-            >
-              Generation mode
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(
-                [
-                  {
-                    key: 'fast' as GenerationMode,
-                    icon: '⚡',
-                    title: 'Fast Mode',
-                    badge: 'DEFAULT',
-                    desc: '~1 credit · $0.03/video · ready in 60s. Stock footage + AI voiceover.',
-                    cost: '~1 credit',
-                  },
-                  {
-                    key: 'cinematic' as GenerationMode,
-                    icon: '🎬',
-                    title: 'Cinematic Mode',
-                    badge: 'PRO',
-                    desc: `~${QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15} credits · Pro only · 5-10 min render. AI-generated scenes via Runway.`,
-                    cost: `~${QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15} credits`,
-                  },
-                ]
-              ).map((opt) => {
-                const selected = mode === opt.key
-                return (
-                  <button
-                    key={opt.key}
-                    onClick={() => setMode(opt.key)}
-                    className="rounded-xl p-4 text-left"
-                    style={{
-                      background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
-                      border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      boxShadow: selected ? '0 0 22px rgba(37,99,235,.18)' : 'none',
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span>{opt.icon}</span>
-                      <span
-                        className="text-sm font-black"
-                        style={{ color: selected ? '#93c5fd' : 'var(--text)' }}
-                      >
-                        {opt.title}
-                      </span>
-                      <span
-                        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: 'rgba(37,99,235,.18)',
-                          color: '#93c5fd',
-                          border: '1px solid rgba(37,99,235,.3)',
-                        }}
-                      >
-                        {opt.cost}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                        style={{
-                          background: opt.key === 'fast' ? 'rgba(52,211,153,.15)' : 'rgba(251,191,36,.15)',
-                          color: opt.key === 'fast' ? '#34d399' : '#fbbf24',
-                          border: opt.key === 'fast' ? '1px solid rgba(52,211,153,.3)' : '1px solid rgba(251,191,36,.3)',
-                        }}
-                      >
-                        {opt.badge}
-                      </span>
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      {opt.desc}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          {/* Push #084 — Generation mode selector.
+              Push #087 — Cinematic Mode is gated to Pro users; Free + Basic
+              see a non-interactive locked card with an upgrade CTA. The
+              server enforces the same gate (/api/generate-video returns 403
+              for non-Pro callers). */}
+          <ModeSelector
+            mode={mode}
+            setMode={setMode}
+            isPro={planTier === 'pro'}
+            cinematicCredits={QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15}
+          />
 
           {/* Push #034: duration + quality selectors moved here from the
               post-analyze step so users can pick everything in one screen
@@ -1126,8 +1124,11 @@ export default function GenerateClient() {
           </div>
 
           {/* Push #084 — Media & quality only applies to Cinematic Mode.
-              Fast Mode runs Pexels + TTS at a fixed 1-credit cost. */}
-          {mode === 'cinematic' && (
+              Push #087 — also requires Pro plan; if a Free/Basic user
+              somehow lands here (state already snaps mode to 'fast' in an
+              effect) we still hide the cards. Fast Mode runs Pexels + TTS
+              at a fixed 1-credit cost. */}
+          {mode === 'cinematic' && planTier === 'pro' && (
           <div className="mt-5">
             <div
               className="text-xs font-black uppercase tracking-widest mb-2"
@@ -1181,25 +1182,39 @@ export default function GenerateClient() {
           )}
 
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              {mode === 'fast'
-                ? `⚡ ${selectedCost} credit • ~$0.03/video • ready in 60s — stock footage + AI voiceover.`
-                : `🎬 ${selectedCost} credits • 5-10 min render — AI-generated cinematic scenes (Pro only).`}
-            </p>
+            <div>
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                {mode === 'fast'
+                  ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
+                  : `🎬 ${selectedCost} credits • Cinematic Mode • 5-10 min render (Pro plan).`}
+              </p>
+              {/* Push #087 — credit-balance awareness right under the CTA.
+                  Three states: low (<5), empty (=0), and silent (healthy). */}
+              {credits !== null && credits === 0 && (
+                <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
+                  No credits left. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
+                </p>
+              )}
+              {credits !== null && credits > 0 && credits < 5 && (
+                <p className="text-xs mt-1" style={{ color: '#fbbf24', fontWeight: 700 }}>
+                  ⚠ Low credits — {credits} remaining. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Top up →</a>
+                </p>
+              )}
+            </div>
             <button
               onClick={() => handleAnalyze()}
-              disabled={phase === 'analyzing' || !prompt.trim()}
+              disabled={phase === 'analyzing' || !prompt.trim() || credits === 0}
               className="rounded-xl px-6 py-2.5 text-sm font-black flex items-center gap-2"
               style={{
                 background:
-                  phase === 'analyzing' || !prompt.trim()
+                  phase === 'analyzing' || !prompt.trim() || credits === 0
                     ? 'rgba(255,255,255,.04)'
                     : '#3B82F6',
                 border: 'none',
-                cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
-                color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
+                cursor: phase === 'analyzing' || !prompt.trim() || credits === 0 ? 'not-allowed' : 'pointer',
+                color: phase === 'analyzing' || !prompt.trim() || credits === 0 ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
-                  phase === 'analyzing' || !prompt.trim()
+                  phase === 'analyzing' || !prompt.trim() || credits === 0
                     ? 'none'
                     : '0 8px 28px rgba(59, 130, 246,.35)',
               }}
@@ -1209,6 +1224,8 @@ export default function GenerateClient() {
                   <Spinner />
                   Analyzing…
                 </>
+              ) : credits === 0 ? (
+                'No credits left'
               ) : (
                 'Generate Short'
               )}
@@ -1440,15 +1457,18 @@ export default function GenerateClient() {
                 {statusMessage}
               </div>
 
-              {/* Push #048 — 5-stage pipeline indicator + trust copy.
-                  Stage status is inferred from the existing phase machine
-                  + clip success counts so we don't add new round-trips to
-                  the API. */}
-              <PipelineStages
-                phase={phase}
-                renderProgress={renderProgress}
-                finalReady={!!finalVideoUrl}
-              />
+              {/* Push #087 — Fast Mode gets its own 4-step indicator that
+                  matches the actual Pexels + TTS + assemble pipeline.
+                  Cinematic Mode keeps the 5-stage Runway indicator. */}
+              {mode === 'fast' ? (
+                <FastPipelineStages step={fastStep} phase={phase} />
+              ) : (
+                <PipelineStages
+                  phase={phase}
+                  renderProgress={renderProgress}
+                  finalReady={!!finalVideoUrl}
+                />
+              )}
 
               <div
                 className="rounded-xl px-3 py-2 mt-4 text-xs"
@@ -1610,6 +1630,21 @@ export default function GenerateClient() {
                 >
                   ⬇ Download MP4
                 </a>
+                <a
+                  href={finalVideoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.05)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ▶ Open in New Tab
+                </a>
                 <button
                   type="button"
                   onClick={handleCopyUrl}
@@ -1639,7 +1674,65 @@ export default function GenerateClient() {
                 </button>
               </div>
 
-              <p className="text-xs mt-6 text-center" style={{ color: 'var(--muted)', maxWidth: 420, lineHeight: 1.55 }}>
+              {/* Push #087 — secondary actions: re-generate the same idea
+                  (one click) or jump back to edit the script. Keeps the
+                  primary download flow above prominent. */}
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={!prompt.trim() || credits === 0}
+                  className="rounded-xl px-4 py-2 text-xs font-bold"
+                  style={{
+                    background: 'rgba(37,99,235,.10)',
+                    border: '1px solid rgba(37,99,235,.35)',
+                    color: '#93c5fd',
+                    cursor: !prompt.trim() || credits === 0 ? 'not-allowed' : 'pointer',
+                    opacity: !prompt.trim() || credits === 0 ? 0.5 : 1,
+                  }}
+                >
+                  🔁 Generate Similar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackToEdit}
+                  className="rounded-xl px-4 py-2 text-xs font-bold"
+                  style={{
+                    background: 'rgba(255,255,255,.04)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✏️ Edit Script
+                </button>
+              </div>
+
+              {/* Push #087 — stats + posting tip strip. Reads from the
+                  current generation state (no extra round-trips). */}
+              <div
+                className="rounded-xl px-4 py-3 mt-6 text-xs flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
+                style={{
+                  background: 'rgba(255,255,255,.02)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--muted2)',
+                  maxWidth: 480,
+                }}
+              >
+                <span>📊 {duration}s</span>
+                <span>·</span>
+                <span>{selectedCost} credit{selectedCost === 1 ? '' : 's'} used</span>
+                <span>·</span>
+                <span style={{ color: mode === 'fast' ? '#34d399' : '#fbbf24', fontWeight: 700 }}>
+                  {mode === 'fast' ? 'Fast Mode ⚡' : 'Cinematic 🎬'}
+                </span>
+              </div>
+
+              <p className="text-xs mt-4 text-center" style={{ color: '#93c5fd', maxWidth: 480, lineHeight: 1.55 }}>
+                💡 Tip: Post within 2 hours for max algorithm boost.
+              </p>
+
+              <p className="text-xs mt-2 text-center" style={{ color: 'var(--muted)', maxWidth: 420, lineHeight: 1.55 }}>
                 Voiceover, captions and CTA are baked into the final video. Upload it straight to YouTube Shorts.
               </p>
             </section>
@@ -2721,5 +2814,275 @@ function ProgressBar({ progress }: { progress: number }) {
         }}
       />
     </div>
+  )
+}
+
+// ─── Push #087 — Mode Selector with Pro gating ─────────────────────────────
+// Cinematic Mode renders as a non-interactive locked card for non-Pro users
+// so the option is still visible (drives upgrade interest) but the click is
+// inert. The server enforces the same gate as a defense-in-depth check.
+function ModeSelector({
+  mode,
+  setMode,
+  isPro,
+  cinematicCredits,
+}: {
+  mode: GenerationMode
+  setMode: (m: GenerationMode) => void
+  isPro: boolean
+  cinematicCredits: number
+}) {
+  return (
+    <div className="mt-5">
+      <div
+        className="text-xs font-black uppercase tracking-widest mb-2"
+        style={{ color: 'var(--muted)' }}
+      >
+        Generation mode
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Fast Mode — always available */}
+        <button
+          type="button"
+          onClick={() => setMode('fast')}
+          className="rounded-xl p-4 text-left"
+          style={{
+            background: mode === 'fast' ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
+            border: mode === 'fast' ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            boxShadow: mode === 'fast' ? '0 0 22px rgba(37,99,235,.18)' : 'none',
+          }}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span>⚡</span>
+            <span
+              className="text-sm font-black"
+              style={{ color: mode === 'fast' ? '#93c5fd' : 'var(--text)' }}
+            >
+              Fast Mode
+            </span>
+            <span
+              className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+              style={{
+                background: 'rgba(37,99,235,.18)',
+                color: '#93c5fd',
+                border: '1px solid rgba(37,99,235,.3)',
+              }}
+            >
+              1 credit
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+              style={{
+                background: 'rgba(52,211,153,.15)',
+                color: '#34d399',
+                border: '1px solid rgba(52,211,153,.3)',
+              }}
+            >
+              DEFAULT
+            </span>
+          </div>
+          <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+            Stock footage + AI voiceover. ~$0.03/video, ready in ~60 seconds.
+          </div>
+        </button>
+
+        {/* Cinematic Mode — Pro only. Locked card for Free + Basic. */}
+        {isPro ? (
+          <button
+            type="button"
+            onClick={() => setMode('cinematic')}
+            className="rounded-xl p-4 text-left"
+            style={{
+              background:
+                mode === 'cinematic' ? 'rgba(168, 85, 247,.12)' : 'rgba(255,255,255,.03)',
+              border:
+                mode === 'cinematic' ? '1px solid rgba(168, 85, 247,.55)' : '1px solid var(--border)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              boxShadow:
+                mode === 'cinematic' ? '0 0 22px rgba(168, 85, 247,.18)' : 'none',
+            }}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <span>🎬</span>
+              <span
+                className="text-sm font-black"
+                style={{ color: mode === 'cinematic' ? '#d8b4fe' : 'var(--text)' }}
+              >
+                Cinematic Mode
+              </span>
+              <span
+                className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: 'rgba(168, 85, 247,.18)',
+                  color: '#d8b4fe',
+                  border: '1px solid rgba(168, 85, 247,.3)',
+                }}
+              >
+                {cinematicCredits} credits
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                style={{
+                  background: 'rgba(168, 85, 247,.15)',
+                  color: '#d8b4fe',
+                  border: '1px solid rgba(168, 85, 247,.3)',
+                }}
+              >
+                PRO
+              </span>
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+              AI-generated cinematic scenes via Runway. ~5 minute render.
+            </div>
+          </button>
+        ) : (
+          <div
+            className="relative rounded-xl p-4"
+            style={{
+              background: 'rgba(168, 85, 247,.04)',
+              border: '1px solid rgba(168, 85, 247,.20)',
+              opacity: 0.85,
+              cursor: 'not-allowed',
+            }}
+          >
+            <div
+              className="absolute"
+              style={{
+                top: 8,
+                right: 8,
+                background: '#9333ea',
+                color: '#fff',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                padding: '3px 8px',
+                borderRadius: 999,
+                boxShadow: '0 4px 14px rgba(147, 51, 234,.35)',
+              }}
+            >
+              Pro Only
+            </div>
+            <div className="flex items-center gap-1.5 mb-1 pr-16">
+              <span style={{ filter: 'grayscale(0.4)' }}>🎬</span>
+              <span className="text-sm font-black" style={{ color: 'var(--muted2)' }}>
+                Cinematic Mode
+              </span>
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+              Runway AI · ~5 min render · {cinematicCredits} credits
+            </div>
+            <a
+              href="/pricing"
+              className="inline-flex items-center gap-1 text-xs font-bold mt-2"
+              style={{ color: '#d8b4fe', textDecoration: 'none' }}
+            >
+              🔓 Upgrade to Pro · $9.50/month →
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Push #087 — Fast Mode 4-step pipeline indicator ───────────────────────
+// Pure visual progression (no extra round-trips). The parent advances the
+// `step` index every ~8s while a Fast Mode generation is in flight so the
+// long single roundtrip feels intentional. Once the phase reaches `done`
+// every step is shown as completed regardless of timer.
+function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
+  const STEPS = [
+    { label: 'Writing your viral script', sub: 'AI scene planning' },
+    { label: 'Fetching cinematic stock footage', sub: 'Pexels HD library' },
+    { label: 'Generating professional voiceover', sub: 'Neural TTS' },
+    { label: 'Assembling your Short', sub: '9:16 MP4 render' },
+  ]
+  return (
+    <ol
+      className="mt-5"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+        margin: 0,
+      }}
+    >
+      {STEPS.map((s, i) => {
+        const isDone = phase === 'done' || step > i
+        const isActive = !isDone && step === i
+        const color = isDone ? '#34d399' : isActive ? '#93c5fd' : 'var(--muted)'
+        const ring = isDone
+          ? '1px solid rgba(52,211,153,.45)'
+          : isActive
+          ? '1px solid rgba(147,197,253,.45)'
+          : '1px solid var(--border)'
+        const bg = isDone
+          ? 'rgba(52,211,153,.08)'
+          : isActive
+          ? 'rgba(37,99,235,.08)'
+          : 'rgba(255,255,255,.03)'
+        return (
+          <li
+            key={i}
+            className="rounded-lg px-3 py-2 flex items-center gap-3"
+            style={{ background: bg, border: ring }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: isDone
+                  ? 'rgba(52,211,153,.18)'
+                  : isActive
+                  ? 'transparent'
+                  : 'rgba(255,255,255,.04)',
+                border: isDone
+                  ? '1px solid rgba(52,211,153,.55)'
+                  : isActive
+                  ? '2px solid rgba(147,197,253,.55)'
+                  : '1px solid var(--border)',
+                borderTopColor: isActive ? '#93c5fd' : undefined,
+                animation: isActive ? 'spin 0.9s linear infinite' : undefined,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color,
+                fontSize: '0.7rem',
+                fontWeight: 900,
+              }}
+            >
+              {isDone ? '✓' : isActive ? '' : i + 1}
+            </span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="text-sm font-bold" style={{ color, lineHeight: 1.2 }}>
+                {s.label}
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                {s.sub}
+              </div>
+            </div>
+            <span
+              className="text-[10px] font-black uppercase tracking-widest"
+              style={{ color }}
+            >
+              {isDone ? 'Done' : isActive ? 'Active' : 'Queued'}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
   )
 }

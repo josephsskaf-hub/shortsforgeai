@@ -38,6 +38,16 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       )
     }
+    // Push #087 — fail fast if the downstream renderer isn't configured.
+    // /api/compose will hard-error on this same check; surfacing it here
+    // saves an OpenAI scene-generation call for a job we can't finish.
+    if (!process.env.CREATOMATE_API_KEY) {
+      console.error('[generate-fast] CREATOMATE_API_KEY is not configured')
+      return NextResponse.json(
+        { error: 'Video assembly is not configured — please contact support.' },
+        { status: 500 }
+      )
+    }
 
     const supabase = createClient()
     const {

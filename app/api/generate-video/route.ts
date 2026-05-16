@@ -7,6 +7,7 @@ import {
   generateScenes,
   startRunwayTask,
 } from '@/lib/runway'
+import { fetchUserPlan } from '@/lib/plan'
 
 export const maxDuration = 60
 
@@ -109,6 +110,24 @@ export async function POST(req: NextRequest) {
 
     const clipCount = clipCountForDuration(duration)
     const cost = creditCostFor(quality)
+
+    // Push #087 — Cinematic mode (this entire route) is gated to Pro plan.
+    // Free + Basic users must use Fast Mode (/api/generate-video-fast). We
+    // check this BEFORE the credit balance check so the response is a
+    // clean 403 with an upgrade hint rather than a confusing 402.
+    {
+      const plan = await fetchUserPlan(supabase, user.id)
+      if (!plan.isPro) {
+        return NextResponse.json(
+          {
+            error: 'Cinematic mode requires the Pro plan.',
+            currentPlan: plan.tier,
+            upgrade: '/pricing',
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     // Step 0 — Upfront credit balance check. We don't deduct here (that
     // happens in /api/compose/status once the final MP4 is confirmed), but

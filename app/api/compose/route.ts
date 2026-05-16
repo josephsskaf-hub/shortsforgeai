@@ -9,6 +9,7 @@ import {
   targetWordCount,
   uploadVoiceoverToSupabase,
 } from '@/lib/compose'
+import { fetchUserPlan } from '@/lib/plan'
 
 export const maxDuration = 60
 
@@ -102,6 +103,23 @@ export async function POST(req: NextRequest) {
       const q = (body.quality ?? 'basic_ai').toString()
       return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
+
+    // Push #087 — Cinematic-tier renders (anything other than 'fast') must
+    // come from a Pro user. Fast Mode renders skip the gate so Free + Basic
+    // users can still produce videos via the Pexels pipeline.
+    if (quality !== 'fast') {
+      const plan = await fetchUserPlan(supabase, user.id)
+      if (!plan.isPro) {
+        return NextResponse.json(
+          {
+            error: 'Cinematic mode requires the Pro plan.',
+            currentPlan: plan.tier,
+            upgrade: '/pricing',
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     // Step 1 — Scale the voiceover script to the right word count.
     let scaledScript: string

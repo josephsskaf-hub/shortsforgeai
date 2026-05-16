@@ -211,6 +211,93 @@ export default function PricingPage() {
             )
           })}
         </div>
+
+        {/* Push #087 — feature comparison table. Makes the Fast vs.
+            Cinematic split explicit so users understand exactly what
+            they're paying for at each tier. Scrolls horizontally on
+            small viewports so the table never breaks layout. */}
+        <div className="mt-16">
+          <div className="mb-6 text-center">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+              Compare plans
+            </div>
+            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#F1F5F9]">
+              What you get at each tier
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0B1120]">
+            <table className="w-full min-w-[640px] text-left text-[13.5px]">
+              <thead>
+                <tr className="border-b border-white/[0.08]">
+                  <th className="px-5 py-4 text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                    Feature
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                    Free
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                    Basic
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-cyan-400">
+                    Pro
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    label: 'Fast Mode (Pexels + AI voiceover)',
+                    free: '✅ 2 videos',
+                    basic: '✅ ~140/mo',
+                    pro: '✅ ~350/mo',
+                  },
+                  {
+                    label: 'Cinematic Mode (Runway AI)',
+                    free: '—',
+                    basic: '—',
+                    pro: '✅ Included',
+                  },
+                  {
+                    label: 'Cost per Fast video',
+                    free: '~$0.03',
+                    basic: '~$0.032',
+                    pro: '~$0.027',
+                  },
+                  {
+                    label: 'Render time',
+                    free: '~60s',
+                    basic: '~60s',
+                    pro: '60s or ~5 min',
+                  },
+                  {
+                    label: 'Watermark-free MP4',
+                    free: '✅',
+                    basic: '✅',
+                    pro: '✅',
+                  },
+                  {
+                    label: 'Priority support',
+                    free: '—',
+                    basic: 'Email',
+                    pro: 'Priority',
+                  },
+                ].map((row) => (
+                  <tr key={row.label} className="border-b border-white/[0.04] last:border-0">
+                    <td className="px-5 py-3.5 font-semibold text-[#F1F5F9]">{row.label}</td>
+                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.free}</td>
+                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.basic}</td>
+                    <td className="px-5 py-3.5 text-center font-bold text-cyan-300">{row.pro}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
+            Cinematic Mode uses Runway AI to generate fully synthetic scenes — only available on Pro.
+          </p>
+        </div>
       </section>
 
       {/* ───────── Footer ───────── */}
