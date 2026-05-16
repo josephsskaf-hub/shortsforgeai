@@ -248,8 +248,11 @@ function VideoCard({
 }) {
   const chip = statusChip(v.status)
   const playable = v.status === 'completed' && !!v.video_url
+  // Push #102 — kick the analyze step off immediately when a video has a
+  // saved prompt, so "Generate Similar" feels like one click. Falls back to
+  // a plain /generate redirect for staging rows that never stored a prompt.
   const generateSimilarHref = v.prompt
-    ? `/generate?prompt=${encodeURIComponent(v.prompt)}`
+    ? `/generate?prompt=${encodeURIComponent(v.prompt)}&autoanalyze=1`
     : '/generate'
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
