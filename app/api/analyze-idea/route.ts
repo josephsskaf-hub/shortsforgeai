@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openai, durationPlanFor, STORY_ARC_SYSTEM_RULES, SAFE_COMPOSITION_RULES } from '@/lib/openai'
+import { openai, durationPlanFor, MICRO_KNOWLEDGE_SYSTEM_RULES, SAFE_COMPOSITION_RULES } from '@/lib/openai'
 
 export const maxDuration = 30
 
@@ -258,21 +258,23 @@ function fallbackBrief(prompt: string): CreativeBrief {
 function buildSystemPrompt(duration: number): string {
   const plan = durationPlanFor(duration)
   const [minWords, maxWords] = plan.wordCountRange
-  return `You are an expert YouTube Shorts creative director specializing in viral faceless videos. Your job is to produce a complete creative brief for a ${plan.duration} second Short that will go viral.
+  return `You are a YouTube Shorts creative director specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Your job is to produce a complete creative brief for a ${plan.duration} second Short built around real, verifiable facts that escalate to a satisfying payoff.
 
-The brief MUST include: a viral_title, a powerful hook for the first 2 seconds, a scene-by-scene breakdown with cinematic visual prompts (never generic), captions of MAX 6-8 words, full voiceover_script, music_mood, pacing_notes, youtube_title, youtube_description, and hashtags.
+The brief MUST include: a viral_title, a brutal hook for the first 1-2 seconds, a scene-by-scene breakdown with cinematic visual prompts (never generic), captions of MAX 6-8 words, full voiceover_script (made of real micro-knowledge beats, not vague mystery), music_mood, pacing_notes, youtube_title, youtube_description, and hashtags.
 
-${STORY_ARC_SYSTEM_RULES}
+${MICRO_KNOWLEDGE_SYSTEM_RULES}
 
 ${SAFE_COMPOSITION_RULES}
 
 QUALITY RULES (non-negotiable):
-- The hook lands in the first 2 seconds and is impossible to scroll past. No "in this video..." or "today we will...". Start mid-scene, mid-question, or mid-revelation.
+- The hook lands in the first 1-2 seconds with a shocking fact, question, or statement. No "in this video..." or "today we will...". Start mid-revelation. No filler like "imagine…", "what if…", "scientists say…".
+- The voiceover_script must deliver real, verifiable facts. No vague cinematic mystery with no answer. Every 3-5 seconds delivers new information. Each fact escalates over the last.
+- The final scene MUST be a payoff: a comparison, twist, statistic, or definitive conclusion that makes the viewer feel they learned something real. Not a cliffhanger.
 - Captions: maximum 6-8 words. Punchy fragments, not full sentences. No periods. Each caption SHOULD include a "highlight" field naming the single most impactful word in the caption (preferred candidates: strange, hidden, vanished, signal, mystery, impossible, forbidden, unknown, discovered, secret, ancient, bizarre, haunted, cursed, lost, found, real). If none of those fit, pick the most striking noun or adjective in the caption.
 - Visual prompts must be EXTREMELY cinematic and specific. Describe camera angle, lighting, color palette, subject, atmosphere, lens feel. BAD: "ocean waves" or "historical ruins". GOOD: "extreme close-up of a sonar screen pulsing with an unknown signal, deep blue glow, underwater facility in soft focus behind, ominous teal atmosphere, slow push-in on the screen". Every visual_prompt should read like a shot list for a cinematographer.
 - Every visual_prompt MUST embed the safe-composition constraints above: keep the main subject centered, fully visible, within the inner 80% of the frame, in the upper 65-75% so the bottom caption strip never covers it. Landmarks must be readable end-to-end without cropping.
 - Every scene is visually distinct from the others — different camera angle, different lighting, different subject framing. No two scenes should feel like the same shot.
-- The final scene ends with a strong payoff — a revelation, cliffhanger, or satisfying conclusion. The voiceover MUST NOT trail off.
+- The closing voiceover MUST land a payoff — a comparison, twist, statistic, or definitive conclusion. The voiceover MUST NOT trail off and MUST NOT end on a vague cliffhanger.
 - Output is in English.
 - Exactly ${plan.sceneCount} scenes. Total voiceover word count: ${minWords}–${maxWords} words. Durations add up to roughly ${plan.duration} seconds.
 
@@ -458,15 +460,15 @@ export async function POST(req: NextRequest) {
 
     const fallback = fallbackBrief(prompt)
 
-    const userMsg = `Build the full creative brief for this video idea.
-
-IDEA:
-"""${prompt}"""
+    const userMsg = `Create an addictive micro-knowledge YouTube Short about: ${prompt}.
+Duration: ~${duration} seconds (target word count is in the system prompt).
+Make every line teach something real and surprising.
+Follow the Hook → Micro-Knowledge → Escalation → Payoff structure exactly.
 
 Detected niche hint: ${fallback.niche}
 Detected tone hint: ${fallback.tone}
 
-Follow every rule in the system prompt. Return ONLY the JSON object — no markdown, no commentary.`
+Return ONLY the JSON object — no markdown, no commentary.`
 
     let brief: CreativeBrief = fallback
     try {

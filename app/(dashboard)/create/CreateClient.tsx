@@ -84,7 +84,7 @@ const MEDIA_OPTIONS: { id: string; label: string; desc: string; emoji: string; d
 ]
 
 const STAGE_MESSAGES: { id: string; label: string; weight: number }[] = [
-  { id: 'script',   label: '✍️ Writing viral script...',        weight: 18 },
+  { id: 'script',   label: '✍️ Writing addictive micro-knowledge script...',        weight: 18 },
   { id: 'voice',    label: '🎙️ Generating AI narration...',     weight: 22 },
   { id: 'visuals',  label: '🎬 Finding cinematic visuals...',   weight: 22 },
   { id: 'captions', label: '📝 Building animated captions...',  weight: 8 },

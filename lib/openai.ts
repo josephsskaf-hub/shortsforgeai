@@ -56,22 +56,32 @@ export const SAFE_COMPOSITION_RULES = `SAFE COMPOSITION (mandatory for every vis
 - Use safe inner-frame composition: center composition, subject fully visible, landmark fully readable.
 - Avoid extreme close-ups that crop a face above the eyebrows or below the chin; avoid wide shots where a landmark touches the frame edges.`
 
-// Push #064 — story arc enforced on every Short. The arc keeps the AI
-// from emitting "5 random facts" without a build-up; the ending samples
-// are deliberately decisive so the closing scene doesn't trail off.
-export const STORY_ARC_SYSTEM_RULES = `Every video must follow this exact structure:
-1. HOOK (first 2 seconds): Grab attention immediately with a striking statement or question.
-2. SETUP: Briefly explain what the topic is.
-3. TENSION/MYSTERY: Show why it is strange, surprising, or important.
-4. EXPLANATION: Give enough context so the viewer understands.
-5. PAYOFF/ENDING: End with a strong final revelation, cliffhanger, or satisfying conclusion.
+// Push #083 — Addictive micro-knowledge content formula. Every Short must
+// feel like Netflix knowledge dopamine: short, real, surprising, satisfying.
+// Replaces the older "story arc" rules. We keep the export name
+// STORY_ARC_SYSTEM_RULES so every existing caller picks up the new formula
+// without breaking imports; a new alias MICRO_KNOWLEDGE_SYSTEM_RULES is
+// also exported for new call sites.
+export const MICRO_KNOWLEDGE_SYSTEM_RULES = `Every video must follow this addictive micro-knowledge formula:
 
-Do NOT list random facts without a story arc.
-Do NOT end abruptly.
-The ending MUST feel complete and strong — examples:
-- "And that is why this mystery still refuses to disappear."
-- "Some discoveries do not solve history. They make it stranger."
-- "If this is what we found… what else is still hidden?"`
+CONTENT FORMULA:
+1. BRUTAL HOOK (first 1-2 seconds): Must create instant curiosity. Start with a shocking fact, question, or statement.
+2. MICRO-KNOWLEDGE (every 3-5 seconds): Real, surprising, useful facts. No filler. No vague mystery.
+3. ESCALATION: Each fact must be more interesting than the last.
+4. PAYOFF: A comparison, twist, statistic, or conclusion that makes it feel complete.
+5. COMPLETE ENDING: Viewer should feel they learned something real.
+
+RULES (non-negotiable):
+- Every fact must be real and verifiable.
+- No vague cinematic mystery with no answer.
+- No generic motivational phrases.
+- No filler language ("imagine...", "what if...", "scientists say...").
+- Every 3-5 seconds delivers new information.
+- End with a payoff, not a cliffhanger.
+
+PREFERRED ANGLES: history facts, weird facts, money psychology, hidden places, science mysteries, ancient civilizations, ocean discoveries, forbidden inventions, military secrets, billionaire psychology.`
+
+export const STORY_ARC_SYSTEM_RULES = MICRO_KNOWLEDGE_SYSTEM_RULES
 
 // Push #064 — caption highlight picker. Caption objects carry an optional
 // `highlight` field so the renderer can paint that word in yellow. When the
@@ -206,24 +216,24 @@ const NICHE_CONTEXT: Record<string, string> = {
 export function buildGenerationPrompt(niche: string): string {
   const context = NICHE_CONTEXT[niche] || NICHE_CONTEXT.general
 
-  return `You are a viral YouTube Shorts content creator specializing in the "${context}" niche.
+  return `You are a viral YouTube Shorts script writer specializing in addictive micro-knowledge content for the "${context}" niche. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying.
 
-Generate exactly 5 viral YouTube Shorts scripts. Each short must be designed to maximize watch time, shares, and follows.
+Generate exactly 5 addictive micro-knowledge YouTube Shorts scripts. Each one delivers a brutal hook plus 4-5 real, surprising facts that escalate to a satisfying payoff.
 
-${STORY_ARC_SYSTEM_RULES}
+${MICRO_KNOWLEDGE_SYSTEM_RULES}
 
 ${SAFE_COMPOSITION_RULES}
 
 Return ONLY a valid JSON array with exactly 5 objects. No markdown, no code blocks, no extra text — just the raw JSON array.
 
 Each object must have these exact fields:
-- "title": string — a click-bait, curiosity-driving title under 70 chars with 1 relevant emoji at the end
-- "script": string — a complete 30-second script with 3 clearly labeled sections: "🎯 HOOK:" (first 3 seconds, shocking statement), "📝 CONTENT:" (main body, 20 seconds), "🔗 ENDING:" (call to action, 7 seconds). Use \\n\\n between sections.
+- "title": string — a curiosity-driven YouTube title under 60 chars, no clickbait fluff, with 1 relevant emoji at the end
+- "script": string — a complete ~30-second script (~80-100 words) with 3 clearly labeled sections: "🎯 HOOK:" (brutal opening line, 1-2 seconds), "📝 CONTENT:" (5 micro-knowledge beats, each 1-2 sentences, real facts, escalating), "🔗 PAYOFF:" (satisfying conclusion or twist — a comparison, twist, statistic, or definitive statement that makes it feel complete). Use \\n\\n between sections.
 - "videoPrompt": string — a detailed AI video generation prompt describing visuals, camera angles, text overlays, transitions, mood, and vertical 9:16 format
 - "hashtags": array of 7 strings — each starting with # (e.g. "#shorts"), mix of niche-specific and viral tags
-- "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO, include primary keyword naturally
+- "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO. Include the main facts naturally and the primary keyword.
 
-Make every hook absolutely shocking. The first 3 seconds must make the viewer physically unable to scroll past.`
+Every fact must be real and verifiable. Every 3-5 seconds must deliver new information. End with a payoff, not a cliffhanger.`
 }
 
 export function buildSingleVideoPrompt(niche: string, topic: string, tone: string, durationSec: number): string {
@@ -232,25 +242,25 @@ export function buildSingleVideoPrompt(niche: string, topic: string, tone: strin
   const plan = durationPlanFor(durationSec)
   const [minWords, maxWords] = plan.wordCountRange
 
-  return `You are a viral YouTube Shorts content creator specializing in the "${context}" niche.
+  return `You are a viral YouTube Shorts script writer specializing in addictive micro-knowledge content for the "${context}" niche. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying.
 
-Generate ONE viral YouTube Short tailored to this exact topic:
-"${safeTopic}"
+Create an addictive micro-knowledge YouTube Short about: "${safeTopic}".
+Duration: ~${plan.duration} seconds (~${minWords}-${maxWords} words of script). Make every line teach something real and surprising. Follow the Hook → Micro-Knowledge → Escalation → Payoff structure exactly.
 
-Tone: ${tone}. Target duration: ${plan.duration} seconds. Target word count: ${minWords}–${maxWords} words. Scene count: ${plan.sceneCount}. Vertical 9:16 format. English language.
+Tone: ${tone}. Scene count: ${plan.sceneCount}. Vertical 9:16 format. English language.
 
-${STORY_ARC_SYSTEM_RULES}
+${MICRO_KNOWLEDGE_SYSTEM_RULES}
 
 ${SAFE_COMPOSITION_RULES}
 
 Return ONLY a valid JSON array containing exactly 1 object — no markdown, no code blocks, no extra text. Just the raw JSON array.
 
 The object must have these exact fields:
-- "title": string — a click-bait, curiosity-driving title under 70 chars with 1 relevant emoji at the end
-- "script": string — a complete ${plan.duration}-second script following the HOOK → SETUP → TENSION → EXPLANATION → PAYOFF arc above. Total word count must land in ${minWords}–${maxWords} words. Use 3 clearly labeled sections: "🎯 HOOK:" (first 2 seconds), "📝 CONTENT:" (setup + tension + explanation), "🔗 ENDING:" (CTA — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
+- "title": string — a curiosity-driven YouTube title under 60 chars, no clickbait fluff, with 1 relevant emoji at the end
+- "script": string — a complete ${plan.duration}-second script (${minWords}–${maxWords} words total) with 3 clearly labeled sections: "🎯 HOOK:" (brutal opening line, 1-2 seconds), "📝 CONTENT:" (5 micro-knowledge beats, each 1-2 sentences, real verifiable facts, escalating in interest, every 3-5 seconds delivers new info), "🔗 PAYOFF:" (a comparison, twist, statistic, or definitive conclusion that makes the Short feel complete — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
 - "videoPrompt": string — a detailed AI video generation prompt describing visuals, camera angles, text overlays, transitions, mood, and vertical 9:16 format
 - "hashtags": array of 7 strings — each starting with # (e.g. "#shorts"), mix of niche-specific and viral tags
-- "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO, include primary keyword naturally
+- "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO. Include the main facts naturally and the primary keyword.
 
-Make the hook absolutely shocking. The first 2 seconds must make the viewer physically unable to scroll past.`
+Every fact must be real and verifiable. No filler ("imagine…", "what if…", "scientists say…"). End with a payoff, not a cliffhanger.`
 }

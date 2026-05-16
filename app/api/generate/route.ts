@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
             {
               role: 'system',
               content:
-                'You are an expert viral content creator. You always respond with valid JSON only — no markdown, no code blocks, no extra text. Just the raw JSON array.',
+                'You are a viral YouTube Shorts script writer specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Follow the Hook → Micro-Knowledge → Escalation → Payoff structure on every script. Use only real, verifiable facts — no vague mystery, no filler. You always respond with valid JSON only — no markdown, no code blocks, no extra text. Just the raw JSON array.',
             },
             {
               role: 'user',

@@ -24,7 +24,7 @@ interface StockClip {
 type StepStatus = 'pending' | 'active' | 'done'
 
 const STEPS: { id: number; emoji: string; title: string; subtitle: string }[] = [
-  { id: 1, emoji: '📝', title: 'Script Review', subtitle: 'Confirm your viral script' },
+  { id: 1, emoji: '📝', title: 'Script Review', subtitle: 'Confirm your addictive micro-knowledge script' },
   { id: 2, emoji: '🎬', title: 'Scene Breakdown', subtitle: 'AI splits script into cinematic scenes' },
   { id: 3, emoji: '🎵', title: 'Voiceover', subtitle: 'Generate cinematic narration' },
   { id: 4, emoji: '🎞️', title: 'Stock Footage', subtitle: 'Match scenes with portrait clips' },
@@ -395,7 +395,7 @@ export default function VideoClient() {
           }}
         >
           <p className="text-sm leading-relaxed" style={{ color: 'var(--muted2)' }}>
-            No script loaded yet. Generate a viral script first, then click{' '}
+            No script loaded yet. Generate an addictive micro-knowledge script first, then click{' '}
             <span style={{ color: '#22D3EE', fontWeight: 700 }}>🎬 Create Video</span> on
             any result card to start the pipeline.
           </p>
@@ -1157,7 +1157,7 @@ function Step5Export({
   onRegenerate: () => void
 }) {
   const stages = [
-    { from: 0, to: 8, label: '✍️ Writing viral script...' },
+    { from: 0, to: 8, label: '✍️ Writing addictive micro-knowledge script...' },
     { from: 8, to: 22, label: '🎙️ Generating AI narration...' },
     { from: 22, to: 38, label: '🎬 Finding cinematic visuals...' },
     { from: 38, to: 55, label: '📝 Building animated captions...' },

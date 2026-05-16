@@ -859,10 +859,10 @@ export default function GenerateClient() {
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-              {showStep1 ? 'Build Your Viral Short' : '🎬 Generate a Real AI Short'}
+              {showStep1 ? 'Build Your Addictive Micro-Knowledge Short' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-              {showStep1 && 'Turn your idea into a hook, script, scenes, captions and hashtags.'}
+              {showStep1 && 'Create addictive micro-knowledge Shorts in seconds — brutal hook, real facts, satisfying payoff.'}
               {showStep2 && 'Pick duration and quality, then generate.'}
               {showRender && 'Rendering your vertical 9:16 Short.'}
             </p>
@@ -935,7 +935,7 @@ export default function GenerateClient() {
               // helper line no longer makes sense — clear the breadcrumb.
               if (fromHome) setFromHome(false)
             }}
-            placeholder="Describe your Short — topic, angle, hook, anything you want viewers to feel…"
+            placeholder="Drop your topic — we'll turn it into an addictive micro-knowledge Short with real facts, escalation, and a satisfying payoff."
             maxLength={1000}
             disabled={phase === 'analyzing'}
             // Push #052 — Tailwind responsive min-h so the textarea stays
@@ -2316,7 +2316,7 @@ function ShortPackageSection({
     .join('\n\n')
 
   const cards: { key: string; label: string; body: string; mono?: boolean }[] = [
-    { key: 'hook', label: 'Viral Hook', body: analysis.hook },
+    { key: 'hook', label: 'Hook', body: analysis.hook },
     { key: 'script', label: 'Full Script', body: analysis.voiceoverScript },
     { key: 'scenes', label: 'Visual Scenes', body: scenesText },
     {
