@@ -2060,6 +2060,62 @@ export default function GenerateClient() {
                 </button>
               </div>
 
+              {/* Push #099 — Post-generation upgrade upsell. Shows under the
+                  download/share row for free users only (planTier === 'free'
+                  AND credits < 40, so users who already upgraded don't get
+                  re-pitched). Uses the same /api/stripe/checkout flow as the
+                  out-of-credits modal so attribution stays consistent. */}
+              {planTier === 'free' && credits !== null && credits < 40 && (
+                <div
+                  className="rounded-2xl px-5 py-5 mt-6 w-full"
+                  style={{
+                    maxWidth: 480,
+                    background:
+                      'linear-gradient(135deg, rgba(34,197,94,.10), rgba(16,185,129,.06))',
+                    border: '1px solid rgba(34,197,94,.45)',
+                    boxShadow:
+                      '0 0 28px rgba(34,197,94,.16), inset 0 1px 0 rgba(255,255,255,.04)',
+                  }}
+                >
+                  <div className="text-center">
+                    <div
+                      className="text-[11px] font-black uppercase tracking-[.16em] mb-1.5"
+                      style={{ color: '#34d399' }}
+                    >
+                      🚀 Loved your Short? Make more.
+                    </div>
+                    <p
+                      className="text-xs font-semibold"
+                      style={{ color: 'var(--muted2)', lineHeight: 1.5 }}
+                    >
+                      50 videos/month · HD quality · Fast delivery
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUpgradeNow}
+                    disabled={upgradeLoading}
+                    className="block w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
+                    style={{
+                      background: upgradeLoading
+                        ? 'rgba(34,197,94,.6)'
+                        : 'linear-gradient(135deg, #22C55E, #16A34A)',
+                      border: 'none',
+                      cursor: upgradeLoading ? 'wait' : 'pointer',
+                      boxShadow: '0 8px 24px rgba(34,197,94,.32)',
+                    }}
+                  >
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — Just $4.50/mo →'}
+                  </button>
+                  <p
+                    className="text-[11px] font-bold text-center mt-2.5"
+                    style={{ color: '#FBBF24' }}
+                  >
+                    🔥 50% off your first month — Launch offer
+                  </p>
+                </div>
+              )}
+
               {/* Push #087 — secondary actions: re-generate the same idea
                   (one click) or jump back to edit the script. Keeps the
                   primary download flow above prominent. */}

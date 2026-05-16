@@ -27,6 +27,31 @@ const STRIPE_LINKS = {
   pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
 }
 
+// Push #099 — FAQ entries shown below the pricing comparison table. Pure
+// content array so the accordion renders from one source of truth.
+const FAQS: { q: string; a: string }[] = [
+  {
+    q: 'Do I need a credit card to start?',
+    a: 'No! Sign up free and get 2 videos included. No card required.',
+  },
+  {
+    q: 'How fast are videos generated?',
+    a: 'Fast Mode videos are ready in about 60 seconds. We use AI to write, voice, and edit everything automatically.',
+  },
+  {
+    q: 'Can I cancel anytime?',
+    a: 'Yes, cancel from your account settings at any time. No contracts, no commitments.',
+  },
+  {
+    q: 'What’s the difference between Fast Mode and Cinematic Mode?',
+    a: 'Fast Mode uses AI + stock footage and is included in all plans. Cinematic Mode uses Runway AI to generate custom scenes — available on Pro.',
+  },
+  {
+    q: 'What counts as 1 credit?',
+    a: 'Each video you generate uses 1 credit, whether it’s 15 seconds or 60 seconds.',
+  },
+]
+
 const PRICING = [
   {
     tier: 'free',
@@ -97,6 +122,9 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
   // Push #097 — live countdown for the launch-offer banner.
   const [countdown, setCountdown] = useState<number>(COUNTDOWN_START_SECONDS)
+  // Push #099 — open FAQ index for the accordion (null = all collapsed). First
+  // question is open by default so the section reads as scannable, not empty.
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -373,6 +401,69 @@ export default function PricingPage() {
             Cinematic Mode uses Runway AI to generate fully synthetic scenes
             — included on Pro as 1 token per month, resets on each renewal.
             Fast Mode stays unlimited within your monthly Fast credits.
+          </p>
+        </div>
+
+        {/* Push #099 — FAQ accordion. Five evergreen objections lifted from
+            support tickets and the homepage CRO copy. Pure client-side
+            useState toggle so the page stays static-renderable. */}
+        <div className="mt-16">
+          <div className="mb-6 text-center">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+              FAQ
+            </div>
+            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#F1F5F9]">
+              💬 Frequently Asked Questions
+            </h2>
+          </div>
+
+          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120]">
+            {FAQS.map((item, i) => {
+              const isOpen = openFaq === i
+              return (
+                <div
+                  key={item.q}
+                  className="border-b border-white/[0.06] last:border-0"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-white/[.02]"
+                  >
+                    <span className="text-[14.5px] font-bold text-[#F1F5F9]">
+                      {item.q}
+                    </span>
+                    <span
+                      aria-hidden
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-cyan-400 transition-transform duration-200 ${
+                        isOpen ? 'rotate-45' : ''
+                      }`}
+                      style={{ fontSize: 16, lineHeight: 1 }}
+                    >
+                      +
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 pb-4 -mt-1">
+                      <p className="text-[13.5px] leading-relaxed text-[#94A3B8]">
+                        {item.a}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="mt-5 text-center text-[12.5px] text-[#94A3B8]">
+            Still have questions?{' '}
+            <a
+              href="mailto:hello@shortsforgeai.com"
+              className="font-bold text-cyan-400 hover:text-cyan-300"
+            >
+              Email us →
+            </a>
           </p>
         </div>
       </section>

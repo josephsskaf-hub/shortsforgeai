@@ -3,10 +3,38 @@ import Script from 'next/script'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ShortsForgeAI | AI Video Generator',
+  title: 'ShortsForgeAI — Turn Ideas Into Viral YouTube Shorts in 60 Seconds',
   description:
-    'AI-powered video generator for YouTube Shorts, TikTok, and Instagram Reels. Create cinematic faceless AI Shorts in minutes.',
-  keywords: 'ai video generator, youtube shorts, tiktok video, instagram reels, faceless video, ai shorts',
+    'AI-powered YouTube Shorts generator. Write a topic, get a fully edited 35-second Short with voiceover, footage, and captions. Free to try.',
+  keywords: [
+    'YouTube Shorts',
+    'AI video generator',
+    'short form video',
+    'YouTube automation',
+    'viral shorts',
+  ],
+  openGraph: {
+    title: 'ShortsForgeAI — Viral YouTube Shorts in 60 Seconds',
+    description:
+      'AI writes, voices, and edits your YouTube Shorts automatically. Join 500+ creators. 2 free videos, no credit card.',
+    url: 'https://shortsforgeai.vercel.app',
+    siteName: 'ShortsForgeAI',
+    images: [
+      {
+        url: 'https://shortsforgeai.vercel.app/og-image.png',
+        width: 1200,
+        height: 630,
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ShortsForgeAI — Viral YouTube Shorts in 60 Seconds',
+    description:
+      'AI writes, voices, and edits your YouTube Shorts. Free to try.',
+    images: ['https://shortsforgeai.vercel.app/og-image.png'],
+  },
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
