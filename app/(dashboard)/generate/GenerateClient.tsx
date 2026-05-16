@@ -192,6 +192,10 @@ export default function GenerateClient() {
   // Push #087 — user plan tier ('free' | 'basic' | 'pro'). Drives the
   // Cinematic-mode lock UI; null while we're loading the value.
   const [planTier, setPlanTier] = useState<'free' | 'basic' | 'pro' | null>(null)
+  // Push #088 — cinematic tokens remaining this month. Pro = 1/month,
+  // everyone else = 0. We render a separate "no tokens left, resets
+  // monthly" state when the user IS pro but has spent their token.
+  const [cinematicTokens, setCinematicTokens] = useState<number>(0)
   // Fast-mode-specific staged progress index (0..3). The real backend is
   // a single roundtrip; this drives a 4-step visual that auto-advances on
   // a timer so the wait feels intentional.
@@ -284,21 +288,32 @@ export default function GenerateClient() {
   // Push #087 — fetch the user's plan tier so we can lock Cinematic mode
   // for Free + Basic users. The server enforces the gate too — this only
   // controls the UI affordance.
+  // Push #088 — also fetches cinematic_tokens so the Cinematic card can
+  // show "1 token left" vs. "0 tokens · resets monthly".
   useEffect(() => {
     let cancelled = false
     async function fetchPlan() {
       try {
         const res = await fetch('/api/me/plan', { cache: 'no-store' })
         if (!res.ok) {
-          if (!cancelled) setPlanTier('free')
+          if (!cancelled) {
+            setPlanTier('free')
+            setCinematicTokens(0)
+          }
           return
         }
         const data = await res.json()
         if (cancelled) return
         const t = typeof data.plan === 'string' ? data.plan.toLowerCase() : 'free'
         setPlanTier(t === 'pro' || t === 'basic' || t === 'free' ? t : 'free')
+        const tokens =
+          typeof data.cinematic_tokens === 'number' ? data.cinematic_tokens : 0
+        setCinematicTokens(Math.max(0, tokens))
       } catch {
-        if (!cancelled) setPlanTier('free')
+        if (!cancelled) {
+          setPlanTier('free')
+          setCinematicTokens(0)
+        }
       }
     }
     fetchPlan()
@@ -312,11 +327,19 @@ export default function GenerateClient() {
   // Push #087 — Force Fast Mode for non-Pro users. If the user had already
   // selected Cinematic before the plan loaded (or downgraded mid-session),
   // snap them back to Fast.
+  // Push #088 — also snap Pro users back to Fast Mode when they have 0
+  // cinematic tokens left, so the submit doesn't 403 after the user types
+  // a prompt.
   useEffect(() => {
-    if (planTier && planTier !== 'pro' && mode === 'cinematic') {
+    if (mode !== 'cinematic') return
+    if (planTier && planTier !== 'pro') {
+      setMode('fast')
+      return
+    }
+    if (planTier === 'pro' && cinematicTokens <= 0) {
       setMode('fast')
     }
-  }, [planTier, mode])
+  }, [planTier, mode, cinematicTokens])
 
   // Push #087 — Fast Mode 4-step staged progress. Auto-advances every
   // ~8s while Fast Mode is mid-generation so the long single roundtrip
@@ -800,9 +823,18 @@ export default function GenerateClient() {
       // Push #087 — server-side cinematic gate. Snap UI back to Fast Mode
       // and surface an upgrade-aware error. Defense in depth: the client
       // already locks the Cinematic card for non-Pro users.
+      // Push #088 — the server also returns 403 when a Pro user has 0
+      // cinematic tokens left. Differentiate the two messages so the user
+      // knows whether to upgrade or to wait for the monthly reset.
       if (res.status === 403) {
         setMode('fast')
-        setError('Cinematic mode requires the Pro plan. Switched to Fast Mode — try again, or upgrade at /pricing.')
+        const isTokenExhausted = typeof data?.cinematic_tokens === 'number' && data.cinematic_tokens === 0
+        if (isTokenExhausted) {
+          setCinematicTokens(0)
+          setError('You have used your Cinematic video this month. Switched to Fast Mode — use it freely until your next Pro renewal.')
+        } else {
+          setError('Cinematic mode requires the Pro plan. Switched to Fast Mode — try again, or upgrade at /pricing.')
+        }
         setPhase('failed')
         return
       }
@@ -813,6 +845,12 @@ export default function GenerateClient() {
         setPhase('failed')
         return
       }
+
+      // Push #088 — server has just consumed the token. Mirror that
+      // optimistically on the client so the badge / lock state flips
+      // immediately. A refetch happens on the next `creditsChanged`
+      // event after the render completes.
+      setCinematicTokens((prev) => Math.max(0, prev - 1))
 
       setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
       setScenes(Array.isArray(data.scenes) ? data.scenes : [])
@@ -1086,7 +1124,7 @@ export default function GenerateClient() {
             mode={mode}
             setMode={setMode}
             isPro={planTier === 'pro'}
-            cinematicCredits={QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15}
+            cinematicTokens={cinematicTokens}
           />
 
           {/* Push #034: duration + quality selectors moved here from the
@@ -1186,11 +1224,11 @@ export default function GenerateClient() {
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
                 {mode === 'fast'
                   ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
-                  : `🎬 ${selectedCost} credits • Cinematic Mode • 5-10 min render (Pro plan).`}
+                  : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
               {/* Push #087 — credit-balance awareness right under the CTA.
                   Three states: low (<5), empty (=0), and silent (healthy). */}
-              {credits !== null && credits === 0 && (
+              {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) && (
                 <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
                   No credits left. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
                 </p>
@@ -1203,18 +1241,18 @@ export default function GenerateClient() {
             </div>
             <button
               onClick={() => handleAnalyze()}
-              disabled={phase === 'analyzing' || !prompt.trim() || credits === 0}
+              disabled={phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))}
               className="rounded-xl px-6 py-2.5 text-sm font-black flex items-center gap-2"
               style={{
                 background:
-                  phase === 'analyzing' || !prompt.trim() || credits === 0
+                  phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))
                     ? 'rgba(255,255,255,.04)'
                     : '#3B82F6',
                 border: 'none',
-                cursor: phase === 'analyzing' || !prompt.trim() || credits === 0 ? 'not-allowed' : 'pointer',
-                color: phase === 'analyzing' || !prompt.trim() || credits === 0 ? 'var(--muted)' : '#FFFFFF',
+                cursor: phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'not-allowed' : 'pointer',
+                color: phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
-                  phase === 'analyzing' || !prompt.trim() || credits === 0
+                  phase === 'analyzing' || !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))
                     ? 'none'
                     : '0 8px 28px rgba(59, 130, 246,.35)',
               }}
@@ -1224,7 +1262,7 @@ export default function GenerateClient() {
                   <Spinner />
                   Analyzing…
                 </>
-              ) : credits === 0 ? (
+              ) : (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? (
                 'No credits left'
               ) : (
                 'Generate Short'
@@ -1422,7 +1460,9 @@ export default function GenerateClient() {
                   boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
                 }}
               >
-                Generate • {selectedCost} credit{selectedCost === 1 ? '' : 's'}
+                {mode === 'cinematic'
+                  ? 'Generate • 1 Cinematic token'
+                  : `Generate • ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
               </button>
             </div>
           </section>
@@ -1681,14 +1721,14 @@ export default function GenerateClient() {
                 <button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={!prompt.trim() || credits === 0}
+                  disabled={!prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0))}
                   className="rounded-xl px-4 py-2 text-xs font-bold"
                   style={{
                     background: 'rgba(37,99,235,.10)',
                     border: '1px solid rgba(37,99,235,.35)',
                     color: '#93c5fd',
-                    cursor: !prompt.trim() || credits === 0 ? 'not-allowed' : 'pointer',
-                    opacity: !prompt.trim() || credits === 0 ? 0.5 : 1,
+                    cursor: !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 'not-allowed' : 'pointer',
+                    opacity: !prompt.trim() || (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) ? 0.5 : 1,
                   }}
                 >
                   🔁 Generate Similar
@@ -1721,7 +1761,11 @@ export default function GenerateClient() {
               >
                 <span>📊 {duration}s</span>
                 <span>·</span>
-                <span>{selectedCost} credit{selectedCost === 1 ? '' : 's'} used</span>
+                <span>
+                  {mode === 'cinematic'
+                    ? '1 Cinematic token used'
+                    : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}
+                </span>
                 <span>·</span>
                 <span style={{ color: mode === 'fast' ? '#34d399' : '#fbbf24', fontWeight: 700 }}>
                   {mode === 'fast' ? 'Fast Mode ⚡' : 'Cinematic 🎬'}
@@ -2821,17 +2865,20 @@ function ProgressBar({ progress }: { progress: number }) {
 // Cinematic Mode renders as a non-interactive locked card for non-Pro users
 // so the option is still visible (drives upgrade interest) but the click is
 // inert. The server enforces the same gate as a defense-in-depth check.
+// Push #088 — Pro users with 0 cinematic_tokens get a "resets monthly"
+// inert card too, so spending the token doesn't silently fail at submit.
 function ModeSelector({
   mode,
   setMode,
   isPro,
-  cinematicCredits,
+  cinematicTokens,
 }: {
   mode: GenerationMode
   setMode: (m: GenerationMode) => void
   isPro: boolean
-  cinematicCredits: number
+  cinematicTokens: number
 }) {
+  const proHasToken = isPro && cinematicTokens > 0
   return (
     <div className="mt-5">
       <div
@@ -2890,8 +2937,9 @@ function ModeSelector({
           </div>
         </button>
 
-        {/* Cinematic Mode — Pro only. Locked card for Free + Basic. */}
-        {isPro ? (
+        {/* Cinematic Mode — Pro + token required. Locked card for Free,
+            Basic, AND Pro-with-0-tokens (resets monthly). */}
+        {proHasToken ? (
           <button
             type="button"
             onClick={() => setMode('cinematic')}
@@ -2923,7 +2971,7 @@ function ModeSelector({
                   border: '1px solid rgba(168, 85, 247,.3)',
                 }}
               >
-                {cinematicCredits} credits
+                {cinematicTokens} token{cinematicTokens === 1 ? '' : 's'}
               </span>
             </div>
             <div className="flex items-center gap-2 mb-1">
@@ -2935,14 +2983,56 @@ function ModeSelector({
                   border: '1px solid rgba(168, 85, 247,.3)',
                 }}
               >
-                PRO
+                PRO · 1 / month
               </span>
             </div>
             <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
               AI-generated cinematic scenes via Runway. ~5 minute render.
+              Uses your 1 monthly cinematic token.
             </div>
           </button>
+        ) : isPro ? (
+          /* Pro user, but token already spent this month. */
+          <div
+            className="relative rounded-xl p-4"
+            style={{
+              background: 'rgba(168, 85, 247,.04)',
+              border: '1px solid rgba(168, 85, 247,.20)',
+              opacity: 0.85,
+              cursor: 'not-allowed',
+            }}
+          >
+            <div
+              className="absolute"
+              style={{
+                top: 8,
+                right: 8,
+                background: 'rgba(251, 191, 36, 0.2)',
+                color: '#fbbf24',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                padding: '3px 8px',
+                borderRadius: 999,
+                border: '1px solid rgba(251, 191, 36, 0.4)',
+              }}
+            >
+              0 tokens left
+            </div>
+            <div className="flex items-center gap-1.5 mb-1 pr-24">
+              <span style={{ filter: 'grayscale(0.4)' }}>🎬</span>
+              <span className="text-sm font-black" style={{ color: 'var(--muted2)' }}>
+                Cinematic Mode
+              </span>
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+              You used your Cinematic video this month. Resets on your next
+              Pro renewal. Use Fast Mode for unlimited videos this month.
+            </div>
+          </div>
         ) : (
+          /* Free / Basic — upgrade CTA. */
           <div
             className="relative rounded-xl p-4"
             style={{
@@ -2977,7 +3067,7 @@ function ModeSelector({
               </span>
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-              Runway AI · ~5 min render · {cinematicCredits} credits
+              Runway AI · ~5 min render · 1 Cinematic token / month
             </div>
             <a
               href="/pricing"

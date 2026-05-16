@@ -17,7 +17,7 @@ const PRICING = [
     name: 'Free',
     price: '$0',
     priceSub: 'forever',
-    features: ['2 credits to try', 'Full AI pipeline', 'Watermark-free MP4'],
+    features: ['2 Fast videos to try', 'Full AI pipeline', 'Watermark-free MP4'],
     cta: { label: 'Start Free', href: '/signup' },
   },
   {
@@ -25,7 +25,12 @@ const PRICING = [
     name: 'Basic',
     price: '$4.50',
     priceSub: 'first month, then $9/mo',
-    features: ['140 credits / month', '≈9 videos / month', '15 credits per video', 'Email support'],
+    features: [
+      '140 Fast videos / month',
+      'Pexels + AI voiceover pipeline',
+      'Watermark-free MP4',
+      'Email support',
+    ],
     cta: { label: 'Start Basic', href: STRIPE_LINKS.basic },
   },
   {
@@ -34,10 +39,10 @@ const PRICING = [
     price: '$9.50',
     priceSub: 'first month, then $19/mo',
     features: [
-      '350 credits / month',
-      '≈17 videos / month',
-      '20 credits per video',
-      'Cinematic prompting',
+      '350 Fast videos / month',
+      '1 Cinematic (Runway AI) video / month',
+      'Fast: ~$0.03 each · Cinematic: included',
+      'Cinematic prompting + premium models',
       'Priority support',
     ],
     cta: { label: 'Start Pro', href: STRIPE_LINKS.pro },
@@ -256,7 +261,7 @@ export default function PricingPage() {
                     label: 'Cinematic Mode (Runway AI)',
                     free: '—',
                     basic: '—',
-                    pro: '✅ Included',
+                    pro: '✅ 1 / month',
                   },
                   {
                     label: 'Cost per Fast video',
@@ -295,7 +300,9 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
-            Cinematic Mode uses Runway AI to generate fully synthetic scenes — only available on Pro.
+            Cinematic Mode uses Runway AI to generate fully synthetic scenes
+            — included on Pro as 1 token per month, resets on each renewal.
+            Fast Mode stays unlimited within your monthly Fast credits.
           </p>
         </div>
       </section>

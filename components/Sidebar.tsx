@@ -133,6 +133,11 @@ export default function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn)
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
+  // Push #088 — Cinematic tokens are a separate pool (Pro = 1/month) shown
+  // next to the regular credits as a subtle "· 🎬 N" suffix. Null while
+  // loading; 0 hides the badge so non-Pro users don't see a meaningless
+  // zero.
+  const [cinematicTokens, setCinematicTokens] = useState<number | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   function extractDisplayName(meta: Record<string, unknown> | undefined | null): string {
@@ -146,7 +151,12 @@ export default function Sidebar({
   }
 
   const fetchCredits = useCallback(async () => {
-    if (!isLoggedIn) { setCredits(null); setCreditsLoading(false); return }
+    if (!isLoggedIn) {
+      setCredits(null)
+      setCinematicTokens(null)
+      setCreditsLoading(false)
+      return
+    }
     setCreditsLoading(true)
     try {
       const res = await fetch('/api/credits', { cache: 'no-store' })
@@ -156,6 +166,23 @@ export default function Sidebar({
       } else setCredits(0)
     } catch { setCredits(0) }
     finally { setCreditsLoading(false) }
+    // Push #088 — fetch cinematic tokens in parallel. We swallow errors so
+    // a missing column or 401 never blocks the credit chip from rendering.
+    try {
+      const planRes = await fetch('/api/me/plan', { cache: 'no-store' })
+      if (planRes.ok) {
+        const planData = await planRes.json()
+        const tokens =
+          typeof planData.cinematic_tokens === 'number'
+            ? planData.cinematic_tokens
+            : 0
+        setCinematicTokens(Math.max(0, tokens))
+      } else {
+        setCinematicTokens(0)
+      }
+    } catch {
+      setCinematicTokens(0)
+    }
   }, [isLoggedIn])
 
   useEffect(() => {
@@ -337,6 +364,22 @@ export default function Sidebar({
                   <div>
                     <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#60A5FA', lineHeight: 1.1 }}>
                       {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
+                      {/* Push #088 — Cinematic token badge. Only show when
+                          the user has at least 1 token (Pro plan) so the
+                          chip doesn't clutter Free/Basic accounts. */}
+                      {isPro && cinematicTokens !== null && cinematicTokens > 0 && (
+                        <span
+                          title="Cinematic tokens (Runway AI) — 1 per month on Pro"
+                          style={{
+                            marginLeft: 6,
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            color: '#d8b4fe',
+                          }}
+                        >
+                          · 🎬 {cinematicTokens}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : '#94A3B8', marginTop: 1 }}>
                       {creditsZero ? 'No credits left' : 'available'}

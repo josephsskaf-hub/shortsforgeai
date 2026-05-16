@@ -207,30 +207,44 @@ export async function GET(
       let creditsRemaining: number | null = null
       const cost = creditCostFor(quality)
 
+      // Push #088 — Cinematic renders (any non-'fast' quality) no longer
+      // deduct from `video_credits`. They were already paid for by a
+      // cinematic_token consumed upstream in /api/generate-video. Only
+      // Fast Mode still draws from the regular credit pool.
+      const shouldDeductCredits = quality === 'fast'
+
       // Idempotency: the client tells us whether it has already seen a "done"
       // for this render. If so, we skip deduction so refresh / multi-tab polls
       // don't double-charge.
       if (!deductedParam) {
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('video_credits')
-          .eq('id', user.id)
-          .single()
-        if (!fetchError) {
-          const current = profile?.video_credits ?? 0
-          const next = Math.max(0, current - cost)
-          const { error: updateError } = await supabase
+        if (shouldDeductCredits) {
+          const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .update({ video_credits: next })
+            .select('video_credits')
             .eq('id', user.id)
-          if (!updateError) {
-            creditsDeducted = true
-            creditsRemaining = next
+            .single()
+          if (!fetchError) {
+            const current = profile?.video_credits ?? 0
+            const next = Math.max(0, current - cost)
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ video_credits: next })
+              .eq('id', user.id)
+            if (!updateError) {
+              creditsDeducted = true
+              creditsRemaining = next
+            } else {
+              console.error('[compose/status] credit deduct error:', updateError.message)
+            }
           } else {
-            console.error('[compose/status] credit deduct error:', updateError.message)
+            console.error('[compose/status] credit fetch error:', fetchError.message)
           }
         } else {
-          console.error('[compose/status] credit fetch error:', fetchError.message)
+          // Cinematic — token was consumed at job start. Surface this in
+          // the response so the client can still update its "credits left"
+          // chip from the regular endpoint without double-decrementing.
+          creditsDeducted = true
+          creditsRemaining = null
         }
 
         // Push #050 — persist the completed video for Visual History.

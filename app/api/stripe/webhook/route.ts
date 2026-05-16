@@ -135,6 +135,12 @@ export async function POST(req: NextRequest) {
         const current = currentProfile?.video_credits ?? 0
         const next = current + planCredits
 
+        // Push #088 — Pro plan also includes 1 cinematic token / month.
+        // Basic stays at 0 (Cinematic is Pro-exclusive). We use a separate
+        // column so the user can't accidentally drain their 350 Fast
+        // credits on Runway renders.
+        const cinematicTokensForTier = tier === 'pro' ? 1 : 0
+
         const { error: subUpdErr } = await supabase
           .from('profiles')
           .update({
@@ -142,13 +148,14 @@ export async function POST(req: NextRequest) {
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             video_credits: next,
+            cinematic_tokens: cinematicTokensForTier,
           })
           .eq('id', userId)
 
         if (subUpdErr) {
           console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
         } else {
-          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits}) → user ${userId} (now ${next})`)
+          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits}, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
         }
 
         break
@@ -183,15 +190,23 @@ export async function POST(req: NextRequest) {
 
         // On renewal we set the balance to the plan amount rather than adding,
         // so unused credits from the prior cycle don't pile up indefinitely.
+        // Push #088 — also reset cinematic_tokens on renewal: Pro = 1,
+        // Basic = 0. Resetting (not adding) keeps the monthly cap honest
+        // even if the user never spent the prior month's token.
+        const renewalCinematicTokens = renewalTier === 'pro' ? 1 : 0
         const { error: renewErr } = await supabase
           .from('profiles')
-          .update({ video_credits: renewalCredits, is_pro: true })
+          .update({
+            video_credits: renewalCredits,
+            is_pro: true,
+            cinematic_tokens: renewalCinematicTokens,
+          })
           .eq('id', renewalUserId)
 
         if (renewErr) {
           console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
         } else {
-          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}) → user ${renewalUserId}`)
+          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
         }
         break
       }
@@ -217,11 +232,15 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
 
+        // Push #088 — wipe cinematic_tokens on cancellation so a former
+        // Pro user can't keep a stranded Runway token after their plan
+        // lapses. Regular credits stay (they were already paid for).
         await supabase
           .from('profiles')
           .update({
             is_pro: false,
             stripe_subscription_id: null,
+            cinematic_tokens: 0,
           })
           .eq('stripe_customer_id', customerId)
 

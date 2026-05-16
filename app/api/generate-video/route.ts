@@ -109,7 +109,11 @@ export async function POST(req: NextRequest) {
     })()
 
     const clipCount = clipCountForDuration(duration)
-    const cost = creditCostFor(quality)
+    // Push #088 — `creditCostFor` is no longer used here. Cinematic deducts
+    // a single cinematic_token (see block below) rather than a per-quality
+    // pile of regular credits. We keep the helper export for backwards
+    // compatibility with /api/compose/status's display logic.
+    void creditCostFor(quality)
 
     // Push #087 — Cinematic mode (this entire route) is gated to Pro plan.
     // Free + Basic users must use Fast Mode (/api/generate-video-fast). We
@@ -129,23 +133,46 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 0 — Upfront credit balance check. We don't deduct here (that
-    // happens in /api/compose/status once the final MP4 is confirmed), but
-    // refusing now prevents starting Runway tasks for a user who can't pay.
+    // Push #088 — Cinematic is gated on a separate pool of "cinematic
+    // tokens" (1/month on Pro), NOT on the regular `video_credits` pool
+    // that powers Fast Mode. This route burns Runway credits the moment
+    // we call startRunwayTask, so we decrement here (best-effort) rather
+    // than at /api/compose/status — if we waited until success and the
+    // Runway job failed, the user could retry indefinitely and we'd eat
+    // multiple Runway charges per token. The token is therefore consumed
+    // on intent, not on success. Refunds for failed renders are handled
+    // out-of-band via support.
     {
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('video_credits')
+        .select('cinematic_tokens')
         .eq('id', user.id)
         .single()
       if (profileErr && profileErr.code !== 'PGRST116') {
-        console.error('[generate-video] credit balance fetch failed:', profileErr.message)
+        console.error('[generate-video] cinematic_tokens fetch failed:', profileErr.message)
       }
-      const balance = profile?.video_credits ?? 0
-      if (balance < cost) {
+      const tokens = profile?.cinematic_tokens ?? 0
+      if (tokens < 1) {
         return NextResponse.json(
-          { error: 'Not enough credits.', needed: cost, balance },
-          { status: 402 }
+          {
+            error: 'You have used your Cinematic video for this month.',
+            cinematic_tokens: 0,
+            upgrade: '/pricing',
+            message:
+              'Cinematic videos reset on each Pro plan renewal. Use Fast Mode for unlimited additional videos this month.',
+          },
+          { status: 403 }
+        )
+      }
+      const { error: decErr } = await supabase
+        .from('profiles')
+        .update({ cinematic_tokens: tokens - 1 })
+        .eq('id', user.id)
+      if (decErr) {
+        console.error('[generate-video] cinematic_tokens decrement failed:', decErr.message)
+        return NextResponse.json(
+          { error: 'Could not reserve your cinematic token. Please try again.' },
+          { status: 500 }
         )
       }
     }

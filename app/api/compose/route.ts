@@ -107,6 +107,11 @@ export async function POST(req: NextRequest) {
     // Push #087 — Cinematic-tier renders (anything other than 'fast') must
     // come from a Pro user. Fast Mode renders skip the gate so Free + Basic
     // users can still produce videos via the Pexels pipeline.
+    // Push #088 — Cinematic also requires a cinematic_token to have been
+    // reserved upstream. /api/generate-video already does the consume on
+    // the way in, so by the time we reach /api/compose the user paid for
+    // the render. We do NOT decrement again here. We only verify the
+    // upstream gate held (plan === pro) as defense in depth.
     if (quality !== 'fast') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
