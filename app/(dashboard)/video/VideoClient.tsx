@@ -9,6 +9,9 @@ interface Scene {
   narration: string
   visualDescription: string
   searchQuery: string
+  // Ordered list of 2-3 visual phrases from /api/scenes — used to query
+  // /api/stock with priority fallback so each clip matches the narration.
+  searchKeywords?: string[]
   emotionalTone: string
 }
 
@@ -195,8 +198,19 @@ export default function VideoClient() {
     setStockError(null)
     try {
       const results = await Promise.all(
-        scenes.map(async (s) => {
-          const r = await fetch(`/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}`)
+        scenes.map(async (s, sceneIdx) => {
+          // Pass the scene's ordered keyword list (ks=k1,k2,k3) so /api/stock
+          // tries Pexels with each in priority order — this is what makes
+          // footage match what's being narrated instead of landing on
+          // whatever the first 2-word query happened to return.
+          const keywords = (s.searchKeywords && s.searchKeywords.length > 0
+            ? s.searchKeywords
+            : [s.searchQuery || s.visualDescription].filter(Boolean)
+          ).slice(0, 3)
+          const ksParam = keywords.map((k) => k.trim()).filter(Boolean).join(',')
+          const r = await fetch(
+            `/api/stock?ks=${encodeURIComponent(ksParam)}&i=${sceneIdx}`
+          )
           const data = await r.json()
           return { sceneNumber: s.sceneNumber, videos: (data.videos ?? []) as StockClip[] }
         })

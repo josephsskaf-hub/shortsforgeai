@@ -116,8 +116,22 @@ function libraryToStockClips(query: string, sceneIndex: number): StockClip[] {
 
 export async function GET(req: NextRequest) {
   try {
-    const q = (req.nextUrl.searchParams.get('q') ?? '').trim()
-    if (!q) {
+    // Accept either a single query (legacy: ?q=...) or an ordered comma-
+    // separated keyword list (?ks=k1,k2,k3). The keyword-list path is what
+    // /api/scenes now feeds us — see push #079: each scene gets 2-3 specific
+    // visual phrases, most specific first, and we try each on Pexels until
+    // one returns a real match. This stops "top 5 mountains" scenes from
+    // landing on skateboard footage because the first keyword was generic.
+    const ksParam = (req.nextUrl.searchParams.get('ks') ?? '').trim()
+    const qParam = (req.nextUrl.searchParams.get('q') ?? '').trim()
+
+    const keywords: string[] = (ksParam
+      ? ksParam.split(',').map((k) => k.trim()).filter((k) => k.length > 0)
+      : qParam
+        ? [qParam]
+        : [])
+
+    if (keywords.length === 0) {
       return NextResponse.json({ error: 'Query is required.', videos: [] }, { status: 400 })
     }
 
@@ -130,33 +144,45 @@ export async function GET(req: NextRequest) {
 
     // Try Pexels first if the API key is configured.
     if (apiKey) {
-      let clips = await fetchPexelsVideos(q, apiKey)
-      if (clips.length === 0) {
-        const broad = broadenQuery(q)
-        if (broad && broad !== q.toLowerCase()) {
-          console.log(`[stock] no Pexels matches for "${q}" — retrying with "${broad}"`)
-          clips = await fetchPexelsVideos(broad, apiKey)
+      // Walk the keyword list in priority order; first hit wins.
+      for (const k of keywords) {
+        const clips = await fetchPexelsVideos(k, apiKey)
+        if (clips.length > 0) {
+          console.log(`[stock] Pexels: returning ${clips.length} clip(s) for "${k}" (matched keyword ${keywords.indexOf(k) + 1}/${keywords.length})`)
+          return NextResponse.json({ videos: clips, source: 'pexels', matchedKeyword: k })
+        }
+        console.log(`[stock] no Pexels match for "${k}", trying next keyword…`)
+      }
+      // Every keyword missed — try a broadened version of the FIRST keyword
+      // (the one we ranked most specific) before falling through.
+      const broad = broadenQuery(keywords[0])
+      if (broad && broad !== keywords[0].toLowerCase()) {
+        console.log(`[stock] retrying with broadened keyword "${broad}"`)
+        const clips = await fetchPexelsVideos(broad, apiKey)
+        if (clips.length > 0) {
+          console.log(`[stock] Pexels: returning ${clips.length} clip(s) for broadened "${broad}"`)
+          return NextResponse.json({ videos: clips, source: 'pexels', matchedKeyword: broad })
         }
       }
-      if (clips.length > 0) {
-        console.log(`[stock] Pexels: returning ${clips.length} clip(s) for "${q}"`)
-        return NextResponse.json({ videos: clips, source: 'pexels' })
-      }
-      console.warn(`[stock] Pexels returned nothing — falling back to curated library for "${q}"`)
+      console.warn(`[stock] Pexels returned nothing for any of [${keywords.join(', ')}] — falling back to curated library`)
     } else {
       console.log('[stock] PEXELS_API_KEY not configured — using curated library')
     }
 
     // Curated library fallback. Always returns a clip (no silent placeholder).
-    const libClips = libraryToStockClips(q, sceneIndex)
+    // Feed the library all keywords joined so its tag mapper has the broadest
+    // signal — the library is keyword-loose by design and benefits from more
+    // context than Pexels would.
+    const libraryQuery = keywords.join(' ')
+    const libClips = libraryToStockClips(libraryQuery, sceneIndex)
     if (libClips.length === 0) {
-      console.error(`[stock] curated library returned nothing for "${q}" (unexpected)`)
+      console.error(`[stock] curated library returned nothing for "${libraryQuery}" (unexpected)`)
       return NextResponse.json(
         { error: 'Could not prepare visuals. Please try again.', videos: [] },
         { status: 500 }
       )
     }
-    console.log(`[stock] library: returning ${libClips.length} clip(s) for "${q}" sceneIndex=${sceneIndex}`)
+    console.log(`[stock] library: returning ${libClips.length} clip(s) for "${libraryQuery}" sceneIndex=${sceneIndex}`)
     return NextResponse.json({ videos: libClips, source: 'library' })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

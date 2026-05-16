@@ -10,6 +10,9 @@ interface Scene {
   narration: string
   visualDescription: string
   searchQuery: string
+  // Ordered list of 2-3 visual phrases from /api/scenes — used to query
+  // /api/stock with priority fallback so each clip matches the narration.
+  searchKeywords?: string[]
   emotionalTone: string
 }
 
@@ -264,16 +267,24 @@ export default function CreateClient() {
       }
       setStage('visuals', 56)
 
-      // Step 4 — Stock clips per scene. We pass the scene index so the curated
-      // library fallback can rotate clips across scenes that hit the same tag
-      // bucket (Pexels API path naturally varies by query).
+      // Step 4 — Stock clips per scene. We pass the scene's ordered keyword
+      // list (ks=k1,k2,k3) so /api/stock can try Pexels for each keyword in
+      // priority order before falling back — this is what makes the footage
+      // match the narration instead of landing on whatever generic clip the
+      // first 2-word query happened to return. Scene index is still passed
+      // so the curated-library path can rotate when it does kick in.
       const selectedClips: Record<number, StockClip> = {}
       if (scenes.length > 0) {
         const results = await Promise.all(
           scenes.map(async (s, sceneIdx) => {
             try {
+              const keywords = (s.searchKeywords && s.searchKeywords.length > 0
+                ? s.searchKeywords
+                : [s.searchQuery || s.visualDescription].filter(Boolean)
+              ).slice(0, 3)
+              const ksParam = keywords.map((k) => k.trim()).filter(Boolean).join(',')
               const r = await fetch(
-                `/api/stock?q=${encodeURIComponent(s.searchQuery || s.visualDescription)}&i=${sceneIdx}`,
+                `/api/stock?ks=${encodeURIComponent(ksParam)}&i=${sceneIdx}`,
                 { cache: 'no-store' }
               )
               if (!r.ok) return { sceneNumber: s.sceneNumber, videos: [] as StockClip[] }
