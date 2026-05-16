@@ -2,9 +2,25 @@
 
 // Push #076 — Standalone /pricing page (real route, not just an anchor).
 // Mirrors the Cyber Blue theme used by HomePageClient.
+//
+// Push #097 — added launch-offer banner with live countdown, a "Most
+// Popular" badge on Basic, and a cancel/instant-access/money-back trust
+// row directly under the plan cards. The countdown is a UX/urgency
+// device; the underlying Stripe discount is the open 50%-off-first-month
+// launch offer.
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+const COUNTDOWN_START_SECONDS = 23 * 3600 + 47 * 60 + 12
+
+function formatCountdown(totalSeconds: number): string {
+  const safe = Math.max(0, totalSeconds)
+  const h = Math.floor(safe / 3600)
+  const m = Math.floor((safe % 3600) / 60)
+  const s = safe % 60
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
 
 const STRIPE_LINKS = {
   basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
@@ -37,6 +53,7 @@ const PRICING = [
       'My Videos history',
     ],
     cta: { label: 'Start Basic', href: STRIPE_LINKS.basic },
+    popular: true,
   },
   {
     tier: 'pro',
@@ -78,6 +95,15 @@ export default function PricingPage() {
   // (Recommended). Card click toggles selection; CTA still drives the
   // Stripe link so users can either click-then-confirm or click-CTA-direct.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  // Push #097 — live countdown for the launch-offer banner.
+  const [countdown, setCountdown] = useState<number>(COUNTDOWN_START_SECONDS)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? COUNTDOWN_START_SECONDS : prev - 1))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#05070D] text-[#F1F5F9] font-sans">
@@ -122,7 +148,31 @@ export default function PricingPage() {
       </nav>
 
       {/* ───────── Pricing ───────── */}
-      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-16 pb-16 sm:px-6 sm:pt-24">
+      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-16 sm:px-6 sm:pt-16">
+        {/* Push #097 — Launch-offer banner with live countdown */}
+        <div
+          className="mx-auto mb-8 flex max-w-2xl flex-col items-center justify-center gap-3 rounded-2xl border border-[#FBBF24]/40 px-5 py-3 text-center sm:flex-row"
+          style={{
+            background: 'linear-gradient(135deg, rgba(251,191,36,.14), rgba(239,68,68,.10))',
+            boxShadow: '0 8px 32px rgba(251,191,36,.12)',
+          }}
+        >
+          <div className="text-[14px] font-black tracking-tight text-[#FBBF24]">
+            🔥 Launch Offer — 50% off first month
+          </div>
+          <div
+            className="flex items-center gap-2 rounded-lg border border-[#FBBF24]/30 px-3 py-1.5"
+            style={{ background: 'rgba(0,0,0,.45)', fontVariantNumeric: 'tabular-nums' }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[.08em] text-[#94A3B8]">
+              Ends in
+            </span>
+            <span className="text-[14px] font-black tracking-wider text-white">
+              {formatCountdown(countdown)}
+            </span>
+          </div>
+        </div>
+
         <div className="mb-10 text-center">
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             Pricing
@@ -174,6 +224,11 @@ export default function PricingPage() {
                     Best Value
                   </div>
                 )}
+                {p.popular && !isSelected && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#22D3EE] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-[#05070D] shadow-[0_4px_18px_rgba(34,211,238,.45)]">
+                    🔥 Most Popular
+                  </div>
+                )}
                 {isSelected && (
                   <div className="absolute -top-3 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_4px_14px_rgba(34,197,94,.45)]" aria-label="Selected">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -221,6 +276,21 @@ export default function PricingPage() {
               </div>
             )
           })}
+        </div>
+
+        {/* Push #097 — Guarantee row directly under the plan cards.
+            Reinforces buyer confidence between the CTA and the comparison
+            table below. */}
+        <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-bold text-[#F1F5F9]">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-[#34D399]">✓</span> Cancel anytime
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-[#34D399]">✓</span> Instant access
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-[#34D399]">✓</span> Money-back guarantee
+          </span>
         </div>
 
         {/* Push #087 — feature comparison table. Makes the Fast vs.

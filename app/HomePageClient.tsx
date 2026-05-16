@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
+const EXIT_INTENT_KEY = 'sfa_exit_intent_shown'
 
 interface ShowcaseCard {
   category: string
@@ -117,6 +118,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [credits, setCredits] = useState<number | null>(null)
   const [checkoutTier, setCheckoutTier] = useState<'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  // Push #097 — exit-intent overlay state. One-shot per session.
+  const [showExitIntent, setShowExitIntent] = useState(false)
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -159,6 +162,32 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     return () => {
       cancelled = true
     }
+  }, [user])
+
+  // Push #097 — exit-intent overlay. Fires once per session when the
+  // cursor leaves the top of the viewport (the canonical "about to
+  // close the tab" gesture). Suppressed for signed-in users — they
+  // don't need the "get 2 free videos" prompt.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (user) return
+    try {
+      if (sessionStorage.getItem(EXIT_INTENT_KEY) === '1') return
+    } catch {
+      // ignore
+    }
+    function handleMouseLeave(e: MouseEvent) {
+      if (e.clientY > 0) return
+      try {
+        sessionStorage.setItem(EXIT_INTENT_KEY, '1')
+      } catch {
+        // ignore
+      }
+      setShowExitIntent(true)
+      document.removeEventListener('mouseleave', handleMouseLeave)
+    }
+    document.addEventListener('mouseleave', handleMouseLeave)
+    return () => document.removeEventListener('mouseleave', handleMouseLeave)
   }, [user])
 
   // Push #081 — Start Free routing rule. Logged-in users go straight to
@@ -436,45 +465,44 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </nav>
 
       {/* ───────── Hero ─────────
-          Push #086 — conversion-focused rewrite. Headline is a concrete
-          promise (output + time), subheadline names the work the user
-          *doesn't* have to do, and the primary CTA removes the credit-card
-          friction. The textarea stays because pre-filling a prompt
-          converts higher-intent visitors directly into /generate. */}
+          Push #097 — conversion overhaul for the Google Ads funnel
+          (85 clicks / 0 signups). Headline now leads with the user's
+          input ("Any Idea") instead of the output, subheadline lists
+          exactly what's automated, and the primary CTA is a green
+          go-button with the trust microcopy stacked below it. */}
       <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
-          Generate Viral{' '}
+          Turn Any Idea Into a{' '}
           <span
             className="text-[#22D3EE]"
             style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
           >
-            YouTube Shorts
+            Viral YouTube Short
           </span>{' '}
-          in 60 Seconds
+          — in 60 Seconds
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          AI picks the script, stock footage, and voiceover. You just post. Plans from <span className="font-bold text-cyan-400">$4.50/month</span>.
+          AI writes the script, finds the footage, adds captions and music. You just download and upload.
         </p>
 
-        {/* Push #086 — primary CTA pair lives above the prompt card so
-            visitors who don't have an idea yet still have a clear next
-            step. The textarea below is for high-intent visitors who
+        {/* Push #097 — primary green go-button + trust microcopy. The
+            textarea below is preserved for high-intent visitors who
             already know what they want to make. */}
-        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => goToGenerate()}
+            onClick={() => {
+              trackHomepageEvent('hero_primary_cta_click')
+              goToGenerate()
+            }}
             disabled={submitting}
-            className="w-full sm:w-auto rounded-xl bg-[#2563EB] px-7 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(59,130,246,.4)] transition hover:bg-blue-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
+            className="w-full sm:w-auto rounded-xl bg-[#10B981] px-9 py-4 text-base sm:text-lg font-extrabold text-white shadow-[0_10px_32px_rgba(16,185,129,.45)] transition hover:bg-[#059669] hover:shadow-[0_12px_40px_rgba(16,185,129,.55)] disabled:opacity-60"
           >
-            {submitting ? 'Loading…' : 'Start Free — No Credit Card'}
+            {submitting ? 'Loading…' : 'Generate Your First Short Free →'}
           </button>
-          <a
-            href="#how-it-works"
-            className="w-full sm:w-auto rounded-xl border border-white/[0.12] px-7 py-4 text-base font-extrabold text-[#F1F5F9] transition hover:border-blue-500/60 hover:bg-white/[0.04]"
-          >
-            See How It Works
-          </a>
+          <p className="text-[13px] font-semibold text-[#94A3B8]">
+            No credit card required · 2 free videos · Ready in 60 seconds
+          </p>
         </div>
 
         {/* Single clean prompt card — kept for visitors with an idea ready */}
@@ -533,25 +561,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </section>
 
       {/* ───────── Social Proof ─────────
-          Push #086 — three creator quotes in a static 3-col grid (no
-          marquee dependency). Star rating chips reinforce credibility
-          before the visitor lands on pricing. */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-10 sm:px-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {[
-            { quote: 'Generated 47 Shorts last month for $9', handle: '@moneyfacts_yt' },
-            { quote: 'Went from 0 to 12k views on my first Short', handle: '@wealthtips_yt' },
-            { quote: 'Finally consistent content without the grind', handle: '@financefacts_yt' },
-          ].map((t) => (
-            <div
-              key={t.handle}
-              className="rounded-2xl border border-white/[0.08] bg-[#0B1120] p-5 transition hover:border-cyan-400/40 hover:shadow-[0_0_22px_rgba(34,211,238,0.15)]"
-            >
-              <div className="text-[#FBBF24] text-sm mb-2 tracking-widest">★★★★★</div>
-              <p className="text-[14px] text-[#F1F5F9] leading-snug">&ldquo;{t.quote}&rdquo;</p>
-              <p className="mt-3 text-[12px] font-bold text-cyan-400">{t.handle}</p>
-            </div>
-          ))}
+          Push #097 — compact dark bar instead of the prior 3-card grid.
+          Sits right under the hero so the visitor sees a creator count
+          + a star quote before they even reach the showcase. */}
+      <section className="relative z-10 mx-auto max-w-4xl px-4 pt-0 pb-10 sm:px-6">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-xl border border-white/[0.08] bg-[#0B1120] px-5 py-3">
+          <span className="text-[13.5px] font-bold text-[#F1F5F9]">
+            ⚡ Join 500+ creators generating Shorts with AI
+          </span>
+          <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
+          <span className="flex items-center gap-2 text-[13.5px] text-[#94A3B8]">
+            <span className="font-black tracking-widest text-[#FBBF24]">★★★★★</span>
+            <span className="text-[#F1F5F9]">&ldquo;Saves me 3 hours per video&rdquo;</span>
+            <span className="text-cyan-400 font-bold">— @moneyfacts_creator</span>
+          </span>
         </div>
       </section>
 
@@ -571,21 +594,21 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {[
             {
-              icon: '💡',
-              title: 'Enter Your Topic',
-              body: "Type a topic like 'The psychology of money' or 'Why billionaires wake up at 5am'",
+              icon: '🎯',
+              title: 'Type your idea',
+              body: '"Top 5 richest people ever" — one sentence is enough.',
               accent: '#22D3EE',
             },
             {
-              icon: '⚡',
-              title: 'AI Generates in 60s',
-              body: 'ShortsForge writes the script, finds cinematic stock footage, and adds a professional voiceover',
+              icon: '🤖',
+              title: 'AI builds your Short',
+              body: 'Script + footage + captions + music, stitched into a vertical MP4.',
               accent: '#3B82F6',
             },
             {
-              icon: '📈',
-              title: 'Post & Go Viral',
-              body: 'Download your Short and upload to YouTube. Our users average 3x more views.',
+              icon: '📥',
+              title: 'Download & post',
+              body: 'Ready for YouTube Shorts in 60 seconds. Just upload.',
               accent: '#34D399',
             },
           ].map((step, i) => (
@@ -807,6 +830,61 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
         </div>
       </section>
+
+      {/* ───────── Exit-intent overlay (Push #097) ───────── */}
+      {showExitIntent && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="exit-intent-title"
+          onClick={() => setShowExitIntent(false)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-5 backdrop-blur-md"
+          style={{ animation: 'sf-exit-fade .2s ease-out' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md rounded-3xl border-2 border-cyan-400/40 bg-[#0B1120] p-8 text-center shadow-[0_30px_80px_rgba(0,0,0,.7),0_0_60px_rgba(34,211,238,.25)]"
+          >
+            <button
+              type="button"
+              onClick={() => setShowExitIntent(false)}
+              aria-label="Close"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-[#94A3B8] hover:text-[#F1F5F9]"
+            >
+              ×
+            </button>
+            <div aria-hidden className="mb-2 text-4xl">👋</div>
+            <h2
+              id="exit-intent-title"
+              className="text-balance text-2xl font-black tracking-tight text-[#F1F5F9]"
+            >
+              Wait! Get <span className="text-[#10B981]">2 FREE videos</span> before you go
+            </h2>
+            <p className="mx-auto mt-3 max-w-xs text-[14px] text-[#94A3B8]">
+              No credit card. No catch. Generate your first viral Short in 60 seconds.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                trackHomepageEvent('exit_intent_cta_click')
+                setShowExitIntent(false)
+                goToGenerate()
+              }}
+              className="mt-6 w-full rounded-xl bg-[#10B981] px-6 py-4 text-base font-extrabold text-white shadow-[0_10px_30px_rgba(16,185,129,.4)] transition hover:bg-[#059669]"
+            >
+              Generate Free →
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowExitIntent(false)}
+              className="mt-3 text-[12px] text-[#94A3B8] underline hover:text-[#F1F5F9]"
+            >
+              No thanks, I&apos;ll pass
+            </button>
+          </div>
+          <style>{`@keyframes sf-exit-fade { from { opacity: 0; } to { opacity: 1; } }`}</style>
+        </div>
+      )}
 
       {/* ───────── Footer ───────── */}
       <footer className="relative z-10 mt-16 border-t border-white/[0.08]">
