@@ -98,6 +98,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [signingOut, setSigningOut] = useState(false)
   // Push #077 — pricing card selected state. Pro is selected by default.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  // Push #081 — credits pill in header. null while loading; never shown
+  // when logged out. We only fetch once auth is confirmed so we don't
+  // hammer the credits route during the unauth flash.
+  const [credits, setCredits] = useState<number | null>(null)
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -118,19 +122,48 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     }
   }, [])
 
+  // Push #081 — fetch credits when the user is signed in. Failures are
+  // swallowed; the pill simply does not render rather than breaking the
+  // header layout. We re-fetch on user-id change so a sign-in/sign-out
+  // cycle picks up the new balance.
+  useEffect(() => {
+    if (!user) {
+      setCredits(null)
+      return
+    }
+    let cancelled = false
+    fetch('/api/credits')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        if (data && typeof data.credits === 'number') {
+          setCredits(data.credits)
+        }
+      })
+      .catch(() => {/* silent */})
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  // Push #081 — Start Free routing rule. Logged-in users go straight to
+  // /generate (with their prompt pre-filled if any). Logged-out users go
+  // to /signup with a redirect param so the post-signup flow lands on
+  // /generate, not the dashboard. Previously this routed to /login,
+  // which was confusing for first-time visitors clicking "Start Free".
   function goToGenerate(text?: string) {
     const trimmed = (text ?? prompt).trim()
     setSubmitting(true)
     const dest = trimmed
       ? `/generate?prompt=${encodeURIComponent(trimmed)}`
       : '/generate'
-    const target = user ? dest : `/login?redirect=${encodeURIComponent(dest)}`
+    const target = user ? dest : `/signup?redirect=${encodeURIComponent(dest)}`
     router.push(target)
   }
 
   function goToShowcase(cardPrompt: string) {
     const dest = `/generate?prompt=${encodeURIComponent(cardPrompt)}`
-    const target = user ? dest : `/login?redirect=${encodeURIComponent(dest)}`
+    const target = user ? dest : `/signup?redirect=${encodeURIComponent(dest)}`
     router.push(target)
   }
 
@@ -209,6 +242,16 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <div aria-hidden className="h-9 w-40" />
             ) : user ? (
               <>
+                {/* Push #081 — credits pill. Hidden while loading so
+                    we never flash a misleading "0 credits". */}
+                {credits !== null && (
+                  <span
+                    className="text-xs font-bold text-cyan-400 border border-cyan-400/30 rounded-full px-2.5 py-1 bg-cyan-400/[0.04]"
+                    title="Video credits remaining"
+                  >
+                    {credits} credits
+                  </span>
+                )}
                 <Link
                   href="/generate"
                   className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
@@ -250,12 +293,22 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {!authChecked ? (
               <div aria-hidden className="h-9 w-20" />
             ) : user ? (
-              <Link
-                href="/generate"
-                className="rounded-lg border border-white/20 px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-white/5"
-              >
-                Dashboard
-              </Link>
+              <>
+                {credits !== null && (
+                  <span
+                    className="text-[10px] font-bold text-cyan-400 border border-cyan-400/30 rounded-full px-2 py-0.5 bg-cyan-400/[0.04]"
+                    title="Video credits"
+                  >
+                    {credits}
+                  </span>
+                )}
+                <Link
+                  href="/generate"
+                  className="rounded-lg border border-white/20 px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-white/5"
+                >
+                  Dashboard
+                </Link>
+              </>
             ) : (
               <Link
                 href="/signup"
@@ -392,12 +445,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </p>
         </div>
 
-        {/* Horizontal scroll on mobile, 3-col grid on desktop. */}
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-3">
+        {/* Push #081 — 2 cols on mobile, 3 cols on desktop. Removed
+            horizontal scroll so all six cards are visible without a
+            swipe; broken/blank cards are impossible because each card
+            paints its own gradient poster from the accent color. */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
           {SHOWCASE.map((card) => (
             <div
               key={card.title}
-              className="group flex w-[78%] min-w-[260px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)] sm:w-auto sm:min-w-0"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]"
             >
               {/* Static "thumbnail" — no autoplay video, just a gradient
                   block tinted with the card's accent so the grid reads as
@@ -443,12 +499,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col gap-3 p-5">
-                <h3 className="text-[15px] font-bold text-[#F1F5F9]">{card.title}</h3>
+              <div className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
+                <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title}</h3>
+                <p className="hidden text-[12px] text-[#94A3B8] line-clamp-2 sm:block">
+                  {card.prompt}
+                </p>
                 <button
                   type="button"
                   onClick={() => goToShowcase(card.prompt)}
-                  className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
+                  className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
                 >
                   <span>Generate similar</span>
                   <span style={{ color: card.accent }}>→</span>
@@ -477,12 +536,19 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             const isPaid = plan.tier === 'basic' || plan.tier === 'pro'
             const isSelected = isPaid && selectedPlan === plan.tier
             const isRecommended = !!plan.recommended
-            const isExternal = plan.href.startsWith('http')
+            // Push #081 — Free plan CTA respects auth state. Logged-in
+            // users skip /signup and go straight to /generate so the
+            // CTA never asks them to re-create an account.
+            const planHref =
+              plan.tier === 'free' && user ? '/generate' : plan.href
+            const isExternal = planHref.startsWith('http')
 
             const features = featureListFor(plan.tier)
             const ctaLabel = isSelected
               ? plan.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
-              : plan.cta
+              : plan.tier === 'free' && user
+                ? 'Open Generator'
+                : plan.cta
 
             return (
               <div
@@ -542,7 +608,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   ))}
                 </ul>
                 <a
-                  href={plan.href}
+                  href={planHref}
                   target={isExternal ? '_blank' : undefined}
                   rel={isExternal ? 'noopener noreferrer' : undefined}
                   onClick={(e) => {

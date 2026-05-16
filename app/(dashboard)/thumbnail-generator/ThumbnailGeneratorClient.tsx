@@ -549,6 +549,77 @@ export default function ThumbnailGeneratorClient() {
             </div>
           </div>
 
+          {/* Push #081 — Thumbnail credit pricing table.
+              Shown BEFORE the generate button so the user knows the
+              cost of each option up-front. The currently-selected
+              option is highlighted. Credits are charged only on a
+              successful generation (the API caller handles the
+              deduction; this UI just surfaces the price). */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--muted2)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                💎 Thumbnail Credits
+              </label>
+              <span
+                style={{
+                  background: 'rgba(34,211,238,0.15)',
+                  color: '#22D3EE',
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  letterSpacing: '0.08em',
+                  border: '1px solid rgba(34,211,238,0.35)',
+                }}
+              >
+                BETA
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { key: 1, label: '1 thumbnail', credits: 5, selected: generateCount === 1 },
+                { key: 3, label: '3 variations', credits: 10, selected: generateCount === 3 },
+                { key: 'pro', label: 'Pro pack — 3 variations + cinematic + text suggestions', credits: 15, selected: false, soon: true },
+              ].map((row) => (
+                <div
+                  key={row.key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    padding: '8px 12px',
+                    borderRadius: 9,
+                    border: row.selected ? '1px solid rgba(59, 130, 246,0.45)' : '1px solid rgba(255,255,255,0.06)',
+                    background: row.selected ? 'rgba(59, 130, 246,0.10)' : 'transparent',
+                  }}
+                >
+                  <span style={{ fontSize: '0.78rem', color: row.selected ? '#60A5FA' : 'var(--text)', fontWeight: row.selected ? 800 : 600 }}>
+                    {row.label}
+                    {row.soon && (
+                      <span style={{ marginLeft: 8, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+                        soon
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 900, color: row.selected ? '#22D3EE' : 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {row.credits} credits
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', marginTop: 10, lineHeight: 1.5 }}>
+              Credits are charged only when thumbnails are successfully generated.
+            </p>
+          </div>
+
           {/* Generate button */}
           <button
             onClick={handleGenerate}
