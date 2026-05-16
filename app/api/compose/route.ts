@@ -16,7 +16,7 @@ export const maxDuration = 60
 // /api/generate-video. Legacy 10 / 50 kept here for backward
 // compatibility with any in-flight requests from the old client.
 const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60] as const
-type Quality = 'basic' | 'basic_ai' | 'pro'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
 
 interface ComposeBody {
   generationId?: string
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
-      return q === 'basic' || q === 'pro' ? q : 'basic_ai'
+      return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
 
     // Step 1 — Scale the voiceover script to the right word count.

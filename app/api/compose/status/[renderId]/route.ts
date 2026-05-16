@@ -8,13 +8,17 @@ export const maxDuration = 30
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
 
-type Quality = 'basic' | 'basic_ai' | 'pro'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
   // The UI display lives in app/(dashboard)/generate/GenerateClient.tsx — keep
-  // these two in sync when adjusting prices. Basic / Basic AI = 15, Pro = 20.
+  // these two in sync when adjusting prices. Push #084 added 'fast' = 1
+  // credit for the Pexels + TTS Fast Mode pipeline. Basic / Basic AI = 15,
+  // Pro = 20.
   switch (quality) {
+    case 'fast':
+      return 1
     case 'pro':
       return 20
     case 'basic':
@@ -169,7 +173,7 @@ export async function GET(
 
     const qParam = (req.nextUrl.searchParams.get('quality') ?? 'basic_ai').toString()
     const quality: Quality =
-      qParam === 'basic' || qParam === 'pro' ? qParam : 'basic_ai'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' ? qParam : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
 
     // Push #050 — topic + duration travel as query params so we can record

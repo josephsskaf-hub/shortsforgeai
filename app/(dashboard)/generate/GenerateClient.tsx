@@ -68,7 +68,10 @@ type Phase =
 // build a real story arc (hook → setup → tension → payoff). 45s is the new
 // default; 30s is the "quick" option, 60s is the "deep story" option.
 type Duration = 30 | 45 | 60
-type Quality = 'basic' | 'basic_ai' | 'pro'
+// Push #084 — added 'fast' for the Pexels + TTS cheap pipeline (1 credit).
+// Cinematic quality tiers (basic / basic_ai / pro) still flow through Runway.
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
+type GenerationMode = 'fast' | 'cinematic'
 
 const DURATION_OPTIONS: { value: Duration; label: string }[] = [
   { value: 30, label: '30s — Quick' },
@@ -154,6 +157,10 @@ export default function GenerateClient() {
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState<Duration>(45)
   const [quality, setQuality] = useState<Quality>('basic_ai')
+  // Push #084 — Fast Mode (Pexels + TTS, 1 credit, ~30s) is the new default.
+  // Cinematic Mode keeps the Runway path. Quality tiers above only apply to
+  // Cinematic Mode; Fast Mode pins the effective quality to 'fast' on submit.
+  const [mode, setMode] = useState<GenerationMode>('fast')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
   const [renderId, setRenderId] = useState<string | null>(null)
@@ -664,6 +671,47 @@ export default function GenerateClient() {
     deductedRef.current = false
     setPhase('generating')
 
+    // Push #084 — Fast Mode skips Runway and resolves Pexels clips
+    // synchronously, then jumps straight to the compose phase. Cinematic
+    // Mode keeps the existing Runway path with its polling state machine.
+    if (mode === 'fast') {
+      try {
+        const res = await fetch('/api/generate-video-fast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: trimmed, duration }),
+        })
+        const data = await res.json()
+        if (res.status === 401) {
+          router.push('/login?redirect=/generate')
+          return
+        }
+        if (res.status === 402) {
+          setError('Not enough credits. Fast Mode needs 1 credit.')
+          setPhase('failed')
+          return
+        }
+        if (!res.ok) {
+          console.error('[generate] fast-mode error:', data?.error)
+          setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
+          setPhase('failed')
+          return
+        }
+        // Quality is pinned to 'fast' so compose/status charges 1 credit.
+        setQuality('fast')
+        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
+        setScenes(Array.isArray(data.scenes) ? data.scenes : [])
+        setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+        setGenerateProgress(100)
+        setPhase('clips_ready')
+      } catch (err: unknown) {
+        console.error('[generate] fast-mode threw:', err)
+        setError(GENERIC_ERROR)
+        setPhase('failed')
+      }
+      return
+    }
+
     try {
       const res = await fetch('/api/generate-video', {
         method: 'POST',
@@ -796,7 +844,11 @@ export default function GenerateClient() {
   }, [phase, finalVideoUrl])
 
 
-  const selectedCost = QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15
+  // Push #084 — Fast Mode is a flat 1 credit; Cinematic Mode uses the
+  // per-quality cost from QUALITY_OPTIONS.
+  const selectedCost = mode === 'fast'
+    ? 1
+    : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
   const showRender =
@@ -954,6 +1006,91 @@ export default function GenerateClient() {
             }}
           />
 
+          {/* Push #084 — Generation mode selector. Fast Mode (Pexels + TTS,
+              1 credit, ~30s) is the default. Cinematic Mode runs the Runway
+              path. The quality cards below only apply to Cinematic Mode. */}
+          <div className="mt-5">
+            <div
+              className="text-xs font-black uppercase tracking-widest mb-2"
+              style={{ color: 'var(--muted)' }}
+            >
+              Generation mode
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    key: 'fast' as GenerationMode,
+                    icon: '⚡',
+                    title: 'Fast Mode',
+                    badge: 'DEFAULT',
+                    desc: 'Stock footage + TTS. ~30s render.',
+                    cost: '~1 credit',
+                  },
+                  {
+                    key: 'cinematic' as GenerationMode,
+                    icon: '🎬',
+                    title: 'Cinematic Mode',
+                    badge: 'PRO',
+                    desc: 'AI-generated scenes via Runway + TTS. ~3-5min render.',
+                    cost: `~${QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15} credits`,
+                  },
+                ]
+              ).map((opt) => {
+                const selected = mode === opt.key
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => setMode(opt.key)}
+                    className="rounded-xl p-4 text-left"
+                    style={{
+                      background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
+                      border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: selected ? '0 0 22px rgba(37,99,235,.18)' : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span>{opt.icon}</span>
+                      <span
+                        className="text-sm font-black"
+                        style={{ color: selected ? '#93c5fd' : 'var(--text)' }}
+                      >
+                        {opt.title}
+                      </span>
+                      <span
+                        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: 'rgba(37,99,235,.18)',
+                          color: '#93c5fd',
+                          border: '1px solid rgba(37,99,235,.3)',
+                        }}
+                      >
+                        {opt.cost}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                        style={{
+                          background: opt.key === 'fast' ? 'rgba(52,211,153,.15)' : 'rgba(251,191,36,.15)',
+                          color: opt.key === 'fast' ? '#34d399' : '#fbbf24',
+                          border: opt.key === 'fast' ? '1px solid rgba(52,211,153,.3)' : '1px solid rgba(251,191,36,.3)',
+                        }}
+                      >
+                        {opt.badge}
+                      </span>
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                      {opt.desc}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Push #034: duration + quality selectors moved here from the
               post-analyze step so users can pick everything in one screen
               before they hit Analyze. The selected values persist into the
@@ -988,6 +1125,9 @@ export default function GenerateClient() {
             </p>
           </div>
 
+          {/* Push #084 — Media & quality only applies to Cinematic Mode.
+              Fast Mode runs Pexels + TTS at a fixed 1-credit cost. */}
+          {mode === 'cinematic' && (
           <div className="mt-5">
             <div
               className="text-xs font-black uppercase tracking-widest mb-2"
@@ -1038,10 +1178,13 @@ export default function GenerateClient() {
               })}
             </div>
           </div>
+          )}
 
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              You&apos;ll review the brief before any credits are charged.
+              {mode === 'fast'
+                ? `⚡ ${selectedCost} credit • ~30s render — stock footage + AI voiceover.`
+                : `🎬 ${selectedCost} credits • ~5min render — AI-generated cinematic scenes.`}
             </p>
             <button
               onClick={() => handleAnalyze()}
@@ -1247,7 +1390,9 @@ export default function GenerateClient() {
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs" style={{ color: 'var(--muted2)' }}>
-                {duration}s · {QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts (9:16)
+                {mode === 'fast'
+                  ? `⚡ Fast Mode · ${duration}s · YouTube Shorts (9:16)`
+                  : `🎬 Cinematic Mode · ${duration}s · ${QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts (9:16)`}
               </div>
               <button
                 onClick={handleGenerate}
@@ -1260,7 +1405,7 @@ export default function GenerateClient() {
                   boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
                 }}
               >
-                Generate • {selectedCost} credits
+                Generate • {selectedCost} credit{selectedCost === 1 ? '' : 's'}
               </button>
             </div>
           </section>

@@ -415,7 +415,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           with AI
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          Turn one idea into a ready-to-post Short with voiceover, captions, visuals and download.
+          Create addictive micro-knowledge Shorts in seconds. One idea → ready-to-post vertical video with voiceover, captions and visuals.
         </p>
 
         {/* Single clean prompt card */}

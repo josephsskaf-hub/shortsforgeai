@@ -279,13 +279,16 @@ export default function Sidebar({
               exists for the legacy Shorts Packs view but is no longer the
               primary entry point. */}
           <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
+              badge. The thumbnail click-through rate is the single biggest
+              lever for Shorts performance, so we surface this tool right
+              after the generator. */}
+          <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
           <NavItem href="/my-videos" icon="📼" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #060 — examples gallery. Static prompt showcase that
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}
           <NavItem href="/examples" icon="✨" label="Examples" exact={false} pathname={pathname} onClick={onClose} />
-          {/* AI Thumbnail Generator — DALL-E 3 powered thumbnail creation */}
-          <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
 
         </nav>
 
