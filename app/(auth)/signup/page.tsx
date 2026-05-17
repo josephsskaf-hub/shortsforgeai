@@ -102,6 +102,18 @@ export default function SignupPage() {
       />
 
       <div className="w-full max-w-md relative z-10">
+        {/* Push #116 — explicit back-to-home link above the card. */}
+        <Link
+          href="/"
+          className="block text-xs font-bold mb-3"
+          style={{
+            color: 'var(--muted)',
+            textDecoration: 'none',
+            letterSpacing: '0.02em',
+          }}
+        >
+          ← Back to Home
+        </Link>
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div

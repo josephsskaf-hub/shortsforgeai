@@ -147,11 +147,11 @@ export default function PricingPage() {
       })
       const data = await res.json().catch(() => ({}))
       // Guest visitor — /api/stripe/checkout returns 401 without a
-      // Supabase session. Route through /login so we come back here after
-      // sign-in and try again. Cheaper than loading the Supabase client
-      // on the marketing page just for an auth check.
+      // Supabase session. Push #116 — route through /signup (not /login)
+      // because new users convert better starting from the create-account
+      // flow than from a login form they have no creds for.
       if (res.status === 401) {
-        window.location.href = `/login?redirect=${encodeURIComponent('/pricing')}`
+        window.location.href = `/signup?redirect=${encodeURIComponent('/pricing')}`
         return
       }
       // Already subscribed — push the user straight into the product

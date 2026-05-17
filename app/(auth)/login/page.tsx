@@ -110,6 +110,21 @@ export default function LoginPage() {
       />
 
       <div className="w-full max-w-md relative z-10">
+        {/* Push #116 — explicit back-to-home link above the card. The
+            wordmark logo already routes to /, but the explicit text
+            anchor reads as a clear escape hatch for visitors who landed
+            here from an ad. */}
+        <Link
+          href="/"
+          className="block text-xs font-bold mb-3"
+          style={{
+            color: 'var(--muted)',
+            textDecoration: 'none',
+            letterSpacing: '0.02em',
+          }}
+        >
+          ← Back to Home
+        </Link>
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center gap-3 mb-8" style={{ textDecoration: 'none' }}>
           <div
