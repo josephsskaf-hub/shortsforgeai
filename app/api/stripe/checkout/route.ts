@@ -11,7 +11,7 @@ type Tier = 'basic' | 'pro'
 type Currency = 'usd' | 'brl'
 
 // Plan definitions:
-//   Basic = $9/month, 50 Fast Mode videos/month.
+//   Basic = $9/month, 50 Fast Mode videos/month.h
 //   Pro   = $19/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You already have an active subscription.' }, { status: 400 })
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
     let customerId = profile?.stripe_customer_id
 
