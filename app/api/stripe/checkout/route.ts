@@ -50,18 +50,29 @@ export async function POST(req: NextRequest) {
     }
 
     let tier: Tier = 'basic'
-    let currency: Currency = 'usd'
+    let bodyCurrencyOverride: Currency | null = null
     try {
       const body = await req.json().catch(() => null)
       // Accept legacy `creator` as an alias for `basic` so any cached client
       // calls don't break during the rollout.
       if (body?.tier === 'pro') tier = 'pro'
       else if (body?.tier === 'basic' || body?.tier === 'creator') tier = 'basic'
-      // Push #111 — opt-in BRL. Any value other than 'brl' falls back to USD.
-      if (body?.currency === 'brl') currency = 'brl'
+      // Explicit override from the client still wins — useful for local dev
+      // (no Vercel headers) and for QA forcing a specific currency.
+      if (body?.currency === 'brl') bodyCurrencyOverride = 'brl'
     } catch {
       // ignore body parse errors and use default tier
     }
+
+    // Push #112 — server-side BRL detection via Vercel's edge header. The
+    // navigator.language path from #111 turned out to be unreliable (browser
+    // locale doesn't always match account country, and a few embedded
+    // browsers never set it). x-vercel-ip-country is set on every request
+    // from the edge in production, so BR visitors get BRL pricing
+    // automatically regardless of what their browser reports.
+    const ipCountry = req.headers.get('x-vercel-ip-country') ?? ''
+    const currency: Currency =
+      bodyCurrencyOverride ?? (ipCountry === 'BR' ? 'brl' : 'usd')
     const plan = TIERS[tier]
     const unitAmount = TIER_PRICES[tier][currency]
 
@@ -202,12 +213,44 @@ export async function POST(req: NextRequest) {
     try {
       session = await stripe.checkout.sessions.create(sessionParams)
     } catch (sessionErr) {
-      const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
-      console.error('[stripe/checkout] Session creation error:', msg)
-      return NextResponse.json(
-        { error: `Payment session failed: ${msg || 'Please try again'}` },
-        { status: 500 }
-      )
+      // Push #112 — boleto requires an explicit Stripe Dashboard toggle
+      // (Settings → Payments → Payment methods → Boleto). If the account
+      // hasn't flipped it on yet, Stripe returns invalid_payment_method
+      // _types / parameter_unknown — retry card-only so the BR user still
+      // reaches checkout in BRL instead of being told "payment failed".
+      const stripeErr = sessionErr as { code?: string; param?: string; message?: string }
+      const isBoletoIssue =
+        currency === 'brl' &&
+        sessionParams.payment_method_types?.includes('boleto') &&
+        (stripeErr?.code === 'invalid_payment_method_types' ||
+          stripeErr?.code === 'parameter_unknown' ||
+          (typeof stripeErr?.param === 'string' && stripeErr.param.includes('payment_method_types')) ||
+          (typeof stripeErr?.message === 'string' && stripeErr.message.toLowerCase().includes('boleto')))
+      if (isBoletoIssue) {
+        console.warn(
+          '[stripe/checkout] boleto rejected by Stripe — retrying card-only',
+          stripeErr?.code,
+          stripeErr?.message,
+        )
+        sessionParams.payment_method_types = ['card']
+        try {
+          session = await stripe.checkout.sessions.create(sessionParams)
+        } catch (retryErr) {
+          const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+          console.error('[stripe/checkout] Session creation retry error:', msg)
+          return NextResponse.json(
+            { error: `Payment session failed: ${msg || 'Please try again'}` },
+            { status: 500 }
+          )
+        }
+      } else {
+        const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
+        console.error('[stripe/checkout] Session creation error:', msg)
+        return NextResponse.json(
+          { error: `Payment session failed: ${msg || 'Please try again'}` },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({ url: session.url })
