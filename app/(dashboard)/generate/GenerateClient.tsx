@@ -2401,7 +2401,20 @@ export default function GenerateClient() {
               original tiny "Start over" footer so users can bail out of a
               stuck render. */}
           {phase === 'done' ? (
-            <NextActionSection onAnother={handleReset} onUpgrade={() => router.push('/pricing')} />
+            // Push #116 — free users see the smarter UpsellSection that
+            // pitches Pro by name and shows a credit-urgency line when
+            // they're at ≤1. Paid users keep the lighter
+            // NextActionSection (their main action is "make another one").
+            planTier === 'free' ? (
+              <UpsellSection
+                onAnother={handleReset}
+                onUpgrade={() => handleUpgradeNow('pro', 'usd')}
+                upgradeLoading={upgradeLoading}
+                creditsLeft={credits ?? 0}
+              />
+            ) : (
+              <NextActionSection onAnother={handleReset} onUpgrade={() => router.push('/pricing')} />
+            )
           ) : (
             <>
               <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
@@ -3299,6 +3312,157 @@ function ShortPackageSection({
           .sf-package-grid { grid-template-columns: 1fr; }
         }
       `}</style>
+    </section>
+  )
+}
+
+// Push #116 — smarter post-generation upsell for free-tier users. Replaces
+// the bland "Ready to create more shorts?" section with a celebration +
+// credit-urgency line + a Pro pitch ("100 videos/month") + the same
+// Generate-Another fallback. Routes through handleUpgradeNow('pro') so
+// checkout attribution stays consistent with the rest of the app.
+function UpsellSection({
+  onAnother,
+  onUpgrade,
+  upgradeLoading,
+  creditsLeft,
+}: {
+  onAnother: () => void
+  onUpgrade: () => void
+  upgradeLoading: boolean
+  creditsLeft: number
+}) {
+  return (
+    <section
+      className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+      style={{
+        background: 'linear-gradient(135deg, rgba(251,191,36,.04), rgba(59,130,246,.04))',
+        border: '1px solid rgba(255,255,255,.08)',
+      }}
+    >
+      {/* Celebration line */}
+      <div
+        style={{
+          fontSize: '0.95rem',
+          fontWeight: 800,
+          color: '#34D399',
+          marginBottom: 10,
+          letterSpacing: '-0.01em',
+        }}
+      >
+        ✅ Your Short is ready! Nice work.
+      </div>
+
+      {/* Credit urgency — only when the user is at the edge */}
+      {creditsLeft <= 1 && (
+        <div
+          style={{
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            color: '#FBBF24',
+            marginBottom: 14,
+          }}
+        >
+          ⚡ You have {creditsLeft} credit{creditsLeft === 1 ? '' : 's'} left. Don&apos;t lose your momentum.
+        </div>
+      )}
+
+      {/* Pro pitch card */}
+      <div
+        style={{
+          border: '1px solid rgba(251,191,36,.3)',
+          background: 'rgba(251,191,36,.05)',
+          borderRadius: 14,
+          padding: '16px 20px',
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            fontSize: '0.72rem',
+            color: '#FBBF24',
+            fontWeight: 800,
+            letterSpacing: '.12em',
+            marginBottom: 8,
+            textTransform: 'uppercase',
+          }}
+        >
+          Pro creators post daily
+        </div>
+        <div
+          style={{
+            fontSize: '1rem',
+            fontWeight: 800,
+            color: 'var(--text)',
+            marginBottom: 10,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Get 100 credits/month — post every day for $9.50
+        </div>
+        <ul
+          style={{
+            fontSize: '0.85rem',
+            color: '#94A3B8',
+            marginBottom: 16,
+            paddingLeft: 18,
+            lineHeight: 1.65,
+          }}
+        >
+          <li>100 Fast Mode videos/month</li>
+          <li>1 Cinematic (Runway AI) video/month</li>
+          <li>Download MP4 · Captions included</li>
+        </ul>
+        <button
+          type="button"
+          onClick={onUpgrade}
+          disabled={upgradeLoading}
+          style={{
+            width: '100%',
+            padding: '12px',
+            borderRadius: 10,
+            background: upgradeLoading ? 'rgba(251,191,36,.5)' : '#FBBF24',
+            color: '#0A0A0F',
+            fontWeight: 800,
+            fontSize: '0.95rem',
+            border: 'none',
+            cursor: upgradeLoading ? 'wait' : 'pointer',
+            boxShadow: '0 6px 22px rgba(251,191,36,.28)',
+          }}
+        >
+          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Pro — $9.50/mo first month →'}
+        </button>
+        <div
+          style={{
+            fontSize: '0.74rem',
+            color: '#94A3B8',
+            textAlign: 'center',
+            marginTop: 8,
+            fontWeight: 600,
+          }}
+        >
+          50% off first month · Cancel anytime · 7-day guarantee
+        </div>
+      </div>
+
+      {/* Secondary action — keep iterating */}
+      <button
+        type="button"
+        onClick={onAnother}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: 10,
+          background: 'rgba(255,255,255,.04)',
+          border: '1px solid rgba(255,255,255,.10)',
+          color: 'var(--text)',
+          fontWeight: 700,
+          fontSize: '0.9rem',
+          cursor: 'pointer',
+        }}
+      >
+        Generate another Short →
+      </button>
     </section>
   )
 }
