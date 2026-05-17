@@ -74,18 +74,41 @@ export async function searchPexelsVideos(query: string, perPage = 3): Promise<st
 }
 
 /**
- * Resolve a single best-match Pexels clip URL for a scene description.
- * Strips punctuation, keeps the 3 most relevant words, and returns null
- * when nothing matched or the API key is missing.
+ * Resolve a single best-match Pexels clip URL for a scene.
+ *
+ * Push #128 — `searchKeywords` is now the primary input: the AI scene
+ * generator returns an explicit 2-4 word subject phrase that matches the
+ * user's topic (e.g., "pyramids egypt"), separate from the cinematic
+ * description ("A lone photographer crouches…"). Searching Pexels with
+ * the latter was producing wildly wrong footage (photographer instead of
+ * pyramid), which is the bug this signature change fixes.
+ *
+ * `fallbackDescription` keeps backward compatibility: when keywords are
+ * absent or empty (older callers, missing GPT field), we fall back to the
+ * legacy 3-word extraction over the description so the function still
+ * returns something rather than null.
  */
-export async function getPexelsVideoForScene(sceneDescription: string): Promise<string | null> {
-  const keywords = (sceneDescription ?? '')
+export async function getPexelsVideoForScene(
+  searchKeywords: string | null | undefined,
+  fallbackDescription?: string
+): Promise<string | null> {
+  const cleanedExplicit = (searchKeywords ?? '')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 4)
+    .join(' ')
+    .trim()
+
+  const fallback = (fallbackDescription ?? '')
     .replace(/[^a-zA-Z0-9 ]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 3)
     .join(' ')
     .trim()
+
+  const keywords = cleanedExplicit || fallback
   if (!keywords) return null
 
   const urls = await searchPexelsVideos(keywords, 1)

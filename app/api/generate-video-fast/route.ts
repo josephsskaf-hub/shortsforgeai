@@ -102,9 +102,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 1 — Generate cinematic scene descriptions (same OpenAI call
-    // Cinematic Mode uses).
-    let scenes: string[]
+    // Step 1 — Generate cinematic scene descriptions + matching stock-search
+    // keywords. Push #128 — each scene now carries both a cinematic
+    // `description` (for the visual model) AND a tight `searchKeywords`
+    // string (for Pexels). Searching with the prose description was
+    // returning wildly wrong footage (e.g. "pyramids egypt" prompt →
+    // photographer clip) because the prose opens with framing filler
+    // like "A lone photographer crouches…".
+    let scenes: Awaited<ReturnType<typeof generateScenes>>
     try {
       scenes = await generateScenes(prompt.slice(0, 400), clipCount)
     } catch (err) {
@@ -116,14 +121,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 2 — Resolve each scene to a Pexels HD portrait clip, with the
-    // curated stockLibrary as a fallback so we always return SOMETHING
-    // even if PEXELS_API_KEY is missing or a search returns 0 results.
+    // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
+    // explicit search keywords (NOT the cinematic prose), falling back to
+    // the curated stockLibrary so we always return SOMETHING even if
+    // PEXELS_API_KEY is missing or a search returns 0 results.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        const pexelsUrl = await getPexelsVideoForScene(scene)
+        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
         if (pexelsUrl) return pexelsUrl
-        const lib = pickLibraryClips(scene, 1, idx)
+        // For library fallback prefer the keyword query — its tag-matching
+        // also does poorly on cinematic prose openers.
+        const query = scene.searchKeywords || scene.description
+        const lib = pickLibraryClips(query, 1, idx)
         return lib[0]?.url ?? ''
       })
     )
@@ -141,12 +150,14 @@ export async function POST(req: NextRequest) {
       `[generate-fast] OK user=${user.id.slice(0, 8)} clips=${filtered.length} duration=${duration}s`
     )
 
+    // Client expects `scenes` to be a string array of descriptions for the
+    // result-page recap UI — flatten before serializing.
     return NextResponse.json({
       mode: 'fast',
       generationId,
       prompt,
       duration,
-      scenes,
+      scenes: scenes.map((s) => s.description),
       clip_urls: filtered,
     })
   } catch (error: unknown) {

@@ -211,20 +211,59 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
-export async function generateScenes(prompt: string, count = 4): Promise<string[]> {
-  const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
-  const exampleArr = Array.from({ length: safeCount }, (_, i) => `"scene ${i + 1} description"`).join(', ')
+/**
+ * One generated scene. `description` is cinematic film prose for the AI
+ * text-to-video / image model (Runway). `searchKeywords` is a tight 2-4 word
+ * subject phrase intended for stock-footage search (Pexels) — it reflects
+ * the visual subject of the user's topic, not the narrative framing.
+ *
+ * Push #128 — these two were merged into one field before, which meant the
+ * Fast Mode pipeline ended up searching Pexels for prose-opening filler
+ * like "A lone photographer" instead of the actual subject ("pyramids"),
+ * producing wildly wrong footage. They're now separate by design.
+ */
+export interface Scene {
+  description: string
+  searchKeywords: string
+}
 
-  const userPrompt = `You break a Short-form video idea into ${safeCount} vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo).
+/**
+ * Best-effort fallback: derive 2-3 search keywords from a cinematic
+ * description by stripping articles / filler and keeping the most
+ * content-bearing words. Used when GPT omits `searchKeywords` or when
+ * upstream code only has the description string.
+ */
+const STOPWORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'of', 'in', 'on', 'at', 'to', 'for',
+  'with', 'from', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been',
+  'being', 'has', 'have', 'had', 'do', 'does', 'did', 'this', 'that',
+  'these', 'those', 'it', 'its', 'into', 'over', 'under', 'through',
+  'across', 'while', 'soft', 'lone', 'slow', 'gentle', 'gentleman',
+])
+export function deriveKeywordsFromDescription(description: string): string {
+  const words = (description ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w))
+  return words.slice(0, 3).join(' ').trim()
+}
+
+export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
+  const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
+  const exampleArr = Array.from(
+    { length: safeCount },
+    (_, i) =>
+      `{"description": "cinematic scene ${i + 1} description", "searchKeywords": "subject noun phrase"}`
+  ).join(', ')
+
+  const userPrompt = `You break a Short-form video idea into ${safeCount} vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo) AND matching stock-footage search keywords.
 
 Idea: "${prompt}"
 
-Return ONLY a valid JSON array of exactly ${safeCount} strings — no markdown, no preamble. Each string must:
-- Be one sentence, ~15-25 words
-- Be visual, specific, concrete (subject + setting + lighting + camera motion + mood)
-- Stay coherent across the ${safeCount} shots so they tell one short story
-- Avoid text overlays, logos, or watermarks
-- Be optimized for vertical 9:16 framing (tall composition)
+Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, no preamble. Each object must have:
+- "description": one cinematic sentence, ~15-25 words. Visual, specific, concrete (subject + setting + lighting + camera motion + mood). Coherent across all ${safeCount} shots so they tell one short story. No text overlays, logos, or watermarks. Optimized for vertical 9:16 framing.
+- "searchKeywords": 2-4 plain words naming the literal visual SUBJECT of the shot for stock-footage search. Use concrete nouns from the user's topic (e.g., "pyramids egypt", "stock market chart", "lion savanna"). NEVER use cinematic framing words like "lone", "soft light", "slow zoom", or generic openers like "a person" — those belong only in the description.
 
 Example output format:
 [${exampleArr}]`
@@ -236,12 +275,12 @@ Example output format:
         {
           role: 'system',
           content:
-            'You are an expert cinematic prompt engineer. You always respond with a valid JSON array of strings only — no markdown, no code fences, no commentary.',
+            'You are an expert cinematic prompt engineer. You always respond with a valid JSON array of objects with the requested shape — no markdown, no code fences, no commentary.',
         },
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.85,
-      max_tokens: 600,
+      max_tokens: 900,
     },
     { timeout: 25000 }
   )
@@ -261,9 +300,30 @@ Example output format:
   }
 
   if (!Array.isArray(parsed)) throw new Error('Scenes response was not an array.')
-  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, safeCount)
+
+  // Accept both new-shape objects {description, searchKeywords} and
+  // legacy bare strings — older deployments / retries may still return
+  // the old shape, and we'd rather render a slightly-off video than 500.
+  const scenes: Scene[] = []
+  for (const item of parsed) {
+    if (typeof item === 'string') {
+      const desc = item.trim()
+      if (!desc) continue
+      scenes.push({ description: desc, searchKeywords: deriveKeywordsFromDescription(desc) })
+    } else if (item && typeof item === 'object') {
+      const obj = item as Record<string, unknown>
+      const desc = typeof obj.description === 'string' ? obj.description.trim() : ''
+      if (!desc) continue
+      const kwRaw = typeof obj.searchKeywords === 'string' ? obj.searchKeywords.trim() : ''
+      const kw = kwRaw || deriveKeywordsFromDescription(desc)
+      scenes.push({ description: desc, searchKeywords: kw })
+    }
+    if (scenes.length >= safeCount) break
+  }
+
   while (scenes.length < safeCount) {
-    scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
+    const desc = `Cinematic vertical 9:16 shot inspired by: ${prompt}`
+    scenes.push({ description: desc, searchKeywords: deriveKeywordsFromDescription(prompt) })
   }
   return scenes
 }

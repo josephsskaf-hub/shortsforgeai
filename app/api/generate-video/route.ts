@@ -192,11 +192,14 @@ export async function POST(req: NextRequest) {
       `[generate] provider_prompt length: ${sceneSeed.length}, preview: ${sceneSeed.slice(0, 120)}`
     )
 
-    // Step 1 — OpenAI breaks the seed into N cinematic scene descriptions.
-    // Each returned string is short (~15-25 words) and goes through
-    // buildRunwayPayload → clampToProviderLimit again before reaching Runway,
-    // so per-scene 500-char compliance is enforced at the boundary.
-    let scenes: string[]
+    // Step 1 — OpenAI breaks the seed into N cinematic scenes. Each scene
+    // is short (~15-25 words) and goes through buildRunwayPayload →
+    // clampToProviderLimit again before reaching Runway, so per-scene
+    // 500-char compliance is enforced at the boundary. Push #128 — scenes
+    // now also carry a `searchKeywords` field; Cinematic mode doesn't use
+    // it (Runway gets the cinematic description directly), but the shared
+    // generator returns both for Fast Mode's Pexels search.
+    let scenes: Awaited<ReturnType<typeof generateScenes>>
     try {
       scenes = await generateScenes(sceneSeed, clipCount)
     } catch (err: unknown) {
@@ -212,7 +215,7 @@ export async function POST(req: NextRequest) {
     // Runway field error surfaces before any Runway billing happens.
     const runwayQuality = runwayQualityFor(quality)
     try {
-      buildRunwayPayload(scenes[0], platform, 10, runwayQuality)
+      buildRunwayPayload(scenes[0].description, platform, 10, runwayQuality)
     } catch (validationErr: unknown) {
       const msg = validationErr instanceof Error ? validationErr.message : String(validationErr)
       console.error('[generate-video] payload pre-validation failed:', msg)
@@ -226,7 +229,7 @@ export async function POST(req: NextRequest) {
     let tasks: { id: string; promptText: string }[]
     try {
       tasks = await Promise.all(
-        scenes.map((sceneText) => startRunwayTask(sceneText, platform, 10, runwayQuality))
+        scenes.map((scene) => startRunwayTask(scene.description, platform, 10, runwayQuality))
       )
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -241,7 +244,7 @@ export async function POST(req: NextRequest) {
       prompt,
       duration,
       quality,
-      scenes,
+      scenes: scenes.map((s) => s.description),
       tasks: tasks.map((t, i) => ({
         id: t.id,
         promptText: t.promptText,
