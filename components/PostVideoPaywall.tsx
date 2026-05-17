@@ -5,6 +5,11 @@
 // Stripe-hosted launch-offer links (same as PricingCards) for Basic and
 // Pro. Dismiss link keeps the result page usable for users who don't
 // want to upgrade yet.
+//
+// Push #114 — CTAs now POST to /api/stripe/checkout instead of opening
+// the hardcoded buy.stripe.com links. The hosted links were USD-only and
+// BR cards were getting rejected ("Seu cartão não aceita essa moeda");
+// the server route applies BRL via x-vercel-ip-country (#112).
 
 import { useState } from 'react'
 import { PLANS } from '@/lib/pricing'
@@ -39,6 +44,45 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   const [dismissed, setDismissed] = useState(false)
   // Push #077 — Pro selected by default. Card click selects, CTA navigates.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  // Push #114 — CTAs go through /api/stripe/checkout, so we need a busy
+  // flag to disable the buttons + show a "Loading…" label while the
+  // session is being created.
+  const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
+
+  async function handleBuy(tier: 'basic' | 'pro') {
+    setPurchasing(tier)
+    trackCheckoutClick(tier)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401) {
+        // Session expired between generation and click — bounce through
+        // login and come back to /generate.
+        window.location.href = `/login?redirect=${encodeURIComponent('/generate')}`
+        return
+      }
+      if (
+        res.status === 400 &&
+        typeof data?.error === 'string' &&
+        data.error.toLowerCase().includes('already have an active subscription')
+      ) {
+        window.location.href = '/generate'
+        return
+      }
+      if (!res.ok || !data?.url) {
+        setPurchasing(null)
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setPurchasing(null)
+    }
+  }
+
   if (dismissed) return null
   if (credits > 30) return null
 
@@ -84,9 +128,15 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
             `${PLANS.basic.credits} Fast Mode videos / month`,
             'Email support',
           ]}
-          href={PLANS.basic.href}
-          ctaLabel={selectedPlan === 'basic' ? 'Continue with Basic →' : 'Start Basic →'}
-          onClick={() => trackCheckoutClick('basic')}
+          ctaLabel={
+            purchasing === 'basic'
+              ? 'Loading…'
+              : selectedPlan === 'basic'
+                ? 'Continue with Basic →'
+                : 'Start Basic →'
+          }
+          onClick={() => handleBuy('basic')}
+          loading={purchasing === 'basic'}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
         />
@@ -99,9 +149,15 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
             `${PLANS.pro.credits} Fast Mode videos / month`,
             '1 Cinematic (Runway AI) video / month',
           ]}
-          href={PLANS.pro.href}
-          ctaLabel={selectedPlan === 'pro' ? 'Continue with Pro →' : 'Start Pro →'}
-          onClick={() => trackCheckoutClick('pro')}
+          ctaLabel={
+            purchasing === 'pro'
+              ? 'Loading…'
+              : selectedPlan === 'pro'
+                ? 'Continue with Pro →'
+                : 'Start Pro →'
+          }
+          onClick={() => handleBuy('pro')}
+          loading={purchasing === 'pro'}
           highlight
           selected={selectedPlan === 'pro'}
           onSelect={() => setSelectedPlan('pro')}
@@ -134,10 +190,10 @@ function PlanCard({
   price,
   renew,
   features,
-  href,
   ctaLabel,
   highlight,
   onClick,
+  loading,
   selected,
   onSelect,
 }: {
@@ -146,10 +202,10 @@ function PlanCard({
   price: string
   renew: string
   features: string[]
-  href: string
   ctaLabel: string
   highlight?: boolean
   onClick?: () => void
+  loading?: boolean
   selected?: boolean
   onSelect?: () => void
 }) {
@@ -249,10 +305,9 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        type="button"
+        disabled={!!loading}
         onClick={(e) => {
           e.stopPropagation()
           if (onSelect) onSelect()
@@ -264,11 +319,13 @@ function PlanCard({
           boxShadow: isSelected
             ? '0 4px 22px rgba(59, 130, 246,.35)'
             : '0 6px 22px rgba(37, 99, 235,.32)',
-          textDecoration: 'none',
+          border: 'none',
+          cursor: loading ? 'wait' : 'pointer',
+          opacity: loading ? 0.7 : 1,
         }}
       >
         {ctaLabel}
-      </a>
+      </button>
     </div>
   )
 }

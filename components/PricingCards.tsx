@@ -6,13 +6,13 @@
 // experience (current credits, FAQ, billing portal) — this is just the
 // in-flow nudge below the prompt textarea.
 //
-// Push #046 — CTAs now redirect directly to Stripe-hosted launch-offer
-// payment links instead of hitting /api/stripe/checkout. This bypasses
-// the server-side price-id lookup (the link itself encodes the price)
-// and works for guests too — Stripe handles account / email collection.
-//   - Free  → static "Current plan" label (no action)
-//   - Basic → buy.stripe.com basic launch link
-//   - Pro   → buy.stripe.com pro launch link
+// Push #114 — CTAs now POST to /api/stripe/checkout instead of redirecting
+// to hardcoded buy.stripe.com payment links. The hosted links were USD-
+// only and Brazilian cards were getting rejected with "Seu cartão não
+// aceita essa moeda". Going through the API lets the server pick BRL via
+// x-vercel-ip-country (Push #112) and attach boleto for BR cohorts. The
+// component is only rendered for signed-in users (inside /generate), so a
+// 401 just means the session expired — we fall back to /login.
 
 import { useState } from 'react'
 import { PLANS } from '@/lib/pricing'
@@ -52,7 +52,7 @@ export default function PricingCards() {
   // click navigates to Stripe.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
-  function handleBuy(tier: 'basic' | 'pro') {
+  async function handleBuy(tier: 'basic' | 'pro') {
     setError(null)
     setPurchasing(tier)
     // Push #061 — fire-and-forget tracking before redirect. Both the
@@ -71,8 +71,38 @@ export default function PricingCards() {
     } catch {
       // ignore
     }
-    // Direct Stripe-hosted launch-offer link — no server round-trip.
-    window.location.href = PLANS[tier].href
+
+    // Push #114 — server-side checkout so x-vercel-ip-country can route
+    // BR users into BRL pricing.
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      const data = await res.json().catch(() => ({}))
+      // Session timed out / not signed in — bounce through /login and
+      // come back to /generate (this card lives on /generate).
+      if (res.status === 401) {
+        window.location.href = `/login?redirect=${encodeURIComponent('/generate')}`
+        return
+      }
+      // Already subscribed — skip the error toast and just take the user
+      // back to the generator where their plan is already active.
+      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
+        window.location.href = '/generate'
+        return
+      }
+      if (!res.ok || !data?.url) {
+        setError(data?.error ?? 'Could not start checkout. Please try again.')
+        setPurchasing(null)
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setError('Could not start checkout. Please try again.')
+      setPurchasing(null)
+    }
   }
 
   return (

@@ -119,14 +119,59 @@ function trackPricingEvent(name: string): void {
 
 export default function PricingPage() {
   // Push #077 — pricing card selected state. Pro is selected by default
-  // (Recommended). Card click toggles selection; CTA still drives the
-  // Stripe link so users can either click-then-confirm or click-CTA-direct.
+  // (Recommended). Card click toggles selection; CTA used to drive a
+  // hard-coded Stripe payment link, but Push #114 routes it through
+  // /api/stripe/checkout so BR users land on a BRL session instead of a
+  // USD link that their card refuses.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
   // Push #097 — live countdown for the launch-offer banner.
   const [countdown, setCountdown] = useState<number>(COUNTDOWN_START_SECONDS)
   // Push #099 — open FAQ index for the accordion (null = all collapsed). First
   // question is open by default so the section reads as scannable, not empty.
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  // Push #114 — CTA state. `purchasing` is the tier whose button shows
+  // "Loading…" while the API call is in flight; `checkoutError` surfaces
+  // any server-returned error below the cards.
+  const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  async function handleBuy(tier: 'basic' | 'pro') {
+    setCheckoutError(null)
+    setPurchasing(tier)
+    trackPricingEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      const data = await res.json().catch(() => ({}))
+      // Guest visitor — /api/stripe/checkout returns 401 without a
+      // Supabase session. Route through /login so we come back here after
+      // sign-in and try again. Cheaper than loading the Supabase client
+      // on the marketing page just for an auth check.
+      if (res.status === 401) {
+        window.location.href = `/login?redirect=${encodeURIComponent('/pricing')}`
+        return
+      }
+      // Already subscribed — push the user straight into the product
+      // instead of showing a "you already have an active subscription"
+      // error toast.
+      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
+        window.location.href = '/generate'
+        return
+      }
+      if (!res.ok || !data?.url) {
+        setCheckoutError(data?.error ?? 'Could not start checkout. Please try again.')
+        setPurchasing(null)
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setCheckoutError('Could not start checkout. Please try again.')
+      setPurchasing(null)
+    }
+  }
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -285,24 +330,44 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href={p.cta.href}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (isPaid) setSelectedPlan(p.tier as 'basic' | 'pro')
-                    if (p.tier === 'basic') trackPricingEvent('basic_checkout_clicked')
-                    if (p.tier === 'pro') trackPricingEvent('pro_checkout_clicked')
-                  }}
-                  className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
-                    p.highlight || isSelected
-                      ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
-                  }`}
-                >
-                  {ctaLabel} →
-                </a>
+                {/* Push #114 — paid tiers go through /api/stripe/checkout
+                    (button + POST) so the route can pick BRL based on
+                    x-vercel-ip-country. Free tier keeps the plain anchor
+                    to /signup. */}
+                {isPaid ? (
+                  <button
+                    type="button"
+                    disabled={purchasing !== null && purchasing !== p.tier}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedPlan(p.tier as 'basic' | 'pro')
+                      handleBuy(p.tier as 'basic' | 'pro')
+                    }}
+                    className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
+                      p.highlight || isSelected
+                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                    }`}
+                  >
+                    {purchasing === p.tier ? 'Starting…' : `${ctaLabel} →`}
+                  </button>
+                ) : (
+                  <a
+                    href={p.cta.href}
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
+                      isSelected
+                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                    }`}
+                  >
+                    {ctaLabel} →
+                  </a>
+                )}
                 {/* Push #104 — trial reassurance microcopy under paid CTAs. */}
                 {isPaid && (
                   <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
@@ -313,6 +378,14 @@ export default function PricingPage() {
             )
           })}
         </div>
+
+        {/* Push #114 — surface any checkout error inline so users aren't
+            stranded silently when the API rejects the request. */}
+        {checkoutError && (
+          <p className="mx-auto mt-4 max-w-2xl text-center text-[13px] font-semibold text-[#f87171]">
+            {checkoutError}
+          </p>
+        )}
 
         {/* Push #097 — Guarantee row directly under the plan cards.
             Reinforces buyer confidence between the CTA and the comparison
