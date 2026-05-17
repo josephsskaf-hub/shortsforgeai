@@ -11,6 +11,19 @@ import { useEffect } from 'react'
 
 export default function CheckoutSuccessPage() {
   useEffect(() => {
+    // Push #110 — Google Ads purchase conversion. Stripe success_url
+    // appends ?success=true (Push #105) so we can fire only on the
+    // real redirect, not on an accidental direct visit. gtag itself
+    // is loaded globally from app/layout.tsx.
+    if (typeof window !== 'undefined' && window.location.search.includes('success=true')) {
+      if (typeof (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag === 'function') {
+        ;(window as unknown as { gtag: (...args: unknown[]) => void }).gtag('event', 'conversion', {
+          send_to: 'AW-18156258081/purchase',
+          value: 4.50,
+          currency: 'USD',
+        })
+      }
+    }
     try {
       void fetch('/api/events', {
         method: 'POST',
@@ -79,7 +92,7 @@ export default function CheckoutSuccessPage() {
             margin: 0,
           }}
         >
-          Welcome to ShortsForgeAI.
+          You&apos;re in! 🎉
         </h1>
         <p
           style={{
@@ -89,7 +102,7 @@ export default function CheckoutSuccessPage() {
             lineHeight: 1.55,
           }}
         >
-          Your plan is being activated.
+          Your 7-day trial has started. Make your first viral Short now.
         </p>
         <p
           style={{
@@ -136,7 +149,7 @@ export default function CheckoutSuccessPage() {
               letterSpacing: '-0.01em',
             }}
           >
-            Generate Video
+            Generate Your First Video →
           </Link>
           <Link
             href="/my-videos"

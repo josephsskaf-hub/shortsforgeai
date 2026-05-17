@@ -187,7 +187,7 @@ export default function SignupPage() {
                   className="w-2 h-2 rounded-full animate-pulse-dot"
                   style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }}
                 />
-                Free tier · 2 AI video credits included
+                🎁 7-day free trial · 2 AI videos included · No credit card required
               </div>
 
               <form onSubmit={handleSignup} className="flex flex-col gap-4">

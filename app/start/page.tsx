@@ -244,6 +244,80 @@ export default function StartPage() {
           </section>
         )}
 
+        {/* Push #110 — stats bar. Compact muted line right above the FAQ
+            so the social signals land before the buyer reads objections. */}
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: '0.8rem',
+            color: '#94A3B8',
+            marginBottom: 28,
+            fontWeight: 500,
+          }}
+        >
+          3,200+ videos generated · 4.8★ average rating · 7-day free trial
+        </p>
+
+        {/* Push #110 — FAQ. <details>/<summary> keeps this a server
+            component (no useState). Four highest-value objections lifted
+            from the ad cohort: face/camera, post-trial billing, time-to-
+            value, and free-tier scope. */}
+        <section style={{ marginBottom: 40 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              {
+                q: 'Do I need a camera or show my face?',
+                a: 'No. ShortsForgeAI generates visuals, voiceover, and subtitles from a topic you type. 100% faceless.',
+              },
+              {
+                q: 'What happens after the free trial?',
+                a: 'You’ll be charged $4.50 for month 1 (50% off), then $9/month. Cancel anytime.',
+              },
+              {
+                q: 'How long does it take?',
+                a: 'Under 60 seconds in Fast Mode. Type topic → Generate → Download.',
+              },
+              {
+                q: 'What’s in the free plan?',
+                a: '2 full videos, no credit card required. Upgrade only when you’re ready.',
+              },
+            ].map((item) => (
+              <details
+                key={item.q}
+                style={{
+                  background: 'rgba(255,255,255,.04)',
+                  border: '1px solid rgba(255,255,255,.08)',
+                  borderRadius: 10,
+                  padding: '14px 18px',
+                }}
+              >
+                <summary
+                  style={{
+                    color: '#F5F7FF',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    listStyle: 'none',
+                  }}
+                >
+                  {item.q}
+                </summary>
+                <p
+                  style={{
+                    marginTop: 10,
+                    marginBottom: 0,
+                    color: '#94A3B8',
+                    fontSize: '0.88rem',
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* Pricing — Basic highlight */}
         <section style={{ marginBottom: 36 }}>
           <div
