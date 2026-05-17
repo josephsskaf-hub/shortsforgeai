@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
       // shows the activation note and nudges back into /generate;
       // /checkout/cancelled re-offers the launch links so the abandoned-cart
       // intent doesn't vanish.
-      success_url: `${appUrl}/checkout/success`,
+      success_url: `${appUrl}/checkout/success?success=true`,
       cancel_url: `${appUrl}/checkout/cancelled`,
       metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
       subscription_data: {
