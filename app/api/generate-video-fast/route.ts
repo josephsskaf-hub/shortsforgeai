@@ -145,6 +145,8 @@ export async function POST(req: NextRequest) {
       `[generate-fast] OK user=${user.id.slice(0, 8)} clips=${filtered.length} duration=${duration}s`
     )
 
+    // Client expects `scenes` to be a string array of descriptions for the
+    // result-page recap UI — flatten before serializing.
     return NextResponse.json({
       mode: 'fast',
       generationId,
