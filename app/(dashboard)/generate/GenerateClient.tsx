@@ -1085,20 +1085,21 @@ export default function GenerateClient() {
     handleGenerate()
   }
 
-  async function handleUpgradeNow() {
+  // Push #113 — explicit currency selection. Auto-detection (browser
+  // locale in #111, then Vercel-IP-country in #112) wasn't reliable
+  // through VPNs and a few browser configs. The UI now exposes a BRL
+  // button on each upgrade surface and passes the currency in directly,
+  // so the path is always user-driven.
+  async function handleUpgradeNow(
+    tier: 'basic' | 'pro' = 'basic',
+    currency: 'usd' | 'brl' = 'usd',
+  ) {
     setUpgradeLoading(true)
     try {
-      // Push #111 — BR cards reject USD charges. Detect pt-* locale and
-      // ask the checkout route for BRL pricing + boleto support. Falls
-      // back to USD for everyone else.
-      const currency =
-        typeof navigator !== 'undefined' && navigator.language?.startsWith('pt')
-          ? 'brl'
-          : 'usd'
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: 'basic', currency }),
+        body: JSON.stringify({ tier, currency }),
       })
       const data = await res.json().catch(() => null)
       if (data?.url) {
@@ -1367,7 +1368,7 @@ export default function GenerateClient() {
           </span>
           <button
             type="button"
-            onClick={handleUpgradeNow}
+            onClick={() => handleUpgradeNow()}
             disabled={upgradeLoading}
             style={{
               background: 'linear-gradient(135deg, #f59e0b, #d97706)',
@@ -1444,7 +1445,8 @@ export default function GenerateClient() {
       {showUpgradeModal && (
         <UpgradeModal
           loading={upgradeLoading}
-          onUpgrade={handleUpgradeNow}
+          onUpgrade={() => handleUpgradeNow('basic', 'usd')}
+          onUpgradeBrl={() => handleUpgradeNow('basic', 'brl')}
           onClose={() => setShowUpgradeModal(false)}
         />
       )}
@@ -1454,7 +1456,8 @@ export default function GenerateClient() {
         <UrgencyModal
           remaining={urgencyRemaining}
           loading={upgradeLoading}
-          onUpgrade={handleUpgradeNow}
+          onUpgrade={() => handleUpgradeNow('basic', 'usd')}
+          onUpgradeBrl={() => handleUpgradeNow('basic', 'brl')}
           onClose={() => setShowUrgencyModal(false)}
         />
       )}
@@ -2239,7 +2242,7 @@ export default function GenerateClient() {
                   </div>
                   <button
                     type="button"
-                    onClick={handleUpgradeNow}
+                    onClick={() => handleUpgradeNow()}
                     disabled={upgradeLoading}
                     className="block w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
                     style={{
@@ -3769,10 +3772,12 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
 function UpgradeModal({
   loading,
   onUpgrade,
+  onUpgradeBrl,
   onClose,
 }: {
   loading: boolean
   onUpgrade: () => void
+  onUpgradeBrl: () => void
   onClose: () => void
 }) {
   return (
@@ -3853,6 +3858,32 @@ function UpgradeModal({
         >
           {loading ? 'Opening checkout…' : 'Upgrade Now — 50% Off Today'}
         </button>
+        {/* Push #113 — explicit BRL rail. Auto-detection (locale/IP) was
+            unreliable through VPNs and embedded browsers, so we surface
+            the BRL option as a clear, user-initiated button. */}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onUpgradeBrl}
+          style={{
+            marginTop: 8,
+            width: '100%',
+            padding: '10px 16px',
+            borderRadius: 10,
+            background: 'rgba(255,255,255,.05)',
+            border: '1px solid rgba(255,255,255,.12)',
+            color: '#94A3B8',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          🇧🇷 Pagar em R$ 49/mês (Brasil)
+        </button>
         <button
           type="button"
           onClick={onClose}
@@ -3896,11 +3927,13 @@ function UrgencyModal({
   remaining,
   loading,
   onUpgrade,
+  onUpgradeBrl,
   onClose,
 }: {
   remaining: number
   loading: boolean
   onUpgrade: () => void
+  onUpgradeBrl: () => void
   onClose: () => void
 }) {
   const expired = remaining <= 0
@@ -4030,6 +4063,32 @@ function UrgencyModal({
           }}
         >
           {loading ? 'Opening checkout…' : 'Claim 50% Off — Start Trial →'}
+        </button>
+        {/* Push #113 — BRL option. R$24,50 = 50% off the R$49 list price,
+            mirroring the USD "$4.50 (50% off $9)" framing on the primary
+            CTA. */}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onUpgradeBrl}
+          style={{
+            marginTop: 8,
+            width: '100%',
+            padding: '10px 16px',
+            borderRadius: 10,
+            background: 'rgba(255,255,255,.05)',
+            border: '1px solid rgba(255,255,255,.12)',
+            color: '#94A3B8',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          🇧🇷 Pagar em R$ 24,50/mês (Brasil)
         </button>
         <p
           style={{
