@@ -337,6 +337,34 @@ export default function PricingPage() {
           </p>
         </div>
 
+        {/* Push #125 — "Your first video is on us" announcement banner.
+            Full-width, gradient purple/blue, links to /start (the free
+            signup flow) so the visitor can act on it immediately. */}
+        <a
+          href="/start"
+          className="mx-auto mb-8 flex max-w-3xl items-center justify-center gap-3 rounded-2xl px-5 py-4 text-center transition hover:opacity-90"
+          style={{
+            background: 'linear-gradient(135deg, rgba(124,58,237,0.25) 0%, rgba(6,182,212,0.20) 100%)',
+            border: '1px solid rgba(124,58,237,0.45)',
+            boxShadow: '0 8px 32px rgba(124,58,237,0.18)',
+            textDecoration: 'none',
+            display: 'flex',
+          }}
+        >
+          <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>🎬</span>
+          <span style={{
+            fontSize: '0.925rem',
+            fontWeight: 800,
+            color: '#F1F5F9',
+            lineHeight: 1.4,
+          }}>
+            Your first video is on us —{' '}
+            <span style={{ color: '#A78BFA' }}>sign up free</span> and get{' '}
+            <span style={{ color: '#22D3EE' }}>3 credits instantly</span>,
+            no card required.
+          </span>
+        </a>
+
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {PRICING.map((p) => {
             const isPaid = p.tier === 'basic' || p.tier === 'pro'

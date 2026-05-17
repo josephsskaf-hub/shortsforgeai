@@ -236,6 +236,12 @@ export default function GenerateClient() {
   const [urgencyRemaining, setUrgencyRemaining] = useState<number>(600)
   const urgencyAutoShownRef = useRef(false)
 
+  // Push #125 — exit-intent upgrade prompt. Fires once per session (ref
+  // flag, no localStorage) when the cursor leaves the top of the viewport
+  // and the user is NOT pro and has fewer than 10 credits left.
+  const [showExitIntentUpgrade, setShowExitIntentUpgrade] = useState(false)
+  const exitIntentShownRef = useRef(false)
+
   // Push #098 — welcome banner shown to brand-new users (credits >= 2 and
   // the `sf_welcomed` localStorage flag not yet set). Dismissed via the X
   // button, which writes the flag so we never show it again.
@@ -1156,6 +1162,28 @@ export default function GenerateClient() {
     return () => window.clearInterval(id)
   }, [showUrgencyModal])
 
+  // Push #125 — exit-intent upgrade prompt. Listens for the cursor leaving
+  // the top of the viewport (the "about to close the tab" signal). Fires
+  // only once per session (exitIntentShownRef), only for non-pro users with
+  // fewer than 10 credits. Uses a ref — not localStorage — so the flag
+  // resets on every fresh page load / new session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (planTier === 'pro') return
+    if (credits !== null && credits >= 10) return
+
+    function handleMouseLeave(e: MouseEvent) {
+      if (e.clientY > 0) return
+      if (exitIntentShownRef.current) return
+      exitIntentShownRef.current = true
+      setShowExitIntentUpgrade(true)
+      document.removeEventListener('mouseleave', handleMouseLeave)
+    }
+
+    document.addEventListener('mouseleave', handleMouseLeave)
+    return () => document.removeEventListener('mouseleave', handleMouseLeave)
+  }, [planTier, credits])
+
   function dismissWelcome() {
     setShowWelcome(false)
     try {
@@ -1460,6 +1488,121 @@ export default function GenerateClient() {
           onUpgradeBrl={() => handleUpgradeNow('basic', 'brl')}
           onClose={() => setShowUrgencyModal(false)}
         />
+      )}
+
+      {/* Push #125 — exit-intent upgrade prompt. Shown once per session
+          when the cursor leaves the top of the viewport for non-pro users
+          with fewer than 10 credits. Dismiss with X or clicking backdrop. */}
+      {showExitIntentUpgrade && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Upgrade to Pro"
+          onClick={() => setShowExitIntentUpgrade(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            background: 'rgba(0,0,0,0.72)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: 440,
+              width: '100%',
+              borderRadius: 20,
+              background: 'linear-gradient(145deg, #0D1830 0%, #0B1120 100%)',
+              border: '1px solid rgba(59,130,246,0.4)',
+              boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(59,130,246,.15)',
+              padding: '32px 28px 28px',
+              textAlign: 'center',
+            }}
+          >
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setShowExitIntentUpgrade(false)}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 14,
+                background: 'none',
+                border: 'none',
+                color: '#94A3B8',
+                fontSize: 22,
+                lineHeight: 1,
+                cursor: 'pointer',
+                padding: 4,
+              }}
+            >
+              ×
+            </button>
+
+            <div style={{ fontSize: '2.2rem', marginBottom: 8 }}>⚡</div>
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: 900,
+              color: '#F1F5F9',
+              marginBottom: 8,
+              lineHeight: 1.25,
+            }}>
+              Wait — before you go!
+            </h2>
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#94A3B8',
+              marginBottom: 22,
+              lineHeight: 1.55,
+            }}>
+              Upgrade to Pro and never run out of credits.
+              Get <strong style={{ color: '#22D3EE' }}>100 videos/month</strong> + Cinematic Mode
+              and keep your channel growing on autopilot.
+            </p>
+            <a
+              href="https://buy.stripe.com/8x214nbF323ddizcF8gjC0o"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: 12,
+                background: 'linear-gradient(90deg, #2563EB, #06B6D4)',
+                color: '#fff',
+                fontWeight: 900,
+                fontSize: '0.95rem',
+                textDecoration: 'none',
+                boxShadow: '0 8px 24px rgba(37,99,235,.4)',
+                marginBottom: 10,
+              }}
+            >
+              Upgrade to Pro — $9.50/mo →
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowExitIntentUpgrade(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              No thanks, I&apos;ll stay on the free plan
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Push #060 — first-user onboarding panel. Only renders when the
