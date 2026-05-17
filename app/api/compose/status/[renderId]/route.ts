@@ -302,6 +302,51 @@ export async function GET(
             ? JSON.stringify({ name: e.name, message: e.message, stack: e.stack?.split('\n').slice(0, 3).join(' | ') })
             : String(e))
         }
+
+        // Push #104 — fire-and-forget "your Short is ready" email via
+        // Resend. Inlined here (rather than calling /api/notify-video-ready
+        // over HTTP) so we don't have to forward auth cookies on a
+        // server-to-server hop and so we don't pay a cold-start tax on the
+        // user's polling response. Mirrors the env conventions of
+        // /api/send-welcome.
+        try {
+          const RESEND_API_KEY = process.env.RESEND_API_KEY
+          const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.com>'
+          if (RESEND_API_KEY && user.email) {
+            const safeTopic = (topic || 'your topic').replace(/[<>]/g, '')
+            const safeVideoUrl = state.url.replace(/"/g, '')
+            const html = `
+              <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0a0a1a;color:#fff;padding:32px;border-radius:16px;">
+                <h1 style="color:#34d399;font-size:24px;margin:0 0 8px">Your Short is ready! ⚡</h1>
+                <p style="color:#94a3b8;margin:0 0 24px">Your AI-generated YouTube Short about "<strong style="color:#fff">${safeTopic}</strong>" is ready to download.</p>
+                <a href="${safeVideoUrl}" style="display:inline-block;background:linear-gradient(135deg,#2563EB,#22D3EE);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
+                  ⬇ Download Your Short
+                </a>
+                <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade for just $2.25 your first month →</a></p>
+                <p style="color:#475569;font-size:11px;margin:16px 0 0">ShortsForgeAI · <a href="https://shortsforgeai.com" style="color:#475569;">shortsforgeai.com</a></p>
+              </div>
+            `
+            const emailRes = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: FROM_EMAIL,
+                to: [user.email],
+                subject: '⚡ Your Short is ready to download!',
+                html,
+              }),
+            })
+            if (!emailRes.ok) {
+              const errText = await emailRes.text()
+              console.warn('[notify-video-ready] resend non-2xx:', emailRes.status, errText.slice(0, 200))
+            }
+          }
+        } catch (emailErr) {
+          console.warn('[notify-video-ready] send failed:', emailErr instanceof Error ? emailErr.message : String(emailErr))
+        }
       }
 
       return NextResponse.json({

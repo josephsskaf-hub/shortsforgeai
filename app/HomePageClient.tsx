@@ -120,9 +120,26 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   // Push #097 — exit-intent overlay state. One-shot per session.
   const [showExitIntent, setShowExitIntent] = useState(false)
+  // Push #104 — live "X Shorts created today" counter for the social
+  // proof bar. Falls back to the API's baseline if the fetch fails.
+  const [shortsToday, setShortsToday] = useState<number>(47)
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return
+        if (typeof d.count === 'number') setShortsToday(d.count)
+      })
+      .catch(() => {/* keep the baseline fallback */})
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -570,11 +587,59 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ⚡ Join 500+ creators generating Shorts with AI
           </span>
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
+          {/* Push #104 — live counter pulled from /api/stats. */}
+          <span className="text-[13.5px] font-bold text-[#34D399]">
+            ⚡ {shortsToday.toLocaleString()} Shorts created today
+          </span>
+          <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
           <span className="flex items-center gap-2 text-[13.5px] text-[#94A3B8]">
             <span className="font-black tracking-widest text-[#FBBF24]">★★★★★</span>
             <span className="text-[#F1F5F9]">&ldquo;Saves me 3 hours per video&rdquo;</span>
             <span className="text-cyan-400 font-bold">— @moneyfacts_creator</span>
           </span>
+        </div>
+      </section>
+
+      {/* ───────── See It In Action ─────────
+          Push #104 — demo video slot just above "How It Works". If
+          NEXT_PUBLIC_DEMO_VIDEO_URL is set we play it as a muted loop;
+          otherwise we render a "coming soon" placeholder so the section
+          still gives the page a clear shape. */}
+      <section className="py-12 px-4 text-center">
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#34d399' }}>
+          SEE IT IN ACTION
+        </p>
+        <h2 className="text-2xl sm:text-3xl font-black mb-8" style={{ color: 'var(--text)' }}>
+          From idea to YouTube Short in 60 seconds
+        </h2>
+        <div
+          className="mx-auto rounded-2xl overflow-hidden"
+          style={{
+            maxWidth: 640,
+            aspectRatio: '16/9',
+            background: 'rgba(255,255,255,.04)',
+            border: '1px solid rgba(255,255,255,.10)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL ? (
+            <video
+              src={process.env.NEXT_PUBLIC_DEMO_VIDEO_URL}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: 32 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>▶</div>
+              <p style={{ fontSize: 14 }}>Demo video coming soon</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -768,6 +833,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   {plan.tier === 'basic' && '50 Fast Mode videos/month'}
                   {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic/month'}
                 </p>
+                {/* Push #104 — 7-day trial reassurance under each paid CTA. */}
+                {(plan.tier === 'basic' || plan.tier === 'pro') && (
+                  <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
+                    No charge for 7 days
+                  </p>
+                )}
               </div>
             )
           })}

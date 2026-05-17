@@ -38,7 +38,9 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     regularPrice: '$9/month',
     credits: 50,
     videoCredits: 1,
-    cta: 'Start Basic — $4.50',
+    // Push #104 — Stripe checkout now sets a 7-day trial, so we lead with
+    // the trial framing on every paid-tier surface.
+    cta: 'Start Free Trial',
     href: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
   },
   pro: {
@@ -49,7 +51,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     regularPrice: '$19/month',
     credits: 100,
     videoCredits: 1,
-    cta: 'Start Pro — $9.50',
+    cta: 'Start Free Trial',
     href: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
     recommended: true,
   },

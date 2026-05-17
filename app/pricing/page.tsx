@@ -77,7 +77,9 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    cta: { label: 'Start Basic', href: STRIPE_LINKS.basic },
+    // Push #104 — Stripe checkout adds a 7-day trial so we frame the CTA
+    // around the trial entry, not the discounted first-month price.
+    cta: { label: 'Start Free Trial', href: STRIPE_LINKS.basic },
     popular: true,
   },
   {
@@ -93,7 +95,7 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    cta: { label: 'Start Pro', href: STRIPE_LINKS.pro },
+    cta: { label: 'Start Free Trial', href: STRIPE_LINKS.pro },
     highlight: true,
   },
 ]
@@ -301,6 +303,12 @@ export default function PricingPage() {
                 >
                   {ctaLabel} →
                 </a>
+                {/* Push #104 — trial reassurance microcopy under paid CTAs. */}
+                {isPaid && (
+                  <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
+                    No charge for 7 days
+                  </p>
+                )}
               </div>
             )
           })}
