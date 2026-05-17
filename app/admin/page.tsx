@@ -11,7 +11,8 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const ADMIN_EMAIL = 'josephsskaf@gmail.com'
+// Push #115b — owner uses both gmail and hotmail accounts; allow either.
+const ADMIN_EMAILS = ['josephsskaf@gmail.com', 'josephskaf@hotmail.com']
 
 interface RecentUser {
   id: string
@@ -40,7 +41,7 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || (user.email ?? '').toLowerCase() !== ADMIN_EMAIL) {
+  if (!user || !ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())) {
     redirect('/generate')
   }
 
