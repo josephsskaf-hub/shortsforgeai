@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
