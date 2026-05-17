@@ -11,7 +11,7 @@
 //   the wrong state during hydration.
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
@@ -997,6 +997,37 @@ function ShowcaseVideoCard({
 }) {
   const [videoReady, setVideoReady] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  // Push #106 — IntersectionObserver fallback. The `autoplay` attribute
+  // is supposed to start the muted preview the moment the card paints,
+  // but iOS Low Power Mode + a few strict browser policies block that.
+  // This re-issues play() the moment the card enters the viewport, and
+  // pauses + rewinds once it scrolls off so we don't waste decoder time.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el || videoFailed) return
+    if (typeof IntersectionObserver === 'undefined') {
+      el.play().catch(() => {/* autoplay blocked */})
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const v = entry.target as HTMLVideoElement
+          if (entry.isIntersecting) {
+            v.play().catch(() => {/* autoplay blocked */})
+          } else {
+            v.pause()
+            try { v.currentTime = 0 } catch { /* not seekable yet */ }
+          }
+        })
+      },
+      { threshold: 0.3 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [videoFailed])
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
@@ -1022,6 +1053,7 @@ function ShowcaseVideoCard({
 
         {!videoFailed && (
           <video
+            ref={videoRef}
             src={card.videoUrl}
             autoPlay
             muted
