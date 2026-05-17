@@ -229,6 +229,13 @@ export default function GenerateClient() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
 
+  // Push #109 — stronger urgency variant for free users who just used
+  // their last credit. Countdown is persisted in localStorage so reloading
+  // or closing/reopening the modal doesn't reset the timer.
+  const [showUrgencyModal, setShowUrgencyModal] = useState(false)
+  const [urgencyRemaining, setUrgencyRemaining] = useState<number>(600)
+  const urgencyAutoShownRef = useRef(false)
+
   // Push #098 — welcome banner shown to brand-new users (credits >= 2 and
   // the `sf_welcomed` localStorage flag not yet set). Dismissed via the X
   // button, which writes the flag so we never show it again.
@@ -1051,9 +1058,20 @@ export default function GenerateClient() {
     return true
   }
 
+  // Push #109 — free users at 0 credits get the urgency modal (with the
+  // 10-min countdown); everyone else keeps the standard out-of-credits
+  // modal.
+  function openOutOfCreditsModal() {
+    if (planTier === 'free') {
+      setShowUrgencyModal(true)
+    } else {
+      setShowUpgradeModal(true)
+    }
+  }
+
   function handleAnalyzeGuarded() {
     if (outOfCredits()) {
-      setShowUpgradeModal(true)
+      openOutOfCreditsModal()
       return
     }
     handleAnalyze()
@@ -1061,7 +1079,7 @@ export default function GenerateClient() {
 
   function handleGenerateGuarded() {
     if (outOfCredits()) {
-      setShowUpgradeModal(true)
+      openOutOfCreditsModal()
       return
     }
     handleGenerate()
@@ -1089,6 +1107,46 @@ export default function GenerateClient() {
       setUpgradeLoading(false)
     }
   }
+
+  // Push #109 — auto-open the urgency modal exactly once when a free user
+  // finishes a generation that drained their last credit. The ref keeps it
+  // from re-firing on every re-render; the localStorage key (read in the
+  // tick effect below) makes the countdown survive page reloads.
+  useEffect(() => {
+    if (urgencyAutoShownRef.current) return
+    if (phase !== 'done') return
+    if (planTier !== 'free') return
+    if (credits === null || credits > 0) return
+    urgencyAutoShownRef.current = true
+    setShowUrgencyModal(true)
+  }, [phase, planTier, credits])
+
+  // Push #109 — countdown tick while the urgency modal is open. The start
+  // timestamp is persisted to localStorage so dismissing + reopening (or
+  // hitting the retry guards below) doesn't reset the scarcity clock.
+  useEffect(() => {
+    if (!showUrgencyModal) return
+    const URGENCY_START_KEY = 'sf_urgency_start'
+    const DURATION = 600
+    let start = Date.now()
+    try {
+      const stored = parseInt(localStorage.getItem(URGENCY_START_KEY) ?? '', 10)
+      if (Number.isFinite(stored) && stored > 0) {
+        start = stored
+      } else {
+        localStorage.setItem(URGENCY_START_KEY, String(start))
+      }
+    } catch {
+      // private mode or quota — fall back to in-memory start
+    }
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - start) / 1000)
+      setUrgencyRemaining(Math.max(0, DURATION - elapsed))
+    }
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [showUrgencyModal])
 
   function dismissWelcome() {
     setShowWelcome(false)
@@ -1381,6 +1439,16 @@ export default function GenerateClient() {
           loading={upgradeLoading}
           onUpgrade={handleUpgradeNow}
           onClose={() => setShowUpgradeModal(false)}
+        />
+      )}
+
+      {/* Push #109 — urgency variant with countdown for free users at 0. */}
+      {showUrgencyModal && (
+        <UrgencyModal
+          remaining={urgencyRemaining}
+          loading={upgradeLoading}
+          onUpgrade={handleUpgradeNow}
+          onClose={() => setShowUrgencyModal(false)}
         />
       )}
 
@@ -3805,6 +3873,166 @@ function UpgradeModal({
           }}
         >
           🔥 Launch offer ends soon
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Push #109 — urgency modal with countdown ──────────────────────────────
+// Shown automatically when a free user finishes a generation that drained
+// their last credit, and reopened by any retry guard while planTier is
+// free and credits <= 0. The 10-minute timer is sourced from
+// localStorage (sf_urgency_start) by the parent's tick effect, so the
+// clock survives dismiss + reopen and page reloads.
+function UrgencyModal({
+  remaining,
+  loading,
+  onUpgrade,
+  onClose,
+}: {
+  remaining: number
+  loading: boolean
+  onUpgrade: () => void
+  onClose: () => void
+}) {
+  const expired = remaining <= 0
+  const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
+  const ss = String(remaining % 60).padStart(2, '0')
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="urgency-modal-title"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1100,
+        background: 'rgba(0,0,0,0.82)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <style jsx>{`
+        @keyframes sf-urgency-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.78; transform: scale(1.02); }
+        }
+      `}</style>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 460,
+          background: '#0f0f1e',
+          border: '1px solid rgba(251,191,36,0.45)',
+          borderRadius: 20,
+          padding: '32px 28px',
+          textAlign: 'center',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(251,191,36,0.20)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            border: 'none',
+            background: 'rgba(255,255,255,0.05)',
+            color: '#94a3b8',
+            fontSize: '1.1rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+        <h2
+          id="urgency-modal-title"
+          style={{
+            fontSize: '1.3rem',
+            fontWeight: 900,
+            color: '#fff',
+            lineHeight: 1.3,
+            margin: 0,
+            marginBottom: 16,
+          }}
+        >
+          {expired ? '⚡ Offer expired — still just $4.50/mo' : '⚡ Last chance — 50% off expires in:'}
+        </h2>
+        {!expired && (
+          <div
+            aria-live="polite"
+            style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontVariantNumeric: 'tabular-nums',
+              fontSize: '2.6rem',
+              fontWeight: 900,
+              color: '#34d399',
+              letterSpacing: '0.04em',
+              marginBottom: 20,
+              animation: 'sf-urgency-pulse 1.4s ease-in-out infinite',
+            }}
+          >
+            {mm}:{ss}
+          </div>
+        )}
+        <p
+          style={{
+            fontSize: '0.92rem',
+            color: '#cbd5e1',
+            lineHeight: 1.55,
+            margin: 0,
+            marginBottom: 22,
+          }}
+        >
+          Start a 7-day free trial — no charge until day 8.
+          Then 50 videos/month for just <strong style={{ color: '#34d399' }}>$4.50</strong> your first month.
+        </p>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onUpgrade}
+          style={{
+            width: '100%',
+            padding: '14px 20px',
+            borderRadius: 12,
+            border: 'none',
+            background: loading
+              ? 'rgba(52,211,153,0.5)'
+              : 'linear-gradient(135deg, #10b981, #059669)',
+            color: '#fff',
+            fontSize: '1rem',
+            fontWeight: 900,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: '0 10px 30px rgba(16,185,129,0.4)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {loading ? 'Opening checkout…' : 'Claim 50% Off — Start Trial →'}
+        </button>
+        <p
+          style={{
+            marginTop: 14,
+            fontSize: '0.74rem',
+            color: '#94a3b8',
+            fontWeight: 600,
+          }}
+        >
+          7-day free trial · Cancel anytime · No charge today
         </p>
       </div>
     </div>

@@ -218,6 +218,32 @@ export default function StartPage() {
           </div>
         </section>
 
+        {/* Push #109 — demo video. Only renders when the env var is set
+            so the ad LP doesn't carry a "coming soon" placeholder. */}
+        {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL && (
+          <section style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: '#F5F7FF',
+                marginBottom: 14,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Watch It Work
+            </div>
+            <video
+              src={process.env.NEXT_PUBLIC_DEMO_VIDEO_URL}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full max-w-2xl mx-auto rounded-xl"
+            />
+          </section>
+        )}
+
         {/* Pricing — Basic highlight */}
         <section style={{ marginBottom: 36 }}>
           <div
