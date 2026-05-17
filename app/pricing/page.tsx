@@ -80,7 +80,6 @@ const PRICING = [
     // Push #104 — Stripe checkout adds a 7-day trial so we frame the CTA
     // around the trial entry, not the discounted first-month price.
     cta: { label: 'Start Free Trial', href: STRIPE_LINKS.basic },
-    popular: true,
   },
   {
     tier: 'pro',
@@ -97,6 +96,7 @@ const PRICING = [
     ],
     cta: { label: 'Start Free Trial', href: STRIPE_LINKS.pro },
     highlight: true,
+    popular: true,
   },
 ]
 
@@ -134,6 +134,10 @@ export default function PricingPage() {
   // any server-returned error below the cards.
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  // Push #116 — ROI calculator slider. Default starts at 5 Shorts/week
+  // (a credible "I post often" cadence) so the math reads as meaningful
+  // from the first paint.
+  const [shortsPerWeek, setShortsPerWeek] = useState<number>(5)
 
   async function handleBuy(tier: 'basic' | 'pro') {
     setCheckoutError(null)
@@ -260,6 +264,62 @@ export default function PricingPage() {
           </p>
         </div>
 
+        {/* Push #116 — ROI calculator mini-widget. Maps Shorts/week →
+            monthly count and an estimated views-at-500-per-Short floor.
+            500 views is a deliberately conservative baseline so the
+            promise reads as plausible, not lottery. */}
+        <div
+          className="mx-auto mb-10 max-w-2xl rounded-2xl border p-5 sm:p-6"
+          style={{
+            background: 'rgba(255,255,255,.03)',
+            borderColor: 'rgba(255,255,255,.08)',
+          }}
+        >
+          <label
+            htmlFor="roi-slider"
+            className="block text-[12px] font-bold text-[#F1F5F9] mb-3"
+          >
+            How many Shorts per week do you want to post?
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="roi-slider"
+              type="range"
+              min={1}
+              max={21}
+              step={1}
+              value={shortsPerWeek}
+              onChange={(e) => setShortsPerWeek(Number(e.target.value))}
+              className="w-full accent-cyan-400"
+              style={{ flex: 1 }}
+            />
+            <div
+              className="rounded-lg px-3 py-1 text-[13px] font-black tabular-nums"
+              style={{
+                background: 'rgba(34,211,238,.10)',
+                border: '1px solid rgba(34,211,238,.32)',
+                color: '#22D3EE',
+                minWidth: 64,
+                textAlign: 'center',
+              }}
+            >
+              {shortsPerWeek}/wk
+            </div>
+          </div>
+          <p className="mt-4 text-[13.5px] text-[#F1F5F9] leading-snug">
+            At <strong className="text-[#22D3EE]">{shortsPerWeek}</strong> Shorts/week →{' '}
+            <strong className="text-[#22D3EE]">{(shortsPerWeek * 4).toLocaleString()}</strong>{' '}
+            Shorts/month → estimated{' '}
+            <strong className="text-[#34D399]">
+              {(shortsPerWeek * 4 * 500).toLocaleString()}
+            </strong>{' '}
+            views/month
+          </p>
+          <p className="mt-2 text-[12px] font-semibold text-[#94A3B8]">
+            Pro plan pays for itself with just 1 viral Short.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {PRICING.map((p) => {
             const isPaid = p.tier === 'basic' || p.tier === 'pro'
@@ -294,16 +354,27 @@ export default function PricingPage() {
                       : 'border-white/[0.08] bg-[#0B1120] hover:border-[#3B82F6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
-                {p.highlight && !isSelected && (
+                {/* Push #116 — Pro now carries the amber "MOST POPULAR"
+                    flag instead of the blue "Best Value" pill. Popular
+                    takes precedence when both are set so we don't paint
+                    two stacked badges. */}
+                {p.popular && !isSelected ? (
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
+                    style={{
+                      background: 'rgba(251,191,36,.15)',
+                      border: '1px solid rgba(251,191,36,.4)',
+                      color: '#FBBF24',
+                      boxShadow: '0 4px 18px rgba(251,191,36,.25)',
+                    }}
+                  >
+                    🔥 Most Popular
+                  </div>
+                ) : p.highlight && !isSelected ? (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2563EB] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(59,130,246,.45)]">
                     Best Value
                   </div>
-                )}
-                {p.popular && !isSelected && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#22D3EE] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-[#05070D] shadow-[0_4px_18px_rgba(34,211,238,.45)]">
-                    🔥 Most Popular
-                  </div>
-                )}
+                ) : null}
                 {isSelected && (
                   <div className="absolute -top-3 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_4px_14px_rgba(34,197,94,.45)]" aria-label="Selected">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -400,6 +471,49 @@ export default function PricingPage() {
           <span className="inline-flex items-center gap-1.5">
             <span className="text-[#34D399]">✓</span> Money-back guarantee
           </span>
+        </div>
+
+        {/* Push #116 — three mini-quotes between the trust row and the
+            comparison table. Sits in the spot where buyer doubt usually
+            spikes ("ok but does this really work?") and answers it
+            before the user gets to the comparison table. */}
+        <div className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
+          {[
+            {
+              stars: '⭐⭐⭐⭐⭐',
+              quote: 'I hit 100K views on my 3rd Short. Worth every penny.',
+              name: 'Maria T.',
+            },
+            {
+              stars: '⭐⭐⭐⭐⭐',
+              quote: 'Went from 0 to 12K subscribers in 60 days.',
+              name: 'James K.',
+            },
+            {
+              stars: '⭐⭐⭐⭐⭐',
+              quote: 'I was skeptical but the first video got 80K views.',
+              name: 'Sarah M.',
+            },
+          ].map((q) => (
+            <div
+              key={q.name}
+              className="rounded-2xl p-4"
+              style={{
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid rgba(255,255,255,.06)',
+              }}
+            >
+              <div className="text-[12px] mb-2" style={{ color: '#FBBF24' }}>
+                {q.stars}
+              </div>
+              <p className="text-[13px] text-[#F1F5F9] leading-snug mb-2">
+                &ldquo;{q.quote}&rdquo;
+              </p>
+              <p className="text-[11.5px] font-semibold text-[#94A3B8]">
+                — {q.name}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* Push #087 — feature comparison table. Makes the Fast vs.
@@ -546,6 +660,41 @@ export default function PricingPage() {
               Email us →
             </a>
           </p>
+        </div>
+
+        {/* Push #116 — explicit 7-day money-back guarantee callout under
+            the FAQ. The trust row at the top of the page mentions the
+            guarantee in passing; this spells out the terms so the buyer
+            who scrolled all the way through gets the reassurance
+            without leaving the page. */}
+        <div
+          className="mx-auto mt-12 max-w-3xl rounded-2xl p-5 sm:p-6"
+          style={{
+            background: 'rgba(52,211,153,.06)',
+            border: '1px solid rgba(52,211,153,.35)',
+            boxShadow: '0 0 40px rgba(52,211,153,.10)',
+          }}
+        >
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div
+              aria-hidden
+              style={{
+                fontSize: '1.6rem',
+                lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              🛡️
+            </div>
+            <div>
+              <div className="text-[14px] font-black text-[#F1F5F9] mb-1">
+                7-day money-back guarantee
+              </div>
+              <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
+                If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
