@@ -997,6 +997,12 @@ function ShowcaseVideoCard({
 }) {
   const [videoReady, setVideoReady] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
+  // Push #108 — `videoReady` (driven by `canplay`) flipped too late on some
+  // networks: the player was paused-but-fetching with readyState 0, so the
+  // overlay stuck and the video stayed at opacity 0 even after autoplay
+  // succeeded. `isPlaying` is the authoritative "frames are painting" signal
+  // — fed by the `playing` media event — and now drives the overlay.
+  const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   // Push #106 — IntersectionObserver fallback. The `autoplay` attribute
@@ -1059,11 +1065,19 @@ function ShowcaseVideoCard({
             muted
             loop
             playsInline
-            preload="metadata"
+            // Push #108 — preload="auto" so first frames land immediately
+            // for the homepage showcase (6 short Mixkit clips, total ~few
+            // MB). My Videos cards keep preload="none" — that grid can
+            // have dozens of rows.
+            preload="auto"
             onCanPlay={() => setVideoReady(true)}
+            onLoadedData={() => setVideoReady(true)}
+            onPlaying={() => { setIsPlaying(true); setVideoReady(true) }}
+            onPause={() => setIsPlaying(false)}
+            onWaiting={() => setIsPlaying(false)}
             onError={() => setVideoFailed(true)}
             className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-out group-hover:scale-[1.02]"
-            style={{ opacity: videoReady ? 1 : 0, transform: 'translateZ(0)' }}
+            style={{ opacity: videoReady || isPlaying ? 1 : 0, transform: 'translateZ(0)' }}
           />
         )}
 
@@ -1105,11 +1119,17 @@ function ShowcaseVideoCard({
           </span>
         </div>
 
-        {/* Only show the central play affordance while the video isn't
-            playing yet (or has failed) — once it's looping we get out of
-            the way. */}
-        {!videoReady && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center">
+        {/* Push #108 — central play affordance. Driven by `isPlaying`
+            (the `playing` media event) so the overlay clears the moment
+            frames actually start painting, not when the network metadata
+            arrives. Kept mounted so the fade-out animates instead of
+            popping. */}
+        {!videoFailed && (
+          <div
+            className={`absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-300 ${
+              isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
+          >
             <div
               className="flex h-14 w-14 items-center justify-center rounded-full backdrop-blur-md transition-transform duration-200 group-hover:scale-110"
               style={{
