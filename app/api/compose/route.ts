@@ -186,15 +186,42 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 4 — Build the Creatomate source. Pass the SCALED voiceover script
-    // (the same string we fed to TTS) so captions are split from the actual
-    // narration the viewer hears, not from the raw user input.
+    // Step 4 — Build the Creatomate source.
+    //
+    // Push #132 — per-scene captions are now the single source of truth for
+    // on-screen text. analyze-idea (and /api/generate-video-fast) populate
+    // `scene_captions` with ≤8 word readable paraphrases of each scene's
+    // own voiceover line, so the narration the TTS reads and the caption
+    // the viewer sees come from the SAME source string per scene. When
+    // sceneCaptions is non-empty we pass an empty `voiceoverScript` to
+    // buildCreatomateSource — its existing caption pipeline (lib/compose.ts)
+    // falls back to sceneCaptions in that case, giving us one caption slot
+    // per scene instead of arbitrary 7-word slices of the full script.
+    //
+    // When sceneCaptions is empty (legacy clients), we still pass the
+    // scaled script so the chunker can recover a caption strip.
+    const haveSceneCaptions = sceneCaptions.length > 0
+    console.log(
+      '[compose] scenes:',
+      JSON.stringify(
+        sceneCaptions.map((caption, i) => ({
+          scene: i + 1,
+          voiceover: scaledScript, // shared TTS source — per-scene split not available at this layer
+          caption,
+        })),
+      ),
+    )
+    console.log('[compose] captions being sent:', JSON.stringify(sceneCaptions))
+    console.log(
+      `[compose] caption source: ${haveSceneCaptions ? 'per-scene scene_captions' : 'chunked voiceover_script (fallback)'} count=${haveSceneCaptions ? sceneCaptions.length : 'derived'}`,
+    )
+
     let source: Record<string, unknown>
     try {
       source = buildCreatomateSource({
         clipUrls,
         voiceoverUrl,
-        voiceoverScript: scaledScript,
+        voiceoverScript: haveSceneCaptions ? '' : scaledScript,
         sceneCaptions,
         duration,
       })

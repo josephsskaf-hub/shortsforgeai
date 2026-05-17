@@ -251,7 +251,12 @@ function fallbackBrief(prompt: string): CreativeBrief {
     detected_duration_seconds: detectDurationFromPrompt(prompt),
     viral_intelligence: fallbackViralIntelligence(fallbackHook, niche),
     title: trimmed || 'The Truth Nobody Told You',
-    scenePlan: scenes.map((s) => s.visual_prompt),
+    // Push #132 — `scenePlan` is the legacy field the GenerateClient feeds
+    // into /api/compose as `scene_captions`. It MUST be the readable per-scene
+    // captions (≤8 word fragments paraphrasing each scene's voiceover) — not
+    // the cinematic `visual_prompt`, which is a camera/lighting description
+    // and reads as garbage when shown as a caption strip.
+    scenePlan: scenes.map((s) => s.caption),
   }
 }
 
@@ -556,7 +561,12 @@ Return ONLY the JSON object — no markdown, no commentary.`
         viral_intelligence,
         // Legacy compatibility
         title: viral_title,
-        scenePlan: scenes.map((s) => s.visual_prompt),
+        // Push #132 — `scenePlan` is the legacy field the GenerateClient feeds
+    // into /api/compose as `scene_captions`. It MUST be the readable per-scene
+    // captions (≤8 word fragments paraphrasing each scene's voiceover) — not
+    // the cinematic `visual_prompt`, which is a camera/lighting description
+    // and reads as garbage when shown as a caption strip.
+    scenePlan: scenes.map((s) => s.caption),
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
