@@ -724,7 +724,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             See what our AI generates in seconds.
           </p>
         </div>
-        <PhoneCardRow videoCounter={videoCounter} />
+        <PhoneCardRow videoCounter={shortsTotal} />
       </section>
 
       {/* ───────── How It Works ─────────
