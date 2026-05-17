@@ -56,6 +56,20 @@ body {
   html, body { overflow-x: hidden; }
 }
 
+/* Push #117 — iOS Safari zooms the page when focusing an input whose
+   computed font-size is < 16px. Forcing 16px on every focusable form
+   element below the 768px breakpoint kills the auto-zoom site-wide
+   without forcing 16px on desktop where designers might want denser
+   forms. Applied via `font-size` only — we don't override the visual
+   size on desktop. */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Noise texture overlay */
 body::after {
   content: '';

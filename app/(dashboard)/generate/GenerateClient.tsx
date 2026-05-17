@@ -1656,10 +1656,13 @@ export default function GenerateClient() {
                 </p>
               )}
             </div>
+            {/* Push #117 — primary CTA goes full-width on mobile and
+                bumps to a 52 px tap height. Desktop keeps the compact
+                pill via sm: utilities. */}
             <button
               onClick={handleAnalyzeGuarded}
               disabled={phase === 'analyzing' || !prompt.trim()}
-              className="rounded-xl px-6 py-2.5 text-sm font-black flex items-center gap-2"
+              className="rounded-xl px-6 py-3.5 sm:py-2.5 text-base sm:text-sm font-black flex items-center justify-center gap-2 w-full sm:w-auto"
               style={{
                 background:
                   phase === 'analyzing' || !prompt.trim()
@@ -1672,6 +1675,7 @@ export default function GenerateClient() {
                   phase === 'analyzing' || !prompt.trim()
                     ? 'none'
                     : '0 8px 28px rgba(59, 130, 246,.35)',
+                minHeight: 52,
               }}
             >
               {phase === 'analyzing' ? (

@@ -88,11 +88,15 @@ export default function StartPage() {
 
         {/* Primary CTA */}
         <section style={{ textAlign: 'center', marginBottom: 32 }}>
+          {/* Push #117 — anchor is block-level on mobile so the green
+              button spans the full content width and clears the 44 px
+              touch-target floor by a comfortable margin. Desktop keeps
+              the inline-block "pill" framing via the sm: utilities. */}
           <Link
             href="/signup"
+            className="start-primary-cta block sm:inline-block w-full sm:w-auto"
             style={{
-              display: 'inline-block',
-              padding: '18px 36px',
+              padding: '18px 28px',
               borderRadius: 14,
               background: 'linear-gradient(135deg, #10b981, #059669)',
               color: '#FFFFFF',
@@ -101,6 +105,11 @@ export default function StartPage() {
               letterSpacing: '-0.01em',
               textDecoration: 'none',
               boxShadow: '0 10px 32px rgba(16,185,129,.45)',
+              boxSizing: 'border-box',
+              minHeight: 56,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             Start Free — No Credit Card Needed →
@@ -409,8 +418,8 @@ export default function StartPage() {
             </div>
             <Link
               href="/signup?plan=basic"
+              className="block sm:inline-block w-full sm:w-auto"
               style={{
-                display: 'inline-block',
                 padding: '14px 28px',
                 borderRadius: 12,
                 background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
@@ -419,6 +428,11 @@ export default function StartPage() {
                 fontSize: '0.95rem',
                 textDecoration: 'none',
                 boxShadow: '0 8px 28px rgba(34,211,238,.4)',
+                boxSizing: 'border-box',
+                minHeight: 48,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               Start 7-Day Free Trial →

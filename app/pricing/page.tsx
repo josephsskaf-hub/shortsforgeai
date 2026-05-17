@@ -138,6 +138,10 @@ export default function PricingPage() {
   // (a credible "I post often" cadence) so the math reads as meaningful
   // from the first paint.
   const [shortsPerWeek, setShortsPerWeek] = useState<number>(5)
+  // Push #117 — sticky mobile CTA bar shows after 300px scroll so phone
+  // users always have the "Basic / Pro" choice in reach without
+  // scrolling back up to the cards.
+  const [showStickyCta, setShowStickyCta] = useState<boolean>(false)
 
   async function handleBuy(tier: 'basic' | 'pro') {
     setCheckoutError(null)
@@ -182,6 +186,19 @@ export default function PricingPage() {
       setCountdown((prev) => (prev <= 1 ? COUNTDOWN_START_SECONDS : prev - 1))
     }, 1000)
     return () => clearInterval(id)
+  }, [])
+
+  // Push #117 — show the sticky mobile CTA only after the user scrolls
+  // past the hero. We pin the listener to passive so it never blocks
+  // scroll on slower phones.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onScroll = () => {
+      setShowStickyCta(window.scrollY > 300)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
@@ -345,6 +362,13 @@ export default function PricingPage() {
                   }
                 }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
+                  // Push #117 — mobile-first ordering. Pro card jumps to
+                  // the top of the stack on small screens so the
+                  // recommended plan is the first thing a phone user
+                  // sees; desktop keeps the Free → Basic → Pro reading
+                  // order.
+                  p.tier === 'pro' ? 'order-first md:order-none' : ''
+                } ${
                   isPaid ? 'cursor-pointer' : ''
                 } ${
                   isSelected
@@ -697,6 +721,75 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+
+      {/* Push #117 — spacer so the sticky bar below doesn't cover the
+          last bit of the FAQ on mobile. Desktop ignores it. */}
+      {showStickyCta && <div aria-hidden className="h-24 md:hidden" />}
+
+      {/* Push #117 — sticky mobile checkout bar. Only renders on
+          small viewports (md:hidden), only after 300 px of scroll, and
+          uses backdrop-blur + the safe-area class so the bar clears the
+          iOS home-indicator. Buttons go through the same handleBuy used
+          by the cards above. */}
+      {showStickyCta && (
+        <div
+          className="mobile-sticky-cta md:hidden"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'rgba(10,10,15,0.96)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderTop: '1px solid rgba(255,255,255,.08)',
+            padding: '12px 16px',
+            display: 'flex',
+            gap: 10,
+            zIndex: 50,
+          }}
+        >
+          <button
+            type="button"
+            disabled={purchasing !== null && purchasing !== 'basic'}
+            onClick={() => handleBuy('basic')}
+            style={{
+              flex: 1,
+              padding: '14px 12px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,.06)',
+              border: '1px solid rgba(255,255,255,.12)',
+              color: '#F1F5F9',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              minHeight: 48,
+            }}
+          >
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.50/mo'}
+          </button>
+          <button
+            type="button"
+            disabled={purchasing !== null && purchasing !== 'pro'}
+            onClick={() => handleBuy('pro')}
+            style={{
+              flex: 1,
+              padding: '14px 12px',
+              borderRadius: 10,
+              background: '#FBBF24',
+              color: '#0A0A0F',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              minHeight: 48,
+              border: 'none',
+              boxShadow: '0 8px 22px rgba(251,191,36,.35)',
+            }}
+          >
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.50/mo 🔥'}
+          </button>
+        </div>
+      )}
 
       {/* ───────── Footer ───────── */}
       <footer className="relative z-10 border-t border-white/[0.08]">

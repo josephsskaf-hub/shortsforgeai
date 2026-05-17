@@ -1,6 +1,16 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
+
+// Push #117 — explicit viewport so iOS Safari renders pages at the
+// device width (not 980px-zoomed-out) and the 16px input rule below
+// can do its job. maximum-scale: 5 keeps pinch-to-zoom for
+// accessibility — never lock it to 1.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
 
 export const metadata: Metadata = {
   title: 'ShortsForgeAI — Turn Ideas Into Viral YouTube Shorts in 60 Seconds',

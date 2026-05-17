@@ -84,24 +84,39 @@ export default function NotFound() {
         >
           This page doesn&apos;t exist or was moved.
         </p>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: 10,
-          }}
-        >
+        {/* Push #117 — CTAs stack on mobile (full-width) and sit
+            side-by-side on sm+. Inline media query via a scoped style
+            tag keeps the page server-renderable. */}
+        <div className="nf-cta-row">
+          <style>{`
+            .nf-cta-row {
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              width: 100%;
+              max-width: 320px;
+            }
+            .nf-cta-row a {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 48px;
+              padding: 12px 22px;
+              border-radius: 12px;
+              font-size: 0.95rem;
+              font-weight: 800;
+              text-decoration: none;
+              box-sizing: border-box;
+            }
+            @media (min-width: 480px) {
+              .nf-cta-row { flex-direction: row; max-width: none; }
+            }
+          `}</style>
           <Link
             href="/"
             style={{
-              padding: '12px 22px',
-              borderRadius: 12,
               background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
               color: '#FFFFFF',
-              fontSize: '0.92rem',
-              fontWeight: 800,
-              textDecoration: 'none',
               boxShadow: '0 8px 26px rgba(34,211,238,.35)',
             }}
           >
@@ -110,14 +125,10 @@ export default function NotFound() {
           <Link
             href="/generate"
             style={{
-              padding: '12px 22px',
-              borderRadius: 12,
               background: 'rgba(255,255,255,.04)',
               border: '1px solid rgba(255,255,255,.10)',
               color: '#F5F7FF',
-              fontSize: '0.92rem',
               fontWeight: 700,
-              textDecoration: 'none',
             }}
           >
             Go to Generator
