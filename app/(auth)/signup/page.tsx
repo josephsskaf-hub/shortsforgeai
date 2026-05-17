@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Footer from '@/components/Footer'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -69,6 +70,7 @@ export default function SignupPage() {
   }
 
   return (
+    <>
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'var(--bg)' }}
@@ -310,5 +312,7 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   )
 }

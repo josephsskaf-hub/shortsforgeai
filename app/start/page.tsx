@@ -1,9 +1,14 @@
 import Link from 'next/link'
+import Footer from '@/components/Footer'
 
 // Push #107 — Google Ads landing page. Single conversion target
 // (Start Free → /signup), zero outbound links to other marketing pages
 // so the ad spend doesn't bleed into reading the homepage. Server
 // component; everything below is static markup that the CDN can serve.
+// Push #116 — Footer now mounted here for Terms/Privacy/Contact links.
+// Google Ads policy effectively requires a Privacy Policy link on
+// landing pages, and the legal-only Footer doesn't break the ad-LP
+// discipline (no marketing-page links).
 
 const HOW_IT_WORKS: { step: string; title: string }[] = [
   { step: '1', title: 'Type your idea' },
@@ -452,6 +457,7 @@ export default function StartPage() {
           <span>Money-back if not satisfied</span>
         </section>
       </div>
+      <Footer />
     </main>
   )
 }

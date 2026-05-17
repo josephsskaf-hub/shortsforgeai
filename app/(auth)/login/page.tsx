@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Footer from '@/components/Footer'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
 // can't bounce a logged-in user out to an external phishing page.
@@ -77,6 +78,7 @@ export default function LoginPage() {
   }
 
   return (
+    <>
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'var(--bg)' }}
@@ -287,5 +289,7 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   )
 }
