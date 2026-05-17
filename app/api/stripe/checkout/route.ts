@@ -4,24 +4,36 @@ import { stripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
 type Tier = 'basic' | 'pro'
+// Push #111 — BR cards reject USD charges, so we now bill BRL natively
+// for users whose locale signals pt-* (detection happens client-side
+// and the value rides through on the request body). USD stays the
+// default.
+type Currency = 'usd' | 'brl'
 
 // Plan definitions:
 //   Basic = $9/month, 50 Fast Mode videos/month.
 //   Pro   = $19/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
-const TIERS: Record<Tier, { name: string; description: string; amount: number; credits: number }> = {
+const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   basic: {
     name: 'ShortsForgeAI — Basic',
     description: '50 Fast Mode videos / month',
-    amount: 900, // $9.00
     credits: 50,
   },
   pro: {
     name: 'ShortsForgeAI — Pro',
     description: '100 Fast Mode videos / month + 1 Cinematic (Runway AI) video / month',
-    amount: 1900, // $19.00
     credits: 100,
   },
+}
+
+// Push #111 — per-currency unit_amount table. BRL prices are tuned to
+// roughly mirror the USD list price (Basic R$49 ≈ $9, Pro R$99 ≈ $19)
+// rather than a live FX rate, so the "$9 / R$49" framing stays stable
+// across both surfaces.
+const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
+  basic: { usd: 900, brl: 4900 },
+  pro: { usd: 1900, brl: 9900 },
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
@@ -38,16 +50,20 @@ export async function POST(req: NextRequest) {
     }
 
     let tier: Tier = 'basic'
+    let currency: Currency = 'usd'
     try {
       const body = await req.json().catch(() => null)
       // Accept legacy `creator` as an alias for `basic` so any cached client
       // calls don't break during the rollout.
       if (body?.tier === 'pro') tier = 'pro'
       else if (body?.tier === 'basic' || body?.tier === 'creator') tier = 'basic'
+      // Push #111 — opt-in BRL. Any value other than 'brl' falls back to USD.
+      if (body?.currency === 'brl') currency = 'brl'
     } catch {
       // ignore body parse errors and use default tier
     }
     const plan = TIERS[tier]
+    const unitAmount = TIER_PRICES[tier][currency]
 
     const supabase = createClient()
 
@@ -139,18 +155,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Push #111 — BR cards regularly fail on card-only checkout when the
+    // bill is in BRL; offering boleto alongside the card option is the
+    // standard workaround. USD checkouts stay card-only.
+    const paymentMethodTypes: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] =
+      currency === 'brl' ? ['card', 'boleto'] : ['card']
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
-      payment_method_types: ['card'],
+      payment_method_types: paymentMethodTypes,
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency,
             product_data: {
               name: plan.name,
               description: plan.description,
             },
-            unit_amount: plan.amount,
+            unit_amount: unitAmount,
             recurring: { interval: 'month' },
           },
           quantity: 1,

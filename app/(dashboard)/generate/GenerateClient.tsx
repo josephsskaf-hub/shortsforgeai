@@ -1088,10 +1088,17 @@ export default function GenerateClient() {
   async function handleUpgradeNow() {
     setUpgradeLoading(true)
     try {
+      // Push #111 — BR cards reject USD charges. Detect pt-* locale and
+      // ask the checkout route for BRL pricing + boleto support. Falls
+      // back to USD for everyone else.
+      const currency =
+        typeof navigator !== 'undefined' && navigator.language?.startsWith('pt')
+          ? 'brl'
+          : 'usd'
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: 'basic' }),
+        body: JSON.stringify({ tier: 'basic', currency }),
       })
       const data = await res.json().catch(() => null)
       if (data?.url) {

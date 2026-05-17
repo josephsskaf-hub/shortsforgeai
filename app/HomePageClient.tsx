@@ -257,10 +257,16 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
     setCheckoutTier(tier)
     try {
+      // Push #111 — BR locales bill in BRL with boleto fallback so card
+      // rejections (USD-on-BR-card) stop killing the upgrade flow.
+      const currency =
+        typeof navigator !== 'undefined' && navigator.language?.startsWith('pt')
+          ? 'brl'
+          : 'usd'
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, currency }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data?.url) {
