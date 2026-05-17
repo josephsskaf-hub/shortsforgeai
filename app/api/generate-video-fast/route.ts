@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes } from '@/lib/runway'
+import type { Scene } from '@/lib/runway'
 import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 
@@ -102,9 +103,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 1 — Generate cinematic scene descriptions (same OpenAI call
-    // Cinematic Mode uses).
-    let scenes: string[]
+    // Step 1 — Generate scenes: each scene has a cinematic description
+    // (for Runway) and explicit searchKeywords (for Pexels stock search).
+    // Push #128 — previously, searchKeywords were the first 3 words of the
+    // cinematic description, causing totally wrong footage ("A lone photographer"
+    // for a pyramid prompt). Now GPT returns topic-specific keywords.
+    let scenes: Scene[]
     try {
       scenes = await generateScenes(prompt.slice(0, 400), clipCount)
     } catch (err) {
@@ -116,14 +120,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 2 — Resolve each scene to a Pexels HD portrait clip, with the
-    // curated stockLibrary as a fallback so we always return SOMETHING
-    // even if PEXELS_API_KEY is missing or a search returns 0 results.
+    // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
+    // topic-specific searchKeywords (NOT the cinematic description).
+    // Curated stockLibrary is the fallback so we always return something.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        const pexelsUrl = await getPexelsVideoForScene(scene)
+        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
         if (pexelsUrl) return pexelsUrl
-        const lib = pickLibraryClips(scene, 1, idx)
+        const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
         return lib[0]?.url ?? ''
       })
     )
@@ -146,7 +150,7 @@ export async function POST(req: NextRequest) {
       generationId,
       prompt,
       duration,
-      scenes,
+      scenes: scenes.map((s) => s.description), // client still gets string array
       clip_urls: filtered,
     })
   } catch (error: unknown) {

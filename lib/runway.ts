@@ -211,23 +211,34 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
-export async function generateScenes(prompt: string, count = 4): Promise<string[]> {
-  const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
-  const exampleArr = Array.from({ length: safeCount }, (_, i) => `"scene ${i + 1} description"`).join(', ')
+// Push #128 — Scene now carries both the cinematic Runway description AND
+// explicit Pexels search keywords so the two uses are cleanly separated.
+export interface Scene {
+  description: string   // cinematic prose for Runway image/video AI
+  searchKeywords: string // 2-4 concrete nouns for Pexels stock search
+}
 
-  const userPrompt = `You break a Short-form video idea into ${safeCount} vivid, cinematic shot descriptions for an AI text-to-video model (RunwayML Gen-4 Turbo).
+export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
+  const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
+
+  const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert"}`
+  const exampleArr = Array.from({ length: safeCount }, () => exampleScene).join(',\n  ')
+
+  const userPrompt = `You break a Short-form video idea into ${safeCount} scenes for a YouTube Short.
 
 Idea: "${prompt}"
 
-Return ONLY a valid JSON array of exactly ${safeCount} strings — no markdown, no preamble. Each string must:
-- Be one sentence, ~15-25 words
-- Be visual, specific, concrete (subject + setting + lighting + camera motion + mood)
-- Stay coherent across the ${safeCount} shots so they tell one short story
-- Avoid text overlays, logos, or watermarks
-- Be optimized for vertical 9:16 framing (tall composition)
+Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, no preamble.
+Each object must have exactly two fields:
+1. "description": A cinematic shot description for an AI video model (~15-25 words). Visual, specific, concrete — subject + setting + lighting + camera motion + mood. Vertical 9:16 framing.
+2. "searchKeywords": 2-4 concrete nouns or short phrases that describe WHAT IS VISUALLY IN THIS SCENE, directly related to the video topic. These are used to search stock footage. NEVER use abstract words like "cinematic", "footage", "video", "shot". NEVER start with "a", "the", "lone", "soft". Use the actual topic: e.g. for pyramids → "ancient pyramid egypt desert"; for money → "gold coins cash dollar bills".
 
-Example output format:
-[${exampleArr}]`
+The "searchKeywords" MUST match the topic of the video idea, not describe filming style.
+
+Example output:
+[
+  ${exampleArr}
+]`
 
   const completion = await openai.chat.completions.create(
     {
@@ -236,12 +247,12 @@ Example output format:
         {
           role: 'system',
           content:
-            'You are an expert cinematic prompt engineer. You always respond with a valid JSON array of strings only — no markdown, no code fences, no commentary.',
+            'You are a video production expert. You always respond with a valid JSON array only — no markdown, no code fences, no commentary.',
         },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.85,
-      max_tokens: 600,
+      temperature: 0.7,
+      max_tokens: 800,
     },
     { timeout: 25000 }
   )
@@ -261,9 +272,29 @@ Example output format:
   }
 
   if (!Array.isArray(parsed)) throw new Error('Scenes response was not an array.')
-  const scenes = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0).slice(0, safeCount)
+
+  const scenes: Scene[] = parsed
+    .map((item: unknown): Scene | null => {
+      if (typeof item === 'string') {
+        // Legacy fallback: plain string → use as description, derive keywords from prompt
+        return { description: item.trim(), searchKeywords: prompt.slice(0, 40) }
+      }
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>
+        const description = (typeof obj.description === 'string' ? obj.description : '').trim()
+        const searchKeywords = (typeof obj.searchKeywords === 'string' ? obj.searchKeywords : '').trim()
+        if (description) return { description, searchKeywords: searchKeywords || prompt.slice(0, 40) }
+      }
+      return null
+    })
+    .filter((s): s is Scene => s !== null)
+    .slice(0, safeCount)
+
   while (scenes.length < safeCount) {
-    scenes.push(`Cinematic vertical 9:16 shot inspired by: ${prompt}`)
+    scenes.push({
+      description: `Cinematic vertical 9:16 shot inspired by: ${prompt}`,
+      searchKeywords: prompt.slice(0, 40),
+    })
   }
   return scenes
 }

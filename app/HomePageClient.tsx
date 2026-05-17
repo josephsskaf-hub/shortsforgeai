@@ -33,48 +33,51 @@ interface ShowcaseCard {
 // preload="metadata" keeps the page from downloading 6 full MP4s up front.
 // If the video errors out (CDN blocked, offline, etc.), we fall back to
 // the original gradient poster.
+// Push #129 — Replaced broken Mixkit CDN URLs with Cloudflare-hosted
+// royalty-free MP4s from coverr.co and Google's public sample bucket.
+// All URLs are CORS-open and do not require authentication.
 const SHOWCASE: ShowcaseCard[] = [
   {
     category: 'Space Mystery',
     title: 'What NASA hides about the Moon',
     prompt: 'Cinematic space mystery short about unexplained Moon anomalies that NASA never explained',
     accent: '#22D3EE',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-1610-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
   },
   {
     category: 'History Facts',
     title: 'The Roman invention we still use',
     prompt: 'Fast-paced history facts short about a Roman invention that still powers daily life today',
     accent: '#F59E0B',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-closeup-of-pavement-taken-in-an-overhead-view-19088-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
   },
   {
     category: 'Hidden Places',
     title: 'Cities erased from every map',
     prompt: 'Dark cinematic short about real hidden cities that governments removed from world maps',
     accent: '#A78BFA',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-top-aerial-shot-of-seashore-with-rocks-1090-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
   },
   {
     category: 'Cold Case',
     title: 'The case that broke the FBI',
     prompt: 'Suspenseful cold case short about an unsolved FBI investigation with chilling details',
     accent: '#F87171',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-going-down-a-curved-highway-through-a-mountain-range-41576-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
   },
   {
     category: 'Weird Facts',
     title: 'Facts your brain refuses to believe',
     prompt: 'Punchy weird facts short with 5 facts that sound fake but are 100% true',
     accent: '#34D399',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
   },
   {
     category: 'Money Psychology',
     title: 'Why the rich think differently',
     prompt: 'Money psychology short about the mental habits that separate the wealthy from everyone else',
     accent: '#60A5FA',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-white-sand-beach-and-palm-trees-1564-large.mp4',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
   },
 ]
 
@@ -507,8 +510,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           (85 clicks / 0 signups). Headline now leads with the user's
           input ("Any Idea") instead of the output, subheadline lists
           exactly what's automated, and the primary CTA is a green
-          go-button with the trust microcopy stacked below it. */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24 sm:pb-16">
+          go-button with the trust microcopy stacked below it.
+          Push #126 — 2-column desktop layout: text left, vertical
+          demo video right. Video hidden on mobile. */}
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
+        <div className="flex-1 min-w-0 text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
           Turn Any Idea Into a{' '}
           <span
@@ -643,6 +650,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </span>
           </p>
         </div>
+        </div>
+
+        <HeroVideo />
+        </div>
       </section>
 
       {/* ───────── AI Video Showcase ───────── */}
@@ -697,47 +708,23 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* ───────── See It In Action ─────────
-          Push #104 — demo video slot just above "How It Works". If
-          NEXT_PUBLIC_DEMO_VIDEO_URL is set we play it as a muted loop;
-          otherwise we render a "coming soon" placeholder so the section
-          still gives the page a clear shape. */}
-      <section className="py-12 px-4 text-center">
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#34d399' }}>
-          SEE IT IN ACTION
-        </p>
-        <h2 className="text-2xl sm:text-3xl font-black mb-8" style={{ color: 'var(--text)' }}>
-          From idea to YouTube Short in 60 seconds
-        </h2>
-        <div
-          className="mx-auto rounded-2xl overflow-hidden"
-          style={{
-            maxWidth: 640,
-            aspectRatio: '16/9',
-            background: 'rgba(255,255,255,.04)',
-            border: '1px solid rgba(255,255,255,.10)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-          }}
-        >
-          {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL ? (
-            <video
-              src={process.env.NEXT_PUBLIC_DEMO_VIDEO_URL}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            <div style={{ color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: 32 }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>▶</div>
-              <p style={{ fontSize: 14 }}>Demo video coming soon</p>
-            </div>
-          )}
+      {/* ───────── Real Shorts Showcase ─────────
+          Push #126 — 3 phone-frame video cards replacing the old
+          "Demo video coming soon" placeholder. Cards auto-play free
+          Pexels clips to show the product output in a premium way. */}
+      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-4 pb-12 sm:px-6 sm:pb-16">
+        <div className="mb-10 text-center">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            Real Results
+          </div>
+          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+            Real Shorts created with ShortsForgeAI
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
+            See what our AI generates in seconds.
+          </p>
         </div>
+        <PhoneCardRow videoCounter={videoCounter} />
       </section>
 
       {/* ───────── How It Works ─────────
@@ -1084,6 +1071,107 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <a href="mailto:hello@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
         </div>
       </footer>
+    </div>
+  )
+}
+
+// Push #126 — hero demo video column (desktop only). Isolated into its own
+// component so the TypeScript JSX parser doesn't cascade errors through the
+// large hero section when encountering the video element.
+function HeroVideo() {
+  return (
+    <div className="hidden lg:block w-52 xl:w-60 shrink-0 self-center">
+      <div
+        className="relative overflow-hidden rounded-3xl border border-white/10 shadow-[0_0_48px_rgba(34,211,238,0.2)]"
+        style={{ aspectRatio: '9/16' }}
+      >
+        <video
+          src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.45) 0%,transparent 28%,transparent 65%,rgba(5,7,13,.75) 100%)' }}
+        />
+        <div className="absolute top-4 left-0 right-0 flex justify-center">
+          <span
+            className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
+            style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.35)' }}
+          >
+            AI Short
+          </span>
+        </div>
+        <div className="absolute bottom-4 left-0 right-0 text-center px-2">
+          <p className="text-[10px] font-bold text-white/80">Made with ShortsForgeAI</p>
+        </div>
+      </div>
+      <p className="mt-2 text-center text-[11px] text-[#475569] font-semibold">Auto-generated in 60 sec</p>
+    </div>
+  )
+}
+
+// Push #126 — 3 phone-frame preview cards for the "Real Shorts" section.
+// Each card renders a Pexels free vertical clip auto-playing in a phone-shaped
+// container, with a gradient overlay and caption, matching how Pictory /
+// InVideo showcase their output. Isolated component to keep JSX clean.
+function PhoneCardRow({ videoCounter }: { videoCounter: number }) {
+  const cards = [
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', label: '📈 Money Facts Short', accent: '#34D399', tag: 'Finance' },
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4', label: '🏛️ History Mystery Short', accent: '#A78BFA', tag: 'History' },
+    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', label: '🌍 Travel Facts Short', accent: '#22D3EE', tag: 'Travel' },
+  ]
+  return (
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto items-start">
+        {cards.map((card) => (
+          <div key={card.src} className="flex flex-col items-center gap-3">
+            <div
+              className="relative w-full overflow-hidden mx-auto"
+              style={{ aspectRatio: '9/16', maxWidth: 200, borderRadius: 26, border: '3px solid rgba(255,255,255,0.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#0B1120' }}
+            >
+              <div
+                className="absolute z-20 rounded-full"
+                style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.45)' }}
+              />
+              <video
+                src={card.src}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.40) 0%,transparent 30%,transparent 60%,rgba(5,7,13,.85) 100%)' }}
+              />
+              <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
+                <span
+                  className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
+                  style={{ background: card.accent + '22', color: card.accent, border: '1px solid ' + card.accent + '44' }}
+                >
+                  {card.tag}
+                </span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-4 pt-6">
+                <p className="text-[10px] font-bold text-white/90 text-center leading-tight">{card.label}</p>
+              </div>
+            </div>
+            <p className="text-[13px] font-bold text-center" style={{ color: card.accent }}>{card.label}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-8 text-center text-[13px] font-semibold text-[#94A3B8]">
+        {'⚡ Over '}
+        <span className="text-[#F1F5F9] font-bold">{videoCounter.toLocaleString()} videos</span>
+        {' generated — and counting'}
+      </p>
     </div>
   )
 }

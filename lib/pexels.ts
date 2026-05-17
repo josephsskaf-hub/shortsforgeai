@@ -74,20 +74,40 @@ export async function searchPexelsVideos(query: string, perPage = 3): Promise<st
 }
 
 /**
- * Resolve a single best-match Pexels clip URL for a scene description.
- * Strips punctuation, keeps the 3 most relevant words, and returns null
- * when nothing matched or the API key is missing.
+ * Resolve a single best-match Pexels clip URL for a scene.
+ *
+ * Push #128 — accepts explicit `searchKeywords` (topic-specific, e.g.
+ * "pyramid egypt desert") so Pexels gets the actual subject matter instead
+ * of the first 3 words of a cinematic Runway description. Falls back to
+ * stopword-filtered extraction from the description if keywords are empty.
  */
-export async function getPexelsVideoForScene(sceneDescription: string): Promise<string | null> {
-  const keywords = (sceneDescription ?? '')
-    .replace(/[^a-zA-Z0-9 ]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 3)
-    .join(' ')
-    .trim()
-  if (!keywords) return null
+export async function getPexelsVideoForScene(
+  searchKeywords: string,
+  fallbackDescription?: string,
+): Promise<string | null> {
+  // Use the explicit topic keywords first
+  let query = (searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
 
-  const urls = await searchPexelsVideos(keywords, 1)
+  // If no explicit keywords, fall back to extracting meaningful words from
+  // the description — but skip leading stopwords ("a", "the", "lone", etc.)
+  // so we don't search for "A lone photographer" on a pyramid video.
+  if (!query && fallbackDescription) {
+    const STOP = new Set([
+      'a', 'an', 'the', 'this', 'that', 'in', 'on', 'at', 'of', 'is', 'are',
+      'with', 'and', 'or', 'to', 'into', 'from', 'by', 'for', 'as', 'its',
+      'lone', 'soft', 'golden', 'slow', 'gentle', 'cinematic', 'dramatic',
+    ])
+    query = (fallbackDescription)
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !STOP.has(w.toLowerCase()))
+      .slice(0, 3)
+      .join(' ')
+      .trim()
+  }
+
+  if (!query) return null
+
+  const urls = await searchPexelsVideos(query, 1)
   return urls[0] ?? null
 }
