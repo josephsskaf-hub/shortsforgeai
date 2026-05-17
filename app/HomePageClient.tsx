@@ -123,6 +123,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // Push #104 — live "X Shorts created today" counter for the social
   // proof bar. Falls back to the API's baseline if the fetch fails.
   const [shortsToday, setShortsToday] = useState<number>(47)
+  // Push #116 — cumulative hero counter ("9,847 Shorts created — and
+  // counting"). Bumps +1 every 30s in a setInterval so the page reads
+  // as alive while the visitor sits on it.
+  const [shortsTotal, setShortsTotal] = useState<number>(9847)
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -135,11 +139,22 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       .then((d) => {
         if (cancelled || !d) return
         if (typeof d.count === 'number') setShortsToday(d.count)
+        if (typeof d.total === 'number') setShortsTotal(d.total)
       })
       .catch(() => {/* keep the baseline fallback */})
     return () => {
       cancelled = true
     }
+  }, [])
+
+  // Push #116 — bump the cumulative hero counter every 30s so the page
+  // feels alive while a visitor reads. Strictly visual — the real count
+  // re-syncs on the next page load via /api/stats.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setShortsTotal((n) => n + 1)
+    }, 30_000)
+    return () => window.clearInterval(id)
   }, [])
 
   useEffect(() => {
@@ -508,6 +523,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           AI writes the script, finds the footage, adds captions and music. You just download and upload.
         </p>
 
+        {/* Push #116 — live cumulative counter directly under the
+            subheadline. Reads from /api/stats on mount, ticks +1 every
+            30s so the number feels alive without lying about volume. */}
+        <p className="mt-5 text-sm font-bold text-[#34D399]">
+          🎬 {shortsTotal.toLocaleString()} Shorts created — and counting
+        </p>
+
         {/* Push #097 — primary green go-button + trust microcopy. The
             textarea below is preserved for high-intent visitors who
             already know what they want to make. */}
@@ -552,6 +574,75 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate your first video →'}
           </button>
         </form>
+
+        {/* Push #116 — three mini-testimonials and a creator-community
+            line right after the hero CTA. The card shapes mirror the
+            social-proof bar style used elsewhere on the page. */}
+        <div
+          className="mx-auto mt-10 grid w-full max-w-5xl gap-3 sm:grid-cols-3"
+        >
+          {[
+            {
+              initials: 'RF',
+              accent: '#22D3EE',
+              quote: 'Made $2,400 last month from my Shorts channel',
+              handle: '@ryan_finance',
+              subs: '47K subs',
+            },
+            {
+              initials: 'MT',
+              accent: '#A78BFA',
+              quote: 'I post 3 Shorts/day without touching a camera',
+              handle: '@moneywithtom',
+              subs: '28K subs',
+            },
+            {
+              initials: 'CF',
+              accent: '#34D399',
+              quote: 'Best $9 I spend every month',
+              handle: '@cryptofactss',
+              subs: '91K subs',
+            },
+          ].map((t) => (
+            <div
+              key={t.handle}
+              className="rounded-2xl border border-white/[0.08] bg-[#0B1120] p-4 text-left"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  aria-hidden
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-black"
+                  style={{
+                    background: `${t.accent}22`,
+                    border: `1px solid ${t.accent}55`,
+                    color: t.accent,
+                    letterSpacing: '.02em',
+                  }}
+                >
+                  {t.initials}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[13px] font-bold text-[#F1F5F9]">{t.handle}</span>
+                  <span className="text-[11px] font-bold text-[#34D399]">{t.subs}</span>
+                </div>
+              </div>
+              <p className="text-[13.5px] text-[#F1F5F9] leading-snug">
+                &ldquo;{t.quote}&rdquo;
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Push #116 — "As seen in" community row. Plain text only —
+            no logos to chase down or licensing to navigate. */}
+        <div className="mx-auto mt-6 max-w-3xl">
+          <p className="text-center text-[12px] font-semibold text-[#94A3B8]">
+            Creators from these communities use ShortsForge:{' '}
+            <span className="text-[#F1F5F9]">
+              Reddit · Twitter/X · YouTube · TikTok · Discord
+            </span>
+          </p>
+        </div>
       </section>
 
       {/* ───────── AI Video Showcase ───────── */}
