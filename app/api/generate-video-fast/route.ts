@@ -123,20 +123,40 @@ export async function POST(req: NextRequest) {
     // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
     // topic-specific searchKeywords (NOT the cinematic description).
     // Curated stockLibrary is the fallback so we always return something.
+    //
+    // Push #145 — black-screen fix: log per-scene resolution outcome so
+    // any future report of "scene N went black" can be traced to whether
+    // Pexels returned a clip, whether we fell back to the library, or
+    // whether the scene had no visual at all.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
         const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
-        if (pexelsUrl) return pexelsUrl
+        if (pexelsUrl) {
+          console.log(`[generate-fast] scene ${idx} → pexels (${pexelsUrl.slice(0, 80)})`)
+          return pexelsUrl
+        }
         const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
-        return lib[0]?.url ?? ''
+        const libUrl = lib[0]?.url ?? ''
+        console.warn(
+          `[generate-fast] scene ${idx} pexels MISS, falling back to library (${libUrl.slice(0, 80) || '<none>'})`,
+        )
+        return libUrl
       })
     )
 
     const filtered = clipUrls.filter((u) => typeof u === 'string' && u.length > 0)
     if (filtered.length === 0) {
+      console.error(
+        `[generate-fast] zero usable clips after Pexels + library fallback. scenes=${scenes.length} prompt="${prompt.slice(0, 80)}"`,
+      )
       return NextResponse.json(
         { error: 'No stock footage could be sourced. Please try a different topic.' },
         { status: 502 }
+      )
+    }
+    if (filtered.length < scenes.length) {
+      console.warn(
+        `[generate-fast] coverage gap: requested ${scenes.length} clips, sourced ${filtered.length}. Compose will tile remaining slots.`,
       )
     }
 

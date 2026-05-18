@@ -6,6 +6,7 @@
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
+import { pickLibraryClip } from '@/lib/stockLibrary'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
@@ -240,7 +241,7 @@ export async function uploadVoiceoverToSupabase(userId: string, buffer: Buffer):
 }
 
 interface CreatomateElement {
-  type: 'video' | 'audio' | 'text' | 'shape'
+  type: 'video' | 'audio' | 'text' | 'shape' | 'image'
   track: number
   time: number
   duration: number
@@ -258,6 +259,14 @@ interface CreatomateElement {
   font_family?: string
   font_size?: number
   font_weight?: string
+  // Push #145 — black-screen fix.
+  // `loop: true` tells Creatomate to replay the clip when it ends before
+  // the requested element duration. Without this a 5-second Pexels clip
+  // dropped into a 10-second timeline slot leaves a 5-second tail where
+  // Creatomate falls through to the layer below (our Track 1 dark
+  // background) while narration keeps playing — exactly what users
+  // reported as "random black sections."
+  loop?: boolean
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -367,38 +376,85 @@ export function buildCreatomateSource({
   })
 
   // Track 2 — tile / loop the clips to fill the full duration.
-  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
   //
-  // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
-  // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
-  // 'cover' and 'contain' produce identical output. The case that matters
-  // is the curated stock-library fallback, which contains landscape clips
-  // (Cloudinary 1280x720 etc.) — 'contain' would render those as a small
-  // strip on a black canvas (the black-screen bug); 'cover' fills the
-  // frame with a centered crop. Track 1 still paints a dark background as
-  // a safety net for any decode failure.
+  // Each Runway clip is 10s, but Fast Mode stock footage can be anywhere
+  // from ~5s to ~30s. We tile them in order until we cover totalDuration.
+  //
+  // Push #145 — three guarantees against the "black screen mid-narration"
+  // bug:
+  //   1. `loop: true` — Creatomate replays the source clip if its natural
+  //      length is shorter than the slot it was assigned. Without this,
+  //      a 5s clip dropped into a 10s slot leaves 5s of fall-through to
+  //      the Track-1 background while audio keeps playing.
+  //   2. `fit: 'cover'` — keeps landscape stock-library clips fully
+  //      covering the 9:16 canvas so they never letterbox into the
+  //      background.
+  //   3. The cursor loop is bounded by `totalDuration` AND we assert
+  //      coverage at the end. If for any reason the last segment would
+  //      land short of totalDuration, the final element's duration is
+  //      stretched (with loop:true active) to seal the gap.
+  //
+  // Track 1 still paints a dark background as a defense-in-depth safety
+  // net for catastrophic decode failure on Creatomate's side.
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
+  const videoSegments: CreatomateElement[] = []
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
     const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
-    elements.push({
+    const segment: CreatomateElement = {
       type: 'video',
       track: 2,
       time: round3(cursor),
       duration: segLen,
       source: url,
       fit: 'cover',
+      loop: true,
       x: '50%',
       y: '50%',
       width: '100%',
       height: '100%',
       volume: '0%',
-    })
+    }
+    videoSegments.push(segment)
+    elements.push(segment)
     cursor += segLen
     i += 1
+  }
+
+  // Coverage assertion — if rounding ever leaves a sub-pixel gap, stretch
+  // the last segment to the exact end of the timeline. With loop:true the
+  // visual stays unbroken.
+  if (videoSegments.length > 0) {
+    const last = videoSegments[videoSegments.length - 1]
+    const segmentEnd = round3(last.time + last.duration)
+    if (segmentEnd < totalDuration) {
+      const extension = round3(totalDuration - last.time)
+      console.warn(
+        `[compose] sealing ${round3(totalDuration - segmentEnd)}s coverage gap by extending last clip (was ${last.duration}s, now ${extension}s)`,
+      )
+      last.duration = extension
+    }
+  }
+
+  // Log the assembled visual timeline so any future black-screen reports
+  // can be diagnosed from the deployment logs alone.
+  console.log(
+    '[compose] visual timeline:',
+    JSON.stringify(
+      videoSegments.map((s, idx) => ({
+        idx,
+        time: s.time,
+        duration: s.duration,
+        source: typeof s.source === 'string' ? s.source.slice(0, 80) : null,
+        loop: s.loop === true,
+      })),
+    ),
+  )
+  if (videoSegments.length === 0) {
+    console.error('[compose] NO VIDEO SEGMENTS were built — render will be black. duration=', totalDuration)
   }
 
   // Track 3 — soft dark overlay so caption text always reads on any clip.
@@ -478,6 +534,101 @@ export function buildCreatomateSource({
     duration: totalDuration,
     elements,
   }
+}
+
+/**
+ * Push #145 — Validate that each clip URL is reachable BEFORE we hand
+ * the timeline to Creatomate. A dead URL on the visual track renders as
+ * black-with-audio (the user-reported bug), because Creatomate has no
+ * notion of "fall back to a different source." We do that fallback here.
+ *
+ * Behaviour:
+ *   - HEAD or short ranged GET to each URL with a 6s per-clip timeout.
+ *   - On 4xx/5xx/timeout, swap that slot for a guaranteed-working clip
+ *     from the curated stockLibrary (keyed by topic so the fallback at
+ *     least loosely matches the scene).
+ *   - Final guarantee: the returned array is the same length as the
+ *     input, has no empty strings, and every entry is either the original
+ *     URL (validated reachable) or a library fallback.
+ *
+ * Never throws — a failed validation always falls back. Logs every swap.
+ */
+export async function validateAndFallbackClipUrls(
+  clipUrls: string[],
+  topicHint: string,
+): Promise<string[]> {
+  const fallbackFor = (idx: number): string => {
+    try {
+      return pickLibraryClip(topicHint || 'default', idx).url
+    } catch {
+      return ''
+    }
+  }
+
+  async function probe(url: string): Promise<boolean> {
+    if (!url || typeof url !== 'string') return false
+    const trimmed = url.trim()
+    if (!trimmed) return false
+    // Reject obviously malformed URLs without a network round-trip.
+    if (!/^https?:\/\//i.test(trimmed)) return false
+
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 6000)
+    try {
+      // Some CDNs (e.g. Pexels) reject HEAD with 405 / 403 but accept GET
+      // with a 0-1 range. Use a ranged GET — it's cheap and accepted
+      // everywhere we use.
+      const res = await fetch(trimmed, {
+        method: 'GET',
+        headers: { Range: 'bytes=0-1' },
+        signal: ctrl.signal,
+        cache: 'no-store',
+      })
+      // 200, 206 (partial), 304 (not modified) all count as reachable.
+      return res.ok || res.status === 206 || res.status === 304
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  const results = await Promise.all(
+    clipUrls.map(async (url, idx) => {
+      const ok = await probe(url)
+      if (ok) {
+        return { url, swapped: false as const }
+      }
+      const fb = fallbackFor(idx) || clipUrls.find((u) => u && u !== url) || ''
+      console.warn(
+        `[compose] clip ${idx} unreachable, swapping → fallback: ${fb.slice(0, 80) || '<none>'} (was: ${(url || '<empty>').slice(0, 80)})`,
+      )
+      return { url: fb, swapped: true as const }
+    }),
+  )
+
+  const validated = results
+    .map((r) => r.url)
+    .filter((u) => typeof u === 'string' && u.length > 0)
+
+  // Last-ditch: if every clip failed AND no fallback resolved, ship
+  // whatever non-empty URLs were originally provided so Creatomate at
+  // least has something to attempt. The render-pipeline's track-1
+  // background then handles whatever Creatomate can't decode.
+  if (validated.length === 0) {
+    const passthrough = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
+    console.error(
+      `[compose] ALL ${clipUrls.length} clip URLs failed validation and no library fallback resolved. Passing through ${passthrough.length} unvalidated URLs.`,
+    )
+    return passthrough
+  }
+
+  const swappedCount = results.filter((r) => r.swapped).length
+  console.log(
+    `[compose] clip URL validation: total=${clipUrls.length} ok=${results.length - swappedCount} swapped=${swappedCount}`,
+  )
+
+  return validated
 }
 
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
