@@ -258,6 +258,14 @@ interface CreatomateElement {
   font_family?: string
   font_size?: number
   font_weight?: string
+  // Push #146 — Creatomate transition directive. When set on an element
+  // placed back-to-back with another element on the same track, the
+  // renderer crossfades between them for `duration` seconds — overlapping
+  // the cut so the dark track-1 background can't show through.
+  transition?: { duration: number; type: string }
+  // Loop a short source until its track-time duration is filled. Prevents
+  // black tail when the source clip is shorter than the requested segment.
+  loop?: boolean
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -377,14 +385,30 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
+  //
+  // Push #146 — fix black flash at cuts between clips. Two reinforcing
+  // fixes, both required because the symptom had two causes:
+  //   1. The source clip's intrinsic length can be a hair under the
+  //      assumed CLIP_LEN (e.g. a Runway 10s clip that's actually 9.8s).
+  //      Without `loop: true` Creatomate paints black for the gap until
+  //      the next clip's `time` arrives. With loop, the clip restarts.
+  //   2. Even at perfectly aligned boundaries, the hard cut from one
+  //      source to the next can show a single frame of the dark track-1
+  //      background while the next decoder primes. `transition: fade`
+  //      (300ms) on every clip after the first crossfades the cut, so
+  //      there is no instant at which neither clip is on screen.
+  // Time/duration stay back-to-back (time + duration === next time) —
+  // the transition directive overlaps them visually without shifting
+  // the timeline math.
   const CLIP_LEN = 10
+  const TRANSITION_DURATION = 0.3
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
     const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
-    elements.push({
+    const clipElement: CreatomateElement = {
       type: 'video',
       track: 2,
       time: round3(cursor),
@@ -396,7 +420,12 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
-    })
+      loop: true,
+    }
+    if (i > 0) {
+      clipElement.transition = { duration: TRANSITION_DURATION, type: 'fade' }
+    }
+    elements.push(clipElement)
     cursor += segLen
     i += 1
   }
