@@ -19,9 +19,10 @@ const SHOWCASE_QUERIES = [
   { id: 'facts',   queries: ['science technology', 'technology digital', 'science nature'] },
   { id: 'money',   queries: ['money finance business', 'business success', 'finance city'] },
   // PhoneCardRow extras
-  { id: 'finance', queries: ['finance money wealth', 'business city office', 'stock market'] },
-  { id: 'mystery', queries: ['history mystery ancient', 'ancient history', 'historical mystery'] },
-  { id: 'travel',  queries: ['travel nature landscape', 'travel adventure', 'nature landscape'] },
+  { id: 'finance',    queries: ['finance money wealth', 'business city office', 'stock market'] },
+  { id: 'mystery',    queries: ['history mystery ancient', 'ancient history', 'historical mystery'] },
+  { id: 'travel',     queries: ['travel nature landscape', 'travel adventure', 'nature landscape'] },
+  { id: 'psychology', queries: ['psychology mind brain', 'thinking person portrait', 'meditation calm'] },
 ]
 
 export async function GET() {

@@ -137,9 +137,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         const sv: Record<string, string> = {}
         const pv: Record<string, string> = {}
         SHOWCASE_IDS.forEach((id, i) => { if (clips[id]) sv[`${i}`] = clips[id] as string })
-        if (clips['finance']) pv['finance'] = clips['finance'] as string
-        if (clips['mystery']) pv['mystery'] = clips['mystery'] as string
-        if (clips['travel'])  pv['travel']  = clips['travel']  as string
+        if (clips['finance'])    pv['finance']    = clips['finance']    as string
+        if (clips['mystery'])    pv['mystery']    = clips['mystery']    as string
+        if (clips['travel'])     pv['travel']     = clips['travel']     as string
+        if (clips['psychology']) pv['psychology'] = clips['psychology'] as string
         setShowcaseVideos(sv)
         setPhoneVideos(pv)
       })
@@ -1141,8 +1142,12 @@ function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number
       tag: 'Travel',
     },
     {
-      src: phoneVideos['psychology'] ?? 'https://videos.pexels.com/video-files/3163534/3163534-uhd_1440_2560_25fps.mp4',
-      label: '🧠 Money Psychology Short',
+      // Push #151 — psychology had been reusing the finance URL; swap in a
+      // distinct verified-working Cloudinary clip (lifestyle/people, tagged
+      // "psychology" in lib/stockLibrary.ts) so each card plays unique
+      // footage. object-cover crops it cleanly into the 9:16 phone frame.
+      src: phoneVideos['psychology'] ?? 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',
+      label: '💰 Money Psychology Short',
       accent: '#F59E0B',
       tag: 'Psychology',
     },
