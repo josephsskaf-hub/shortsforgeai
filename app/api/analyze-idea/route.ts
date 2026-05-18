@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openai, durationPlanFor, MICRO_KNOWLEDGE_SYSTEM_RULES, SAFE_COMPOSITION_RULES } from '@/lib/openai'
+import {
+  openai,
+  durationPlanFor,
+  detectFactCountFromPrompt,
+  MICRO_KNOWLEDGE_SYSTEM_RULES,
+  SAFE_COMPOSITION_RULES,
+} from '@/lib/openai'
 
 export const maxDuration = 30
 
@@ -260,7 +266,7 @@ function fallbackBrief(prompt: string): CreativeBrief {
   }
 }
 
-function buildSystemPrompt(duration: number): string {
+function buildSystemPrompt(duration: number, sceneCount: number): string {
   const plan = durationPlanFor(duration)
   const [minWords, maxWords] = plan.wordCountRange
   return `You are a YouTube Shorts creative director specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Your job is to produce a complete creative brief for a ${plan.duration} second Short built around real, verifiable facts that escalate to a satisfying payoff.
@@ -281,7 +287,8 @@ QUALITY RULES (non-negotiable):
 - Every scene is visually distinct from the others — different camera angle, different lighting, different subject framing. No two scenes should feel like the same shot.
 - The closing voiceover MUST land a payoff — a comparison, twist, statistic, or definitive conclusion. The voiceover MUST NOT trail off and MUST NOT end on a vague cliffhanger.
 - Output is in English.
-- Exactly ${plan.sceneCount} scenes. Total voiceover word count: ${minWords}–${maxWords} words. Durations add up to roughly ${plan.duration} seconds.
+- Exactly ${sceneCount} scenes — one per micro-knowledge beat. Total voiceover word count: ${minWords}–${maxWords} words. Durations add up to roughly ${plan.duration} seconds.
+- Each of the ${sceneCount} scenes MUST deliver a DISTINCT, self-contained fact about the topic. No scene may repeat or rephrase a previous one. If the user asked for "top ${sceneCount}", that means ${sceneCount} different facts numbered 1 through ${sceneCount} in the narration.
 
 GENRE-SPECIFIC GUIDANCE:
 - Mystery / Conspiracy: suspense, curiosity gaps, dark cinematic visuals, slow reveals, deep blues and shadow.
@@ -404,7 +411,9 @@ function coerceViralIntelligence(raw: unknown, fallbacks: ViralIntelligence): Vi
 function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
   if (!Array.isArray(raw) || raw.length === 0) return fallbacks
   const out: SceneBrief[] = []
-  raw.slice(0, 6).forEach((entry, i) => {
+  // Push #143 — bumped from 6 to 8 so "top 7"/"top 8" prompts keep all their
+  // scenes after coercion. detectFactCountFromPrompt already clamps to 8.
+  raw.slice(0, 8).forEach((entry, i) => {
     if (!entry || typeof entry !== 'object') return
     const e = entry as Record<string, unknown>
     const fb = fallbacks[i] ?? fallbacks[fallbacks.length - 1]
@@ -463,6 +472,16 @@ export async function POST(req: NextRequest) {
     const requestedDuration = Number(body.duration) || 45
     const duration = [30, 45, 60].includes(requestedDuration) ? requestedDuration : 45
 
+    // Push #143 — if the user prompt explicitly says "top N" / "N facts",
+    // the brief MUST have N scenes, not the duration-default count, so the
+    // narration delivers all N promised beats. Falls back to duration plan
+    // when no explicit count is present.
+    const detectedCount = detectFactCountFromPrompt(prompt)
+    const sceneCount = detectedCount ?? durationPlanFor(duration).sceneCount
+    if (detectedCount) {
+      console.log(`[analyze-idea] detected "top ${detectedCount}" in prompt — overriding sceneCount`)
+    }
+
     const fallback = fallbackBrief(prompt)
 
     const userMsg = `Create an addictive micro-knowledge YouTube Short about: ${prompt}.
@@ -481,7 +500,7 @@ Return ONLY the JSON object — no markdown, no commentary.`
         {
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: buildSystemPrompt(duration) },
+            { role: 'system', content: buildSystemPrompt(duration, sceneCount) },
             { role: 'user', content: userMsg },
           ],
           temperature: 0.85,

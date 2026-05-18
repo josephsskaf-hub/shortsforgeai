@@ -258,6 +258,8 @@ Each object must have exactly four fields:
 The "searchKeywords" MUST match the topic of the video idea, not describe filming style.
 The "caption" MUST come from the same idea as "voiceover" — they describe the same moment in the narration.
 
+CRITICAL: every one of the ${safeCount} scenes MUST deliver a DISTINCT fact. No two scenes may repeat or rephrase each other. If the idea says "top ${safeCount}" or "${safeCount} facts/curiosities/secrets/reasons", the output must contain ${safeCount} different, numbered items — fact 1, fact 2, … fact ${safeCount}. The viewer should be able to count them on screen and reach exactly ${safeCount}.
+
 Example output:
 [
   ${exampleArr}

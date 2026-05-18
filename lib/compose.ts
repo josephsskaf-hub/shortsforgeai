@@ -5,13 +5,19 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
-import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
-// Push #064 — yellow used for the per-caption highlight word overlay.
+// Push #143 — yellow used to paint the currently-spoken word during the
+// karaoke caption effect. Creatomate's `transcript_color` controls the
+// active-word color; the static line color stays white.
 const HIGHLIGHT_COLOR = '#FFD700'
+// Push #143 — stable id we attach to the voiceover audio element so the
+// transcript text element can reference it via `transcript_source`. Must
+// match `VOICEOVER_TRACK_NAME` literally — Creatomate links the two by
+// string equality on the audio element's `name`.
+const VOICEOVER_TRACK_NAME = 'voiceover_audio'
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
@@ -34,6 +40,49 @@ export interface ComposeInputs {
    */
   sceneCaptions: string[]
   duration: number
+}
+
+// Push #143 — Creatomate element shape. The transcript_* fields drive
+// karaoke-style auto-captions: Creatomate transcribes the referenced
+// audio server-side (the "transcribing" status in pollCreatomateRender
+// surfaces this) and renders one word at a time, painting the active
+// word in `transcript_color` so the caption follows the narrator in
+// real time.
+interface CreatomateElement {
+  type: 'video' | 'audio' | 'text' | 'shape'
+  /** Stable id used by transcript_source links. Creatomate uses `name` as
+   *  the reference key — not `id` — so we mirror that field name. */
+  name?: string
+  track: number
+  time: number
+  duration: number
+  source?: string
+  text?: string
+  x?: string
+  y?: string
+  width?: string
+  height?: string
+  fit?: string
+  /** When true, a video clip shorter than its slot loops within the slot
+   *  instead of freezing on the last frame / going black. */
+  loop?: boolean
+  volume?: string
+  fill_color?: string
+  stroke_color?: string
+  stroke_width?: number
+  font_family?: string
+  font_size?: number
+  font_weight?: string
+  y_alignment?: string
+  // Auto-transcript karaoke caption fields. Only the text element with
+  // transcript_source set uses these — everything else leaves them
+  // undefined and Creatomate ignores them.
+  transcript_source?: string
+  transcript_effect?: 'karaoke' | 'color'
+  transcript_split?: 'word' | 'line'
+  transcript_placement?: 'static' | 'animate'
+  transcript_color?: string
+  transcript_maximum_length?: number
 }
 
 export interface CreatomateRenderState {
@@ -239,26 +288,6 @@ export async function uploadVoiceoverToSupabase(userId: string, buffer: Buffer):
   return pub.publicUrl
 }
 
-interface CreatomateElement {
-  type: 'video' | 'audio' | 'text' | 'shape'
-  track: number
-  time: number
-  duration: number
-  source?: string
-  text?: string
-  x?: string
-  y?: string
-  width?: string
-  height?: string
-  fit?: string
-  volume?: string
-  fill_color?: string
-  stroke_color?: string
-  stroke_width?: number
-  font_family?: string
-  font_size?: number
-  font_weight?: string
-}
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
@@ -269,67 +298,57 @@ function round3(v: number): number {
 }
 
 /**
- * Push #066 — build the Creatomate text element(s) for a single caption
- * slot. Renders ONE text element so captions never stack on screen.
+ * Push #143 — Karaoke caption element.
  *
- * Visual rule (guided captions):
- *   - If the segment carries a highlight word, the whole caption is
- *     rendered in yellow (#FFD700). The viewer's eye locks onto
- *     high-impact moments without us doing fragile per-word positioning.
- *   - Otherwise the caption renders in white.
+ * Creatomate transcribes the voiceover audio server-side and exposes it
+ * via the `transcript_source` field on a text element. We attach a
+ * stable `name` to the audio element (VOICEOVER_TRACK_NAME) and point a
+ * single text element at it. Creatomate then:
+ *   - splits the transcript per-word (`transcript_split: 'word'`)
+ *   - shows one short slot at a time (`transcript_maximum_length`)
+ *   - paints the word being spoken in `transcript_color` (yellow)
+ *   - timing comes from the audio itself, NOT from a pre-distributed
+ *     timeline, so captions always follow the narrator
  *
- * Why not two layers / inline rich text:
- *   Push #064 used a separate floating yellow accent word above the
- *   white caption. In practice this read as two stacked subtitle lines
- *   and the positioning never landed cleanly on top of the matching
- *   word in the white caption. Per-word inline color via Creatomate
- *   rich-text markup is feature-gated across versions, so a malformed
- *   tag would render as literal `[color]` text — unacceptable.
- *   Whole-line color is the simplest path that's guaranteed to render
- *   correctly on every Creatomate template.
+ * Why this replaces the old per-segment text loop:
+ *   The previous implementation chunked the script into 7-word slots
+ *   and distributed them evenly across the timeline. The TTS audio
+ *   does not pace itself evenly, so captions drifted out of sync with
+ *   the voiceover. The transcript_source path delegates timing to
+ *   Creatomate's transcriber, which is word-accurate.
  *
- * Safety: the build is wrapped in try/catch and ALWAYS returns at least
- * the plain white caption element — a failed highlight decision can
- * never break the render.
+ * The text element's `duration` stops before the CTA tail so the
+ * karaoke line never overlaps the final shortsforgeai.com call-to-action.
  */
-export function buildCaptionElements({
-  text,
-  time,
-  duration,
-  highlight,
-}: {
-  text: string
-  time: number
-  duration: number
-  highlight?: string | null
-}): CreatomateElement[] {
-  const baseCaption: CreatomateElement = {
+function buildKaraokeCaptionElement(totalDuration: number): CreatomateElement {
+  const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
+  return {
     type: 'text',
     track: 5,
-    time,
-    duration,
-    text,
+    time: 0,
+    duration: round3(captionWindow),
+    // Creatomate replaces this placeholder with the live transcript as
+    // soon as transcript_source resolves; the field is required by the
+    // schema but its value is not shown when transcription succeeds.
+    text: ' ',
     x: '50%',
-    y: '68%',
+    y: '72%',
+    y_alignment: '50%',
     width: '86%',
     font_family: 'Montserrat',
-    font_size: 58,
+    font_size: 64,
     font_weight: '800',
     fill_color: '#ffffff',
-    stroke_color: 'rgba(0,0,0,0.9)',
-    stroke_width: 3,
-  }
-
-  try {
-    const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
-    if (candidate && candidate.trim().length > 0) {
-      return [{ ...baseCaption, fill_color: HIGHLIGHT_COLOR }]
-    }
-    return [baseCaption]
-  } catch {
-    // Any failure picking the highlight falls back to plain white —
-    // the render must never depend on the highlight decision.
-    return [baseCaption]
+    stroke_color: 'rgba(0,0,0,0.95)',
+    stroke_width: 4,
+    transcript_source: VOICEOVER_TRACK_NAME,
+    transcript_effect: 'karaoke',
+    transcript_split: 'word',
+    transcript_placement: 'animate',
+    transcript_color: HIGHLIGHT_COLOR,
+    // ~18 characters per slot ≈ 2-3 short words on screen at once;
+    // tight enough to read fast, wide enough not to flicker constantly.
+    transcript_maximum_length: 18,
   }
 }
 
@@ -377,6 +396,11 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
+  //
+  // Push #143 — `loop: true` ensures any clip shorter than its allotted
+  // slot loops back to the start instead of freezing on the last frame
+  // (which read as a blank/static screen mid-video). Some Pexels portrait
+  // assets come in at 7-9s and would otherwise hold black for 1-3s.
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
@@ -391,6 +415,7 @@ export function buildCreatomateSource({
       duration: segLen,
       source: url,
       fit: 'cover',
+      loop: true,
       x: '50%',
       y: '50%',
       width: '100%',
@@ -414,9 +439,14 @@ export function buildCreatomateSource({
     fill_color: 'rgba(0,0,0,0.35)',
   })
 
-  // Track 4 — voiceover for the full duration.
+  // Track 4 — voiceover for the full duration. The `name` field is what
+  // the karaoke text element below references via `transcript_source`,
+  // so Creatomate knows which audio to transcribe and time the
+  // word-by-word highlight against. The name must stay in sync with
+  // VOICEOVER_TRACK_NAME.
   elements.push({
     type: 'audio',
+    name: VOICEOVER_TRACK_NAME,
     track: 4,
     time: 0,
     duration: totalDuration,
@@ -424,32 +454,19 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions distributed evenly across the duration (minus CTA
-  // tail). Push #066 — captions are now ≤7-word viral-style segments with
-  // a per-segment highlight word so the renderer can paint the line
-  // yellow when an impactful keyword is present. Caption text comes from
-  // the voiceover script first so it matches what the narrator says;
-  // falls back to scene descriptions only when no script is available.
-  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
-  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
-    ? scriptSegments
-    : sceneCaptions
-        .map((c) => (c ?? '').toString().trim())
-        .filter((c) => c.length > 0)
-        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
-  if (captionsClean.length > 0) {
-    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
-    const perCaption = round3(captionWindow / captionsClean.length)
-    captionsClean.forEach((segment, idx) => {
-      const elementsForCaption = buildCaptionElements({
-        text: segment.text,
-        time: round3(idx * perCaption),
-        duration: perCaption,
-        highlight: segment.highlight,
-      })
-      elements.push(...elementsForCaption)
-    })
-  }
+  // Track 5 — karaoke captions auto-synced to the voiceover audio.
+  //
+  // Push #143 — switched from pre-distributed text slots (chunked by
+  // word count) to Creatomate's transcript_source feature. Captions
+  // now timestamp themselves against the actual TTS audio, so they
+  // follow the narrator word-for-word with the active word painted
+  // yellow. The voiceover_script / sceneCaptions arguments are no
+  // longer needed for caption rendering — they remain in the public
+  // function signature for backward compatibility but are not consumed
+  // here. We intentionally void-read them so eslint stays quiet.
+  void voiceoverScript
+  void sceneCaptions
+  elements.push(buildKaraokeCaptionElement(totalDuration))
 
   // Track 6 — CTA in the final 2.5s.
   const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
