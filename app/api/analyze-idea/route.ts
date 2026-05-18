@@ -266,10 +266,35 @@ function fallbackBrief(prompt: string): CreativeBrief {
   }
 }
 
-function buildSystemPrompt(duration: number, sceneCount: number): string {
+// Push #144 — Number-word lookup so the narrator says "Number one — …",
+// "Number two — …" out loud instead of having the LLM emit "Fact #1:"
+// (which TTS would read as the awkward "fact hash one colon"). Words read
+// cleanly in onyx voice and give viewers a clear audio counter for each
+// item in a "Top N" list.
+const NUMBER_WORDS = [
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+] as const
+
+function buildListModeBlock(sceneCount: number): string {
+  const numberWords = NUMBER_WORDS.slice(0, sceneCount).join(', ')
+  return `LIST MODE — the user asked for a "Top ${sceneCount}" / "${sceneCount} facts" video. The brief MUST be structured as a numbered countdown of exactly ${sceneCount} items:
+
+- The "voiceover_script" MUST contain exactly ${sceneCount} clearly numbered items. Each item starts with the spoken counter and an em dash, e.g. "Number one — <fact>. Number two — <fact>. ...". Use these counters in order: ${numberWords}. DO NOT write "Fact #1" or "#1" — TTS reads "#" as "hash" and "1" as "one", which sounds broken. Spell the counter ("Number one", "Number two", …).
+- Each scene's "voiceover" field MUST also start with the matching "Number X — " counter so the narration of each scene begins with its number. The TTS reads each scene voiceover in order so the audio mirrors the script.
+- Each scene's "caption" field MUST start with the same counter in compact form: "#1", "#2", … "#${sceneCount}". Example caption: "#1 Older than written history". This gives the viewer a visible counter that matches the audio.
+- The first scene's voiceover after the hook MUST be item #1. The last scene's voiceover MUST be item #${sceneCount} AND deliver the strongest payoff so the countdown ends on impact.
+- Items must be DISTINCT — ${sceneCount} different facts. Never repeat or rephrase a previous item. A viewer counting on screen MUST be able to reach exactly ${sceneCount}.
+
+`
+}
+
+function buildSystemPrompt(duration: number, sceneCount: number, listMode: boolean): string {
   const plan = durationPlanFor(duration)
   const [minWords, maxWords] = plan.wordCountRange
+  const listBlock = listMode ? buildListModeBlock(sceneCount) : ''
   return `You are a YouTube Shorts creative director specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Your job is to produce a complete creative brief for a ${plan.duration} second Short built around real, verifiable facts that escalate to a satisfying payoff.
+
+${listBlock}
 
 The brief MUST include: a viral_title, a brutal hook for the first 1-2 seconds, a scene-by-scene breakdown with cinematic visual prompts (never generic), captions of MAX 6-8 words, full voiceover_script (made of real micro-knowledge beats, not vague mystery), music_mood, pacing_notes, youtube_title, youtube_description, and hashtags.
 
@@ -408,6 +433,30 @@ function coerceViralIntelligence(raw: unknown, fallbacks: ViralIntelligence): Vi
   }
 }
 
+// Push #144 — guarantee every scene in list mode carries its spoken
+// counter ("Number one — …") in the voiceover and its visible counter
+// ("#1 …") in the caption. Idempotent: a scene that already starts with
+// either form of counter is left alone, so well-formed model output
+// stays untouched and we don't end up with "Number one — Number one — …".
+function applyListModeCounters(scenes: SceneBrief[]): SceneBrief[] {
+  const spokenAlreadyRe = /^(?:number\s+(?:one|two|three|four|five|six|seven|eight)|fact\s+\d|#?\d+[.):]?\s)/i
+  const captionAlreadyRe = /^#?\d+[.):]?\s/
+  return scenes.map((scene, idx) => {
+    const numWord = NUMBER_WORDS[idx] ?? `item ${idx + 1}`
+    const nextVoiceover = spokenAlreadyRe.test(scene.voiceover)
+      ? scene.voiceover
+      : `Number ${numWord} — ${scene.voiceover}`
+    const nextCaption = captionAlreadyRe.test(scene.caption)
+      ? scene.caption
+      : `#${idx + 1} ${scene.caption}`.trim()
+    return {
+      ...scene,
+      voiceover: nextVoiceover,
+      caption: nextCaption,
+    }
+  })
+}
+
 function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
   if (!Array.isArray(raw) || raw.length === 0) return fallbacks
   const out: SceneBrief[] = []
@@ -476,18 +525,30 @@ export async function POST(req: NextRequest) {
     // the brief MUST have N scenes, not the duration-default count, so the
     // narration delivers all N promised beats. Falls back to duration plan
     // when no explicit count is present.
+    // Push #144 — also flip the brief into LIST MODE so the script is
+    // structured as a numbered countdown ("Number one — …, Number two — …")
+    // and captions show "#1, #2, … #N" prefixes.
     const detectedCount = detectFactCountFromPrompt(prompt)
+    const listMode = detectedCount !== null
     const sceneCount = detectedCount ?? durationPlanFor(duration).sceneCount
     if (detectedCount) {
-      console.log(`[analyze-idea] detected "top ${detectedCount}" in prompt — overriding sceneCount`)
+      console.log(
+        `[analyze-idea] detected "top ${detectedCount}" in prompt — overriding sceneCount and enabling list mode`,
+      )
     }
 
     const fallback = fallbackBrief(prompt)
 
+    const listModeReminder = listMode
+      ? `
+
+⚠️ LIST MODE IS ACTIVE. The user prompt asks for exactly ${sceneCount} items. The voiceover MUST be a numbered countdown: "Number one — <fact 1>. Number two — <fact 2>. ... Number ${NUMBER_WORDS[sceneCount - 1]} — <fact ${sceneCount}>." Each scene's voiceover starts with its own "Number X — " counter. Each caption starts with "#X". ${sceneCount} distinct facts, no repeats, no merging. If you produce fewer than ${sceneCount} numbered items, the output is wrong.`
+      : ''
+
     const userMsg = `Create an addictive micro-knowledge YouTube Short about: ${prompt}.
 Duration: ~${duration} seconds (target word count is in the system prompt).
 Make every line teach something real and surprising.
-Follow the Hook → Micro-Knowledge → Escalation → Payoff structure exactly.
+Follow the Hook → Micro-Knowledge → Escalation → Payoff structure exactly.${listModeReminder}
 
 Detected niche hint: ${fallback.niche}
 Detected tone hint: ${fallback.tone}
@@ -500,7 +561,7 @@ Return ONLY the JSON object — no markdown, no commentary.`
         {
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: buildSystemPrompt(duration, sceneCount) },
+            { role: 'system', content: buildSystemPrompt(duration, sceneCount, listMode) },
             { role: 'user', content: userMsg },
           ],
           temperature: 0.85,
@@ -513,16 +574,29 @@ Return ONLY the JSON object — no markdown, no commentary.`
       if (!raw) throw new Error('Empty response from OpenAI')
       const data = JSON.parse(raw) as Record<string, unknown>
 
-      const scenes = coerceScenes(data.scenes, fallback.scenes)
+      const scenesRaw = coerceScenes(data.scenes, fallback.scenes)
+      // Push #144 — list-mode safety net. If the user prompt is "Top N" but
+      // the model returned scenes without numbered prefixes, force them in
+      // here so the script and captions both carry the countdown structure
+      // the viewer expects. Counters are skipped on scenes that already
+      // start with one, so well-formed model output stays untouched.
+      const scenes = listMode ? applyListModeCounters(scenesRaw) : scenesRaw
       const viral_title = asString(data.viral_title, fallback.viral_title).slice(0, 120)
       const hook = asString(data.hook, fallback.hook)
       const summary = asString(data.summary, fallback.summary)
       const niche = asString(data.niche, fallback.niche).slice(0, 40)
       const tone = asString(data.tone, fallback.tone).slice(0, 80)
-      const voiceover_script = asString(
-        data.voiceover_script,
-        scenes.map((s) => s.voiceover).filter(Boolean).join(' ') || fallback.voiceover_script,
-      )
+      // In list mode, derive the voiceover_script from the (already-counter-
+      // prefixed) per-scene voiceovers so what the TTS speaks is the
+      // numbered countdown — not whatever loose paragraph the model emitted
+      // in `voiceover_script`. Outside list mode we still prefer the
+      // model's own voiceover_script field for natural narrative flow.
+      const voiceover_script = listMode
+        ? scenes.map((s) => s.voiceover).filter(Boolean).join(' ')
+        : asString(
+            data.voiceover_script,
+            scenes.map((s) => s.voiceover).filter(Boolean).join(' ') || fallback.voiceover_script,
+          )
       const music_mood = asString(data.music_mood, fallback.music_mood).slice(0, 160)
       const pacing_notes = asString(data.pacing_notes, fallback.pacing_notes).slice(0, 240)
       const youtube_title = asString(data.youtube_title, fallback.youtube_title).slice(0, 120)

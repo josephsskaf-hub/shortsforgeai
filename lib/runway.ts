@@ -1,4 +1,11 @@
-import { openai } from '@/lib/openai'
+import { openai, detectFactCountFromPrompt } from '@/lib/openai'
+
+// Push #144 — spoken-friendly counters for "Top N" countdown narration.
+// TTS reads digits + punctuation literally, so "Number one — " sounds
+// natural where "Fact #1:" sounds broken ("fact hash one colon").
+const NUMBER_WORDS = [
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+] as const
 
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1'
 const RUNWAY_VERSION = '2024-11-06'
@@ -241,8 +248,43 @@ export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
 export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
   const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
 
-  const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`
-  const exampleArr = Array.from({ length: safeCount }, () => exampleScene).join(',\n  ')
+  // Push #144 — When the user prompt is a "Top N" / "N facts" request,
+  // every scene's voiceover and caption MUST be a numbered countdown item
+  // so the script audibly delivers N distinct facts instead of one vague
+  // narration about the topic.
+  const detectedListCount = detectFactCountFromPrompt(prompt)
+  const listMode = detectedListCount !== null && detectedListCount === safeCount
+
+  const listExampleScenes = Array.from({ length: safeCount }, (_, i) => {
+    const numWord = NUMBER_WORDS[i] ?? `item ${i + 1}`
+    const hashTag = `#${i + 1}`
+    return `{"description":"Cinematic shot illustrating fact ${i + 1} about the topic, vertical 9:16, dramatic lighting","searchKeywords":"topic-specific nouns here","voiceover":"Number ${numWord} — a concrete verifiable fact about the topic, 10 to 18 words.","caption":"${hashTag} short readable fragment"}`
+  }).join(',\n  ')
+
+  const genericExampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`
+  const genericExampleArr = Array.from({ length: safeCount }, () => genericExampleScene).join(',\n  ')
+
+  const listModeBlock = listMode
+    ? `
+
+⚠️ LIST MODE — the user prompt explicitly asks for "Top ${safeCount}" / "${safeCount} facts" about the topic. The output MUST be structured as a numbered countdown of exactly ${safeCount} items.
+
+For each scene i (1..${safeCount}):
+- "voiceover" MUST start with the spoken counter "Number ${NUMBER_WORDS.slice(0, safeCount).map((w, idx) => `${w} — <fact ${idx + 1}>`).join('", "Number ')}". Use the spelled-out word ("Number one", "Number two", …) NOT digits and NOT "#" — TTS reads punctuation literally.
+- "caption" MUST start with the visible counter "#${'i'}" (e.g. "#1 Older than history", "#2 Built without iron tools", "#${safeCount} <final payoff>"). The counter visible on screen mirrors the spoken counter.
+- Each item delivers a DISTINCT, self-contained fact. No two items repeat, rephrase, or merge. A viewer counting on screen MUST be able to reach exactly ${safeCount}.
+- The final item (#${safeCount}) MUST land the strongest payoff — the most shocking, definitive, or surprising fact — so the countdown ends on impact.
+
+Example output for list mode:
+[
+  ${listExampleScenes}
+]`
+    : `
+
+Example output:
+[
+  ${genericExampleArr}
+]`
 
   const userPrompt = `You break a Short-form video idea into ${safeCount} scenes for a YouTube Short.
 
@@ -258,12 +300,7 @@ Each object must have exactly four fields:
 The "searchKeywords" MUST match the topic of the video idea, not describe filming style.
 The "caption" MUST come from the same idea as "voiceover" — they describe the same moment in the narration.
 
-CRITICAL: every one of the ${safeCount} scenes MUST deliver a DISTINCT fact. No two scenes may repeat or rephrase each other. If the idea says "top ${safeCount}" or "${safeCount} facts/curiosities/secrets/reasons", the output must contain ${safeCount} different, numbered items — fact 1, fact 2, … fact ${safeCount}. The viewer should be able to count them on screen and reach exactly ${safeCount}.
-
-Example output:
-[
-  ${exampleArr}
-]`
+CRITICAL: every one of the ${safeCount} scenes MUST deliver a DISTINCT fact. No two scenes may repeat or rephrase each other. If the idea says "top ${safeCount}" or "${safeCount} facts/curiosities/secrets/reasons", the output must contain ${safeCount} different, numbered items — fact 1, fact 2, … fact ${safeCount}. The viewer should be able to count them on screen and reach exactly ${safeCount}.${listModeBlock}`
 
   const completion = await openai.chat.completions.create(
     {
@@ -348,6 +385,35 @@ Example output:
       caption: shortCaptionFromVoiceover(voiceover),
     })
   }
+
+  // Push #144 — List-mode safety net. If the user asked for "Top N" but the
+  // LLM forgot the numbered structure, prefix each voiceover with its
+  // spoken counter ("Number one — ", "Number two — ", …) and each caption
+  // with its visible counter ("#1 ", "#2 ", …). This guarantees the
+  // viewer hears and reads all N numbered items even when the model
+  // ignores the LIST MODE instructions. Counters are only added when
+  // they're not already present, so we don't double up on well-formed
+  // model output ("Number one — fact" stays as-is).
+  if (listMode) {
+    for (let idx = 0; idx < scenes.length; idx++) {
+      const scene = scenes[idx]
+      const numWord = NUMBER_WORDS[idx] ?? `item ${idx + 1}`
+      const voiceoverPrefix = `Number ${numWord} — `
+      const captionPrefix = `#${idx + 1} `
+      const startsWithSpokenCounter = new RegExp(
+        `^(?:number\\s+(?:one|two|three|four|five|six|seven|eight)|fact\\s+\\d|#?\\d+[.):]?\\s)`,
+        'i',
+      ).test(scene.voiceover)
+      const startsWithCaptionCounter = /^#?\d+[.):]?\s/.test(scene.caption)
+      if (!startsWithSpokenCounter) {
+        scene.voiceover = voiceoverPrefix + scene.voiceover
+      }
+      if (!startsWithCaptionCounter) {
+        scene.caption = captionPrefix + scene.caption
+      }
+    }
+  }
+
   return scenes
 }
 
