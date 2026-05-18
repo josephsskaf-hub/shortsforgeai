@@ -27,59 +27,51 @@ interface ShowcaseCard {
   videoUrl: string
 }
 
-// Push #082 — real video showcase. Each card loops a short royalty-free
-// clip from Mixkit's free preview CDN as the poster. The clip is muted +
-// autoplay + playsInline so it works on mobile without user gesture, and
-// preload="metadata" keeps the page from downloading 6 full MP4s up front.
-// If the video errors out (CDN blocked, offline, etc.), we fall back to
-// the original gradient poster.
-// Push #129 — Replaced broken Mixkit CDN URLs with Cloudflare-hosted
-// royalty-free MP4s from coverr.co and Google's public sample bucket.
-// All URLs are CORS-open and do not require authentication.
-const SHOWCASE: ShowcaseCard[] = [
+// Push #132 — SHOWCASE no longer hard-codes any CDN URLs. Video URLs are
+// fetched server-side from Pexels via /api/showcase-clips (1h ISR cache)
+// so the page always has working video previews. The `videoUrl` field
+// starts as '' and is hydrated on mount; the gradient poster is the
+// natural placeholder while the fetch is in flight.
+const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
   {
     category: 'Space Mystery',
     title: 'What NASA hides about the Moon',
     prompt: 'Cinematic space mystery short about unexplained Moon anomalies that NASA never explained',
     accent: '#22D3EE',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
   },
   {
     category: 'History Facts',
     title: 'The Roman invention we still use',
     prompt: 'Fast-paced history facts short about a Roman invention that still powers daily life today',
     accent: '#F59E0B',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
   },
   {
     category: 'Hidden Places',
     title: 'Cities erased from every map',
     prompt: 'Dark cinematic short about real hidden cities that governments removed from world maps',
     accent: '#A78BFA',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
   },
   {
     category: 'Cold Case',
     title: 'The case that broke the FBI',
     prompt: 'Suspenseful cold case short about an unsolved FBI investigation with chilling details',
     accent: '#F87171',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
   },
   {
     category: 'Weird Facts',
     title: 'Facts your brain refuses to believe',
     prompt: 'Punchy weird facts short with 5 facts that sound fake but are 100% true',
     accent: '#34D399',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
   },
   {
     category: 'Money Psychology',
     title: 'Why the rich think differently',
     prompt: 'Money psychology short about the mental habits that separate the wealthy from everyone else',
     accent: '#60A5FA',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
   },
 ]
+// IDs must match SHOWCASE_QUERIES in /api/showcase-clips/route.ts
+const SHOWCASE_IDS = ['space', 'history', 'hidden', 'crime', 'facts', 'money']
 
 function trackHomepageEvent(name: string): void {
   try {
@@ -130,6 +122,29 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // counting"). Bumps +1 every 30s in a setInterval so the page reads
   // as alive while the visitor sits on it.
   const [shortsTotal, setShortsTotal] = useState<number>(9847)
+
+  // Push #132 — showcase video URLs fetched from /api/showcase-clips so
+  // the page never hard-codes a CDN that can go private. Start empty so
+  // gradient placeholders show immediately; hydrate on mount.
+  const [showcaseVideos, setShowcaseVideos] = useState<Record<string, string>>({})
+  const [phoneVideos, setPhoneVideos] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    void fetch('/api/showcase-clips')
+      .then((r) => r.json())
+      .then((data: { clips?: Record<string, string | null> }) => {
+        const clips = data.clips ?? {}
+        const sv: Record<string, string> = {}
+        const pv: Record<string, string> = {}
+        SHOWCASE_IDS.forEach((id, i) => { if (clips[id]) sv[`${i}`] = clips[id] as string })
+        if (clips['finance']) pv['finance'] = clips['finance'] as string
+        if (clips['mystery']) pv['mystery'] = clips['mystery'] as string
+        if (clips['travel'])  pv['travel']  = clips['travel']  as string
+        setShowcaseVideos(sv)
+        setPhoneVideos(pv)
+      })
+      .catch(() => { /* fall back to gradient placeholders */ })
+  }, [])
 
   useEffect(() => {
     trackHomepageEvent('homepage_view')
@@ -675,13 +690,16 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             CDN. The gradient poster stays as a fallback for slow networks
             and as a paint target before the video's first frame lands. */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
-          {SHOWCASE.map((card) => (
-            <ShowcaseVideoCard
-              key={card.title}
-              card={card}
-              onGenerate={() => goToShowcase(card.prompt)}
-            />
-          ))}
+          {SHOWCASE_BASE.map((base, i) => {
+            const card: ShowcaseCard = { ...base, videoUrl: showcaseVideos[`${i}`] ?? '' }
+            return (
+              <ShowcaseVideoCard
+                key={card.title}
+                card={card}
+                onGenerate={() => goToShowcase(card.prompt)}
+              />
+            )
+          })}
         </div>
       </section>
 
@@ -724,7 +742,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             See what our AI generates in seconds.
           </p>
         </div>
-        <PhoneCardRow videoCounter={shortsTotal} />
+        <PhoneCardRow videoCounter={shortsTotal} phoneVideos={phoneVideos} />
       </section>
 
       {/* ───────── How It Works ─────────
@@ -1119,11 +1137,11 @@ function HeroVideo() {
 // Each card renders a Pexels free vertical clip auto-playing in a phone-shaped
 // container, with a gradient overlay and caption, matching how Pictory /
 // InVideo showcase their output. Isolated component to keep JSX clean.
-function PhoneCardRow({ videoCounter }: { videoCounter: number }) {
+function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number; phoneVideos?: Record<string, string> }) {
   const cards = [
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', label: '📈 Money Facts Short', accent: '#34D399', tag: 'Finance' },
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4', label: '🏛️ History Mystery Short', accent: '#A78BFA', tag: 'History' },
-    { src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', label: '🌍 Travel Facts Short', accent: '#22D3EE', tag: 'Travel' },
+    { src: phoneVideos['finance'] ?? '', label: '📈 Money Facts Short', accent: '#34D399', tag: 'Finance' },
+    { src: phoneVideos['mystery'] ?? '', label: '🏛️ History Mystery Short', accent: '#A78BFA', tag: 'History' },
+    { src: phoneVideos['travel']  ?? '', label: '🌍 Travel Facts Short', accent: '#22D3EE', tag: 'Travel' },
   ]
   return (
     <div>
@@ -1138,15 +1156,15 @@ function PhoneCardRow({ videoCounter }: { videoCounter: number }) {
                 className="absolute z-20 rounded-full"
                 style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.45)' }}
               />
-              <video
+              {card.src && <video
                 src={card.src}
                 autoPlay
                 muted
                 loop
                 playsInline
                 preload="auto"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+                className="absolute inset-0 w-full h-full object-cover z-0"
+              />}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.40) 0%,transparent 30%,transparent 60%,rgba(5,7,13,.85) 100%)' }}
@@ -1188,14 +1206,13 @@ function ShowcaseVideoCard({
   card: ShowcaseCard
   onGenerate: () => void
 }) {
-  const [videoReady, setVideoReady] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
-  // Push #108 — `videoReady` (driven by `canplay`) flipped too late on some
-  // networks: the player was paused-but-fetching with readyState 0, so the
-  // overlay stuck and the video stayed at opacity 0 even after autoplay
-  // succeeded. `isPlaying` is the authoritative "frames are painting" signal
-  // — fed by the `playing` media event — and now drives the overlay.
-  const [isPlaying, setIsPlaying] = useState(false)
+  // Push #131 — removed opacity gating (videoReady/isPlaying states).
+  // Video was staying at opacity:0 because canplay/playing events don't
+  // reliably fire on Google CDN clips across all browsers. The gradient
+  // div behind the video acts as the natural load placeholder — just show
+  // the video immediately so it renders as soon as the first frame lands.
+  const isPlaying = true // keep for overlay logic compat
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   // Push #106 — IntersectionObserver fallback. The `autoplay` attribute
@@ -1250,7 +1267,7 @@ function ShowcaseVideoCard({
           }}
         />
 
-        {!videoFailed && (
+        {!videoFailed && card.videoUrl && (
           <video
             ref={videoRef}
             src={card.videoUrl}
@@ -1263,29 +1280,23 @@ function ShowcaseVideoCard({
             // MB). My Videos cards keep preload="none" — that grid can
             // have dozens of rows.
             preload="auto"
-            onCanPlay={() => setVideoReady(true)}
-            onLoadedData={() => setVideoReady(true)}
-            onPlaying={() => { setIsPlaying(true); setVideoReady(true) }}
-            onPause={() => setIsPlaying(false)}
-            onWaiting={() => setIsPlaying(false)}
             onError={() => setVideoFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-out group-hover:scale-[1.02]"
-            style={{ opacity: videoReady || isPlaying ? 1 : 0, transform: 'translateZ(0)' }}
+            className="absolute inset-0 h-full w-full object-cover z-0 group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+            style={{ opacity: 1, transform: 'translateZ(0)' }}
           />
         )}
 
-        {/* Subtle dark gradient overlay so the category chip + play badge
-            stay legible against bright frames. */}
+        {/* Dark overlay — z-10, above the video (z-0), below text (z-20) */}
         <div
           aria-hidden
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none z-10"
           style={{
             background:
               'linear-gradient(180deg, rgba(11,17,32,0.55) 0%, rgba(11,17,32,0) 35%, rgba(11,17,32,0) 65%, rgba(11,17,32,0.65) 100%)',
           }}
         />
 
-        <div className="absolute left-3 top-3 z-10">
+        <div className="absolute left-3 top-3 z-20">
           <span
             className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-md"
             style={{
@@ -1299,7 +1310,7 @@ function ShowcaseVideoCard({
         </div>
 
         {/* Format badge — bottom-left, matches the 9:16 product spec. */}
-        <div className="absolute bottom-3 left-3 z-10">
+        <div className="absolute bottom-3 left-3 z-20">
           <span
             className="rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] backdrop-blur-md"
             style={{
