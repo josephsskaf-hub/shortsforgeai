@@ -667,7 +667,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
         </div>
 
-        <HeroVideo />
         </div>
       </section>
 
