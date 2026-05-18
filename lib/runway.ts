@@ -213,15 +213,35 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
 
 // Push #128 — Scene now carries both the cinematic Runway description AND
 // explicit Pexels search keywords so the two uses are cleanly separated.
+// Push #132 — Scene also carries the per-scene `voiceover` (full narration
+// line) and `caption` (≤8 word readable version of that voiceover). The
+// voiceover sent to TTS and the caption shown on screen come from the
+// SAME source string, so captions can never disconnect from the narration.
 export interface Scene {
-  description: string   // cinematic prose for Runway image/video AI
+  description: string    // cinematic prose for Runway image/video AI
   searchKeywords: string // 2-4 concrete nouns for Pexels stock search
+  voiceover: string      // the narration line the TTS will speak for this scene
+  caption: string        // ≤8-word readable on-screen caption derived from voiceover
+}
+
+// Trim a narration line down to a punchy ≤maxWords caption. Strips
+// markdown asterisks, collapses whitespace, drops trailing punctuation.
+// The on-screen caption format is fragment-style — no period, no quote.
+export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
+  const cleaned = (text ?? '')
+    .replace(/[*"_`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!cleaned) return ''
+  const words = cleaned.split(' ').filter(Boolean)
+  const sliced = words.length <= maxWords ? words : words.slice(0, maxWords)
+  return sliced.join(' ').replace(/[.!?,;:]+$/, '')
 }
 
 export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
   const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
 
-  const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert"}`
+  const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`
   const exampleArr = Array.from({ length: safeCount }, () => exampleScene).join(',\n  ')
 
   const userPrompt = `You break a Short-form video idea into ${safeCount} scenes for a YouTube Short.
@@ -229,11 +249,14 @@ export async function generateScenes(prompt: string, count = 4): Promise<Scene[]
 Idea: "${prompt}"
 
 Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, no preamble.
-Each object must have exactly two fields:
+Each object must have exactly four fields:
 1. "description": A cinematic shot description for an AI video model (~15-25 words). Visual, specific, concrete — subject + setting + lighting + camera motion + mood. Vertical 9:16 framing.
 2. "searchKeywords": 2-4 concrete nouns or short phrases that describe WHAT IS VISUALLY IN THIS SCENE, directly related to the video topic. These are used to search stock footage. NEVER use abstract words like "cinematic", "footage", "video", "shot". NEVER start with "a", "the", "lone", "soft". Use the actual topic: e.g. for pyramids → "ancient pyramid egypt desert"; for money → "gold coins cash dollar bills".
+3. "voiceover": One real narration line that delivers a concrete fact, escalation, or payoff about the topic (10-22 words). This is the EXACT text the TTS will read for this scene. No filler like "imagine…", "what if…". No stage directions.
+4. "caption": A ≤8-word readable on-screen caption that paraphrases the same voiceover line. Punchy fragment, no period, must match what the narrator says in meaning.
 
 The "searchKeywords" MUST match the topic of the video idea, not describe filming style.
+The "caption" MUST come from the same idea as "voiceover" — they describe the same moment in the narration.
 
 Example output:
 [
@@ -276,14 +299,37 @@ Example output:
   const scenes: Scene[] = parsed
     .map((item: unknown): Scene | null => {
       if (typeof item === 'string') {
-        // Legacy fallback: plain string → use as description, derive keywords from prompt
-        return { description: item.trim(), searchKeywords: prompt.slice(0, 40) }
+        // Legacy fallback: plain string → use as description, derive keywords
+        // from prompt, and let voiceover/caption fall back to the description.
+        const description = item.trim()
+        const voiceover = description
+        return {
+          description,
+          searchKeywords: prompt.slice(0, 40),
+          voiceover,
+          caption: shortCaptionFromVoiceover(voiceover),
+        }
       }
       if (item && typeof item === 'object') {
         const obj = item as Record<string, unknown>
         const description = (typeof obj.description === 'string' ? obj.description : '').trim()
         const searchKeywords = (typeof obj.searchKeywords === 'string' ? obj.searchKeywords : '').trim()
-        if (description) return { description, searchKeywords: searchKeywords || prompt.slice(0, 40) }
+        const rawVoiceover = (typeof obj.voiceover === 'string' ? obj.voiceover : '').trim()
+        const rawCaption = (typeof obj.caption === 'string' ? obj.caption : '').trim()
+        if (description) {
+          // The cinematic `description` can double as voiceover when the
+          // model doesn't supply one (e.g. older callers / legacy
+          // responses). Caption is always derived from the voiceover so
+          // both come from the same source string.
+          const voiceover = rawVoiceover || description
+          const caption = shortCaptionFromVoiceover(rawCaption || voiceover)
+          return {
+            description,
+            searchKeywords: searchKeywords || prompt.slice(0, 40),
+            voiceover,
+            caption,
+          }
+        }
       }
       return null
     })
@@ -291,9 +337,13 @@ Example output:
     .slice(0, safeCount)
 
   while (scenes.length < safeCount) {
+    const description = `Cinematic vertical 9:16 shot inspired by: ${prompt}`
+    const voiceover = `Here is something most people do not know about ${prompt}.`
     scenes.push({
-      description: `Cinematic vertical 9:16 shot inspired by: ${prompt}`,
+      description,
       searchKeywords: prompt.slice(0, 40),
+      voiceover,
+      caption: shortCaptionFromVoiceover(voiceover),
     })
   }
   return scenes

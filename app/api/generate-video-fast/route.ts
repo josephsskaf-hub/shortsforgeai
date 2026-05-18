@@ -141,18 +141,46 @@ export async function POST(req: NextRequest) {
     }
 
     const generationId = randomUUID()
+
+    // Push #132 — assemble the caption/voiceover pipeline. Each scene now
+    // carries the SAME source string for both: the per-scene `voiceover` is
+    // the narration TTS will read, and the per-scene `caption` is its
+    // ≤8-word readable on-screen paraphrase. We log both so any future
+    // drift between captions and narration is debuggable from server logs.
+    const sceneCaptions = scenes.map((s) => s.caption)
+    const voiceoverScript = scenes
+      .map((s) => s.voiceover)
+      .filter((v) => typeof v === 'string' && v.trim().length > 0)
+      .join(' ')
+
     console.log(
-      `[generate-fast] OK user=${user.id.slice(0, 8)} clips=${filtered.length} duration=${duration}s`
+      '[generate-fast] scenes:',
+      JSON.stringify(
+        scenes.map((s, i) => ({
+          scene: i + 1,
+          voiceover: s.voiceover,
+          caption: s.caption,
+        })),
+      ),
+    )
+
+    console.log(
+      `[generate-fast] OK user=${user.id.slice(0, 8)} clips=${filtered.length} duration=${duration}s captions=${sceneCaptions.length}`
     )
 
     // Client expects `scenes` to be a string array of descriptions for the
-    // result-page recap UI — flatten before serializing.
+    // result-page recap UI — flatten before serializing. We also surface
+    // `scene_captions` and `voiceover_script` so the compose request can
+    // be assembled with the per-scene caption pipeline as the single source
+    // of truth.
     return NextResponse.json({
       mode: 'fast',
       generationId,
       prompt,
       duration,
       scenes: scenes.map((s) => s.description), // client still gets string array
+      scene_captions: sceneCaptions,
+      voiceover_script: voiceoverScript,
       clip_urls: filtered,
     })
   } catch (error: unknown) {
