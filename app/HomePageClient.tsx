@@ -1,12 +1,12 @@
 'use client'
 
-// Push #080 — Top auth buttons polish.
+// Top auth buttons.
 // - Auth state stays reactive via supabase.auth.onAuthStateChange + the
 //   initial getSession() check, so the header updates immediately on
 //   login/logout without a full page reload.
-// - Right side (desktop + mobile): guest = Sign In (ghost) + Sign Up (cyan
-//   filled), signed-in = Dashboard (ghost, → /generate) + Sign Out (ghost).
-//   Sign Out hits supabase.auth.signOut() then router.push('/').
+// - Right side (desktop + mobile): guest = single "Get Started" CTA →
+//   /signup (the signup page exposes an inline link back to /login for
+//   returning users); signed-in = Dashboard (→ /generate) + Sign Out.
 // - Buttons render only after the auth check completes so we don't flash
 //   the wrong state during hydration.
 
@@ -364,10 +364,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
-          {/* Right side — desktop. Push #079: guest = Sign In (ghost) +
-              Sign Up (solid blue), signed-in = Dashboard (ghost, → /generate)
-              + Sign Out (outline). Buttons are only rendered after the auth
-              check completes so we don't flash the wrong state on hydration. */}
+          {/* Right side — desktop. Guest = single "Get Started" CTA → /signup,
+              signed-in = Dashboard (→ /generate) + Sign Out. Buttons render
+              only after the auth check completes so we don't flash the wrong
+              state on hydration. */}
           <div className="hidden items-center gap-2 md:flex">
             {!authChecked ? (
               <div aria-hidden className="h-9 w-40" />
@@ -399,27 +399,18 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
-                >
-                  Sign Up
-                </Link>
-              </>
+              <Link
+                href="/signup"
+                className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
+              >
+                Get Started
+              </Link>
             )}
           </div>
 
-          {/* Mobile right side: persistent CTA + hamburger. Push #079 mirrors
-              the desktop auth split — Dashboard (ghost, → /generate) when
-              signed in, Sign Up (solid blue) when signed out. Sign In and
-              Sign Out live in the dropdown panel below to keep the bar tight. */}
+          {/* Mobile right side: persistent CTA + hamburger. Dashboard (→ /generate)
+              when signed in, Get Started (→ /signup) when signed out. Sign Out
+              lives in the dropdown panel below to keep the bar tight. */}
           <div className="flex items-center gap-2 md:hidden">
             {!authChecked ? (
               <div aria-hidden className="h-9 w-20" />
@@ -445,7 +436,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 href="/signup"
                 className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
               >
-                Sign Up
+                Get Started
               </Link>
             )}
             <button
@@ -463,9 +454,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Mobile menu panel — Push #079: nav items + auth tail. Guests get
-            both Sign In (ghost) and Sign Up (solid blue) so the full auth
-            choice is visible from one tap. Signed-in users get Sign Out. */}
+        {/* Mobile menu panel — nav items + auth tail. Guests get a single
+            "Get Started" CTA → /signup; signed-in users get Sign Out. */}
         {navOpen && (
           <div className="md:hidden border-t border-white/[0.08] bg-[#0B1120]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
@@ -498,22 +488,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
               ) : (
-                <>
-                  <Link
-                    onClick={() => setNavOpen(false)}
-                    href="/login"
-                    className="rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    onClick={() => setNavOpen(false)}
-                    href="/signup"
-                    className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300"
-                  >
-                    Sign Up
-                  </Link>
-                </>
+                <Link
+                  onClick={() => setNavOpen(false)}
+                  href="/signup"
+                  className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300"
+                >
+                  Get Started
+                </Link>
               )}
             </div>
           </div>
