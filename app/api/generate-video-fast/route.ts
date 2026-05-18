@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
+import { detectFactCountFromPrompt } from '@/lib/openai'
 import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 
@@ -81,7 +82,16 @@ export async function POST(req: NextRequest) {
       ? (requestedDuration as Duration)
       : 45
 
-    const clipCount = clipCountForDuration(duration)
+    // Push #143 — "top N" prompts get N scenes so every promised fact lands
+    // in the script. Otherwise fall back to the duration-based default.
+    const detectedCount = detectFactCountFromPrompt(prompt)
+    const baseClipCount = clipCountForDuration(duration)
+    const clipCount = detectedCount ? Math.min(8, Math.max(detectedCount, baseClipCount)) : baseClipCount
+    if (detectedCount) {
+      console.log(
+        `[generate-fast] detected "top ${detectedCount}" — clipCount=${clipCount} (base=${baseClipCount})`,
+      )
+    }
 
     // Upfront credit balance check. Deduction happens in /api/compose/status
     // when the final mp4 succeeds.
