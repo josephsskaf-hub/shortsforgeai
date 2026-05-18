@@ -299,24 +299,43 @@ function round3(v: number): number {
 }
 
 /**
- * Push #143 — Karaoke caption element.
+ * Push #143 / #146 — Single karaoke caption element.
  *
  * Creatomate transcribes the voiceover audio server-side and exposes it
  * via the `transcript_source` field on a text element. We attach a
  * stable `name` to the audio element (VOICEOVER_TRACK_NAME) and point a
- * single text element at it. Creatomate then:
- *   - splits the transcript per-word (`transcript_split: 'word'`)
- *   - shows one short slot at a time (`transcript_maximum_length`)
- *   - paints the word being spoken in `transcript_color` (yellow)
- *   - timing comes from the audio itself, NOT from a pre-distributed
- *     timeline, so captions always follow the narrator
+ * single text element at it. Creatomate then paints one continuous
+ * caption line, with the currently-spoken word highlighted in yellow.
  *
- * Why this replaces the old per-segment text loop:
- *   The previous implementation chunked the script into 7-word slots
- *   and distributed them evenly across the timeline. The TTS audio
- *   does not pace itself evenly, so captions drifted out of sync with
- *   the voiceover. The transcript_source path delegates timing to
- *   Creatomate's transcriber, which is word-accurate.
+ * Push #146 — fixes the "two-caption" bug reported in the screenshot.
+ *
+ * The previous configuration was:
+ *   transcript_split: 'word'
+ *   transcript_placement: 'animate'
+ *   transcript_maximum_length: 18
+ *   stroke_width: 4
+ *
+ * What that produced on screen:
+ *   - 'word' + max-length 18 chunks the transcript into ~3-word slots
+ *     ("as astonishing 2.5"), and 'animate' slid each slot in. The
+ *     visible chunk never matched the narrator's current word because
+ *     the chunk boundary was character-based, not phoneme-based.
+ *   - stroke_width 4 around a white fill rendered most of the glyph
+ *     mass as black. Combined with the moving yellow chunk underneath,
+ *     viewers perceived TWO caption layers — a black sentence on top
+ *     and a wrong yellow snippet below.
+ *
+ * The new configuration:
+ *   transcript_split:    'line'   — one readable line per visible slot
+ *   transcript_placement:'static' — no slide animation; the line is
+ *                                   replaced cleanly when it advances
+ *   transcript_maximum_length: 42 — ~7 words per line, fits the 86% width
+ *   stroke_width: 2                — thinner outline so the white fill
+ *                                   reads as white, not as a black mass
+ *
+ * What the viewer now sees: ONE single white caption line at a time, the
+ * active word painted yellow, perfectly synced to the TTS audio
+ * (Creatomate transcribes the audio so timing is word-accurate).
  *
  * The text element's `duration` stops before the CTA tail so the
  * karaoke line never overlaps the final shortsforgeai.com call-to-action.
@@ -340,16 +359,17 @@ function buildKaraokeCaptionElement(totalDuration: number): CreatomateElement {
     font_size: 64,
     font_weight: '800',
     fill_color: '#ffffff',
-    stroke_color: 'rgba(0,0,0,0.95)',
-    stroke_width: 4,
+    stroke_color: 'rgba(0,0,0,0.9)',
+    stroke_width: 2,
     transcript_source: VOICEOVER_TRACK_NAME,
     transcript_effect: 'karaoke',
-    transcript_split: 'word',
-    transcript_placement: 'animate',
+    transcript_split: 'line',
+    transcript_placement: 'static',
     transcript_color: HIGHLIGHT_COLOR,
-    // ~18 characters per slot ≈ 2-3 short words on screen at once;
-    // tight enough to read fast, wide enough not to flicker constantly.
-    transcript_maximum_length: 18,
+    // ~42 characters per line ≈ 6-7 readable words at the 86% width;
+    // wide enough to land on a natural phrase boundary, narrow enough to
+    // never wrap to a second line that could read as a second caption.
+    transcript_maximum_length: 42,
   }
 }
 
