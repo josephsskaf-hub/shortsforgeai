@@ -67,6 +67,11 @@ interface CreatomateElement {
   /** When true, a video clip shorter than its slot loops within the slot
    *  instead of freezing on the last frame / going black. */
   loop?: boolean
+  /** Push #146 — Creatomate transition directive. When set on an element
+   *  placed back-to-back with another element on the same track, the
+   *  renderer crossfades between them for `duration` seconds — overlapping
+   *  the cut so the dark track-1 background can't show through. */
+  transition?: { duration: number; type: string }
   volume?: string
   fill_color?: string
   stroke_color?: string
@@ -289,7 +294,6 @@ export async function uploadVoiceoverToSupabase(userId: string, buffer: Buffer):
   return pub.publicUrl
 }
 
-
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
 }
@@ -434,9 +438,19 @@ export function buildCreatomateSource({
   //   3. Structured per-segment logging — we print the assembled
   //      timeline so any future "scene N went black" report can be
   //      traced from deploy logs alone.
+  //
+  // Push #146 — even at perfectly aligned boundaries, the hard cut from
+  // one source to the next can show a single frame of the dark track-1
+  // background while the next decoder primes. `transition: fade` (300ms)
+  // on every clip after the first crossfades the cut, so there is no
+  // instant at which neither clip is on screen. Time/duration stay
+  // back-to-back (time + duration === next time) — the transition
+  // directive overlaps them visually without shifting the timeline math.
+  //
   // Track 1 still paints a dark background as a defense-in-depth safety
   // net for catastrophic decode failure on Creatomate's side.
   const CLIP_LEN = 10
+  const TRANSITION_DURATION = 0.3
   let cursor = 0
   let i = 0
   const videoSegments: CreatomateElement[] = []
@@ -457,6 +471,9 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
+    }
+    if (i > 0) {
+      segment.transition = { duration: TRANSITION_DURATION, type: 'fade' }
     }
     videoSegments.push(segment)
     elements.push(segment)

@@ -185,12 +185,22 @@ export async function POST(req: NextRequest) {
     })
 
     // Tracks 2-3: stock video clip + dark overlay (if real URL available)
+    //
+    // Push #146 — crossfade between consecutive clips on track 2. Without
+    // a transition the cut from clip N to clip N+1 can flash through to
+    // the dark track-1 background (visible as a 1-2s black frame). With
+    // `transition: fade` the renderer overlaps the cut, and `loop: true`
+    // covers any case where the source's intrinsic duration is shorter
+    // than the assigned `dur` (would otherwise paint black at the tail).
+    // Time/duration stay back-to-back so the timeline math is unchanged.
     let cursor = 0
+    let videoIdx = 0
     scenes.forEach((scene, i) => {
       const dur = durations[i]
       const url = findStockUrl(stockClips, scene.sceneNumber)
       if (url) {
-        elements.push({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const clip: any = {
           type: 'video',
           track: 2,
           time: cursor,
@@ -202,7 +212,12 @@ export async function POST(req: NextRequest) {
           width: '100%',
           height: '100%',
           volume: '0%',
-        })
+          loop: true,
+        }
+        if (videoIdx > 0) {
+          clip.transition = { duration: 0.3, type: 'fade' }
+        }
+        elements.push(clip)
         elements.push({
           type: 'shape',
           track: 3,
@@ -214,6 +229,7 @@ export async function POST(req: NextRequest) {
           height: '100%',
           fill_color: 'rgba(0,0,0,0.55)',
         })
+        videoIdx += 1
       }
       cursor += dur
     })
