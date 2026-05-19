@@ -137,9 +137,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         const sv: Record<string, string> = {}
         const pv: Record<string, string> = {}
         SHOWCASE_IDS.forEach((id, i) => { if (clips[id]) sv[`${i}`] = clips[id] as string })
-        if (clips['finance']) pv['finance'] = clips['finance'] as string
-        if (clips['mystery']) pv['mystery'] = clips['mystery'] as string
-        if (clips['travel'])  pv['travel']  = clips['travel']  as string
+        if (clips['finance'])    pv['finance']    = clips['finance']    as string
+        if (clips['mystery'])    pv['mystery']    = clips['mystery']    as string
+        if (clips['travel'])     pv['travel']     = clips['travel']     as string
+        if (clips['psychology']) pv['psychology'] = clips['psychology'] as string
         setShowcaseVideos(sv)
         setPhoneVideos(pv)
       })
@@ -1137,14 +1138,42 @@ function HeroVideo() {
 // container, with a gradient overlay and caption, matching how Pictory /
 // InVideo showcase their output. Isolated component to keep JSX clean.
 function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number; phoneVideos?: Record<string, string> }) {
+  // Push #150 — hardcoded Pexels portrait fallbacks so the cards never render
+  // black when the /api/showcase-clips lookup returns no portrait match for a
+  // given query (finance and history were the consistent offenders).
   const cards = [
-    { src: phoneVideos['finance'] ?? '', label: '📈 Money Facts Short', accent: '#34D399', tag: 'Finance' },
-    { src: phoneVideos['mystery'] ?? '', label: '🏛️ History Mystery Short', accent: '#A78BFA', tag: 'History' },
-    { src: phoneVideos['travel']  ?? '', label: '🌍 Travel Facts Short', accent: '#22D3EE', tag: 'Travel' },
+    {
+      src: phoneVideos['finance'] ?? 'https://videos.pexels.com/video-files/3163534/3163534-uhd_1440_2560_25fps.mp4',
+      label: '📈 Money Facts Short',
+      accent: '#34D399',
+      tag: 'Finance',
+    },
+    {
+      src: phoneVideos['mystery'] ?? 'https://videos.pexels.com/video-files/5466163/5466163-uhd_1440_2560_25fps.mp4',
+      label: '🏛️ History Mystery Short',
+      accent: '#A78BFA',
+      tag: 'History',
+    },
+    {
+      src: phoneVideos['travel'] ?? 'https://videos.pexels.com/video-files/2231346/2231346-hd_1080_1920_24fps.mp4',
+      label: '🌍 Travel Facts Short',
+      accent: '#22D3EE',
+      tag: 'Travel',
+    },
+    {
+      // Push #151 — psychology had been reusing the finance URL; swap in a
+      // distinct verified-working Cloudinary clip (lifestyle/people, tagged
+      // "psychology" in lib/stockLibrary.ts) so each card plays unique
+      // footage. object-cover crops it cleanly into the 9:16 phone frame.
+      src: phoneVideos['psychology'] ?? 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',
+      label: '💰 Money Psychology Short',
+      accent: '#F59E0B',
+      tag: 'Psychology',
+    },
   ]
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-3xl mx-auto items-start">
         {cards.map((card) => (
           <div key={card.src} className="flex flex-col items-center gap-3">
             <div
