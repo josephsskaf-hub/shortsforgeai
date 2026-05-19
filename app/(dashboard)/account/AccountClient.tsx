@@ -287,7 +287,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                     textDecoration: 'none',
                   }}
                 >
-                  🎬 Upgrade — 50% off first month
+                  🎬 Upgrade to Pro
                 </Link>
               )}
             </div>

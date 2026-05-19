@@ -7,9 +7,10 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+// Push #175 — use checkout GET route instead of hardcoded Stripe links.
 const STRIPE_LINKS = {
-  basic: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
-  pro: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
+  basic: '/api/stripe/checkout?tier=basic',
+  pro: '/api/stripe/checkout?tier=pro',
 }
 
 function trackEvent(name: string) {
@@ -46,12 +47,11 @@ export default function CheckoutCancelledPage() {
           <p style={{ marginTop: 10, fontSize: '0.88rem', color: '#93c5fd', fontWeight: 700 }}>Redirecting to pricing in {countdown}…</p>
         </div>
         <div style={{ marginTop: 22, background: 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(124,58,237,.06))', border: '1px solid rgba(37,99,235,.30)', borderRadius: 16, padding: 18 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.14em', color: '#93C5FD', textTransform: 'uppercase', marginBottom: 8 }}>Launch offer still available</div>
           <p style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: 700, margin: 0 }}>Still want to create more videos?</p>
-          <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: '4px 0 14px', lineHeight: 1.5 }}>50% off your first month — failed generations never consume credits.</p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: '4px 0 14px', lineHeight: 1.5 }}>Failed generations never consume credits. Start a plan and keep creating.</p>
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-            <a href={STRIPE_LINKS.basic} onClick={() => trackEvent('basic_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>Try Basic — $4.50 →</a>
-            <a href={STRIPE_LINKS.pro} onClick={() => trackEvent('pro_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>Try Pro — $9.50 →</a>
+            <a href={STRIPE_LINKS.basic} onClick={() => trackEvent('basic_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>Basic — $9.90/mo →</a>
+            <a href={STRIPE_LINKS.pro} onClick={() => trackEvent('pro_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>Pro — $19.90/mo →</a>
           </div>
         </div>
         <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: '0.85rem' }}>

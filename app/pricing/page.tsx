@@ -12,32 +12,6 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-const COUNTDOWN_START_SECONDS = 23 * 3600 + 47 * 60 + 12
-
-function formatCountdown(totalSeconds: number): string {
-  const safe = Math.max(0, totalSeconds)
-  const h = Math.floor(safe / 3600)
-  const m = Math.floor((safe % 3600) / 60)
-  const s = safe % 60
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-// Push #168 — dual-currency: USD for non-BR, BRL for BR (auto-detected via /api/geo).
-const PRICING_DATA = {
-  usd: {
-    basic: { price: '$2.45', priceSub: 'first month, then $4.90/mo' },
-    pro:   { price: '$4.95', priceSub: 'first month, then $9.90/mo' },
-    stickyBasic: 'Basic — $4.90/mo',
-    stickyPro:   'Pro — $9.90/mo 🔥',
-  },
-  brl: {
-    basic: { price: 'R$12,45', priceSub: 'first month, then R$24,90/mo' },
-    pro:   { price: 'R$24,95', priceSub: 'first month, then R$49,90/mo' },
-    stickyBasic: 'Basic — R$24,90/mo',
-    stickyPro:   'Pro — R$49,90/mo 🔥',
-  },
-}
-
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
 const FAQS: { q: string; a: string }[] = [
@@ -63,8 +37,8 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-function buildPricing(currency: 'usd' | 'brl') {
-  const d = PRICING_DATA[currency]
+// Push #175 — flat pricing, no first-month discount.
+function buildPricing() {
   return [
     {
       tier: 'free',
@@ -81,8 +55,8 @@ function buildPricing(currency: 'usd' | 'brl') {
     {
       tier: 'basic',
       name: 'Basic',
-      price: d.basic.price,
-      priceSub: d.basic.priceSub,
+      price: '$9.90',
+      priceSub: '/ month',
       features: [
         '50 Fast Mode videos/month',
         'Pexels footage + AI voiceover',
@@ -90,13 +64,13 @@ function buildPricing(currency: 'usd' | 'brl') {
         'Download MP4',
         'My Videos history',
       ],
-      cta: { label: 'Get Started', href: '#checkout' },
+      cta: { label: 'Get Basic', href: '#checkout' },
     },
     {
       tier: 'pro',
       name: 'Pro',
-      price: d.pro.price,
-      priceSub: d.pro.priceSub,
+      price: '$19.90',
+      priceSub: '/ month',
       features: [
         '100 Fast Mode videos/month',
         '1 Cinematic (Runway AI) video/month',
@@ -105,7 +79,7 @@ function buildPricing(currency: 'usd' | 'brl') {
         'Download MP4',
         'My Videos history',
       ],
-      cta: { label: 'Get Started', href: '#checkout' },
+      cta: { label: 'Get Pro', href: '#checkout' },
       highlight: true,
       popular: true,
     },
@@ -130,25 +104,9 @@ function trackPricingEvent(name: string): void {
 }
 
 export default function PricingPage() {
-  // Push #077 — pricing card selected state. Pro is selected by default
-  // (Recommended). Card click toggles selection; CTA used to drive a
-  // hard-coded Stripe payment link, but Push #114 routes it through
-  // /api/stripe/checkout so BR users land on a BRL session instead of a
-  // USD link that their card refuses.
-  const [currency, setCurrency] = useState<'usd' | 'brl'>('usd')
+  // Push #077 — pricing card selected state. Pro is selected by default.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
-  useEffect(() => {
-    fetch('/api/geo')
-      .then((r) => r.json())
-      .then((d: { currency?: string }) => {
-        if (d.currency === 'brl' || d.currency === 'usd') setCurrency(d.currency)
-      })
-      .catch(() => {})
-  }, [])
-
-  // Push #097 — live countdown for the launch-offer banner.
-  const [countdown, setCountdown] = useState<number>(COUNTDOWN_START_SECONDS)
   // Push #099 — open FAQ index for the accordion (null = all collapsed). First
   // question is open by default so the section reads as scannable, not empty.
   const [openFaq, setOpenFaq] = useState<number | null>(0)
@@ -187,13 +145,6 @@ export default function PricingPage() {
     const err = params.get('checkout_error')
     if (err) setCheckoutError(decodeURIComponent(err))
     if (params.get('already_subscribed') === '1') setAlreadySubscribed(true)
-  }, [])
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setCountdown((prev) => (prev <= 1 ? COUNTDOWN_START_SECONDS : prev - 1))
-    }, 1000)
-    return () => clearInterval(id)
   }, [])
 
   // Push #117 — show the sticky mobile CTA only after the user scrolls
@@ -253,30 +204,6 @@ export default function PricingPage() {
 
       {/* ───────── Pricing ───────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-16 sm:px-6 sm:pt-16">
-        {/* Push #097 — Launch-offer banner with live countdown */}
-        <div
-          className="mx-auto mb-8 flex max-w-2xl flex-col items-center justify-center gap-3 rounded-2xl border border-[#FBBF24]/40 px-5 py-3 text-center sm:flex-row"
-          style={{
-            background: 'linear-gradient(135deg, rgba(251,191,36,.14), rgba(239,68,68,.10))',
-            boxShadow: '0 8px 32px rgba(251,191,36,.12)',
-          }}
-        >
-          <div className="text-[14px] font-black tracking-tight text-[#FBBF24]">
-            🔥 Launch Offer — 50% off first month
-          </div>
-          <div
-            className="flex items-center gap-2 rounded-lg border border-[#FBBF24]/30 px-3 py-1.5"
-            style={{ background: 'rgba(0,0,0,.45)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-[.08em] text-[#94A3B8]">
-              Ends in
-            </span>
-            <span className="text-[14px] font-black tracking-wider text-white">
-              {formatCountdown(countdown)}
-            </span>
-          </div>
-        </div>
-
         <div className="mb-10 text-center">
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             Pricing
@@ -285,7 +212,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two paid plans, 50% off the first month. Failed generations never consume credits.
+            Two paid plans, flat monthly price. Failed generations never consume credits.
           </p>
         </div>
 
@@ -374,7 +301,7 @@ export default function PricingPage() {
         </a>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {buildPricing(currency).map((p) => {
+          {buildPricing().map((p) => {
             const isPaid = p.tier === 'basic' || p.tier === 'pro'
             const isSelected = isPaid && selectedPlan === p.tier
             const ctaLabel = isSelected
@@ -821,7 +748,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : PRICING_DATA[currency].stickyBasic}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $9.90/mo'}
           </button>
           <button
             type="button"
@@ -841,7 +768,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : PRICING_DATA[currency].stickyPro}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — $19.90/mo 🔥'}
           </button>
         </div>
       )}

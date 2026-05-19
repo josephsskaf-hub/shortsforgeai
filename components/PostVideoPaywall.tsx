@@ -49,38 +49,13 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   // session is being created.
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
 
-  async function handleBuy(tier: 'basic' | 'pro') {
+  // Push #175 — use direct GET navigation (same fix as PricingCards #173).
+  // Avoids iOS Safari gesture-chain break from async fetch/await and
+  // removes the broken /generate redirect on already-subscribed.
+  function handleBuy(tier: 'basic' | 'pro') {
     setPurchasing(tier)
     trackCheckoutClick(tier)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.status === 401) {
-        // Session expired between generation and click — bounce through
-        // login and come back to /generate.
-        window.location.href = `/login?redirect=${encodeURIComponent('/generate')}`
-        return
-      }
-      if (
-        res.status === 400 &&
-        typeof data?.error === 'string' &&
-        data.error.toLowerCase().includes('already have an active subscription')
-      ) {
-        window.location.href = '/generate'
-        return
-      }
-      if (!res.ok || !data?.url) {
-        setPurchasing(null)
-        return
-      }
-      window.location.href = data.url
-    } catch {
-      setPurchasing(null)
-    }
+    window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
 
   if (dismissed) return null
@@ -122,8 +97,8 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         <PlanCard
           tier="basic"
           name={PLANS.basic.name}
-          price={`${PLANS.basic.priceLabel} first month`}
-          renew={`then ${PLANS.basic.regularPrice}`}
+          price={PLANS.basic.priceLabel}
+          renew={PLANS.basic.periodLabel}
           features={[
             `${PLANS.basic.credits} Fast Mode videos / month`,
             'Email support',
@@ -143,8 +118,8 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         <PlanCard
           tier="pro"
           name={PLANS.pro.name}
-          price={`${PLANS.pro.priceLabel} first month`}
-          renew={`then ${PLANS.pro.regularPrice}`}
+          price={PLANS.pro.priceLabel}
+          renew={PLANS.pro.periodLabel}
           features={[
             `${PLANS.pro.credits} Fast Mode videos / month`,
             '1 Cinematic (Runway AI) video / month',

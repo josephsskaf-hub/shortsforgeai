@@ -786,13 +786,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
             Choose a plan
           </h2>
-          {/* Push #086 — urgency strip just under the headline. The 50%
-              off line ties back to the cyan "first month" copy on each
-              plan card, so this isn't a fake scarcity claim. */}
-          <p className="mx-auto mt-3 max-w-xl text-[14px] font-bold text-[#FBBF24]">
-            🔥 50% off launch pricing — limited time
-          </p>
-          <p className="mx-auto mt-2 max-w-xl text-[14px] text-[#94A3B8]">
+          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
             Start creating AI Shorts with credits. Upgrade when you need more videos.
           </p>
         </div>
@@ -862,7 +856,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   </span>
                 </div>
                 <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
-                  {plan.regularPrice ? `first month, then ${plan.regularPrice}` : 'forever'}
+                  {plan.periodLabel}
                 </div>
                 <ul className="mt-5 mb-6 flex flex-col gap-2.5">
                   {features.map((f) => (
@@ -906,19 +900,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     {ctaLabel} →
                   </a>
                 )}
-                {/* Push #086 — per-tier urgency / value highlight under
-                    each CTA. Costs use first-month math (credits ÷ first
-                    month price) to match the cyan "first month" copy
-                    above and the 50% off launch strip on the headline. */}
+                {/* Push #175 — per-tier value highlight under each CTA. */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
                   {plan.tier === 'free' && 'No credit card required'}
                   {plan.tier === 'basic' && '50 Fast Mode videos/month'}
                   {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic/month'}
                 </p>
-                {/* Push #104 — 7-day trial reassurance under each paid CTA. */}
                 {(plan.tier === 'basic' || plan.tier === 'pro') && (
                   <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
-                    No charge for 7 days
+                    Cancel anytime
                   </p>
                 )}
               </div>
@@ -951,9 +941,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         )}
 
         <p className="mx-auto mt-6 max-w-2xl text-center text-[12px] text-[#94A3B8]">
-          50% off applies to the first month only. Plans renew at the regular monthly price.
-        </p>
-        <p className="mx-auto mt-2 max-w-2xl text-center text-[12px] text-[#94A3B8]">
           Credits are charged only when your final video is successfully generated.
         </p>
       </section>

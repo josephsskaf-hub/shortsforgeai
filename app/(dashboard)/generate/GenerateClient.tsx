@@ -1374,7 +1374,7 @@ export default function GenerateClient() {
 
       {/* Push #103 — sticky low-credits upgrade banner. Sits above every
           other piece of the page so a free user who's about to be locked
-          out always sees the 50% off offer. Hits the existing
+          out sees the upgrade offer. Hits the existing
           /api/stripe/checkout flow via handleUpgradeNow. */}
       {planTier === 'free' && credits !== null && credits <= 1 && (
         <div
@@ -1568,9 +1568,7 @@ export default function GenerateClient() {
               and keep your channel growing on autopilot.
             </p>
             <a
-              href="https://buy.stripe.com/8x214nbF323ddizcF8gjC0o"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/api/stripe/checkout?tier=pro"
               style={{
                 display: 'block',
                 width: '100%',
@@ -1585,7 +1583,7 @@ export default function GenerateClient() {
                 marginBottom: 10,
               }}
             >
-              Upgrade to Pro — $9.50/mo →
+              Upgrade to Pro — $19.90/mo →
             </a>
             <button
               type="button"
@@ -2401,14 +2399,8 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(34,197,94,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — Just $4.50/mo →'}
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $9.90/mo →'}
                   </button>
-                  <p
-                    className="text-[11px] font-bold text-center mt-2.5"
-                    style={{ color: '#FBBF24' }}
-                  >
-                    🔥 50% off your first month — Launch offer
-                  </p>
                 </div>
               )}
 
@@ -3545,7 +3537,7 @@ function UpsellSection({
             letterSpacing: '-0.01em',
           }}
         >
-          Get 100 credits/month — post every day for $9.50
+          Get 100 credits/month — post every day for $19.90/mo
         </div>
         <ul
           style={{
@@ -3577,7 +3569,7 @@ function UpsellSection({
             boxShadow: '0 6px 22px rgba(251,191,36,.28)',
           }}
         >
-          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Pro — $9.50/mo first month →'}
+          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Pro — $19.90/mo →'}
         </button>
         <div
           style={{
@@ -3588,7 +3580,7 @@ function UpsellSection({
             fontWeight: 600,
           }}
         >
-          50% off first month · Cancel anytime · 7-day guarantee
+          Cancel anytime
         </div>
       </div>
 
@@ -3973,7 +3965,7 @@ function ModeSelector({
               className="inline-flex items-center gap-1 text-xs font-bold mt-2"
               style={{ color: '#d8b4fe', textDecoration: 'none' }}
             >
-              🔓 Upgrade to Pro · $9.50/month →
+              🔓 Upgrade to Pro · $19.90/month →
             </a>
           </div>
         )}
@@ -4145,7 +4137,7 @@ function UpgradeModal({
             marginBottom: 24,
           }}
         >
-          Upgrade to Basic for 50 videos/month — just $4.50/mo
+          Upgrade to Basic for 50 videos/month — $9.90/mo
         </p>
         <button
           type="button"
@@ -4322,7 +4314,7 @@ function UrgencyModal({
             marginBottom: 16,
           }}
         >
-          {expired ? '⚡ Offer expired — still just $4.50/mo' : '⚡ Last chance — 50% off expires in:'}
+          {'⚡ Upgrade and keep creating'}
         </h2>
         {!expired && (
           <div
@@ -4350,8 +4342,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          Start a 7-day free trial — no charge until day 8.
-          Then 50 videos/month for just <strong style={{ color: '#34d399' }}>$4.50</strong> your first month.
+          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$9.90/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -4373,11 +4364,9 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Claim 50% Off — Start Trial →'}
+          {loading ? 'Opening checkout…' : 'Get Basic — $9.90/mo →'}
         </button>
-        {/* Push #113 — BRL option. R$24,50 = 50% off the R$49 list price,
-            mirroring the USD "$4.50 (50% off $9)" framing on the primary
-            CTA. */}
+        {/* Push #113 — BRL option for BR users. */}
         <button
           type="button"
           disabled={loading}
@@ -4399,7 +4388,7 @@ function UrgencyModal({
             gap: 6,
           }}
         >
-          🇧🇷 Pagar em R$ 24,50/mês (Brasil)
+          🇧🇷 Pagar em R$ 49,90/mês (Brasil)
         </button>
         <p
           style={{
@@ -4409,7 +4398,7 @@ function UrgencyModal({
             fontWeight: 600,
           }}
         >
-          7-day free trial · Cancel anytime · No charge today
+          Cancel anytime
         </p>
       </div>
     </div>

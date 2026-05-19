@@ -107,7 +107,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             cursor: 'pointer',
           }}
         >
-          Launch offer — 50% off first month →
+          Upgrade Now →
         </button>
 
         <button

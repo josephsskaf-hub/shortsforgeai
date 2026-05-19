@@ -1,20 +1,20 @@
-// Push #078 — single source of truth for plan pricing, credits, and Stripe
-// payment links. All marketing surfaces (homepage, /pricing, paywall card,
-// in-flow upgrade cards) read from this so copy can't drift between pages.
+// Push #175 — single source of truth for plan pricing.
+// Basic = $9.90/month  (50 Fast Mode videos)
+// Pro   = $19.90/month (100 Fast Mode videos + 1 Cinematic/month)
 //
-// DO NOT change Stripe URLs or pricing values without also updating the
-// matching Stripe products. Numbers below mirror what Stripe has on file.
+// All checkout buttons on every surface link to /api/stripe/checkout?tier=...
+// The server route handles currency detection (BRL for BR users) and creates
+// the Stripe session. No Stripe payment-link URLs live here.
 
 export type PlanTier = 'free' | 'basic' | 'pro'
 
 export interface PlanConfig {
   tier: PlanTier
   name: string
-  price: number
-  priceLabel: string
-  regularPrice?: string
+  price: number         // numeric, for logic comparisons
+  priceLabel: string    // display string shown in UI
+  periodLabel: string   // e.g. "/ month" or "forever"
   credits: number
-  videoCredits?: number
   cta: string
   href: string
   recommended?: boolean
@@ -26,6 +26,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     name: 'Free',
     price: 0,
     priceLabel: '$0',
+    periodLabel: 'forever',
     credits: 2,
     cta: 'Start Free',
     href: '/signup',
@@ -33,26 +34,22 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   basic: {
     tier: 'basic',
     name: 'Basic',
-    price: 4.5,
-    priceLabel: '$4.50',
-    regularPrice: '$9/month',
+    price: 9.90,
+    priceLabel: '$9.90',
+    periodLabel: '/ month',
     credits: 50,
-    videoCredits: 1,
-    // Push #104 — Stripe checkout now sets a 7-day trial, so we lead with
-    // the trial framing on every paid-tier surface.
-    cta: 'Start Free Trial',
-    href: 'https://buy.stripe.com/fZu8wP24tePZbareNggjC0n',
+    cta: 'Get Basic',
+    href: '/api/stripe/checkout?tier=basic',
   },
   pro: {
     tier: 'pro',
     name: 'Pro',
-    price: 9.5,
-    priceLabel: '$9.50',
-    regularPrice: '$19/month',
+    price: 19.90,
+    priceLabel: '$19.90',
+    periodLabel: '/ month',
     credits: 100,
-    videoCredits: 1,
-    cta: 'Start Free Trial',
-    href: 'https://buy.stripe.com/8x214nbF323ddizcF8gjC0o',
+    cta: 'Get Pro',
+    href: '/api/stripe/checkout?tier=pro',
     recommended: true,
   },
 }

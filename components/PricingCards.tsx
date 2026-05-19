@@ -77,7 +77,7 @@ export default function PricingCards() {
           className="font-black tracking-tight"
           style={{ fontSize: '1.35rem', color: 'var(--text)' }}
         >
-          Choose your plan — launch offer 50% off
+          Choose your plan
         </h2>
       </div>
 
@@ -148,8 +148,7 @@ export default function PricingCards() {
           tier="basic"
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
-          period="first month"
-          renewNote={`then ${PLANS.basic.regularPrice}`}
+          period="/ month"
           tagline={`${PLANS.basic.credits} Fast Mode videos/month.`}
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
@@ -170,8 +169,7 @@ export default function PricingCards() {
           tier="pro"
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
-          period="first month"
-          renewNote={`then ${PLANS.pro.regularPrice}`}
+          period="/ month"
           tagline={`${PLANS.pro.credits} Fast Mode + 1 Cinematic/month.`}
           features={PRO_FEATURES}
           badge="Recommended"

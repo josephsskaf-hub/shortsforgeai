@@ -284,8 +284,8 @@ export default function StartPage() {
                 a: 'No. ShortsForgeAI generates visuals, voiceover, and subtitles from a topic you type. 100% faceless.',
               },
               {
-                q: 'What happens after the free trial?',
-                a: 'You’ll be charged $4.50 for month 1 (50% off), then $9/month. Cancel anytime.',
+                q: ‘What happens after the free trial?’,
+                a: ‘Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.’,
               },
               {
                 q: 'How long does it take?',
@@ -386,16 +386,6 @@ export default function StartPage() {
             >
               <span
                 style={{
-                  fontSize: '1rem',
-                  color: '#64748B',
-                  textDecoration: 'line-through',
-                  fontWeight: 700,
-                }}
-              >
-                $9
-              </span>
-              <span
-                style={{
                   fontSize: '2.4rem',
                   fontWeight: 900,
                   letterSpacing: '-0.02em',
@@ -403,7 +393,7 @@ export default function StartPage() {
                   lineHeight: 1,
                 }}
               >
-                $4.50
+                $9.90
               </span>
             </div>
             <div
@@ -414,7 +404,7 @@ export default function StartPage() {
                 marginBottom: 18,
               }}
             >
-              First month — then $9/month
+              / month
             </div>
             <Link
               href="/signup?plan=basic"
