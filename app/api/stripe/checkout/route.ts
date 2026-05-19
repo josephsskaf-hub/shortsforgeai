@@ -198,10 +198,7 @@ export async function POST(req: NextRequest) {
       cancel_url: `${appUrl}/checkout/cancelled`,
       metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
       subscription_data: {
-        // Push #104 — 7-day free trial so users can try the paid tier
-        // before any charge hits the card. The LAUNCH50 coupon still
-        // applies once the trial ends, so the first real bill is 50% off.
-        trial_period_days: 7,
+        // Push #157 — removed free trial; charge starts immediately on signup.
         metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
       },
     }
@@ -260,3 +257,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 })
   }
 }
+                                                                                                                                                                      
