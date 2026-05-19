@@ -68,8 +68,8 @@ const PRICING = [
   {
     tier: 'basic',
     name: 'Basic',
-    price: '$2.45',
-    priceSub: 'first month, then $4.90/mo',
+    price: 'R$4,50',
+    priceSub: 'first month, then R$9/mo',
     features: [
       '50 Fast Mode videos/month',
       'Pexels footage + AI voiceover',
@@ -82,8 +82,8 @@ const PRICING = [
   {
     tier: 'pro',
     name: 'Pro',
-    price: '$4.95',
-    priceSub: 'first month, then $9.90/mo',
+    price: 'R$9,50',
+    priceSub: 'first month, then R$19/mo',
     features: [
       '100 Fast Mode videos/month',
       '1 Cinematic (Runway AI) video/month',
@@ -792,7 +792,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.90/mo'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — R$9/mo'}
           </button>
           <button
             type="button"
@@ -812,7 +812,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.90/mo 🔥'}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — R$19/mo 🔥'}
           </button>
         </div>
       )}
@@ -844,3 +844,4 @@ export default function PricingPage() {
     </div>
   )
 }
+                                                                                                                                                                          
