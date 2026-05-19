@@ -68,8 +68,8 @@ const PRICING = [
   {
     tier: 'basic',
     name: 'Basic',
-    price: '$4.50',
-    priceSub: 'first month, then $9/mo',
+    price: '$2.45',
+    priceSub: 'first month, then $4.90/mo',
     features: [
       '50 Fast Mode videos/month',
       'Pexels footage + AI voiceover',
@@ -77,15 +77,13 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    // Push #104 — Stripe checkout adds a 7-day trial so we frame the CTA
-    // around the trial entry, not the discounted first-month price.
-    cta: { label: 'Start Free Trial', href: STRIPE_LINKS.basic },
+    cta: { label: 'Get Started', href: STRIPE_LINKS.basic },
   },
   {
     tier: 'pro',
     name: 'Pro',
-    price: '$9.50',
-    priceSub: 'first month, then $19/mo',
+    price: '$4.95',
+    priceSub: 'first month, then $9.90/mo',
     features: [
       '100 Fast Mode videos/month',
       '1 Cinematic (Runway AI) video/month',
@@ -94,7 +92,7 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    cta: { label: 'Start Free Trial', href: STRIPE_LINKS.pro },
+    cta: { label: 'Get Started', href: STRIPE_LINKS.pro },
     highlight: true,
     popular: true,
   },
@@ -794,7 +792,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.50/mo'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.90/mo'}
           </button>
           <button
             type="button"
@@ -814,7 +812,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.50/mo 🔥'}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.90/mo 🔥'}
           </button>
         </div>
       )}
