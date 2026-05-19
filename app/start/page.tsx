@@ -292,8 +292,8 @@ export default function StartPage() {
                 a: 'Under 60 seconds in Fast Mode. Type topic → Generate → Download.',
               },
               {
-                q: 'What’s in the free plan?',
-                a: '2 full videos, no credit card required. Upgrade only when you’re ready.',
+                q: "What’s in the free plan?",
+                a: "2 full videos, no credit card required. Upgrade only when you’re ready.",
               },
             ].map((item) => (
               <details
