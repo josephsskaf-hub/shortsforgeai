@@ -169,44 +169,25 @@ export default function PricingPage() {
   // scrolling back up to the cards.
   const [showStickyCta, setShowStickyCta] = useState<boolean>(false)
 
-  async function handleBuy(tier: 'basic' | 'pro') {
-    setCheckoutError(null)
+  // Push #173 — iOS Safari blocks window.location.href inside async/await
+  // (user gesture chain is severed after the first await). Fix: navigate
+  // directly to the GET checkout endpoint which does a server-side 302
+  // redirect to Stripe. No fetch(), no await, no gesture breakage.
+  function handleBuy(tier: 'basic' | 'pro') {
     setPurchasing(tier)
     trackPricingEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      const data = await res.json().catch(() => ({}))
-      // Guest visitor — /api/stripe/checkout returns 401 without a
-      // Supabase session. Push #116 — route through /signup (not /login)
-      // because new users convert better starting from the create-account
-      // flow than from a login form they have no creds for.
-      if (res.status === 401) {
-        window.location.href = `/signup?redirect=${encodeURIComponent('/pricing')}`
-        return
-      }
-      // Already subscribed — show an info banner explaining the situation
-      // instead of silently redirecting (which confused users with 0 credits
-      // into thinking their purchase failed).
-      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
-        setAlreadySubscribed(true)
-        setPurchasing(null)
-        return
-      }
-      if (!res.ok || !data?.url) {
-        setCheckoutError(data?.error ?? 'Could not start checkout. Please try again.')
-        setPurchasing(null)
-        return
-      }
-      window.location.href = data.url
-    } catch {
-      setCheckoutError('Could not start checkout. Please try again.')
-      setPurchasing(null)
-    }
+    window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
+
+  // Push #173 — read checkout_error / already_subscribed from URL params
+  // set by the GET checkout handler when it can't create a Stripe session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const err = params.get('checkout_error')
+    if (err) setCheckoutError(decodeURIComponent(err))
+    if (params.get('already_subscribed') === '1') setAlreadySubscribed(true)
+  }, [])
 
   useEffect(() => {
     const id = setInterval(() => {

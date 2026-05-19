@@ -55,58 +55,13 @@ export default function PricingCards() {
   // click navigates to Stripe.
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
 
-  async function handleBuy(tier: 'basic' | 'pro') {
-    setError(null)
+  // Push #173 — use direct GET navigation to bypass iOS Safari async block.
+  // The server-side GET handler creates the Stripe session and issues a 302
+  // redirect, so no fetch/await is needed here and the user gesture is
+  // preserved across all browsers including mobile Safari.
+  function handleBuy(tier: 'basic' | 'pro') {
     setPurchasing(tier)
-    // Push #061 — fire-and-forget tracking before redirect. Both the
-    // legacy name (kept for /admin/metrics) and the new spec name are
-    // emitted so the funnel + metrics dashboards stay in sync.
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_name: tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked',
-          name: tier === 'basic' ? 'checkout_basic_click' : 'checkout_pro_click',
-        }),
-        keepalive: true,
-      }).catch(() => {})
-    } catch {
-      // ignore
-    }
-
-    // Push #114 — server-side checkout so x-vercel-ip-country can route
-    // BR users into BRL pricing.
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
-      })
-      const data = await res.json().catch(() => ({}))
-      // Session timed out / not signed in — bounce through /login and
-      // come back to /generate (this card lives on /generate).
-      if (res.status === 401) {
-        window.location.href = `/login?redirect=${encodeURIComponent('/generate')}`
-        return
-      }
-      // Already subscribed — show an info banner instead of silently
-      // redirecting (confused users with 0 credits into thinking purchase failed).
-      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
-        setAlreadySubscribed(true)
-        setPurchasing(null)
-        return
-      }
-      if (!res.ok || !data?.url) {
-        setError(data?.error ?? 'Could not start checkout. Please try again.')
-        setPurchasing(null)
-        return
-      }
-      window.location.href = data.url
-    } catch {
-      setError('Could not start checkout. Please try again.')
-      setPurchasing(null)
-    }
+    window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
 
   return (

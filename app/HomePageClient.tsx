@@ -281,48 +281,18 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     }
   }
 
-  async function handleStartPlan(tier: 'basic' | 'pro') {
+  // Push #173 — iOS Safari blocks window.location.href changes inside
+  // async/await (user gesture chain severed after first await). Fix: navigate
+  // directly to the GET checkout endpoint which does a server-side 302 to
+  // Stripe — no fetch, no await, no gesture breakage on any mobile browser.
+  function handleStartPlan(tier: 'basic' | 'pro') {
     trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
-    setCheckoutError(null)
-
-    // Guests can't be linked to a Stripe customer with a supabase_user_id yet,
-    // so the webhook would have no one to credit. Route them through login first.
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent('/pricing')}`)
       return
     }
-
     setCheckoutTier(tier)
-    try {
-      // Push #111 — BR locales bill in BRL with boleto fallback so card
-      // rejections (USD-on-BR-card) stop killing the upgrade flow.
-      const currency =
-        typeof navigator !== 'undefined' && navigator.language?.startsWith('pt')
-          ? 'brl'
-          : 'usd'
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier, currency }),
-      })
-      const data = await res.json().catch(() => ({}))
-      // Push #171 — already subscribed: show friendly banner instead of
-      // a red error (which confused users into thinking checkout failed).
-      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
-        setAlreadySubscribed(true)
-        setCheckoutTier(null)
-        return
-      }
-      if (!res.ok || !data?.url) {
-        setCheckoutError(data?.error ?? 'Could not start checkout. Please try again.')
-        setCheckoutTier(null)
-        return
-      }
-      window.location.assign(data.url)
-    } catch {
-      setCheckoutError('Network error. Please try again.')
-      setCheckoutTier(null)
-    }
+    window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
 
   return (

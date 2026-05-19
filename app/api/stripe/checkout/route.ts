@@ -33,6 +33,184 @@ const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
 
 const LAUNCH_COUPON = 'LAUNCH50'
 
+// Push #173 — GET handler for server-side redirect checkout.
+// iOS Safari blocks window.location.href changes that occur inside async/await
+// (the user gesture chain is severed after the first await). By converting to a
+// GET request + server-side 302 redirect, the browser handles the navigation
+// natively and iOS Safari lets it through without any popup-blocker interference.
+// Client buttons now just set window.location.href = '/api/stripe/checkout?tier=...'
+// instead of doing a fetch().
+export async function GET(req: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+
+  function redirectError(msg: string) {
+    return NextResponse.redirect(
+      `${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`
+    )
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout GET] STRIPE_SECRET_KEY is not set')
+    return redirectError('Payment service is not configured. Please contact support.')
+  }
+
+  const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
+  const tier: Tier = tierParam === 'pro' ? 'pro' : 'basic'
+  const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+  const currency: Currency = country === 'BR' ? 'brl' : 'usd'
+  const plan = TIERS[tier]
+  const unitAmount = TIER_PRICES[tier][currency]
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.redirect(
+      `${appUrl}/signup?redirect=${encodeURIComponent('/pricing')}`
+    )
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, stripe_customer_id, is_pro, stripe_subscription_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError && profileError.code !== 'PGRST116') {
+    console.error('[stripe/checkout GET] Profile fetch error:', profileError.message, profileError.code)
+  }
+
+  if (profile?.is_pro) {
+    const subId = profile.stripe_subscription_id as string | null
+    let isActuallyActive = false
+    if (subId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId)
+        isActuallyActive = sub.status === 'active' || sub.status === 'trialing'
+      } catch (err) {
+        console.warn('[stripe/checkout GET] could not verify sub status, allowing checkout:', subId, err)
+      }
+    }
+    if (isActuallyActive) {
+      return NextResponse.redirect(`${appUrl}/pricing?already_subscribed=1`)
+    }
+    console.log('[stripe/checkout GET] stale is_pro cleared for user:', user.id, 'sub:', subId)
+    await supabase
+      .from('profiles')
+      .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
+      .eq('id', user.id)
+  }
+
+  let customerId = profile?.stripe_customer_id
+  if (!customerId) {
+    try {
+      const customer = await stripe.customers.create({
+        email: profile?.email ?? user.email ?? '',
+        metadata: { supabase_user_id: user.id },
+      })
+      customerId = customer.id
+      await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
+    } catch (customerErr) {
+      const msg = customerErr instanceof Error ? customerErr.message : String(customerErr)
+      console.error('[stripe/checkout GET] Failed to create Stripe customer:', msg)
+      return redirectError('Failed to set up payment. Please try again.')
+    }
+  }
+
+  let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
+  let allowPromotionCodes = false
+  try {
+    await stripe.coupons.retrieve(LAUNCH_COUPON)
+    discounts = [{ coupon: LAUNCH_COUPON }]
+  } catch {
+    try {
+      await stripe.coupons.create({
+        id: LAUNCH_COUPON,
+        percent_off: 50,
+        duration: 'once',
+        name: '50% off first month',
+      })
+      discounts = [{ coupon: LAUNCH_COUPON }]
+    } catch (createErr) {
+      const stripeErr = createErr as { code?: string; message?: string }
+      if (stripeErr?.code === 'resource_already_exists') {
+        discounts = [{ coupon: LAUNCH_COUPON }]
+      } else {
+        console.error('[stripe/checkout GET] LAUNCH50 create failed:', stripeErr?.code, stripeErr?.message)
+        allowPromotionCodes = true
+      }
+    }
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    customer: customerId,
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency,
+          product_data: {
+            name: plan.name,
+            description: plan.description,
+          },
+          unit_amount: unitAmount,
+          recurring: { interval: 'month' },
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'subscription',
+    success_url: `${appUrl}/checkout/success?success=true`,
+    cancel_url: `${appUrl}/checkout/cancelled`,
+    metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
+    subscription_data: {
+      metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
+    },
+  }
+
+  if (discounts) sessionParams.discounts = discounts
+  if (allowPromotionCodes) sessionParams.allow_promotion_codes = true
+
+  let session
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams)
+  } catch (sessionErr) {
+    const stripeErr = sessionErr as { message?: string; code?: string }
+    const isCurrencyMismatch =
+      typeof stripeErr?.message === 'string' &&
+      stripeErr.message.toLowerCase().includes('cannot combine currencies')
+
+    if (isCurrencyMismatch) {
+      console.warn('[stripe/checkout GET] currency mismatch — creating new customer and retrying')
+      try {
+        const newCustomer = await stripe.customers.create({
+          email: profile?.email ?? user.email ?? '',
+          metadata: { supabase_user_id: user.id },
+        })
+        await supabase
+          .from('profiles')
+          .update({ stripe_customer_id: newCustomer.id })
+          .eq('id', user.id)
+        sessionParams.customer = newCustomer.id
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } catch (retryErr) {
+        const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.error('[stripe/checkout GET] currency mismatch retry failed:', msg)
+        return redirectError(`Payment session failed: ${msg || 'Please try again'}`)
+      }
+    } else {
+      const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
+      console.error('[stripe/checkout GET] Session creation error:', msg)
+      return redirectError(`Payment session failed: ${msg || 'Please try again'}`)
+    }
+  }
+
+  return NextResponse.redirect(session.url!)
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Guard: fail fast if Stripe is not configured
