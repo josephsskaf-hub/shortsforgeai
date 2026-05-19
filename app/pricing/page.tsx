@@ -77,7 +77,7 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    cta: { label: 'Get Started', href: STRIPE_LINKS.basic },
+    cta: { label: 'Get Started', href: '#checkout' },
   },
   {
     tier: 'pro',
@@ -92,7 +92,7 @@ const PRICING = [
       'Download MP4',
       'My Videos history',
     ],
-    cta: { label: 'Get Started', href: STRIPE_LINKS.pro },
+    cta: { label: 'Get Started', href: '#checkout' },
     highlight: true,
     popular: true,
   },
