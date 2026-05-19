@@ -11,8 +11,8 @@ type Tier = 'basic' | 'pro'
 type Currency = 'usd' | 'brl'
 
 // Plan definitions:
-//   Basic = $9/month, 50 Fast Mode videos/month.h
-//   Pro   = $19/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
+//   Basic = $4.90/month, 50 Fast Mode videos/month.
+//   Pro   = $9.90/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   basic: {
@@ -27,13 +27,11 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Push #111 — per-currency unit_amount table. BRL prices are tuned to
-// roughly mirror the USD list price (Basic R$49 ≈ $9, Pro R$99 ≈ $19)
-// rather than a live FX rate, so the "$9 / R$49" framing stays stable
-// across both surfaces.
+// Push #158 — updated prices to $4.90/mo (Basic) and $9.90/mo (Pro).
+// BRL prices mirror Stripe: Basic R$24.90, Pro R$49.90.
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 900, brl: 4900 },
-  pro: { usd: 1900, brl: 9900 },
+  basic: { usd: 490, brl: 2490 },
+  pro: { usd: 990, brl: 4990 },
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
