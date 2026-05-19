@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
           .from('profiles')
           .update({
             is_pro: true,
+            plan: tier,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             video_credits: next,
@@ -155,7 +156,7 @@ export async function POST(req: NextRequest) {
         if (subUpdErr) {
           console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
         } else {
-          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits}, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
+          console.log(`[stripe webhook] subscription start: ${tier} plan=${tier} (+${planCredits}, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
         }
 
         break
@@ -199,6 +200,7 @@ export async function POST(req: NextRequest) {
           .update({
             video_credits: renewalCredits,
             is_pro: true,
+            plan: renewalTier,
             cinematic_tokens: renewalCinematicTokens,
           })
           .eq('id', renewalUserId)
@@ -239,6 +241,7 @@ export async function POST(req: NextRequest) {
           .from('profiles')
           .update({
             is_pro: false,
+            plan: 'free',
             stripe_subscription_id: null,
             cinematic_tokens: 0,
           })
