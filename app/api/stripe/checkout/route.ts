@@ -22,10 +22,10 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Push #159 — USD-only pricing. BRL support removed (Stripe BRL prices no longer active).
+// Push #163 — BRL pricing (Stripe account is Brazilian). R$5 test price.
 const TIER_PRICES: Record<Tier, number> = {
-  basic: 490,
-  pro: 990,
+  basic: 500,
+  pro: 500,
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'brl',
             product_data: {
               name: plan.name,
               description: plan.description,
