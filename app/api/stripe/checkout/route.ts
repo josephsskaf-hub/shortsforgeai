@@ -4,11 +4,6 @@ import { stripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
 type Tier = 'basic' | 'pro'
-// Push #111 — BR cards reject USD charges, so we now bill BRL natively
-// for users whose locale signals pt-* (detection happens client-side
-// and the value rides through on the request body). USD stays the
-// default.
-type Currency = 'usd' | 'brl'
 
 // Plan definitions:
 //   Basic = $4.90/month, 50 Fast Mode videos/month.
@@ -27,11 +22,10 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Push #158 — updated prices to $4.90/mo (Basic) and $9.90/mo (Pro).
-// BRL prices mirror Stripe: Basic R$24.90, Pro R$49.90.
-const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 490, brl: 2490 },
-  pro: { usd: 990, brl: 4990 },
+// Push #159 — USD-only pricing. BRL support removed (Stripe BRL prices no longer active).
+const TIER_PRICES: Record<Tier, number> = {
+  basic: 490,
+  pro: 990,
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
@@ -48,31 +42,18 @@ export async function POST(req: NextRequest) {
     }
 
     let tier: Tier = 'basic'
-    let bodyCurrencyOverride: Currency | null = null
     try {
       const body = await req.json().catch(() => null)
       // Accept legacy `creator` as an alias for `basic` so any cached client
       // calls don't break during the rollout.
       if (body?.tier === 'pro') tier = 'pro'
       else if (body?.tier === 'basic' || body?.tier === 'creator') tier = 'basic'
-      // Explicit override from the client still wins — useful for local dev
-      // (no Vercel headers) and for QA forcing a specific currency.
-      if (body?.currency === 'brl') bodyCurrencyOverride = 'brl'
     } catch {
       // ignore body parse errors and use default tier
     }
 
-    // Push #112 — server-side BRL detection via Vercel's edge header. The
-    // navigator.language path from #111 turned out to be unreliable (browser
-    // locale doesn't always match account country, and a few embedded
-    // browsers never set it). x-vercel-ip-country is set on every request
-    // from the edge in production, so BR visitors get BRL pricing
-    // automatically regardless of what their browser reports.
-    const ipCountry = req.headers.get('x-vercel-ip-country') ?? ''
-    const currency: Currency =
-      bodyCurrencyOverride ?? (ipCountry === 'BR' ? 'brl' : 'usd')
     const plan = TIERS[tier]
-    const unitAmount = TIER_PRICES[tier][currency]
+    const unitAmount = TIER_PRICES[tier]
 
     const supabase = createClient()
 
@@ -132,11 +113,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Launch-offer discount ────────────────────────────────────────────────
-    // Push #020 advertises "50% off first month" as $4.50 / $9.50. We attach
-    // the LAUNCH50 coupon (duration: once) directly so the discount is
-    // guaranteed regardless of whether the user pastes a promo code. If the
-    // coupon doesn't exist in this Stripe account yet, we create it on the
-    // fly so the advertised first-month price is always honored.
+    // Attach the LAUNCH50 coupon (50% off first month, duration: once).
+    // Create it on the fly if it doesn't exist yet.
     let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined
     let allowPromotionCodes = false
     try {
@@ -153,8 +131,6 @@ export async function POST(req: NextRequest) {
         discounts = [{ coupon: LAUNCH_COUPON }]
       } catch (createErr) {
         const stripeErr = createErr as { code?: string; message?: string }
-        // `resource_already_exists` means a concurrent request just created it
-        // — safe to attach. Anything else, fall back to user-entered codes.
         if (stripeErr?.code === 'resource_already_exists') {
           discounts = [{ coupon: LAUNCH_COUPON }]
         } else {
@@ -164,19 +140,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Push #111 — BR cards regularly fail on card-only checkout when the
-    // bill is in BRL; offering boleto alongside the card option is the
-    // standard workaround. USD checkouts stay card-only.
-    const paymentMethodTypes: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] =
-      currency === 'brl' ? ['card', 'boleto'] : ['card']
-
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
-      payment_method_types: paymentMethodTypes,
+      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency,
+            currency: 'usd',
             product_data: {
               name: plan.name,
               description: plan.description,
@@ -188,10 +158,6 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: 'subscription',
-      // Push #063 — recovery-friendly post-checkout pages. /checkout/success
-      // shows the activation note and nudges back into /generate;
-      // /checkout/cancelled re-offers the launch links so the abandoned-cart
-      // intent doesn't vanish.
       success_url: `${appUrl}/checkout/success?success=true`,
       cancel_url: `${appUrl}/checkout/cancelled`,
       metadata: { supabase_user_id: user.id, tier, plan_credits: String(plan.credits) },
@@ -208,44 +174,12 @@ export async function POST(req: NextRequest) {
     try {
       session = await stripe.checkout.sessions.create(sessionParams)
     } catch (sessionErr) {
-      // Push #112 — boleto requires an explicit Stripe Dashboard toggle
-      // (Settings → Payments → Payment methods → Boleto). If the account
-      // hasn't flipped it on yet, Stripe returns invalid_payment_method
-      // _types / parameter_unknown — retry card-only so the BR user still
-      // reaches checkout in BRL instead of being told "payment failed".
-      const stripeErr = sessionErr as { code?: string; param?: string; message?: string }
-      const isBoletoIssue =
-        currency === 'brl' &&
-        sessionParams.payment_method_types?.includes('boleto') &&
-        (stripeErr?.code === 'invalid_payment_method_types' ||
-          stripeErr?.code === 'parameter_unknown' ||
-          (typeof stripeErr?.param === 'string' && stripeErr.param.includes('payment_method_types')) ||
-          (typeof stripeErr?.message === 'string' && stripeErr.message.toLowerCase().includes('boleto')))
-      if (isBoletoIssue) {
-        console.warn(
-          '[stripe/checkout] boleto rejected by Stripe — retrying card-only',
-          stripeErr?.code,
-          stripeErr?.message,
-        )
-        sessionParams.payment_method_types = ['card']
-        try {
-          session = await stripe.checkout.sessions.create(sessionParams)
-        } catch (retryErr) {
-          const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
-          console.error('[stripe/checkout] Session creation retry error:', msg)
-          return NextResponse.json(
-            { error: `Payment session failed: ${msg || 'Please try again'}` },
-            { status: 500 }
-          )
-        }
-      } else {
-        const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
-        console.error('[stripe/checkout] Session creation error:', msg)
-        return NextResponse.json(
-          { error: `Payment session failed: ${msg || 'Please try again'}` },
-          { status: 500 }
-        )
-      }
+      const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
+      console.error('[stripe/checkout] Session creation error:', msg)
+      return NextResponse.json(
+        { error: `Payment session failed: ${msg || 'Please try again'}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ url: session.url })
