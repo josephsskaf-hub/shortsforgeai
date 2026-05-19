@@ -174,12 +174,43 @@ export async function POST(req: NextRequest) {
     try {
       session = await stripe.checkout.sessions.create(sessionParams)
     } catch (sessionErr) {
-      const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
-      console.error('[stripe/checkout] Session creation error:', msg)
-      return NextResponse.json(
-        { error: `Payment session failed: ${msg || 'Please try again'}` },
-        { status: 500 }
-      )
+      const stripeErr = sessionErr as { message?: string; code?: string }
+      const isCurrencyMismatch =
+        typeof stripeErr?.message === 'string' &&
+        stripeErr.message.toLowerCase().includes('cannot combine currencies')
+
+      // Push #160 — if the existing Stripe customer has BRL history, create a
+      // fresh USD customer and retry. This handles users who hit the checkout
+      // before the BRL→USD migration was complete.
+      if (isCurrencyMismatch) {
+        console.warn('[stripe/checkout] currency mismatch — creating new USD customer and retrying')
+        try {
+          const newCustomer = await stripe.customers.create({
+            email: profile?.email ?? user.email ?? '',
+            metadata: { supabase_user_id: user.id },
+          })
+          await supabase
+            .from('profiles')
+            .update({ stripe_customer_id: newCustomer.id })
+            .eq('id', user.id)
+          sessionParams.customer = newCustomer.id
+          session = await stripe.checkout.sessions.create(sessionParams)
+        } catch (retryErr) {
+          const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+          console.error('[stripe/checkout] currency mismatch retry failed:', msg)
+          return NextResponse.json(
+            { error: `Payment session failed: ${msg || 'Please try again'}` },
+            { status: 500 }
+          )
+        }
+      } else {
+        const msg = sessionErr instanceof Error ? sessionErr.message : String(sessionErr)
+        console.error('[stripe/checkout] Session creation error:', msg)
+        return NextResponse.json(
+          { error: `Payment session failed: ${msg || 'Please try again'}` },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({ url: session.url })

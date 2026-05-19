@@ -491,10 +491,10 @@ export default function PricingPage() {
                     {ctaLabel} →
                   </a>
                 )}
-                {/* Push #104 — trial reassurance microcopy under paid CTAs. */}
+                {/* Push #160 — removed trial copy; charge starts immediately. */}
                 {isPaid && (
                   <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
-                    No charge for 7 days
+                    Cancel anytime
                   </p>
                 )}
               </div>
@@ -740,10 +740,10 @@ export default function PricingPage() {
             </div>
             <div>
               <div className="text-[14px] font-black text-[#F1F5F9] mb-1">
-                7-day money-back guarantee
+                30-day money-back guarantee
               </div>
               <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
-                If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked.
+                If you&apos;re not happy in the first 30 days, email us and we&apos;ll refund 100%. No questions asked.
               </p>
             </div>
           </div>
