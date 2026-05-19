@@ -4,10 +4,11 @@ import { stripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
 type Tier = 'basic' | 'pro'
+type Currency = 'usd' | 'brl'
 
 // Plan definitions:
-//   Basic = $4.90/month, 50 Fast Mode videos/month.
-//   Pro   = $9.90/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
+//   Basic = $4.90/month (USD) or R$9/month (BRL), 50 Fast Mode videos/month.
+//   Pro   = $9.90/month (USD) or R$19/month (BRL), 100 Fast Mode videos/month + 1 Cinematic video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   basic: {
@@ -22,10 +23,12 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Push #164 — BRL pricing matching Stripe. Basic R$9/mo, Pro R$19/mo.
-const TIER_PRICES: Record<Tier, number> = {
-  basic: 900,
-  pro: 1900,
+// Push #165 — dual-currency pricing.
+//   USD (non-BR users): Basic $4.90/mo, Pro $9.90/mo
+//   BRL (BR users):     Basic R$9/mo,   Pro R$19/mo
+const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
+  basic: { usd: 490, brl: 900 },
+  pro:   { usd: 990, brl: 1900 },
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
@@ -52,8 +55,13 @@ export async function POST(req: NextRequest) {
       // ignore body parse errors and use default tier
     }
 
+    // Push #165 — detect user country via Vercel edge header.
+    // BR users pay in BRL; everyone else pays in USD.
+    const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+    const currency: Currency = country === 'BR' ? 'brl' : 'usd'
+
     const plan = TIERS[tier]
-    const unitAmount = TIER_PRICES[tier]
+    const unitAmount = TIER_PRICES[tier][currency]
 
     const supabase = createClient()
 
@@ -146,7 +154,7 @@ export async function POST(req: NextRequest) {
       line_items: [
         {
           price_data: {
-            currency: 'brl',
+            currency,
             product_data: {
               name: plan.name,
               description: plan.description,
@@ -179,11 +187,10 @@ export async function POST(req: NextRequest) {
         typeof stripeErr?.message === 'string' &&
         stripeErr.message.toLowerCase().includes('cannot combine currencies')
 
-      // Push #160 — if the existing Stripe customer has BRL history, create a
-      // fresh USD customer and retry. This handles users who hit the checkout
-      // before the BRL→USD migration was complete.
+      // Push #165 — if the existing Stripe customer has a different currency
+      // history, create a fresh customer and retry with the correct currency.
       if (isCurrencyMismatch) {
-        console.warn('[stripe/checkout] currency mismatch — creating new USD customer and retrying')
+        console.warn('[stripe/checkout] currency mismatch — creating new customer and retrying')
         try {
           const newCustomer = await stripe.customers.create({
             email: profile?.email ?? user.email ?? '',
