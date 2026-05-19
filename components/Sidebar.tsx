@@ -227,9 +227,19 @@ export default function Sidebar({
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    try {
+      // scope:'local' clears the session immediately without a server round-trip
+      // so the sign-out never hangs on a slow network.
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ])
+    } catch {
+      // ignore — always redirect regardless
+    } finally {
+      // Hard redirect so server renders fresh with no auth cookie
+      window.location.href = '/'
+    }
   }
 
   const creditsZero = credits !== null && credits <= 0

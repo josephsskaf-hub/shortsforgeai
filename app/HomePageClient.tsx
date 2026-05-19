@@ -270,14 +270,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     setSigningOut(true)
     try {
       const supabase = createClient()
-      await supabase.auth.signOut()
-      setUser(null)
+      // scope:'local' clears the session from cookies/localStorage immediately
+      // without a server round-trip, preventing the "Signing out…" freeze that
+      // happens when supabase.auth.signOut() stalls on a slow/failed network.
+      // A 3 s timeout race guarantees we always reach the finally block.
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ])
     } catch {
       // ignore
     } finally {
-      setSigningOut(false)
-      router.push('/')
-      router.refresh()
+      // Hard redirect so all React state (including signingOut) is cleared
+      // and the server renders the page fresh with no auth cookie.
+      window.location.href = '/'
     }
   }
 

@@ -284,8 +284,8 @@ export default function StartPage() {
                 a: 'No. ShortsForgeAI generates visuals, voiceover, and subtitles from a topic you type. 100% faceless.',
               },
               {
-                q: "What happens after the free trial?",
-                a: "Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.",
+                q: ‘What happens after the free trial?’,
+                a: ‘Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.’,
               },
               {
                 q: 'How long does it take?',
