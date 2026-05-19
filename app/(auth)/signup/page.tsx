@@ -379,21 +379,8 @@ export default function SignupPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       placeholder="you@example.com"
-                      className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
-                      style={{
-                        background: 'rgba(255,255,255,.03)',
-                        border: '1px solid var(--border2)',
-                        color: 'var(--text)',
-                        fontFamily: 'inherit',
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
-                        e.target.style.background = 'rgba(59, 130, 246,.04)'
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = 'var(--border2)'
-                        e.target.style.background = 'rgba(255,255,255,.03)'
-                      }}
+                      autoComplete="email"
+                      className="input-pro"
                     />
                   </div>
 
@@ -412,21 +399,9 @@ export default function SignupPage() {
                         required
                         minLength={6}
                         placeholder="Min. 6 characters"
-                        className="w-full rounded-xl px-4 py-3 pr-12 text-sm outline-none transition-all"
-                        style={{
-                          background: 'rgba(255,255,255,.03)',
-                          border: '1px solid var(--border2)',
-                          color: 'var(--text)',
-                          fontFamily: 'inherit',
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
-                          e.target.style.background = 'rgba(59, 130, 246,.04)'
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = 'var(--border2)'
-                          e.target.style.background = 'rgba(255,255,255,.03)'
-                        }}
+                        autoComplete="new-password"
+                        className="input-pro"
+                        style={{ paddingRight: 48 }}
                       />
                       <button
                         type="button"

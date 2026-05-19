@@ -19,6 +19,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { showToast } from '@/components/Toast'
 
 export interface VideoRow {
   id: string
@@ -129,8 +130,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       await navigator.clipboard.writeText(v.video_url)
       setCopiedId(v.id)
       setTimeout(() => setCopiedId((c) => (c === v.id ? null : c)), 1800)
+      showToast('Video link copied to clipboard', 'success')
     } catch {
-      // clipboard denied — silent no-op
+      showToast('Could not copy — clipboard blocked by browser', 'error')
     }
   }
 
@@ -162,9 +164,11 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       a.remove()
       // Give the browser a tick to start the download before revoking.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+      showToast('Download started', 'success')
     } catch {
       // Fall back to opening the URL in a new tab so the user isn't stranded.
       window.open(v.video_url, '_blank', 'noopener,noreferrer')
+      showToast('Opened video in a new tab', 'info')
     } finally {
       setDownloadingId(null)
     }

@@ -375,7 +375,7 @@ export default function Sidebar({
                   </svg>
                 </div>
                 {creditsLoading ? (
-                  <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                  <span className="skeleton" style={{ display: 'inline-block', width: 72, height: 14 }} />
                 ) : (
                   <div>
                     <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#60A5FA', lineHeight: 1.1 }}>

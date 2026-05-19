@@ -1656,6 +1656,7 @@ export default function GenerateClient() {
             placeholder="Drop your topic — we'll turn it into an addictive micro-knowledge Short with real facts, escalation, and a satisfying payoff."
             maxLength={5000}
             disabled={phase === 'analyzing'}
+            aria-label="Your idea or script"
             // Push #052 — Tailwind responsive min-h so the textarea stays
             // ~220px (≈8 lines) on phones, then expands back to 400px on
             // sm+ viewports. Keeps the Generate button above the fold on
@@ -1671,6 +1672,21 @@ export default function GenerateClient() {
               resize: 'none',
             }}
           />
+          {/* UX #2 — char counter + soft warning when the user is near the
+              5,000-char cap. The cap is generous, but having a live counter
+              prevents the silent truncation surprise. */}
+          <div
+            className="mt-2 flex items-center justify-end gap-2 text-xs"
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              color: prompt.length >= 4800 ? '#fbbf24' : 'var(--muted)',
+              fontWeight: 700,
+              maxWidth: '830px',
+            }}
+            aria-live="polite"
+          >
+            {prompt.length}/5,000 characters
+          </div>
 
           {/* Push #084 — Generation mode selector.
               Push #087 — Cinematic Mode is gated to Pro users; Free + Basic

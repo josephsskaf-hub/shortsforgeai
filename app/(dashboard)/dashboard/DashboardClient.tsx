@@ -199,6 +199,7 @@ export default function DashboardClient({
             placeholder="e.g. A neon Tokyo alley at midnight with a lone samurai"
             maxLength={500}
             rows={2}
+            aria-label="Video prompt"
             style={{
               width: '100%',
               minHeight: 64,
@@ -214,7 +215,75 @@ export default function DashboardClient({
               boxSizing: 'border-box',
             }}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '0 4px 0 12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                fontSize: '0.7rem',
+                color: 'var(--muted)',
+                lineHeight: 1.2,
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <kbd
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    borderRadius: 5,
+                    padding: '1px 6px',
+                    fontFamily: 'inherit',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    color: 'var(--text2)',
+                  }}
+                >
+                  Enter
+                </kbd>
+                <span>to send · </span>
+                <kbd
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    borderRadius: 5,
+                    padding: '1px 6px',
+                    fontFamily: 'inherit',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    color: 'var(--text2)',
+                  }}
+                >
+                  Shift+Enter
+                </kbd>
+                <span>for newline</span>
+              </span>
+              <span
+                aria-live="polite"
+                style={{
+                  fontVariantNumeric: 'tabular-nums',
+                  color: videoPrompt.length >= 480 ? '#fbbf24' : 'var(--muted)',
+                  fontWeight: 700,
+                }}
+              >
+                {videoPrompt.length}/500
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleVideoGenerate}
@@ -269,12 +338,8 @@ export default function DashboardClient({
               </div>
               {creditsLoading ? (
                 <div
-                  className="rounded"
-                  style={{
-                    width: 200, height: 20,
-                    background: 'rgba(255,255,255,.05)',
-                    animation: 'pulse 1.4s ease-in-out infinite',
-                  }}
+                  className="skeleton"
+                  style={{ width: 200, height: 20 }}
                 />
               ) : (
                 <div className="font-black" style={{ fontSize: '1rem', color: 'var(--text)' }}>
