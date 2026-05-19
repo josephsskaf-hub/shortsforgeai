@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('email, stripe_customer_id, is_pro')
+      .select('email, stripe_customer_id, is_pro, stripe_subscription_id')
       .eq('id', user.id)
       .single()
 
@@ -88,8 +88,33 @@ export async function POST(req: NextRequest) {
       console.error('[stripe/checkout] Profile fetch error:', profileError.message, profileError.code)
     }
 
+    // Push #172 — verify the ACTUAL Stripe subscription status before blocking.
+    // A stale is_pro=true (e.g. from a failed webhook when the secret was wrong)
+    // should not permanently lock the user out of re-subscribing.
+    // - Active/trialing in Stripe → block (already subscribed)
+    // - Cancelled/missing in Stripe → clear stale flag and allow checkout
     if (profile?.is_pro) {
-      return NextResponse.json({ error: 'You already have an active subscription.' }, { status: 400 })
+      const subId = profile.stripe_subscription_id as string | null
+      let isActuallyActive = false
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId)
+          isActuallyActive = sub.status === 'active' || sub.status === 'trialing'
+        } catch (err) {
+          // Can't verify — treat as not active so the user isn't permanently blocked.
+          console.warn('[stripe/checkout] could not verify subscription status, allowing checkout:', subId, err)
+        }
+      }
+      if (isActuallyActive) {
+        return NextResponse.json({ error: 'You already have an active subscription.' }, { status: 400 })
+      }
+      // Subscription is gone or cancelled — clear the stale flag so the user
+      // can subscribe again. Fall through to create a new checkout session.
+      console.log('[stripe/checkout] stale is_pro cleared for user:', user.id, 'sub:', subId)
+      await supabase
+        .from('profiles')
+        .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
+        .eq('id', user.id)
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
