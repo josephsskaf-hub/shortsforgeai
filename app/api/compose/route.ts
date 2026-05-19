@@ -7,7 +7,9 @@ import {
   scaleVoiceoverScript,
   submitCreatomateRender,
   targetWordCount,
+  transcribeWordTimings,
   uploadVoiceoverToSupabase,
+  type WordTiming,
 } from '@/lib/compose'
 import { fetchUserPlan } from '@/lib/plan'
 
@@ -27,6 +29,10 @@ interface ComposeBody {
   duration?: number
   topic?: string
   quality?: string
+  // Push #180 — viewer-facing captions toggle. Accepts 'on' | 'off' (or
+  // boolean for older clients). Default is 'on' because captions are the
+  // single biggest driver of retention on Shorts.
+  captions?: string | boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -104,6 +110,19 @@ export async function POST(req: NextRequest) {
       return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
 
+    // Push #180 — captions toggle. Accept 'on'/'off' strings and booleans
+    // (older clients). Anything we can't parse defaults to ON because
+    // captions are the single biggest retention driver on Shorts.
+    const captionsEnabled: boolean = ((): boolean => {
+      const raw = body.captions
+      if (typeof raw === 'boolean') return raw
+      if (typeof raw === 'string') {
+        const v = raw.trim().toLowerCase()
+        if (v === 'off' || v === 'false' || v === '0' || v === 'no') return false
+      }
+      return true
+    })()
+
     // Push #087 — Cinematic-tier renders (anything other than 'fast') must
     // come from a Pro user. Fast Mode renders skip the gate so Free + Basic
     // users can still produce videos via the Pexels pipeline.
@@ -168,6 +187,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Step 2.5 — Push #180 — word-level caption timings from Whisper. We
+    // run this BEFORE the upload (so the buffer is still in memory) and
+    // strictly best-effort: if Whisper hiccups, `wordTimings` stays null
+    // and the renderer falls back to segment captions. Skipped entirely
+    // when the viewer turned captions off — saves the Whisper round-trip.
+    let wordTimings: WordTiming[] | null = null
+    if (captionsEnabled) {
+      try {
+        wordTimings = await transcribeWordTimings(audioBuffer)
+        const count = Array.isArray(wordTimings) ? wordTimings.length : 0
+        console.log(`[compose] word-level captions: words=${count} (whisper-1, granularity=word)`)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn('[compose] word-level caption transcription failed (falling back to segments):', msg)
+        wordTimings = null
+      }
+    } else {
+      console.log('[compose] captions disabled by client — skipping Whisper transcription')
+    }
+
     // Step 3 — Upload TTS to Supabase storage.
     let voiceoverUrl: string
     try {
@@ -224,6 +263,8 @@ export async function POST(req: NextRequest) {
         voiceoverScript: haveSceneCaptions ? '' : scaledScript,
         sceneCaptions,
         duration,
+        wordTimings,
+        captionsEnabled,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

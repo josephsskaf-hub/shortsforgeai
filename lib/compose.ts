@@ -5,17 +5,35 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
-import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
+import { buildCaptionSegments, isHighlightWord, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
+// Push #180 — minimum on-screen time per word. Whisper occasionally
+// returns sub-100ms durations for fast filler words ("the", "a", "of"),
+// which strobes the caption strip. We pad each word out to this floor so
+// the eye can register it without the duration leaking into the next
+// word's slot (we cap at the next word's start).
+const WORD_MIN_DURATION = 0.18
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
 export const VOICEOVER_BUCKET = 'voiceovers'
+
+/**
+ * Push #180 — word-level timing returned by Whisper. The renderer turns
+ * each entry into a Creatomate text element with precise time/duration so
+ * the caption strip syncs to the actual voiceover instead of guessing
+ * from word count alone.
+ */
+export interface WordTiming {
+  word: string
+  start: number
+  end: number
+}
 
 export interface ComposeInputs {
   clipUrls: string[]
@@ -34,6 +52,20 @@ export interface ComposeInputs {
    */
   sceneCaptions: string[]
   duration: number
+  /**
+   * Push #180 — word-level timings from Whisper. When present, captions
+   * render one-word-at-a-time synced to the actual voiceover audio (TikTok
+   * viral style). When absent, we fall back to the existing segment-based
+   * caption strip so the render never fails for caption reasons.
+   */
+  wordTimings?: WordTiming[] | null
+  /**
+   * Push #180 — viewer-facing toggle. When `false` the renderer ships the
+   * video without ANY caption strip (word- or segment-level). Default is
+   * `true` (captions on) because captions are the single biggest driver of
+   * retention on Shorts.
+   */
+  captionsEnabled?: boolean
 }
 
 export interface CreatomateRenderState {
@@ -106,6 +138,59 @@ export async function generateTTS(script: string): Promise<Buffer> {
     input,
   })
   return Buffer.from(await speech.arrayBuffer())
+}
+
+/**
+ * Push #180 — transcribe the freshly-generated voiceover with Whisper to
+ * recover word-level timestamps. Output drives the word-by-word caption
+ * highlight effect downstream.
+ *
+ * Cost: whisper-1 is $0.006/min, so a 45s short costs <$0.005 — well below
+ * the noise floor of a credit. We still call this lazily (only when
+ * captions are enabled) so disabling captions saves the round-trip.
+ *
+ * Failure mode is deliberately soft: if Whisper rate-limits, errors, or
+ * returns no word array, we return `null`. The caller falls back to the
+ * existing segment-based caption strip. Captions are a polish layer — they
+ * must never break the render.
+ */
+export async function transcribeWordTimings(audioBuffer: Buffer): Promise<WordTiming[] | null> {
+  if (!audioBuffer || audioBuffer.length === 0) return null
+  try {
+    const { openai } = await import('@/lib/openai')
+    const { toFile } = await import('openai')
+    const file = await toFile(audioBuffer, 'voiceover.mp3', { type: 'audio/mpeg' })
+    const transcription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+      response_format: 'verbose_json',
+      timestamp_granularities: ['word'],
+    })
+    const raw = (transcription as unknown as { words?: Array<{ word?: unknown; start?: unknown; end?: unknown }> }).words
+    if (!Array.isArray(raw) || raw.length === 0) return null
+
+    const words: WordTiming[] = []
+    for (const entry of raw) {
+      const w = typeof entry.word === 'string' ? entry.word.trim() : ''
+      const start = typeof entry.start === 'number' ? entry.start : NaN
+      const end = typeof entry.end === 'number' ? entry.end : NaN
+      if (!w) continue
+      if (!Number.isFinite(start) || !Number.isFinite(end)) continue
+      if (end <= start) continue
+      words.push({ word: w, start, end })
+    }
+    if (words.length === 0) return null
+
+    // Whisper output is already in playback order, but defend against
+    // out-of-order edge cases — a single jumbled timestamp would make the
+    // captions blink backwards on screen.
+    words.sort((a, b) => a.start - b.start)
+    return words
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[compose] transcribeWordTimings failed (captions will fall back to segments):', msg)
+    return null
+  }
 }
 
 // Push #049 — fix voiceover storage on staging.
@@ -334,6 +419,71 @@ export function buildCaptionElements({
 }
 
 /**
+ * Push #180 — word-by-word caption strip. Renders ONE Creatomate text
+ * element per word, time-synced to the actual voiceover via Whisper word
+ * timings. The visible word is the word currently being spoken, big and
+ * centered low — the TikTok / viral-Shorts caption style.
+ *
+ * Color rule:
+ *   - White (#ffffff) by default — the reader's baseline.
+ *   - Yellow (#FFD700) for words in HIGHLIGHT_CANDIDATES (strange, hidden,
+ *     forbidden, secret, etc.) — high-impact words pop.
+ *
+ * Timing rule:
+ *   - Each word renders from its Whisper `start` to the next word's
+ *     `start` (so words never overlap or leave a gap). The last word
+ *     extends to its own `end` (capped at totalDuration - CTA tail so it
+ *     never collides with the call-to-action).
+ *   - Words shorter than WORD_MIN_DURATION are stretched up to that
+ *     minimum, again clamped to the next word's start.
+ *   - Words that start inside the CTA tail (last 2.5s) are dropped so the
+ *     CTA reads cleanly.
+ */
+export function buildWordCaptionElements({
+  words,
+  totalDuration,
+}: {
+  words: WordTiming[]
+  totalDuration: number
+}): CreatomateElement[] {
+  const ctaCutoff = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
+  const elements: CreatomateElement[] = []
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]
+    const display = w.word.replace(/^\s+|\s+$/g, '')
+    if (!display) continue
+    if (w.start >= ctaCutoff) break
+
+    const nextStart = i + 1 < words.length ? words[i + 1].start : w.end
+    const naturalEnd = Math.max(w.end, w.start + WORD_MIN_DURATION)
+    const cappedEnd = Math.min(naturalEnd, nextStart, ctaCutoff)
+    const duration = cappedEnd - w.start
+    if (duration <= 0) continue
+
+    const color = isHighlightWord(display) ? HIGHLIGHT_COLOR : '#ffffff'
+    elements.push({
+      type: 'text',
+      track: 5,
+      time: round3(w.start),
+      duration: round3(duration),
+      text: display.toUpperCase(),
+      x: '50%',
+      y: '70%',
+      width: '86%',
+      font_family: 'Montserrat',
+      font_size: 96,
+      font_weight: '900',
+      fill_color: color,
+      stroke_color: 'rgba(0,0,0,0.95)',
+      stroke_width: 6,
+    })
+  }
+
+  return elements
+}
+
+/**
  * Build a Creatomate source JSON: video clips tiled to fill `duration`,
  * voiceover audio across the full timeline, captions evenly distributed,
  * and a CTA in the last 2.5 seconds.
@@ -344,6 +494,8 @@ export function buildCreatomateSource({
   voiceoverScript,
   sceneCaptions,
   duration,
+  wordTimings,
+  captionsEnabled = true,
 }: ComposeInputs): Record<string, unknown> {
   const totalDuration = clamp(Math.round(duration), 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
@@ -424,31 +576,51 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions distributed evenly across the duration (minus CTA
-  // tail). Push #066 — captions are now ≤7-word viral-style segments with
-  // a per-segment highlight word so the renderer can paint the line
-  // yellow when an impactful keyword is present. Caption text comes from
-  // the voiceover script first so it matches what the narrator says;
-  // falls back to scene descriptions only when no script is available.
-  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
-  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
-    ? scriptSegments
-    : sceneCaptions
-        .map((c) => (c ?? '').toString().trim())
-        .filter((c) => c.length > 0)
-        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
-  if (captionsClean.length > 0) {
-    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
-    const perCaption = round3(captionWindow / captionsClean.length)
-    captionsClean.forEach((segment, idx) => {
-      const elementsForCaption = buildCaptionElements({
-        text: segment.text,
-        time: round3(idx * perCaption),
-        duration: perCaption,
-        highlight: segment.highlight,
-      })
-      elements.push(...elementsForCaption)
-    })
+  // Track 5 — captions.
+  //
+  // Push #180 — prefer word-by-word captions when Whisper word timings are
+  // available. Each word becomes its own Creatomate text element, time-
+  // synced to the actual voiceover, with high-impact words painted yellow
+  // (#FFD700) and the rest white. Matches the viral TikTok/Shorts style.
+  //
+  // Fallback hierarchy (any layer breaking falls through to the next):
+  //   1. word timings  → buildWordCaptionElements  (preferred, audio-accurate)
+  //   2. voiceoverScript → 7-word segments via buildCaptionSegments
+  //   3. sceneCaptions   → one caption per scene, evenly distributed
+  //
+  // `captionsEnabled = false` skips the strip entirely (viewer opted out).
+  if (captionsEnabled) {
+    let wordElementsAdded = 0
+    if (Array.isArray(wordTimings) && wordTimings.length > 0) {
+      const wordElements = buildWordCaptionElements({ words: wordTimings, totalDuration })
+      elements.push(...wordElements)
+      wordElementsAdded = wordElements.length
+    }
+
+    // Only fall back to segment captions when the word-level path produced
+    // nothing — otherwise we'd double-stack two caption strips on screen.
+    if (wordElementsAdded === 0) {
+      const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+      const captionsClean: CaptionSegment[] = scriptSegments.length > 0
+        ? scriptSegments
+        : sceneCaptions
+            .map((c) => (c ?? '').toString().trim())
+            .filter((c) => c.length > 0)
+            .map((text) => ({ text, highlight: pickHighlightWord(text) }))
+      if (captionsClean.length > 0) {
+        const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
+        const perCaption = round3(captionWindow / captionsClean.length)
+        captionsClean.forEach((segment, idx) => {
+          const elementsForCaption = buildCaptionElements({
+            text: segment.text,
+            time: round3(idx * perCaption),
+            duration: perCaption,
+            highlight: segment.highlight,
+          })
+          elements.push(...elementsForCaption)
+        })
+      }
+    }
   }
 
   // Track 6 — CTA in the final 2.5s.

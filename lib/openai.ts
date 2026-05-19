@@ -111,6 +111,16 @@ function cleanWord(w: string): string {
   return w.replace(/[^a-zA-Z]/g, '').toLowerCase()
 }
 
+// Push #180 — word-level caption highlight check. The renderer paints
+// individual words yellow when they sit in the HIGHLIGHT_CANDIDATES list;
+// every other word stays white. Single token in, boolean out, so callers
+// can decide color per Whisper word without re-implementing the rules.
+export function isHighlightWord(word: string): boolean {
+  const c = cleanWord(word ?? '')
+  if (!c) return false
+  return HIGHLIGHT_CANDIDATES.includes(c)
+}
+
 export function pickHighlightWord(caption: string): string | null {
   const text = (caption ?? '').trim()
   if (!text) return null
