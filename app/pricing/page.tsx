@@ -22,25 +22,7 @@ function formatCountdown(totalSeconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-// Push #165 — dual-currency pricing.
-// USD shown by default (80% of users are from the US).
-// On mount the component calls /api/geo and switches to BRL if the visitor
-// is in Brazil. Stripe server-side uses x-vercel-ip-country as the
-// source of truth so the currency shown in the card matches what Stripe charges.
-const PRICING_DATA = {
-  usd: {
-    basic: { price: '$2.45', priceSub: 'first month, then $4.90/mo' },
-    pro:   { price: '$4.95', priceSub: 'first month, then $9.90/mo' },
-    stickyBasic: 'Basic — $4.90/mo',
-    stickyPro:   'Pro — $9.90/mo 🔥',
-  },
-  brl: {
-    basic: { price: 'R$12,45', priceSub: 'first month, then R$24,90/mo' },
-    pro:   { price: 'R$24,95', priceSub: 'first month, then R$49,90/mo' },
-    stickyBasic: 'Basic — R$24,90/mo',
-    stickyPro:   'Pro — R$49,90/mo 🔥',
-  },
-}
+// Push #167 — USD only pricing.
 
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
@@ -67,54 +49,51 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-function buildPricing(currency: 'usd' | 'brl') {
-  const d = PRICING_DATA[currency]
-  return [
-    {
-      tier: 'free',
-      name: 'Free',
-      price: '$0',
-      priceSub: 'forever',
-      features: [
-        '2 Fast Mode videos to try',
-        'Pexels footage + AI voiceover',
-        'Watermark-free MP4',
-      ],
-      cta: { label: 'Start Free', href: '/signup' },
-    },
-    {
-      tier: 'basic',
-      name: 'Basic',
-      price: d.basic.price,
-      priceSub: d.basic.priceSub,
-      features: [
-        '50 Fast Mode videos/month',
-        'Pexels footage + AI voiceover',
-        'Voiceover + captions',
-        'Download MP4',
-        'My Videos history',
-      ],
-      cta: { label: 'Get Started', href: '#checkout' },
-    },
-    {
-      tier: 'pro',
-      name: 'Pro',
-      price: d.pro.price,
-      priceSub: d.pro.priceSub,
-      features: [
-        '100 Fast Mode videos/month',
-        '1 Cinematic (Runway AI) video/month',
-        'Better generation settings',
-        'Voiceover + captions',
-        'Download MP4',
-        'My Videos history',
-      ],
-      cta: { label: 'Get Started', href: '#checkout' },
-      highlight: true,
-      popular: true,
-    },
-  ]
-}
+const PRICING = [
+  {
+    tier: 'free',
+    name: 'Free',
+    price: '$0',
+    priceSub: 'forever',
+    features: [
+      '2 Fast Mode videos to try',
+      'Pexels footage + AI voiceover',
+      'Watermark-free MP4',
+    ],
+    cta: { label: 'Start Free', href: '/signup' },
+  },
+  {
+    tier: 'basic',
+    name: 'Basic',
+    price: '$2.45',
+    priceSub: 'first month, then $4.90/mo',
+    features: [
+      '50 Fast Mode videos/month',
+      'Pexels footage + AI voiceover',
+      'Voiceover + captions',
+      'Download MP4',
+      'My Videos history',
+    ],
+    cta: { label: 'Get Started', href: '#checkout' },
+  },
+  {
+    tier: 'pro',
+    name: 'Pro',
+    price: '$4.95',
+    priceSub: 'first month, then $9.90/mo',
+    features: [
+      '100 Fast Mode videos/month',
+      '1 Cinematic (Runway AI) video/month',
+      'Better generation settings',
+      'Voiceover + captions',
+      'Download MP4',
+      'My Videos history',
+    ],
+    cta: { label: 'Get Started', href: '#checkout' },
+    highlight: true,
+    popular: true,
+  },
+]
 
 function trackPricingEvent(name: string): void {
   try {
@@ -139,10 +118,6 @@ export default function PricingPage() {
   // hard-coded Stripe payment link, but Push #114 routes it through
   // /api/stripe/checkout so BR users land on a BRL session instead of a
   // USD link that their card refuses.
-  // Push #165 — currency detected from /api/geo (x-vercel-ip-country).
-  // Default USD since 80% of users are from the US; switches to BRL for Brazil.
-  const [currency, setCurrency] = useState<'usd' | 'brl'>('usd')
-
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
   // Push #097 — live countdown for the launch-offer banner.
   const [countdown, setCountdown] = useState<number>(COUNTDOWN_START_SECONDS)
@@ -206,16 +181,6 @@ export default function PricingPage() {
       setCountdown((prev) => (prev <= 1 ? COUNTDOWN_START_SECONDS : prev - 1))
     }, 1000)
     return () => clearInterval(id)
-  }, [])
-
-  // Push #165 — detect user currency on mount.
-  useEffect(() => {
-    fetch('/api/geo')
-      .then((r) => r.json())
-      .then((d: { currency?: string }) => {
-        if (d.currency === 'brl' || d.currency === 'usd') setCurrency(d.currency)
-      })
-      .catch(() => {})
   }, [])
 
   // Push #117 — show the sticky mobile CTA only after the user scrolls
@@ -396,7 +361,7 @@ export default function PricingPage() {
         </a>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {buildPricing(currency).map((p) => {
+          {PRICING.map((p) => {
             const isPaid = p.tier === 'basic' || p.tier === 'pro'
             const isSelected = isPaid && selectedPlan === p.tier
             const ctaLabel = isSelected
@@ -824,7 +789,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : PRICING_DATA[currency].stickyBasic}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.90/mo'}
           </button>
           <button
             type="button"
@@ -844,7 +809,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : PRICING_DATA[currency].stickyPro}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.90/mo 🔥'}
           </button>
         </div>
       )}
