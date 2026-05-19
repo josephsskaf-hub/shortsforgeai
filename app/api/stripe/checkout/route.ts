@@ -3,6 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
+// Push #173 — force-dynamic so Next.js never tries to statically cache the GET
+// handler. Without this, the route could be pre-rendered at build time and
+// would fail to read Supabase auth cookies on every request.
+export const dynamic = 'force-dynamic'
+
 type Tier = 'basic' | 'pro'
 type Currency = 'usd' | 'brl'
 
