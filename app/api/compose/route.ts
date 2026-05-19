@@ -8,7 +8,6 @@ import {
   submitCreatomateRender,
   targetWordCount,
   uploadVoiceoverToSupabase,
-  validateAndFallbackClipUrls,
 } from '@/lib/compose'
 import { fetchUserPlan } from '@/lib/plan'
 
@@ -82,29 +81,6 @@ export async function POST(req: NextRequest) {
       : []
     if (clipUrls.length === 0) {
       return NextResponse.json({ error: 'clip_urls is required.' }, { status: 400 })
-    }
-
-    // Push #145 — black-screen fix.
-    // Validate every clip URL is actually reachable BEFORE handing the
-    // timeline to Creatomate. A dead Pexels URL on the visual track
-    // renders as a black tail with audio (the reported bug). The helper
-    // swaps unreachable URLs for a curated library fallback so every
-    // timeline slot has guaranteed video coverage.
-    const topicHint = (body.topic ?? '').toString().slice(0, 200)
-    let validatedClipUrls: string[]
-    try {
-      validatedClipUrls = await validateAndFallbackClipUrls(clipUrls, topicHint)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[compose] clip URL validation threw (continuing with raw URLs):', msg)
-      validatedClipUrls = clipUrls
-    }
-    if (validatedClipUrls.length === 0) {
-      console.error('[compose] no usable clip URLs after validation — refusing to render.')
-      return NextResponse.json(
-        { error: 'No usable video clips for this render. Please try again.' },
-        { status: 502 }
-      )
     }
 
     const voiceoverScript = (body.voiceover_script ?? '').toString().trim()
@@ -243,7 +219,7 @@ export async function POST(req: NextRequest) {
     let source: Record<string, unknown>
     try {
       source = buildCreatomateSource({
-        clipUrls: validatedClipUrls,
+        clipUrls,
         voiceoverUrl,
         voiceoverScript: haveSceneCaptions ? '' : scaledScript,
         sceneCaptions,

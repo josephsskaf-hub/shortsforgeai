@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
-import { detectFactCountFromPrompt } from '@/lib/openai'
 import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 
@@ -82,16 +81,7 @@ export async function POST(req: NextRequest) {
       ? (requestedDuration as Duration)
       : 45
 
-    // Push #143 — "top N" prompts get N scenes so every promised fact lands
-    // in the script. Otherwise fall back to the duration-based default.
-    const detectedCount = detectFactCountFromPrompt(prompt)
-    const baseClipCount = clipCountForDuration(duration)
-    const clipCount = detectedCount ? Math.min(8, Math.max(detectedCount, baseClipCount)) : baseClipCount
-    if (detectedCount) {
-      console.log(
-        `[generate-fast] detected "top ${detectedCount}" — clipCount=${clipCount} (base=${baseClipCount})`,
-      )
-    }
+    const clipCount = clipCountForDuration(duration)
 
     // Upfront credit balance check. Deduction happens in /api/compose/status
     // when the final mp4 succeeds.
@@ -133,40 +123,20 @@ export async function POST(req: NextRequest) {
     // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
     // topic-specific searchKeywords (NOT the cinematic description).
     // Curated stockLibrary is the fallback so we always return something.
-    //
-    // Push #145 — black-screen fix: log per-scene resolution outcome so
-    // any future report of "scene N went black" can be traced to whether
-    // Pexels returned a clip, whether we fell back to the library, or
-    // whether the scene had no visual at all.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
         const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
-        if (pexelsUrl) {
-          console.log(`[generate-fast] scene ${idx} → pexels (${pexelsUrl.slice(0, 80)})`)
-          return pexelsUrl
-        }
+        if (pexelsUrl) return pexelsUrl
         const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
-        const libUrl = lib[0]?.url ?? ''
-        console.warn(
-          `[generate-fast] scene ${idx} pexels MISS, falling back to library (${libUrl.slice(0, 80) || '<none>'})`,
-        )
-        return libUrl
+        return lib[0]?.url ?? ''
       })
     )
 
     const filtered = clipUrls.filter((u) => typeof u === 'string' && u.length > 0)
     if (filtered.length === 0) {
-      console.error(
-        `[generate-fast] zero usable clips after Pexels + library fallback. scenes=${scenes.length} prompt="${prompt.slice(0, 80)}"`,
-      )
       return NextResponse.json(
         { error: 'No stock footage could be sourced. Please try a different topic.' },
         { status: 502 }
-      )
-    }
-    if (filtered.length < scenes.length) {
-      console.warn(
-        `[generate-fast] coverage gap: requested ${scenes.length} clips, sourced ${filtered.length}. Compose will tile remaining slots.`,
       )
     }
 

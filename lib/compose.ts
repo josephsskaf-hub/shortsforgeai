@@ -5,20 +5,13 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
-import { pickLibraryClip } from '@/lib/stockLibrary'
+import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
-// Push #143 — yellow used to paint the currently-spoken word during the
-// karaoke caption effect. Creatomate's `transcript_color` controls the
-// active-word color; the static line color stays white.
+// Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
-// Push #143 — stable id we attach to the voiceover audio element so the
-// transcript text element can reference it via `transcript_source`. Must
-// match `VOICEOVER_TRACK_NAME` literally — Creatomate links the two by
-// string equality on the audio element's `name`.
-const VOICEOVER_TRACK_NAME = 'voiceover_audio'
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
@@ -41,54 +34,6 @@ export interface ComposeInputs {
    */
   sceneCaptions: string[]
   duration: number
-}
-
-// Push #143 — Creatomate element shape. The transcript_* fields drive
-// karaoke-style auto-captions: Creatomate transcribes the referenced
-// audio server-side (the "transcribing" status in pollCreatomateRender
-// surfaces this) and renders one word at a time, painting the active
-// word in `transcript_color` so the caption follows the narrator in
-// real time.
-interface CreatomateElement {
-  type: 'video' | 'audio' | 'text' | 'shape'
-  /** Stable id used by transcript_source links. Creatomate uses `name` as
-   *  the reference key — not `id` — so we mirror that field name. */
-  name?: string
-  track: number
-  time: number
-  duration: number
-  source?: string
-  text?: string
-  x?: string
-  y?: string
-  width?: string
-  height?: string
-  fit?: string
-  /** When true, a video clip shorter than its slot loops within the slot
-   *  instead of freezing on the last frame / going black. */
-  loop?: boolean
-  /** Push #146 — Creatomate transition directive. When set on an element
-   *  placed back-to-back with another element on the same track, the
-   *  renderer crossfades between them for `duration` seconds — overlapping
-   *  the cut so the dark track-1 background can't show through. */
-  transition?: { duration: number; type: string }
-  volume?: string
-  fill_color?: string
-  stroke_color?: string
-  stroke_width?: number
-  font_family?: string
-  font_size?: number
-  font_weight?: string
-  y_alignment?: string
-  // Auto-transcript karaoke caption fields. Only the text element with
-  // transcript_source set uses these — everything else leaves them
-  // undefined and Creatomate ignores them.
-  transcript_source?: string
-  transcript_effect?: 'karaoke' | 'color'
-  transcript_split?: 'word' | 'line'
-  transcript_placement?: 'static' | 'animate'
-  transcript_color?: string
-  transcript_maximum_length?: number
 }
 
 export interface CreatomateRenderState {
@@ -294,6 +239,27 @@ export async function uploadVoiceoverToSupabase(userId: string, buffer: Buffer):
   return pub.publicUrl
 }
 
+interface CreatomateElement {
+  type: 'video' | 'audio' | 'text' | 'shape'
+  track: number
+  time: number
+  duration: number
+  source?: string
+  text?: string
+  x?: string
+  y?: string
+  width?: string
+  height?: string
+  fit?: string
+  volume?: string
+  fill_color?: string
+  stroke_color?: string
+  stroke_width?: number
+  font_family?: string
+  font_size?: number
+  font_weight?: string
+}
+
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
 }
@@ -303,77 +269,67 @@ function round3(v: number): number {
 }
 
 /**
- * Push #143 / #146 — Single karaoke caption element.
+ * Push #066 — build the Creatomate text element(s) for a single caption
+ * slot. Renders ONE text element so captions never stack on screen.
  *
- * Creatomate transcribes the voiceover audio server-side and exposes it
- * via the `transcript_source` field on a text element. We attach a
- * stable `name` to the audio element (VOICEOVER_TRACK_NAME) and point a
- * single text element at it. Creatomate then paints one continuous
- * caption line, with the currently-spoken word highlighted in yellow.
+ * Visual rule (guided captions):
+ *   - If the segment carries a highlight word, the whole caption is
+ *     rendered in yellow (#FFD700). The viewer's eye locks onto
+ *     high-impact moments without us doing fragile per-word positioning.
+ *   - Otherwise the caption renders in white.
  *
- * Push #146 — fixes the "two-caption" bug reported in the screenshot.
+ * Why not two layers / inline rich text:
+ *   Push #064 used a separate floating yellow accent word above the
+ *   white caption. In practice this read as two stacked subtitle lines
+ *   and the positioning never landed cleanly on top of the matching
+ *   word in the white caption. Per-word inline color via Creatomate
+ *   rich-text markup is feature-gated across versions, so a malformed
+ *   tag would render as literal `[color]` text — unacceptable.
+ *   Whole-line color is the simplest path that's guaranteed to render
+ *   correctly on every Creatomate template.
  *
- * The previous configuration was:
- *   transcript_split: 'word'
- *   transcript_placement: 'animate'
- *   transcript_maximum_length: 18
- *   stroke_width: 4
- *
- * What that produced on screen:
- *   - 'word' + max-length 18 chunks the transcript into ~3-word slots
- *     ("as astonishing 2.5"), and 'animate' slid each slot in. The
- *     visible chunk never matched the narrator's current word because
- *     the chunk boundary was character-based, not phoneme-based.
- *   - stroke_width 4 around a white fill rendered most of the glyph
- *     mass as black. Combined with the moving yellow chunk underneath,
- *     viewers perceived TWO caption layers — a black sentence on top
- *     and a wrong yellow snippet below.
- *
- * The new configuration:
- *   transcript_split:    'line'   — one readable line per visible slot
- *   transcript_placement:'static' — no slide animation; the line is
- *                                   replaced cleanly when it advances
- *   transcript_maximum_length: 42 — ~7 words per line, fits the 86% width
- *   stroke_width: 2                — thinner outline so the white fill
- *                                   reads as white, not as a black mass
- *
- * What the viewer now sees: ONE single white caption line at a time, the
- * active word painted yellow, perfectly synced to the TTS audio
- * (Creatomate transcribes the audio so timing is word-accurate).
- *
- * The text element's `duration` stops before the CTA tail so the
- * karaoke line never overlaps the final shortsforgeai.com call-to-action.
+ * Safety: the build is wrapped in try/catch and ALWAYS returns at least
+ * the plain white caption element — a failed highlight decision can
+ * never break the render.
  */
-function buildKaraokeCaptionElement(totalDuration: number): CreatomateElement {
-  const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
-  return {
+export function buildCaptionElements({
+  text,
+  time,
+  duration,
+  highlight,
+}: {
+  text: string
+  time: number
+  duration: number
+  highlight?: string | null
+}): CreatomateElement[] {
+  const baseCaption: CreatomateElement = {
     type: 'text',
     track: 5,
-    time: 0,
-    duration: round3(captionWindow),
-    // Creatomate replaces this placeholder with the live transcript as
-    // soon as transcript_source resolves; the field is required by the
-    // schema but its value is not shown when transcription succeeds.
-    text: ' ',
+    time,
+    duration,
+    text,
     x: '50%',
-    y: '72%',
-    y_alignment: '50%',
+    y: '68%',
     width: '86%',
     font_family: 'Montserrat',
-    font_size: 64,
+    font_size: 58,
     font_weight: '800',
     fill_color: '#ffffff',
     stroke_color: 'rgba(0,0,0,0.9)',
-    stroke_width: 2,
-    transcript_source: VOICEOVER_TRACK_NAME,
-    transcript_effect: 'karaoke',
-    transcript_split: 'line',
-    transcript_placement: 'static',
-    transcript_color: HIGHLIGHT_COLOR,
-    // ~42 characters per line ≈ 6-7 readable words at the 86% width;
-    // wide enough to land on a natural phrase boundary, narrow enough to
-    // never wrap to a second line that could read as a second caption.
-    transcript_maximum_length: 42,
+    stroke_width: 3,
+  }
+
+  try {
+    const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
+    if (candidate && candidate.trim().length > 0) {
+      return [{ ...baseCaption, fill_color: HIGHLIGHT_COLOR }]
+    }
+    return [baseCaption]
+  } catch {
+    // Any failure picking the highlight falls back to plain white —
+    // the render must never depend on the highlight decision.
+    return [baseCaption]
   }
 }
 
@@ -411,9 +367,7 @@ export function buildCreatomateSource({
   })
 
   // Track 2 — tile / loop the clips to fill the full duration.
-  //
-  // Each Runway clip is 10s, but Fast Mode stock footage can be anywhere
-  // from ~5s to ~30s. We tile them in order until we cover totalDuration.
+  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
   //
   // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
   // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
@@ -421,97 +375,30 @@ export function buildCreatomateSource({
   // is the curated stock-library fallback, which contains landscape clips
   // (Cloudinary 1280x720 etc.) — 'contain' would render those as a small
   // strip on a black canvas (the black-screen bug); 'cover' fills the
-  // frame with a centered crop.
-  //
-  // Push #143 — `loop: true` ensures any clip shorter than its allotted
-  // slot loops back to the start instead of freezing on the last frame
-  // (which read as a blank/static screen mid-video). Some Pexels portrait
-  // assets come in at 7-9s and would otherwise hold black for 1-3s.
-  //
-  // Push #145 — additional defense layers on top of #143's loop fix:
-  //   1. Coverage assertion at the end of this loop stretches the last
-  //      segment to seal any sub-pixel gap from rounding.
-  //   2. Upstream (app/api/compose/route.ts) every URL is reachability-
-  //      probed via validateAndFallbackClipUrls before reaching this
-  //      function; dead URLs get swapped for a stock-library fallback
-  //      so Creatomate never sees a 404 source.
-  //   3. Structured per-segment logging — we print the assembled
-  //      timeline so any future "scene N went black" report can be
-  //      traced from deploy logs alone.
-  //
-  // Push #146 — even at perfectly aligned boundaries, the hard cut from
-  // one source to the next can show a single frame of the dark track-1
-  // background while the next decoder primes. `transition: fade` (300ms)
-  // on every clip after the first crossfades the cut, so there is no
-  // instant at which neither clip is on screen. Time/duration stay
-  // back-to-back (time + duration === next time) — the transition
-  // directive overlaps them visually without shifting the timeline math.
-  //
-  // Track 1 still paints a dark background as a defense-in-depth safety
-  // net for catastrophic decode failure on Creatomate's side.
+  // frame with a centered crop. Track 1 still paints a dark background as
+  // a safety net for any decode failure.
   const CLIP_LEN = 10
-  const TRANSITION_DURATION = 0.3
   let cursor = 0
   let i = 0
-  const videoSegments: CreatomateElement[] = []
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
     const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
-    const segment: CreatomateElement = {
+    elements.push({
       type: 'video',
       track: 2,
       time: round3(cursor),
       duration: segLen,
       source: url,
       fit: 'cover',
-      loop: true,
       x: '50%',
       y: '50%',
       width: '100%',
       height: '100%',
       volume: '0%',
-    }
-    if (i > 0) {
-      segment.transition = { duration: TRANSITION_DURATION, type: 'fade' }
-    }
-    videoSegments.push(segment)
-    elements.push(segment)
+    })
     cursor += segLen
     i += 1
-  }
-
-  // Coverage assertion — if rounding ever leaves a sub-pixel gap, stretch
-  // the last segment to the exact end of the timeline. With loop:true the
-  // visual stays unbroken.
-  if (videoSegments.length > 0) {
-    const last = videoSegments[videoSegments.length - 1]
-    const segmentEnd = round3(last.time + last.duration)
-    if (segmentEnd < totalDuration) {
-      const extension = round3(totalDuration - last.time)
-      console.warn(
-        `[compose] sealing ${round3(totalDuration - segmentEnd)}s coverage gap by extending last clip (was ${last.duration}s, now ${extension}s)`,
-      )
-      last.duration = extension
-    }
-  }
-
-  // Log the assembled visual timeline so any future black-screen reports
-  // can be diagnosed from the deployment logs alone.
-  console.log(
-    '[compose] visual timeline:',
-    JSON.stringify(
-      videoSegments.map((s, idx) => ({
-        idx,
-        time: s.time,
-        duration: s.duration,
-        source: typeof s.source === 'string' ? s.source.slice(0, 80) : null,
-        loop: s.loop === true,
-      })),
-    ),
-  )
-  if (videoSegments.length === 0) {
-    console.error('[compose] NO VIDEO SEGMENTS were built — render will be black. duration=', totalDuration)
   }
 
   // Track 3 — soft dark overlay so caption text always reads on any clip.
@@ -527,14 +414,9 @@ export function buildCreatomateSource({
     fill_color: 'rgba(0,0,0,0.35)',
   })
 
-  // Track 4 — voiceover for the full duration. The `name` field is what
-  // the karaoke text element below references via `transcript_source`,
-  // so Creatomate knows which audio to transcribe and time the
-  // word-by-word highlight against. The name must stay in sync with
-  // VOICEOVER_TRACK_NAME.
+  // Track 4 — voiceover for the full duration.
   elements.push({
     type: 'audio',
-    name: VOICEOVER_TRACK_NAME,
     track: 4,
     time: 0,
     duration: totalDuration,
@@ -542,19 +424,32 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — karaoke captions auto-synced to the voiceover audio.
-  //
-  // Push #143 — switched from pre-distributed text slots (chunked by
-  // word count) to Creatomate's transcript_source feature. Captions
-  // now timestamp themselves against the actual TTS audio, so they
-  // follow the narrator word-for-word with the active word painted
-  // yellow. The voiceover_script / sceneCaptions arguments are no
-  // longer needed for caption rendering — they remain in the public
-  // function signature for backward compatibility but are not consumed
-  // here. We intentionally void-read them so eslint stays quiet.
-  void voiceoverScript
-  void sceneCaptions
-  elements.push(buildKaraokeCaptionElement(totalDuration))
+  // Track 5 — captions distributed evenly across the duration (minus CTA
+  // tail). Push #066 — captions are now ≤7-word viral-style segments with
+  // a per-segment highlight word so the renderer can paint the line
+  // yellow when an impactful keyword is present. Caption text comes from
+  // the voiceover script first so it matches what the narrator says;
+  // falls back to scene descriptions only when no script is available.
+  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
+    ? scriptSegments
+    : sceneCaptions
+        .map((c) => (c ?? '').toString().trim())
+        .filter((c) => c.length > 0)
+        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
+  if (captionsClean.length > 0) {
+    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
+    const perCaption = round3(captionWindow / captionsClean.length)
+    captionsClean.forEach((segment, idx) => {
+      const elementsForCaption = buildCaptionElements({
+        text: segment.text,
+        time: round3(idx * perCaption),
+        duration: perCaption,
+        highlight: segment.highlight,
+      })
+      elements.push(...elementsForCaption)
+    })
+  }
 
   // Track 6 — CTA in the final 2.5s.
   const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
@@ -583,101 +478,6 @@ export function buildCreatomateSource({
     duration: totalDuration,
     elements,
   }
-}
-
-/**
- * Push #145 — Validate that each clip URL is reachable BEFORE we hand
- * the timeline to Creatomate. A dead URL on the visual track renders as
- * black-with-audio (the user-reported bug), because Creatomate has no
- * notion of "fall back to a different source." We do that fallback here.
- *
- * Behaviour:
- *   - HEAD or short ranged GET to each URL with a 6s per-clip timeout.
- *   - On 4xx/5xx/timeout, swap that slot for a guaranteed-working clip
- *     from the curated stockLibrary (keyed by topic so the fallback at
- *     least loosely matches the scene).
- *   - Final guarantee: the returned array is the same length as the
- *     input, has no empty strings, and every entry is either the original
- *     URL (validated reachable) or a library fallback.
- *
- * Never throws — a failed validation always falls back. Logs every swap.
- */
-export async function validateAndFallbackClipUrls(
-  clipUrls: string[],
-  topicHint: string,
-): Promise<string[]> {
-  const fallbackFor = (idx: number): string => {
-    try {
-      return pickLibraryClip(topicHint || 'default', idx).url
-    } catch {
-      return ''
-    }
-  }
-
-  async function probe(url: string): Promise<boolean> {
-    if (!url || typeof url !== 'string') return false
-    const trimmed = url.trim()
-    if (!trimmed) return false
-    // Reject obviously malformed URLs without a network round-trip.
-    if (!/^https?:\/\//i.test(trimmed)) return false
-
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 6000)
-    try {
-      // Some CDNs (e.g. Pexels) reject HEAD with 405 / 403 but accept GET
-      // with a 0-1 range. Use a ranged GET — it's cheap and accepted
-      // everywhere we use.
-      const res = await fetch(trimmed, {
-        method: 'GET',
-        headers: { Range: 'bytes=0-1' },
-        signal: ctrl.signal,
-        cache: 'no-store',
-      })
-      // 200, 206 (partial), 304 (not modified) all count as reachable.
-      return res.ok || res.status === 206 || res.status === 304
-    } catch {
-      return false
-    } finally {
-      clearTimeout(timer)
-    }
-  }
-
-  const results = await Promise.all(
-    clipUrls.map(async (url, idx) => {
-      const ok = await probe(url)
-      if (ok) {
-        return { url, swapped: false as const }
-      }
-      const fb = fallbackFor(idx) || clipUrls.find((u) => u && u !== url) || ''
-      console.warn(
-        `[compose] clip ${idx} unreachable, swapping → fallback: ${fb.slice(0, 80) || '<none>'} (was: ${(url || '<empty>').slice(0, 80)})`,
-      )
-      return { url: fb, swapped: true as const }
-    }),
-  )
-
-  const validated = results
-    .map((r) => r.url)
-    .filter((u) => typeof u === 'string' && u.length > 0)
-
-  // Last-ditch: if every clip failed AND no fallback resolved, ship
-  // whatever non-empty URLs were originally provided so Creatomate at
-  // least has something to attempt. The render-pipeline's track-1
-  // background then handles whatever Creatomate can't decode.
-  if (validated.length === 0) {
-    const passthrough = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
-    console.error(
-      `[compose] ALL ${clipUrls.length} clip URLs failed validation and no library fallback resolved. Passing through ${passthrough.length} unvalidated URLs.`,
-    )
-    return passthrough
-  }
-
-  const swappedCount = results.filter((r) => r.swapped).length
-  console.log(
-    `[compose] clip URL validation: total=${clipUrls.length} ok=${results.length - swappedCount} swapped=${swappedCount}`,
-  )
-
-  return validated
 }
 
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {

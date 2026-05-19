@@ -7,8 +7,17 @@
 // fallback), credits used, and a numeric quality_score star rating
 // when present. The grid still falls back gracefully on staging rows
 // that don't have a video_url yet.
+//
+// Push #153 — two UX improvements:
+// 1. Autoplay in viewport: VideoCard uses IntersectionObserver so the
+//    video starts playing as soon as the card is 40% visible — no hover
+//    needed. Hover/pin still work as before.
+// 2. Auto-refresh: when any video is still processing, the page calls
+//    router.refresh() every 12 seconds so newly completed renders appear
+//    without a manual page reload.
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 export interface VideoRow {
@@ -85,6 +94,16 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   // tapping a new card auto-pauses the previously playing one.
   const [playingId, setPlayingId] = useState<string | null>(null)
 
+  // Push #153 — auto-refresh while any video is still processing so the
+  // user doesn't have to manually reload to see a completed render.
+  const router = useRouter()
+  const hasProcessing = useMemo(() => videos.some((v) => v.status === 'processing'), [videos])
+  useEffect(() => {
+    if (!hasProcessing) return
+    const id = setInterval(() => router.refresh(), 12_000)
+    return () => clearInterval(id)
+  }, [hasProcessing, router])
+
   const counts = useMemo(() => {
     const c = { all: videos.length, completed: 0, processing: 0, failed: 0 }
     for (const v of videos) {
@@ -128,7 +147,16 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = objectUrl
-      a.download = `shortsforge-${v.id.slice(0, 8)}.mp4`
+      // Push #154 — use the video title as the download filename so the
+      // user can tell files apart without opening each one. Strip chars
+      // that are illegal in filenames on Windows/macOS, collapse spaces
+      // to underscores, and cap at 80 chars.
+      const safeTitle = v.title
+        .replace(/[\\/:*?"<>|]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .slice(0, 80)
+      a.download = safeTitle ? `${safeTitle}.mp4` : `shortsforge-${v.id.slice(0, 8)}.mp4`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -256,13 +284,25 @@ function VideoCard({
     : '/generate'
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const cardRef = useRef<HTMLDivElement | null>(null)
   const [hovered, setHovered] = useState(false)
   const [previewFailed, setPreviewFailed] = useState(false)
+  // Push #153 — autoplay when card is 40% visible in viewport.
+  const [isVisible, setIsVisible] = useState(false)
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || !playable) return
+    const obs = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.4 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [playable])
 
   // Push #100 — single source of truth for "should the preview be playing".
-  // Hover handles desktop, isPinned handles mobile tap. preload="none" +
-  // dynamic src means cards don't fetch any bytes until the user interacts.
-  const shouldPlay = (hovered || isPinned) && playable && !previewFailed
+  // Push #153 — isVisible adds viewport-based autoplay on top of hover/pin.
+  const shouldPlay = (isVisible || hovered || isPinned) && playable && !previewFailed
 
   useEffect(() => {
     const el = videoRef.current
@@ -305,6 +345,7 @@ function VideoCard({
 
   return (
     <div
+      ref={cardRef}
       onPointerEnter={(e) => { if (e.pointerType !== 'touch') setHovered(true) }}
       onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
@@ -341,7 +382,7 @@ function VideoCard({
             muted
             loop
             playsInline
-            preload="none"
+            preload="metadata"
             onError={() => setPreviewFailed(true)}
             className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
             style={{ opacity: shouldPlay ? 1 : 0 }}

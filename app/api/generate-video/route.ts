@@ -108,12 +108,6 @@ export async function POST(req: NextRequest) {
       return q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
 
-    // Cinematic-mode visual clip count stays at the duration default — the
-    // narrative beats come from /api/analyze-idea on the client (which is
-    // the path that gets the "top N" override in push #143), and karaoke
-    // captions follow the audio rather than the visual cuts, so adding
-    // more Runway clips here would just burn credits without helping the
-    // viewer count more facts.
     const clipCount = clipCountForDuration(duration)
     // Push #088 — `creditCostFor` is no longer used here. Cinematic deducts
     // a single cinematic_token (see block below) rather than a per-quality

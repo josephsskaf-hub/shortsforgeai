@@ -43,36 +43,6 @@ export function durationPlanFor(duration: number): DurationPlan {
   return { duration: 45, wordCountRange: [110, 135], sceneCount: 5 }
 }
 
-// Push #143 — Detect "top N" / "N facts" / "N curiosities" in the prompt
-// so the scene generator knows to produce N distinct beats. Without this,
-// a "Top 5 facts about X" prompt at 30s only got 3 scenes (one per Runway
-// clip), and the script delivered just 1-3 facts instead of the promised 5.
-//
-// Returns the explicit count when found (clamped to 2..8 because Runway
-// clips are 10s — more than 8 facts would push the Short past 80s and
-// past Creatomate's affordable render window), otherwise returns null
-// and the caller falls back to its duration-based default.
-//
-// Recognised patterns (EN + PT, since the team writes prompts in both):
-//   - "top 5", "best 7", "5 facts", "5 curiosities", "5 reasons"
-//   - "top 5 curiosidades", "5 fatos", "5 segredos"
-export function detectFactCountFromPrompt(prompt: string): number | null {
-  const text = (prompt ?? '').toLowerCase()
-  const patterns: RegExp[] = [
-    /\b(?:top|best|melhores|maiores)\s+(\d{1,2})\b/,
-    /\b(\d{1,2})\s+(?:facts?|curios(?:ities|ity)?|reasons?|secrets?|things?|tips?|ways?|signs?)\b/,
-    /\b(\d{1,2})\s+(?:curiosidades?|fatos?|segredos?|coisas|dicas|motivos|razões|sinais)\b/,
-  ]
-  for (const re of patterns) {
-    const m = text.match(re)
-    if (m) {
-      const n = parseInt(m[1], 10)
-      if (Number.isFinite(n) && n >= 2 && n <= 8) return n
-    }
-  }
-  return null
-}
-
 // Push #065 — safe composition rules. Vertical 9:16 + bottom captions
 // means generators must keep landmarks/faces inside a generous inner
 // frame, otherwise heads, monuments, or readable text get clipped on
