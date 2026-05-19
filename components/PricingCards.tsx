@@ -47,6 +47,9 @@ const PRO_FEATURES = [
 export default function PricingCards() {
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Push #171 — show a clear "already subscribed" banner instead of
+  // silently redirecting to /generate on duplicate purchase attempts.
+  const [alreadySubscribed, setAlreadySubscribed] = useState(false)
   // Push #077 — pricing card selected state. Pro is the recommended
   // default. Card click selects (does NOT trigger Stripe); CTA button
   // click navigates to Stripe.
@@ -87,10 +90,11 @@ export default function PricingCards() {
         window.location.href = `/login?redirect=${encodeURIComponent('/generate')}`
         return
       }
-      // Already subscribed — skip the error toast and just take the user
-      // back to the generator where their plan is already active.
+      // Already subscribed — show an info banner instead of silently
+      // redirecting (confused users with 0 credits into thinking purchase failed).
       if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
-        window.location.href = '/generate'
+        setAlreadySubscribed(true)
+        setPurchasing(null)
         return
       }
       if (!res.ok || !data?.url) {
@@ -133,6 +137,39 @@ export default function PricingCards() {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {/* Push #171 — already subscribed info banner */}
+      {alreadySubscribed && (
+        <div
+          className="rounded-xl px-4 py-4 text-sm mb-4 mx-auto text-center"
+          style={{
+            maxWidth: 720,
+            background: 'rgba(52,211,153,.07)',
+            border: '1px solid rgba(52,211,153,.25)',
+          }}
+        >
+          <p style={{ color: '#34d399', fontWeight: 800 }}>✅ You already have an active subscription!</p>
+          <p style={{ color: '#94a3b8', marginTop: 4, fontSize: '0.75rem' }}>
+            Your plan is active. Credits may still be syncing.
+          </p>
+          <a
+            href="/generate"
+            style={{
+              display: 'inline-block',
+              marginTop: 10,
+              background: '#34d399',
+              color: '#05070d',
+              borderRadius: 8,
+              padding: '6px 16px',
+              fontWeight: 800,
+              fontSize: '0.8rem',
+              textDecoration: 'none',
+            }}
+          >
+            Go to Dashboard →
+          </a>
         </div>
       )}
 

@@ -157,6 +157,9 @@ export default function PricingPage() {
   // any server-returned error below the cards.
   const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  // Push #171 — show a friendly "already subscribed" info banner instead of
+  // silently redirecting to /generate when the API blocks a duplicate purchase.
+  const [alreadySubscribed, setAlreadySubscribed] = useState(false)
   // Push #116 — ROI calculator slider. Default starts at 5 Shorts/week
   // (a credible "I post often" cadence) so the math reads as meaningful
   // from the first paint.
@@ -185,11 +188,12 @@ export default function PricingPage() {
         window.location.href = `/signup?redirect=${encodeURIComponent('/pricing')}`
         return
       }
-      // Already subscribed — push the user straight into the product
-      // instead of showing a "you already have an active subscription"
-      // error toast.
+      // Already subscribed — show an info banner explaining the situation
+      // instead of silently redirecting (which confused users with 0 credits
+      // into thinking their purchase failed).
       if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
-        window.location.href = '/generate'
+        setAlreadySubscribed(true)
+        setPurchasing(null)
         return
       }
       if (!res.ok || !data?.url) {
@@ -533,6 +537,25 @@ export default function PricingPage() {
           </p>
         )}
 
+        {/* Push #171 — "already subscribed" info banner. Shown instead of
+            the old silent redirect so users understand their plan is active. */}
+        {alreadySubscribed && (
+          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-5 py-4 text-center">
+            <p className="text-[13px] font-bold text-emerald-400">
+              ✅ You already have an active subscription!
+            </p>
+            <p className="mt-1 text-[12px] text-[#94A3B8]">
+              Your plan is active. If your credits look low, they may still be syncing.
+            </p>
+            <a
+              href="/generate"
+              className="mt-3 inline-block rounded-lg bg-emerald-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(52,211,153,.35)] transition hover:bg-emerald-400"
+            >
+              Go to Dashboard →
+            </a>
+          </div>
+        )}
+
         {/* Push #097 — Guarantee row directly under the plan cards.
             Reinforces buyer confidence between the CTA and the comparison
             table below. */}
@@ -847,25 +870,4 @@ export default function PricingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B1120] border border-blue-500/40 text-sm">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
-              </svg>
-            </div>
-            <span className="text-[13px] font-bold text-[#F1F5F9]">
-              <span>ShortsForge</span><span className="text-cyan-400">AI</span>
-            </span>
-          </div>
-          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI</p>
-        </div>
-        {/* Push #116 — legal + contact strip. */}
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
-          <Link href="/terms" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Terms of Service</Link>
-          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
-          <Link href="/privacy" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Privacy Policy</Link>
-          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
-          <a href="mailto:hello@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
-        </div>
-      </footer>
-    </div>
-  )
-}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="no

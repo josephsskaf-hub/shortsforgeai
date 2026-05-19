@@ -113,6 +113,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [credits, setCredits] = useState<number | null>(null)
   const [checkoutTier, setCheckoutTier] = useState<'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  // Push #171 — show a friendly "already subscribed" banner instead of a
+  // red error when the API blocks a duplicate purchase attempt.
+  const [alreadySubscribed, setAlreadySubscribed] = useState(false)
   // Push #097 — exit-intent overlay state. One-shot per session.
   const [showExitIntent, setShowExitIntent] = useState(false)
   // Push #104 — live "X Shorts created today" counter for the social
@@ -303,6 +306,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         body: JSON.stringify({ tier, currency }),
       })
       const data = await res.json().catch(() => ({}))
+      // Push #171 — already subscribed: show friendly banner instead of
+      // a red error (which confused users into thinking checkout failed).
+      if (res.status === 400 && typeof data?.error === 'string' && data.error.toLowerCase().includes('already have an active subscription')) {
+        setAlreadySubscribed(true)
+        setCheckoutTier(null)
+        return
+      }
       if (!res.ok || !data?.url) {
         setCheckoutError(data?.error ?? 'Could not start checkout. Please try again.')
         setCheckoutTier(null)
@@ -952,6 +962,24 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </p>
         )}
 
+        {/* Push #171 — already subscribed info banner */}
+        {alreadySubscribed && (
+          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-5 py-4 text-center">
+            <p className="text-[13px] font-bold text-emerald-400">
+              ✅ You already have an active subscription!
+            </p>
+            <p className="mt-1 text-[12px] text-[#94A3B8]">
+              Your plan is active. Credits may still be syncing.
+            </p>
+            <a
+              href="/generate"
+              className="mt-3 inline-block rounded-lg bg-emerald-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(52,211,153,.35)] transition hover:bg-emerald-400"
+            >
+              Go to Dashboard →
+            </a>
+          </div>
+        )}
+
         <p className="mx-auto mt-6 max-w-2xl text-center text-[12px] text-[#94A3B8]">
           50% off applies to the first month only. Plans renew at the regular monthly price.
         </p>
@@ -1379,49 +1407,4 @@ function ShowcaseVideoCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
-        <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title}</h3>
-        <p className="hidden text-[12px] text-[#94A3B8] line-clamp-2 sm:block">
-          {card.prompt}
-        </p>
-        <button
-          type="button"
-          onClick={onGenerate}
-          className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
-        >
-          <span>Generate similar</span>
-          <span style={{ color: card.accent }}>→</span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// Marketing feature copy lives next to the home page so it can be tuned
-// without touching the canonical PLANS config.
-function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
-  if (tier === 'free') {
-    return [
-      `${PLANS.free.credits} Fast Mode videos`,
-      'Pexels footage + AI voiceover',
-      'Watermark-free MP4',
-      'Try the platform',
-    ]
-  }
-  if (tier === 'basic') {
-    return [
-      `${PLANS.basic.credits} Fast Mode videos/month`,
-      'Pexels footage + AI voiceover',
-      'Voiceover + captions',
-      'Download MP4',
-      'My Videos history',
-    ]
-  }
-  return [
-    `${PLANS.pro.credits} Fast Mode videos/month`,
-    '1 Cinematic (Runway AI) video/month',
-    'Better generation settings',
-    'Voiceover + captions',
-    'Download MP4',
-    'My Videos history',
-  ]
-}
+        <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title
