@@ -1407,4 +1407,49 @@ function ShowcaseVideoCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4 sm:p-5">
-        <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title
+        <h3 className="text-[14px] sm:text-[15px] font-bold text-[#F1F5F9] leading-snug">{card.title}</h3>
+        <p className="hidden text-[12px] text-[#94A3B8] line-clamp-2 sm:block">
+          {card.prompt}
+        </p>
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-blue-500/50 hover:bg-white/[0.04]"
+        >
+          <span>Generate similar</span>
+          <span style={{ color: card.accent }}>→</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Marketing feature copy lives next to the home page so it can be tuned
+// without touching the canonical PLANS config.
+function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
+  if (tier === 'free') {
+    return [
+      `${PLANS.free.credits} Fast Mode videos`,
+      'Pexels footage + AI voiceover',
+      'Watermark-free MP4',
+      'Try the platform',
+    ]
+  }
+  if (tier === 'basic') {
+    return [
+      `${PLANS.basic.credits} Fast Mode videos/month`,
+      'Pexels footage + AI voiceover',
+      'Voiceover + captions',
+      'Download MP4',
+      'My Videos history',
+    ]
+  }
+  return [
+    `${PLANS.pro.credits} Fast Mode videos/month`,
+    '1 Cinematic (Runway AI) video/month',
+    'Better generation settings',
+    'Voiceover + captions',
+    'Download MP4',
+    'My Videos history',
+  ]
+}

@@ -870,4 +870,25 @@ export default function PricingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B1120] border border-blue-500/40 text-sm">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="no
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
+              </svg>
+            </div>
+            <span className="text-[13px] font-bold text-[#F1F5F9]">
+              <span>ShortsForge</span><span className="text-cyan-400">AI</span>
+            </span>
+          </div>
+          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI</p>
+        </div>
+        {/* Push #116 — legal + contact strip. */}
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
+          <Link href="/terms" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Terms of Service</Link>
+          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
+          <Link href="/privacy" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Privacy Policy</Link>
+          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
+          <a href="mailto:hello@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
+        </div>
+      </footer>
+    </div>
+  )
+}
