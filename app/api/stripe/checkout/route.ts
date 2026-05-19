@@ -4,10 +4,11 @@ import { stripe } from '@/lib/stripe'
 import Stripe from 'stripe'
 
 type Tier = 'basic' | 'pro'
+type Currency = 'usd' | 'brl'
 
 // Plan definitions:
-//   Basic = $4.90/month, 50 Fast Mode videos/month.
-//   Pro   = $9.90/month, 100 Fast Mode videos/month + 1 Cinematic (Runway AI) video/month.
+//   Basic = $4.90/month (USD) or R$24.90/month (BRL), 50 Fast Mode videos/month.
+//   Pro   = $9.90/month (USD) or R$49.90/month (BRL), 100 Fast Mode videos/month + 1 Cinematic video/month.
 // Launch offer: 50% off the first month via LAUNCH50 coupon (duration: once).
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   basic: {
@@ -22,10 +23,12 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Push #167 — USD only. Basic $4.90/mo, Pro $9.90/mo.
-const TIER_PRICES: Record<Tier, number> = {
-  basic: 490,
-  pro: 990,
+// Push #168 — dual-currency: USD for non-BR, BRL for BR.
+//   USD: Basic $4.90/mo, Pro $9.90/mo
+//   BRL: Basic R$24.90/mo, Pro R$49.90/mo
+const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
+  basic: { usd: 490, brl: 2490 },
+  pro:   { usd: 990, brl: 4990 },
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'
@@ -52,8 +55,12 @@ export async function POST(req: NextRequest) {
       // ignore body parse errors and use default tier
     }
 
+    // Push #168 — detect country, charge BRL for BR users, USD for everyone else.
+    const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+    const currency: Currency = country === 'BR' ? 'brl' : 'usd'
+
     const plan = TIERS[tier]
-    const unitAmount = TIER_PRICES[tier]
+    const unitAmount = TIER_PRICES[tier][currency]
 
     const supabase = createClient()
 
@@ -146,7 +153,7 @@ export async function POST(req: NextRequest) {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency,
             product_data: {
               name: plan.name,
               description: plan.description,
