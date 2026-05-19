@@ -245,9 +245,10 @@ export default function Sidebar({
       )}
 
       <aside
-        className="fixed left-0 top-0 h-screen flex flex-col z-50 transition-transform duration-300"
+        className="fixed left-0 top-0 flex flex-col z-50 transition-transform duration-300"
         style={{
           width: 248,
+          height: '100dvh',
           background: '#0B1020',
           borderRight: '1px solid rgba(255,255,255,0.06)',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
@@ -428,11 +429,12 @@ export default function Sidebar({
           </div>
         ) : creditsZero ? (
           <div className="px-3 pb-2 flex-shrink-0">
-            <div style={{ borderRadius: 14, padding: '14px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)' }}>
-              <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fca5a5', marginBottom: 4 }}>⚠️ No credits left</p>
-              <p style={{ fontSize: '0.7rem', color: '#94A3B8', lineHeight: 1.45, marginBottom: 10 }}>Buy a pack to keep creating.</p>
-              <Link href="/pricing" onClick={onClose} style={{ display: 'block', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#fff', background: '#2563EB', textDecoration: 'none', boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}>
-                💳 Buy Credits →
+            <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fca5a5', margin: 0 }}>⚠️ No credits left</p>
+              </div>
+              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#fff', background: '#2563EB', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Buy →
               </Link>
             </div>
           </div>
