@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         <a href="${safeVideoUrl}" style="display:inline-block;background:linear-gradient(135deg,#2563EB,#22D3EE);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
           ⬇ Download Your Short
         </a>
-        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade for just $2.25 your first month →</a></p>
+        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade to Basic — $9.90/mo →</a></p>
         <p style="color:#475569;font-size:11px;margin:16px 0 0">ShortsForgeAI · <a href="https://shortsforgeai.com" style="color:#475569;">shortsforgeai.com</a></p>
       </div>
     `

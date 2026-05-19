@@ -224,8 +224,7 @@ export default function GenerateClient() {
 
   // Push #098 — out-of-credits upgrade modal. Opened when the user clicks
   // any Generate/Analyze/Generate-Similar CTA while credits <= 0. Routes
-  // through POST /api/stripe/checkout {tier:'basic'} to the launch-offer
-  // checkout session.
+  // through /api/stripe/checkout?tier=basic (GET redirect to Stripe).
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
 
