@@ -27,8 +27,8 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 //   USD (non-BR users): Basic $4.90/mo, Pro $9.90/mo
 //   BRL (BR users):     Basic R$9/mo,   Pro R$19/mo
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 490, brl: 900 },
-  pro:   { usd: 990, brl: 1900 },
+  basic: { usd: 490, brl: 2490 },
+  pro:   { usd: 990, brl: 4990 },
 }
 
 const LAUNCH_COUPON = 'LAUNCH50'

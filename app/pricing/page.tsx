@@ -35,10 +35,10 @@ const PRICING_DATA = {
     stickyPro:   'Pro — $9.90/mo 🔥',
   },
   brl: {
-    basic: { price: 'R$4,50', priceSub: 'first month, then R$9/mo' },
-    pro:   { price: 'R$9,50', priceSub: 'first month, then R$19/mo' },
-    stickyBasic: 'Basic — R$9/mo',
-    stickyPro:   'Pro — R$19/mo 🔥',
+    basic: { price: 'R$12,45', priceSub: 'first month, then R$24,90/mo' },
+    pro:   { price: 'R$24,95', priceSub: 'first month, then R$49,90/mo' },
+    stickyBasic: 'Basic — R$24,90/mo',
+    stickyPro:   'Pro — R$49,90/mo 🔥',
   },
 }
 
