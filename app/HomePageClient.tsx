@@ -910,7 +910,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
                   {plan.tier === 'free' && 'No credit card required'}
                   {plan.tier === 'basic' && '50 Fast Mode videos/month'}
-                  {plan.tier === 'pro' && '100 Fast Mode + 1 Cinematic/month'}
+                  {plan.tier === 'pro' && '100 Fast Mode + Cinematic Mode unlocked.'}
                 </p>
                 {(plan.tier === 'basic' || plan.tier === 'pro') && (
                   <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
@@ -1409,8 +1409,8 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   }
   return [
     `${PLANS.pro.credits} Fast Mode videos/month`,
-    '1 Cinematic (Runway AI) video/month',
-    'Better generation settings',
+    '🎬 Access to Cinematic Mode — AI-generated scenes',
+    'Advanced generation controls',
     'Voiceover + captions',
     'Download MP4',
     'My Videos history',
