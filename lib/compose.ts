@@ -284,6 +284,7 @@ interface CreatomateElement {
   height?: string
   fit?: string
   volume?: string
+  loop?: boolean
   fill_color?: string
   stroke_color?: string
   stroke_width?: number
@@ -429,6 +430,7 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
+      loop: true,
     })
     cursor += segLen
     i += 1
