@@ -2153,8 +2153,12 @@ export default function GenerateClient() {
 
           {phase === 'done' && finalVideoUrl && (
             <section
-              className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+              className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center max-w-lg mx-auto"
+              style={{
+                background: 'rgba(15,15,30,0.85)',
+                border: '1px solid var(--border)',
+                boxShadow: '0 24px 80px rgba(0,0,0,.45)',
+              }}
             >
               <div className="text-center">
                 <h2 className="font-black tracking-tight" style={{ fontSize: '1.5rem', color: 'var(--text)', lineHeight: 1.2 }}>
@@ -2183,19 +2187,14 @@ export default function GenerateClient() {
                 </p>
               </div>
 
-              {/* Push #045A — bigger result-page player. width caps at 460px
-                  on desktop, falls back to 90vw on smaller viewports;
-                  max-height pins it under the fold (78vh) so the buttons
-                  below remain visible. object-fit: contain lets the actual
-                  composed letterboxing show without cropping. */}
+              {/* Result-page player. The container is pinned to a true 9:16
+                  box (max 340px wide, centered) and the <video> uses
+                  object-cover so a source that isn't pixel-perfect 9:16 fills
+                  the frame instead of showing black bars on the sides. */}
               <div
-                className="rounded-2xl overflow-hidden mt-6"
+                className="rounded-2xl overflow-hidden mt-6 max-w-[340px] mx-auto aspect-[9/16] w-full"
                 style={{
-                  width: 'min(460px, 90vw)',
                   maxHeight: '78vh',
-                  aspectRatio: '9 / 16',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
                   border: '1px solid rgba(37,99,235,.45)',
                   boxShadow: '0 18px 60px rgba(37,99,235,.22)',
                   background: '#000',
@@ -2274,7 +2273,7 @@ export default function GenerateClient() {
                     autoPlay
                     playsInline
                     preload="metadata"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 )}
               </div>
