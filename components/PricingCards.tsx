@@ -38,7 +38,7 @@ const BASIC_FEATURES = [
 const PRO_FEATURES = [
   `${PLANS.pro.credits} Fast Mode videos/month`,
   '🎬 Access to Cinematic Mode — AI-generated scenes',
-  'Better generation settings',
+  'Advanced generation controls',
   'Voiceover + captions',
   'Download MP4',
   'My Videos history',

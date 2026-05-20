@@ -74,7 +74,7 @@ function buildPricing() {
       features: [
         '100 Fast Mode videos/month',
         '🎬 Access to Cinematic Mode — AI-generated scenes',
-        'Better generation settings',
+        'Advanced generation controls',
         'Voiceover + captions',
         'Download MP4',
         'My Videos history',
@@ -212,7 +212,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two paid plans, flat monthly price. Pro unlocks Cinematic Mode. Failed generations never consume credits.
+            Two paid plans, flat monthly price. Under $0.20 per video — less than a cup of coffee for a viral Short.
           </p>
         </div>
 
@@ -599,9 +599,8 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
-            Cinematic Mode uses Runway AI to generate fully synthetic scenes
-            — unlocked on Pro. Fast Mode stays unlimited within your monthly
-            Fast credits.
+            Cinematic Mode uses Runway AI to generate fully synthetic, AI-rendered scenes — exclusive to Pro.
+            Fast Mode stays available within your monthly credit balance.
           </p>
         </div>
 
