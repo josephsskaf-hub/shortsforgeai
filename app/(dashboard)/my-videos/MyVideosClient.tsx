@@ -8,19 +8,17 @@
 // when present. The grid still falls back gracefully on staging rows
 // that don't have a video_url yet.
 //
-// Push #153 — auto-refresh: when any video is still processing, the page
-// calls router.refresh() every 12 seconds so newly completed renders
-// appear without a manual page reload.
-//
-// Push #151 — performance: smaller cards (4-up on desktop) and true lazy
-// loading. Thumbnails use <img loading="lazy">, and each card's MP4 has
-// preload="none" with no src until the user actually hovers (or taps on
-// mobile) — so nothing is fetched from the CDN on mount.
+// Push #153 — two UX improvements:
+// 1. Autoplay in viewport: VideoCard uses IntersectionObserver so the
+//    video starts playing as soon as the card is 40% visible — no hover
+//    needed. Hover/pin still work as before.
+// 2. Auto-refresh: when any video is still processing, the page calls
+//    router.refresh() every 12 seconds so newly completed renders appear
+//    without a manual page reload.
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { showToast } from '@/components/Toast'
 
 export interface VideoRow {
   id: string
@@ -65,14 +63,6 @@ function statusChip(s: VideoRow['status']) {
     bg: 'rgba(34, 211, 238,.10)',
     border: 'rgba(34, 211, 238,.32)',
   }
-}
-
-// Format a raw seconds count as "M:SS" — e.g. 45 → "0:45", 95 → "1:35".
-function formatDurationMSS(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 function formatFullDate(iso: string): string {
@@ -139,9 +129,8 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       await navigator.clipboard.writeText(v.video_url)
       setCopiedId(v.id)
       setTimeout(() => setCopiedId((c) => (c === v.id ? null : c)), 1800)
-      showToast('Video link copied to clipboard', 'success')
     } catch {
-      showToast('Could not copy — clipboard blocked by browser', 'error')
+      // clipboard denied — silent no-op
     }
   }
 
@@ -173,11 +162,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       a.remove()
       // Give the browser a tick to start the download before revoking.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
-      showToast('Download started', 'success')
     } catch {
       // Fall back to opening the URL in a new tab so the user isn't stranded.
       window.open(v.video_url, '_blank', 'noopener,noreferrer')
-      showToast('Opened video in a new tab', 'info')
     } finally {
       setDownloadingId(null)
     }
@@ -190,7 +177,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         <div
           className="rounded-2xl p-8 sm:p-14 text-center"
           style={{
-            background: 'linear-gradient(180deg, rgba(15,15,30,.85), rgba(11,16,32,.65))',
+            background: 'linear-gradient(180deg, rgba(11,17,32,.85), rgba(11,16,32,.65))',
             border: '1px solid rgba(59, 130, 246,.18)',
             boxShadow: '0 0 80px rgba(59,130,246,.08)',
           }}
@@ -256,16 +243,13 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       <style jsx>{`
         .mv-grid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 13px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
         }
-        @media (max-width: 1100px) {
-          .mv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        }
-        @media (max-width: 760px) {
+        @media (max-width: 900px) {
           .mv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 540px) {
           .mv-grid { grid-template-columns: 1fr; }
         }
       `}</style>
@@ -300,43 +284,52 @@ function VideoCard({
     : '/generate'
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const cardRef = useRef<HTMLDivElement | null>(null)
   const [hovered, setHovered] = useState(false)
   const [previewFailed, setPreviewFailed] = useState(false)
-  // Push #151 — lazy load: the MP4 src is set exactly once, on first
-  // interaction (hover on desktop, tap/pin on mobile). Nothing is fetched
-  // from the CDN on mount, which keeps the library fast with many videos.
-  const [hasLoaded, setHasLoaded] = useState(false)
+  // Push #153 — autoplay when card is 40% visible in viewport.
+  const [isVisible, setIsVisible] = useState(false)
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || !playable) return
+    const obs = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.4 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [playable])
 
   // Push #100 — single source of truth for "should the preview be playing".
-  const shouldPlay = (hovered || isPinned) && playable && !previewFailed
-
-  useEffect(() => {
-    if (shouldPlay && !hasLoaded) setHasLoaded(true)
-  }, [shouldPlay, hasLoaded])
+  // Push #153 — isVisible adds viewport-based autoplay on top of hover/pin.
+  const shouldPlay = (isVisible || hovered || isPinned) && playable && !previewFailed
 
   useEffect(() => {
     const el = videoRef.current
     if (!el) return
-    // Attach the src on first interaction and keep it afterwards so
-    // re-hovering doesn't trigger a fresh CDN fetch each time.
-    if (hasLoaded && !el.src && v.video_url) el.src = v.video_url
     if (shouldPlay) {
+      if (!el.src && v.video_url) el.src = v.video_url
       el.muted = true
       el.play().catch(() => {/* autoplay blocked — silent */})
     } else {
       el.pause()
+      try { el.currentTime = 0 } catch { /* not seekable yet */ }
+      // Drop the src so an idle, off-screen card doesn't hold a decoder.
+      if (el.src) {
+        el.removeAttribute('src')
+        el.load()
+      }
     }
-  }, [shouldPlay, hasLoaded, v.video_url])
+  }, [shouldPlay, v.video_url])
 
   function handlePreviewClick() {
     if (!playable || previewFailed) return
     onTogglePin()
   }
 
-  // Duration label — formatted as M:SS when known (e.g. "0:45"), with a
-  // sensible fallback so the card never reads "0:00".
-  const durationLabel =
-    v.duration && v.duration > 0 ? formatDurationMSS(v.duration) : '0:35'
+  // Duration label — show the real seconds when known, otherwise the
+  // expected ~35s for a Shorts render so the card never reads "0s".
+  const durationLabel = v.duration && v.duration > 0 ? `${Math.round(v.duration)}s` : '~35s'
 
   // Quality badge — prefer the numeric quality_score (rendered as stars),
   // fall back to the `quality` text column, finally show "HD" so every
@@ -352,18 +345,17 @@ function VideoCard({
 
   return (
     <div
+      ref={cardRef}
       onPointerEnter={(e) => { if (e.pointerType !== 'touch') setHovered(true) }}
       onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
         background: 'linear-gradient(180deg, #0F1424 0%, #0B1020 100%)',
         border: isActive
-          ? '1px solid rgba(59,130,246,0.75)'
+          ? '1px solid rgba(59,130,246,0.55)'
           : '1px solid rgba(255,255,255,0.06)',
-        // Hover glow uses the brand accent — a tighter inner ring plus a
-        // wider cyan outer halo so the card visibly lifts on pointer enter.
         boxShadow: isActive
-          ? '0 0 0 1px rgba(59,130,246,0.45), 0 0 38px rgba(59,130,246,0.35), 0 0 80px rgba(34,211,238,0.18), 0 22px 44px rgba(0,0,0,0.55)'
+          ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
           : '0 8px 22px rgba(0,0,0,0.35)',
         transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
       }}
@@ -372,34 +364,25 @@ function VideoCard({
         className="relative"
         onClick={handlePreviewClick}
         style={{
-          background: 'linear-gradient(135deg, rgba(37,99,235,.22), rgba(34,211,238,.10))',
+          background: v.thumbnail_url
+            ? `center / cover no-repeat url(${v.thumbnail_url})`
+            : 'linear-gradient(135deg, rgba(37,99,235,.22), rgba(34,211,238,.10))',
           aspectRatio: '9 / 16',
           overflow: 'hidden',
           cursor: playable && !previewFailed ? 'pointer' : 'default',
         }}
       >
-        {/* Push #151 — lazy-loaded thumbnail. loading="lazy" defers the CDN
-            fetch until the card is near the viewport, so the page no longer
-            pulls every thumbnail at once. */}
-        {v.thumbnail_url && (
-          <img
-            src={v.thumbnail_url}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover pointer-events-none"
-          />
-        )}
-
         {/* Hover/tap preview — the rendered MP4 plays muted while the user
             is on (desktop) or has tapped (mobile) the card. preload="none"
             and dynamic src mean nothing is fetched until interaction. */}
         {playable && !previewFailed && (
           <video
             ref={videoRef}
+            poster={v.thumbnail_url ?? undefined}
             muted
             loop
             playsInline
-            preload="none"
+            preload="metadata"
             onError={() => setPreviewFailed(true)}
             className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 pointer-events-none"
             style={{ opacity: shouldPlay ? 1 : 0 }}
@@ -420,8 +403,8 @@ function VideoCard({
           >
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 56,
+                height: 56,
                 borderRadius: '50%',
                 background: 'rgba(11,17,32,.55)',
                 backdropFilter: 'blur(8px)',
@@ -430,8 +413,8 @@ function VideoCard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
-                fontSize: '1.05rem',
-                paddingLeft: 3,
+                fontSize: '1.35rem',
+                paddingLeft: 4,
                 boxShadow: '0 6px 22px rgba(0,0,0,.45)',
               }}
             >
@@ -455,14 +438,14 @@ function VideoCard({
         <span
           className="absolute"
           style={{
-            top: 6,
-            left: 6,
-            padding: '2px 7px',
+            top: 8,
+            left: 8,
+            padding: '3px 9px',
             borderRadius: 999,
             background: chip.bg,
             border: `1px solid ${chip.border}`,
             color: chip.fg,
-            fontSize: '0.55rem',
+            fontSize: '0.62rem',
             fontWeight: 900,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -477,14 +460,14 @@ function VideoCard({
           <span
             className="absolute"
             style={{
-              top: 6,
-              right: 6,
-              padding: '2px 7px',
+              top: 8,
+              right: 8,
+              padding: '3px 9px',
               borderRadius: 6,
               background: 'rgba(11,17,32,.7)',
               border: '1px solid rgba(34,211,238,.45)',
               color: '#22D3EE',
-              fontSize: '0.54rem',
+              fontSize: '0.6rem',
               fontWeight: 900,
               letterSpacing: '0.06em',
               backdropFilter: 'blur(8px)',
@@ -495,31 +478,18 @@ function VideoCard({
           </span>
         )}
 
-        {/* Bottom gradient overlay — improves readability of the badges
-            below it (format, duration) and gives the card a polished,
-            cinematic look regardless of the underlying thumbnail. */}
-        <div
-          className="absolute inset-x-0 bottom-0 pointer-events-none"
-          aria-hidden="true"
-          style={{
-            height: '46%',
-            background:
-              'linear-gradient(to top, rgba(5,7,13,0.92) 0%, rgba(5,7,13,0.55) 45%, rgba(5,7,13,0) 100%)',
-          }}
-        />
-
         {/* Bottom-left: format badge */}
         <span
           className="absolute"
           style={{
-            bottom: 6,
-            left: 6,
-            padding: '2px 6px',
+            bottom: 8,
+            left: 8,
+            padding: '3px 8px',
             borderRadius: 6,
             background: 'rgba(11,17,32,.7)',
             border: '1px solid rgba(255,255,255,.12)',
             color: '#F1F5F9',
-            fontSize: '0.52rem',
+            fontSize: '0.58rem',
             fontWeight: 800,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
@@ -533,13 +503,13 @@ function VideoCard({
         <span
           className="absolute"
           style={{
-            bottom: 6,
-            right: 6,
-            padding: '2px 6px',
+            bottom: 8,
+            right: 8,
+            padding: '3px 8px',
             borderRadius: 6,
             background: 'rgba(0,0,0,.65)',
             color: '#fff',
-            fontSize: '0.55rem',
+            fontSize: '0.62rem',
             fontWeight: 800,
             backdropFilter: 'blur(8px)',
           }}
@@ -548,12 +518,12 @@ function VideoCard({
         </span>
       </div>
 
-      <div className="p-2.5 flex flex-col gap-1.5 flex-1">
+      <div className="p-3.5 flex flex-col gap-2 flex-1">
         <p
-          className="text-[13px] font-bold tracking-tight"
+          className="text-[14px] font-bold tracking-tight"
           style={{
             color: 'var(--text)',
-            lineHeight: 1.3,
+            lineHeight: 1.35,
             margin: 0,
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -565,7 +535,7 @@ function VideoCard({
         </p>
 
         <div
-          className="text-[10px] flex flex-wrap items-center gap-x-1.5 gap-y-1"
+          className="text-[11px] flex flex-wrap items-center gap-x-1.5 gap-y-1"
           style={{ color: 'var(--muted)' }}
         >
           <span>{formatFullDate(v.created_at)}</span>
@@ -578,13 +548,13 @@ function VideoCard({
         </div>
 
         {playable && v.video_url ? (
-          <div className="flex flex-col gap-1.5 mt-auto pt-1.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex flex-col gap-2 mt-auto pt-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <a
                 href={v.video_url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold flex-1 text-center transition-all"
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center transition-all"
                 style={{
                   background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
                   color: '#fff',
@@ -599,7 +569,7 @@ function VideoCard({
                 onClick={onDownload}
                 disabled={isDownloading}
                 title="Download MP4"
-                className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold"
+                className="rounded-lg px-3 py-2 text-xs font-bold"
                 style={{
                   background: 'rgba(255,255,255,.04)',
                   border: '1px solid var(--border)',
@@ -611,11 +581,11 @@ function VideoCard({
                 {isDownloading ? '…' : '⬇ Download'}
               </button>
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={onCopy}
-                className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold flex-1"
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1"
                 style={{
                   background: isCopied
                     ? 'rgba(52,211,153,.12)'
@@ -632,7 +602,7 @@ function VideoCard({
               </button>
               <Link
                 href={generateSimilarHref}
-                className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold flex-1 text-center"
+                className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
                 style={{
                   background: 'rgba(59, 130, 246,.10)',
                   border: '1px solid rgba(59, 130, 246,.32)',

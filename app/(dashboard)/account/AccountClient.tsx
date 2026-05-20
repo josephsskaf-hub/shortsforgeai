@@ -92,9 +92,18 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
   async function handleSignOut() {
     setSigningOut(true)
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    try {
+      // scope:'local' clears the session immediately without a server round-trip
+      // so the sign-out never hangs on a slow network.
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ])
+    } catch {
+      // ignore — always redirect regardless
+    } finally {
+      window.location.href = '/'
+    }
   }
 
   async function handlePortal() {
@@ -142,7 +151,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
       {/* Tabs */}
       <div
         className="flex gap-1 mb-6 rounded-xl p-1 overflow-x-auto"
-        style={{ background: 'rgba(15,15,30,0.7)', border: '1px solid var(--border)', maxWidth: 640 }}
+        style={{ background: 'rgba(11,17,32,0.7)', border: '1px solid var(--border)', maxWidth: 640 }}
       >
         {TABS.map((t) => {
           const active = t.key === activeTab
@@ -379,7 +388,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
             <div
               className="rounded-2xl p-5"
-              style={{ background: 'rgba(15,15,30,0.7)', border: '1px dashed var(--border)' }}
+              style={{ background: 'rgba(11,17,32,0.7)', border: '1px dashed var(--border)' }}
             >
               <div className="text-xs font-bold mb-1" style={{ color: 'var(--text2)' }}>Stock library</div>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
@@ -389,7 +398,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
             <div
               className="rounded-2xl p-5"
-              style={{ background: 'rgba(15,15,30,0.7)', border: '1px dashed var(--border)' }}
+              style={{ background: 'rgba(11,17,32,0.7)', border: '1px dashed var(--border)' }}
             >
               <div className="text-xs font-bold mb-1" style={{ color: 'var(--text2)' }}>Storage</div>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>

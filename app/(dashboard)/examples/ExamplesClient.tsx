@@ -120,7 +120,7 @@ function ExampleCard({ example }: { example: Example }) {
     <div
       className="rounded-2xl p-5 flex flex-col"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         border: '1px solid var(--border)',
         transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
       }}

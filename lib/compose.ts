@@ -5,35 +5,17 @@
 // dynamically import it below.
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
-import { buildCaptionSegments, isHighlightWord, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
+import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
-// Push #180 — minimum on-screen time per word. Whisper occasionally
-// returns sub-100ms durations for fast filler words ("the", "a", "of"),
-// which strobes the caption strip. We pad each word out to this floor so
-// the eye can register it without the duration leaking into the next
-// word's slot (we cap at the next word's start).
-const WORD_MIN_DURATION = 0.18
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
 export const VOICEOVER_BUCKET = 'voiceovers'
-
-/**
- * Push #180 — word-level timing returned by Whisper. The renderer turns
- * each entry into a Creatomate text element with precise time/duration so
- * the caption strip syncs to the actual voiceover instead of guessing
- * from word count alone.
- */
-export interface WordTiming {
-  word: string
-  start: number
-  end: number
-}
 
 export interface ComposeInputs {
   clipUrls: string[]
@@ -52,20 +34,6 @@ export interface ComposeInputs {
    */
   sceneCaptions: string[]
   duration: number
-  /**
-   * Push #180 — word-level timings from Whisper. When present, captions
-   * render one-word-at-a-time synced to the actual voiceover audio (TikTok
-   * viral style). When absent, we fall back to the existing segment-based
-   * caption strip so the render never fails for caption reasons.
-   */
-  wordTimings?: WordTiming[] | null
-  /**
-   * Push #180 — viewer-facing toggle. When `false` the renderer ships the
-   * video without ANY caption strip (word- or segment-level). Default is
-   * `true` (captions on) because captions are the single biggest driver of
-   * retention on Shorts.
-   */
-  captionsEnabled?: boolean
 }
 
 export interface CreatomateRenderState {
@@ -75,16 +43,10 @@ export interface CreatomateRenderState {
   error: string | null
 }
 
-// Push #180 — OpenAI's `onyx` voice on `tts-1` reads at roughly 2.7 words/sec
-// at speed=1.0. We size the script to ~2.6 wps so audio comfortably fills the
-// duration without the TTS audio overrunning the Creatomate timeline (which
-// would cut the last word). For the audio-too-short case we lean on TTS
-// `speed` (see `generateTTS`) rather than padding the script.
-const WORDS_PER_SECOND_BASE = 2.6
-
+// 2.5 words per second is a comfortable voiceover pace.
 export function targetWordCount(duration: number): number {
   const seconds = Math.max(5, Math.min(120, Math.round(duration)))
-  return Math.round(seconds * WORDS_PER_SECOND_BASE)
+  return Math.round(seconds * 2.5)
 }
 
 /**
@@ -97,12 +59,9 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
   if (!cleanInput) return ''
 
   const words = cleanInput.split(/\s+/).filter(Boolean)
-  // Push #180 — tighter ±10% window. The wider ±15% window let too many
-  // off-target scripts pass through unchanged, so 30s videos sometimes
-  // narrated a 95-word script (≈37s of audio cut at 30s) while 60s
-  // videos narrated a 130-word script with 12s of trailing silence.
-  const lo = Math.floor(targetWords * 0.9)
-  const hi = Math.ceil(targetWords * 1.1)
+  // If already close to target (±15%), don't bother round-tripping to OpenAI.
+  const lo = Math.floor(targetWords * 0.85)
+  const hi = Math.ceil(targetWords * 1.15)
   if (words.length >= lo && words.length <= hi) return cleanInput
 
   try {
@@ -114,11 +73,11 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
           {
             role: 'system',
             content:
-              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook and the core idea. Reply with the script text only — no quotes, no markdown.',
+              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook, the core idea, and a strong CTA. Reply with the script text only — no quotes, no markdown.',
           },
           {
             role: 'user',
-            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence and the payoff in the middle. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit shortsforgeai.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,
@@ -138,100 +97,15 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
   return cleanInput
 }
 
-// Push #180 — duration-aware TTS pacing.
-//
-// onyx@tts-1 reads at roughly 2.7 wps at speed=1.0. After `scaleVoiceoverScript`
-// the script should be at ~2.6 wps of duration, but the model occasionally
-// over/undershoots. We compute a small TTS speed adjustment so the rendered
-// audio fits the user's chosen duration:
-//
-//   speed = scriptWords / (targetSeconds * 2.7)
-//
-// Clamped to [0.92, 1.18] so the voice never sounds chipmunked or sluggish —
-// these bounds match what we tested manually as imperceptible to most listeners.
-// If `targetSeconds` is missing, we keep the default speed=1.0 (legacy behavior).
-const TTS_BASELINE_WPS = 2.7
-const TTS_SPEED_MIN = 0.92
-const TTS_SPEED_MAX = 1.18
-
-export function computeTTSSpeed(scriptWords: number, targetSeconds?: number): number {
-  if (!targetSeconds || targetSeconds <= 0) return 1.0
-  if (scriptWords <= 0) return 1.0
-  const raw = scriptWords / (targetSeconds * TTS_BASELINE_WPS)
-  return Math.max(TTS_SPEED_MIN, Math.min(TTS_SPEED_MAX, raw))
-}
-
-export async function generateTTS(
-  script: string,
-  opts: { targetSeconds?: number } = {},
-): Promise<Buffer> {
+export async function generateTTS(script: string): Promise<Buffer> {
   const input = script.length > 3800 ? script.slice(0, 3800) : script
-  const wordCount = input.split(/\s+/).filter(Boolean).length
-  const speed = computeTTSSpeed(wordCount, opts.targetSeconds)
   const { openai } = await import('@/lib/openai')
-  console.log(
-    `[compose] TTS request: words=${wordCount} targetSeconds=${opts.targetSeconds ?? 'none'} speed=${speed.toFixed(3)}`,
-  )
   const speech = await openai.audio.speech.create({
     model: 'tts-1',
     voice: 'onyx',
     input,
-    speed,
   })
   return Buffer.from(await speech.arrayBuffer())
-}
-
-/**
- * Push #180 — transcribe the freshly-generated voiceover with Whisper to
- * recover word-level timestamps. Output drives the word-by-word caption
- * highlight effect downstream.
- *
- * Cost: whisper-1 is $0.006/min, so a 45s short costs <$0.005 — well below
- * the noise floor of a credit. We still call this lazily (only when
- * captions are enabled) so disabling captions saves the round-trip.
- *
- * Failure mode is deliberately soft: if Whisper rate-limits, errors, or
- * returns no word array, we return `null`. The caller falls back to the
- * existing segment-based caption strip. Captions are a polish layer — they
- * must never break the render.
- */
-export async function transcribeWordTimings(audioBuffer: Buffer): Promise<WordTiming[] | null> {
-  if (!audioBuffer || audioBuffer.length === 0) return null
-  try {
-    const { openai } = await import('@/lib/openai')
-    const { toFile } = await import('openai')
-    const file = await toFile(audioBuffer, 'voiceover.mp3', { type: 'audio/mpeg' })
-    const transcription = await openai.audio.transcriptions.create({
-      file,
-      model: 'whisper-1',
-      response_format: 'verbose_json',
-      timestamp_granularities: ['word'],
-    })
-    const raw = (transcription as unknown as { words?: Array<{ word?: unknown; start?: unknown; end?: unknown }> }).words
-    if (!Array.isArray(raw) || raw.length === 0) return null
-
-    const words: WordTiming[] = []
-    for (const entry of raw) {
-      const w = typeof entry.word === 'string' ? entry.word.trim() : ''
-      const start = typeof entry.start === 'number' ? entry.start : NaN
-      const end = typeof entry.end === 'number' ? entry.end : NaN
-      if (!w) continue
-      if (!Number.isFinite(start) || !Number.isFinite(end)) continue
-      if (end <= start) continue
-      words.push({ word: w, start, end })
-    }
-    if (words.length === 0) return null
-
-    // Whisper output is already in playback order, but defend against
-    // out-of-order edge cases — a single jumbled timestamp would make the
-    // captions blink backwards on screen.
-    words.sort((a, b) => a.start - b.start)
-    return words
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[compose] transcribeWordTimings failed (captions will fall back to segments):', msg)
-    return null
-  }
 }
 
 // Push #049 — fix voiceover storage on staging.
@@ -394,147 +268,6 @@ function round3(v: number): number {
   return Math.round(v * 1000) / 1000
 }
 
-// Creatomate validates the composition `duration` strictly: it must be a
-// positive, WHOLE number of seconds. The measured TTS audio length is
-// fractional (e.g. 47.3s) — and a fractional, NaN, string, or out-of-range
-// value makes the API reject the ENTIRE render with a 400, surfaced to the
-// user as "Render service rejected the job." Every duration that feeds a
-// Creatomate payload must pass through here first: coerce -> round -> clamp
-// to [20,120] -> fall back to `target` (then 45) when the value is unusable.
-export const MIN_RENDER_DURATION = 20
-export const MAX_RENDER_DURATION = 120
-export const DEFAULT_RENDER_DURATION = 45
-
-export function safeRenderDuration(
-  value: unknown,
-  target: number = DEFAULT_RENDER_DURATION,
-): number {
-  const targetNum =
-    typeof target === 'number' && Number.isFinite(target) ? target : DEFAULT_RENDER_DURATION
-  const fallback = clamp(Math.round(targetNum), MIN_RENDER_DURATION, MAX_RENDER_DURATION)
-  const n = typeof value === 'number' ? value : Number(value)
-  if (!Number.isFinite(n) || n <= 0) return fallback
-  return clamp(Math.round(n), MIN_RENDER_DURATION, MAX_RENDER_DURATION)
-}
-
-/**
- * Measure the real playback length (seconds) of an MP3 buffer.
- *
- * Why this exists: OpenAI TTS returns MP3 whose actual length is almost
- * always a bit longer (or shorter) than the duration we asked the script to
- * fit. `computeTTSSpeed` nudges the pace toward the target but is clamped, so
- * the audio still over/undershoots. Driving the Creatomate render off the
- * fixed target then either cuts the voiceover off OR (because the word-by-word
- * caption strip is gated on `totalDuration - CTA tail`) drops the last few
- * seconds of captions. Measuring the audio and rendering to its true length
- * fixes both at once.
- *
- * Implementation: walk the MPEG audio frame headers and sum each frame's
- * (samplesPerFrame / sampleRate). Dependency-free and correct for both CBR
- * and VBR streams; a leading ID3v2 tag is skipped. Returns null if the buffer
- * doesn't parse as MP3 so the caller can fall back to the target duration.
- */
-export function getMp3DurationSeconds(buffer: Buffer): number | null {
-  if (!buffer || buffer.length < 4) return null
-
-  let offset = 0
-
-  // Skip a leading ID3v2 tag: 'ID3' + 2 version bytes + 1 flags byte + a
-  // 4-byte synchsafe size (7 significant bits per byte).
-  if (
-    buffer.length > 10 &&
-    buffer[0] === 0x49 && // 'I'
-    buffer[1] === 0x44 && // 'D'
-    buffer[2] === 0x33 // '3'
-  ) {
-    const tagSize =
-      ((buffer[6] & 0x7f) << 21) |
-      ((buffer[7] & 0x7f) << 14) |
-      ((buffer[8] & 0x7f) << 7) |
-      (buffer[9] & 0x7f)
-    offset = 10 + tagSize
-  }
-
-  // version bits: 00=MPEG2.5, 10=MPEG2, 11=MPEG1 (01 reserved).
-  const MPEG1 = 3
-  // Bitrate tables (kbps) keyed by "<versionGroup>-<layer>". versionGroup is
-  // 1 for MPEG1, 2 for MPEG2/2.5. layer is 1/2/3.
-  const BITRATES: Record<string, number[]> = {
-    '1-1': [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0],
-    '1-2': [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0],
-    '1-3': [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0],
-    '2-1': [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0],
-    '2-2': [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0],
-    '2-3': [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0],
-  }
-  const SAMPLE_RATES: Record<number, number[]> = {
-    3: [44100, 48000, 32000, 0], // MPEG1
-    2: [22050, 24000, 16000, 0], // MPEG2
-    0: [11025, 12000, 8000, 0], // MPEG2.5
-  }
-
-  let duration = 0
-  let frames = 0
-
-  while (offset + 4 <= buffer.length) {
-    // Frame sync = 11 set bits.
-    if (buffer[offset] !== 0xff || (buffer[offset + 1] & 0xe0) !== 0xe0) {
-      offset += 1
-      continue
-    }
-
-    const b1 = buffer[offset + 1]
-    const b2 = buffer[offset + 2]
-    const versionBits = (b1 >> 3) & 0x03
-    const layerBits = (b1 >> 1) & 0x03
-    if (versionBits === 1 || layerBits === 0) {
-      offset += 1
-      continue
-    }
-
-    const bitrateIndex = (b2 >> 4) & 0x0f
-    const sampleRateIndex = (b2 >> 2) & 0x03
-    const padding = (b2 >> 1) & 0x01
-    if (bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) {
-      offset += 1
-      continue
-    }
-
-    // layerBits: 01=Layer III, 10=Layer II, 11=Layer I.
-    const layerNum = layerBits === 3 ? 1 : layerBits === 2 ? 2 : 3
-    const versionGroup = versionBits === MPEG1 ? '1' : '2'
-    const bitrate = (BITRATES[`${versionGroup}-${layerNum}`]?.[bitrateIndex] ?? 0) * 1000
-    const sampleRate = SAMPLE_RATES[versionBits]?.[sampleRateIndex] ?? 0
-    if (!bitrate || !sampleRate) {
-      offset += 1
-      continue
-    }
-
-    let samplesPerFrame: number
-    if (layerNum === 1) samplesPerFrame = 384
-    else if (layerNum === 3 && versionBits !== MPEG1) samplesPerFrame = 576
-    else samplesPerFrame = 1152
-
-    let frameLength: number
-    if (layerNum === 1) {
-      frameLength = (Math.floor((12 * bitrate) / sampleRate) + padding) * 4
-    } else {
-      frameLength = Math.floor((samplesPerFrame / 8) * (bitrate / sampleRate)) + padding
-    }
-    if (frameLength <= 0) {
-      offset += 1
-      continue
-    }
-
-    duration += samplesPerFrame / sampleRate
-    frames += 1
-    offset += frameLength
-  }
-
-  if (frames === 0 || duration <= 0) return null
-  return round3(duration)
-}
-
 /**
  * Push #066 — build the Creatomate text element(s) for a single caption
  * slot. Renders ONE text element so captions never stack on screen.
@@ -601,71 +334,6 @@ export function buildCaptionElements({
 }
 
 /**
- * Push #180 — word-by-word caption strip. Renders ONE Creatomate text
- * element per word, time-synced to the actual voiceover via Whisper word
- * timings. The visible word is the word currently being spoken, big and
- * centered low — the TikTok / viral-Shorts caption style.
- *
- * Color rule:
- *   - White (#ffffff) by default — the reader's baseline.
- *   - Yellow (#FFD700) for words in HIGHLIGHT_CANDIDATES (strange, hidden,
- *     forbidden, secret, etc.) — high-impact words pop.
- *
- * Timing rule:
- *   - Each word renders from its Whisper `start` to the next word's
- *     `start` (so words never overlap or leave a gap). The last word
- *     extends to its own `end` (capped at totalDuration - CTA tail so it
- *     never collides with the call-to-action).
- *   - Words shorter than WORD_MIN_DURATION are stretched up to that
- *     minimum, again clamped to the next word's start.
- *   - Words that start inside the CTA tail (last 2.5s) are dropped so the
- *     CTA reads cleanly.
- */
-export function buildWordCaptionElements({
-  words,
-  totalDuration,
-}: {
-  words: WordTiming[]
-  totalDuration: number
-}): CreatomateElement[] {
-  const ctaCutoff = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
-  const elements: CreatomateElement[] = []
-
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i]
-    const display = w.word.replace(/^\s+|\s+$/g, '')
-    if (!display) continue
-    if (w.start >= ctaCutoff) break
-
-    const nextStart = i + 1 < words.length ? words[i + 1].start : w.end
-    const naturalEnd = Math.max(w.end, w.start + WORD_MIN_DURATION)
-    const cappedEnd = Math.min(naturalEnd, nextStart, ctaCutoff)
-    const duration = cappedEnd - w.start
-    if (duration <= 0) continue
-
-    const color = isHighlightWord(display) ? HIGHLIGHT_COLOR : '#ffffff'
-    elements.push({
-      type: 'text',
-      track: 5,
-      time: round3(w.start),
-      duration: round3(duration),
-      text: display.toUpperCase(),
-      x: '50%',
-      y: '70%',
-      width: '86%',
-      font_family: 'Montserrat',
-      font_size: 96,
-      font_weight: '900',
-      fill_color: color,
-      stroke_color: 'rgba(0,0,0,0.95)',
-      stroke_width: 6,
-    })
-  }
-
-  return elements
-}
-
-/**
  * Build a Creatomate source JSON: video clips tiled to fill `duration`,
  * voiceover audio across the full timeline, captions evenly distributed,
  * and a CTA in the last 2.5 seconds.
@@ -676,16 +344,8 @@ export function buildCreatomateSource({
   voiceoverScript,
   sceneCaptions,
   duration,
-  wordTimings,
-  captionsEnabled = true,
 }: ComposeInputs): Record<string, unknown> {
-  // The caller passes the measured TTS audio length (e.g. 47.3s), which is
-  // fractional — sending that verbatim as the composition `duration` made
-  // Creatomate reject the entire render. Round to a whole integer, clamp to
-  // [20,120], and fall back to 45 if the value is invalid. The <0.5s of
-  // rounding stays well inside the caption/CTA tail, so the prior "audio cut
-  // off / captions dropped" fix is preserved.
-  const totalDuration = safeRenderDuration(duration)
+  const totalDuration = clamp(Math.round(duration), 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
   if (cleanClips.length === 0) {
     throw new Error('No video clips provided to compose.')
@@ -764,51 +424,31 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions.
-  //
-  // Push #180 — prefer word-by-word captions when Whisper word timings are
-  // available. Each word becomes its own Creatomate text element, time-
-  // synced to the actual voiceover, with high-impact words painted yellow
-  // (#FFD700) and the rest white. Matches the viral TikTok/Shorts style.
-  //
-  // Fallback hierarchy (any layer breaking falls through to the next):
-  //   1. word timings  → buildWordCaptionElements  (preferred, audio-accurate)
-  //   2. voiceoverScript → 7-word segments via buildCaptionSegments
-  //   3. sceneCaptions   → one caption per scene, evenly distributed
-  //
-  // `captionsEnabled = false` skips the strip entirely (viewer opted out).
-  if (captionsEnabled) {
-    let wordElementsAdded = 0
-    if (Array.isArray(wordTimings) && wordTimings.length > 0) {
-      const wordElements = buildWordCaptionElements({ words: wordTimings, totalDuration })
-      elements.push(...wordElements)
-      wordElementsAdded = wordElements.length
-    }
-
-    // Only fall back to segment captions when the word-level path produced
-    // nothing — otherwise we'd double-stack two caption strips on screen.
-    if (wordElementsAdded === 0) {
-      const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
-      const captionsClean: CaptionSegment[] = scriptSegments.length > 0
-        ? scriptSegments
-        : sceneCaptions
-            .map((c) => (c ?? '').toString().trim())
-            .filter((c) => c.length > 0)
-            .map((text) => ({ text, highlight: pickHighlightWord(text) }))
-      if (captionsClean.length > 0) {
-        const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
-        const perCaption = round3(captionWindow / captionsClean.length)
-        captionsClean.forEach((segment, idx) => {
-          const elementsForCaption = buildCaptionElements({
-            text: segment.text,
-            time: round3(idx * perCaption),
-            duration: perCaption,
-            highlight: segment.highlight,
-          })
-          elements.push(...elementsForCaption)
-        })
-      }
-    }
+  // Track 5 — captions distributed evenly across the duration (minus CTA
+  // tail). Push #066 — captions are now ≤7-word viral-style segments with
+  // a per-segment highlight word so the renderer can paint the line
+  // yellow when an impactful keyword is present. Caption text comes from
+  // the voiceover script first so it matches what the narrator says;
+  // falls back to scene descriptions only when no script is available.
+  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
+    ? scriptSegments
+    : sceneCaptions
+        .map((c) => (c ?? '').toString().trim())
+        .filter((c) => c.length > 0)
+        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
+  if (captionsClean.length > 0) {
+    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
+    const perCaption = round3(captionWindow / captionsClean.length)
+    captionsClean.forEach((segment, idx) => {
+      const elementsForCaption = buildCaptionElements({
+        text: segment.text,
+        time: round3(idx * perCaption),
+        duration: perCaption,
+        highlight: segment.highlight,
+      })
+      elements.push(...elementsForCaption)
+    })
   }
 
   // Track 6 — CTA in the final 2.5s.
@@ -840,38 +480,9 @@ export function buildCreatomateSource({
   }
 }
 
-// Carries the actual Creatomate HTTP status and response body so the caller
-// can surface the REAL rejection reason (out of credits, invalid api key,
-// invalid field, …) instead of a generic "rejected" message. Production was
-// down for days because the genuine cause was hidden behind a friendly string
-// and every fix was a guess — never let that happen again.
-export class CreatomateSubmitError extends Error {
-  status: number
-  body: string
-  constructor(status: number, body: string) {
-    super(`Creatomate rejected the render (HTTP ${status}): ${body.slice(0, 500)}`)
-    this.name = 'CreatomateSubmitError'
-    this.status = status
-    this.body = body
-  }
-}
-
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
   const key = process.env.CREATOMATE_API_KEY
   if (!key) throw new Error('CREATOMATE_API_KEY is not configured.')
-
-  // Diagnostics: log the shape of what we're sending (NOT the asset bytes) so
-  // an element-count / payload-size / duration problem is visible in the logs
-  // alongside whatever Creatomate replies.
-  const payload = JSON.stringify({ source })
-  const elementCount = Array.isArray((source as { elements?: unknown[] }).elements)
-    ? (source as { elements: unknown[] }).elements.length
-    : 0
-  console.log(
-    `[compose] Creatomate submit: elements=${elementCount} duration=${String(
-      (source as { duration?: unknown }).duration,
-    )} payloadBytes=${payload.length}`,
-  )
 
   const res = await fetch(`${CREATOMATE_BASE}/renders`, {
     method: 'POST',
@@ -879,17 +490,12 @@ export async function submitCreatomateRender(source: Record<string, unknown>): P
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: payload,
+    body: JSON.stringify({ source }),
   })
 
   const text = await res.text()
   if (!res.ok) {
-    // Log the FULL Creatomate response body (not a 300-char slice) plus the
-    // status so the exact invalid field / account problem is in Vercel logs.
-    console.error(
-      `[compose] Creatomate REJECTED submit: status=${res.status} elements=${elementCount} body=${text}`,
-    )
-    throw new CreatomateSubmitError(res.status, text)
+    throw new Error(`Creatomate rejected the render (${res.status}): ${text.slice(0, 300)}`)
   }
 
   let parsed: unknown

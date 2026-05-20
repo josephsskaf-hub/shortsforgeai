@@ -27,7 +27,7 @@ export default function StartPage() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#0a0c14',
+        background: '#05070D',
         color: '#F5F7FF',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         padding: '32px 20px 48px',
@@ -145,7 +145,7 @@ export default function StartPage() {
                 gap: 8,
                 padding: '8px 14px',
                 borderRadius: 999,
-                background: 'rgba(15,15,30,0.7)',
+                background: 'rgba(11,17,32,0.7)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 fontSize: '0.8rem',
                 fontWeight: 700,
@@ -194,7 +194,7 @@ export default function StartPage() {
               <div
                 key={s.step}
                 style={{
-                  background: 'rgba(15,15,30,0.85)',
+                  background: 'rgba(11,17,32,0.85)',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 14,
                   padding: '16px 18px',
@@ -284,16 +284,16 @@ export default function StartPage() {
                 a: 'No. ShortsForgeAI generates visuals, voiceover, and subtitles from a topic you type. 100% faceless.',
               },
               {
-                q: 'What happens after the free trial?',
-                a: 'Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.',
+                q: "What happens after the free trial?",
+                a: "Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.",
               },
               {
                 q: 'How long does it take?',
                 a: 'Under 60 seconds in Fast Mode. Type topic → Generate → Download.',
               },
               {
-                q: "What's in the free plan?",
-                a: "2 full videos, no credit card required. Upgrade only when you're ready.",
+                q: "What’s in the free plan?",
+                a: "2 full videos, no credit card required. Upgrade only when you’re ready.",
               },
             ].map((item) => (
               <details

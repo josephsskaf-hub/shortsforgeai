@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
-import ToastHost from '@/components/Toast'
 
 // Push #117 — explicit viewport so iOS Safari renders pages at the
 // device width (not 980px-zoomed-out) and the 16px input rule below
@@ -74,10 +73,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body>
-        {children}
-        <ToastHost />
-      </body>
+      <body>{children}</body>
     </html>
   )
 }

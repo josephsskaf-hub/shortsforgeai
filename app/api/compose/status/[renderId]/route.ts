@@ -199,12 +199,8 @@ export async function GET(
     // Push #050 — topic + duration travel as query params so we can record
     // them in the videos history row on success. Both are optional: the
     // route still works without them, the history row just has nulls.
-    // Push #180 — default to 45s (the client's recommended default) so the
-    // videos history row doesn't get a misleading 30s tag when the param
-    // is missing. Doesn't affect the render itself — that's already
-    // committed by the time we reach this status endpoint.
     const durationParam = Number(req.nextUrl.searchParams.get('duration') ?? '')
-    const duration = Number.isFinite(durationParam) && durationParam > 0 ? Math.floor(durationParam) : 45
+    const duration = Number.isFinite(durationParam) && durationParam > 0 ? Math.floor(durationParam) : 30
     const topic = (req.nextUrl.searchParams.get('topic') ?? '').toString().slice(0, 1000)
 
     if (!process.env.CREATOMATE_API_KEY) {

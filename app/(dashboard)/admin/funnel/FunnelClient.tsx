@@ -143,7 +143,7 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
             <div
               key={s.label}
               className="rounded-xl p-4"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
             >
               <div
                 className="text-[10px] font-black uppercase tracking-widest mb-2"
@@ -180,7 +180,7 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
             <div
               key={r.label}
               className="rounded-xl p-4"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
             >
               <div
                 className="text-[10px] font-black uppercase tracking-widest mb-2"

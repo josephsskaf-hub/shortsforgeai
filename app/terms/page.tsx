@@ -17,7 +17,7 @@ export default function TermsPage() {
       <main
         style={{
           minHeight: '100vh',
-          background: '#0A0A0F',
+          background: '#05070D',
           color: '#F5F7FF',
           fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
           padding: '24px 20px 32px',

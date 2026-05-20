@@ -199,7 +199,6 @@ export default function DashboardClient({
             placeholder="e.g. A neon Tokyo alley at midnight with a lone samurai"
             maxLength={500}
             rows={2}
-            aria-label="Video prompt"
             style={{
               width: '100%',
               minHeight: 64,
@@ -215,75 +214,7 @@ export default function DashboardClient({
               boxSizing: 'border-box',
             }}
           />
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '0 4px 0 12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                fontSize: '0.7rem',
-                color: 'var(--muted)',
-                lineHeight: 1.2,
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
-              >
-                <kbd
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    borderRadius: 5,
-                    padding: '1px 6px',
-                    fontFamily: 'inherit',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    color: 'var(--text2)',
-                  }}
-                >
-                  Enter
-                </kbd>
-                <span>to send · </span>
-                <kbd
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    borderRadius: 5,
-                    padding: '1px 6px',
-                    fontFamily: 'inherit',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    color: 'var(--text2)',
-                  }}
-                >
-                  Shift+Enter
-                </kbd>
-                <span>for newline</span>
-              </span>
-              <span
-                aria-live="polite"
-                style={{
-                  fontVariantNumeric: 'tabular-nums',
-                  color: videoPrompt.length >= 480 ? '#fbbf24' : 'var(--muted)',
-                  fontWeight: 700,
-                }}
-              >
-                {videoPrompt.length}/500
-              </span>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               type="button"
               onClick={handleVideoGenerate}
@@ -310,7 +241,7 @@ export default function DashboardClient({
         <div
           className="rounded-[20px] px-5 py-4 mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
           style={{
-            background: creditsZero ? 'rgba(239,68,68,.06)' : 'rgba(15,15,30,0.85)',
+            background: creditsZero ? 'rgba(239,68,68,.06)' : 'rgba(11,17,32,0.85)',
             border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(59, 130, 246,.22)',
             boxShadow: '0 0 30px rgba(59, 130, 246,.08)',
           }}
@@ -338,8 +269,12 @@ export default function DashboardClient({
               </div>
               {creditsLoading ? (
                 <div
-                  className="skeleton"
-                  style={{ width: 200, height: 20 }}
+                  className="rounded"
+                  style={{
+                    width: 200, height: 20,
+                    background: 'rgba(255,255,255,.05)',
+                    animation: 'pulse 1.4s ease-in-out infinite',
+                  }}
                 />
               ) : (
                 <div className="font-black" style={{ fontSize: '1rem', color: 'var(--text)' }}>
@@ -401,7 +336,7 @@ export default function DashboardClient({
       {!isLoggedIn && (
         <div
           className="rounded-[20px] px-6 py-7 text-center"
-          style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid rgba(59, 130, 246,.22)' }}
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(59, 130, 246,.22)' }}
         >
           <p className="font-bold text-base mb-2" style={{ color: 'var(--text)' }}>
             🔑 Create your account to start

@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildCreatomateSource,
-  CreatomateSubmitError,
   generateTTS,
-  getMp3DurationSeconds,
   pollCreatomateRender,
-  safeRenderDuration,
   scaleVoiceoverScript,
   submitCreatomateRender,
   targetWordCount,
-  transcribeWordTimings,
   uploadVoiceoverToSupabase,
-  type WordTiming,
 } from '@/lib/compose'
 import { fetchUserPlan } from '@/lib/plan'
 
@@ -32,10 +27,6 @@ interface ComposeBody {
   duration?: number
   topic?: string
   quality?: string
-  // Push #180 — viewer-facing captions toggle. Accepts 'on' | 'off' (or
-  // boolean for older clients). Default is 'on' because captions are the
-  // single biggest driver of retention on Shorts.
-  captions?: string | boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -113,19 +104,6 @@ export async function POST(req: NextRequest) {
       return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
 
-    // Push #180 — captions toggle. Accept 'on'/'off' strings and booleans
-    // (older clients). Anything we can't parse defaults to ON because
-    // captions are the single biggest retention driver on Shorts.
-    const captionsEnabled: boolean = ((): boolean => {
-      const raw = body.captions
-      if (typeof raw === 'boolean') return raw
-      if (typeof raw === 'string') {
-        const v = raw.trim().toLowerCase()
-        if (v === 'off' || v === 'false' || v === '0' || v === 'no') return false
-      }
-      return true
-    })()
-
     // Push #087 — Cinematic-tier renders (anything other than 'fast') must
     // come from a Pro user. Fast Mode renders skip the gate so Free + Basic
     // users can still produce videos via the Pexels pipeline.
@@ -161,17 +139,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2 — Generate TTS.
-    //
-    // Push #180 — pass duration through so TTS speed is computed to land
-    // the audio inside the user's chosen video length. Without this the
-    // audio defaults to speed=1.0, leaving silence at the end of longer
-    // videos and clipping the final word on shorter ones.
     console.log(
       `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s`,
     )
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(scaledScript, { targetSeconds: duration })
+      audioBuffer = await generateTTS(scaledScript)
       console.log(
         `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg`,
       )
@@ -193,48 +166,6 @@ export async function POST(req: NextRequest) {
         { error: 'Voiceover generation returned no audio. Please try again.' },
         { status: 502 }
       )
-    }
-
-    // Drive the render off the REAL voiceover length. computeTTSSpeed only
-    // nudges the pace toward the target (and is clamped), so the audio still
-    // over/undershoots — and a fixed-duration render then cut the voiceover
-    // off AND dropped the last few seconds of word-by-word captions (their
-    // cutoff is derived from totalDuration). Measuring the MP3 and rendering
-    // to its true length fixes both. Falls back to the target if the parse
-    // fails so the render never depends on the measurement.
-    // Always a whole, in-range integer: the measured MP3 length is fractional
-    // (e.g. 47.3s) and Creatomate rejects a fractional composition duration.
-    let renderDuration = safeRenderDuration(duration)
-    const measuredAudio = getMp3DurationSeconds(audioBuffer)
-    if (measuredAudio && measuredAudio >= 5 && measuredAudio <= 120) {
-      renderDuration = safeRenderDuration(measuredAudio, duration)
-      console.log(
-        `[compose] measured TTS audio duration: ${measuredAudio}s (target was ${duration}s) — rendering to ${renderDuration}s`,
-      )
-    } else {
-      console.warn(
-        `[compose] could not measure TTS audio duration (got ${measuredAudio}); falling back to target ${duration}s`,
-      )
-    }
-
-    // Step 2.5 — Push #180 — word-level caption timings from Whisper. We
-    // run this BEFORE the upload (so the buffer is still in memory) and
-    // strictly best-effort: if Whisper hiccups, `wordTimings` stays null
-    // and the renderer falls back to segment captions. Skipped entirely
-    // when the viewer turned captions off — saves the Whisper round-trip.
-    let wordTimings: WordTiming[] | null = null
-    if (captionsEnabled) {
-      try {
-        wordTimings = await transcribeWordTimings(audioBuffer)
-        const count = Array.isArray(wordTimings) ? wordTimings.length : 0
-        console.log(`[compose] word-level captions: words=${count} (whisper-1, granularity=word)`)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.warn('[compose] word-level caption transcription failed (falling back to segments):', msg)
-        wordTimings = null
-      }
-    } else {
-      console.log('[compose] captions disabled by client — skipping Whisper transcription')
     }
 
     // Step 3 — Upload TTS to Supabase storage.
@@ -292,9 +223,7 @@ export async function POST(req: NextRequest) {
         voiceoverUrl,
         voiceoverScript: haveSceneCaptions ? '' : scaledScript,
         sceneCaptions,
-        duration: renderDuration,
-        wordTimings,
-        captionsEnabled,
+        duration,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -312,22 +241,6 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[compose] Creatomate submit failed:', msg)
-      // Surface the REAL rejection reason so an outage is diagnosable from the
-      // response alone (out of credits / invalid key / invalid field), instead
-      // of the generic message that masked the root cause for days. `detail`
-      // carries Creatomate's own status + body — it never contains our keys.
-      if (err instanceof CreatomateSubmitError) {
-        const userMessage =
-          err.status === 401 || err.status === 403
-            ? 'Render service authentication failed. Please contact support.'
-            : err.status === 402 || err.status === 429
-              ? 'Render service is temporarily unavailable (quota). Please try again shortly.'
-              : 'Render service rejected the job. Please try again.'
-        return NextResponse.json(
-          { error: userMessage, detail: err.body.slice(0, 500), status: err.status },
-          { status: 502 }
-        )
-      }
       return NextResponse.json(
         { error: 'Render service rejected the job. Please try again.' },
         { status: 502 }
@@ -345,7 +258,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       render_id: renderId,
       quality,
-      duration: renderDuration,
+      duration,
       voiceover_url: voiceoverUrl,
     })
   } catch (error: unknown) {

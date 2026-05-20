@@ -181,16 +181,11 @@ function fallbackViralIntelligence(hook: string, niche: string): ViralIntelligen
   }
 }
 
-function fallbackBrief(prompt: string, duration = 45): CreativeBrief {
+function fallbackBrief(prompt: string): CreativeBrief {
   const trimmed = prompt.trim().slice(0, 80)
   const niche = inferNiche(prompt)
   const tone = inferTone(niche)
-  // Push #180 — fallback brief is now duration-aware. Previously it always
-  // produced 5 scenes summing to 35s regardless of the user's selection;
-  // when GPT failed to return valid JSON, a 30s and a 60s video both ended
-  // up with the same fallback brief, which is exactly the "duration buttons
-  // do nothing" experience the user reported.
-  const allScenes: SceneBrief[] = [
+  const scenes: SceneBrief[] = [
     {
       scene_number: 1,
       duration_seconds: 6,
@@ -225,14 +220,6 @@ function fallbackBrief(prompt: string, duration = 45): CreativeBrief {
     },
     {
       scene_number: 5,
-      duration_seconds: 8,
-      caption: 'Even the experts were stunned',
-      visual_prompt: 'archival photograph slowly zooming in, vignette, sepia tones with a ' +
-        'cold blue highlight, dust particles drifting through a beam of light',
-      voiceover: 'Even the experts who studied it for decades could not agree on what it really meant.',
-    },
-    {
-      scene_number: 6,
       duration_seconds: 5,
       caption: 'Follow for part two',
       visual_prompt: 'silhouette of a figure walking toward a single distant light, ' +
@@ -240,12 +227,6 @@ function fallbackBrief(prompt: string, duration = 45): CreativeBrief {
       voiceover: 'Follow for the part nobody is allowed to talk about.',
     },
   ]
-  // 30s → 4 scenes, 45s → 5 scenes, 60s → 6 scenes (matches durationPlanFor).
-  const sceneCount = duration <= 35 ? 4 : duration >= 55 ? 6 : 5
-  const scenes: SceneBrief[] = allScenes.slice(0, sceneCount).map((s, i) => ({
-    ...s,
-    scene_number: i + 1,
-  }))
   const providerPrompt = clampToProviderLimit(
     `Cinematic vertical 9:16 video, ${tone.toLowerCase()} tone, ${niche.toLowerCase()} aesthetic. ` +
     `Dark moody lighting, deep shadows, dramatic camera moves, rich color grading, ` +
@@ -482,9 +463,7 @@ export async function POST(req: NextRequest) {
     const requestedDuration = Number(body.duration) || 45
     const duration = [30, 45, 60].includes(requestedDuration) ? requestedDuration : 45
 
-    // Push #180 — fallbackBrief is now duration-aware so a GPT JSON parse
-    // failure doesn't collapse every duration onto the same 5-scene shape.
-    const fallback = fallbackBrief(prompt, duration)
+    const fallback = fallbackBrief(prompt)
 
     const userMsg = `Create an addictive micro-knowledge YouTube Short about: ${prompt}.
 Duration: ~${duration} seconds (target word count is in the system prompt).

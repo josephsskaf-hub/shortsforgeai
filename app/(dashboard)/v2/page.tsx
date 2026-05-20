@@ -167,7 +167,7 @@ export default function V2PrototypePage() {
       {/* ─── Idea textarea ─── */}
       <section
         className="rounded-2xl p-5 sm:p-6 mb-6"
-        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
       >
         <label
           className="block text-xs font-black uppercase tracking-widest mb-2"
@@ -266,7 +266,7 @@ export default function V2PrototypePage() {
       {/* ─── Example niches ─── */}
       <section
         className="rounded-2xl p-5 sm:p-6 mb-6"
-        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
       >
         <div className="mb-3">
           <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>

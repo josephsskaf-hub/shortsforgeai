@@ -404,7 +404,7 @@ export default function VideoClient() {
         <div
           className="rounded-2xl p-6"
           style={{
-            background: 'rgba(15,15,30,0.85)',
+            background: 'rgba(11,17,32,0.85)',
             border: '1px solid var(--border)',
           }}
         >
@@ -471,7 +471,7 @@ export default function VideoClient() {
       <div
         className="hidden sm:flex items-center justify-between mb-6 rounded-2xl px-4 py-3"
         style={{
-          background: 'rgba(15,15,30,0.7)',
+          background: 'rgba(11,17,32,0.7)',
           border: '1px solid var(--border)',
         }}
       >
@@ -529,10 +529,10 @@ export default function VideoClient() {
               className="step-card rounded-2xl overflow-hidden transition-all"
               style={{
                 background: isActive
-                  ? 'rgba(15,15,30,0.92)'
+                  ? 'rgba(11,17,32,0.92)'
                   : isDone
-                  ? 'rgba(15,15,30,0.7)'
-                  : 'rgba(15,15,30,0.5)',
+                  ? 'rgba(11,17,32,0.7)'
+                  : 'rgba(11,17,32,0.5)',
                 border: isActive
                   ? '1px solid rgba(34, 211, 238,.45)'
                   : isDone

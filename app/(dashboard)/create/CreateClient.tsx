@@ -584,7 +584,7 @@ export default function CreateClient() {
         <div
           className="rounded-[20px] p-6 md:p-7 mb-5"
           style={{
-            background: 'rgba(15,15,30,0.85)',
+            background: 'rgba(11,17,32,0.85)',
             border: '1px solid rgba(59, 130, 246,.22)',
             boxShadow: '0 0 30px rgba(59, 130, 246,.08)',
           }}
@@ -956,7 +956,7 @@ function ProgressView({
     <div
       className="rounded-[20px] p-7 md:p-9 mb-5 text-center"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         border: '1px solid rgba(59, 130, 246,.32)',
         boxShadow: '0 0 50px rgba(59, 130, 246,.18)',
       }}
@@ -1277,7 +1277,7 @@ function FieldBlock({
     <div
       className="rounded-[20px] p-5"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         border: '1px solid var(--border)',
       }}
     >

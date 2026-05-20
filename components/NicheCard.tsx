@@ -30,7 +30,7 @@ export default function NicheCard({
     <div
       className="rounded-2xl p-6 cursor-pointer transition-all duration-200 relative overflow-hidden group"
       style={{
-        background: selected ? 'rgba(59, 130, 246,.13)' : 'rgba(15,15,30,0.6)',
+        background: selected ? 'rgba(59, 130, 246,.13)' : 'rgba(11,17,32,0.6)',
         backdropFilter: 'blur(16px) saturate(140%)',
         WebkitBackdropFilter: 'blur(16px) saturate(140%)',
         border: selected ? '1.5px solid rgba(59, 130, 246,.65)' : '1px solid rgba(255,255,255,0.08)',

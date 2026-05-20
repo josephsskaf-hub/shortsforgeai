@@ -225,7 +225,7 @@ function PlanCard({
   function background(): string {
     if (isSelected) return '#0D1830'
     if (highlight) return 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
-    return 'rgba(15,15,30,0.85)'
+    return 'rgba(11,17,32,0.85)'
   }
   function border(): string {
     if (isSelected) return '2px solid #3B82F6'

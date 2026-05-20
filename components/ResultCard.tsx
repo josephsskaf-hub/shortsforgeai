@@ -67,7 +67,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
     <div
       className="rounded-[20px] overflow-hidden transition-all duration-300"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         backdropFilter: 'blur(16px) saturate(140%)',
         WebkitBackdropFilter: 'blur(16px) saturate(140%)',
         border: '1px solid rgba(59, 130, 246,0.16)',

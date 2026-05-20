@@ -56,6 +56,13 @@ export default function ResetPasswordPage() {
     }
   }
 
+  const inputStyle = {
+    background: 'rgba(255,255,255,.03)',
+    border: '1px solid var(--border2)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg)' }}>
       <div className="fixed rounded-full pointer-events-none" style={{ width: 600, height: 600, background: 'var(--indigo)', top: -200, right: -150, opacity: 0.04, filter: 'blur(90px)', zIndex: 0 }} />
@@ -105,8 +112,10 @@ export default function ResetPasswordPage() {
                     required
                     minLength={6}
                     placeholder="Min. 6 characters"
-                    autoComplete="new-password"
-                    className="input-pro"
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                    style={inputStyle}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(59, 130, 246,.5)'; e.target.style.background = 'rgba(59, 130, 246,.04)' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'var(--border2)'; e.target.style.background = 'rgba(255,255,255,.03)' }}
                   />
                 </div>
 
@@ -120,8 +129,10 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Repeat your password"
-                    autoComplete="new-password"
-                    className="input-pro"
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                    style={inputStyle}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(59, 130, 246,.5)'; e.target.style.background = 'rgba(59, 130, 246,.04)' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'var(--border2)'; e.target.style.background = 'rgba(255,255,255,.03)' }}
                   />
                 </div>
 

@@ -309,8 +309,21 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  autoComplete="email"
-                  className="input-pro"
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,.03)',
+                    border: '1px solid var(--border2)',
+                    color: 'var(--text)',
+                    fontFamily: 'inherit',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
+                    e.target.style.background = 'rgba(59, 130, 246,.04)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--border2)'
+                    e.target.style.background = 'rgba(255,255,255,.03)'
+                  }}
                 />
               </div>
 
@@ -340,9 +353,21 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    autoComplete="current-password"
-                    className="input-pro"
-                    style={{ paddingRight: 48 }}
+                    className="w-full rounded-xl px-4 py-3 pr-12 text-sm outline-none transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,.03)',
+                      border: '1px solid var(--border2)',
+                      color: 'var(--text)',
+                      fontFamily: 'inherit',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
+                      e.target.style.background = 'rgba(59, 130, 246,.04)'
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--border2)'
+                      e.target.style.background = 'rgba(255,255,255,.03)'
+                    }}
                   />
                   <button
                     type="button"

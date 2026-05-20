@@ -54,7 +54,7 @@ export default function CheckoutSuccessPage() {
         style={{
           width: '100%',
           maxWidth: 520,
-          background: 'rgba(15,15,30,0.85)',
+          background: 'rgba(11,17,32,0.85)',
           border: '1px solid var(--border)',
           borderRadius: 22,
           padding: 'clamp(24px, 5vw, 36px)',

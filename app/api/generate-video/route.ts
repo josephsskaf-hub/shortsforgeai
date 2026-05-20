@@ -8,7 +8,6 @@ import {
   startRunwayTask,
 } from '@/lib/runway'
 import { fetchUserPlan } from '@/lib/plan'
-import { targetWordCount } from '@/lib/compose'
 
 export const maxDuration = 60
 
@@ -202,13 +201,7 @@ export async function POST(req: NextRequest) {
     // generator returns both for Fast Mode's Pexels search.
     let scenes: Awaited<ReturnType<typeof generateScenes>>
     try {
-      // Push #180 — pass total word target so per-scene voiceover sums to
-      // the duration-appropriate script length. Without this, all durations
-      // got ~10-22 words/scene regardless, and the audio length never lined
-      // up with the rendered video length.
-      scenes = await generateScenes(sceneSeed, clipCount, {
-        targetTotalWords: targetWordCount(duration),
-      })
+      scenes = await generateScenes(sceneSeed, clipCount)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-video] scene generation failed:', msg)

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
-import { getMp3DurationSeconds, safeRenderDuration } from '@/lib/compose'
 
 export const maxDuration = 300
 
@@ -151,32 +150,22 @@ export async function POST(req: NextRequest) {
 
     // — Voiceover (non-fatal) —
     let voiceoverUrl: string | null = null
-    let audioDuration: number | null = null
     if (process.env.OPENAI_API_KEY) {
       try {
         const ttsInput = script.length > 4000 ? script.slice(0, 4000) : script
         const speech = await openai.audio.speech.create({ model: 'tts-1', voice: 'onyx', input: ttsInput })
         const buf = Buffer.from(await speech.arrayBuffer())
-        audioDuration = getMp3DurationSeconds(buf)
         voiceoverUrl = await uploadVoiceover(user.id, buf)
-        console.log('[render] voiceover:', voiceoverUrl ? 'uploaded ok' : 'null', 'audioDuration:', audioDuration)
+        console.log('[render] voiceover:', voiceoverUrl ? 'uploaded ok' : 'null')
       } catch (err) {
         console.error('[render] TTS error:', err)
       }
     }
 
     // — Timing —
-    // Prefer the real voiceover length so the render never cuts off the audio
-    // (or drops captions before it ends). Fall back to the scene-summed
-    // estimate when the audio couldn't be measured.
-    const sceneBasedDuration = Math.min(45, Math.max(20, scenes.reduce((a, s) => a + (s.duration || 0), 0) || 35))
-    const totalDuration =
-      audioDuration && audioDuration >= 5 && audioDuration <= 120 ? audioDuration : sceneBasedDuration
+    const totalDuration = Math.min(45, Math.max(20, scenes.reduce((a, s) => a + (s.duration || 0), 0) || 35))
     const durations = distributeDurations(scenes, totalDuration)
-    // Creatomate requires the composition `duration` to be a whole integer in
-    // a sane range. The summed per-scene durations are fractional, so guard
-    // the final value: round + clamp [20,120] + fall back to the estimate.
-    const finalDur = safeRenderDuration(durations.reduce((a, b) => a + b, 0), totalDuration)
+    const finalDur = Math.round(durations.reduce((a, b) => a + b, 0) * 100) / 100
 
     // — Build Creatomate composition —
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

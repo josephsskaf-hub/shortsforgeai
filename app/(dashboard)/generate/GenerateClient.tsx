@@ -422,13 +422,13 @@ export default function GenerateClient() {
     return () => clearInterval(interval)
   }, [mode, phase])
 
-  // 5-step generation progress indicator. Time-based so it stays useful
-  // even when the backend phase doesn't change for a while.
-  //   0-6s   : Script
-  //   6-14s  : Footage
-  //   14-24s : Voiceover
-  //   24-36s : Captions
-  //   36s+   : Rendering
+  // Push #098 — generic 4-step generation progress indicator. Time-based
+  // so it stays useful even when the backend phase doesn't change for a
+  // while (the Pexels + TTS fast pipeline can sit in one phase for 30s+).
+  //   0-8s   : ✍️ Writing your script...
+  //   8-20s  : 🎙️ Generating voiceover...
+  //   20-40s : 🎬 Finding footage...
+  //   40s+   : ⚡ Rendering your Short...
   useEffect(() => {
     const isGenerating =
       phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
@@ -440,10 +440,9 @@ export default function GenerateClient() {
     const startedAt = Date.now()
     const interval = setInterval(() => {
       const elapsedSec = (Date.now() - startedAt) / 1000
-      if (elapsedSec >= 36) setProgressStep(4)
-      else if (elapsedSec >= 24) setProgressStep(3)
-      else if (elapsedSec >= 14) setProgressStep(2)
-      else if (elapsedSec >= 6) setProgressStep(1)
+      if (elapsedSec >= 40) setProgressStep(3)
+      else if (elapsedSec >= 20) setProgressStep(2)
+      else if (elapsedSec >= 8) setProgressStep(1)
       else setProgressStep(0)
     }, 1000)
     return () => clearInterval(interval)
@@ -1621,7 +1620,7 @@ export default function GenerateClient() {
       {showStep1 && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-          style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
         >
           {/* Push #047 — only show the "already loaded" helper line when the
               prompt arrived from the homepage's sessionStorage bridge. The
@@ -1657,7 +1656,6 @@ export default function GenerateClient() {
             placeholder="Drop your topic — we'll turn it into an addictive micro-knowledge Short with real facts, escalation, and a satisfying payoff."
             maxLength={5000}
             disabled={phase === 'analyzing'}
-            aria-label="Your idea or script"
             // Push #052 — Tailwind responsive min-h so the textarea stays
             // ~220px (≈8 lines) on phones, then expands back to 400px on
             // sm+ viewports. Keeps the Generate button above the fold on
@@ -1673,21 +1671,6 @@ export default function GenerateClient() {
               resize: 'none',
             }}
           />
-          {/* UX #2 — char counter + soft warning when the user is near the
-              5,000-char cap. The cap is generous, but having a live counter
-              prevents the silent truncation surprise. */}
-          <div
-            className="mt-2 flex items-center justify-end gap-2 text-xs"
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              color: prompt.length >= 4800 ? '#fbbf24' : 'var(--muted)',
-              fontWeight: 700,
-              maxWidth: '830px',
-            }}
-            aria-live="polite"
-          >
-            {prompt.length}/5,000 characters
-          </div>
 
           {/* Push #084 — Generation mode selector.
               Push #087 — Cinematic Mode is gated to Pro users; Free + Basic
@@ -1886,7 +1869,7 @@ export default function GenerateClient() {
       {phase === 'analyzing' && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
-          style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
         >
           <Spinner />
           <div>
@@ -1905,7 +1888,7 @@ export default function GenerateClient() {
         <>
           <section
             className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
-            style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+            style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <span
@@ -2017,7 +2000,7 @@ export default function GenerateClient() {
               and kicks off the actual generation. */}
           <section
             className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-            style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+            style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs" style={{ color: 'var(--muted2)' }}>
@@ -2051,7 +2034,7 @@ export default function GenerateClient() {
           {(phase === 'generating' || phase === 'clips_ready' || phase === 'composing') && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-              style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
             >
               {/* Push #047 — staged-pipeline message. The rotating copy lives
                   in `LOADER_MESSAGES` and is driven by `loaderTick`; the
@@ -2068,16 +2051,29 @@ export default function GenerateClient() {
                   {headlineProgress}%
                 </div>
               </div>
-              <div className="text-xs mt-1 mb-1" style={{ color: 'var(--muted2)' }}>
+              <ProgressBar progress={headlineProgress} />
+              <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
                 {statusMessage}
               </div>
 
-              {/* Animated 5-step pipeline + overall progress bar. */}
-              <AnimatedPipelineProgress
-                step={progressStep}
-                percent={headlineProgress}
-                phase={phase}
-              />
+              {/* Push #098 — 4-step generation text below the spinner.
+                  Time-driven (see progressStep useEffect) so it advances
+                  even when the API phase doesn't change for a stretch. */}
+              <GenerationProgressSteps step={progressStep} />
+
+
+              {/* Push #087 — Fast Mode gets its own 4-step indicator that
+                  matches the actual Pexels + TTS + assemble pipeline.
+                  Cinematic Mode keeps the 5-stage Runway indicator. */}
+              {mode === 'fast' ? (
+                <FastPipelineStages step={fastStep} phase={phase} />
+              ) : (
+                <PipelineStages
+                  phase={phase}
+                  renderProgress={renderProgress}
+                  finalReady={!!finalVideoUrl}
+                />
+              )}
 
               <div
                 className="rounded-xl px-3 py-2 mt-4 text-xs"
@@ -2153,12 +2149,8 @@ export default function GenerateClient() {
 
           {phase === 'done' && finalVideoUrl && (
             <section
-              className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center max-w-lg mx-auto"
-              style={{
-                background: 'rgba(15,15,30,0.85)',
-                border: '1px solid var(--border)',
-                boxShadow: '0 24px 80px rgba(0,0,0,.45)',
-              }}
+              className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center"
+              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
             >
               <div className="text-center">
                 <h2 className="font-black tracking-tight" style={{ fontSize: '1.5rem', color: 'var(--text)', lineHeight: 1.2 }}>
@@ -2187,14 +2179,19 @@ export default function GenerateClient() {
                 </p>
               </div>
 
-              {/* Result-page player. The container is pinned to a true 9:16
-                  box (max 340px wide, centered) and the <video> uses
-                  object-cover so a source that isn't pixel-perfect 9:16 fills
-                  the frame instead of showing black bars on the sides. */}
+              {/* Push #045A — bigger result-page player. width caps at 460px
+                  on desktop, falls back to 90vw on smaller viewports;
+                  max-height pins it under the fold (78vh) so the buttons
+                  below remain visible. object-fit: contain lets the actual
+                  composed letterboxing show without cropping. */}
               <div
-                className="rounded-2xl overflow-hidden mt-6 max-w-[340px] mx-auto aspect-[9/16] w-full"
+                className="rounded-2xl overflow-hidden mt-6"
                 style={{
+                  width: 'min(460px, 90vw)',
                   maxHeight: '78vh',
+                  aspectRatio: '9 / 16',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
                   border: '1px solid rgba(37,99,235,.45)',
                   boxShadow: '0 18px 60px rgba(37,99,235,.22)',
                   background: '#000',
@@ -2273,7 +2270,7 @@ export default function GenerateClient() {
                     autoPlay
                     playsInline
                     preload="metadata"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                   />
                 )}
               </div>
@@ -2600,7 +2597,7 @@ function TrendingHooksSection({
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
     >
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div>
@@ -2710,7 +2707,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
     return (
       <section
         className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
           Recent Videos
@@ -2726,7 +2723,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
     return (
       <section
         className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
-        style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
           Recent Videos
@@ -2767,7 +2764,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
     >
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div>
@@ -3082,7 +3079,7 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         border: `1px solid ${accent.border}`,
         boxShadow: `0 0 28px ${accent.bg}`,
       }}
@@ -3355,7 +3352,7 @@ function ShortPackageSection({
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(15,15,30,0.85)', border: '1px solid var(--border)' }}
+      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
     >
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div>
@@ -3681,16 +3678,14 @@ function buildSceneCaptions(
   scenes: string[],
   duration: Duration
 ): string[] {
-  // Push #180 — duration-aware slice. Previously, if `analysis.scenePlan`
-  // existed we returned ALL of it regardless of duration: a user who
-  // analyzed at 60s and then switched to 30s would get 6 captions
-  // crammed into 30s. Now we always slice to the target count, whether
-  // captions came from the brief or from the raw scenes list.
-  const targetCount = duration === 30 ? 4 : duration === 45 ? 5 : 6
   const fromPlan = analysis?.scenePlan?.filter((s) => typeof s === 'string' && s.trim().length > 0) ?? []
   if (fromPlan.length > 0) {
-    return fromPlan.slice(0, targetCount).map((s) => trimCaption(s))
+    // Tighten each line so it fits the caption box.
+    return fromPlan.map((s) => trimCaption(s))
   }
+  // 30s → 3 clips, 45s → 5 clips (rounded up from 4.5), 60s → 6 clips.
+  // Matches clipCountForDuration in /api/generate-video.
+  const targetCount = duration === 30 ? 3 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
 }
 
@@ -4111,7 +4106,7 @@ function UpgradeModal({
         style={{
           width: '100%',
           maxWidth: 440,
-          background: '#0f0f1e',
+          background: '#0B1120',
           border: '1px solid rgba(52,211,153,0.35)',
           borderRadius: 20,
           padding: '32px 28px',
@@ -4277,7 +4272,7 @@ function UrgencyModal({
           position: 'relative',
           width: '100%',
           maxWidth: 460,
-          background: '#0f0f1e',
+          background: '#0B1120',
           border: '1px solid rgba(251,191,36,0.45)',
           borderRadius: 20,
           padding: '32px 28px',
@@ -4452,192 +4447,69 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 
-// ─── Animated 5-step pipeline + overall progress bar ───────────────────────
-// Replaces the older plain-text step list. Each row shows icon + label +
-// status chip (Queued / Active / Done). The active row pulses with a brand
-// shimmer; completed rows show a green checkmark. An overall progress bar
-// renders below the list and fills smoothly as `percent` advances.
-function AnimatedPipelineProgress({
-  step,
-  percent,
-  phase,
-}: {
-  step: number
-  percent: number
-  phase: Phase
-}) {
-  const allDone = phase === 'done'
-  const STEPS = [
-    { icon: '✍️', label: 'Script', sub: 'Writing your viral script' },
-    { icon: '🎬', label: 'Footage', sub: 'Fetching cinematic clips' },
-    { icon: '🎙️', label: 'Voiceover', sub: 'Generating neural narration' },
-    { icon: '✨', label: 'Captions', sub: 'Word-by-word overlay' },
-    { icon: '🚀', label: 'Rendering', sub: 'Assembling final 9:16 MP4' },
+// ─── Push #098 — 4-step generation progress text ────────────────────────────
+// Sits below the spinner. Active step is bold green; completed steps stay
+// visible in muted green; upcoming steps are dimmed. The step index is
+// time-driven (see useEffect in the parent) so the user always feels
+// forward motion even when the API phase doesn't change for a while.
+function GenerationProgressSteps({ step }: { step: number }) {
+  const items = [
+    { icon: '✍️', label: 'Writing your script...' },
+    { icon: '🎙️', label: 'Generating voiceover...' },
+    { icon: '🎬', label: 'Finding footage...' },
+    { icon: '⚡', label: 'Rendering your Short...' },
   ]
-  const safePercent = Math.min(100, Math.max(0, allDone ? 100 : percent))
   return (
-    <div className="mt-4">
-      <style jsx>{`
-        @keyframes sf-pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
-          70% { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
-          100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-        }
-        @keyframes sf-shimmer {
-          0% { background-position: -200px 0; }
-          100% { background-position: 200px 0; }
-        }
-        @keyframes sf-bar-shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .sf-active-dot {
-          animation: sf-pulse-ring 1.4s ease-out infinite;
-        }
-        .sf-active-row {
-          background: linear-gradient(
-            90deg,
-            rgba(59,130,246,0.06) 0%,
-            rgba(34,211,238,0.12) 50%,
-            rgba(59,130,246,0.06) 100%
-          );
-          background-size: 400px 100%;
-          animation: sf-shimmer 2.2s linear infinite;
-        }
-        .sf-bar-fill::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255,255,255,0.35) 50%,
-            transparent 100%
-          );
-          animation: sf-bar-shimmer 1.6s ease-in-out infinite;
-        }
-      `}</style>
-      <ol
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-        }}
-      >
-        {STEPS.map((s, i) => {
-          const isDone = allDone || i < step
-          const isActive = !allDone && i === step
-          const labelColor = isDone ? '#34d399' : isActive ? '#F5F7FF' : 'var(--muted2)'
-          const subColor = isDone ? 'rgba(110,231,183,0.85)' : isActive ? '#93c5fd' : 'var(--muted)'
-          const ring = isDone
-            ? '1px solid rgba(52,211,153,0.45)'
-            : isActive
-            ? '1px solid rgba(59,130,246,0.55)'
-            : '1px solid var(--border)'
-          const baseBg = isDone
-            ? 'rgba(52,211,153,0.08)'
-            : isActive
-            ? 'rgba(59,130,246,0.10)'
-            : 'rgba(255,255,255,0.02)'
-          return (
-            <li
-              key={i}
-              className={`rounded-xl px-3 py-2.5 flex items-center gap-3 ${
-                isActive ? 'sf-active-row' : ''
-              }`}
-              style={{ background: baseBg, border: ring }}
+    <ol
+      style={{
+        marginTop: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+      }}
+    >
+      {items.map((it, i) => {
+        const isActive = i === step
+        const isDone = i < step
+        const color = isActive ? '#34d399' : isDone ? '#6ee7b7' : 'var(--muted)'
+        return (
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              opacity: isActive || isDone ? 1 : 0.55,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{ fontSize: '1.1rem', width: 22, textAlign: 'center' }}
             >
+              {it.icon}
+            </span>
+            <span
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 800 : isDone ? 600 : 500,
+                color,
+              }}
+            >
+              {it.label}
+            </span>
+            {isDone && (
               <span
                 aria-hidden="true"
-                className={isActive ? 'sf-active-dot' : ''}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  background: isDone
-                    ? 'rgba(52,211,153,0.20)'
-                    : isActive
-                    ? 'rgba(59,130,246,0.18)'
-                    : 'rgba(255,255,255,0.04)',
-                  border: isDone
-                    ? '1px solid rgba(52,211,153,0.55)'
-                    : isActive
-                    ? '1px solid rgba(59,130,246,0.65)'
-                    : '1px solid var(--border)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  fontSize: '1rem',
-                }}
+                style={{ marginLeft: 'auto', color: '#6ee7b7', fontSize: '0.85rem' }}
               >
-                {isDone ? (
-                  <span style={{ color: '#34d399', fontSize: '0.95rem', fontWeight: 900 }}>✓</span>
-                ) : (
-                  <span>{s.icon}</span>
-                )}
+                ✓
               </span>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  className="text-sm font-bold"
-                  style={{ color: labelColor, lineHeight: 1.2 }}
-                >
-                  {s.label}
-                </div>
-                <div className="text-[11px]" style={{ color: subColor, lineHeight: 1.3 }}>
-                  {s.sub}
-                </div>
-              </div>
-              <span
-                className="text-[10px] font-black uppercase tracking-widest"
-                style={{
-                  color: isDone ? '#34d399' : isActive ? '#93c5fd' : 'var(--muted)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isDone ? 'Done' : isActive ? 'Active' : 'Queued'}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
-
-      {/* Overall progress bar */}
-      <div className="mt-4 flex items-center justify-between mb-1.5">
-        <span
-          className="text-[10px] font-black uppercase tracking-widest"
-          style={{ color: 'var(--muted)' }}
-        >
-          Overall progress
-        </span>
-        <span className="text-xs font-bold" style={{ color: '#F5F7FF' }}>
-          {Math.round(safePercent)}%
-        </span>
-      </div>
-      <div
-        className="w-full rounded-full overflow-hidden relative"
-        style={{
-          height: 10,
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        <div
-          className={allDone ? '' : 'sf-bar-fill'}
-          style={{
-            position: 'relative',
-            height: '100%',
-            width: `${safePercent}%`,
-            background: 'linear-gradient(90deg, #3B82F6 0%, #22D3EE 100%)',
-            boxShadow: '0 0 18px rgba(59,130,246,0.55)',
-            transition: 'width 700ms cubic-bezier(0.22, 1, 0.36, 1)',
-            overflow: 'hidden',
-          }}
-        />
-      </div>
-    </div>
+            )}
+          </li>
+        )
+      })}
+    </ol>
   )
 }

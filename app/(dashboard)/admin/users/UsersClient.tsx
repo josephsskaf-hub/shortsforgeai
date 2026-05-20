@@ -199,7 +199,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
             placeholder="Search by email or name…"
             className="rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]"
             style={{
-              background: 'rgba(15,15,30,0.85)',
+              background: 'rgba(11,17,32,0.85)',
               border: '1px solid var(--border)',
               color: 'var(--text)',
               outline: 'none',
@@ -232,7 +232,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: 'rgba(15,15,30,0.4)' }}>
+                <tr style={{ background: 'rgba(11,17,32,0.4)' }}>
                   <Th>Email</Th>
                   <Th>Name</Th>
                   <Th>Joined</Th>
@@ -280,7 +280,7 @@ function MetricCard({
     <div
       className="rounded-xl p-4"
       style={{
-        background: 'rgba(15,15,30,0.85)',
+        background: 'rgba(11,17,32,0.85)',
         border: '1px solid var(--border)',
       }}
     >
