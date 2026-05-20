@@ -19,6 +19,14 @@ export const VOICEOVER_BUCKET = 'voiceovers'
 
 export interface ComposeInputs {
   clipUrls: string[]
+  /**
+   * Push #160 — real measured duration (seconds) of each clip, parallel to
+   * `clipUrls`. When provided, each clip is tiled at its true length so a
+   * sub-10s clip no longer holds a frozen/black frame to fill a fixed 10s
+   * slot, and the `loop` workaround is dropped. Optional: when absent the
+   * tiling falls back to the fixed `CLIP_LEN` with `loop: true`.
+   */
+  clipDurations?: number[]
   voiceoverUrl: string
   /**
    * The narration text that the captions should be derived from. Push #031
@@ -373,6 +381,7 @@ export function buildCaptionElements({
  */
 export function buildCreatomateSource({
   clipUrls,
+  clipDurations,
   voiceoverUrl,
   voiceoverScript,
   sceneCaptions,
@@ -400,8 +409,14 @@ export function buildCreatomateSource({
     fill_color: '#08080f',
   })
 
-  // Track 2 — tile / loop the clips to fill the full duration.
-  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
+  // Track 2 — tile the clips to fill the full duration.
+  //
+  // Push #160 — when real per-clip durations are known, each segment runs for
+  // the clip's true length (capped at CLIP_LEN and the remaining time) so a
+  // sub-10s clip no longer freezes/blacks out filling a fixed 10s slot. The
+  // `loop: true` workaround is only emitted when durations are unknown — with
+  // real durations the segment fits the clip exactly so looping is moot. We
+  // still cap at CLIP_LEN to keep variety and bound any one clip's screen time.
   //
   // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
   // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
@@ -411,13 +426,21 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
+  const haveDurations = Array.isArray(clipDurations) && clipDurations.length > 0
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
-    const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
+
+    // Use the real clip duration when available; otherwise fall back to the
+    // fixed CLIP_LEN. Guard against non-positive values so a bad entry can't
+    // produce a zero-length segment (which would never advance the cursor).
+    const known = haveDurations ? clipDurations![i % clipDurations!.length] : undefined
+    const knownDuration = typeof known === 'number' && known > 0 ? known : CLIP_LEN
+    const segLen = round3(Math.min(knownDuration, CLIP_LEN, remaining))
+
     elements.push({
       type: 'video',
       track: 2,
@@ -430,7 +453,8 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
-      loop: true,
+      // loop only needed when duration is unknown — real-duration clips fit exactly.
+      ...(!haveDurations && { loop: true }),
     })
     cursor += segLen
     i += 1

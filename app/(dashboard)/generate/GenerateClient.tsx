@@ -184,6 +184,9 @@ export default function GenerateClient() {
   const [mode, setMode] = useState<GenerationMode>('fast')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
+  // Push #160 — real per-clip durations (seconds), parallel to clipUrls.
+  // Sent to /api/compose so Creatomate tiles clips to their true length.
+  const [clipDurations, setClipDurations] = useState<number[]>([])
   const [renderId, setRenderId] = useState<string | null>(null)
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
@@ -546,6 +549,7 @@ export default function GenerateClient() {
         if (data.phase === 'clips_ready') {
           setGenerateProgress(100)
           setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+          setClipDurations(Array.isArray(data.clip_durations) ? data.clip_durations : [])
           setPhase('clips_ready')
           return
         }
@@ -596,6 +600,7 @@ export default function GenerateClient() {
           body: JSON.stringify({
             generationId,
             clip_urls: clipUrls,
+            clip_durations: clipDurations,
             voiceover_script: voiceoverScript,
             scene_captions: sceneCaptions,
             duration,
@@ -734,6 +739,7 @@ export default function GenerateClient() {
     setTasks([])
     setTaskStates({})
     setClipUrls([])
+    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setPhase('analyzing')
@@ -854,6 +860,7 @@ export default function GenerateClient() {
     setTasks([])
     setScenes([])
     setClipUrls([])
+    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
@@ -893,6 +900,7 @@ export default function GenerateClient() {
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+        setClipDurations(Array.isArray(data.clip_durations) ? data.clip_durations : [])
         setGenerateProgress(100)
         setPhase('clips_ready')
       } catch (err: unknown) {
@@ -1030,6 +1038,7 @@ export default function GenerateClient() {
     setTasks([])
     setTaskStates({})
     setClipUrls([])
+    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
