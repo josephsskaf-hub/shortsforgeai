@@ -1124,10 +1124,65 @@ function HeroVideo() {
   )
 }
 
+// Sub-component for a single phone card — owns its own videoRef so hover
+// handlers can call play/pause without lifting state up.
+function PhoneCard({ src, label, accent, tag }: { src: string; label: string; accent: string; tag: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  function handleMouseEnter() {
+    if (videoRef.current) videoRef.current.play().catch(() => {/* blocked */})
+  }
+  function handleMouseLeave() {
+    if (videoRef.current) {
+      videoRef.current.pause()
+      try { videoRef.current.currentTime = 0 } catch { /* not seekable yet */ }
+    }
+  }
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div
+        className="relative w-full overflow-hidden mx-auto"
+        style={{ aspectRatio: '9/16', maxWidth: 200, borderRadius: 26, border: '3px solid rgba(255,255,255,0.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#0B1120' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div
+          className="absolute z-20 rounded-full"
+          style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.45)' }}
+        />
+        {src && <video
+          ref={videoRef}
+          src={src}
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        />}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.40) 0%,transparent 30%,transparent 60%,rgba(5,7,13,.85) 100%)' }}
+        />
+        <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
+          <span
+            className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
+            style={{ background: accent + '22', color: accent, border: '1px solid ' + accent + '44' }}
+          >
+            {tag}
+          </span>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-4 pt-6">
+          <p className="text-[10px] font-bold text-white/90 text-center leading-tight">{label}</p>
+        </div>
+      </div>
+      <p className="text-[13px] font-bold text-center" style={{ color: accent }}>{label}</p>
+    </div>
+  )
+}
+
 // Push #126 — 3 phone-frame preview cards for the "Real Shorts" section.
-// Each card renders a Pexels free vertical clip auto-playing in a phone-shaped
-// container, with a gradient overlay and caption, matching how Pictory /
-// InVideo showcase their output. Isolated component to keep JSX clean.
+// Each card renders a Pexels free vertical clip that plays on hover in a
+// phone-shaped container, with a gradient overlay and caption, matching how
+// Pictory / InVideo showcase their output. Isolated component to keep JSX clean.
 function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number; phoneVideos?: Record<string, string> }) {
   // Push #150 — hardcoded Pexels portrait fallbacks so the cards never render
   // black when the /api/showcase-clips lookup returns no portrait match for a
@@ -1166,42 +1221,7 @@ function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-3xl mx-auto items-start">
         {cards.map((card) => (
-          <div key={card.src} className="flex flex-col items-center gap-3">
-            <div
-              className="relative w-full overflow-hidden mx-auto"
-              style={{ aspectRatio: '9/16', maxWidth: 200, borderRadius: 26, border: '3px solid rgba(255,255,255,0.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#0B1120' }}
-            >
-              <div
-                className="absolute z-20 rounded-full"
-                style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.45)' }}
-              />
-              {card.src && <video
-                src={card.src}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                className="absolute inset-0 w-full h-full object-cover z-0"
-              />}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.40) 0%,transparent 30%,transparent 60%,rgba(5,7,13,.85) 100%)' }}
-              />
-              <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
-                <span
-                  className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
-                  style={{ background: card.accent + '22', color: card.accent, border: '1px solid ' + card.accent + '44' }}
-                >
-                  {card.tag}
-                </span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-4 pt-6">
-                <p className="text-[10px] font-bold text-white/90 text-center leading-tight">{card.label}</p>
-              </div>
-            </div>
-            <p className="text-[13px] font-bold text-center" style={{ color: card.accent }}>{card.label}</p>
-          </div>
+          <PhoneCard key={card.src} src={card.src} label={card.label} accent={card.accent} tag={card.tag} />
         ))}
       </div>
       <p className="mt-8 text-center text-[13px] font-semibold text-[#94A3B8]">
@@ -1234,38 +1254,19 @@ function ShowcaseVideoCard({
   const isPlaying = true // keep for overlay logic compat
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  // Push #106 — IntersectionObserver fallback. The `autoplay` attribute
-  // is supposed to start the muted preview the moment the card paints,
-  // but iOS Low Power Mode + a few strict browser policies block that.
-  // This re-issues play() the moment the card enters the viewport, and
-  // pauses + rewinds once it scrolls off so we don't waste decoder time.
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el || videoFailed) return
-    if (typeof IntersectionObserver === 'undefined') {
-      el.play().catch(() => {/* autoplay blocked */})
-      return
+  // Hover-to-play: video starts on mouseenter and pauses/resets on mouseleave.
+  function handleMouseEnter() {
+    if (videoRef.current) videoRef.current.play().catch(() => {/* blocked */})
+  }
+  function handleMouseLeave() {
+    if (videoRef.current) {
+      videoRef.current.pause()
+      try { videoRef.current.currentTime = 0 } catch { /* not seekable yet */ }
     }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const v = entry.target as HTMLVideoElement
-          if (entry.isIntersecting) {
-            v.play().catch(() => {/* autoplay blocked */})
-          } else {
-            v.pause()
-            try { v.currentTime = 0 } catch { /* not seekable yet */ }
-          }
-        })
-      },
-      { threshold: 0.3 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [videoFailed])
+  }
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       {/* 9:16 vertical preview — matches the YouTube Shorts format the
           rest of the product is built around. */}
       <div
@@ -1290,7 +1291,6 @@ function ShowcaseVideoCard({
           <video
             ref={videoRef}
             src={card.videoUrl}
-            autoPlay
             muted
             loop
             playsInline
@@ -1416,3 +1416,4 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
     'My Videos history',
   ]
 }
+                                                                                                                                      
