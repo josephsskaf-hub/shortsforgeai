@@ -2185,8 +2185,9 @@ export default function GenerateClient() {
               {/* Push #045A — bigger result-page player. width caps at 460px
                   on desktop, falls back to 90vw on smaller viewports;
                   max-height pins it under the fold (78vh) so the buttons
-                  below remain visible. object-fit: contain lets the actual
-                  composed letterboxing show without cropping. */}
+                  below remain visible. The 9:16 aspect-ratio box plus
+                  object-fit: cover fills the frame so the vertical Short
+                  never shows black pillarbox bars. */}
               <div
                 className="rounded-2xl overflow-hidden mt-6"
                 style={{
@@ -2273,7 +2274,7 @@ export default function GenerateClient() {
                     autoPlay
                     playsInline
                     preload="metadata"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 )}
               </div>
