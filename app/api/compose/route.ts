@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildCreatomateSource,
+  CreatomateSubmitError,
   generateTTS,
   getMp3DurationSeconds,
   pollCreatomateRender,
@@ -311,6 +312,22 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[compose] Creatomate submit failed:', msg)
+      // Surface the REAL rejection reason so an outage is diagnosable from the
+      // response alone (out of credits / invalid key / invalid field), instead
+      // of the generic message that masked the root cause for days. `detail`
+      // carries Creatomate's own status + body — it never contains our keys.
+      if (err instanceof CreatomateSubmitError) {
+        const userMessage =
+          err.status === 401 || err.status === 403
+            ? 'Render service authentication failed. Please contact support.'
+            : err.status === 402 || err.status === 429
+              ? 'Render service is temporarily unavailable (quota). Please try again shortly.'
+              : 'Render service rejected the job. Please try again.'
+        return NextResponse.json(
+          { error: userMessage, detail: err.body.slice(0, 500), status: err.status },
+          { status: 502 }
+        )
+      }
       return NextResponse.json(
         { error: 'Render service rejected the job. Please try again.' },
         { status: 502 }

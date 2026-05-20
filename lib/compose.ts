@@ -840,9 +840,38 @@ export function buildCreatomateSource({
   }
 }
 
+// Carries the actual Creatomate HTTP status and response body so the caller
+// can surface the REAL rejection reason (out of credits, invalid api key,
+// invalid field, …) instead of a generic "rejected" message. Production was
+// down for days because the genuine cause was hidden behind a friendly string
+// and every fix was a guess — never let that happen again.
+export class CreatomateSubmitError extends Error {
+  status: number
+  body: string
+  constructor(status: number, body: string) {
+    super(`Creatomate rejected the render (HTTP ${status}): ${body.slice(0, 500)}`)
+    this.name = 'CreatomateSubmitError'
+    this.status = status
+    this.body = body
+  }
+}
+
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
   const key = process.env.CREATOMATE_API_KEY
   if (!key) throw new Error('CREATOMATE_API_KEY is not configured.')
+
+  // Diagnostics: log the shape of what we're sending (NOT the asset bytes) so
+  // an element-count / payload-size / duration problem is visible in the logs
+  // alongside whatever Creatomate replies.
+  const payload = JSON.stringify({ source })
+  const elementCount = Array.isArray((source as { elements?: unknown[] }).elements)
+    ? (source as { elements: unknown[] }).elements.length
+    : 0
+  console.log(
+    `[compose] Creatomate submit: elements=${elementCount} duration=${String(
+      (source as { duration?: unknown }).duration,
+    )} payloadBytes=${payload.length}`,
+  )
 
   const res = await fetch(`${CREATOMATE_BASE}/renders`, {
     method: 'POST',
@@ -850,12 +879,17 @@ export async function submitCreatomateRender(source: Record<string, unknown>): P
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ source }),
+    body: payload,
   })
 
   const text = await res.text()
   if (!res.ok) {
-    throw new Error(`Creatomate rejected the render (${res.status}): ${text.slice(0, 300)}`)
+    // Log the FULL Creatomate response body (not a 300-char slice) plus the
+    // status so the exact invalid field / account problem is in Vercel logs.
+    console.error(
+      `[compose] Creatomate REJECTED submit: status=${res.status} elements=${elementCount} body=${text}`,
+    )
+    throw new CreatomateSubmitError(res.status, text)
   }
 
   let parsed: unknown
