@@ -238,8 +238,41 @@ export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
   return sliced.join(' ').replace(/[.!?,;:]+$/, '')
 }
 
-export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
+// Push #180 — duration-aware per-scene word sizing.
+//
+// When the caller passes `targetTotalWords`, we ask GPT to size each
+// scene's voiceover so the SUM lands near that target. This keeps the
+// raw script length matched to the user's chosen duration (30s/45s/60s)
+// instead of always producing 10-22 words per scene regardless. The
+// downstream `scaleVoiceoverScript` is still the final guarantor, but
+// starting closer to target means fewer extra GPT rewrites.
+export interface GenerateScenesOptions {
+  /**
+   * Approximate total voiceover word count across all scenes. When set,
+   * per-scene voiceover length is computed as `targetTotalWords / count`
+   * with a ±20% tolerance, instructed in the GPT prompt directly so the
+   * model writes longer or shorter lines as needed.
+   */
+  targetTotalWords?: number
+}
+
+export async function generateScenes(
+  prompt: string,
+  count = 4,
+  opts: GenerateScenesOptions = {},
+): Promise<Scene[]> {
   const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
+
+  // Push #180 — derive a per-scene word range from the total target so the
+  // SUM of voiceovers lands at the user's chosen duration. Fallback range
+  // (used when no target is supplied) preserves prior behavior.
+  let perSceneWordHint = '10-22 words'
+  if (typeof opts.targetTotalWords === 'number' && opts.targetTotalWords > 0) {
+    const perScene = Math.max(6, Math.round(opts.targetTotalWords / safeCount))
+    const lo = Math.max(6, Math.round(perScene * 0.8))
+    const hi = Math.max(lo + 4, Math.round(perScene * 1.2))
+    perSceneWordHint = `${lo}-${hi} words (so the ${safeCount} scenes together total ~${opts.targetTotalWords} words)`
+  }
 
   const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`
   const exampleArr = Array.from({ length: safeCount }, () => exampleScene).join(',\n  ')
@@ -252,7 +285,7 @@ Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, 
 Each object must have exactly four fields:
 1. "description": A cinematic shot description for an AI video model (~15-25 words). Visual, specific, concrete — subject + setting + lighting + camera motion + mood. Vertical 9:16 framing.
 2. "searchKeywords": 2-4 concrete nouns or short phrases that describe WHAT IS VISUALLY IN THIS SCENE, directly related to the video topic. These are used to search stock footage. NEVER use abstract words like "cinematic", "footage", "video", "shot". NEVER start with "a", "the", "lone", "soft". Use the actual topic: e.g. for pyramids → "ancient pyramid egypt desert"; for money → "gold coins cash dollar bills".
-3. "voiceover": One real narration line that delivers a concrete fact, escalation, or payoff about the topic (10-22 words). This is the EXACT text the TTS will read for this scene. No filler like "imagine…", "what if…". No stage directions.
+3. "voiceover": One real narration line that delivers a concrete fact, escalation, or payoff about the topic (${perSceneWordHint}). This is the EXACT text the TTS will read for this scene. No filler like "imagine…", "what if…". No stage directions.
 4. "caption": A ≤8-word readable on-screen caption that paraphrases the same voiceover line. Punchy fragment, no period, must match what the narrator says in meaning.
 
 The "searchKeywords" MUST match the topic of the video idea, not describe filming style.

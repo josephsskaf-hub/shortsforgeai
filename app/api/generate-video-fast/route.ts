@@ -5,6 +5,7 @@ import { generateScenes } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
 import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
+import { targetWordCount } from '@/lib/compose'
 
 export const maxDuration = 60
 
@@ -82,6 +83,13 @@ export async function POST(req: NextRequest) {
       : 45
 
     const clipCount = clipCountForDuration(duration)
+    // Push #180 — duration also drives the per-scene voiceover sizing so
+    // the raw script that comes out of generateScenes lands close to the
+    // total word count compose.ts will later scale to. Without this hint
+    // generateScenes produced ~10-22 words/scene regardless of duration,
+    // and the 30s and 60s videos ended up with near-identical narration
+    // lengths after `scaleVoiceoverScript` did its rewrite.
+    const totalWordsTarget = targetWordCount(duration)
 
     // Upfront credit balance check. Deduction happens in /api/compose/status
     // when the final mp4 succeeds.
@@ -110,7 +118,9 @@ export async function POST(req: NextRequest) {
     // for a pyramid prompt). Now GPT returns topic-specific keywords.
     let scenes: Scene[]
     try {
-      scenes = await generateScenes(prompt.slice(0, 400), clipCount)
+      scenes = await generateScenes(prompt.slice(0, 400), clipCount, {
+        targetTotalWords: totalWordsTarget,
+      })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[generate-fast] scene generation failed:', msg)

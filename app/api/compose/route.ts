@@ -158,12 +158,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2 — Generate TTS.
+    //
+    // Push #180 — pass duration through so TTS speed is computed to land
+    // the audio inside the user's chosen video length. Without this the
+    // audio defaults to speed=1.0, leaving silence at the end of longer
+    // videos and clipping the final word on shorter ones.
     console.log(
       `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s`,
     )
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(scaledScript)
+      audioBuffer = await generateTTS(scaledScript, { targetSeconds: duration })
       console.log(
         `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg`,
       )

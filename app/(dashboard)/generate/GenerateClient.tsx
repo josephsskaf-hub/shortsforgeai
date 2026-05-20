@@ -3682,14 +3682,16 @@ function buildSceneCaptions(
   scenes: string[],
   duration: Duration
 ): string[] {
+  // Push #180 — duration-aware slice. Previously, if `analysis.scenePlan`
+  // existed we returned ALL of it regardless of duration: a user who
+  // analyzed at 60s and then switched to 30s would get 6 captions
+  // crammed into 30s. Now we always slice to the target count, whether
+  // captions came from the brief or from the raw scenes list.
+  const targetCount = duration === 30 ? 4 : duration === 45 ? 5 : 6
   const fromPlan = analysis?.scenePlan?.filter((s) => typeof s === 'string' && s.trim().length > 0) ?? []
   if (fromPlan.length > 0) {
-    // Tighten each line so it fits the caption box.
-    return fromPlan.map((s) => trimCaption(s))
+    return fromPlan.slice(0, targetCount).map((s) => trimCaption(s))
   }
-  // 30s → 3 clips, 45s → 5 clips (rounded up from 4.5), 60s → 6 clips.
-  // Matches clipCountForDuration in /api/generate-video.
-  const targetCount = duration === 30 ? 3 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
 }
 

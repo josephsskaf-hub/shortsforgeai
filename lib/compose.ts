@@ -75,10 +75,16 @@ export interface CreatomateRenderState {
   error: string | null
 }
 
-// 2.5 words per second is a comfortable voiceover pace.
+// Push #180 — OpenAI's `onyx` voice on `tts-1` reads at roughly 2.7 words/sec
+// at speed=1.0. We size the script to ~2.6 wps so audio comfortably fills the
+// duration without the TTS audio overrunning the Creatomate timeline (which
+// would cut the last word). For the audio-too-short case we lean on TTS
+// `speed` (see `generateTTS`) rather than padding the script.
+const WORDS_PER_SECOND_BASE = 2.6
+
 export function targetWordCount(duration: number): number {
   const seconds = Math.max(5, Math.min(120, Math.round(duration)))
-  return Math.round(seconds * 2.5)
+  return Math.round(seconds * WORDS_PER_SECOND_BASE)
 }
 
 /**
@@ -91,9 +97,12 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
   if (!cleanInput) return ''
 
   const words = cleanInput.split(/\s+/).filter(Boolean)
-  // If already close to target (±15%), don't bother round-tripping to OpenAI.
-  const lo = Math.floor(targetWords * 0.85)
-  const hi = Math.ceil(targetWords * 1.15)
+  // Push #180 — tighter ±10% window. The wider ±15% window let too many
+  // off-target scripts pass through unchanged, so 30s videos sometimes
+  // narrated a 95-word script (≈37s of audio cut at 30s) while 60s
+  // videos narrated a 130-word script with 12s of trailing silence.
+  const lo = Math.floor(targetWords * 0.9)
+  const hi = Math.ceil(targetWords * 1.1)
   if (words.length >= lo && words.length <= hi) return cleanInput
 
   try {
@@ -129,13 +138,45 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
   return cleanInput
 }
 
-export async function generateTTS(script: string): Promise<Buffer> {
+// Push #180 — duration-aware TTS pacing.
+//
+// onyx@tts-1 reads at roughly 2.7 wps at speed=1.0. After `scaleVoiceoverScript`
+// the script should be at ~2.6 wps of duration, but the model occasionally
+// over/undershoots. We compute a small TTS speed adjustment so the rendered
+// audio fits the user's chosen duration:
+//
+//   speed = scriptWords / (targetSeconds * 2.7)
+//
+// Clamped to [0.92, 1.18] so the voice never sounds chipmunked or sluggish —
+// these bounds match what we tested manually as imperceptible to most listeners.
+// If `targetSeconds` is missing, we keep the default speed=1.0 (legacy behavior).
+const TTS_BASELINE_WPS = 2.7
+const TTS_SPEED_MIN = 0.92
+const TTS_SPEED_MAX = 1.18
+
+export function computeTTSSpeed(scriptWords: number, targetSeconds?: number): number {
+  if (!targetSeconds || targetSeconds <= 0) return 1.0
+  if (scriptWords <= 0) return 1.0
+  const raw = scriptWords / (targetSeconds * TTS_BASELINE_WPS)
+  return Math.max(TTS_SPEED_MIN, Math.min(TTS_SPEED_MAX, raw))
+}
+
+export async function generateTTS(
+  script: string,
+  opts: { targetSeconds?: number } = {},
+): Promise<Buffer> {
   const input = script.length > 3800 ? script.slice(0, 3800) : script
+  const wordCount = input.split(/\s+/).filter(Boolean).length
+  const speed = computeTTSSpeed(wordCount, opts.targetSeconds)
   const { openai } = await import('@/lib/openai')
+  console.log(
+    `[compose] TTS request: words=${wordCount} targetSeconds=${opts.targetSeconds ?? 'none'} speed=${speed.toFixed(3)}`,
+  )
   const speech = await openai.audio.speech.create({
     model: 'tts-1',
     voice: 'onyx',
     input,
+    speed,
   })
   return Buffer.from(await speech.arrayBuffer())
 }
