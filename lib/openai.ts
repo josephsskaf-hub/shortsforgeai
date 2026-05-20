@@ -257,7 +257,7 @@ Return ONLY a valid JSON array containing exactly 1 object — no markdown, no c
 
 The object must have these exact fields:
 - "title": string — a curiosity-driven YouTube title under 60 chars, no clickbait fluff, with 1 relevant emoji at the end
-- "script": string — a complete ${plan.duration}-second script (${minWords}–${maxWords} words total) with 3 clearly labeled sections: "🎯 HOOK:" (brutal opening line, 1-2 seconds), "📝 CONTENT:" (5 micro-knowledge beats, each 1-2 sentences, real verifiable facts, escalating in interest, every 3-5 seconds delivers new info), "🔗 PAYOFF:" (a comparison, twist, statistic, or definitive conclusion that makes the Short feel complete — must end with: "Visit shortsforgeai.com"). Use \\n\\n between sections.
+- "script": string — a complete ${plan.duration}-second script (${minWords}–${maxWords} words total) with 3 clearly labeled sections: "🎯 HOOK:" (brutal opening line, 1-2 seconds), "📝 CONTENT:" (5 micro-knowledge beats, each 1-2 sentences, real verifiable facts, escalating in interest, every 3-5 seconds delivers new info), "🔗 PAYOFF:" (a comparison, twist, statistic, or definitive conclusion that makes the Short feel complete — end with the story payoff only, no website mention, no subscribe line, no promotional CTA). Use \\n\\n between sections.
 - "videoPrompt": string — a detailed AI video generation prompt describing visuals, camera angles, text overlays, transitions, mood, and vertical 9:16 format
 - "hashtags": array of 7 strings — each starting with # (e.g. "#shorts"), mix of niche-specific and viral tags
 - "youtubeDescription": string — 2-3 sentences optimized for YouTube Shorts SEO. Include the main facts naturally and the primary keyword.

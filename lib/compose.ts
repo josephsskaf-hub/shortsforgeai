@@ -8,8 +8,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
-const CTA_TEXT = 'shortsforgeai.com'
-const CTA_TAIL_SECONDS = 2.5
+// CTA_TEXT and CTA_TAIL_SECONDS removed -- no promotional overlay in generated videos
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
@@ -88,11 +87,11 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
           {
             role: 'system',
             content:
-              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook, the core idea, and a strong CTA. Reply with the script text only — no quotes, no markdown.',
+              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook and the core idea. Do NOT include any website mention, app mention, subscribe line, follow line, promotional CTA, or branded outro. End with the story payoff only. Reply with the script text only — no quotes, no markdown.',
           },
           {
             role: 'user',
-            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit shortsforgeai.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence and the story payoff at the end. Do NOT add any website URL, app name, subscribe line, or promotional CTA. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,
@@ -507,7 +506,7 @@ export function buildCreatomateSource({
     // Real audio is usually shorter than the requested duration; cap at
     // totalDuration so a long take can't push captions past the video end.
     const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
-    const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
+    const captionWindow = Math.max(2, Math.min(measured, totalDuration))
     const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
     let elapsed = 0
     captionsClean.forEach((segment, idx) => {
@@ -526,24 +525,7 @@ export function buildCreatomateSource({
     })
   }
 
-  // Track 6 — CTA in the final 2.5s.
-  const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
-  elements.push({
-    type: 'text',
-    track: 6,
-    time: round3(ctaTime),
-    duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
-    text: CTA_TEXT,
-    x: '50%',
-    y: '90%',
-    width: '80%',
-    font_family: 'Montserrat',
-    font_size: 30,
-    font_weight: '700',
-    fill_color: '#ffffff',
-    stroke_color: 'rgba(99,102,241,0.9)',
-    stroke_width: 2,
-  })
+  // Track 6 -- CTA overlay removed (fix: no promotional text in generated videos)
 
   return {
     output_format: 'mp4',
