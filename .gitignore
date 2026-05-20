@@ -8,3 +8,4 @@ RODAR-DEPLOY.bat
 CORRIGIR-E-PUSH.bat
 tsconfig.tsbuildinfo
 *.log
+.claude/
