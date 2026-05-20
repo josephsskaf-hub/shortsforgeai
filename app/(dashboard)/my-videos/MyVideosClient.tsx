@@ -66,6 +66,14 @@ function statusChip(s: VideoRow['status']) {
   }
 }
 
+// Format a raw seconds count as "M:SS" — e.g. 45 → "0:45", 95 → "1:35".
+function formatDurationMSS(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 function formatFullDate(iso: string): string {
   try {
     const d = new Date(iso)
@@ -331,9 +339,10 @@ function VideoCard({
     onTogglePin()
   }
 
-  // Duration label — show the real seconds when known, otherwise the
-  // expected ~35s for a Shorts render so the card never reads "0s".
-  const durationLabel = v.duration && v.duration > 0 ? `${Math.round(v.duration)}s` : '~35s'
+  // Duration label — formatted as M:SS when known (e.g. "0:45"), with a
+  // sensible fallback so the card never reads "0:00".
+  const durationLabel =
+    v.duration && v.duration > 0 ? formatDurationMSS(v.duration) : '0:35'
 
   // Quality badge — prefer the numeric quality_score (rendered as stars),
   // fall back to the `quality` text column, finally show "HD" so every
@@ -356,10 +365,12 @@ function VideoCard({
       style={{
         background: 'linear-gradient(180deg, #0F1424 0%, #0B1020 100%)',
         border: isActive
-          ? '1px solid rgba(59,130,246,0.55)'
+          ? '1px solid rgba(59,130,246,0.75)'
           : '1px solid rgba(255,255,255,0.06)',
+        // Hover glow uses the brand accent — a tighter inner ring plus a
+        // wider cyan outer halo so the card visibly lifts on pointer enter.
         boxShadow: isActive
-          ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
+          ? '0 0 0 1px rgba(59,130,246,0.45), 0 0 38px rgba(59,130,246,0.35), 0 0 80px rgba(34,211,238,0.18), 0 22px 44px rgba(0,0,0,0.55)'
           : '0 8px 22px rgba(0,0,0,0.35)',
         transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
       }}
@@ -481,6 +492,19 @@ function VideoCard({
             {qualityText}
           </span>
         )}
+
+        {/* Bottom gradient overlay — improves readability of the badges
+            below it (format, duration) and gives the card a polished,
+            cinematic look regardless of the underlying thumbnail. */}
+        <div
+          className="absolute inset-x-0 bottom-0 pointer-events-none"
+          aria-hidden="true"
+          style={{
+            height: '46%',
+            background:
+              'linear-gradient(to top, rgba(5,7,13,0.92) 0%, rgba(5,7,13,0.55) 45%, rgba(5,7,13,0) 100%)',
+          }}
+        />
 
         {/* Bottom-left: format badge */}
         <span
