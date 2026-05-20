@@ -394,6 +394,29 @@ function round3(v: number): number {
   return Math.round(v * 1000) / 1000
 }
 
+// Creatomate validates the composition `duration` strictly: it must be a
+// positive, WHOLE number of seconds. The measured TTS audio length is
+// fractional (e.g. 47.3s) — and a fractional, NaN, string, or out-of-range
+// value makes the API reject the ENTIRE render with a 400, surfaced to the
+// user as "Render service rejected the job." Every duration that feeds a
+// Creatomate payload must pass through here first: coerce -> round -> clamp
+// to [20,120] -> fall back to `target` (then 45) when the value is unusable.
+export const MIN_RENDER_DURATION = 20
+export const MAX_RENDER_DURATION = 120
+export const DEFAULT_RENDER_DURATION = 45
+
+export function safeRenderDuration(
+  value: unknown,
+  target: number = DEFAULT_RENDER_DURATION,
+): number {
+  const targetNum =
+    typeof target === 'number' && Number.isFinite(target) ? target : DEFAULT_RENDER_DURATION
+  const fallback = clamp(Math.round(targetNum), MIN_RENDER_DURATION, MAX_RENDER_DURATION)
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return clamp(Math.round(n), MIN_RENDER_DURATION, MAX_RENDER_DURATION)
+}
+
 /**
  * Measure the real playback length (seconds) of an MP3 buffer.
  *
@@ -656,11 +679,13 @@ export function buildCreatomateSource({
   wordTimings,
   captionsEnabled = true,
 }: ComposeInputs): Record<string, unknown> {
-  // Keep the duration fractional — the caller passes the measured TTS audio
-  // length (e.g. 47.3s). Rounding it down would clip the final word of the
-  // voiceover and pull the word-caption CTA cutoff in by up to a second.
-  // Clamp only as a sanity guard against a bogus parse.
-  const totalDuration = round3(clamp(duration, 5, 120))
+  // The caller passes the measured TTS audio length (e.g. 47.3s), which is
+  // fractional — sending that verbatim as the composition `duration` made
+  // Creatomate reject the entire render. Round to a whole integer, clamp to
+  // [20,120], and fall back to 45 if the value is invalid. The <0.5s of
+  // rounding stays well inside the caption/CTA tail, so the prior "audio cut
+  // off / captions dropped" fix is preserved.
+  const totalDuration = safeRenderDuration(duration)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
   if (cleanClips.length === 0) {
     throw new Error('No video clips provided to compose.')

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
-import { getMp3DurationSeconds } from '@/lib/compose'
+import { getMp3DurationSeconds, safeRenderDuration } from '@/lib/compose'
 
 export const maxDuration = 300
 
@@ -173,7 +173,10 @@ export async function POST(req: NextRequest) {
     const totalDuration =
       audioDuration && audioDuration >= 5 && audioDuration <= 120 ? audioDuration : sceneBasedDuration
     const durations = distributeDurations(scenes, totalDuration)
-    const finalDur = Math.round(durations.reduce((a, b) => a + b, 0) * 100) / 100
+    // Creatomate requires the composition `duration` to be a whole integer in
+    // a sane range. The summed per-scene durations are fractional, so guard
+    // the final value: round + clamp [20,120] + fall back to the estimate.
+    const finalDur = safeRenderDuration(durations.reduce((a, b) => a + b, 0), totalDuration)
 
     // — Build Creatomate composition —
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

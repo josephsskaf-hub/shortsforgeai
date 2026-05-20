@@ -5,6 +5,7 @@ import {
   generateTTS,
   getMp3DurationSeconds,
   pollCreatomateRender,
+  safeRenderDuration,
   scaleVoiceoverScript,
   submitCreatomateRender,
   targetWordCount,
@@ -200,12 +201,14 @@ export async function POST(req: NextRequest) {
     // cutoff is derived from totalDuration). Measuring the MP3 and rendering
     // to its true length fixes both. Falls back to the target if the parse
     // fails so the render never depends on the measurement.
-    let renderDuration = duration
+    // Always a whole, in-range integer: the measured MP3 length is fractional
+    // (e.g. 47.3s) and Creatomate rejects a fractional composition duration.
+    let renderDuration = safeRenderDuration(duration)
     const measuredAudio = getMp3DurationSeconds(audioBuffer)
     if (measuredAudio && measuredAudio >= 5 && measuredAudio <= 120) {
-      renderDuration = measuredAudio
+      renderDuration = safeRenderDuration(measuredAudio, duration)
       console.log(
-        `[compose] measured TTS audio duration: ${measuredAudio}s (target was ${duration}s) — rendering to actual length`,
+        `[compose] measured TTS audio duration: ${measuredAudio}s (target was ${duration}s) — rendering to ${renderDuration}s`,
       )
     } else {
       console.warn(
