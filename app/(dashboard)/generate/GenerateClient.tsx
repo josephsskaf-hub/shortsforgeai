@@ -1329,6 +1329,11 @@ export default function GenerateClient() {
   const selectedCost = mode === 'fast'
     ? 1
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
+
+  // Push #156 — ready-to-paste YouTube description for the next-steps guide.
+  const nextStepsDescription =
+    analysis?.youtubeDescription?.trim() || analysis?.title?.trim() || ''
+
   const showStep1 = phase === 'idle' || phase === 'analyzing'
   const showStep2 = phase === 'options'
   const showRender =
@@ -1723,7 +1728,7 @@ export default function GenerateClient() {
               somehow lands here (state already snaps mode to 'fast' in an
               effect) we still hide the cards. Fast Mode runs Pexels + TTS
               at a fixed 1-credit cost. */}
-          {mode === 'cinematic' && planTier === 'pro' && (
+          {mode === 'cinematic' && (
           <div className="mt-5">
             <div
               className="text-xs font-black uppercase tracking-widest mb-2"
@@ -2019,9 +2024,7 @@ export default function GenerateClient() {
                   boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
                 }}
               >
-                {mode === 'cinematic'
-                  ? 'Generate • 1 Cinematic token'
-                  : `Generate • ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
+                {`Generate · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
               </button>
             </div>
           </section>
@@ -2352,6 +2355,91 @@ export default function GenerateClient() {
                   𝕏 Share on X
                 </a>
               </div>
+
+              {/* Push #156 — Next-steps guide. Collapsible checklist that walks
+                  the user from a finished render to a published Short. */}
+              <details
+                className="rounded-2xl mt-6 w-full"
+                style={{
+                  maxWidth: 480,
+                  background: 'rgba(34,211,238,.05)',
+                  border: '1px solid #22D3EE',
+                }}
+              >
+                <summary
+                  className="cursor-pointer select-none px-5 py-3 text-sm font-black"
+                  style={{ color: '#22D3EE', listStyle: 'none' }}
+                >
+                  What to do next ▾
+                </summary>
+                <div className="px-5 pb-5 pt-1 flex flex-col gap-3">
+                  <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                    <span style={{ color: '#34d399', fontWeight: 800 }}>✓</span>
+                    <span>
+                      <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
+                      — use the “⬇ Download MP4” button above to save the file to your device.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                    <span style={{ color: '#22D3EE', fontWeight: 800 }}>2</span>
+                    <span>
+                      <span style={{ color: 'var(--text)', fontWeight: 700 }}>Upload to YouTube</span> — open{' '}
+                      <a
+                        href="https://studio.youtube.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#22D3EE', textDecoration: 'underline', fontWeight: 700 }}
+                      >
+                        studio.youtube.com
+                      </a>{' '}
+                      and create a new Short.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                    <span style={{ color: '#22D3EE', fontWeight: 800 }}>3</span>
+                    <div className="flex-1">
+                      <span style={{ color: 'var(--text)', fontWeight: 700 }}>Paste the description</span>{' '}
+                      — copy the ready-made caption below.
+                      {nextStepsDescription && (
+                        <div
+                          className="rounded-lg mt-2 p-3 text-xs"
+                          style={{
+                            background: 'rgba(0,0,0,.30)',
+                            border: '1px solid rgba(34,211,238,.25)',
+                            color: 'var(--muted2)',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: 1.5,
+                            maxHeight: 160,
+                            overflowY: 'auto',
+                          }}
+                        >
+                          {nextStepsDescription}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => copySection('next-steps-desc', nextStepsDescription)}
+                        className="rounded-lg px-4 py-2 mt-2 text-xs font-bold"
+                        style={{
+                          background:
+                            copiedSection === 'next-steps-desc'
+                              ? 'rgba(52,211,153,.12)'
+                              : 'rgba(34,211,238,.10)',
+                          border:
+                            copiedSection === 'next-steps-desc'
+                              ? '1px solid rgba(52,211,153,.45)'
+                              : '1px solid rgba(34,211,238,.45)',
+                          color: copiedSection === 'next-steps-desc' ? '#34d399' : '#22D3EE',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {copiedSection === 'next-steps-desc' ? '✓ Copied' : '📋 Copy description'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </details>
 
               {/* Push #099 — Post-generation upgrade upsell. Shows under the
                   download/share row for free users only (planTier === 'free'

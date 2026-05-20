@@ -42,26 +42,29 @@ type FilterKey = 'all' | 'completed' | 'processing' | 'failed'
 function statusChip(s: VideoRow['status']) {
   if (s === 'completed')
     return {
-      label: 'Completed',
+      label: 'Ready',
       emoji: '✅',
       fg: '#34d399',
-      bg: 'rgba(52,211,153,.10)',
-      border: 'rgba(52,211,153,.32)',
+      bg: 'rgba(52,211,153,.12)',
+      border: 'rgba(52,211,153,.40)',
+      pulse: false,
     }
   if (s === 'failed' || s === 'cancelled')
     return {
       label: 'Failed',
       emoji: '❌',
       fg: '#f87171',
-      bg: 'rgba(248,113,113,.10)',
-      border: 'rgba(248,113,113,.32)',
+      bg: 'rgba(248,113,113,.12)',
+      border: 'rgba(248,113,113,.40)',
+      pulse: false,
     }
   return {
-    label: 'Processing',
+    label: 'Processing...',
     emoji: '⏳',
-    fg: '#22D3EE',
-    bg: 'rgba(34, 211, 238,.10)',
-    border: 'rgba(34, 211, 238,.32)',
+    fg: '#fbbf24',
+    bg: 'rgba(251,191,36,.12)',
+    border: 'rgba(251,191,36,.40)',
+    pulse: true,
   }
 }
 
@@ -434,34 +437,13 @@ function VideoCard({
           </div>
         )}
 
-        {/* Top-left: status chip */}
-        <span
-          className="absolute"
-          style={{
-            top: 8,
-            left: 8,
-            padding: '3px 9px',
-            borderRadius: 999,
-            background: chip.bg,
-            border: `1px solid ${chip.border}`,
-            color: chip.fg,
-            fontSize: '0.62rem',
-            fontWeight: 900,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {chip.emoji} {chip.label}
-        </span>
-
-        {/* Top-right: quality badge */}
+        {/* Top-left: quality badge */}
         {playable && (
           <span
             className="absolute"
             style={{
               top: 8,
-              right: 8,
+              left: 8,
               padding: '3px 9px',
               borderRadius: 6,
               background: 'rgba(11,17,32,.7)',
@@ -477,6 +459,28 @@ function VideoCard({
             {qualityText}
           </span>
         )}
+
+        {/* Top-right: status badge — Ready / Processing... / Failed.
+            Processing pulses to signal an in-flight render. */}
+        <span
+          className={`absolute${chip.pulse ? ' animate-pulse' : ''}`}
+          style={{
+            top: 8,
+            right: 8,
+            padding: '3px 9px',
+            borderRadius: 999,
+            background: chip.bg,
+            border: `1px solid ${chip.border}`,
+            color: chip.fg,
+            fontSize: '0.62rem',
+            fontWeight: 900,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          {chip.emoji} {chip.label}
+        </span>
 
         {/* Bottom-left: format badge */}
         <span
