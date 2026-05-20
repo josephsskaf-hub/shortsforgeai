@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   buildCreatomateSource,
   generateTTS,
+  getMp3DurationSeconds,
   pollCreatomateRender,
   scaleVoiceoverScript,
   submitCreatomateRender,
@@ -192,6 +193,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Drive the render off the REAL voiceover length. computeTTSSpeed only
+    // nudges the pace toward the target (and is clamped), so the audio still
+    // over/undershoots — and a fixed-duration render then cut the voiceover
+    // off AND dropped the last few seconds of word-by-word captions (their
+    // cutoff is derived from totalDuration). Measuring the MP3 and rendering
+    // to its true length fixes both. Falls back to the target if the parse
+    // fails so the render never depends on the measurement.
+    let renderDuration = duration
+    const measuredAudio = getMp3DurationSeconds(audioBuffer)
+    if (measuredAudio && measuredAudio >= 5 && measuredAudio <= 120) {
+      renderDuration = measuredAudio
+      console.log(
+        `[compose] measured TTS audio duration: ${measuredAudio}s (target was ${duration}s) — rendering to actual length`,
+      )
+    } else {
+      console.warn(
+        `[compose] could not measure TTS audio duration (got ${measuredAudio}); falling back to target ${duration}s`,
+      )
+    }
+
     // Step 2.5 — Push #180 — word-level caption timings from Whisper. We
     // run this BEFORE the upload (so the buffer is still in memory) and
     // strictly best-effort: if Whisper hiccups, `wordTimings` stays null
@@ -267,7 +288,7 @@ export async function POST(req: NextRequest) {
         voiceoverUrl,
         voiceoverScript: haveSceneCaptions ? '' : scaledScript,
         sceneCaptions,
-        duration,
+        duration: renderDuration,
         wordTimings,
         captionsEnabled,
       })
@@ -304,7 +325,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       render_id: renderId,
       quality,
-      duration,
+      duration: renderDuration,
       voiceover_url: voiceoverUrl,
     })
   } catch (error: unknown) {

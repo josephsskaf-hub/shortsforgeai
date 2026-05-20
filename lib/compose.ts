@@ -395,6 +395,124 @@ function round3(v: number): number {
 }
 
 /**
+ * Measure the real playback length (seconds) of an MP3 buffer.
+ *
+ * Why this exists: OpenAI TTS returns MP3 whose actual length is almost
+ * always a bit longer (or shorter) than the duration we asked the script to
+ * fit. `computeTTSSpeed` nudges the pace toward the target but is clamped, so
+ * the audio still over/undershoots. Driving the Creatomate render off the
+ * fixed target then either cuts the voiceover off OR (because the word-by-word
+ * caption strip is gated on `totalDuration - CTA tail`) drops the last few
+ * seconds of captions. Measuring the audio and rendering to its true length
+ * fixes both at once.
+ *
+ * Implementation: walk the MPEG audio frame headers and sum each frame's
+ * (samplesPerFrame / sampleRate). Dependency-free and correct for both CBR
+ * and VBR streams; a leading ID3v2 tag is skipped. Returns null if the buffer
+ * doesn't parse as MP3 so the caller can fall back to the target duration.
+ */
+export function getMp3DurationSeconds(buffer: Buffer): number | null {
+  if (!buffer || buffer.length < 4) return null
+
+  let offset = 0
+
+  // Skip a leading ID3v2 tag: 'ID3' + 2 version bytes + 1 flags byte + a
+  // 4-byte synchsafe size (7 significant bits per byte).
+  if (
+    buffer.length > 10 &&
+    buffer[0] === 0x49 && // 'I'
+    buffer[1] === 0x44 && // 'D'
+    buffer[2] === 0x33 // '3'
+  ) {
+    const tagSize =
+      ((buffer[6] & 0x7f) << 21) |
+      ((buffer[7] & 0x7f) << 14) |
+      ((buffer[8] & 0x7f) << 7) |
+      (buffer[9] & 0x7f)
+    offset = 10 + tagSize
+  }
+
+  // version bits: 00=MPEG2.5, 10=MPEG2, 11=MPEG1 (01 reserved).
+  const MPEG1 = 3
+  // Bitrate tables (kbps) keyed by "<versionGroup>-<layer>". versionGroup is
+  // 1 for MPEG1, 2 for MPEG2/2.5. layer is 1/2/3.
+  const BITRATES: Record<string, number[]> = {
+    '1-1': [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0],
+    '1-2': [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0],
+    '1-3': [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0],
+    '2-1': [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0],
+    '2-2': [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0],
+    '2-3': [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0],
+  }
+  const SAMPLE_RATES: Record<number, number[]> = {
+    3: [44100, 48000, 32000, 0], // MPEG1
+    2: [22050, 24000, 16000, 0], // MPEG2
+    0: [11025, 12000, 8000, 0], // MPEG2.5
+  }
+
+  let duration = 0
+  let frames = 0
+
+  while (offset + 4 <= buffer.length) {
+    // Frame sync = 11 set bits.
+    if (buffer[offset] !== 0xff || (buffer[offset + 1] & 0xe0) !== 0xe0) {
+      offset += 1
+      continue
+    }
+
+    const b1 = buffer[offset + 1]
+    const b2 = buffer[offset + 2]
+    const versionBits = (b1 >> 3) & 0x03
+    const layerBits = (b1 >> 1) & 0x03
+    if (versionBits === 1 || layerBits === 0) {
+      offset += 1
+      continue
+    }
+
+    const bitrateIndex = (b2 >> 4) & 0x0f
+    const sampleRateIndex = (b2 >> 2) & 0x03
+    const padding = (b2 >> 1) & 0x01
+    if (bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) {
+      offset += 1
+      continue
+    }
+
+    // layerBits: 01=Layer III, 10=Layer II, 11=Layer I.
+    const layerNum = layerBits === 3 ? 1 : layerBits === 2 ? 2 : 3
+    const versionGroup = versionBits === MPEG1 ? '1' : '2'
+    const bitrate = (BITRATES[`${versionGroup}-${layerNum}`]?.[bitrateIndex] ?? 0) * 1000
+    const sampleRate = SAMPLE_RATES[versionBits]?.[sampleRateIndex] ?? 0
+    if (!bitrate || !sampleRate) {
+      offset += 1
+      continue
+    }
+
+    let samplesPerFrame: number
+    if (layerNum === 1) samplesPerFrame = 384
+    else if (layerNum === 3 && versionBits !== MPEG1) samplesPerFrame = 576
+    else samplesPerFrame = 1152
+
+    let frameLength: number
+    if (layerNum === 1) {
+      frameLength = (Math.floor((12 * bitrate) / sampleRate) + padding) * 4
+    } else {
+      frameLength = Math.floor((samplesPerFrame / 8) * (bitrate / sampleRate)) + padding
+    }
+    if (frameLength <= 0) {
+      offset += 1
+      continue
+    }
+
+    duration += samplesPerFrame / sampleRate
+    frames += 1
+    offset += frameLength
+  }
+
+  if (frames === 0 || duration <= 0) return null
+  return round3(duration)
+}
+
+/**
  * Push #066 — build the Creatomate text element(s) for a single caption
  * slot. Renders ONE text element so captions never stack on screen.
  *
@@ -538,7 +656,11 @@ export function buildCreatomateSource({
   wordTimings,
   captionsEnabled = true,
 }: ComposeInputs): Record<string, unknown> {
-  const totalDuration = clamp(Math.round(duration), 5, 90)
+  // Keep the duration fractional — the caller passes the measured TTS audio
+  // length (e.g. 47.3s). Rounding it down would clip the final word of the
+  // voiceover and pull the word-caption CTA cutoff in by up to a second.
+  // Clamp only as a sanity guard against a bogus parse.
+  const totalDuration = round3(clamp(duration, 5, 120))
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
   if (cleanClips.length === 0) {
     throw new Error('No video clips provided to compose.')
