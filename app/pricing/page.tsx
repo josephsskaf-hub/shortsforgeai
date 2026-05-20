@@ -73,7 +73,7 @@ function buildPricing() {
       priceSub: '/ month',
       features: [
         '100 Fast Mode videos/month',
-        '1 Cinematic (Runway AI) video/month',
+        '🎬 Access to Cinematic Mode — AI-generated scenes',
         'Better generation settings',
         'Voiceover + captions',
         'Download MP4',
@@ -212,7 +212,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two paid plans, flat monthly price. Failed generations never consume credits.
+            Two paid plans, flat monthly price. Pro unlocks Cinematic Mode. Failed generations never consume credits.
           </p>
         </div>
 
@@ -566,7 +566,7 @@ export default function PricingPage() {
                     label: 'Cinematic Mode (Runway AI)',
                     free: '—',
                     basic: '—',
-                    pro: '✅ 1 / month',
+                    pro: '✅ Included',
                   },
                   {
                     label: 'Render time',
@@ -600,8 +600,8 @@ export default function PricingPage() {
 
           <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
             Cinematic Mode uses Runway AI to generate fully synthetic scenes
-            — included on Pro as 1 token per month, resets on each renewal.
-            Fast Mode stays unlimited within your monthly Fast credits.
+            — unlocked on Pro. Fast Mode stays unlimited within your monthly
+            Fast credits.
           </p>
         </div>
 

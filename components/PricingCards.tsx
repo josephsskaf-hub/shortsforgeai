@@ -37,7 +37,7 @@ const BASIC_FEATURES = [
 
 const PRO_FEATURES = [
   `${PLANS.pro.credits} Fast Mode videos/month`,
-  '1 Cinematic (Runway AI) video/month',
+  '🎬 Access to Cinematic Mode — AI-generated scenes',
   'Better generation settings',
   'Voiceover + captions',
   'Download MP4',
@@ -170,7 +170,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline={`${PLANS.pro.credits} Fast Mode + 1 Cinematic/month.`}
+          tagline={`${PLANS.pro.credits} Fast Mode + Cinematic Mode unlocked.`}
           features={PRO_FEATURES}
           badge="Recommended"
           highlight
