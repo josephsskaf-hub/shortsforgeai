@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildCreatomateSource,
+  estimateMp3DurationSeconds,
   generateTTS,
   pollCreatomateRender,
   scaleVoiceoverScript,
@@ -168,6 +169,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Push #158 — measure the REAL narration length so captions key to the
+    // actual audio, not the requested duration (which assumed 2.5 wps).
+    const realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
+    console.log(
+      `[compose] estimated TTS duration: ${realAudioDuration.toFixed(1)}s (requested ${duration}s)`,
+    )
+
     // Step 3 — Upload TTS to Supabase storage.
     let voiceoverUrl: string
     try {
@@ -188,18 +196,13 @@ export async function POST(req: NextRequest) {
 
     // Step 4 — Build the Creatomate source.
     //
-    // Push #132 — per-scene captions are now the single source of truth for
-    // on-screen text. analyze-idea (and /api/generate-video-fast) populate
-    // `scene_captions` with ≤8 word readable paraphrases of each scene's
-    // own voiceover line, so the narration the TTS reads and the caption
-    // the viewer sees come from the SAME source string per scene. When
-    // sceneCaptions is non-empty we pass an empty `voiceoverScript` to
-    // buildCreatomateSource — its existing caption pipeline (lib/compose.ts)
-    // falls back to sceneCaptions in that case, giving us one caption slot
-    // per scene instead of arbitrary 7-word slices of the full script.
-    //
-    // When sceneCaptions is empty (legacy clients), we still pass the
-    // scaled script so the chunker can recover a caption strip.
+    // Push #158 (Fix #158) — captions are re-derived from the FINAL scaled
+    // script (the exact text the TTS reads) by buildCreatomateSource's
+    // buildCaptionSegments pipeline. This reverses Push #132, which used the
+    // original per-scene `scene_captions`: whenever scaleVoiceoverScript
+    // rewrote the narration, the voice said one thing while the caption
+    // showed the pre-rewrite scene text. `scene_captions` is now passed only
+    // as a fallback for when the scaled script can't be segmented.
     const haveSceneCaptions = sceneCaptions.length > 0
     console.log(
       '[compose] scenes:',
@@ -213,7 +216,7 @@ export async function POST(req: NextRequest) {
     )
     console.log('[compose] captions being sent:', JSON.stringify(sceneCaptions))
     console.log(
-      `[compose] caption source: ${haveSceneCaptions ? 'per-scene scene_captions' : 'chunked voiceover_script (fallback)'} count=${haveSceneCaptions ? sceneCaptions.length : 'derived'}`,
+      `[compose] caption source: re-segmented scaled script (${scaledScript.split(/\s+/).filter(Boolean).length} words); scene_captions fallback available=${haveSceneCaptions}`,
     )
 
     let source: Record<string, unknown>
@@ -221,9 +224,10 @@ export async function POST(req: NextRequest) {
       source = buildCreatomateSource({
         clipUrls,
         voiceoverUrl,
-        voiceoverScript: haveSceneCaptions ? '' : scaledScript,
+        voiceoverScript: scaledScript,
         sceneCaptions,
         duration,
+        realAudioDuration,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

@@ -34,6 +34,13 @@ export interface ComposeInputs {
    */
   sceneCaptions: string[]
   duration: number
+  /**
+   * Push #158 — real measured duration (seconds) of the generated TTS mp3.
+   * The caption window is sized to this instead of the requested duration,
+   * which assumed a fixed 2.5 words/sec pace the real audio never matched.
+   * Optional: when absent the window falls back to the requested duration.
+   */
+  realAudioDuration?: number
 }
 
 export interface CreatomateRenderState {
@@ -106,6 +113,31 @@ export async function generateTTS(script: string): Promise<Buffer> {
     input,
   })
   return Buffer.from(await speech.arrayBuffer())
+}
+
+// OpenAI tts-1 emits constant-bitrate MP3 at ~128 kbps.
+const TTS_MP3_BITRATE_BPS = 128_000
+
+/**
+ * Push #158 — estimate the real playback duration (seconds) of a TTS mp3
+ * buffer without any external dependency. `music-metadata` is not installed,
+ * so we use the size/bitrate relationship: at CBR, duration ≈ bytes * 8 /
+ * bitrate. OpenAI tts-1 returns ~128 kbps mp3, so duration ≈ bytes / 16000.
+ *
+ * Returns 0 when the buffer is empty/unparseable — callers MUST treat 0 as
+ * "unknown" and fall back to the requested-duration window.
+ */
+export function estimateMp3DurationSeconds(buffer: Buffer): number {
+  if (!buffer || buffer.length === 0) return 0
+  const bytesPerSecond = TTS_MP3_BITRATE_BPS / 8
+  const seconds = buffer.length / bytesPerSecond
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : 0
+}
+
+function wordCount(s: string): number {
+  const t = (s ?? '').trim()
+  if (!t) return 0
+  return t.split(/\s+/).length
 }
 
 // Push #049 — fix voiceover storage on staging.
@@ -344,6 +376,7 @@ export function buildCreatomateSource({
   voiceoverScript,
   sceneCaptions,
   duration,
+  realAudioDuration,
 }: ComposeInputs): Record<string, unknown> {
   const totalDuration = clamp(Math.round(duration), 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
@@ -424,12 +457,19 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions distributed evenly across the duration (minus CTA
-  // tail). Push #066 — captions are now ≤7-word viral-style segments with
-  // a per-segment highlight word so the renderer can paint the line
-  // yellow when an impactful keyword is present. Caption text comes from
-  // the voiceover script first so it matches what the narrator says;
-  // falls back to scene descriptions only when no script is available.
+  // Track 5 — captions. Push #066 — ≤7-word viral-style segments with a
+  // per-segment highlight word so the renderer can paint the line yellow
+  // when an impactful keyword is present. Caption text comes from the
+  // voiceover script first so it matches what the narrator says; falls back
+  // to scene descriptions only when no script is available.
+  //
+  // Push #158 — two desync fixes:
+  //   1. The window is sized to the REAL measured audio duration
+  //      (realAudioDuration - CTA tail), not the requested duration. The
+  //      old code assumed a fixed 2.5 wps pace the TTS never actually hit.
+  //   2. Slots are word-count-proportional, not equal width — a 2-word
+  //      caption no longer holds the screen as long as a 7-word one, so
+  //      captions track the narration cadence instead of drifting.
   const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
   const captionsClean: CaptionSegment[] = scriptSegments.length > 0
     ? scriptSegments
@@ -438,16 +478,25 @@ export function buildCreatomateSource({
         .filter((c) => c.length > 0)
         .map((text) => ({ text, highlight: pickHighlightWord(text) }))
   if (captionsClean.length > 0) {
-    const captionWindow = Math.max(2, totalDuration - CTA_TAIL_SECONDS)
-    const perCaption = round3(captionWindow / captionsClean.length)
+    // Real audio is usually shorter than the requested duration; cap at
+    // totalDuration so a long take can't push captions past the video end.
+    const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
+    const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
+    const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
+    let elapsed = 0
     captionsClean.forEach((segment, idx) => {
+      const portion = (wordCount(segment.text) || 1) / totalWords
+      const isLast = idx === captionsClean.length - 1
+      // Last slot absorbs rounding drift so captions fill the window exactly.
+      const slot = isLast ? Math.max(0.1, captionWindow - elapsed) : portion * captionWindow
       const elementsForCaption = buildCaptionElements({
         text: segment.text,
-        time: round3(idx * perCaption),
-        duration: perCaption,
+        time: round3(elapsed),
+        duration: round3(slot),
         highlight: segment.highlight,
       })
       elements.push(...elementsForCaption)
+      elapsed += slot
     })
   }
 
