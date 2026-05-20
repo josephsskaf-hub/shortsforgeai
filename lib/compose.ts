@@ -114,11 +114,11 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
           {
             role: 'system',
             content:
-              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook, the core idea, and a strong CTA. Reply with the script text only — no quotes, no markdown.',
+              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook and the core idea. Reply with the script text only — no quotes, no markdown.',
           },
           {
             role: 'user',
-            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit shortsforgeai.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence and the payoff in the middle. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,
