@@ -1,5 +1,5 @@
-// Push #169 — improved /admin dashboard.
-// Adds: MRR estimate, Basic/Pro breakdown, nav links, better table.
+// Push #164 — fix /admin auth: redirect unauthenticated → /login?next=/admin,
+// expand ADMIN_EMAILS to include all variants, show denied card for non-admins.
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -7,7 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const ADMIN_EMAILS = ['josephsskaf@gmail.com', 'josephskaf@hotmail.com']
+const ADMIN_EMAILS = new Set([
+  'josephsskaf@gmail.com',
+  'josephskaf@gmail.com',
+  'josephskaf@hotmail.com',
+  'joseph-test@shortsforgeai.com',
+])
 
 const BASIC_PRICE = 4.9
 const PRO_PRICE = 9.9
@@ -35,8 +40,38 @@ export default async function AdminPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user || !ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())) {
-    redirect('/generate')
+  if (!user) {
+    redirect('/login?next=/admin')
+  }
+  if (!ADMIN_EMAILS.has((user.email ?? '').toLowerCase())) {
+    return (
+      <main style={{
+        minHeight: '100vh', background: '#07080F',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}>
+        <div style={{
+          background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.25)',
+          borderRadius: 16, padding: '32px 40px', textAlign: 'center', maxWidth: 380,
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: 12 }}>🚫</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#F87171', marginBottom: 8 }}>
+            Access denied
+          </div>
+          <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>
+            {user.email} is not authorised to view this page.
+          </div>
+          <Link href="/generate" style={{
+            display: 'inline-block', marginTop: 20,
+            padding: '10px 20px', borderRadius: 10,
+            background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
+            color: '#CBD5E1', fontSize: '0.83rem', fontWeight: 700, textDecoration: 'none',
+          }}>
+            ← Back to app
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   const todayStart = new Date()
