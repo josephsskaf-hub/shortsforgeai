@@ -253,20 +253,59 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                     ⚡ Again
                   </button>
 
-                  <button
-                    onClick={() => handleDelete(gen.id)}
-                    disabled={isDeleting}
-                    title={wantsConfirm ? 'Click again to confirm' : 'Delete'}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
-                    style={{
-                      background: wantsConfirm ? 'rgba(239,68,68,.15)' : 'rgba(255,255,255,.04)',
-                      border: wantsConfirm ? '1px solid rgba(239,68,68,.4)' : '1px solid var(--border)',
-                      color: wantsConfirm ? '#f87171' : 'var(--muted)',
-                      cursor: isDeleting ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {isDeleting ? '…' : wantsConfirm ? '✓?' : '🗑'}
-                  </button>
+                  {wantsConfirm ? (
+                    // Push #162 — explicit inline confirm replaces the old
+                    // click-twice-with-tooltip pattern, which gave no visible
+                    // hint that a second click would delete. Now the intent is
+                    // spelled out with a labelled Delete button + a Cancel.
+                    <div className="flex items-center gap-1.5 animate-fade-in">
+                      <button
+                        onClick={() => handleDelete(gen.id)}
+                        disabled={isDeleting}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        style={{
+                          background: 'rgba(239,68,68,.16)',
+                          border: '1px solid rgba(239,68,68,.45)',
+                          color: '#f87171',
+                          cursor: isDeleting ? 'not-allowed' : 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isDeleting ? '…' : '🗑 Delete'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        disabled={isDeleting}
+                        title="Cancel"
+                        aria-label="Cancel delete"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
+                        style={{
+                          background: 'rgba(255,255,255,.04)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--muted)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleDelete(gen.id)}
+                      disabled={isDeleting}
+                      title="Delete this pack"
+                      aria-label="Delete this pack"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
+                      style={{
+                        background: 'rgba(255,255,255,.04)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--muted)',
+                        cursor: isDeleting ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {isDeleting ? '…' : '🗑'}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setExpanded(isOpen ? null : gen.id)}
