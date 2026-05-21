@@ -2073,26 +2073,10 @@ export default function GenerateClient() {
                   in `LOADER_MESSAGES` and is driven by `loaderTick`; the
                   small grey caption underneath keeps the truthful API
                   status so power users still see what's actually happening. */}
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <div className="font-black text-base flex items-center gap-2" style={{ color: 'var(--text)' }}>
-                  <Spinner />
-                  <span style={{ minWidth: 0 }}>
-                    {LOADER_MESSAGES[loaderTick % LOADER_MESSAGES.length]}
-                  </span>
-                </div>
-                <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
-                  {headlineProgress}%
-                </div>
-              </div>
-              <ProgressBar progress={headlineProgress} />
-              <div className="text-xs mt-3" style={{ color: 'var(--muted2)' }}>
-                {statusMessage}
-              </div>
-
-              {/* Push #098 — 4-step generation text below the spinner.
-                  Time-driven (see progressStep useEffect) so it advances
-                  even when the API phase doesn't change for a stretch. */}
-              <GenerationProgressSteps step={progressStep} />
+              <RenderHeader
+                progress={headlineProgress}
+                message={LOADER_MESSAGES[loaderTick % LOADER_MESSAGES.length]}
+              />
 
 
               {/* Push #087 — Fast Mode gets its own 4-step indicator that
@@ -2120,13 +2104,13 @@ export default function GenerateClient() {
                 <div className="flex items-center gap-2 mb-1.5">
                   <span aria-hidden="true">⚡</span>
                   <span className="font-bold" style={{ color: '#93c5fd' }}>
-                    AI Video Engine — automated video pipeline
+                    ShortsForgeAI rendering engine
                   </span>
                 </div>
                 <div>
-                  Your video is generated in stages. Credits are charged only when the final video is successfully created.
+                  Your Short is being built in multiple AI stages. Credits are only charged on successful delivery.
                 </div>
-                <div className="mt-1">Safe to keep this tab open while rendering.</div>
+                <div className="mt-1">Safe to keep this tab open — we&apos;ll notify you when it&apos;s ready.</div>
               </div>
 
               {/* The per-clip tile grid was removed in push #031 — the final
@@ -3082,12 +3066,12 @@ function PipelineStages({
     },
     {
       label: 'Rendering final video',
-      sub: 'AI Video Engine',
+      sub: 'ShortsForgeAI engine',
       status: renderDone ? 'done' : renderActive ? 'active' : 'queued',
     },
     {
       label: 'Preparing download',
-      sub: '9:16 MP4',
+      sub: 'Your Short is ready',
       status: downloadDone ? 'done' : downloadActive ? 'active' : 'queued',
     },
   ]
@@ -3862,10 +3846,70 @@ function ProgressBar({ progress }: { progress: number }) {
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
           background: 'linear-gradient(90deg, rgba(37,99,235,.85), rgba(59,130,246,1))',
-          boxShadow: '0 0 16px rgba(37,99,235,.55)',
           transition: 'width 600ms ease',
         }}
       />
+    </div>
+  )
+}
+
+// ─── Render Header — ring progress + rotating message + elapsed timer ──────
+function RenderHeader({ progress, message }: { progress: number; message: string }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const start = Date.now()
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+  const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+
+  const r = 30
+  const circ = 2 * Math.PI * r
+  const pct = Math.min(100, Math.max(0, progress))
+  const dash = (pct / 100) * circ
+  const gap = circ - dash
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 20 }}>
+      {/* Ring */}
+      <div style={{ position: 'relative', flexShrink: 0, width: 72, height: 72 }}>
+        <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="5" />
+          <circle
+            cx="36" cy="36" r={r} fill="none"
+            stroke="#3B82F6"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${gap}`}
+            style={{ transition: 'stroke-dasharray 700ms ease' }}
+          />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 800, color: '#93c5fd',
+        }}>
+          {pct}%
+        </div>
+      </div>
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4, lineHeight: 1.3 }}>
+          {message}
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+            background: '#3B82F6', animation: 'pulse 1.5s ease-in-out infinite',
+          }} />
+          <span>Rendering · {timeStr}</span>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <ProgressBar progress={pct} />
+        </div>
+      </div>
     </div>
   )
 }
@@ -3889,7 +3933,7 @@ function ModeSelector({
 }) {
   const proHasToken = isPro && cinematicTokens > 0
 
-  const fastFeatures = ['Pexels HD stock footage', 'Neural TTS voiceover', 'Ready in ~60 seconds']
+  const fastFeatures = ['Premium visual library', 'AI voice synthesis', 'Ready in ~60 seconds']
   const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', '~5 minute render']
 
   return (
@@ -4109,10 +4153,10 @@ function ModeSelector({
 // every step is shown as completed regardless of timer.
 function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
   const STEPS = [
-    { label: 'Writing your viral script', sub: 'AI scene planning' },
-    { label: 'Fetching cinematic stock footage', sub: 'Pexels HD library' },
-    { label: 'Generating professional voiceover', sub: 'Neural TTS' },
-    { label: 'Assembling your Short', sub: '9:16 MP4 render' },
+    { label: 'Writing your viral script', sub: 'AI content model' },
+    { label: 'Selecting visual scenes', sub: 'AI visual matching' },
+    { label: 'Synthesizing narration', sub: 'AI voice generation' },
+    { label: 'Composing your Short', sub: 'Vertical 9:16 format' },
   ]
   return (
     <ol
@@ -4584,8 +4628,8 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
 function GenerationProgressSteps({ step }: { step: number }) {
   const items = [
     { icon: '✍️', label: 'Writing your script...' },
-    { icon: '🎙️', label: 'Generating voiceover...' },
-    { icon: '🎬', label: 'Finding footage...' },
+    { icon: '🎙️', label: 'Synthesizing narration...' },
+    { icon: '🎬', label: 'Composing your scenes...' },
     { icon: '⚡', label: 'Rendering your Short...' },
   ]
   return (
