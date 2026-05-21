@@ -12,6 +12,7 @@ export default function CheckoutSuccessPage() {
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
+    // Internal analytics event
     try {
       void fetch('/api/events', {
         method: 'POST',
@@ -25,6 +26,25 @@ export default function CheckoutSuccessPage() {
       }).catch(() => {})
     } catch {
       // ignore
+    }
+
+    // Google Ads purchase conversion — fires once per checkout session.
+    // The base gtag tag (AW-18156258081) is already loaded in app/layout.tsx.
+    // send_to format: 'AW-<CONVERSION_ID>/<CONVERSION_LABEL>'
+    // To get the label: Google Ads → Metas → Resumo → click "Compra" →
+    //   Ações de conversão → click "Compra" row → Tab "Configuração da tag"
+    //   Copy the label from the gtag snippet, e.g. 'AW-18156258081/AbCdEfGhIjKl'
+    try {
+      if (typeof window !== 'undefined' && typeof (window as Window & { gtag?: Function }).gtag === 'function') {
+        ;(window as Window & { gtag: Function }).gtag('event', 'conversion', {
+          send_to: 'AW-18156258081/REPLACE_WITH_COMPRA_LABEL',
+          // value and currency are optional but improve bid optimisation
+          // value: 4.90,
+          // currency: 'BRL',
+        })
+      }
+    } catch {
+      // silent — never break the page
     }
   }, [])
 

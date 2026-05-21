@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,8 +83,15 @@ export default async function AdminPage() {
   weekStart.setDate(weekStart.getDate() - 7)
   const weekIso = weekStart.toISOString()
 
+  // Service-role client — needed to count from auth.users (anon key cannot access it)
+  const adminClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  )
+
   const [
-    totalUsersRes,
+    authUsersRes,
     paidUsersRes,
     basicUsersRes,
     proUsersRes,
@@ -91,7 +99,7 @@ export default async function AdminPage() {
     videosTodayRes,
     newUsersWeekRes,
   ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_pro', true),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('plan', 'basic'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('plan', 'pro'),
@@ -100,7 +108,7 @@ export default async function AdminPage() {
     supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekIso),
   ])
 
-  const totalUsers = totalUsersRes.count ?? 0
+  const totalUsers = authUsersRes.data?.users?.length ?? 0
   const paidUsers = paidUsersRes.count ?? 0
   const basicUsers = basicUsersRes.count ?? 0
   const proUsers = proUsersRes.count ?? 0
