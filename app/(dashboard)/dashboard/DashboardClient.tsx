@@ -350,34 +350,4 @@ export default function DashboardClient({
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">
-            <span style={{ fontSize: '0.7rem', color: '#34d399' }}>●</span>
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Viral Engine Online</span>
-          </div>
-          <div className="ml-auto">
-            <Link href="/history" className="text-xs font-bold" style={{ color: 'var(--indigo-light)', textDecoration: 'none' }}>
-              View history →
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* ── Logged-out CTA ── */}
-      {!isLoggedIn && (
-        <div
-          className="rounded-[20px] px-6 py-7 text-center"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(59, 130, 246,.22)' }}
-        >
-          <p className="font-bold text-base mb-2" style={{ color: 'var(--text)' }}>
-            🔑 Create your account to start
-          </p>
-          <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
-            2 free credits on signup — just sign in.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// TopPickCard component was deleted in push #031 along with the niche grid
-// it rendered for.
+            <span style={{ fontSize: '0.7rem', color: '#34d399' }}>●</

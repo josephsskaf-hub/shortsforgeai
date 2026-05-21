@@ -1124,26 +1124,17 @@ function HeroVideo() {
   )
 }
 
-// Sub-component for a single phone card — owns its own videoRef so hover
-// handlers can call play/pause without lifting state up.
+// Sub-component for a single phone card — autoplay full time (no hover needed).
 function PhoneCard({ src, label, accent, tag }: { src: string; label: string; accent: string; tag: string }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  function handleMouseEnter() {
-    if (videoRef.current) videoRef.current.play().catch(() => {/* blocked */})
-  }
-  function handleMouseLeave() {
-    if (videoRef.current) {
-      videoRef.current.pause()
-      try { videoRef.current.currentTime = 0 } catch { /* not seekable yet */ }
-    }
-  }
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
+  }, [src])
   return (
     <div className="flex flex-col items-center gap-3">
       <div
         className="relative w-full overflow-hidden mx-auto"
         style={{ aspectRatio: '9/16', maxWidth: 200, borderRadius: 26, border: '3px solid rgba(255,255,255,0.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#0B1120' }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         <div
           className="absolute z-20 rounded-full"
@@ -1152,6 +1143,7 @@ function PhoneCard({ src, label, accent, tag }: { src: string; label: string; ac
         {src && <video
           ref={videoRef}
           src={src}
+          autoPlay
           muted
           loop
           playsInline
@@ -1254,19 +1246,13 @@ function ShowcaseVideoCard({
   const isPlaying = true // keep for overlay logic compat
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  // Hover-to-play: video starts on mouseenter and pauses/resets on mouseleave.
-  function handleMouseEnter() {
-    if (videoRef.current) videoRef.current.play().catch(() => {/* blocked */})
-  }
-  function handleMouseLeave() {
-    if (videoRef.current) {
-      videoRef.current.pause()
-      try { videoRef.current.currentTime = 0 } catch { /* not seekable yet */ }
-    }
-  }
+  // Autoplay full time — no hover needed.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
+  }, [card.videoUrl])
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
       {/* 9:16 vertical preview — matches the YouTube Shorts format the
           rest of the product is built around. */}
       <div
@@ -1291,13 +1277,10 @@ function ShowcaseVideoCard({
           <video
             ref={videoRef}
             src={card.videoUrl}
+            autoPlay
             muted
             loop
             playsInline
-            // Push #108 — preload="auto" so first frames land immediately
-            // for the homepage showcase (6 short Mixkit clips, total ~few
-            // MB). My Videos cards keep preload="none" — that grid can
-            // have dozens of rows.
             preload="auto"
             onError={() => setVideoFailed(true)}
             className="absolute inset-0 h-full w-full object-cover z-0 group-hover:scale-[1.02] transition-transform duration-500 ease-out"

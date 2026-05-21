@@ -160,45 +160,4 @@ function CreditsBadge({ isPro }: { isPro: boolean }) {
             if (typeof row.video_credits === 'number') setCredits(row.video_credits)
           },
         )
-        .subscribe()
-    })
-    return () => {
-      cancelled = true
-      if (channel) supabase.removeChannel(channel)
-    }
-  }, [])
-
-  if (loading || credits === null) return null
-
-  const isZero = credits <= 0
-  const isLow = !isZero && credits <= 5 && !isPro
-
-  const colors = isZero
-    ? { fg: '#f87171', bg: 'rgba(239,68,68,.10)', border: 'rgba(239,68,68,.35)' }
-    : isLow
-    ? { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.35)' }
-    : { fg: '#cbd5e1', bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)' }
-
-  const label = (
-    <span
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
-      style={{
-        background: colors.bg,
-        border: `1px solid ${colors.border}`,
-        color: colors.fg,
-      }}
-    >
-      <span aria-hidden="true">⚡</span>
-      {credits} credit{credits === 1 ? '' : 's'}
-    </span>
-  )
-
-  if (isZero) {
-    return (
-      <Link href="/pricing" style={{ textDecoration: 'none' }} aria-label="Out of credits — view pricing">
-        {label}
-      </Link>
-    )
-  }
-  return label
-}
+       
