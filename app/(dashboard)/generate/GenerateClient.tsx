@@ -184,9 +184,6 @@ export default function GenerateClient() {
   const [mode, setMode] = useState<GenerationMode>('fast')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
-  // Push #160 — real per-clip durations (seconds), parallel to clipUrls.
-  // Sent to /api/compose so Creatomate tiles clips to their true length.
-  const [clipDurations, setClipDurations] = useState<number[]>([])
   const [renderId, setRenderId] = useState<string | null>(null)
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
@@ -549,7 +546,6 @@ export default function GenerateClient() {
         if (data.phase === 'clips_ready') {
           setGenerateProgress(100)
           setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
-          setClipDurations(Array.isArray(data.clip_durations) ? data.clip_durations : [])
           setPhase('clips_ready')
           return
         }
@@ -600,7 +596,6 @@ export default function GenerateClient() {
           body: JSON.stringify({
             generationId,
             clip_urls: clipUrls,
-            clip_durations: clipDurations,
             voiceover_script: voiceoverScript,
             scene_captions: sceneCaptions,
             duration,
@@ -739,7 +734,6 @@ export default function GenerateClient() {
     setTasks([])
     setTaskStates({})
     setClipUrls([])
-    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setPhase('analyzing')
@@ -860,7 +854,6 @@ export default function GenerateClient() {
     setTasks([])
     setScenes([])
     setClipUrls([])
-    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
@@ -900,7 +893,6 @@ export default function GenerateClient() {
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
-        setClipDurations(Array.isArray(data.clip_durations) ? data.clip_durations : [])
         setGenerateProgress(100)
         setPhase('clips_ready')
       } catch (err: unknown) {
@@ -1038,7 +1030,6 @@ export default function GenerateClient() {
     setTasks([])
     setTaskStates({})
     setClipUrls([])
-    setClipDurations([])
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
@@ -3867,10 +3858,14 @@ function ModeSelector({
   cinematicTokens: number
 }) {
   const proHasToken = isPro && cinematicTokens > 0
+
+  const fastFeatures = ['Pexels HD stock footage', 'Neural TTS voiceover', 'Ready in ~60 seconds']
+  const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', '~5 minute render']
+
   return (
     <div className="mt-5">
       <div
-        className="text-xs font-black uppercase tracking-widest mb-2"
+        className="text-xs font-black uppercase tracking-widest mb-3"
         style={{ color: 'var(--muted)' }}
       >
         Generation mode
@@ -3882,47 +3877,54 @@ function ModeSelector({
           onClick={() => setMode('fast')}
           className="rounded-xl p-4 text-left"
           style={{
-            background: mode === 'fast' ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
-            border: mode === 'fast' ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+            background: mode === 'fast' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
+            border: mode === 'fast' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
             cursor: 'pointer',
             transition: 'all 0.15s',
-            boxShadow: mode === 'fast' ? '0 0 22px rgba(37,99,235,.18)' : 'none',
+            boxShadow: mode === 'fast' ? '0 0 28px rgba(37,99,235,.15)' : 'none',
           }}
         >
-          <div className="flex items-center gap-1.5 mb-1">
-            <span>⚡</span>
+          {/* Header row */}
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-base">⚡</span>
             <span
               className="text-sm font-black"
               style={{ color: mode === 'fast' ? '#93c5fd' : 'var(--text)' }}
             >
               Fast Mode
             </span>
-            <span
-              className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-              style={{
-                background: 'rgba(37,99,235,.18)',
-                color: '#93c5fd',
-                border: '1px solid rgba(37,99,235,.3)',
-              }}
-            >
-              1 credit
-            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span
+                className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                style={{
+                  background: 'rgba(52,211,153,.12)',
+                  color: '#34d399',
+                  border: '1px solid rgba(52,211,153,.25)',
+                }}
+              >
+                Default
+              </span>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: 'rgba(37,99,235,.18)',
+                  color: '#93c5fd',
+                  border: '1px solid rgba(37,99,235,.3)',
+                }}
+              >
+                1 credit
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-              style={{
-                background: 'rgba(52,211,153,.15)',
-                color: '#34d399',
-                border: '1px solid rgba(52,211,153,.3)',
-              }}
-            >
-              DEFAULT
-            </span>
-          </div>
-          <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-            Stock footage + AI voiceover. ~$0.03/video, ready in ~60 seconds.
-          </div>
+          {/* Feature list */}
+          <ul className="space-y-1">
+            {fastFeatures.map((f) => (
+              <li key={f} className="flex items-center gap-1.5">
+                <span style={{ color: '#34d399', fontSize: '0.6rem' }}>●</span>
+                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
+              </li>
+            ))}
+          </ul>
         </button>
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
@@ -3933,136 +3935,135 @@ function ModeSelector({
             onClick={() => setMode('cinematic')}
             className="rounded-xl p-4 text-left"
             style={{
-              background:
-                mode === 'cinematic' ? 'rgba(168, 85, 247,.12)' : 'rgba(255,255,255,.03)',
-              border:
-                mode === 'cinematic' ? '1px solid rgba(168, 85, 247,.55)' : '1px solid var(--border)',
+              background: mode === 'cinematic' ? 'rgba(168,85,247,.10)' : 'rgba(255,255,255,.03)',
+              border: mode === 'cinematic' ? '1.5px solid rgba(168,85,247,.55)' : '1.5px solid var(--border)',
               cursor: 'pointer',
               transition: 'all 0.15s',
-              boxShadow:
-                mode === 'cinematic' ? '0 0 22px rgba(168, 85, 247,.18)' : 'none',
+              boxShadow: mode === 'cinematic' ? '0 0 28px rgba(168,85,247,.15)' : 'none',
             }}
           >
-            <div className="flex items-center gap-1.5 mb-1">
-              <span>🎬</span>
+            {/* Header row */}
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-base">🎬</span>
               <span
                 className="text-sm font-black"
                 style={{ color: mode === 'cinematic' ? '#d8b4fe' : 'var(--text)' }}
               >
-                Cinematic Mode
+                Cinematic
               </span>
-              <span
-                className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: 'rgba(168, 85, 247,.18)',
-                  color: '#d8b4fe',
-                  border: '1px solid rgba(168, 85, 247,.3)',
-                }}
-              >
-                {cinematicTokens} token{cinematicTokens === 1 ? '' : 's'}
-              </span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span
+                  className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                  style={{
+                    background: 'rgba(168,85,247,.15)',
+                    color: '#d8b4fe',
+                    border: '1px solid rgba(168,85,247,.25)',
+                  }}
+                >
+                  Pro
+                </span>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: 'rgba(168,85,247,.18)',
+                    color: '#d8b4fe',
+                    border: '1px solid rgba(168,85,247,.3)',
+                  }}
+                >
+                  {cinematicTokens} token{cinematicTokens === 1 ? '' : 's'}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{
-                  background: 'rgba(168, 85, 247,.15)',
-                  color: '#d8b4fe',
-                  border: '1px solid rgba(168, 85, 247,.3)',
-                }}
-              >
-                PRO · 1 / month
-              </span>
-            </div>
-            <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-              AI-generated cinematic scenes via Runway. ~5 minute render.
-              Uses your 1 monthly cinematic token.
-            </div>
+            {/* Feature list */}
+            <ul className="space-y-1">
+              {cinematicFeatures.map((f) => (
+                <li key={f} className="flex items-center gap-1.5">
+                  <span style={{ color: '#d8b4fe', fontSize: '0.6rem' }}>●</span>
+                  <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
+                </li>
+              ))}
+            </ul>
           </button>
         ) : isPro ? (
           /* Pro user, but token already spent this month. */
           <div
-            className="relative rounded-xl p-4"
+            className="rounded-xl p-4"
             style={{
-              background: 'rgba(168, 85, 247,.04)',
-              border: '1px solid rgba(168, 85, 247,.20)',
-              opacity: 0.85,
+              background: 'rgba(168,85,247,.04)',
+              border: '1.5px solid rgba(168,85,247,.18)',
+              opacity: 0.7,
               cursor: 'not-allowed',
             }}
           >
-            <div
-              className="absolute"
-              style={{
-                top: 8,
-                right: 8,
-                background: 'rgba(251, 191, 36, 0.2)',
-                color: '#fbbf24',
-                fontSize: '0.62rem',
-                fontWeight: 900,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                padding: '3px 8px',
-                borderRadius: 999,
-                border: '1px solid rgba(251, 191, 36, 0.4)',
-              }}
-            >
-              0 tokens left
-            </div>
-            <div className="flex items-center gap-1.5 mb-1 pr-24">
-              <span style={{ filter: 'grayscale(0.4)' }}>🎬</span>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-base" style={{ filter: 'grayscale(0.5)' }}>🎬</span>
               <span className="text-sm font-black" style={{ color: 'var(--muted2)' }}>
-                Cinematic Mode
+                Cinematic
               </span>
+              <div className="ml-auto">
+                <span
+                  className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: 'rgba(251,191,36,.15)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(251,191,36,.3)',
+                  }}
+                >
+                  Resets monthly
+                </span>
+              </div>
             </div>
-            <div className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-              You used your Cinematic video this month. Resets on your next
-              Pro renewal. Use Fast Mode for unlimited videos this month.
-            </div>
+            <p className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
+              Your Cinematic token was used this month. It resets on your next renewal — use Fast Mode until then.
+            </p>
           </div>
         ) : (
           /* Free / Basic — upgrade CTA. */
           <div
-            className="relative rounded-xl p-4"
+            className="rounded-xl p-4"
             style={{
-              background: 'rgba(168, 85, 247,.04)',
-              border: '1px solid rgba(168, 85, 247,.20)',
-              opacity: 0.85,
+              background: 'rgba(168,85,247,.04)',
+              border: '1.5px solid rgba(168,85,247,.18)',
               cursor: 'not-allowed',
             }}
           >
-            <div
-              className="absolute"
-              style={{
-                top: 8,
-                right: 8,
-                background: '#9333ea',
-                color: '#fff',
-                fontSize: '0.62rem',
-                fontWeight: 900,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                padding: '3px 8px',
-                borderRadius: 999,
-                boxShadow: '0 4px 14px rgba(147, 51, 234,.35)',
-              }}
-            >
-              Pro Only
-            </div>
-            <div className="flex items-center gap-1.5 mb-1 pr-16">
-              <span style={{ filter: 'grayscale(0.4)' }}>🎬</span>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-base" style={{ filter: 'grayscale(0.5)' }}>🎬</span>
               <span className="text-sm font-black" style={{ color: 'var(--muted2)' }}>
-                Cinematic Mode
+                Cinematic
               </span>
+              <div className="ml-auto">
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg,#7c3aed,#9333ea)',
+                    color: '#fff',
+                    fontSize: '0.62rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    padding: '3px 10px',
+                    borderRadius: 999,
+                    boxShadow: '0 2px 10px rgba(147,51,234,.3)',
+                  }}
+                >
+                  Pro Only
+                </span>
+              </div>
             </div>
-            <div className="text-xs" style={{ color: 'var(--muted)', lineHeight: 1.5 }}>
-              Runway AI · ~5 min render · 1 Cinematic token / month
-            </div>
+            <ul className="space-y-1 mb-2.5">
+              {cinematicFeatures.map((f) => (
+                <li key={f} className="flex items-center gap-1.5">
+                  <span style={{ color: 'var(--muted)', fontSize: '0.6rem' }}>●</span>
+                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{f}</span>
+                </li>
+              ))}
+            </ul>
             <a
               href="/pricing"
-              className="inline-flex items-center gap-1 text-xs font-bold mt-2"
+              className="inline-flex items-center gap-1 text-xs font-bold"
               style={{ color: '#d8b4fe', textDecoration: 'none' }}
             >
-              🔓 Upgrade to Pro · $19.90/month →
+              Unlock with Pro →
             </a>
           </div>
         )}
