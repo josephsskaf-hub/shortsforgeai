@@ -81,9 +81,10 @@ async function buildAndRedirect(
     console.error('[stripe/checkout] Profile fetch error:', profileError.message, profileError.code)
   }
 
-  // Verify actual Stripe subscription before blocking.
-  // A stale is_pro=true (e.g. from a failed webhook) should not permanently
-  // lock the user out of subscribing again.
+  // Push #166 — allow repeat purchases to stack credits.
+  // Users with an active subscription can buy again; the webhook's
+  // additive (current + planCredits) logic will add credits on top.
+  // We still clear stale is_pro flags so the DB stays consistent.
   if (profile?.is_pro) {
     const subId = profile.stripe_subscription_id as string | null
     let isActuallyActive = false
@@ -95,17 +96,16 @@ async function buildAndRedirect(
         console.warn('[stripe/checkout] could not verify subscription status, allowing checkout:', subId, err)
       }
     }
-    if (isActuallyActive) {
-      return isGet
-        ? NextResponse.redirect(`${appUrl}/pricing?already_subscribed=1`)
-        : jsonError('You already have an active subscription.', 400)
+    if (!isActuallyActive) {
+      // Stale flag — clear it and fall through to create a new checkout session.
+      console.log('[stripe/checkout] stale is_pro cleared for user:', user.id, 'sub:', subId)
+      await supabase
+        .from('profiles')
+        .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
+        .eq('id', user.id)
     }
-    // Stale flag — clear it and fall through to create a new checkout session.
-    console.log('[stripe/checkout] stale is_pro cleared for user:', user.id, 'sub:', subId)
-    await supabase
-      .from('profiles')
-      .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
-      .eq('id', user.id)
+    // Active subscribers fall through to create a new checkout session —
+    // credits are added additively by the webhook (current + planCredits).
   }
 
   let customerId = profile?.stripe_customer_id
