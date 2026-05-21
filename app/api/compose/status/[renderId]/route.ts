@@ -355,4 +355,58 @@ export async function GET(
                 </a>
                 <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade to Basic — $9.90/mo →</a></p>
                 <p style="color:#475569;font-size:11px;margin:16px 0 0">ShortsForgeAI · <a href="https://shortsforgeai.com" style="color:#475569;">shortsforgeai.com</a></p>
-         
+              </div>
+            `
+            const emailRes = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: FROM_EMAIL,
+                to: [user.email],
+                subject: '⚡ Your Short is ready to download!',
+                html,
+              }),
+            })
+            if (!emailRes.ok) {
+              const errText = await emailRes.text()
+              console.warn('[notify-video-ready] resend non-2xx:', emailRes.status, errText.slice(0, 200))
+            }
+          }
+        } catch (emailErr) {
+          console.warn('[notify-video-ready] send failed:', emailErr instanceof Error ? emailErr.message : String(emailErr))
+        }
+      }
+
+      return NextResponse.json({
+        phase: 'done',
+        final_video_url: state.url,
+        progress: 100,
+        creditsDeducted,
+        creditsRemaining,
+      })
+    }
+
+    if (state.status === 'failed' || state.status === 'cancelled') {
+      return NextResponse.json({
+        phase: 'failed',
+        error: state.error ?? 'Render failed.',
+        progress: 0,
+      })
+    }
+
+    return NextResponse.json({
+      phase: 'composing',
+      progress: state.progress,
+    })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[compose/status] unexpected error:', msg)
+    return NextResponse.json(
+      { error: 'Status lookup failed. Please retry.' },
+      { status: 500 }
+    )
+  }
+}
