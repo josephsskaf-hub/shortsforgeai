@@ -1372,4 +1372,32 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
             ✕
           </button>
           <div className="text-4xl mb-4 text-center">⚡</div>
-          <h2 className="text-xl font-black tracking-tight mb-3 text-center" style={{ color: 'var(-
+          <h2 className="text-xl font-black tracking-tight mb-3 text-center" style={{ color: 'var(--text)' }}>
+            No credits left
+          </h2>
+          <p className="text-sm text-center mb-6" style={{ color: 'var(--muted2)', lineHeight: 1.6 }}>
+            You&apos;ve used all your credits. Get more in Pricing to keep building viral videos.
+          </p>
+          <Link
+            href="/pricing"
+            className="block w-full text-center rounded-xl py-3.5 text-sm font-black text-white transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+              boxShadow: '0 4px 28px rgba(59, 130, 246,.45)',
+              textDecoration: 'none',
+            }}
+          >
+            💳 Buy Credits
+          </Link>
+          <button
+            onClick={onClose}
+            className="block w-full text-center mt-2 py-2 text-xs font-bold transition-all"
+            style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

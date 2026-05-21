@@ -592,4 +592,31 @@ export default function Sidebar({
                 onClick={handleSignOut}
                 title="Sign out"
                 style={{
-                  background: 'tra
+                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 7px', fontSize: '0.75rem',
+                  flexShrink: 0, transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.4)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
+              >
+                🚪
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8,
+                  color: '#60A5FA', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                }}
+              >
+                Sign in
+              </button>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} defaultTab="signup" />}
+    </>
+  )
+}

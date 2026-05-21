@@ -1281,6 +1281,10 @@ function ShowcaseVideoCard({
             muted
             loop
             playsInline
+            // Push #108 — preload="auto" so first frames land immediately
+            // for the homepage showcase (6 short Mixkit clips, total ~few
+            // MB). My Videos cards keep preload="none" — that grid can
+            // have dozens of rows.
             preload="auto"
             onError={() => setVideoFailed(true)}
             className="absolute inset-0 h-full w-full object-cover z-0 group-hover:scale-[1.02] transition-transform duration-500 ease-out"

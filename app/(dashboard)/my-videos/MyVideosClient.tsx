@@ -68,22 +68,12 @@ function statusChip(s: VideoRow['status']) {
   }
 }
 
-// Clean the raw DB title so it shows as a proper video name instead of a
-// full prompt string like "VIDEO 2 - SCIENCE: Create a viral YouTube Short..."
-// Rules:
-//  1. Strip leading "VIDEO N - " or "VIDEO N:" prefix (case-insensitive)
-//  2. Take only the part before the first colon (the topic label)
-//  3. Title-case the result and trim whitespace
-//  4. Fall back to the original title if the result is empty
 function cleanVideoTitle(raw: string): string {
   let t = raw.trim()
-  // Remove "VIDEO N - " or "VIDEO N: " prefix
-  t = t.replace(/^VIDEO\s*\d+\s*[-–:]\s*/i, '')
-  // Take only up to the first colon (prompt instructions come after it)
+  t = t.replace(/^VIDEO\s*\d+\s*[-\u2013:]\s*/i, '')
   const colonIdx = t.indexOf(':')
   if (colonIdx > 0) t = t.slice(0, colonIdx).trim()
-  // Convert ALL-CAPS words to Title Case
-  t = t.replace(/\b([A-Z]{2,})\b/g, (w) =>
+  t = t.replace(/\b([A-Z]{2,})\b/g, (w: string) =>
     w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
   )
   return t.trim() || raw.trim()
@@ -548,7 +538,7 @@ function VideoCard({
 
       <div className="p-3.5 flex flex-col gap-2 flex-1">
         <p
-          className="text-[13px] font-bold tracking-tight"
+          className="text-[14px] font-bold tracking-tight"
           style={{
             color: 'var(--text)',
             lineHeight: 1.35,

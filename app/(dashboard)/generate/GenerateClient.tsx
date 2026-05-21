@@ -4592,4 +4592,53 @@ function GenerationProgressSteps({ step }: { step: number }) {
     <ol
       style={{
         marginTop: 14,
-        display: 'fle
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+      }}
+    >
+      {items.map((it, i) => {
+        const isActive = i === step
+        const isDone = i < step
+        const color = isActive ? '#34d399' : isDone ? '#6ee7b7' : 'var(--muted)'
+        return (
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              opacity: isActive || isDone ? 1 : 0.55,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{ fontSize: '1.1rem', width: 22, textAlign: 'center' }}
+            >
+              {it.icon}
+            </span>
+            <span
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 800 : isDone ? 600 : 500,
+                color,
+              }}
+            >
+              {it.label}
+            </span>
+            {isDone && (
+              <span
+                aria-hidden="true"
+                style={{ marginLeft: 'auto', color: '#6ee7b7', fontSize: '0.85rem' }}
+              >
+                ✓
+              </span>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
