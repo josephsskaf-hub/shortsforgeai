@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import PricingCards from '@/components/PricingCards'
 import OnboardingPanel from '@/components/OnboardingPanel'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
@@ -346,6 +347,35 @@ export default function GenerateClient() {
     return () => {
       cancelled = true
       window.removeEventListener('creditsChanged', fetchCredits)
+    }
+  }, [])
+
+  // Supabase Realtime — push the new balance to this page the instant the
+  // user's profiles row changes in the DB (purchase, deduction, top-up). The
+  // `creditsChanged` event above only fires in the same window; this keeps the
+  // chip in sync across tabs and on a phone browser too.
+  useEffect(() => {
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('credits-realtime-generate')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            const row = payload.new as { video_credits?: number; cinematic_tokens?: number }
+            if (typeof row.video_credits === 'number') setCredits(row.video_credits)
+            if (typeof row.cinematic_tokens === 'number') setCinematicTokens(Math.max(0, row.cinematic_tokens))
+          },
+        )
+        .subscribe()
+    })
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
     }
   }, [])
 

@@ -1,10 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MobileNav from '@/components/MobileNav'
-import ScrollToTop from '@/components/ScrollToTop'
 import { usePathname } from 'next/navigation'
 
 interface DashboardShellProps {
@@ -40,7 +39,6 @@ export default function DashboardShell({
   isLoggedIn,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const mainRef = useRef<HTMLElement>(null)
   const pathname = usePathname()
   const title = pageTitles[pathname] ?? 'Dashboard'
 
@@ -95,8 +93,7 @@ export default function DashboardShell({
           isPro={isPro}
           onMenuToggle={() => setSidebarOpen((v) => !v)}
         />
-        <main ref={mainRef} className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
-        <ScrollToTop scrollRef={mainRef} />
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
         <MobileNav />
       </div>
     </div>

@@ -29,21 +29,11 @@ interface PexelsVideo {
 }
 
 /**
- * A resolved Pexels clip: the hotlink-friendly MP4 URL plus the clip's real
- * playback duration in seconds (from the Pexels API). `duration` is 0 only
- * when the API omits it — callers treat 0 as "unknown".
- */
-export interface PexelsClip {
-  url: string
-  duration: number
-}
-
-/**
  * Search Pexels Videos for a query and return up to `perPage` portrait MP4
- * clips (URL + real duration), HD preferred. Returns an empty array when
- * PEXELS_API_KEY is missing or the search fails — never throws.
+ * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
+ * or the search fails — never throws.
  */
-export async function searchPexelsVideosWithDuration(query: string, perPage = 3): Promise<PexelsClip[]> {
+export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
   const apiKey = process.env.PEXELS_API_KEY
   if (!apiKey) return []
 
@@ -70,7 +60,7 @@ export async function searchPexelsVideosWithDuration(query: string, perPage = 3)
     return []
   }
 
-  const out: PexelsClip[] = []
+  const out: string[] = []
   for (const v of data.videos ?? []) {
     const files = (v.video_files ?? [])
       .filter((f) => f.file_type === 'video/mp4' && f.quality !== 'hls')
@@ -78,33 +68,23 @@ export async function searchPexelsVideosWithDuration(query: string, perPage = 3)
       .sort((a, b) => b.width - a.width)
     if (files.length === 0) continue
     const hd = files.find((f) => f.quality === 'hd') ?? files[0]
-    if (hd?.link) {
-      out.push({ url: hd.link, duration: typeof v.duration === 'number' && v.duration > 0 ? v.duration : 0 })
-    }
+    if (hd?.link) out.push(hd.link)
   }
   return out
 }
 
 /**
- * Backward-compatible URL-only search. Thin wrapper over
- * `searchPexelsVideosWithDuration` for callers that don't need durations
- * (e.g. the showcase-clips route).
- */
-export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
-  const clips = await searchPexelsVideosWithDuration(query, perPage)
-  return clips.map((c) => c.url)
-}
-
-/**
- * Build the Pexels search query for a scene.
+ * Resolve a single best-match Pexels clip URL for a scene.
  *
- * Push #128 — prefers explicit `searchKeywords` (topic-specific, e.g.
+ * Push #128 — accepts explicit `searchKeywords` (topic-specific, e.g.
  * "pyramid egypt desert") so Pexels gets the actual subject matter instead
  * of the first 3 words of a cinematic Runway description. Falls back to
  * stopword-filtered extraction from the description if keywords are empty.
- * Returns '' when nothing usable can be derived.
  */
-function buildSceneQuery(searchKeywords: string, fallbackDescription?: string): string {
+export async function getPexelsVideoForScene(
+  searchKeywords: string,
+  fallbackDescription?: string,
+): Promise<string | null> {
   // Use the explicit topic keywords first
   let query = (searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
 
@@ -126,33 +106,8 @@ function buildSceneQuery(searchKeywords: string, fallbackDescription?: string): 
       .trim()
   }
 
-  return query
-}
-
-/**
- * Resolve a single best-match Pexels clip (URL + real duration) for a scene.
- * Push #160 — the duration travels with the URL so the compose pipeline can
- * tile clips to their true length instead of assuming a fixed 10s.
- */
-export async function getPexelsClipForScene(
-  searchKeywords: string,
-  fallbackDescription?: string,
-): Promise<PexelsClip | null> {
-  const query = buildSceneQuery(searchKeywords, fallbackDescription)
   if (!query) return null
 
-  const clips = await searchPexelsVideosWithDuration(query, 1)
-  return clips[0] ?? null
-}
-
-/**
- * Backward-compatible URL-only scene resolver. Thin wrapper over
- * `getPexelsClipForScene`.
- */
-export async function getPexelsVideoForScene(
-  searchKeywords: string,
-  fallbackDescription?: string,
-): Promise<string | null> {
-  const clip = await getPexelsClipForScene(searchKeywords, fallbackDescription)
-  return clip?.url ?? null
+  const urls = await searchPexelsVideos(query, 1)
+  return urls[0] ?? null
 }

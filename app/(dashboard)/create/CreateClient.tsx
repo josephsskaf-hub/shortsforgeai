@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 interface Scene {
   sceneNumber: number
@@ -159,6 +160,33 @@ export default function CreateClient() {
     }
     load()
     return () => { cancelled = true }
+  }, [])
+
+  // Supabase Realtime — push the new balance to this client whenever the
+  // user's profiles row changes in the DB, so the counter stays live across
+  // tabs and on a phone browser, not just within this window.
+  useEffect(() => {
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('credits-realtime-create')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            const row = payload.new as { video_credits?: number }
+            if (typeof row.video_credits === 'number') setCredits(row.video_credits)
+          },
+        )
+        .subscribe()
+    })
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   // Load user email for creator row

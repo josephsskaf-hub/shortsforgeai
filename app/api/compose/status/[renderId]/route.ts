@@ -233,10 +233,41 @@ export async function GET(
       // Fast Mode still draws from the regular credit pool.
       const shouldDeductCredits = quality === 'fast'
 
+      // Server-side idempotency guard (push #fix-double-deduction):
+      // Check whether this render_id has already been persisted in `videos`.
+      // The client-side `deducted=1` param only works within a single browser
+      // session — a page refresh, mobile browser, or second tab resets the
+      // client ref to false, causing a second deduction for the same render.
+      // By checking the DB here we prevent double-charging regardless of
+      // how many sessions are polling this render concurrently.
+      let serverAlreadyDeducted = false
+      if (shouldDeductCredits && !deductedParam) {
+        try {
+          // The videos table is readable by the owner via RLS (SELECT policy).
+          // We use render_id + user_id to confirm this exact render was already
+          // persisted (and therefore already charged) for THIS user.
+          const { data: existingRow } = await supabase
+            .from('videos')
+            .select('id')
+            .eq('render_id', renderId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (existingRow) {
+            serverAlreadyDeducted = true
+            creditsDeducted = true // Tell client this render is settled
+            console.log(`[compose/status] render ${renderId} already in videos — skipping credit deduction`)
+          }
+        } catch (e) {
+          // Non-fatal: if the check fails we fall through to the normal path.
+          console.warn('[compose/status] idempotency check failed:', e instanceof Error ? e.message : String(e))
+        }
+      }
+
       // Idempotency: the client tells us whether it has already seen a "done"
       // for this render. If so, we skip deduction so refresh / multi-tab polls
-      // don't double-charge.
-      if (!deductedParam) {
+      // don't double-charge. Server-side guard above handles the cross-session
+      // case (refresh, mobile browser, multi-tab).
+      if (!deductedParam && !serverAlreadyDeducted) {
         if (shouldDeductCredits) {
           const { data: profile, error: fetchError } = await supabase
             .from('profiles')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface AuthModalProps {
@@ -25,22 +25,6 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     setEmailAlreadyExists(false)
     setEmailSent(false)
   }
-
-  // Push #162 — close on Escape (matches the existing click-outside behavior)
-  // and lock background scroll while the modal is open so the page behind
-  // doesn't drift under the overlay.
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [onClose])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()

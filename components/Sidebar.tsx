@@ -191,6 +191,35 @@ export default function Sidebar({
     return () => window.removeEventListener('creditsChanged', fetchCredits)
   }, [fetchCredits])
 
+  // Supabase Realtime — when this user's profiles row changes in the DB
+  // (purchase, deduction, top-up) the new balance is pushed to this client
+  // instantly. Unlike the `creditsChanged` DOM event above (same-window only),
+  // this reaches every connected client: other tabs and a phone browser.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('credits-realtime-sidebar')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            const row = payload.new as { video_credits?: number; cinematic_tokens?: number }
+            if (typeof row.video_credits === 'number') setCredits(row.video_credits)
+            if (typeof row.cinematic_tokens === 'number') setCinematicTokens(Math.max(0, row.cinematic_tokens))
+          },
+        )
+        .subscribe()
+    })
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Self-verify auth on mount so we never render a "Guest" sidebar to a user
   // who is actually signed in. The public homepage (`app/page.tsx`) is a client
   // component whose initial render happens before `supabase.auth.getUser()`

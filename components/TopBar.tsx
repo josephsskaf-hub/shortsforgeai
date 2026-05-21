@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface TopBarProps {
   title: string
@@ -136,6 +137,34 @@ function CreditsBadge({ isPro }: { isPro: boolean }) {
     return () => {
       cancelled = true
       window.removeEventListener('creditsChanged', fetchCredits)
+    }
+  }, [])
+
+  // Supabase Realtime — pushes the new balance to this client whenever the
+  // user's profiles row changes in the DB, so the header badge updates on
+  // every device/tab without a refresh (the `creditsChanged` event above only
+  // fires within the same window).
+  useEffect(() => {
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('credits-realtime-topbar')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            const row = payload.new as { video_credits?: number }
+            if (typeof row.video_credits === 'number') setCredits(row.video_credits)
+          },
+        )
+        .subscribe()
+    })
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
     }
   }, [])
 

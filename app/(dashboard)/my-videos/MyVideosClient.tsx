@@ -89,23 +89,10 @@ function starsFor(score: number): string {
   return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full)
 }
 
-// Return a shallow copy of `obj` without `key`. Used to drop a video's
-// transient download outcome once its confirmation window elapses.
-function omit<T extends Record<string, unknown>>(obj: T, key: string): T {
-  const next = { ...obj }
-  delete next[key]
-  return next
-}
-
 export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   const [filter, setFilter] = useState<FilterKey>('all')
-  const [query, setQuery] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
-  // Push #162 — per-video download outcome so the button can confirm
-  // success (✓ Downloaded) or surface a failure (⚠ Retry) instead of
-  // silently snapping back to its idle label.
-  const [downloadStatus, setDownloadStatus] = useState<Record<string, 'done' | 'error'>>({})
   // Push #100 — mobile tap-to-play: only one card pinned at a time so
   // tapping a new card auto-pauses the previously playing one.
   const [playingId, setPlayingId] = useState<string | null>(null)
@@ -131,16 +118,13 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   }, [videos])
 
   const filtered = useMemo(() => {
-    let list = videos
-    if (filter === 'completed') list = list.filter((v) => v.status === 'completed')
-    else if (filter === 'processing') list = list.filter((v) => v.status === 'processing')
-    else if (filter === 'failed')
-      list = list.filter((v) => v.status === 'failed' || v.status === 'cancelled')
-
-    const q = query.trim().toLowerCase()
-    if (q) list = list.filter((v) => v.title.toLowerCase().includes(q))
-    return list
-  }, [videos, filter, query])
+    if (filter === 'all') return videos
+    if (filter === 'completed') return videos.filter((v) => v.status === 'completed')
+    if (filter === 'processing') return videos.filter((v) => v.status === 'processing')
+    if (filter === 'failed')
+      return videos.filter((v) => v.status === 'failed' || v.status === 'cancelled')
+    return videos
+  }, [videos, filter])
 
   async function handleCopyLink(v: VideoRow) {
     if (!v.video_url) return
@@ -159,12 +143,6 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   async function handleDownload(v: VideoRow) {
     if (!v.video_url || downloadingId) return
     setDownloadingId(v.id)
-    // Clear any prior outcome for this card so the button shows the spinner.
-    setDownloadStatus((s) => {
-      const next = { ...s }
-      delete next[v.id]
-      return next
-    })
     try {
       const res = await fetch(v.video_url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -187,20 +165,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       a.remove()
       // Give the browser a tick to start the download before revoking.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
-      // Push #162 — confirm success on the button for 2s, then reset.
-      setDownloadStatus((s) => ({ ...s, [v.id]: 'done' }))
-      setTimeout(
-        () => setDownloadStatus((s) => (s[v.id] === 'done' ? omit(s, v.id) : s)),
-        2200
-      )
     } catch {
-      // Push #162 — surface the failure as a retryable state. The adjacent
-      // "Open" button still lets the user view the MP4 in a new tab.
-      setDownloadStatus((s) => ({ ...s, [v.id]: 'error' }))
-      setTimeout(
-        () => setDownloadStatus((s) => (s[v.id] === 'error' ? omit(s, v.id) : s)),
-        4000
-      )
+      // Fall back to opening the URL in a new tab so the user isn't stranded.
+      window.open(v.video_url, '_blank', 'noopener,noreferrer')
     } finally {
       setDownloadingId(null)
     }
@@ -246,81 +213,37 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
     <div className="px-4 sm:px-6 py-7 pb-20">
       <Header count={videos.length} />
 
-      <div className="mv-toolbar">
-        <FilterTabs filter={filter} counts={counts} onChange={setFilter} />
-        <SearchBox value={query} onChange={setQuery} />
-      </div>
+      <FilterTabs filter={filter} counts={counts} onChange={setFilter} />
 
       {filtered.length === 0 ? (
         <div
-          className="rounded-2xl p-10 sm:p-14 text-center"
-          style={{
-            background: 'linear-gradient(180deg, rgba(11,17,32,.85), rgba(11,16,32,.6))',
-            border: '1px solid var(--border)',
-          }}
+          className="rounded-2xl p-8 text-center"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
         >
-          <div className="text-4xl mb-3">{query.trim() ? '🔍' : '📭'}</div>
-          <h3 className="text-base font-black mb-1.5" style={{ color: 'var(--text)' }}>
-            {query.trim() ? 'No videos match your search' : 'Nothing in this filter yet'}
-          </h3>
-          <p className="text-sm mb-5" style={{ color: 'var(--muted)' }}>
-            {query.trim()
-              ? <>No titles contain &ldquo;{query.trim()}&rdquo;. Try a different keyword.</>
-              : 'Switch filters or generate a new Short to fill this up.'}
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>
+            No videos match this filter.
           </p>
-          <button
-            type="button"
-            onClick={() => { setQuery(''); setFilter('all') }}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold"
-            style={{
-              background: 'rgba(59, 130, 246,.10)',
-              border: '1px solid rgba(59, 130, 246,.32)',
-              color: '#60A5FA',
-              cursor: 'pointer',
-            }}
-          >
-            ↺ Reset filters
-          </button>
         </div>
       ) : (
         <div className="mv-grid">
-          {filtered.map((v, i) => (
-            <div
+          {filtered.map((v) => (
+            <VideoCard
               key={v.id}
-              className="animate-fade-in-up"
-              style={{
-                opacity: 0,
-                // Stagger the reveal so the grid cascades in. Cap the delay so
-                // a large library doesn't leave the last cards hanging.
-                animationDelay: `${Math.min(i, 12) * 45}ms`,
-              }}
-            >
-              <VideoCard
-                video={v}
-                isCopied={copiedId === v.id}
-                onCopy={() => handleCopyLink(v)}
-                onDownload={() => handleDownload(v)}
-                isDownloading={downloadingId === v.id}
-                downloadState={downloadStatus[v.id]}
-                isPinned={playingId === v.id}
-                onTogglePin={() =>
-                  setPlayingId((curr) => (curr === v.id ? null : v.id))
-                }
-              />
-            </div>
+              video={v}
+              isCopied={copiedId === v.id}
+              onCopy={() => handleCopyLink(v)}
+              onDownload={() => handleDownload(v)}
+              isDownloading={downloadingId === v.id}
+              isPinned={playingId === v.id}
+              onTogglePin={() =>
+                setPlayingId((curr) => (curr === v.id ? null : v.id))
+              }
+            />
           ))}
         </div>
       )}
 
       <style jsx>{`
-        .mv-toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-        }
         .mv-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -343,7 +266,6 @@ function VideoCard({
   onCopy,
   onDownload,
   isDownloading,
-  downloadState,
   isPinned,
   onTogglePin,
 }: {
@@ -352,7 +274,6 @@ function VideoCard({
   onCopy: () => void
   onDownload: () => void
   isDownloading: boolean
-  downloadState?: 'done' | 'error'
   isPinned: boolean
   onTogglePin: () => void
 }) {
@@ -651,42 +572,17 @@ function VideoCard({
                 type="button"
                 onClick={onDownload}
                 disabled={isDownloading}
-                title={
-                  downloadState === 'error'
-                    ? 'Download failed — click to retry'
-                    : 'Download MP4'
-                }
-                className="rounded-lg px-3 py-2 text-xs font-bold transition-all"
+                title="Download MP4"
+                className="rounded-lg px-3 py-2 text-xs font-bold"
                 style={{
-                  background:
-                    downloadState === 'done'
-                      ? 'rgba(52,211,153,.12)'
-                      : downloadState === 'error'
-                        ? 'rgba(248,113,113,.12)'
-                        : 'rgba(255,255,255,.04)',
-                  border:
-                    downloadState === 'done'
-                      ? '1px solid rgba(52,211,153,.45)'
-                      : downloadState === 'error'
-                        ? '1px solid rgba(248,113,113,.45)'
-                        : '1px solid var(--border)',
-                  color:
-                    downloadState === 'done'
-                      ? '#34d399'
-                      : downloadState === 'error'
-                        ? '#f87171'
-                        : 'var(--text2)',
+                  background: 'rgba(255,255,255,.04)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text2)',
                   cursor: isDownloading ? 'wait' : 'pointer',
                   opacity: isDownloading ? 0.6 : 1,
                 }}
               >
-                {isDownloading
-                  ? '⏳ Saving…'
-                  : downloadState === 'done'
-                    ? '✓ Downloaded'
-                    : downloadState === 'error'
-                      ? '⚠ Retry'
-                      : '⬇ Download'}
+                {isDownloading ? '…' : '⬇ Download'}
               </button>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -735,60 +631,6 @@ function VideoCard({
   )
 }
 
-function SearchBox({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div
-      className="flex items-center gap-2 rounded-full px-3"
-      style={{
-        background: 'rgba(255,255,255,.04)',
-        border: '1px solid var(--border)',
-        height: 36,
-        minWidth: 200,
-        flex: '0 1 260px',
-      }}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, opacity: 0.6 }}>
-        <circle cx="11" cy="11" r="7" stroke="var(--muted2)" strokeWidth="2" />
-        <path d="m20 20-3.5-3.5" stroke="var(--muted2)" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by title…"
-        aria-label="Search videos by title"
-        className="flex-1 bg-transparent outline-none text-xs"
-        style={{ color: 'var(--text)', border: 'none', minWidth: 0 }}
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          aria-label="Clear search"
-          className="flex-shrink-0"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--muted)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            lineHeight: 1,
-            padding: 2,
-          }}
-        >
-          ✕
-        </button>
-      )}
-    </div>
-  )
-}
-
 function FilterTabs({
   filter,
   counts,
@@ -805,7 +647,7 @@ function FilterTabs({
     { key: 'failed', label: 'Failed', count: counts.failed },
   ]
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 mb-5">
       {tabs.map((t) => {
         const active = filter === t.key
         return (

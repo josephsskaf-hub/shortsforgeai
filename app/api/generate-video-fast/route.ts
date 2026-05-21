@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
-import { getPexelsClipForScene } from '@/lib/pexels'
+import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 
 export const maxDuration = 60
@@ -123,30 +123,22 @@ export async function POST(req: NextRequest) {
     // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
     // topic-specific searchKeywords (NOT the cinematic description).
     // Curated stockLibrary is the fallback so we always return something.
-    // Push #160 — each resolved clip carries its real duration (seconds) so
-    // compose can tile clips to their true length instead of a fixed 10s.
-    const resolvedClips: { url: string; duration: number }[] = await Promise.all(
+    const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        const pexelsClip = await getPexelsClipForScene(scene.searchKeywords, scene.description)
-        if (pexelsClip?.url) return { url: pexelsClip.url, duration: pexelsClip.duration }
+        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
+        if (pexelsUrl) return pexelsUrl
         const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
-        const libClip = lib[0]
-        return { url: libClip?.url ?? '', duration: libClip?.duration ?? 0 }
+        return lib[0]?.url ?? ''
       })
     )
 
-    const usableClips = resolvedClips.filter((c) => typeof c.url === 'string' && c.url.length > 0)
-    if (usableClips.length === 0) {
+    const filtered = clipUrls.filter((u) => typeof u === 'string' && u.length > 0)
+    if (filtered.length === 0) {
       return NextResponse.json(
         { error: 'No stock footage could be sourced. Please try a different topic.' },
         { status: 502 }
       )
     }
-
-    // Parallel arrays, same order: clip_urls (backward compat) +
-    // clip_durations (new, optional downstream).
-    const filtered = usableClips.map((c) => c.url)
-    const clipDurations = usableClips.map((c) => c.duration)
 
     const generationId = randomUUID()
 
@@ -190,7 +182,6 @@ export async function POST(req: NextRequest) {
       scene_captions: sceneCaptions,
       voiceover_script: voiceoverScript,
       clip_urls: filtered,
-      clip_durations: clipDurations,
     })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)

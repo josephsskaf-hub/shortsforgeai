@@ -1,0 +1,6 @@
+cf6c097 fix: route.ts regex range error + r.data null safety - staging build fix
+1935c55 fix: rewrite route.ts to eliminate parse error - clean ASCII strings
+068cb37 fix: lazy OpenAI init to prevent build-time throw on missing API key
+9c3ac22 feat: AI Thumbnail Generator - DALL-E 3, 8 styles, sidebar nav, page route
+06e97c6 release: promote staging to production v1.2
+Done 

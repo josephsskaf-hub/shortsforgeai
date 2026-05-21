@@ -8,7 +8,8 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
-// CTA_TEXT and CTA_TAIL_SECONDS removed -- no promotional overlay in generated videos
+const CTA_TEXT = 'shortsforgeai.com'
+const CTA_TAIL_SECONDS = 2.5
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
@@ -18,14 +19,6 @@ export const VOICEOVER_BUCKET = 'voiceovers'
 
 export interface ComposeInputs {
   clipUrls: string[]
-  /**
-   * Push #160 — real measured duration (seconds) of each clip, parallel to
-   * `clipUrls`. When provided, each clip is tiled at its true length so a
-   * sub-10s clip no longer holds a frozen/black frame to fill a fixed 10s
-   * slot, and the `loop` workaround is dropped. Optional: when absent the
-   * tiling falls back to the fixed `CLIP_LEN` with `loop: true`.
-   */
-  clipDurations?: number[]
   voiceoverUrl: string
   /**
    * The narration text that the captions should be derived from. Push #031
@@ -87,11 +80,11 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
           {
             role: 'system',
             content:
-              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook and the core idea. Do NOT include any website mention, app mention, subscribe line, follow line, promotional CTA, or branded outro. End with the story payoff only. Reply with the script text only — no quotes, no markdown.',
+              'You are a viral short-form scriptwriter. You rewrite scripts to a precise word count while keeping the hook, the core idea, and a strong CTA. Reply with the script text only — no quotes, no markdown.',
           },
           {
             role: 'user',
-            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence and the story payoff at the end. Do NOT add any website URL, app name, subscribe line, or promotional CTA. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
+            content: `Rewrite this voiceover script so it reads as ${targetWords} words (±5%). Keep the hook in the first sentence, the payoff in the middle, and finish with a call to visit shortsforgeai.com. Plain prose only — no scene labels, no stage directions.\n\nSCRIPT:\n${cleanInput}`,
           },
         ],
         temperature: 0.7,
@@ -291,7 +284,6 @@ interface CreatomateElement {
   height?: string
   fit?: string
   volume?: string
-  loop?: boolean
   fill_color?: string
   stroke_color?: string
   stroke_width?: number
@@ -380,7 +372,6 @@ export function buildCaptionElements({
  */
 export function buildCreatomateSource({
   clipUrls,
-  clipDurations,
   voiceoverUrl,
   voiceoverScript,
   sceneCaptions,
@@ -408,14 +399,8 @@ export function buildCreatomateSource({
     fill_color: '#08080f',
   })
 
-  // Track 2 — tile the clips to fill the full duration.
-  //
-  // Push #160 — when real per-clip durations are known, each segment runs for
-  // the clip's true length (capped at CLIP_LEN and the remaining time) so a
-  // sub-10s clip no longer freezes/blacks out filling a fixed 10s slot. The
-  // `loop: true` workaround is only emitted when durations are unknown — with
-  // real durations the segment fits the clip exactly so looping is moot. We
-  // still cap at CLIP_LEN to keep variety and bound any one clip's screen time.
+  // Track 2 — tile / loop the clips to fill the full duration.
+  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
   //
   // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
   // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
@@ -425,21 +410,13 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
-  const haveDurations = Array.isArray(clipDurations) && clipDurations.length > 0
   const CLIP_LEN = 10
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
+    const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
-
-    // Use the real clip duration when available; otherwise fall back to the
-    // fixed CLIP_LEN. Guard against non-positive values so a bad entry can't
-    // produce a zero-length segment (which would never advance the cursor).
-    const known = haveDurations ? clipDurations![i % clipDurations!.length] : undefined
-    const knownDuration = typeof known === 'number' && known > 0 ? known : CLIP_LEN
-    const segLen = round3(Math.min(knownDuration, CLIP_LEN, remaining))
-
     elements.push({
       type: 'video',
       track: 2,
@@ -452,8 +429,6 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
-      // loop only needed when duration is unknown — real-duration clips fit exactly.
-      ...(!haveDurations && { loop: true }),
     })
     cursor += segLen
     i += 1
@@ -506,7 +481,7 @@ export function buildCreatomateSource({
     // Real audio is usually shorter than the requested duration; cap at
     // totalDuration so a long take can't push captions past the video end.
     const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
-    const captionWindow = Math.max(2, Math.min(measured, totalDuration))
+    const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
     const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
     let elapsed = 0
     captionsClean.forEach((segment, idx) => {
@@ -525,7 +500,24 @@ export function buildCreatomateSource({
     })
   }
 
-  // Track 6 -- CTA overlay removed (fix: no promotional text in generated videos)
+  // Track 6 — CTA in the final 2.5s.
+  const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
+  elements.push({
+    type: 'text',
+    track: 6,
+    time: round3(ctaTime),
+    duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
+    text: CTA_TEXT,
+    x: '50%',
+    y: '90%',
+    width: '80%',
+    font_family: 'Montserrat',
+    font_size: 30,
+    font_weight: '700',
+    fill_color: '#ffffff',
+    stroke_color: 'rgba(99,102,241,0.9)',
+    stroke_width: 2,
+  })
 
   return {
     output_format: 'mp4',

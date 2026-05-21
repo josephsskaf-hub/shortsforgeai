@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 interface DashboardClientProps {
   isPro: boolean
@@ -58,6 +59,34 @@ export default function DashboardClient({
     return () => {
       cancelled = true
       window.removeEventListener('creditsChanged', refresh)
+    }
+  }, [isLoggedIn])
+
+  // Supabase Realtime — keep the balance live across every device/tab by
+  // pushing DB changes to this client, not just the same-window
+  // `creditsChanged` event above.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled || !user) return
+      channel = supabase
+        .channel('credits-realtime-dashboard')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+          (payload) => {
+            const row = payload.new as { video_credits?: number }
+            if (typeof row.video_credits === 'number') setCredits(row.video_credits)
+          },
+        )
+        .subscribe()
+    })
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
     }
   }, [isLoggedIn])
 

@@ -8,8 +8,6 @@ export default function NotFound() {
   return (
     <main
       style={{
-        position: 'relative',
-        overflow: 'hidden',
         minHeight: '100vh',
         background: '#05070D',
         color: '#F5F7FF',
@@ -20,39 +18,7 @@ export default function NotFound() {
         padding: '32px 20px',
       }}
     >
-      {/* Ambient glow orbs — match the dashboard's cinematic backdrop */}
-      <div
-        aria-hidden
-        style={{
-          position: 'fixed',
-          width: 520,
-          height: 520,
-          borderRadius: '50%',
-          background: '#22D3EE',
-          top: -180,
-          right: -140,
-          opacity: 0.06,
-          filter: 'blur(120px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: 'fixed',
-          width: 460,
-          height: 460,
-          borderRadius: '50%',
-          background: '#3B82F6',
-          bottom: -160,
-          left: -120,
-          opacity: 0.05,
-          filter: 'blur(110px)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div style={{ marginBottom: 56, marginTop: 8, position: 'relative', zIndex: 1 }}>
+      <div style={{ marginBottom: 56, marginTop: 8 }}>
         <Link
           href="/"
           style={{
@@ -71,8 +37,6 @@ export default function NotFound() {
 
       <div
         style={{
-          position: 'relative',
-          zIndex: 1,
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -169,57 +133,6 @@ export default function NotFound() {
           >
             Go to Generator
           </Link>
-        </div>
-
-        {/* Popular destinations — give the user a fast way out instead of
-            a dead end. */}
-        <div style={{ marginTop: 36, width: '100%' }}>
-          <div
-            style={{
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: '#64748b',
-              marginBottom: 12,
-            }}
-          >
-            Popular pages
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              justifyContent: 'center',
-            }}
-          >
-            {[
-              { href: '/generate', label: '🎬 Generate Video' },
-              { href: '/my-videos', label: '📼 My Videos' },
-              { href: '/examples', label: '✨ Examples' },
-              { href: '/pricing', label: '💎 Pricing' },
-            ].map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '8px 14px',
-                  borderRadius: 999,
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  color: '#cbd5e1',
-                  background: 'rgba(255,255,255,.03)',
-                  border: '1px solid rgba(59,130,246,.18)',
-                }}
-              >
-                {c.label}
-              </Link>
-            ))}
-          </div>
         </div>
       </div>
     </main>

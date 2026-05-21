@@ -23,9 +23,6 @@ type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
 interface ComposeBody {
   generationId?: string
   clip_urls?: string[]
-  // Push #160 — real per-clip durations (seconds), parallel to clip_urls.
-  // Optional: when absent, compose falls back to the fixed 10s tiling.
-  clip_durations?: number[]
   voiceover_script?: string
   scene_captions?: string[]
   duration?: number
@@ -86,13 +83,6 @@ export async function POST(req: NextRequest) {
     if (clipUrls.length === 0) {
       return NextResponse.json({ error: 'clip_urls is required.' }, { status: 400 })
     }
-
-    // Push #160 — optional per-clip durations. Only keep positive numbers so a
-    // bad/zero entry can't make compose tile a zero-length (and never-ending)
-    // segment. When empty, buildCreatomateSource falls back to fixed 10s tiling.
-    const clipDurations = Array.isArray(body.clip_durations)
-      ? body.clip_durations.map(Number).filter((n) => Number.isFinite(n) && n > 0)
-      : []
 
     const voiceoverScript = (body.voiceover_script ?? '').toString().trim()
     if (!voiceoverScript) {
@@ -233,7 +223,6 @@ export async function POST(req: NextRequest) {
     try {
       source = buildCreatomateSource({
         clipUrls,
-        clipDurations,
         voiceoverUrl,
         voiceoverScript: scaledScript,
         sceneCaptions,

@@ -87,59 +87,18 @@ body::after {
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.32);
-  border-radius: 6px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(59, 130, 246, 0.35);
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
-}
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.32) transparent;
-}
-
-/* Text selection — brand tint instead of the default blue */
-::selection {
-  background: rgba(34, 211, 238, 0.28);
-  color: #ffffff;
-}
-
-/* Keyboard focus ring — only shows for keyboard users (:focus-visible),
-   never on mouse clicks, so the cinematic look is untouched for pointer
-   users while keyboard navigation stays clearly visible and accessible. */
-:focus-visible {
-  outline: 2px solid var(--indigo-light);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Respect the OS "reduce motion" setting. The site leans on several
-   infinite/looping animations (btn-pulse, shimmer, spinners, pulsing
-   dots). For users who opt out of motion we drop these to a single,
-   near-instant pass so nothing loops, while transitions still feel
-   responsive. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 /* Animations */
