@@ -1,5 +1,7 @@
 'use client'
 
+// Push #080 — History v2: homepage-quality UI, stats banner, glow cards, polished filter pills
+
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -17,22 +19,22 @@ interface HistoryClientProps {
   generations: Generation[]
 }
 
-const NICHE_META: Record<string, { emoji: string; name: string }> = {
-  mideast: { emoji: '🔥', name: 'Middle East Secrets' },
-  money: { emoji: '💰', name: 'Money Facts' },
-  mind: { emoji: '🧠', name: 'Mind Blowing Facts' },
-  dark: { emoji: '😱', name: 'Dark Mysteries' },
-  motivation: { emoji: '🏋', name: 'Motivation' },
-  ancient: { emoji: '🏛️', name: 'Ancient Civilizations' },
-  space: { emoji: '🚀', name: 'Space Mysteries' },
-  truecrime: { emoji: '🔍', name: 'True Crime' },
-  conspiracy: { emoji: '👁️', name: 'Conspiracy Theories' },
-  psychology: { emoji: '🧬', name: 'Psychology Facts' },
-  nature: { emoji: '🌿', name: 'Nature & Wildlife' },
-  tech: { emoji: '💻', name: 'Tech & AI Facts' },
-  war: { emoji: '⚔️', name: 'War & Battles' },
-  wealth: { emoji: '💎', name: 'Wealth & Luxury' },
-  food: { emoji: '🍜', name: 'Food Secrets' },
+const NICHE_META: Record<string, { emoji: string; name: string; accent: string }> = {
+  mideast:     { emoji: '🔥', name: 'Middle East Secrets',    accent: '#EF4444' },
+  money:       { emoji: '💰', name: 'Money Facts',            accent: '#22D3EE' },
+  mind:        { emoji: '🧠', name: 'Mind Blowing Facts',     accent: '#8B5CF6' },
+  dark:        { emoji: '😱', name: 'Dark Mysteries',         accent: '#EC4899' },
+  motivation:  { emoji: '🏋', name: 'Motivation',             accent: '#F59E0B' },
+  ancient:     { emoji: '🏛️', name: 'Ancient Civilizations',  accent: '#10B981' },
+  space:       { emoji: '🚀', name: 'Space Mysteries',        accent: '#6366F1' },
+  truecrime:   { emoji: '🔍', name: 'True Crime',             accent: '#EF4444' },
+  conspiracy:  { emoji: '👁️', name: 'Conspiracy Theories',    accent: '#8B5CF6' },
+  psychology:  { emoji: '🧬', name: 'Psychology Facts',       accent: '#EC4899' },
+  nature:      { emoji: '🌿', name: 'Nature & Wildlife',      accent: '#10B981' },
+  tech:        { emoji: '💻', name: 'Tech & AI Facts',        accent: '#3B82F6' },
+  war:         { emoji: '⚔️', name: 'War & Battles',          accent: '#EF4444' },
+  wealth:      { emoji: '💎', name: 'Wealth & Luxury',        accent: '#22D3EE' },
+  food:        { emoji: '🍜', name: 'Food Secrets',           accent: '#F59E0B' },
 }
 
 function formatDate(dateStr: string) {
@@ -64,6 +66,11 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
     [generations, filterNiche]
   )
 
+  const totalScripts = useMemo(
+    () => generations.reduce((a, g) => a + (g.content?.length ?? 0), 0),
+    [generations]
+  )
+
   async function handleDelete(id: string) {
     if (deleteConfirm !== id) {
       setDeleteConfirm(id)
@@ -77,8 +84,6 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
     try {
       const { error } = await supabase.from('generations').delete().eq('id', id)
       if (error) {
-        // RLS-blocked or transient — surface to the user instead of optimistically
-        // dropping the row and silently leaving it in the DB.
         console.error('[history] delete failed:', error.message)
         setDeleteError('Could not delete that pack. Please retry.')
         return
@@ -94,27 +99,63 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
     router.push(`/dashboard?niche=${niche}`)
   }
 
+  /* ── Empty state ── */
   if (generations.length === 0) {
     return (
-      // Push #052 — tighter horizontal padding on mobile so the empty-state
-      // card fits the viewport edge-to-edge without scroll.
       <div className="px-4 sm:px-6 py-7">
-        <div className="mb-7">
-          <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
+        <header className="mb-7">
+          <div
+            className="font-black uppercase tracking-[.18em] mb-2 flex items-center gap-2"
+            style={{ fontSize: '0.65rem', color: '#22D3EE' }}
+          >
+            <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
             Generation History
+            <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
           </div>
-          <h1 className="font-black tracking-tight" style={{ fontSize: '1.45rem', color: 'var(--text)' }}>
-            Your <span className="grad-text">History</span>
+          <h1
+            className="font-black tracking-tight"
+            style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
+          >
+            Your{' '}
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              History
+            </span>
           </h1>
-        </div>
-        <div className="rounded-2xl p-8 sm:p-16 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-          <div className="text-5xl mb-4">📋</div>
-          <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>Your next viral Short starts here.</h2>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>Head to Creator Hub and generate your first viral Shorts pack!</p>
+        </header>
+
+        <div
+          className="rounded-2xl p-10 sm:p-16 text-center"
+          style={{
+            background: 'rgba(11,17,32,0.85)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-5"
+            style={{ background: 'linear-gradient(135deg, rgba(34,211,238,.12), rgba(59,130,246,.08))', border: '1px solid rgba(34,211,238,.2)' }}
+          >
+            📋
+          </div>
+          <h2
+            className="text-xl font-black mb-2"
+            style={{ color: 'var(--text)' }}
+          >
+            Your next viral Short starts here.
+          </h2>
+          <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
+            Head to Creator Hub and generate your first viral Shorts pack!
+          </p>
           <a
             href="/dashboard"
-            className="inline-flex items-center gap-2 mt-6 rounded-xl px-5 py-2.5 text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 4px 22px rgba(59, 130, 246,.3)', textDecoration: 'none' }}
+            className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white"
+            style={{
+              background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+              boxShadow: '0 6px 28px rgba(59,130,246,.4)',
+              textDecoration: 'none',
+              transition: 'all 0.18s ease',
+            }}
           >
             ⚡ Generate Your First Pack
           </a>
@@ -123,60 +164,133 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
     )
   }
 
+  /* ── Main ── */
   return (
     <div className="px-4 md:px-6 py-7 pb-20">
-      {/* Header */}
+      <style>{`
+        .hist-card {
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hist-pill {
+          transition: all 0.15s ease;
+        }
+        .hist-pill:hover {
+          filter: brightness(1.1);
+          transform: translateY(-1px);
+        }
+        .hist-again-btn {
+          transition: all 0.15s ease;
+        }
+        .hist-again-btn:hover {
+          background: rgba(59,130,246,.18) !important;
+          transform: translateY(-1px);
+        }
+      `}</style>
+
+      {/* ── Header ── */}
       <div className="mb-6">
-        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
+        <div
+          className="font-black uppercase tracking-[.18em] mb-2 flex items-center gap-2"
+          style={{ fontSize: '0.65rem', color: '#22D3EE' }}
+        >
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
           Generation History
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
         </div>
+
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.45rem', color: 'var(--text)' }}>
-              Your <span className="grad-text">History</span>
+            <h1
+              className="font-black tracking-tight mb-1"
+              style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
+            >
+              Your{' '}
+              <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                History
+              </span>
             </h1>
-            <p style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
-              {filtered.length} generation{filtered.length !== 1 ? 's' : ''} · {filtered.reduce((a, g) => a + (g.content?.length ?? 0), 0)} scripts total
-            </p>
           </div>
           <a
             href="/dashboard"
-            className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', textDecoration: 'none' }}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black text-white flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+              textDecoration: 'none',
+              boxShadow: '0 4px 18px rgba(59,130,246,.35)',
+              transition: 'all 0.18s ease',
+            }}
           >
             ⚡ New Pack
           </a>
         </div>
       </div>
 
-      {/* Niche filter pills */}
+      {/* ── Stats bar ── */}
+      <div
+        className="flex items-center gap-px mb-6 rounded-2xl overflow-hidden"
+        style={{
+          background: 'rgba(11,17,32,0.8)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          display: 'inline-flex',
+        }}
+      >
+        {[
+          { val: String(generations.length), label: 'Generations' },
+          { val: String(totalScripts), label: 'Scripts' },
+          { val: String(usedNiches.length), label: 'Niches' },
+        ].map((s, i) => (
+          <div
+            key={s.label}
+            className="flex flex-col items-center px-5 py-2.5"
+            style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
+          >
+            <span
+              className="font-black text-lg leading-none"
+              style={{
+                background: 'linear-gradient(135deg,#22D3EE,#3B82F6)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {s.val}
+            </span>
+            <span style={{ fontSize: '0.67rem', color: 'var(--muted)', marginTop: 2 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Niche filter pills ── */}
       {usedNiches.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap mb-5">
           <button
             onClick={() => setFilterNiche('all')}
-            className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+            className="hist-pill px-3.5 py-1.5 rounded-full text-xs font-bold"
             style={{
-              background: filterNiche === 'all' ? 'rgba(59, 130, 246,.18)' : 'rgba(255,255,255,.04)',
-              border: filterNiche === 'all' ? '1px solid rgba(59, 130, 246,.4)' : '1px solid var(--border)',
-              color: filterNiche === 'all' ? 'var(--indigo-light)' : 'var(--muted)',
+              background: filterNiche === 'all' ? 'rgba(34,211,238,.15)' : 'rgba(255,255,255,.04)',
+              border: filterNiche === 'all' ? '1px solid rgba(34,211,238,.4)' : '1px solid rgba(255,255,255,.08)',
+              color: filterNiche === 'all' ? '#22D3EE' : 'var(--muted)',
               cursor: 'pointer',
+              boxShadow: filterNiche === 'all' ? '0 0 16px rgba(34,211,238,.15)' : 'none',
             }}
           >
             All ({generations.length})
           </button>
           {usedNiches.map((niche) => {
-            const meta = NICHE_META[niche] ?? { emoji: '⚡', name: niche }
+            const meta = NICHE_META[niche] ?? { emoji: '⚡', name: niche, accent: '#3B82F6' }
             const count = generations.filter((g) => g.niche === niche).length
+            const active = filterNiche === niche
             return (
               <button
                 key={niche}
                 onClick={() => setFilterNiche(niche)}
-                className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                className="hist-pill px-3.5 py-1.5 rounded-full text-xs font-bold"
                 style={{
-                  background: filterNiche === niche ? 'rgba(59, 130, 246,.18)' : 'rgba(255,255,255,.04)',
-                  border: filterNiche === niche ? '1px solid rgba(59, 130, 246,.4)' : '1px solid var(--border)',
-                  color: filterNiche === niche ? 'var(--indigo-light)' : 'var(--muted)',
+                  background: active ? `${meta.accent}18` : 'rgba(255,255,255,.04)',
+                  border: active ? `1px solid ${meta.accent}50` : '1px solid rgba(255,255,255,.08)',
+                  color: active ? meta.accent : 'var(--muted)',
                   cursor: 'pointer',
+                  boxShadow: active ? `0 0 16px ${meta.accent}20` : 'none',
                 }}
               >
                 {meta.emoji} {meta.name} ({count})
@@ -186,6 +300,7 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
         </div>
       )}
 
+      {/* ── Error alert ── */}
       {deleteError && (
         <div
           role="alert"
@@ -196,10 +311,10 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
         </div>
       )}
 
-      {/* List */}
+      {/* ── List ── */}
       <div className="flex flex-col gap-3">
         {filtered.map((gen) => {
-          const meta = NICHE_META[gen.niche] ?? { emoji: '⚡', name: gen.niche }
+          const meta = NICHE_META[gen.niche] ?? { emoji: '⚡', name: gen.niche, accent: '#3B82F6' }
           const isOpen = expanded === gen.id
           const isDeleting = deleting === gen.id
           const wantsConfirm = deleteConfirm === gen.id
@@ -207,13 +322,16 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
           return (
             <div
               key={gen.id}
-              className="rounded-2xl overflow-hidden"
+              className="hist-card rounded-2xl overflow-hidden"
               style={{
-                background: 'var(--card)',
-                border: isOpen ? '1px solid rgba(59, 130, 246,.3)' : '1px solid var(--border)',
-                boxShadow: isOpen ? '0 4px 28px rgba(59, 130, 246,.08)' : 'none',
+                background: 'rgba(11,17,32,0.85)',
+                border: isOpen
+                  ? `1px solid ${meta.accent}40`
+                  : '1px solid rgba(255,255,255,0.07)',
+                boxShadow: isOpen ? `0 6px 36px ${meta.accent}15` : '0 2px 12px rgba(0,0,0,.2)',
                 opacity: isDeleting ? 0.5 : 1,
                 transition: 'opacity .3s, border .2s, box-shadow .2s',
+                backdropFilter: 'blur(12px)',
               }}
             >
               {/* Header row */}
@@ -224,8 +342,11 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246,.14), rgba(37, 99, 235,.09))', border: '1px solid rgba(59, 130, 246,.18)' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${meta.accent}20, ${meta.accent}0a)`,
+                      border: `1px solid ${meta.accent}30`,
+                    }}
                   >
                     {meta.emoji}
                   </div>
@@ -237,15 +358,14 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                   </div>
                 </button>
 
-                {/* Action buttons */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleGenerateAgain(gen.niche)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    className="hist-again-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold"
                     style={{
-                      background: 'rgba(59, 130, 246,.08)',
-                      border: '1px solid rgba(59, 130, 246,.18)',
-                      color: 'var(--indigo-light)',
+                      background: 'rgba(59,130,246,.08)',
+                      border: '1px solid rgba(59,130,246,.18)',
+                      color: '#60A5FA',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                     }}
@@ -257,12 +377,13 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                     onClick={() => handleDelete(gen.id)}
                     disabled={isDeleting}
                     title={wantsConfirm ? 'Click again to confirm' : 'Delete'}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
                     style={{
                       background: wantsConfirm ? 'rgba(239,68,68,.15)' : 'rgba(255,255,255,.04)',
-                      border: wantsConfirm ? '1px solid rgba(239,68,68,.4)' : '1px solid var(--border)',
+                      border: wantsConfirm ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(255,255,255,.08)',
                       color: wantsConfirm ? '#f87171' : 'var(--muted)',
                       cursor: isDeleting ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.15s ease',
                     }}
                   >
                     {isDeleting ? '…' : wantsConfirm ? '✓?' : '🗑'}
@@ -270,8 +391,14 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
 
                   <button
                     onClick={() => setExpanded(isOpen ? null : gen.id)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
-                    style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--border)', color: 'var(--muted)', cursor: 'pointer' }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                    style={{
+                      background: 'rgba(255,255,255,.04)',
+                      border: '1px solid rgba(255,255,255,.08)',
+                      color: isOpen ? '#22D3EE' : 'var(--muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
                   >
                     {isOpen ? '▲' : '▼'}
                   </button>
@@ -281,8 +408,8 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
               {/* Expanded scripts */}
               {isOpen && (
                 <div
-                  className="px-4 pb-4 flex flex-col gap-4 animate-fade-in"
-                  style={{ borderTop: '1px solid var(--border)' }}
+                  className="px-4 pb-4 flex flex-col gap-4"
+                  style={{ borderTop: `1px solid ${meta.accent}22` }}
                 >
                   <div className="pt-4">
                     {(gen.content ?? []).map((video, i) => (
@@ -293,12 +420,13 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
                   </div>
                   <button
                     onClick={() => handleGenerateAgain(gen.niche)}
-                    className="w-full rounded-xl py-3 text-sm font-black text-white transition-all"
+                    className="w-full rounded-xl py-3 text-sm font-black text-white"
                     style={{
-                      background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+                      background: 'linear-gradient(135deg, #2563EB 0%, #22D3EE 100%)',
                       border: 'none',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
+                      boxShadow: '0 6px 28px rgba(59,130,246,.35)',
+                      transition: 'all 0.18s ease',
                     }}
                   >
                     ⚡ Generate New {meta.name} Pack →
@@ -310,14 +438,15 @@ export default function HistoryClient({ generations: initialGenerations }: Histo
         })}
       </div>
 
+      {/* Empty filter result */}
       {filtered.length === 0 && filterNiche !== 'all' && (
-        <div className="text-center py-12">
+        <div className="text-center py-14">
           <div className="text-4xl mb-3">🔍</div>
           <p className="text-sm" style={{ color: 'var(--muted)' }}>No generations for this niche yet.</p>
           <button
             onClick={() => setFilterNiche('all')}
             className="mt-3 text-xs font-bold"
-            style={{ color: 'var(--indigo-light)', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ color: '#22D3EE', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Show all →
           </button>

@@ -1,5 +1,7 @@
 'use client'
 
+// Push #080 — ThumbnailGenerator v2: homepage-quality header, glow style cards, cyan gradient CTA
+
 import { useState, useRef, useCallback } from 'react'
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -327,47 +329,89 @@ export default function ThumbnailGeneratorClient() {
 
   return (
     <div style={{ padding: '28px 28px 48px', maxWidth: 1100, margin: '0 auto' }}>
+      <style>{`
+        .thumb-style-btn {
+          transition: all 0.18s ease;
+        }
+        .thumb-style-btn:hover {
+          transform: translateY(-2px);
+          border-color: rgba(34,211,238,.4) !important;
+          box-shadow: 0 6px 24px rgba(34,211,238,.15) !important;
+        }
+        .thumb-generate-btn {
+          transition: all 0.2s ease;
+        }
+        .thumb-generate-btn:not(:disabled):hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 40px rgba(34,211,238,.45) !important;
+          filter: brightness(1.08);
+        }
+        .thumb-var-btn {
+          transition: all 0.15s ease;
+        }
+        .thumb-var-btn:hover {
+          transform: translateY(-1px);
+        }
+      `}</style>
 
       {/* ── Page header ────────────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: '0.65rem',
+            fontWeight: 900,
+            color: '#22D3EE',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE' }} />
+          Thumbnail Generator
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE' }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 13,
-              background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              boxShadow: '0 0 28px rgba(59, 130, 246,0.45)',
+              boxShadow: '0 0 32px rgba(34,211,238,.4)',
               flexShrink: 0,
             }}
           >
             🖼️
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <h1
               style={{
-                fontSize: '1.45rem',
+                fontSize: 'clamp(1.45rem, 3vw, 1.9rem)',
                 fontWeight: 900,
-                background: 'linear-gradient(135deg, #f1f5f9, #60A5FA)',
+                background: 'linear-gradient(135deg, #F5F7FF 30%, #22D3EE 80%, #3B82F6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                lineHeight: 1.1,
+                backgroundClip: 'text',
+                lineHeight: 1.08,
                 margin: 0,
               }}
             >
               AI Thumbnail Generator
             </h1>
-            <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-              Generate viral YouTube thumbnails with AI
+            <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.5 }}>
+              Generate click-worthy YouTube thumbnails with AI — in seconds.
             </p>
           </div>
 
           {/* Free tier badge */}
-          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+          <div style={{ flexShrink: 0, textAlign: 'right' }}>
             {isLimitReached ? (
               <span
                 style={{
@@ -376,25 +420,27 @@ export default function ThumbnailGeneratorClient() {
                   color: '#f87171',
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  padding: '5px 12px',
-                  borderRadius: 8,
+                  padding: '6px 12px',
+                  borderRadius: 10,
+                  display: 'inline-block',
                 }}
               >
-                ⚠️ Free limit reached · Upgrade for unlimited
+                ⚠️ Free limit reached
               </span>
             ) : (
               <span
                 style={{
-                  background: 'rgba(59, 130, 246,0.1)',
-                  border: '1px solid rgba(59, 130, 246,0.25)',
-                  color: '#60A5FA',
+                  background: 'rgba(34,211,238,.1)',
+                  border: '1px solid rgba(34,211,238,.28)',
+                  color: '#22D3EE',
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  padding: '5px 12px',
-                  borderRadius: 8,
+                  padding: '6px 12px',
+                  borderRadius: 10,
+                  display: 'inline-block',
                 }}
               >
-                ⚡ {remainingFree} free {remainingFree === 1 ? 'generation' : 'generations'} left today
+                ⚡ {remainingFree} free today
               </span>
             )}
           </div>
@@ -471,26 +517,26 @@ export default function ThumbnailGeneratorClient() {
               {STYLES.map((s) => (
                 <button
                   key={s.id}
+                  className="thumb-style-btn"
                   onClick={() => { setSelectedStyle(s.id); setPrompt(s.sample) }}
                   style={{
                     background:
                       selectedStyle === s.id
-                        ? 'linear-gradient(135deg, rgba(59, 130, 246,0.2), rgba(37, 99, 235,0.14))'
+                        ? 'linear-gradient(135deg, rgba(34,211,238,.15), rgba(59,130,246,.1))'
                         : 'rgba(255,255,255,0.03)',
                     border:
                       selectedStyle === s.id
-                        ? '1px solid rgba(59, 130, 246,0.45)'
+                        ? '1px solid rgba(34,211,238,.45)'
                         : '1px solid rgba(255,255,255,0.07)',
                     borderRadius: 10,
                     padding: '10px 12px',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    boxShadow: selectedStyle === s.id ? '0 0 16px rgba(59, 130, 246,0.2)' : 'none',
-                    transition: 'all 0.15s ease',
+                    boxShadow: selectedStyle === s.id ? '0 0 20px rgba(34,211,238,.18)' : 'none',
                   }}
                 >
                   <div style={{ fontSize: '1.1rem', marginBottom: 3 }}>{s.emoji}</div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: selectedStyle === s.id ? '#60A5FA' : 'var(--text)', lineHeight: 1.1 }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: selectedStyle === s.id ? '#22D3EE' : 'var(--text)', lineHeight: 1.1 }}>
                     {s.label}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 2 }}>
@@ -517,18 +563,21 @@ export default function ThumbnailGeneratorClient() {
               {([1, 3] as const).map((n) => (
                 <button
                   key={n}
+                  className="thumb-var-btn"
                   onClick={() => setGenerateCount(n)}
                   style={{
                     flex: 1,
                     padding: '10px 0',
                     borderRadius: 10,
-                    border: generateCount === n ? '1px solid rgba(59, 130, 246,0.45)' : '1px solid rgba(255,255,255,0.08)',
-                    background: generateCount === n ? 'rgba(59, 130, 246,0.15)' : 'rgba(255,255,255,0.03)',
-                    color: generateCount === n ? '#60A5FA' : 'var(--muted)',
+                    border: generateCount === n ? '1px solid rgba(34,211,238,.45)' : '1px solid rgba(255,255,255,0.08)',
+                    background: generateCount === n
+                      ? 'linear-gradient(135deg, rgba(34,211,238,.15), rgba(59,130,246,.1))'
+                      : 'rgba(255,255,255,0.03)',
+                    color: generateCount === n ? '#22D3EE' : 'var(--muted)',
                     fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: 'pointer',
-                    transition: 'all 0.15s',
+                    boxShadow: generateCount === n ? '0 0 16px rgba(34,211,238,.15)' : 'none',
                   }}
                 >
                   {n === 1 ? '1 thumbnail' : '3 variations'}
@@ -624,6 +673,7 @@ export default function ThumbnailGeneratorClient() {
           <button
             onClick={handleGenerate}
             disabled={loading || !prompt.trim() || isLimitReached}
+            className="thumb-generate-btn"
             style={{
               width: '100%',
               padding: '15px 0',
@@ -635,13 +685,12 @@ export default function ThumbnailGeneratorClient() {
               cursor: loading || !prompt.trim() || isLimitReached ? 'not-allowed' : 'pointer',
               background:
                 loading || !prompt.trim() || isLimitReached
-                  ? 'rgba(59, 130, 246,0.25)'
-                  : 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                  ? 'rgba(34,211,238,.18)'
+                  : 'linear-gradient(135deg, #2563EB, #22D3EE)',
               boxShadow:
                 loading || !prompt.trim() || isLimitReached
                   ? 'none'
-                  : '0 0 32px rgba(59, 130, 246,0.4)',
-              transition: 'all 0.2s ease',
+                  : '0 6px 32px rgba(34,211,238,.35)',
               letterSpacing: '0.02em',
             }}
           >
