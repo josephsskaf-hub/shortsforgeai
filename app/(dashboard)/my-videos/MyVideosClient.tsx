@@ -68,6 +68,27 @@ function statusChip(s: VideoRow['status']) {
   }
 }
 
+// Clean the raw DB title so it shows as a proper video name instead of a
+// full prompt string like "VIDEO 2 - SCIENCE: Create a viral YouTube Short..."
+// Rules:
+//  1. Strip leading "VIDEO N - " or "VIDEO N:" prefix (case-insensitive)
+//  2. Take only the part before the first colon (the topic label)
+//  3. Title-case the result and trim whitespace
+//  4. Fall back to the original title if the result is empty
+function cleanVideoTitle(raw: string): string {
+  let t = raw.trim()
+  // Remove "VIDEO N - " or "VIDEO N: " prefix
+  t = t.replace(/^VIDEO\s*\d+\s*[-–:]\s*/i, '')
+  // Take only up to the first colon (prompt instructions come after it)
+  const colonIdx = t.indexOf(':')
+  if (colonIdx > 0) t = t.slice(0, colonIdx).trim()
+  // Convert ALL-CAPS words to Title Case
+  t = t.replace(/\b([A-Z]{2,})\b/g, (w) =>
+    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  )
+  return t.trim() || raw.trim()
+}
+
 function formatFullDate(iso: string): string {
   try {
     const d = new Date(iso)
@@ -246,14 +267,17 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       <style jsx>{`
         .mv-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 12px;
+        }
+        @media (max-width: 1280px) {
+          .mv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
         }
         @media (max-width: 900px) {
-          .mv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .mv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
         }
-        @media (max-width: 540px) {
-          .mv-grid { grid-template-columns: 1fr; }
+        @media (max-width: 600px) {
+          .mv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
         }
       `}</style>
     </div>
@@ -524,7 +548,7 @@ function VideoCard({
 
       <div className="p-3.5 flex flex-col gap-2 flex-1">
         <p
-          className="text-[14px] font-bold tracking-tight"
+          className="text-[13px] font-bold tracking-tight"
           style={{
             color: 'var(--text)',
             lineHeight: 1.35,
@@ -535,7 +559,7 @@ function VideoCard({
             overflow: 'hidden',
           }}
         >
-          {v.title}
+          {cleanVideoTitle(v.title)}
         </p>
 
         <div
