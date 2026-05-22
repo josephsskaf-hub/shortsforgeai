@@ -50,7 +50,7 @@ export default function CheckoutCancelledPage() {
           <p style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: 700, margin: 0 }}>Still want to create more videos?</p>
           <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: '4px 0 14px', lineHeight: 1.5 }}>Failed generations never consume credits. Start a plan and keep creating.</p>
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-            <a href={STRIPE_LINKS.basic} onClick={() => trackEvent('basic_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>Basic — $4.99/mo →</a>
+            <a href={STRIPE_LINKS.basic} onClick={() => trackEvent('basic_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>Basic — $4.90/mo →</a>
             <a href={STRIPE_LINKS.pro} onClick={() => trackEvent('pro_checkout_clicked')} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '12px 14px', borderRadius: 12, fontSize: '0.88rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>Pro — $9.90/mo →</a>
           </div>
         </div>

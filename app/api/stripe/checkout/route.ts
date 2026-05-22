@@ -12,7 +12,7 @@ type Tier = 'basic' | 'pro'
 type Currency = 'usd' | 'brl'
 
 // Push #193 — updated pricing.
-//   Basic:  $4.99 / month  (USD)  |  R$24.90 / month  (BRL)
+//   Basic:  $4.90 / month  (USD)  |  R$24.90 / month  (BRL)
 //   Pro:    $9.90 / month  (USD)  |  R$49.90 / month  (BRL)
 // Hosted payment links (direct, no session needed):
 //   Basic: https://buy.stripe.com/8x26oH8sR7nx2DVcF8gjC0p
@@ -32,7 +32,7 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 
 // Amounts in the smallest currency unit (cents / centavos).
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 499,  brl: 2490 },
+  basic: { usd: 490,  brl: 2490 },
   pro:   { usd: 990,  brl: 4990 },
 }
 

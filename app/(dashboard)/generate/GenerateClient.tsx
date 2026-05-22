@@ -1431,7 +1431,7 @@ export default function GenerateClient() {
               opacity: upgradeLoading ? 0.7 : 1,
             }}
           >
-            {upgradeLoading ? 'Loading…' : 'Upgrade — $4.99/mo →'}
+            {upgradeLoading ? 'Loading…' : 'Upgrade — $4.90/mo →'}
           </button>
         </div>
       )}
@@ -2464,7 +2464,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(34,197,94,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $4.99/mo →'}
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $4.90/mo →'}
                   </button>
                 </div>
               )}
@@ -4157,7 +4157,7 @@ function UpgradeModal({
             marginBottom: 24,
           }}
         >
-          Upgrade to Basic for 50 videos/month — $4.99/mo
+          Upgrade to Basic for 50 videos/month — $4.90/mo
         </p>
         <button
           type="button"
@@ -4179,7 +4179,7 @@ function UpgradeModal({
             transition: 'transform 0.15s ease',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Activate Basic — $4.99/mo →'}
+          {loading ? 'Opening checkout…' : 'Activate Basic — $4.90/mo →'}
         </button>
         {/* Push #113 — explicit BRL rail. Auto-detection (locale/IP) was
             unreliable through VPNs and embedded browsers, so we surface
@@ -4362,7 +4362,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$4.99/mo</strong>. Cancel anytime.
+          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$4.90/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -4384,7 +4384,7 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Get Basic — $4.99/mo →'}
+          {loading ? 'Opening checkout…' : 'Get Basic — $4.90/mo →'}
         </button>
         {/* Push #113 — BRL option for BR users. */}
         <button

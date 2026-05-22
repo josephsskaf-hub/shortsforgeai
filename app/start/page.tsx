@@ -412,7 +412,7 @@ export default function StartPage() {
               },
               {
                 q: 'What happens after my free videos?',
-                a: 'Basic is $4.99/month (50 videos) and Pro is $9.90/month (100 videos + Cinematic AI Engine). Cancel anytime — no contracts.',
+                a: 'Basic is $4.90/month (50 videos) and Pro is $9.90/month (100 videos + Cinematic AI Engine). Cancel anytime — no contracts.',
               },
               {
                 q: 'Will my channel get flagged for AI content?',
@@ -510,7 +510,7 @@ export default function StartPage() {
                   lineHeight: 1,
                 }}
               >
-                $4.99
+                $4.90
               </span>
               <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600 }}>/mo</span>
             </div>

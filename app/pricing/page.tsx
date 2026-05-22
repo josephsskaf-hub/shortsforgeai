@@ -37,7 +37,7 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-// Push #191 — updated pricing $4.99/$9.90 + tech-forward copy.
+// Push #191 — updated pricing $4.90/$9.90 + tech-forward copy.
 function buildPricing() {
   return [
     {
@@ -57,7 +57,7 @@ function buildPricing() {
     {
       tier: 'basic',
       name: 'Basic',
-      price: '$4.99',
+      price: '$4.90',
       priceSub: '/ month',
       tagline: '50 Fast Mode renders/month. Under $0.10 per video.',
       features: [
@@ -756,7 +756,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.99/mo'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.90/mo'}
           </button>
           <button
             type="button"

@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
               </table>
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
-                  Two paid plans, flat monthly price. Basic <strong style="color:#60A5FA;">$4.99/mo</strong> (50 videos / mo), Pro <strong style="color:#60A5FA;">$9.90/mo</strong> (100 videos / mo + priority queue). Cancel anytime.
+                  Two paid plans, flat monthly price. Basic <strong style="color:#60A5FA;">$4.90/mo</strong> (50 videos / mo), Pro <strong style="color:#60A5FA;">$9.90/mo</strong> (100 videos / mo + priority queue). Cancel anytime.
                 </p>
               </div>
             </td>
@@ -112,7 +112,7 @@ Every Short comes with:
 👉 Start generating now:
 ${dashboardUrl}
 
-Two paid plans, flat monthly price. Basic $4.99/mo (50 videos), Pro $9.90/mo (100 videos + priority queue). Cancel anytime.
+Two paid plans, flat monthly price. Basic $4.90/mo (50 videos), Pro $9.90/mo (100 videos + priority queue). Cancel anytime.
 
 — The ShortsForgeAI Team
 shortsforgeai.com`

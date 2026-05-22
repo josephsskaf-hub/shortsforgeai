@@ -1,5 +1,5 @@
 // Push #191 — updated pricing.
-// Basic = $4.99/month  (50 Fast Mode videos)
+// Basic = $4.90/month  (50 Fast Mode videos)
 // Pro   = $9.90/month (100 Fast Mode videos + 1 Cinematic/month)
 //
 // All checkout buttons on every surface link to /api/stripe/checkout?tier=...
@@ -34,8 +34,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   basic: {
     tier: 'basic',
     name: 'Basic',
-    price: 4.99,
-    priceLabel: '$4.99',
+    price: 4.90,
+    priceLabel: '$4.90',
     periodLabel: '/ month',
     credits: 50,
     cta: 'Automate Now',
