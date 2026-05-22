@@ -211,17 +211,21 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
   return rawText.slice(0, 300) || `HTTP ${httpStatus}`
 }
 
-// Push #128 — Scene now carries both the cinematic Runway description AND
-// explicit Pexels search keywords so the two uses are cleanly separated.
-// Push #132 — Scene also carries the per-scene `voiceover` (full narration
-// line) and `caption` (≤8 word readable version of that voiceover). The
-// voiceover sent to TTS and the caption shown on screen come from the
-// SAME source string, so captions can never disconnect from the narration.
+// Push #128 — Scene carries cinematic description + explicit Pexels keywords.
+// Push #132 — Scene carries per-scene voiceover + caption from the same source.
+// Push #211 — Creative Director upgrade: Scene now includes scenePurpose,
+// stockSearchQuery (premium Pexels query), negativeVisualPrompt (what NOT to
+// show), and visualIntent (documentary aesthetic directive). These fields drive
+// the visual selection engine toward premium, realistic, on-topic footage.
 export interface Scene {
-  description: string    // cinematic prose for Runway image/video AI
-  searchKeywords: string // 2-4 concrete nouns for Pexels stock search
-  voiceover: string      // the narration line the TTS will speak for this scene
-  caption: string        // ≤8-word readable on-screen caption derived from voiceover
+  description: string          // cinematic prose for Runway image/video AI
+  searchKeywords: string       // 2-4 concrete nouns for Pexels (legacy compat)
+  stockSearchQuery: string     // full optimised Pexels search query (premium)
+  negativeVisualPrompt: string // comma-separated list of visual elements to avoid
+  scenePurpose: string         // HOOK | ESCALATION | DISCOVERY | EXPLANATION | PAYOFF | FINAL_LINE
+  visualIntent: string         // documentary aesthetic directive for the visual engine
+  voiceover: string            // narration line TTS will speak for this scene
+  caption: string              // ≤8-word on-screen caption derived from voiceover
 }
 
 // Trim a narration line down to a punchy ≤maxWords caption. Strips
@@ -239,59 +243,91 @@ export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
 }
 
 export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
-  const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
+  const safeCount = Math.max(1, Math.min(9, Math.floor(count)))
 
-  // Push #210 — added space/rocket example alongside pyramid to teach the model
-  // that for space topics, searchKeywords must use "rocket launch fire" not "screens".
-  const exampleScenes = [
-    `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`,
-    `{"description":"Falcon 9 rocket booster descending vertically toward drone ship, engines firing, dramatic ocean backdrop, cinematic slow motion","searchKeywords":"rocket booster landing fire","voiceover":"SpaceX landed a rocket booster back on a ship in the middle of the ocean.","caption":"Rocket landed back on a ship"}`,
-  ]
-  const exampleArr = Array.from({ length: safeCount }, (_, i) => exampleScenes[i % exampleScenes.length]).join(',\n  ')
+  // Push #211 — Creative Director Engine. gpt-4o with 8-field scene schema,
+  // premium stockSearchQuery, negativeVisualPrompt per topic, scene purpose
+  // labels, and documentary visual intent directives. This replaces the
+  // 4-field gpt-4o-mini prompt that generated generic/wrong Pexels footage.
+  const systemPrompt = `You are a Creative Director for premium faceless YouTube Shorts. You plan scenes that feel like mini-documentaries — stunning real footage, no filler visuals.
 
-  const userPrompt = `You break a Short-form video idea into ${safeCount} scenes for a YouTube Short.
+Your job is to return a JSON array of scene objects. Each scene object must include EXACTLY these 8 fields:
+1. "description" — cinematic shot description (~15-25 words), visual + specific + subject + setting + lighting + camera motion + mood. 9:16 vertical framing.
+2. "searchKeywords" — 2-4 concrete nouns for Pexels stock search (legacy compat). NEVER abstract words.
+3. "stockSearchQuery" — optimized Pexels search phrase (5-10 words). Full cinematic query like "Falcon 9 rocket launch fire night slow motion" or "ancient Egyptian pyramid aerial desert sunrise". This is the PRIMARY search — make it specific and vivid.
+4. "negativeVisualPrompt" — comma-separated list of visual elements NOT to show for this topic. Be specific.
+5. "scenePurpose" — exactly one of: HOOK | ESCALATION | DISCOVERY | EXPLANATION | PAYOFF | FINAL_LINE
+6. "visualIntent" — documentary aesthetic directive in 1 sentence. How should the shot FEEL? (e.g. "IMAX-scale awe, slow push-in revealing ancient engineering precision")
+7. "voiceover" — one narration line with a concrete fact, escalation, or payoff (10-22 words). Exact TTS text. No filler like "imagine…" or "what if…".
+8. "caption" — ≤8-word on-screen caption paraphrasing the voiceover. Punchy fragment. No period.
 
-Idea: "${prompt}"
+You always respond with a valid JSON array ONLY — no markdown, no code fences, no commentary.`
 
-Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, no preamble.
-Each object must have exactly four fields:
-1. "description": A cinematic shot description for an AI video model (~15-25 words). Visual, specific, concrete — subject + setting + lighting + camera motion + mood. Vertical 9:16 framing.
-2. "searchKeywords": 2-4 concrete nouns or short phrases for Pexels stock search. MUST visually match the scene. Use the actual subject noun — NEVER abstract words like "cinematic", "footage", "video", "shot", "story", "history", "future", "change". NEVER start with "a", "the", "lone", "soft".
+  const userPrompt = `Plan ${safeCount} scenes for this YouTube Short idea:
 
-   TOPIC-SPECIFIC KEYWORD RULES (critical — wrong keywords return unrelated Pexels footage):
-   - Rockets / SpaceX / Elon Musk / Starship / Falcon 9 / NASA / space travel:
-       BANNED: "screens", "engineers", "mission control", "monitors", "control room", "people watching", "team"  — these return music studios or offices on Pexels
-       REQUIRED: always include a rocket/space concrete noun → "rocket launch fire", "rocket engine flames", "falcon 9 landing", "rocket booster smoke", "earth from orbit", "rocket launch pad", "space rocket night sky", "rocket exhaust fire"
-   - Money / finance / wealth: "dollar bills cash", "gold coins", "wall street trading floor", "stock market screen"
-   - Ancient history / civilizations: use the actual place + concrete noun → "ancient pyramid egypt desert", "roman colosseum ruins", "aztec temple mexico"
-   - Tech / AI / computers: "computer chip circuit board", "data center servers", "code screen dark", "silicon valley office"
+"${prompt}"
 
-3. "voiceover": One real narration line that delivers a concrete fact, escalation, or payoff about the topic (10-22 words). This is the EXACT text the TTS will read for this scene. No filler like "imagine…", "what if…". No stage directions.
-4. "caption": A ≤8-word readable on-screen caption that paraphrases the same voiceover line. Punchy fragment, no period, must match what the narrator says in meaning.
+TOPIC-SPECIFIC VISUAL RULES — read carefully before writing stockSearchQuery and negativeVisualPrompt:
 
-The "searchKeywords" MUST match the topic of the video idea, not describe filming style.
-The "caption" MUST come from the same idea as "voiceover" — they describe the same moment in the narration.
+ROCKETS / SPACE / ELON MUSK / SPACEX / NASA / STARSHIP / FALCON 9:
+  stockSearchQuery MUST include real rocket/space nouns: "rocket launch fire", "falcon 9 landing ocean", "rocket booster smoke", "space rocket night sky", "earth from space orbit", "rocket engine exhaust", "launch pad flames", "astronaut space station"
+  negativeVisualPrompt MUST include: "mission control screens, engineers at computers, office monitors, music studio, people at desks, cartoon rocket, toy rocket, animation"
 
-Example output:
-[
-  ${exampleArr}
-]`
+ANCIENT HISTORY / PYRAMIDS / CIVILIZATIONS / ARCHAEOLOGY:
+  stockSearchQuery: use actual place + noun → "ancient pyramid egypt aerial desert", "roman colosseum stone ruins", "aztec temple mexico jungle", "greek parthenon columns marble"
+  negativeVisualPrompt: "modern buildings, CGI reconstruction, cartoon, animation, actors in costume, green screen"
+
+DEEP OCEAN / MARINE BIOLOGY / UNDERWATER:
+  stockSearchQuery: "deep ocean underwater dark", "bioluminescent jellyfish dark water", "whale shark reef coral", "ocean floor submarine lights"
+  negativeVisualPrompt: "swimming pool, aquarium tank, snorkeling holiday, cartoon fish, animation"
+
+MONEY / FINANCE / WEALTH / BITCOIN:
+  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen", "cryptocurrency bitcoin gold coin"
+  negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code"
+
+TECH / AI / SILICON VALLEY / COMPUTERS:
+  stockSearchQuery: "computer chip circuit board macro", "data center server racks", "code terminal dark screen", "robot arm factory precision"
+  negativeVisualPrompt: "clipart robot, cartoon AI, generic office, people smiling at laptop, stock photo handshake"
+
+SCENE PURPOSE FLOW for ${safeCount} scenes: Start with HOOK (scene 1), build through ESCALATION and DISCOVERY, use EXPLANATION for core facts, PAYOFF for the climax, FINAL_LINE for the call-to-action or mic-drop ending.
+
+Return ONLY a valid JSON array of exactly ${safeCount} objects with all 8 fields.
+
+Example of a PERFECT scene object (rockets topic):
+{
+  "description": "Falcon 9 rocket ascending through dark night sky, twin engine plumes blazing white-orange, slow-motion vertical climb above launch pad",
+  "searchKeywords": "rocket launch fire night",
+  "stockSearchQuery": "Falcon 9 rocket launch fire night slow motion",
+  "negativeVisualPrompt": "mission control screens, engineers at computers, music studio, cartoon rocket, toy rocket",
+  "scenePurpose": "HOOK",
+  "visualIntent": "IMAX-scale awe — viewer feels the raw power of 1.7 million pounds of thrust in the first 3 seconds",
+  "voiceover": "SpaceX's Falcon 9 generates more thrust than 18 Boeing 747 engines at full power.",
+  "caption": "More thrust than 18 jumbo jets"
+}
+
+Example of a PERFECT scene object (pyramids topic):
+{
+  "description": "Aerial drone shot pulling back from Great Pyramid apex, revealing full Giza plateau at golden hour, warm desert haze, cinematic wide",
+  "searchKeywords": "pyramid egypt desert aerial",
+  "stockSearchQuery": "Great Pyramid Giza aerial desert golden hour drone",
+  "negativeVisualPrompt": "modern buildings, CGI reconstruction, cartoon, actors in costume",
+  "scenePurpose": "DISCOVERY",
+  "visualIntent": "Planetary-scale perspective — the ancient stone structure dwarfs everything around it, triggering awe",
+  "voiceover": "The Great Pyramid was the tallest structure on Earth for 3,800 years — until a cathedral surpassed it in 1311.",
+  "caption": "Tallest building for 3,800 years"
+}`
 
   const completion = await openai.chat.completions.create(
     {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
-        {
-          role: 'system',
-          content:
-            'You are a video production expert. You always respond with a valid JSON array only — no markdown, no code fences, no commentary.',
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.7,
-      max_tokens: 800,
+      temperature: 0.6,
+      max_tokens: 1800,
     },
-    { timeout: 25000 }
+    { timeout: 35000 }
   )
 
   const raw = completion.choices[0]?.message?.content?.trim() ?? ''
@@ -313,13 +349,16 @@ Example output:
   const scenes: Scene[] = parsed
     .map((item: unknown): Scene | null => {
       if (typeof item === 'string') {
-        // Legacy fallback: plain string → use as description, derive keywords
-        // from prompt, and let voiceover/caption fall back to the description.
+        // Legacy fallback: plain string → use as description with safe defaults
         const description = item.trim()
         const voiceover = description
         return {
           description,
           searchKeywords: prompt.slice(0, 40),
+          stockSearchQuery: prompt.slice(0, 60),
+          negativeVisualPrompt: 'cartoon, animation, clipart',
+          scenePurpose: 'EXPLANATION',
+          visualIntent: 'Documentary style, cinematic and grounded',
           voiceover,
           caption: shortCaptionFromVoiceover(voiceover),
         }
@@ -328,18 +367,22 @@ Example output:
         const obj = item as Record<string, unknown>
         const description = (typeof obj.description === 'string' ? obj.description : '').trim()
         const searchKeywords = (typeof obj.searchKeywords === 'string' ? obj.searchKeywords : '').trim()
+        const stockSearchQuery = (typeof obj.stockSearchQuery === 'string' ? obj.stockSearchQuery : '').trim()
+        const negativeVisualPrompt = (typeof obj.negativeVisualPrompt === 'string' ? obj.negativeVisualPrompt : '').trim()
+        const scenePurpose = (typeof obj.scenePurpose === 'string' ? obj.scenePurpose : '').trim()
+        const visualIntent = (typeof obj.visualIntent === 'string' ? obj.visualIntent : '').trim()
         const rawVoiceover = (typeof obj.voiceover === 'string' ? obj.voiceover : '').trim()
         const rawCaption = (typeof obj.caption === 'string' ? obj.caption : '').trim()
         if (description) {
-          // The cinematic `description` can double as voiceover when the
-          // model doesn't supply one (e.g. older callers / legacy
-          // responses). Caption is always derived from the voiceover so
-          // both come from the same source string.
           const voiceover = rawVoiceover || description
           const caption = shortCaptionFromVoiceover(rawCaption || voiceover)
           return {
             description,
             searchKeywords: searchKeywords || prompt.slice(0, 40),
+            stockSearchQuery: stockSearchQuery || searchKeywords || prompt.slice(0, 60),
+            negativeVisualPrompt: negativeVisualPrompt || 'cartoon, animation, clipart',
+            scenePurpose: scenePurpose || 'EXPLANATION',
+            visualIntent: visualIntent || 'Documentary style, cinematic and grounded',
             voiceover,
             caption,
           }
@@ -356,6 +399,10 @@ Example output:
     scenes.push({
       description,
       searchKeywords: prompt.slice(0, 40),
+      stockSearchQuery: prompt.slice(0, 60),
+      negativeVisualPrompt: 'cartoon, animation, clipart',
+      scenePurpose: 'EXPLANATION',
+      visualIntent: 'Documentary style, cinematic and grounded',
       voiceover,
       caption: shortCaptionFromVoiceover(voiceover),
     })

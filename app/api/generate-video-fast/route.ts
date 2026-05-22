@@ -126,7 +126,8 @@ export async function POST(req: NextRequest) {
     // Curated stockLibrary is the fallback so we always return something.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description)
+        // Push #211 — pass stockSearchQuery as primary premium query
+        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description, scene.stockSearchQuery)
         if (pexelsUrl) return pexelsUrl
         const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
         return lib[0]?.url ?? ''

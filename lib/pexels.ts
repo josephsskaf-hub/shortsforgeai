@@ -96,12 +96,17 @@ const SPACE_BANNED_TERMS = [
 ]
 const SPACE_BOOST_TERM = 'rocket launch fire'
 
+// Push #211 — Creative Director upgrade. `stockSearchQuery` is the primary
+// premium search phrase (e.g. "Falcon 9 rocket launch fire night slow motion")
+// produced by gpt-4o. It is used before `searchKeywords` when available.
 export async function getPexelsVideoForScene(
   searchKeywords: string,
   fallbackDescription?: string,
+  stockSearchQuery?: string,
 ): Promise<string | null> {
-  // Use the explicit topic keywords first
-  let query = (searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
+  // Push #211 — prefer the premium stockSearchQuery over the legacy keywords
+  const rawQuery = (stockSearchQuery ?? searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
+  let query = rawQuery
 
   // Push #210 — Space/rocket override: if the query triggers space keywords,
   // scrub any Pexels-incompatible terms (screens, engineers, etc.) and ensure
@@ -120,9 +125,9 @@ export async function getPexelsVideoForScene(
     query = cleaned
   }
 
-  // If no explicit keywords, fall back to extracting meaningful words from
-  // the description — but skip leading stopwords ("a", "the", "lone", etc.)
-  // so we don't search for "A lone photographer" on a pyramid video.
+  // If no query yet, fall back to extracting meaningful words from the
+  // description — skip leading stopwords ("a", "the", "lone", etc.) so we
+  // don't search for "A lone photographer" on a pyramid video.
   if (!query && fallbackDescription) {
     const STOP = new Set([
       'a', 'an', 'the', 'this', 'that', 'in', 'on', 'at', 'of', 'is', 'are',
@@ -133,12 +138,14 @@ export async function getPexelsVideoForScene(
       .replace(/[^a-zA-Z0-9 ]/g, ' ')
       .split(/\s+/)
       .filter((w) => w.length > 2 && !STOP.has(w.toLowerCase()))
-      .slice(0, 3)
+      .slice(0, 4)
       .join(' ')
       .trim()
   }
 
   if (!query) return null
+
+  console.log(`[pexels] query="${query}" (stockSearchQuery="${stockSearchQuery ?? ''}" searchKeywords="${searchKeywords}")`)
 
   const urls = await searchPexelsVideos(query, 1)
   return urls[0] ?? null
