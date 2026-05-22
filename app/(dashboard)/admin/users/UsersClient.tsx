@@ -1,12 +1,15 @@
 'use client'
 
-// Push #065 — Admin Users List (client).
-// Fetches /api/admin/users on mount and renders four headline metric
-// cards + a searchable, scrollable table. Sort defaults to newest first
-// (server already orders that way). Search filters by email/name client-side.
+// Push #066 — Admin Users List (client).
+// Fetches /api/admin/users on mount and polls every 30 s.
+// Renders four headline metric cards + a searchable, scrollable table.
+// Sort defaults to newest first (server already orders that way).
+// Search filters by email/name client-side.
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
+const POLL_MS = 30_000
 
 interface AdminUserRow {
   id: string
@@ -44,36 +47,54 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
   const [users, setUsers] = useState<AdminUserRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [secondsAgo, setSecondsAgo] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const clockRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Tick the "X s ago" clock every second
+  useEffect(() => {
+    clockRef.current = setInterval(() => {
+      if (lastUpdated) {
+        setSecondsAgo(Math.round((Date.now() - lastUpdated.getTime()) / 1000))
+      }
+    }, 1000)
+    return () => { if (clockRef.current) clearInterval(clockRef.current) }
+  }, [lastUpdated])
+
+  // Initial load + 30 s polling
   useEffect(() => {
     if (denied) return
-    let cancelled = false
-    setLoading(true)
-    fetch('/api/admin/users', { cache: 'no-store' })
-      .then(async (r) => {
-        if (!r.ok) {
-          throw new Error(`HTTP ${r.status}`)
-        }
+
+    async function fetchUsers(isInitial: boolean) {
+      if (isInitial) setLoading(true)
+      else setRefreshing(true)
+      try {
+        const r = await fetch('/api/admin/users', { cache: 'no-store' })
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
         const json = await r.json()
-        if (cancelled) return
         if (Array.isArray(json.users)) {
           setUsers(json.users)
+          setLastUpdated(new Date())
+          setSecondsAgo(0)
         } else {
           setUsers([])
         }
-      })
-      .catch((e) => {
-        if (cancelled) return
+      } catch (e) {
         console.error('[admin/users] fetch failed:', e)
-        setError('Failed to load users.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+        if (isInitial) setError('Failed to load users.')
+        // on poll failure just keep stale data
+      } finally {
+        if (isInitial) setLoading(false)
+        else setRefreshing(false)
+      }
     }
+
+    fetchUsers(true)
+    timerRef.current = setInterval(() => fetchUsers(false), POLL_MS)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [denied])
 
   const stats = useMemo(() => {
@@ -151,6 +172,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
               as {viewerEmail}.
             </p>
           </div>
+          <RefreshIndicator refreshing={refreshing} secondsAgo={secondsAgo} lastUpdated={lastUpdated} />
         </div>
 
         <AdminNav active="users" />
@@ -262,6 +284,49 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function RefreshIndicator({
+  refreshing,
+  secondsAgo,
+  lastUpdated,
+}: {
+  refreshing: boolean
+  secondsAgo: number
+  lastUpdated: Date | null
+}) {
+  if (!lastUpdated) return null
+  return (
+    <div
+      className="flex items-center gap-1.5 text-[11px]"
+      style={{ color: 'var(--muted)' }}
+    >
+      {refreshing ? (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: '#22D3EE',
+            animation: 'pulse 1s ease-in-out infinite',
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: 'rgba(52,211,153,0.7)',
+          }}
+        />
+      )}
+      {refreshing ? 'Refreshing…' : `Updated ${secondsAgo}s ago`}
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
     </div>
   )
 }

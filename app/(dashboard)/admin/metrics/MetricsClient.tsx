@@ -1,12 +1,14 @@
 'use client'
 
-// Push #060 — Conversion Metrics Dashboard (client).
-// Pure presentation. The page server component does all queries and hands
-// us a flat object; we render a dark card grid with one number per card and
-// graceful fallbacks for unavailable metrics ("Not tracked yet" /
-// "Not available").
+// Push #066 — Conversion Metrics Dashboard (client).
+// Now auto-polls /api/admin/metrics every 30 s — no manual refresh needed.
+// Shows a "Last updated X s ago" indicator and a spinning dot while
+// refreshing. Also adds a "Videos Downloaded" metric card.
+// The page server component still seeds the initial data on first render
+// so there's no loading flash.
 
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 
 export interface MetricsData {
   totalUsers: number | null
@@ -22,6 +24,7 @@ export interface MetricsData {
   generateStarted: number | null
   generateCompleted: number | null
   generateFailed: number | null
+  videosDownloaded: number | null
 }
 
 interface Props {
@@ -35,7 +38,52 @@ function fmt(v: number | null): string {
   return v.toLocaleString('en-US')
 }
 
-export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
+const POLL_MS = 30_000
+
+export default function MetricsClient({ metrics: initialMetrics, viewerEmail, denied }: Props) {
+  const [metrics, setMetrics] = useState<MetricsData | undefined>(initialMetrics)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(initialMetrics ? new Date() : null)
+  const [secondsAgo, setSecondsAgo] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const clockRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Tick the "X s ago" clock every second
+  useEffect(() => {
+    clockRef.current = setInterval(() => {
+      if (lastUpdated) {
+        setSecondsAgo(Math.round((Date.now() - lastUpdated.getTime()) / 1000))
+      }
+    }, 1000)
+    return () => { if (clockRef.current) clearInterval(clockRef.current) }
+  }, [lastUpdated])
+
+  // Poll every 30 s
+  useEffect(() => {
+    if (denied) return
+
+    async function poll() {
+      setRefreshing(true)
+      try {
+        const res = await fetch('/api/admin/metrics', { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.data) {
+          setMetrics(json.data as MetricsData)
+          setLastUpdated(new Date())
+          setSecondsAgo(0)
+        }
+      } catch {
+        // silent — keep showing stale data
+      } finally {
+        setRefreshing(false)
+      }
+    }
+
+    timerRef.current = setInterval(poll, POLL_MS)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [denied])
+
   if (denied || !metrics) {
     return (
       <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
@@ -108,6 +156,7 @@ export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
     { label: 'Generate started', value: metrics.generateStarted, eventName: 'generate_started' },
     { label: 'Generate completed', value: metrics.generateCompleted, eventName: 'generate_completed' },
     { label: 'Generate failed', value: metrics.generateFailed, eventName: 'generate_failed' },
+    { label: 'Videos downloaded', value: metrics.videosDownloaded, eventName: 'video_downloaded' },
   ]
 
   return (
@@ -128,6 +177,7 @@ export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
               Live counts from the staging Supabase project. Signed in as {viewerEmail}.
             </p>
           </div>
+          <RefreshIndicator refreshing={refreshing} secondsAgo={secondsAgo} lastUpdated={lastUpdated} />
         </div>
 
         <AdminNav active="metrics" />
@@ -176,11 +226,56 @@ export default function MetricsClient({ metrics, viewerEmail, denied }: Props) {
   )
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 interface Card {
   label: string
   value: number | string | null
   hint?: string
   eventName?: string
+}
+
+function RefreshIndicator({
+  refreshing,
+  secondsAgo,
+  lastUpdated,
+}: {
+  refreshing: boolean
+  secondsAgo: number
+  lastUpdated: Date | null
+}) {
+  if (!lastUpdated) return null
+  return (
+    <div
+      className="flex items-center gap-1.5 text-[11px]"
+      style={{ color: 'var(--muted)' }}
+    >
+      {refreshing ? (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: '#22D3EE',
+            animation: 'pulse 1s ease-in-out infinite',
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            display: 'inline-block',
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: 'rgba(52,211,153,0.7)',
+          }}
+        />
+      )}
+      {refreshing ? 'Refreshing…' : `Updated ${secondsAgo}s ago`}
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+    </div>
+  )
 }
 
 function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {

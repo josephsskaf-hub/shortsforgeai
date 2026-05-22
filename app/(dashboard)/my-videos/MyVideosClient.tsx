@@ -176,6 +176,12 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       a.remove()
       // Give the browser a tick to start the download before revoking.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+      // Fire-and-forget download tracking event (push #066).
+      fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'video_downloaded', metadata: { video_id: v.id } }),
+      }).catch(() => {/* swallow — tracking must never affect UX */})
     } catch {
       // Fall back to opening the URL in a new tab so the user isn't stranded.
       window.open(v.video_url, '_blank', 'noopener,noreferrer')

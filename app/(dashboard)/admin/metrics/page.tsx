@@ -165,6 +165,17 @@ export default async function AdminMetricsPage() {
     eventsAvailable = false
   }
 
+  // Push #066 — video_downloaded count
+  let videosDownloaded: number | null = null
+  if (eventsAvailable) {
+    videosDownloaded = await safeCount(() =>
+      supabase
+        .from('events')
+        .select('id', { head: true, count: 'exact' })
+        .eq('name', 'video_downloaded')
+    )
+  }
+
   const metrics: MetricsData = {
     totalUsers,
     newUsersToday,
@@ -179,6 +190,7 @@ export default async function AdminMetricsPage() {
     generateStarted,
     generateCompleted,
     generateFailed,
+    videosDownloaded,
   }
 
   return <MetricsClient metrics={metrics} viewerEmail={email} />

@@ -1,12 +1,12 @@
 'use client'
 
-// Push #061 — Conversion Funnel Dashboard (client).
-// Pure presentation. Server hands us a flat counts object; we render
-// the funnel as a sequence of step cards with the absolute count, plus
-// a "Conversion rates" grid that derives ratios safely (division by
-// zero shows as "—").
+// Push #066 — Conversion Funnel Dashboard (client).
+// Now auto-polls /api/admin/funnel every 30 s — no manual refresh needed.
+// Shows a "Last updated X s ago" indicator and a pulsing dot while refreshing.
+// The page server component still seeds the initial data on first render.
 
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 
 export interface FunnelData {
   eventsAvailable: boolean
@@ -42,7 +42,48 @@ function pct(num: number, denom: number): string {
   return `${ratio.toFixed(1)}%`
 }
 
-export default function FunnelClient({ data, viewerEmail, denied }: Props) {
+const POLL_MS = 30_000
+
+export default function FunnelClient({ data: initialData, viewerEmail, denied }: Props) {
+  const [data, setData] = useState<FunnelData | undefined>(initialData)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(initialData ? new Date() : null)
+  const [secondsAgo, setSecondsAgo] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const clockRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    clockRef.current = setInterval(() => {
+      if (lastUpdated) {
+        setSecondsAgo(Math.round((Date.now() - lastUpdated.getTime()) / 1000))
+      }
+    }, 1000)
+    return () => { if (clockRef.current) clearInterval(clockRef.current) }
+  }, [lastUpdated])
+
+  useEffect(() => {
+    if (denied) return
+    async function poll() {
+      setRefreshing(true)
+      try {
+        const res = await fetch('/api/admin/funnel', { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.data) {
+          setData(json.data as FunnelData)
+          setLastUpdated(new Date())
+          setSecondsAgo(0)
+        }
+      } catch {
+        // silent — keep showing stale data
+      } finally {
+        setRefreshing(false)
+      }
+    }
+    timerRef.current = setInterval(poll, POLL_MS)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [denied])
+
   if (denied || !data) {
     return (
       <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
@@ -105,6 +146,7 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
               Live counts from public.events on the staging Supabase project. Signed in as {viewerEmail}.
             </p>
           </div>
+          <RefreshIndicator refreshing={refreshing} secondsAgo={secondsAgo} lastUpdated={lastUpdated} />
         </div>
 
         <AdminNav active="funnel" />
@@ -184,54 +226,4 @@ export default function FunnelClient({ data, viewerEmail, denied }: Props) {
             >
               <div
                 className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                {r.label}
-              </div>
-              <div
-                className="font-black"
-                style={{
-                  fontSize: '1.7rem',
-                  lineHeight: 1.1,
-                  color: r.value === '—' ? 'var(--muted2)' : 'var(--text)',
-                }}
-              >
-                {r.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
-  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users'; label: string; href: string }> = [
-    { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
-    { key: 'funnel', label: 'Funnel', href: '/admin/funnel' },
-    { key: 'users', label: 'Users', href: '/admin/users' },
-  ]
-  return (
-    <nav className="mt-4 flex items-center gap-2 flex-wrap">
-      {tabs.map((t) => {
-        const isActive = t.key === active
-        return (
-          <Link
-            key={t.key}
-            href={t.href}
-            className="text-xs font-bold rounded-lg px-3 py-1.5"
-            style={{
-              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
-              color: isActive ? '#22D3EE' : 'var(--muted2)',
-              textDecoration: 'none',
-            }}
-          >
-            {t.label}
-          </Link>
-        )
-      })}
-    </nav>
-  )
-}
+                style={{ col
