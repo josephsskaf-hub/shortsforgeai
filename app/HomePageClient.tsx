@@ -493,7 +493,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           Push #080 — full-width background video behind the hero.
           Dark overlay keeps text legible. */}
       <div className="relative overflow-hidden">
-        {/* Background video */}
+        {/* Push #207 — background video: uses the same dark cinematic Pexels
+            clip already fetched for the showcase (space/tech theme). Falls
+            back to a known dark sample until the fetch resolves. Opacity
+            raised to 0.22 so it reads as "things happening" without
+            competing with the headline or CTAs above it. */}
         <video
           autoPlay
           muted
@@ -506,19 +510,22 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            opacity: 0.13,
+            opacity: 0.22,
             zIndex: 0,
             pointerEvents: 'none',
+            transition: 'opacity 1.2s ease',
           }}
-          src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+          src={showcaseVideos['0'] || showcaseVideos['1'] || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'}
         />
-        {/* Dark gradient overlay */}
+        {/* Gradient overlay — darker at top/bottom, lighter in the middle
+            so the video is visible in the hero body without washing out
+            the nav or the CTA section at the bottom. */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(180deg, rgba(5,7,13,0.7) 0%, rgba(5,7,13,0.45) 50%, rgba(5,7,13,0.85) 100%)',
+            background: 'linear-gradient(180deg, rgba(5,7,13,0.82) 0%, rgba(5,7,13,0.30) 40%, rgba(5,7,13,0.30) 60%, rgba(5,7,13,0.90) 100%)',
             zIndex: 1,
             pointerEvents: 'none',
           }}
