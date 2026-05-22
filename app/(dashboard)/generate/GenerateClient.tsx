@@ -135,7 +135,6 @@ interface RecentVideo {
   created_at: string
 }
 
-// Push #080 — Trending Hooks removed (replaced by cleaner UI)
 
 export default function GenerateClient() {
   const router = useRouter()
@@ -228,10 +227,7 @@ export default function GenerateClient() {
   // from /api/videos. Empty array = empty state; null only during initial
   // load. We never block the page on this — failures degrade to empty.
   const [recentVideos, setRecentVideos] = useState<RecentVideo[] | null>(null)
-  // Push #048 — transient "Copied!" feedback on trending-hook chips.
-  const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null)
-
-  // Push #095 — player resilience. When the B2/Creatomate CDN returns a 503
+// Push #095 — player resilience. When the B2/Creatomate CDN returns a 503
   // or hasn't propagated yet, the <video> element used to spin forever in
   // readyState 0. playerFailed flips true after the full retry budget is
   // spent so the UI can swap in a friendly fallback instead of an empty
@@ -1838,9 +1834,7 @@ export default function GenerateClient() {
         </section>
       )}
 
-      {/* Push #080 — Trending Hooks removed */}
-
-      {/* Push #048 — Visual History. Six most recent videos for this user,
+{/* Push #048 — Visual History. Six most recent videos for this user,
           read-only. Empty state when the list has 0 rows (which is the
           default on a fresh account or before the first successful
           generation persists to the videos table). */}
@@ -2635,6 +2629,7 @@ export default function GenerateClient() {
     </main>
   )
 }
+
 
 // ─── Push #048 — Visual History ─────────────────────────────────────────────
 // Empty state when the user has no rows yet. Status chip on every card.
@@ -4440,4 +4435,84 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
           color: '#34d399',
           width: 28,
           height: 28,
-          display: 'flex
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          fontSize: '0.9rem',
+          fontWeight: 900,
+          flexShrink: 0,
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+// ─── Push #098 — 4-step generation progress text ────────────────────────────
+// Sits below the spinner. Active step is bold green; completed steps stay
+// visible in muted green; upcoming steps are dimmed. The step index is
+// time-driven (see useEffect in the parent) so the user always feels
+// forward motion even when the API phase doesn't change for a while.
+function GenerationProgressSteps({ step }: { step: number }) {
+  const items = [
+    { icon: '✍️', label: 'Writing your script...' },
+    { icon: '🎙️', label: 'Synthesizing narration...' },
+    { icon: '🎬', label: 'Composing your scenes...' },
+    { icon: '⚡', label: 'Rendering your Short...' },
+  ]
+  return (
+    <ol
+      style={{
+        marginTop: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        listStyle: 'none',
+        padding: 0,
+      }}
+    >
+      {items.map((it, i) => {
+        const isActive = i === step
+        const isDone = i < step
+        const color = isActive ? '#34d399' : isDone ? '#6ee7b7' : 'var(--muted)'
+        return (
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              opacity: isActive || isDone ? 1 : 0.55,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{ fontSize: '1.1rem', width: 22, textAlign: 'center' }}
+            >
+              {it.icon}
+            </span>
+            <span
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 800 : isDone ? 600 : 500,
+                color,
+              }}
+            >
+              {it.label}
+            </span>
+            {isDone && (
+              <span
+                aria-hidden="true"
+                style={{ marginLeft: 'auto', color: '#6ee7b7', fontSize: '0.85rem' }}
+              >
+                ✓
+              </span>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
