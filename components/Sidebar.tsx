@@ -577,7 +577,7 @@ export default function Sidebar({
                   background: settingsOpen ? 'rgba(59,130,246,0.2)' : 'transparent',
                   border: settingsOpen ? '1px solid rgba(59,130,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 8,
-                  color: settingsOpen ? '#60A5FA' : 'var(--muted)',
+                  color: settingsOpen ? '#22D3EE' : 'var(--muted)',
                   cursor: 'pointer', padding: '5px 7px', fontSize: '0.85rem',
                   flexShrink: 0, transition: 'all 0.15s',
                   lineHeight: 1,
@@ -606,7 +606,7 @@ export default function Sidebar({
                 onClick={() => setShowAuthModal(true)}
                 style={{
                   background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8,
-                  color: '#60A5FA', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                  color: '#22D3EE', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
                 }}
               >
                 Sign in
