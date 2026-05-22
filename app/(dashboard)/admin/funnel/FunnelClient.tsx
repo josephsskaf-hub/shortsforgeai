@@ -226,4 +226,68 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
             >
               <div
                 className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ col
+                style={{ color: 'var(--muted)' }}
+              >
+                {r.label}
+              </div>
+              <div
+                className="font-black"
+                style={{ fontSize: '1.7rem', lineHeight: 1.1, color: 'var(--text)' }}
+              >
+                {r.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function RefreshIndicator({
+  refreshing,
+  secondsAgo,
+  lastUpdated,
+}: {
+  refreshing: boolean
+  secondsAgo: number
+  lastUpdated: Date | null
+}) {
+  if (!lastUpdated) return null
+  return (
+    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
+      {refreshing && (
+        <span
+          className="inline-block w-2 h-2 rounded-full animate-pulse"
+          style={{ background: '#22d3ee' }}
+        />
+      )}
+      <span>Updated {secondsAgo}s ago</span>
+    </div>
+  )
+}
+
+function AdminNav({ active }: { active: string }) {
+  const tabs = [
+    { label: 'Metrics', href: '/admin/metrics', key: 'metrics' },
+    { label: 'Funnel', href: '/admin/funnel', key: 'funnel' },
+    { label: 'Users', href: '/admin/users', key: 'users' },
+  ]
+  return (
+    <nav className="flex gap-1">
+      {tabs.map((t) => (
+        <Link
+          key={t.key}
+          href={t.href}
+          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+          style={{
+            background: active === t.key ? 'var(--accent)' : 'transparent',
+            color: active === t.key ? '#fff' : 'var(--muted)',
+          }}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
