@@ -3,17 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// Push #053 — primary entry points on mobile. "My Videos" replaces the
-// old "History" item so the bottom bar lines up with the desktop sidebar
-// (the legacy /history Shorts Packs view is still reachable directly).
-// Push #060 — Examples added between My Videos and Credits. Five tabs fit
-// on iPhone widths without crowding the labels.
+// Push #133 — synced with sidebar: Examples removed, Thumbnail elevated.
 const NAV_ITEMS = [
-  { href: '/',           icon: '🏠', label: 'Home',      exact: true  },
-  { href: '/generate',   icon: '⚡', label: 'Generate',  exact: false },
-  { href: '/my-videos',  icon: '📼', label: 'My Videos', exact: false },
-  { href: '/examples',   icon: '✨', label: 'Examples',  exact: false },
-  { href: '/pricing',    icon: '💎', label: 'Credits',   exact: false },
+  { href: '/',                    icon: '🏠', label: 'Home',      exact: true  },
+  { href: '/generate',            icon: '⚡', label: 'Generate',  exact: false },
+  { href: '/thumbnail-generator', icon: '🖼️', label: 'Thumbnail', exact: false },
+  { href: '/my-videos',           icon: '📼', label: 'My Videos', exact: false },
+  { href: '/pricing',             icon: '💎', label: 'Credits',   exact: false },
 ]
 
 export default function MobileNav() {
@@ -51,7 +47,7 @@ export default function MobileNav() {
                     left: '22%',
                     right: '22%',
                     height: 2,
-                    background: 'linear-gradient(90deg, #3B82F6, #22D3EE)',
+                    background: 'linear-gradient(90deg, #22D3EE, #3B82F6)',
                     borderRadius: '0 0 4px 4px',
                   }}
                 />
@@ -78,7 +74,7 @@ export default function MobileNav() {
                   fontWeight: 800,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase' as const,
-                  color: active ? '#60A5FA' : '#94A3B8',
+                  color: active ? '#22D3EE' : '#94A3B8',
                   transition: 'color 0.18s ease',
                 }}
               >
