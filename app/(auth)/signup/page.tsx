@@ -85,6 +85,19 @@ export default function SignupPage() {
       /* non-blocking */
     })
 
+    // Push #188 — fire Google Ads conversion on successful signup
+    try {
+      if (typeof window !== 'undefined' && typeof (window as unknown as { gtag?: Function }).gtag === 'function') {
+        ;(window as unknown as { gtag: Function }).gtag('event', 'conversion', {
+          send_to: 'AW-18156258081/SXGYCk_VlrEcEKGGytFD',
+          value: 1.0,
+          currency: 'BRL',
+        })
+      }
+    } catch {
+      /* non-blocking */
+    }
+
     router.push('/generate')
     router.refresh()
   }

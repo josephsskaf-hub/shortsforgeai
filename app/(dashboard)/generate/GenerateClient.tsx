@@ -262,6 +262,24 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Push #188 — fire Google Ads conversion when arriving from OAuth signup
+  // (/auth/callback sets ?signup=1 for brand-new accounts).
+  useEffect(() => {
+    if (searchParams.get('signup') !== '1') return
+    try {
+      if (typeof window !== 'undefined' && typeof (window as unknown as { gtag?: Function }).gtag === 'function') {
+        ;(window as unknown as { gtag: Function }).gtag('event', 'conversion', {
+          send_to: 'AW-18156258081/SXGYCk_VlrEcEKGGytFD',
+          value: 1.0,
+          currency: 'BRL',
+        })
+      }
+    } catch {
+      /* non-blocking */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Push #033: pull a prompt forwarded by the homepage's Generate Video card.
   // app/page.tsx stashes the user's idea under `pendingVideoPrompt` in
   // sessionStorage right before redirecting here. We only honor it when the
