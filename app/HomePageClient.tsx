@@ -1090,7 +1090,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
             <Link href="/#pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
-          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5 · #160</span></p>
+          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5 · #195</span></p>
         </div>
         {/* Push #116 — legal + contact strip under the main footer row. */}
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">

@@ -1431,7 +1431,7 @@ export default function GenerateClient() {
               opacity: upgradeLoading ? 0.7 : 1,
             }}
           >
-            {upgradeLoading ? 'Loading…' : 'Upgrade — 50% Off →'}
+            {upgradeLoading ? 'Loading…' : 'Upgrade — $4.99/mo →'}
           </button>
         </div>
       )}
