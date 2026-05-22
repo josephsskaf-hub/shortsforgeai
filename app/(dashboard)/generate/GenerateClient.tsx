@@ -4179,7 +4179,7 @@ function UpgradeModal({
             transition: 'transform 0.15s ease',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Upgrade Now — 50% Off Today'}
+          {loading ? 'Opening checkout…' : 'Activate Basic — $4.99/mo →'}
         </button>
         {/* Push #113 — explicit BRL rail. Auto-detection (locale/IP) was
             unreliable through VPNs and embedded browsers, so we surface
@@ -4205,7 +4205,7 @@ function UpgradeModal({
             gap: 6,
           }}
         >
-          🇧🇷 Pagar em R$ 49/mês (Brasil)
+          🇧🇷 Pagar em R$ 24,90/mês (Brasil)
         </button>
         <button
           type="button"
@@ -4408,7 +4408,7 @@ function UrgencyModal({
             gap: 6,
           }}
         >
-          🇧🇷 Pagar em R$ 49,90/mês (Brasil)
+          🇧🇷 Pagar em R$ 24,90/mês (Brasil)
         </button>
         <p
           style={{

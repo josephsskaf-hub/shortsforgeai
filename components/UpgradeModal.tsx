@@ -64,10 +64,10 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           style={{ color: 'var(--text)' }}
         >
           You&apos;ve used all your{' '}
-          <span className="grad-text">free generations</span>
+          <span className="grad-text">free renders</span>
         </h2>
         <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-          Get more videos with a one-time credit pack. No subscription needed.
+          Activate a plan to keep your pipeline running — from $4.99/mo.
         </p>
 
         {/* Features */}
@@ -79,12 +79,12 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           }}
         >
           {[
-            '⚡ Up to 100 Fast Mode videos / month',
-            '🎯 All trending niches',
-            '📋 Full copy-paste scripts',
-            '🎬 AI video prompts',
-            '📊 Generation history',
-            '🔥 Priority support',
+            '⚡ 50–100 Fast Mode renders / month',
+            '🎬 AI script + voiceover pipeline',
+            '🔤 Auto-captions engine',
+            '📥 Watermark-free MP4 output',
+            '📊 Generation history & analytics',
+            '🚀 Priority render queue',
           ].map((f) => (
             <div
               key={f}
@@ -107,7 +107,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             cursor: 'pointer',
           }}
         >
-          Upgrade Now →
+          Activate Plan →
         </button>
 
         <button
