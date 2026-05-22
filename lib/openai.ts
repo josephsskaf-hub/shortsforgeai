@@ -31,14 +31,17 @@ export interface ShortVideo {
 //   30s → 75–90 words and 4 scenes
 //   45s → 110–135 words and 5 scenes (default)
 //   60s → 150–180 words and 6 scenes
+// Push #208 — added 90s tier.
+//   90s → 225–270 words and 9 scenes
 export interface DurationPlan {
-  duration: 30 | 45 | 60
+  duration: 30 | 45 | 60 | 90
   wordCountRange: [number, number]
   sceneCount: number
 }
 
 export function durationPlanFor(duration: number): DurationPlan {
   if (duration <= 35) return { duration: 30, wordCountRange: [75, 90], sceneCount: 4 }
+  if (duration >= 80) return { duration: 90, wordCountRange: [225, 270], sceneCount: 9 }
   if (duration >= 55) return { duration: 60, wordCountRange: [150, 180], sceneCount: 6 }
   return { duration: 45, wordCountRange: [110, 135], sceneCount: 5 }
 }

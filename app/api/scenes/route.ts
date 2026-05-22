@@ -121,7 +121,8 @@ No markdown, no code fences. Raw JSON array only.`
             { role: 'user', content: prompt },
           ],
           temperature: 0.7,
-          max_tokens: 1500,
+          // Push #208 — raised to 2000 to support 90s / 9-scene scripts.
+          max_tokens: 2000,
         },
         { timeout: 30000 }
       )

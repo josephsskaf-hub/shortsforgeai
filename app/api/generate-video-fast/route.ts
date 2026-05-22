@@ -17,7 +17,8 @@ export const maxDuration = 60
 // straight to /api/compose without polling. Target unit cost is
 // ~$0.01-0.05 per video.
 
-const SUPPORTED_DURATIONS = [30, 45, 60] as const
+// Push #208 — removed 30s option, added 90s. 30s replaced by 45s minimum.
+const SUPPORTED_DURATIONS = [45, 60, 90] as const
 type Duration = (typeof SUPPORTED_DURATIONS)[number]
 
 // Fast Mode credit cost. Kept low on purpose — Pexels search is free
@@ -26,8 +27,8 @@ const FAST_MODE_CREDIT_COST = 1
 
 function clipCountForDuration(d: Duration): number {
   // Stock clips are usually >10s, but we still ask for N distinct clips so
-  // Creatomate has variety. We cap at 6 to avoid hammering Pexels.
-  return Math.max(2, Math.min(6, Math.ceil(d / 10)))
+  // Creatomate has variety. We cap at 9 to support 90s videos.
+  return Math.max(2, Math.min(9, Math.ceil(d / 10)))
 }
 
 export async function POST(req: NextRequest) {

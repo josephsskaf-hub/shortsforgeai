@@ -80,8 +80,10 @@ function detectDurationFromPrompt(raw: string): number | null {
     ten: 10, fifteen: 15, twenty: 20, 'twenty-five': 25, 'twenty five': 25,
     thirty: 30, 'thirty-five': 35, 'thirty five': 35,
     forty: 40, 'forty-five': 45, 'forty five': 45,
-    fifty: 50, sixty: 60,
+    fifty: 50, sixty: 60, ninety: 90,
   }
+  // Also detect "1:30" (90s) and "1:30 minutes" style
+  if (/\b1[:\s]30\b/.test(text)) return 90
   const numMatch = text.match(/(?:~|around|about|roughly)?\s*(\d{1,3})\s*(?:s\b|sec\b|seconds?\b)/i)
   if (numMatch) {
     const n = Number(numMatch[1])
@@ -401,10 +403,11 @@ function coerceViralIntelligence(raw: unknown, fallbacks: ViralIntelligence): Vi
   }
 }
 
-function coerceScenes(raw: unknown, fallbacks: SceneBrief[]): SceneBrief[] {
+// Push #208 — accept up to 9 scenes for 90s videos (dynamic cap).
+function coerceScenes(raw: unknown, fallbacks: SceneBrief[], maxScenes = 9): SceneBrief[] {
   if (!Array.isArray(raw) || raw.length === 0) return fallbacks
   const out: SceneBrief[] = []
-  raw.slice(0, 6).forEach((entry, i) => {
+  raw.slice(0, maxScenes).forEach((entry, i) => {
     if (!entry || typeof entry !== 'object') return
     const e = entry as Record<string, unknown>
     const fb = fallbacks[i] ?? fallbacks[fallbacks.length - 1]
@@ -460,8 +463,9 @@ export async function POST(req: NextRequest) {
 
     // Push #064 — duration shapes word count + scene count. Defaults to 45s
     // when missing or invalid so existing clients keep working.
+    // Push #208 — added 90s; removed 30s (replaced by 45s minimum).
     const requestedDuration = Number(body.duration) || 45
-    const duration = [30, 45, 60].includes(requestedDuration) ? requestedDuration : 45
+    const duration = [45, 60, 90].includes(requestedDuration) ? requestedDuration : 45
 
     const fallback = fallbackBrief(prompt)
 
@@ -485,7 +489,8 @@ Return ONLY the JSON object — no markdown, no commentary.`
             { role: 'user', content: userMsg },
           ],
           temperature: 0.85,
-          max_tokens: 1600,
+          // Push #208 — 90s videos need more tokens for 9 scenes + longer script.
+          max_tokens: duration >= 80 ? 3200 : 1800,
           response_format: { type: 'json_object' },
         },
         { timeout: 28000 }
@@ -494,7 +499,8 @@ Return ONLY the JSON object — no markdown, no commentary.`
       if (!raw) throw new Error('Empty response from OpenAI')
       const data = JSON.parse(raw) as Record<string, unknown>
 
-      const scenes = coerceScenes(data.scenes, fallback.scenes)
+      const plan = durationPlanFor(duration)
+      const scenes = coerceScenes(data.scenes, fallback.scenes, plan.sceneCount)
       const viral_title = asString(data.viral_title, fallback.viral_title).slice(0, 120)
       const hook = asString(data.hook, fallback.hook)
       const summary = asString(data.summary, fallback.summary)

@@ -67,17 +67,19 @@ type Phase =
 
 // Push #064 — durations bumped to 30 / 45 / 60 so the AI has enough room to
 // build a real story arc (hook → setup → tension → payoff). 45s is the new
-// default; 30s is the "quick" option, 60s is the "deep story" option.
-type Duration = 30 | 45 | 60
+// default; 60s is the "deep story" option.
+// Push #208 — removed 30s (too short for quality content), added 90s.
+// Works for YouTube Shorts AND TikTok (up to 3 min supported).
+type Duration = 45 | 60 | 90
 // Push #084 — added 'fast' for the Pexels + TTS cheap pipeline (1 credit).
 // Cinematic quality tiers (basic / basic_ai / pro) still flow through Runway.
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
 type GenerationMode = 'fast' | 'cinematic'
 
 const DURATION_OPTIONS: { value: Duration; label: string }[] = [
-  { value: 30, label: '30s — Quick' },
   { value: 45, label: '45s — Recommended ⭐' },
   { value: 60, label: '60s — Deep Story' },
+  { value: 90, label: '90s — Extended 🎬' },
 ]
 
 const POLL_GENERATING_MS = 4000
@@ -2003,8 +2005,8 @@ export default function GenerateClient() {
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs" style={{ color: 'var(--muted2)' }}>
                 {mode === 'fast'
-                  ? `⚡ Fast Mode · ${duration}s · YouTube Shorts (9:16)`
-                  : `🎬 Cinematic Mode · ${duration}s · ${QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts (9:16)`}
+                  ? `⚡ Fast Mode · ${duration}s · YouTube Shorts / TikTok (9:16)`
+                  : `🎬 Cinematic Mode · ${duration}s · ${QUALITY_OPTIONS.find((q) => q.key === quality)?.title} · YouTube Shorts / TikTok (9:16)`}
               </div>
               <button
                 onClick={handleGenerateGuarded}
@@ -2137,7 +2139,7 @@ export default function GenerateClient() {
                   Your video is ready
                 </h2>
                 <p className="text-xs mt-1.5" style={{ color: 'var(--muted)', letterSpacing: '0.04em' }}>
-                  {duration}s · YouTube Shorts 9:16
+                  {duration}s · YouTube Shorts / TikTok 9:16
                 </p>
                 {/* Push #065 — show the generated title so the user can see
                     what the AI named the video. Falls back to a generic
@@ -2569,7 +2571,7 @@ export default function GenerateClient() {
               </p>
 
               <p className="text-xs mt-2 text-center" style={{ color: 'var(--muted)', maxWidth: 420, lineHeight: 1.55 }}>
-                Voiceover, captions and CTA are baked into the final video. Upload it straight to YouTube Shorts.
+                Voiceover, captions and CTA are baked into the final video. Upload it straight to YouTube Shorts or TikTok.
               </p>
             </section>
           )}
@@ -3634,9 +3636,10 @@ function buildSceneCaptions(
     // Tighten each line so it fits the caption box.
     return fromPlan.map((s) => trimCaption(s))
   }
-  // 30s → 3 clips, 45s → 5 clips (rounded up from 4.5), 60s → 6 clips.
+  // 45s → 5 clips, 60s → 6 clips, 90s → 9 clips.
   // Matches clipCountForDuration in /api/generate-video.
-  const targetCount = duration === 30 ? 3 : duration === 45 ? 5 : 6
+  // Push #208 — removed 30s, added 90s.
+  const targetCount = duration === 90 ? 9 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
 }
 
