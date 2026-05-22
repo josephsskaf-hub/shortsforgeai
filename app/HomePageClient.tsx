@@ -544,7 +544,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             subheadline. Reads from /api/stats on mount, ticks +1 every
             30s so the number feels alive without lying about volume. */}
         <p className="mt-5 text-sm font-bold text-[#34D399]">
-          🎬 {shortsTotal.toLocaleString()} Shorts created — and counting
+          🎬 {shortsTotal.toLocaleString('en-US')} Shorts created — and counting
         </p>
 
         {/* Push #097 — primary green go-button + trust microcopy. The
@@ -722,7 +722,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
           {/* Push #104 — live counter pulled from /api/stats. */}
           <span className="text-[13.5px] font-bold text-[#34D399]">
-            ⚡ {shortsToday.toLocaleString()} Shorts created today
+            ⚡ {shortsToday.toLocaleString('en-US')} Shorts created today
           </span>
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
           <span className="flex items-center gap-2 text-[13.5px] text-[#94A3B8]">
@@ -1239,7 +1239,7 @@ function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number
       </div>
       <p className="mt-8 text-center text-[13px] font-semibold text-[#94A3B8]">
         {'⚡ Over '}
-        <span className="text-[#F1F5F9] font-bold">{videoCounter.toLocaleString()} videos</span>
+        <span className="text-[#F1F5F9] font-bold">{videoCounter.toLocaleString('en-US')} videos</span>
         {' generated — and counting'}
       </p>
     </div>
@@ -1419,8 +1419,4 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
     `${PLANS.pro.credits} Fast Mode renders/month`,
     'Cinematic AI Engine — AI-generated scenes',
     'Advanced generation controls',
-    'Auto-captions engine',
-    'Watermark-free MP4 output',
-    'My Videos history',
-  ]
-}
+    'Auto-captions engine'

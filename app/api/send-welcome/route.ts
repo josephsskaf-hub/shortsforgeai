@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const greeting = name ? `Hey ${name},` : 'Hey Creator,'
-    const dashboardUrl = `${APP_URL}/dashboard`
+    const dashboardUrl = `${APP_URL}/generate`
 
     const html = `<!DOCTYPE html>
 <html>
@@ -78,25 +78,25 @@ export async function POST(request: NextRequest) {
                 <tr>
                   <td style="padding:6px 0;">
                     <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Hooks that stop the scroll</span>
+                    <span style="color:#94a3b8;font-size:14px;">AI script + neural voiceover pipeline</span>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding:6px 0;">
                     <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Titles optimized for YouTube</span>
+                    <span style="color:#94a3b8;font-size:14px;">Auto-captions engine</span>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding:6px 0;">
                     <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Full scripts ready to film</span>
+                    <span style="color:#94a3b8;font-size:14px;">Stock footage library — no camera needed</span>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding:6px 0;">
                     <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Hashtags + descriptions included</span>
+                    <span style="color:#94a3b8;font-size:14px;">Watermark-free MP4 output</span>
                   </td>
                 </tr>
               </table>
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
               <!-- Upgrade note -->
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
-                  Two paid plans, flat monthly price. Basic <strong style="color:#60A5FA;">$9.90/mo</strong> (50 videos / mo), Pro <strong style="color:#60A5FA;">$19.90/mo</strong> (100 videos / mo + 1 Cinematic). Cancel anytime.
+                  Two paid plans, flat monthly price. Basic <strong style="color:#60A5FA;">$4.99/mo</strong> (50 videos / mo), Pro <strong style="color:#60A5FA;">$9.90/mo</strong> (100 videos / mo + priority queue). Cancel anytime.
                 </p>
               </div>
 
@@ -146,15 +146,15 @@ Welcome to ShortsForgeAI! 🎬
 
 You have 2 free video credits waiting — enough to try ShortsForgeAI before upgrading.
 Every Short comes with:
-- Hooks that stop the scroll
-- Titles optimized for YouTube
-- Full scripts ready to film
-- Hashtags + descriptions included
+- AI script + neural voiceover pipeline
+- Auto-captions engine
+- Stock footage library — no camera needed
+- Watermark-free MP4 output
 
 👉 Start generating now:
 ${dashboardUrl}
 
-Two paid plans, flat monthly price. Basic $9.90/mo (50 videos), Pro $19.90/mo (100 videos + 1 Cinematic). Cancel anytime.
+Two paid plans, flat monthly price. Basic $4.99/mo (50 videos), Pro $9.90/mo (100 videos + priority queue). Cancel anytime.
 
 — The ShortsForgeAI Team
 shortsforgeai.com`
@@ -187,6 +187,4 @@ shortsforgeai.com`
     return NextResponse.json({ sent: true, id: data.id })
   } catch (err) {
     console.error('[send-welcome] Unexpected error:', err)
-    return NextResponse.json({ sent: false, error: 'Welcome email could not be sent.' })
-  }
-}
+    return NextResponse.json({ sent: false, error: 'Welcome email could

@@ -4533,4 +4533,3 @@ function GenerationProgressSteps({ step }: { step: number }) {
       })}
     </ol>
   )
-}

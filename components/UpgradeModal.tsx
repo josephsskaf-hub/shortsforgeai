@@ -117,7 +117,4 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         >
           View pricing details →
         </button>
-      </div>
-    </div>
-  )
-}
+      
