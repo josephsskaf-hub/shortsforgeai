@@ -95,7 +95,7 @@ function broadenQuery(q: string): string {
 async function fetchPexelsVideos(query: string, apiKey: string): Promise<StockClip[]> {
   const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(
     query
-  )}&per_page=4&orientation=portrait&size=medium`
+  )}&per_page=6&orientation=portrait&size=large&min_duration=4`
   console.log(`[stock] querying Pexels videos: "${query}"`)
   const res = await fetch(url, {
     headers: { Authorization: apiKey },

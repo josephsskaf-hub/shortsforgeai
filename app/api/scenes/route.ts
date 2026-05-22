@@ -62,43 +62,47 @@ export async function POST(req: NextRequest) {
     // identifies the SCRIPT-WIDE theme, then every per-scene keyword carries
     // a concrete noun from that theme — so a Mansa Musa script's "to recover"
     // line gets "ancient african empire" instead of generic wellness clips.
-    const prompt = `You are planning the visuals for a YouTube Short in the "${niche}" niche.
+    const prompt = `You are a STOCK FOOTAGE DIRECTOR planning visuals for a YouTube Short in the "${niche}" niche.
 
 SCRIPT:
 """
 ${script}
 """
 
-STEP 1 — Identify the SCRIPT-WIDE THEME in 2-4 concrete nouns BEFORE writing any scene. Examples:
-  - A script about Mansa Musa → theme: "ancient mali kingdom gold"
-  - A script about Wall Street crash → theme: "wall street stock market crash"
-  - A script about overcoming addiction → theme: "addiction recovery brain"
-  - A script about Mount Everest → theme: "mount everest snow mountain"
-Every scene's keywords MUST stay anchored to this theme, even when the narration is abstract.
+STEP 1 — Extract the TOPIC SUBJECT: identify the 1-2 main proper nouns or concrete subjects that the script is about (e.g. "mansa musa", "mount everest", "wall street crash", "black hole", "elon musk"). Call this the TOPIC ANCHOR. Write it down before proceeding.
 
-STEP 2 — You are now a STOCK FOOTAGE DIRECTOR. Split the script into 4-6 cinematic scenes (durations sum to ~35s). For EACH scene output 3 concrete visual search phrases (\`searchKeywords\`) that a stock-video site like Pexels would actually return matching footage for. Each phrase MUST describe what the viewer should literally see while that narration plays — never the abstract idea behind it.
+STEP 2 — Extract the SCRIPT-WIDE THEME in 2-4 concrete visual nouns (e.g. "ancient mali kingdom gold", "snow mountain summit", "stock market trading floor").
 
-Rules for searchKeywords (CRITICAL — this is the most important field):
+STEP 3 — Split the script into 4-6 cinematic scenes (durations sum to the script's natural length). For EACH scene output 3 concrete visual search phrases (searchKeywords) that a stock-video site like Pexels would actually return matching portrait footage for.
+
+Rules for searchKeywords (CRITICAL):
   1. EXACTLY 3 phrases per scene, lowercase, 2-4 words each, no punctuation, no hashtags.
   2. Order: most specific FIRST, broader LAST.
-  3. Every phrase MUST contain at least one CONCRETE VISUAL NOUN (a place, object, person, landscape). Without a concrete noun, Pexels returns generic wellness/lifestyle clips and ruins the video.
-  4. For ABSTRACT narration ("to recover", "the lesson", "imagine this", "the truth", "what happened next", "the secret"), DO NOT search the abstract phrase alone — anchor every phrase to the STEP 1 theme. Examples:
-       narration "to recover"     + theme "wall street crash"        → ["stock market recovery", "trader celebrating", "wall street bull"]
-       narration "the lesson"     + theme "ancient mali kingdom"     → ["ancient african empire", "gold coins pile", "desert caravan"]
-       narration "imagine this"   + theme "mount everest"            → ["mount everest summit", "snow mountain peak", "alpine landscape"]
-  5. NEVER emit these as standalone phrases: "recover", "lesson", "imagine", "truth", "secret", "story", "people", "thing", "happen", "moment", "feeling", "ranking", "list", "top 5", "facts", "amazing", "remarkable", "shocking".
-  6. Good concrete examples for narration "The highest mountain in the world stands 8,849 meters tall":
-       ["mount everest summit", "snow mountain peak", "alpine landscape"]
-  7. Good concrete examples for narration "Jeff Bezos earned 75 billion dollars in one year":
-       ["jeff bezos portrait", "amazon headquarters building", "stacks of cash money"]
+  3. The FIRST keyword of EVERY scene MUST include the TOPIC ANCHOR or a direct visual synonym of it. This is the most important rule — it ensures the footage always matches what the user asked for.
+       - Topic "mansa musa" → first keyword must contain "mansa musa" OR "african king" OR "mali empire"
+       - Topic "mount everest" → first keyword must contain "mount everest" OR "himalaya peak"
+       - Topic "black hole" → first keyword must contain "black hole" OR "space galaxy" OR "event horizon"
+       - Topic "jeff bezos" → first keyword must contain "jeff bezos" OR "amazon ceo"
+  4. Every phrase MUST contain at least one CONCRETE VISUAL NOUN (a place, object, person, landscape). Without a concrete noun, Pexels returns generic lifestyle clips that ruin the video.
+  5. For ABSTRACT narration lines ("to recover", "the lesson", "imagine this", "the truth"), anchor EVERY keyword to the STEP 2 theme:
+       narration "to recover"   + theme "wall street crash"   → ["wall street bull statue", "stock trader cheering", "nasdaq stock screen"]
+       narration "the lesson"   + theme "ancient mali empire" → ["mali ancient ruins", "african gold coins", "desert trade caravan"]
+  6. NEVER use these standalone: "recover", "lesson", "imagine", "truth", "secret", "story", "people", "thing", "moment", "feeling", "ranking", "list", "facts", "amazing", "shocking".
+  7. Good examples:
+       Narration "The highest mountain stands 8,849 meters tall" (topic: mount everest):
+         ["mount everest summit", "himalaya mountain peak", "alpine snow landscape"]
+       Narration "He earned 75 billion dollars in one year" (topic: jeff bezos):
+         ["jeff bezos portrait", "amazon headquarters building", "stack of money cash"]
+       Narration "It started with a single trade" (topic: wall street crash):
+         ["wall street trading floor", "stock market screen", "new york stock exchange"]
 
 Return ONLY a JSON array. Each object MUST contain:
 - sceneNumber (int, starting at 1)
-- duration (int seconds, total across all scenes ~= 35)
-- narration (the exact words spoken in this scene, drawn from the script)
-- visualDescription (cinematic, dark, fast-paced — what should be on screen)
+- duration (int seconds)
+- narration (the exact words spoken in this scene)
+- visualDescription (cinematic, dark, fast-paced — what should literally be on screen)
 - searchKeywords (array of EXACTLY 3 lowercase visual phrases per the rules above, most specific first)
-- searchQuery (same as searchKeywords[0] — kept for backwards compatibility)
+- searchQuery (same as searchKeywords[0])
 - emotionalTone (one short phrase, e.g. "tense", "uplifting", "shocking")
 
 No markdown, no code fences. Raw JSON array only.`
