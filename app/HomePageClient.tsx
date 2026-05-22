@@ -103,6 +103,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [authChecked, setAuthChecked] = useState(!!initialUser)
   const [prompt, setPromptText] = useState('')
   const [navOpen, setNavOpen] = useState(false)
+  const [featuresOpen, setFeaturesOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   // Push #077 — pricing card selected state. Pro is selected by default.
@@ -334,20 +335,94 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
           </Link>
 
-          {/* Center links — desktop. Push #078 dropped Features and added
-              Thumbnail with a NEW badge. */}
+          {/* Center links — desktop. Push #080: Features dropdown. */}
           <div className="hidden items-center gap-7 md:flex">
             <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
-            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Generator</Link>
-            <Link
-              href={THUMBNAIL_ROUTE}
-              className="flex items-center text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition"
+
+            {/* Features dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setFeaturesOpen(true)}
+              onMouseLeave={() => setFeaturesOpen(false)}
             >
-              Thumbnail
-              <span className="bg-[#22D3EE] text-[#05070D] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
-                NEW
-              </span>
-            </Link>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Features
+                <svg
+                  width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  style={{ transition: 'transform 0.18s ease', transform: featuresOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <path d="M2 4l4 4 4-4" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+              {featuresOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(11,17,32,0.97)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 14,
+                    padding: '8px',
+                    minWidth: 220,
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(20px)',
+                    zIndex: 100,
+                  }}
+                >
+                  <Link
+                    href="/generate"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                        style={{ background: 'rgba(34,211,238,.12)', border: '1px solid rgba(34,211,238,.2)' }}
+                      >
+                        🎬
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-[#F1F5F9]">AI Video Generator</div>
+                        <div className="text-xs text-[#64748b] mt-0.5">Create viral Shorts in 60s</div>
+                      </div>
+                    </div>
+                  </Link>
+                  <Link
+                    href={THUMBNAIL_ROUTE}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                        style={{ background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.2)' }}
+                      >
+                        🖼️
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-[#F1F5F9]">Thumbnail Generator</span>
+                          <span className="bg-[#22D3EE] text-[#05070D] text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                        </div>
+                        <div className="text-xs text-[#64748b] mt-0.5">AI-powered click-bait covers</div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
+
             <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
@@ -508,14 +583,40 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </nav>
 
       {/* ───────── Hero ─────────
-          Push #097 — conversion overhaul for the Google Ads funnel
-          (85 clicks / 0 signups). Headline now leads with the user's
-          input ("Any Idea") instead of the output, subheadline lists
-          exactly what's automated, and the primary CTA is a green
-          go-button with the trust microcopy stacked below it.
-          Push #126 — 2-column desktop layout: text left, vertical
-          demo video right. Video hidden on mobile. */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+          Push #080 — full-width background video behind the hero.
+          Dark overlay keeps text legible. */}
+      <div className="relative overflow-hidden">
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 0.13,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+          src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        />
+        {/* Dark gradient overlay */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, rgba(5,7,13,0.7) 0%, rgba(5,7,13,0.45) 50%, rgba(5,7,13,0.85) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
         <div className="flex-1 min-w-0 text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
@@ -656,26 +757,39 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
         </div>
       </section>
+      </div>{/* end hero background video wrapper */}
 
       {/* ───────── AI Video Showcase ───────── */}
-      <section id="showcase" className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-12 sm:px-6 sm:pb-16">
-        <div className="mb-8 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
-            Showcase
+      {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
+      <section id="showcase" className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6">
+        <div className="mb-10 text-center">
+          <div
+            className="mb-3 text-[11px] font-extrabold uppercase tracking-[.18em] text-cyan-400 flex items-center justify-center gap-3"
+          >
+            <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
+            Create Your First AI Short
+            <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            AI Video Showcase
+          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9] mb-3">
+            Pick a style.{' '}
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              AI does the rest.
+            </span>
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            See what ShortsForge can create.
+          <p className="mx-auto max-w-lg text-[14px] text-[#94A3B8] leading-relaxed">
+            Choose a format below — the AI writes the hook, records the voiceover, cuts the scenes and renders your Short automatically.
           </p>
         </div>
 
-        {/* Push #082 — real playable previews. Cards are now 9:16 (YouTube
-            Shorts) with a muted autoplay loop sourced from a royalty-free
-            CDN. The gradient poster stays as a fallback for slow networks
-            and as a paint target before the video's first frame lands. */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+        {/* 3 columns × 2 rows grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: '16px',
+          }}
+          className="sm:gap-5"
+        >
           {SHOWCASE_BASE.map((base, i) => {
             const card: ShowcaseCard = { ...base, videoUrl: showcaseVideos[`${i}`] ?? '' }
             return (

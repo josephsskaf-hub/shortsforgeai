@@ -352,10 +352,10 @@ export default function Sidebar({
               after the generator. */}
           <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
           <NavItem href="/my-videos" icon="📼" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
-          {/* Push #060 — examples gallery. Static prompt showcase that
+          {/* Push #080 — examples removed (demodé). Was:
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}
-          <NavItem href="/examples" icon="✨" label="Examples" exact={false} pathname={pathname} onClick={onClose} />
+          {/* NavItem href="/examples" removed */}
           {/* Push #103 — Pricing surfaced inside the dashboard nav so users
               don't have to leave the app to find the upgrade page. The
               bottom credits card also links here, but that one is gated on
