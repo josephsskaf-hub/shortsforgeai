@@ -7,9 +7,6 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shorts
 
 export async function POST(request: NextRequest) {
   try {
-    // Require a signed-in caller, and only allow them to send a welcome to
-    // their own email. Without this guard the endpoint is a spam/quota-burn
-    // vector — anyone could POST any email and trigger Resend.
     const supabase = createClient()
     const {
       data: { user },
@@ -27,7 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // If no Resend key is configured, silently skip (don't break signup)
     if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here') {
       console.warn('[send-welcome] RESEND_API_KEY not configured — skipping welcome email')
       return NextResponse.json({ skipped: true })
@@ -48,8 +44,6 @@ export async function POST(request: NextRequest) {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-
-          <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
               <div style="display:inline-flex;align-items:center;gap:12px;">
@@ -58,72 +52,37 @@ export async function POST(request: NextRequest) {
               </div>
             </td>
           </tr>
-
-          <!-- Card -->
           <tr>
             <td style="background:#13131f;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px;">
-
               <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 8px;">${greeting}</p>
               <p style="color:#94a3b8;font-size:15px;margin:0 0 28px;line-height:1.6;">Welcome to <strong style="color:#c7d2fe;">ShortsForgeAI</strong> 🎬</p>
-
-              <!-- Free generations badge -->
               <div style="background:rgba(59, 130, 246,0.12);border:1px solid rgba(59, 130, 246,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
                 <p style="color:#60A5FA;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
                 <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free video credits</p>
                 <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to try ShortsForgeAI before upgrading — vertical 9:16 Shorts, ready to upload.</p>
               </div>
-
-              <!-- Features list -->
               <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;width:100%;">
-                <tr>
-                  <td style="padding:6px 0;">
-                    <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">AI script + neural voiceover pipeline</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;">
-                    <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Auto-captions engine</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;">
-                    <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Stock footage library — no camera needed</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0;">
-                    <span style="color:#34d399;margin-right:8px;">✓</span>
-                    <span style="color:#94a3b8;font-size:14px;">Watermark-free MP4 output</span>
-                  </td>
-                </tr>
+                <tr><td style="padding:6px 0;"><span style="color:#34d399;margin-right:8px;">✓</span><span style="color:#94a3b8;font-size:14px;">AI script + neural voiceover pipeline</span></td></tr>
+                <tr><td style="padding:6px 0;"><span style="color:#34d399;margin-right:8px;">✓</span><span style="color:#94a3b8;font-size:14px;">Auto-captions engine</span></td></tr>
+                <tr><td style="padding:6px 0;"><span style="color:#34d399;margin-right:8px;">✓</span><span style="color:#94a3b8;font-size:14px;">Stock footage library — no camera needed</span></td></tr>
+                <tr><td style="padding:6px 0;"><span style="color:#34d399;margin-right:8px;">✓</span><span style="color:#94a3b8;font-size:14px;">Watermark-free MP4 output</span></td></tr>
               </table>
-
-              <!-- CTA Button -->
               <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:28px;">
                 <tr>
                   <td align="center">
-                    <a href="${dashboardUrl}"
-                       style="display:inline-block;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:16px 40px;border-radius:12px;letter-spacing:0.01em;box-shadow:0 4px 22px rgba(59, 130, 246,0.4);">
+                    <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;padding:16px 40px;border-radius:12px;letter-spacing:0.01em;box-shadow:0 4px 22px rgba(59, 130, 246,0.4);">
                       👉 Start generating now
                     </a>
                   </td>
                 </tr>
               </table>
-
-              <!-- Upgrade note -->
               <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:16px 20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;">
                   Two paid plans, flat monthly price. Basic <strong style="color:#60A5FA;">$4.99/mo</strong> (50 videos / mo), Pro <strong style="color:#60A5FA;">$9.90/mo</strong> (100 videos / mo + priority queue). Cancel anytime.
                 </p>
               </div>
-
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td align="center" style="padding-top:24px;">
               <p style="color:#334155;font-size:12px;margin:0;">
@@ -132,7 +91,6 @@ export async function POST(request: NextRequest) {
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -177,9 +135,6 @@ shortsforgeai.com`
     if (!response.ok) {
       const body = await response.text()
       console.error('[send-welcome] Resend error:', response.status, body)
-      // Return success anyway so signup doesn't appear to fail — but don't echo
-      // the upstream response body to the client; it may contain provider
-      // diagnostics that don't belong in user-facing payloads.
       return NextResponse.json({ sent: false, error: 'Email provider rejected the request.' })
     }
 
