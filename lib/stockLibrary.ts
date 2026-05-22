@@ -44,6 +44,11 @@ const CLIPS: LibraryClip[] = [
   // — Pexels CDN (only IDs verified to return 206 on direct GET) —
   { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['city', 'urban', 'technology', 'modern', 'business', 'money'] },
   { url: 'https://videos.pexels.com/video-files/857195/857195-hd_1280_720_25fps.mp4',     width: 1280, height: 720,  duration: 16, tags: ['space', 'cosmic', 'stars', 'sky', 'mystery', 'dark'] },
+  // Push #210 — additional space/rocket clips for the curated fallback.
+  // Pexels IDs verified to contain real space/rocket footage (public CDN).
+  { url: 'https://videos.pexels.com/video-files/2098405/2098405-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 14, tags: ['rocket', 'launch', 'space', 'fire'] },
+  { url: 'https://videos.pexels.com/video-files/3654268/3654268-hd_1280_720_30fps.mp4',   width: 1280, height: 720,  duration: 13, tags: ['rocket', 'launch', 'space', 'fire'] },
+  { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['rocket', 'launch', 'space', 'technology', 'city'] },
   { url: 'https://videos.pexels.com/video-files/3576378/3576378-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 12, tags: ['nature', 'forest', 'mystery', 'dark', 'horror'] },
   { url: 'https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4',  width: 1920, height: 1080, duration: 14, tags: ['city', 'urban', 'street', 'lifestyle', 'luxury'] },
 
@@ -58,17 +63,25 @@ const CLIPS: LibraryClip[] = [
 // Maps free-text keywords from a scene's searchQuery onto the tag vocabulary
 // used by the clip pool. The map is intentionally generous: a scene query like
 // "mysterious deep ocean signal" should hit both "mystery" and "ocean" tags.
+// Push #210 — added 'rocket' and 'launch' as first-class tags alongside 'space'.
 const KEYWORD_TO_TAGS: Record<string, string[]> = {
   // Ocean / water
   ocean: ['ocean', 'water', 'sea'], sea: ['ocean', 'water', 'sea'], water: ['water', 'ocean'],
   wave: ['ocean', 'water'], waves: ['ocean', 'water'], underwater: ['underwater', 'ocean'],
   deep: ['ocean', 'dark', 'mystery'], sonar: ['ocean', 'mystery'],
 
-  // Space / cosmic
+  // Space / cosmic / rocket
   space: ['space', 'cosmic', 'stars'], cosmic: ['space', 'cosmic'], star: ['space', 'stars'],
   stars: ['space', 'stars'], universe: ['space'], galaxy: ['space'], planet: ['space'],
   alien: ['space', 'mystery'], ufo: ['space', 'mystery', 'dark'], signal: ['space', 'mystery', 'technology'],
   satellite: ['space', 'technology'], telescope: ['space', 'technology'],
+  // Push #210 — rocket/launch/SpaceX keywords → space tag so these always hit the space clip pool
+  rocket: ['rocket', 'space', 'launch'], launch: ['rocket', 'launch', 'space'],
+  booster: ['rocket', 'launch'], falcon: ['rocket', 'launch'], spacex: ['rocket', 'space', 'launch'],
+  starship: ['rocket', 'launch'], nasa: ['rocket', 'space'], astronaut: ['space', 'rocket'],
+  orbit: ['space', 'rocket'], reusable: ['rocket', 'launch'], exhaust: ['rocket', 'launch'],
+  elon: ['rocket', 'space'], musk: ['rocket', 'space'],
+  pad: ['rocket', 'launch'], engine: ['rocket', 'launch'], flames: ['rocket', 'launch'],
 
   // Money / business / luxury
   money: ['money', 'business', 'luxury'], wealth: ['money', 'luxury'], rich: ['money', 'luxury'],

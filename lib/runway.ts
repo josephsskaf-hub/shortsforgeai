@@ -241,8 +241,13 @@ export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
 export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
   const safeCount = Math.max(1, Math.min(8, Math.floor(count)))
 
-  const exampleScene = `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`
-  const exampleArr = Array.from({ length: safeCount }, () => exampleScene).join(',\n  ')
+  // Push #210 — added space/rocket example alongside pyramid to teach the model
+  // that for space topics, searchKeywords must use "rocket launch fire" not "screens".
+  const exampleScenes = [
+    `{"description":"Ancient Egyptian pyramid at golden hour, aerial drone shot pulling back to reveal desert vastness, warm cinematic light","searchKeywords":"pyramid egypt desert","voiceover":"The Great Pyramid of Giza is older than written history itself.","caption":"Older than written history itself"}`,
+    `{"description":"Falcon 9 rocket booster descending vertically toward drone ship, engines firing, dramatic ocean backdrop, cinematic slow motion","searchKeywords":"rocket booster landing fire","voiceover":"SpaceX landed a rocket booster back on a ship in the middle of the ocean.","caption":"Rocket landed back on a ship"}`,
+  ]
+  const exampleArr = Array.from({ length: safeCount }, (_, i) => exampleScenes[i % exampleScenes.length]).join(',\n  ')
 
   const userPrompt = `You break a Short-form video idea into ${safeCount} scenes for a YouTube Short.
 
@@ -251,7 +256,16 @@ Idea: "${prompt}"
 Return ONLY a valid JSON array of exactly ${safeCount} objects — no markdown, no preamble.
 Each object must have exactly four fields:
 1. "description": A cinematic shot description for an AI video model (~15-25 words). Visual, specific, concrete — subject + setting + lighting + camera motion + mood. Vertical 9:16 framing.
-2. "searchKeywords": 2-4 concrete nouns or short phrases that describe WHAT IS VISUALLY IN THIS SCENE, directly related to the video topic. These are used to search stock footage. NEVER use abstract words like "cinematic", "footage", "video", "shot". NEVER start with "a", "the", "lone", "soft". Use the actual topic: e.g. for pyramids → "ancient pyramid egypt desert"; for money → "gold coins cash dollar bills".
+2. "searchKeywords": 2-4 concrete nouns or short phrases for Pexels stock search. MUST visually match the scene. Use the actual subject noun — NEVER abstract words like "cinematic", "footage", "video", "shot", "story", "history", "future", "change". NEVER start with "a", "the", "lone", "soft".
+
+   TOPIC-SPECIFIC KEYWORD RULES (critical — wrong keywords return unrelated Pexels footage):
+   - Rockets / SpaceX / Elon Musk / Starship / Falcon 9 / NASA / space travel:
+       BANNED: "screens", "engineers", "mission control", "monitors", "control room", "people watching", "team"  — these return music studios or offices on Pexels
+       REQUIRED: always include a rocket/space concrete noun → "rocket launch fire", "rocket engine flames", "falcon 9 landing", "rocket booster smoke", "earth from orbit", "rocket launch pad", "space rocket night sky", "rocket exhaust fire"
+   - Money / finance / wealth: "dollar bills cash", "gold coins", "wall street trading floor", "stock market screen"
+   - Ancient history / civilizations: use the actual place + concrete noun → "ancient pyramid egypt desert", "roman colosseum ruins", "aztec temple mexico"
+   - Tech / AI / computers: "computer chip circuit board", "data center servers", "code screen dark", "silicon valley office"
+
 3. "voiceover": One real narration line that delivers a concrete fact, escalation, or payoff about the topic (10-22 words). This is the EXACT text the TTS will read for this scene. No filler like "imagine…", "what if…". No stage directions.
 4. "caption": A ≤8-word readable on-screen caption that paraphrases the same voiceover line. Punchy fragment, no period, must match what the narrator says in meaning.
 

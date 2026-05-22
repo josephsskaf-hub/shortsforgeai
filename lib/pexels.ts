@@ -81,12 +81,44 @@ export async function searchPexelsVideos(query: string, perPage = 3): Promise<st
  * of the first 3 words of a cinematic Runway description. Falls back to
  * stopword-filtered extraction from the description if keywords are empty.
  */
+// Push #210 — keywords that, when present in the search query, signal a
+// space/rocket topic. We strip known bad Pexels terms (like "screens",
+// "engineers", "mission control") that return music studios or offices, and
+// ensure every space query contains at least one strong rocket visual noun.
+const SPACE_TRIGGER_WORDS = new Set([
+  'rocket', 'launch', 'spacex', 'falcon', 'booster', 'starship', 'nasa',
+  'orbit', 'spacecraft', 'astronaut', 'reusable', 'elon', 'musk', 'raptor',
+  'merlin', 'pad', 'liftoff', 'reentry', 'exhaust',
+])
+const SPACE_BANNED_TERMS = [
+  'screens', 'engineers', 'mission control', 'monitors', 'control room',
+  'people watching', 'team', 'technicians',
+]
+const SPACE_BOOST_TERM = 'rocket launch fire'
+
 export async function getPexelsVideoForScene(
   searchKeywords: string,
   fallbackDescription?: string,
 ): Promise<string | null> {
   // Use the explicit topic keywords first
   let query = (searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
+
+  // Push #210 — Space/rocket override: if the query triggers space keywords,
+  // scrub any Pexels-incompatible terms (screens, engineers, etc.) and ensure
+  // the query contains a strong rocket visual noun so Pexels returns real footage.
+  const queryLower = query.toLowerCase()
+  const isSpaceTopic = Array.from(SPACE_TRIGGER_WORDS).some((w) => queryLower.includes(w))
+  if (isSpaceTopic) {
+    let cleaned = query
+    for (const banned of SPACE_BANNED_TERMS) {
+      cleaned = cleaned.replace(new RegExp(banned, 'gi'), '').replace(/\s+/g, ' ').trim()
+    }
+    // If after cleaning we've lost all meaningful content, fall back to the boost term
+    if (!cleaned || cleaned.split(/\s+/).filter((w) => w.length > 2).length < 2) {
+      cleaned = SPACE_BOOST_TERM
+    }
+    query = cleaned
+  }
 
   // If no explicit keywords, fall back to extracting meaningful words from
   // the description — but skip leading stopwords ("a", "the", "lone", etc.)
