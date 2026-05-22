@@ -285,7 +285,7 @@ export default function StartPage() {
               },
               {
                 q: "What happens after the free trial?",
-                a: "Basic is $9.90/month and Pro is $19.90/month. Cancel anytime.",
+                a: "Basic is $4.99/month and Pro is $9.90/month. Cancel anytime.",
               },
               {
                 q: 'How long does it take?',
@@ -393,7 +393,7 @@ export default function StartPage() {
                   lineHeight: 1,
                 }}
               >
-                $9.90
+                $4.99
               </span>
             </div>
             <div

@@ -299,7 +299,7 @@ export default function PricingPage() {
           }}>
             Your first video is on us —{' '}
             <span style={{ color: '#A78BFA' }}>sign up free</span> and get{' '}
-            <span style={{ color: '#22D3EE' }}>3 credits instantly</span>,
+            <span style={{ color: '#22D3EE' }}>2 Fast Mode videos instantly</span>,
             no card required.
           </span>
         </a>

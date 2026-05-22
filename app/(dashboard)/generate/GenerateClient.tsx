@@ -1603,7 +1603,7 @@ export default function GenerateClient() {
                 marginBottom: 10,
               }}
             >
-              Upgrade to Pro — $19.90/mo →
+              Upgrade to Pro — $9.90/mo →
             </a>
             <button
               type="button"
@@ -2464,7 +2464,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(34,197,94,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $9.90/mo →'}
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $4.99/mo →'}
                   </button>
                 </div>
               )}
@@ -3487,7 +3487,7 @@ function UpsellSection({
             letterSpacing: '-0.01em',
           }}
         >
-          Get 100 credits/month — post every day for $19.90/mo
+          Get 100 credits/month — post every day for $9.90/mo
         </div>
         <ul
           style={{
@@ -3519,7 +3519,7 @@ function UpsellSection({
             boxShadow: '0 6px 22px rgba(251,191,36,.28)',
           }}
         >
-          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Pro — $19.90/mo →'}
+          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Pro — $9.90/mo →'}
         </button>
         <div
           style={{
@@ -4157,7 +4157,7 @@ function UpgradeModal({
             marginBottom: 24,
           }}
         >
-          Upgrade to Basic for 50 videos/month — $9.90/mo
+          Upgrade to Basic for 50 videos/month — $4.99/mo
         </p>
         <button
           type="button"
@@ -4362,7 +4362,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$9.90/mo</strong>. Cancel anytime.
+          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$4.99/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -4384,7 +4384,7 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Get Basic — $9.90/mo →'}
+          {loading ? 'Opening checkout…' : 'Get Basic — $4.99/mo →'}
         </button>
         {/* Push #113 — BRL option for BR users. */}
         <button
