@@ -317,7 +317,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Top Nav ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10 lg:px-16">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -334,12 +334,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
           </Link>
 
-          {/* Center links — desktop. Push #134: 4 clean links, no dropdown. */}
-          <div className="hidden items-center gap-7 md:flex">
-            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
-            <Link href={THUMBNAIL_ROUTE} className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
-            <Link href="/my-videos" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">My Videos</Link>
-            <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
+          {/* Center links — desktop. Push #135: full-width layout, larger text. */}
+          <div className="hidden items-center gap-9 md:flex">
+            <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
+            <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
+            <Link href="/my-videos" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">My Videos</Link>
+            <a href="#pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
           {/* Right side — desktop. Push #079: guest = Sign In (ghost) +
@@ -363,7 +363,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 )}
                 <Link
                   href="/generate"
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Dashboard
                 </Link>
@@ -371,7 +371,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   type="button"
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
@@ -380,13 +380,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <>
                 <Link
                   href="/login"
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
+                  className="rounded-lg bg-[#22D3EE] px-5 py-2.5 text-[1rem] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
                 >
                   Start Free
                 </Link>
