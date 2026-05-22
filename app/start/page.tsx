@@ -2,24 +2,60 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 
 // Push #107 — Google Ads landing page. Single conversion target
-// (Start Free → /signup), zero outbound links to other marketing pages
-// so the ad spend doesn't bleed into reading the homepage. Server
-// component; everything below is static markup that the CDN can serve.
-// Push #116 — Footer now mounted here for Terms/Privacy/Contact links.
-// Google Ads policy effectively requires a Privacy Policy link on
-// landing pages, and the legal-only Footer doesn't break the ad-LP
-// discipline (no marketing-page links).
+// (Start Free → /signup), zero outbound links to other marketing pages.
+// Push #116 — Footer mounted for Terms/Privacy/Contact links.
+// Push #195 — full LP refresh: stronger hero, consistent social proof,
+// step descriptions, benefits section, second CTA, improved FAQ.
 
-const HOW_IT_WORKS: { step: string; title: string }[] = [
-  { step: '1', title: 'Type your idea' },
-  { step: '2', title: 'AI builds your Short' },
-  { step: '3', title: 'Download & upload to YouTube' },
+const HOW_IT_WORKS: { step: string; title: string; desc: string }[] = [
+  {
+    step: '1',
+    title: 'Type your topic',
+    desc: 'Enter any subject — finance, history, tech, lifestyle. The AI handles everything from there.',
+  },
+  {
+    step: '2',
+    title: 'AI builds your Short',
+    desc: 'Script, voiceover, footage, captions, and soundtrack — assembled automatically in ~60 seconds.',
+  },
+  {
+    step: '3',
+    title: 'Download & post',
+    desc: 'Get a ready-to-upload 9:16 MP4. No editing app, no camera, no technical skills needed.',
+  },
+]
+
+const BENEFITS: { icon: string; title: string; desc: string; accent: string }[] = [
+  {
+    icon: '🎭',
+    title: '100% Faceless',
+    desc: 'Never show your face or use a camera. The AI generates everything — visuals, voice, text.',
+    accent: '#22D3EE',
+  },
+  {
+    icon: '⚡',
+    title: 'Ready in 60 Seconds',
+    desc: 'Fast Mode renders your full Short in under a minute. Post daily without spending hours editing.',
+    accent: '#FBBF24',
+  },
+  {
+    icon: '🧠',
+    title: 'AI Writes the Script',
+    desc: 'No writing skills needed. Our AI crafts a viral-optimized script for any niche automatically.',
+    accent: '#A78BFA',
+  },
+  {
+    icon: '📥',
+    title: 'Watermark-Free MP4',
+    desc: 'Download clean, professional-quality vertical video — ready for YouTube, TikTok, or Reels.',
+    accent: '#34D399',
+  },
 ]
 
 const SOCIAL_PROOF: { icon: string; text: string; accent: string }[] = [
-  { icon: '⚡', text: '500+ creators', accent: '#22D3EE' },
-  { icon: '★★★★★', text: 'Loved by YouTubers', accent: '#FBBF24' },
-  { icon: '🎬', text: '200+ Shorts created', accent: '#34D399' },
+  { icon: '⚡', text: '3,200+ videos generated', accent: '#22D3EE' },
+  { icon: '★★★★★', text: '4.8★ average rating', accent: '#FBBF24' },
+  { icon: '🎬', text: '500+ active creators', accent: '#34D399' },
 ]
 
 export default function StartPage() {
@@ -34,7 +70,8 @@ export default function StartPage() {
       }}
     >
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Logo (text only — no links so the user never leaves) */}
+
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <span
             style={{
@@ -75,54 +112,56 @@ export default function StartPage() {
           </h1>
           <p
             style={{
-              fontSize: 'clamp(0.95rem, 2.6vw, 1.1rem)',
+              fontSize: 'clamp(0.95rem, 2.6vw, 1.15rem)',
               color: '#94A3B8',
-              maxWidth: 540,
-              margin: '0 auto',
+              maxWidth: 520,
+              margin: '0 auto 10px',
               lineHeight: 1.55,
             }}
           >
-            AI writes the script, finds footage, adds captions &amp; music. Ready in 60 seconds.
+            No camera. No face. No editing.{' '}
+            <span style={{ color: '#F5F7FF', fontWeight: 700 }}>
+              AI writes the script, finds footage, adds captions &amp; music.
+            </span>
+          </p>
+          <p style={{ fontSize: '0.9rem', color: '#64748B', margin: 0 }}>
+            Ready in 60 seconds. Start free — no card needed.
           </p>
         </section>
 
         {/* Primary CTA */}
         <section style={{ textAlign: 'center', marginBottom: 32 }}>
-          {/* Push #117 — anchor is block-level on mobile so the green
-              button spans the full content width and clears the 44 px
-              touch-target floor by a comfortable margin. Desktop keeps
-              the inline-block "pill" framing via the sm: utilities. */}
           <Link
             href="/signup"
             className="start-primary-cta block sm:inline-block w-full sm:w-auto"
             style={{
-              padding: '18px 28px',
+              padding: '18px 32px',
               borderRadius: 14,
               background: 'linear-gradient(135deg, #10b981, #059669)',
               color: '#FFFFFF',
-              fontSize: '1.05rem',
+              fontSize: '1.1rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
               textDecoration: 'none',
-              boxShadow: '0 10px 32px rgba(16,185,129,.45)',
+              boxShadow: '0 10px 36px rgba(16,185,129,.50)',
               boxSizing: 'border-box',
-              minHeight: 56,
+              minHeight: 58,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            Start Free — No Credit Card Needed →
+            Generate My First Short Free →
           </Link>
           <p
             style={{
               fontSize: '0.8rem',
-              color: '#94A3B8',
+              color: '#64748B',
               marginTop: 12,
               fontWeight: 600,
             }}
           >
-            2 free videos · Cancel anytime · Ready in 60s
+            2 free videos included · No credit card · Cancel anytime
           </p>
         </section>
 
@@ -133,7 +172,7 @@ export default function StartPage() {
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: 10,
-            marginBottom: 48,
+            marginBottom: 52,
           }}
         >
           {SOCIAL_PROOF.map((p) => (
@@ -143,7 +182,7 @@ export default function StartPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '8px 14px',
+                padding: '8px 16px',
                 borderRadius: 999,
                 background: 'rgba(11,17,32,0.7)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -158,8 +197,8 @@ export default function StartPage() {
         </section>
 
         {/* How it works */}
-        <section style={{ marginBottom: 48 }}>
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <section style={{ marginBottom: 52 }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <div
               style={{
                 fontSize: '0.62rem',
@@ -174,7 +213,7 @@ export default function StartPage() {
             </div>
             <h2
               style={{
-                fontSize: 'clamp(1.3rem, 4vw, 1.6rem)',
+                fontSize: 'clamp(1.3rem, 4vw, 1.65rem)',
                 fontWeight: 900,
                 letterSpacing: '-0.02em',
                 margin: 0,
@@ -187,7 +226,7 @@ export default function StartPage() {
             style={{
               display: 'grid',
               gap: 12,
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             }}
           >
             {HOW_IT_WORKS.map((s) => (
@@ -197,45 +236,130 @@ export default function StartPage() {
                   background: 'rgba(11,17,32,0.85)',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 14,
-                  padding: '16px 18px',
+                  padding: '20px 18px',
                   textAlign: 'center',
                 }}
               >
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     borderRadius: 10,
                     background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
                     color: '#FFFFFF',
                     fontWeight: 900,
-                    fontSize: '0.95rem',
+                    fontSize: '1rem',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: 10,
+                    marginBottom: 12,
                   }}
                 >
                   {s.step}
                 </div>
                 <div
                   style={{
-                    fontSize: '0.9rem',
+                    fontSize: '0.92rem',
                     fontWeight: 800,
                     letterSpacing: '-0.01em',
+                    marginBottom: 6,
                   }}
                 >
                   {s.title}
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
+                  {s.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Why creators choose ShortsForgeAI */}
+        <section style={{ marginBottom: 52 }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '.14em',
+                color: '#A78BFA',
+                textTransform: 'uppercase',
+                marginBottom: 6,
+              }}
+            >
+              Why creators choose us
+            </div>
+            <h2
+              style={{
+                fontSize: 'clamp(1.3rem, 4vw, 1.65rem)',
+                fontWeight: 900,
+                letterSpacing: '-0.02em',
+                margin: 0,
+              }}
+            >
+              Built for creators who want results, not complexity
+            </h2>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gap: 12,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            }}
+          >
+            {BENEFITS.map((b) => (
+              <div
+                key={b.title}
+                style={{
+                  background: 'rgba(11,17,32,0.85)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 14,
+                  padding: '20px 20px',
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '1.4rem',
+                    flexShrink: 0,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,.04)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {b.icon}
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.9rem',
+                      fontWeight: 800,
+                      color: b.accent,
+                      marginBottom: 4,
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {b.title}
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
+                    {b.desc}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Push #109 — demo video. Only renders when the env var is set
-            so the ad LP doesn't carry a "coming soon" placeholder. */}
+        {/* Demo video */}
         {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL && (
-          <section style={{ textAlign: 'center', marginBottom: 48 }}>
+          <section style={{ textAlign: 'center', marginBottom: 52 }}>
             <div
               style={{
                 fontSize: '0.85rem',
@@ -258,42 +382,41 @@ export default function StartPage() {
           </section>
         )}
 
-        {/* Push #110 — stats bar. Compact muted line right above the FAQ
-            so the social signals land before the buyer reads objections. */}
-        <p
-          style={{
-            textAlign: 'center',
-            fontSize: '0.8rem',
-            color: '#94A3B8',
-            marginBottom: 28,
-            fontWeight: 500,
-          }}
-        >
-          3,200+ videos generated · 4.8★ average rating · 7-day free trial
-        </p>
-
-        {/* Push #110 — FAQ. <details>/<summary> keeps this a server
-            component (no useState). Four highest-value objections lifted
-            from the ad cohort: face/camera, post-trial billing, time-to-
-            value, and free-tier scope. */}
-        <section style={{ marginBottom: 40 }}>
+        {/* FAQ */}
+        <section style={{ marginBottom: 44 }}>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <h2
+              style={{
+                fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)',
+                fontWeight: 900,
+                letterSpacing: '-0.02em',
+                margin: 0,
+              }}
+            >
+              Common questions
+            </h2>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
               {
                 q: 'Do I need a camera or show my face?',
-                a: 'No. ShortsForgeAI generates visuals, voiceover, and subtitles from a topic you type. 100% faceless.',
+                a: 'No — never. ShortsForgeAI generates the visuals, voiceover, and subtitles automatically from any topic you type. 100% faceless, 100% hands-free.',
               },
               {
-                q: "What happens after the free trial?",
-                a: "Basic is $4.99/month and Pro is $9.90/month. Cancel anytime.",
+                q: 'How long does it take to make a video?',
+                a: 'Under 60 seconds in Fast Mode. Type your topic → click Generate → download your MP4. That\'s it.',
               },
               {
-                q: 'How long does it take?',
-                a: 'Under 60 seconds in Fast Mode. Type topic → Generate → Download.',
+                q: "What's included in the free plan?",
+                a: '2 complete Fast Mode videos, no credit card required. Full quality, watermark-free MP4 output. Upgrade only when you\'re ready.',
               },
               {
-                q: "What’s in the free plan?",
-                a: "2 full videos, no credit card required. Upgrade only when you’re ready.",
+                q: 'What happens after my free videos?',
+                a: 'Basic is $4.99/month (50 videos) and Pro is $9.90/month (100 videos + Cinematic AI Engine). Cancel anytime — no contracts.',
+              },
+              {
+                q: 'Will my channel get flagged for AI content?',
+                a: 'No. The output is a normal MP4 — YouTube treats it like any other video. Thousands of faceless channels already use AI-generated content successfully.',
               },
             ].map((item) => (
               <details
@@ -332,7 +455,7 @@ export default function StartPage() {
           </div>
         </section>
 
-        {/* Pricing — Basic highlight */}
+        {/* Pricing card */}
         <section style={{ marginBottom: 36 }}>
           <div
             style={{
@@ -357,9 +480,10 @@ export default function StartPage() {
                 fontWeight: 900,
                 letterSpacing: '.12em',
                 textTransform: 'uppercase',
-                padding: '4px 12px',
+                padding: '4px 14px',
                 borderRadius: 999,
                 boxShadow: '0 4px 18px rgba(34,211,238,.45)',
+                whiteSpace: 'nowrap',
               }}
             >
               🔥 Most Popular
@@ -376,17 +500,10 @@ export default function StartPage() {
             >
               Basic
             </div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'baseline',
-                gap: 8,
-                marginBottom: 4,
-              }}
-            >
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
               <span
                 style={{
-                  fontSize: '2.4rem',
+                  fontSize: '2.6rem',
                   fontWeight: 900,
                   letterSpacing: '-0.02em',
                   color: '#F5F7FF',
@@ -395,31 +512,42 @@ export default function StartPage() {
               >
                 $4.99
               </span>
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600 }}>/mo</span>
             </div>
+            <p style={{ fontSize: '0.8rem', color: '#22D3EE', fontWeight: 800, marginBottom: 6 }}>
+              50 Fast Mode renders/month · Under $0.10 per video
+            </p>
             <div
               style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '4px 16px',
+                marginBottom: 20,
                 fontSize: '0.8rem',
-                color: '#22D3EE',
-                fontWeight: 800,
-                marginBottom: 18,
+                color: '#94A3B8',
+                fontWeight: 600,
               }}
             >
-              / month
+              <span>✓ AI script + voiceover</span>
+              <span>✓ Auto-captions engine</span>
+              <span>✓ Watermark-free MP4</span>
+              <span>✓ My Videos history</span>
             </div>
             <Link
               href="/signup?plan=basic"
               className="block sm:inline-block w-full sm:w-auto"
               style={{
-                padding: '14px 28px',
+                padding: '15px 32px',
                 borderRadius: 12,
                 background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
                 color: '#FFFFFF',
                 fontWeight: 900,
-                fontSize: '0.95rem',
+                fontSize: '1rem',
                 textDecoration: 'none',
                 boxShadow: '0 8px 28px rgba(34,211,238,.4)',
                 boxSizing: 'border-box',
-                minHeight: 48,
+                minHeight: 52,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -430,14 +558,43 @@ export default function StartPage() {
             <p
               style={{
                 fontSize: '0.78rem',
-                color: '#94A3B8',
-                marginTop: 12,
+                color: '#64748B',
+                marginTop: 10,
                 fontWeight: 600,
               }}
             >
               No charge for 7 days. Cancel anytime.
             </p>
           </div>
+        </section>
+
+        {/* Second CTA — repeat the green button after pricing */}
+        <section style={{ textAlign: 'center', marginBottom: 40 }}>
+          <Link
+            href="/signup"
+            className="block sm:inline-block w-full sm:w-auto"
+            style={{
+              padding: '16px 28px',
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#FFFFFF',
+              fontSize: '1rem',
+              fontWeight: 900,
+              letterSpacing: '-0.01em',
+              textDecoration: 'none',
+              boxShadow: '0 8px 28px rgba(16,185,129,.40)',
+              boxSizing: 'border-box',
+              minHeight: 52,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            Generate My First Short Free →
+          </Link>
+          <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: 10, fontWeight: 600 }}>
+            No credit card · 2 videos free · Ready in 60s
+          </p>
         </section>
 
         {/* Trust bar */}
@@ -448,17 +605,19 @@ export default function StartPage() {
             justifyContent: 'center',
             gap: 14,
             fontSize: '0.78rem',
-            color: '#94A3B8',
+            color: '#64748B',
             fontWeight: 600,
           }}
         >
           <span>🔒 Secure checkout</span>
           <span style={{ opacity: 0.4 }}>·</span>
-          <span>SSL</span>
+          <span>SSL encrypted</span>
           <span style={{ opacity: 0.4 }}>·</span>
           <span>Cancel anytime</span>
           <span style={{ opacity: 0.4 }}>·</span>
-          <span>Money-back if not satisfied</span>
+          <span>Money-back guarantee</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>No contracts</span>
         </section>
       </div>
       <Footer />
