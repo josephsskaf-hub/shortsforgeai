@@ -317,7 +317,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Top Nav ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10 lg:px-16">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -334,21 +334,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
           </Link>
 
-          {/* Center links — desktop. Push #078 dropped Features and added
-              Thumbnail with a NEW badge. */}
-          <div className="hidden items-center gap-7 md:flex">
-            <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
-            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Generator</Link>
-            <Link
-              href={THUMBNAIL_ROUTE}
-              className="flex items-center text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition"
-            >
-              Thumbnail
-              <span className="bg-[#22D3EE] text-[#05070D] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
-                NEW
-              </span>
-            </Link>
-            <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
+          {/* Center links — desktop. Push #135: full-width layout, larger text. */}
+          <div className="hidden items-center gap-9 md:flex">
+            <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
+            <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
+            <Link href="/my-videos" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">My Videos</Link>
+            <a href="#pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
           {/* Right side — desktop. Push #079: guest = Sign In (ghost) +
@@ -372,7 +363,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 )}
                 <Link
                   href="/generate"
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Dashboard
                 </Link>
@@ -380,7 +371,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   type="button"
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-200 disabled:opacity-60"
                 >
                   {signingOut ? 'Signing out…' : 'Sign Out'}
                 </button>
@@ -389,15 +380,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <>
                 <Link
                   href="/login"
-                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-[1rem] font-medium text-white transition-colors hover:bg-white/5"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
+                  className="rounded-lg bg-[#22D3EE] px-5 py-2.5 text-[1rem] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
                 >
-                  Sign Up
+                  Start Free
                 </Link>
               </>
             )}
@@ -432,7 +423,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 href="/signup"
                 className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
               >
-                Sign Up
+                Start Free
               </Link>
             )}
             <button
@@ -456,18 +447,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {navOpen && (
           <div className="md:hidden border-t border-white/[0.08] bg-[#0B1120]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
-              <Link onClick={() => setNavOpen(false)} href="/" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Home</Link>
-              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Generator</Link>
-              <Link
-                onClick={() => setNavOpen(false)}
-                href={THUMBNAIL_ROUTE}
-                className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]"
-              >
-                Thumbnail
-                <span className="bg-[#22D3EE] text-[#05070D] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
-                  NEW
-                </span>
-              </Link>
+              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
+              <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
+              <Link onClick={() => setNavOpen(false)} href="/my-videos" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">My Videos</Link>
               <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />
@@ -498,7 +480,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     href="/signup"
                     className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300"
                   >
-                    Sign Up
+                    Start Free
                   </Link>
                 </>
               )}
@@ -508,14 +490,40 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </nav>
 
       {/* ───────── Hero ─────────
-          Push #097 — conversion overhaul for the Google Ads funnel
-          (85 clicks / 0 signups). Headline now leads with the user's
-          input ("Any Idea") instead of the output, subheadline lists
-          exactly what's automated, and the primary CTA is a green
-          go-button with the trust microcopy stacked below it.
-          Push #126 — 2-column desktop layout: text left, vertical
-          demo video right. Video hidden on mobile. */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16">
+          Push #080 — full-width background video behind the hero.
+          Dark overlay keeps text legible. */}
+      <div className="relative overflow-hidden">
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 0.13,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+          src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        />
+        {/* Dark gradient overlay */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, rgba(5,7,13,0.7) 0%, rgba(5,7,13,0.45) 50%, rgba(5,7,13,0.85) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
         <div className="flex-1 min-w-0 text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
@@ -656,26 +664,39 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
         </div>
       </section>
+      </div>{/* end hero background video wrapper */}
 
       {/* ───────── AI Video Showcase ───────── */}
-      <section id="showcase" className="relative z-10 mx-auto max-w-6xl px-4 pt-4 pb-12 sm:px-6 sm:pb-16">
-        <div className="mb-8 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
-            Showcase
+      {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
+      <section id="showcase" className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6">
+        <div className="mb-10 text-center">
+          <div
+            className="mb-3 text-[11px] font-extrabold uppercase tracking-[.18em] text-cyan-400 flex items-center justify-center gap-3"
+          >
+            <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
+            Create Your First AI Short
+            <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            AI Video Showcase
+          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9] mb-3">
+            Pick a style.{' '}
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              AI does the rest.
+            </span>
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            See what ShortsForge can create.
+          <p className="mx-auto max-w-lg text-[14px] text-[#94A3B8] leading-relaxed">
+            Choose a format below — the AI writes the hook, records the voiceover, cuts the scenes and renders your Short automatically.
           </p>
         </div>
 
-        {/* Push #082 — real playable previews. Cards are now 9:16 (YouTube
-            Shorts) with a muted autoplay loop sourced from a royalty-free
-            CDN. The gradient poster stays as a fallback for slow networks
-            and as a paint target before the video's first frame lands. */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+        {/* 3 columns × 2 rows grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: '16px',
+          }}
+          className="sm:gap-5"
+        >
           {SHOWCASE_BASE.map((base, i) => {
             const card: ShowcaseCard = { ...base, videoUrl: showcaseVideos[`${i}`] ?? '' }
             return (

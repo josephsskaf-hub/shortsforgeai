@@ -29,7 +29,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What’s the difference between Fast Mode and Cinematic Mode?',
-    a: 'Fast Mode uses AI + stock footage and is included in all plans. Cinematic Mode uses Runway AI to generate custom scenes — available on Pro.',
+    a: 'Fast Mode uses our AI to write, voice, and edit with curated stock footage and is included in all plans. Cinematic Mode uses Runway AI to generate custom scenes — available on Pro.',
   },
   {
     q: 'What counts as 1 credit?',
@@ -47,7 +47,7 @@ function buildPricing() {
       priceSub: 'forever',
       features: [
         '2 Fast Mode videos to try',
-        'Pexels footage + AI voiceover',
+        'AI stock footage + voiceover',
         'Watermark-free MP4',
       ],
       cta: { label: 'Start Free', href: '/signup' },
@@ -59,7 +59,7 @@ function buildPricing() {
       priceSub: '/ month',
       features: [
         '50 Fast Mode videos/month',
-        'Pexels footage + AI voiceover',
+        'AI stock footage + voiceover',
         'Voiceover + captions',
         'Download MP4',
         'My Videos history',
@@ -557,7 +557,7 @@ export default function PricingPage() {
               <tbody>
                 {[
                   {
-                    label: 'Fast Mode (Pexels + AI voiceover)',
+                    label: 'Fast Mode (AI stock footage + voiceover)',
                     free: '✅ 2 videos',
                     basic: '✅ 50 / month',
                     pro: '✅ 100 / month',

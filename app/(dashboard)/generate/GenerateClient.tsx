@@ -135,35 +135,6 @@ interface RecentVideo {
   created_at: string
 }
 
-// Push #048 — Trending Hooks. Static templates the user can drop into the
-// prompt box (or just copy). Categories drive the colored tag on the chip.
-// Push #101 — retuned for the Money Facts channel: money, mindset,
-// investing topics plus a few history/facts hooks that already proved
-// they convert.
-const TRENDING_HOOKS: { text: string; category: string }[] = [
-  { text: '10 money facts that will blow your mind', category: 'Money' },
-  { text: 'Why billionaires wake up at 4am', category: 'Mindset' },
-  { text: 'The dark side of credit cards no one talks about', category: 'Money' },
-  { text: 'Why 90% of people will never be rich', category: 'Mindset' },
-  { text: 'Hidden secrets of the Federal Reserve', category: 'Money' },
-  { text: 'The most expensive mistake Warren Buffett ever made', category: 'Investing' },
-  { text: 'Why you should never put money in a savings account', category: 'Money' },
-  { text: 'The truth about passive income', category: 'Investing' },
-  { text: 'How the Rothschild family built their empire', category: 'History' },
-  { text: '5 countries where money does not exist', category: 'Facts' },
-  { text: 'The Roman invention we still use today', category: 'History' },
-  { text: 'What NASA discovered that they kept secret', category: 'Facts' },
-]
-
-const HOOK_CATEGORY_COLOR: Record<string, { fg: string; bg: string; border: string }> = {
-  Money: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
-  Mindset: { fg: '#a78bfa', bg: 'rgba(167,139,250,.10)', border: 'rgba(167,139,250,.30)' },
-  Investing: { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.30)' },
-  History: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
-  Facts: { fg: '#93c5fd', bg: 'rgba(147,197,253,.10)', border: 'rgba(147,197,253,.30)' },
-  Mystery: { fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.30)' },
-  Nature: { fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.30)' },
-}
 
 export default function GenerateClient() {
   const router = useRouter()
@@ -256,10 +227,7 @@ export default function GenerateClient() {
   // from /api/videos. Empty array = empty state; null only during initial
   // load. We never block the page on this — failures degrade to empty.
   const [recentVideos, setRecentVideos] = useState<RecentVideo[] | null>(null)
-  // Push #048 — transient "Copied!" feedback on trending-hook chips.
-  const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null)
-
-  // Push #095 — player resilience. When the B2/Creatomate CDN returns a 503
+// Push #095 — player resilience. When the B2/Creatomate CDN returns a 503
   // or hasn't propagated yet, the <video> element used to spin forever in
   // readyState 0. playerFailed flips true after the full retry budget is
   // spent so the UI can swap in a friendly fallback instead of an empty
@@ -1866,30 +1834,7 @@ export default function GenerateClient() {
         </section>
       )}
 
-      {/* Push #048 — Trending Hooks. Compact chip strip below the input.
-          "Use Hook" inserts the template into the prompt (without auto-
-          submitting), "Copy" puts it on the clipboard. Only shown on Step 1
-          so we don't clutter the brief / loading screens. */}
-      {showStep1 && (
-        <TrendingHooksSection
-          onUse={(text) => {
-            setPrompt(text)
-            if (fromHome) setFromHome(false)
-          }}
-          copiedIndex={copiedHookIndex}
-          onCopy={async (text, idx) => {
-            try {
-              await navigator.clipboard.writeText(text)
-              setCopiedHookIndex(idx)
-              setTimeout(() => setCopiedHookIndex((c) => (c === idx ? null : c)), 1800)
-            } catch {
-              // Clipboard can be denied — silent no-op.
-            }
-          }}
-        />
-      )}
-
-      {/* Push #048 — Visual History. Six most recent videos for this user,
+{/* Push #048 — Visual History. Six most recent videos for this user,
           read-only. Empty state when the list has 0 rows (which is the
           default on a fresh account or before the first successful
           generation persists to the videos table). */}
@@ -2685,121 +2630,6 @@ export default function GenerateClient() {
   )
 }
 
-// ─── Push #048 — Trending Hooks ─────────────────────────────────────────────
-// Static hook templates. "Use Hook" calls onUse to prefill the prompt
-// textarea; "Copy" calls onCopy and flashes the matching chip's button.
-function TrendingHooksSection({
-  onUse,
-  onCopy,
-  copiedIndex,
-}: {
-  onUse: (text: string) => void
-  onCopy: (text: string, idx: number) => void
-  copiedIndex: number | null
-}) {
-  return (
-    <section
-      className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
-    >
-      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
-            Trending Hooks
-          </div>
-          <h3 className="font-black text-base sm:text-lg" style={{ color: 'var(--text)' }}>
-            Steal a viral opener
-          </h3>
-        </div>
-        <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
-          Click <strong style={{ color: 'var(--text2)' }}>Use Hook</strong> to drop it into the box above.
-        </span>
-      </div>
-
-      <div className="th-grid">
-        {TRENDING_HOOKS.map((h, i) => {
-          const c = HOOK_CATEGORY_COLOR[h.category] ?? HOOK_CATEGORY_COLOR.Mystery
-          const isCopied = copiedIndex === i
-          return (
-            <div
-              key={i}
-              className="rounded-xl p-3 flex flex-col gap-2"
-              style={{
-                background: 'rgba(255,255,255,.03)',
-                border: '1px solid var(--border)',
-                minWidth: 0,
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className="text-[10px] font-black uppercase tracking-widest"
-                  style={{
-                    color: c.fg,
-                    background: c.bg,
-                    border: `1px solid ${c.border}`,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {h.category}
-                </span>
-              </div>
-              <p
-                className="text-sm font-bold"
-                style={{ color: 'var(--text)', lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}
-              >
-                “{h.text}”
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => onUse(h.text)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-bold flex-1"
-                  style={{
-                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-                    border: 'none',
-                    color: '#fff',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Use Hook
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCopy(h.text, i)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-bold"
-                  style={{
-                    background: isCopied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.04)',
-                    border: isCopied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
-                    color: isCopied ? '#34d399' : 'var(--muted2)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {isCopied ? '✓' : 'Copy'}
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <style jsx>{`
-        .th-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
-        }
-        @media (min-width: 900px) {
-          .th-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        }
-        @media (max-width: 520px) {
-          .th-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
-    </section>
-  )
-}
 
 // ─── Push #048 — Visual History ─────────────────────────────────────────────
 // Empty state when the user has no rows yet. Status chip on every card.
