@@ -360,65 +360,84 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               </button>
 
               {featuresOpen && (
+                /* Push #132 — dropdown sits at top:100% with paddingTop for
+                   visual gap so the mouse never crosses an empty zone and
+                   triggers onMouseLeave before the user can click. */
                 <div
                   style={{
                     position: 'absolute',
-                    top: 'calc(100% + 10px)',
+                    top: '100%',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(11,17,32,0.97)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 14,
-                    padding: '8px',
-                    minWidth: 220,
-                    boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(20px)',
+                    paddingTop: 10,
                     zIndex: 100,
                   }}
                 >
-                  <Link
-                    href="/generate"
-                    style={{ textDecoration: 'none' }}
+                  <div
+                    style={{
+                      background: 'rgba(11,17,32,0.97)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 14,
+                      padding: '8px',
+                      minWidth: 240,
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(20px)',
+                    }}
                   >
-                    <div
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-                        style={{ background: 'rgba(34,211,238,.12)', border: '1px solid rgba(34,211,238,.2)' }}
-                      >
-                        🎬
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-[#F1F5F9]">AI Video Generator</div>
-                        <div className="text-xs text-[#64748b] mt-0.5">Create viral Shorts in 60s</div>
-                      </div>
-                    </div>
-                  </Link>
-                  <Link
-                    href={THUMBNAIL_ROUTE}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <div
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-                        style={{ background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.2)' }}
-                      >
-                        🖼️
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-[#F1F5F9]">Thumbnail Generator</span>
-                          <span className="bg-[#22D3EE] text-[#05070D] text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                    {/* Row 1 — AI Video Generator */}
+                    <Link href="/generate" style={{ textDecoration: 'none' }}>
+                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(34,211,238,.12)', border: '1px solid rgba(34,211,238,.2)' }}>
+                          🎬
                         </div>
-                        <div className="text-xs text-[#64748b] mt-0.5">AI-powered click-bait covers</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="text-sm font-bold text-[#F1F5F9]">AI Video Generator</div>
+                          <div className="text-xs text-[#64748b] mt-0.5">Create viral Shorts in 60s</div>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    {/* Row 2 — Thumbnail Generator */}
+                    <Link href={THUMBNAIL_ROUTE} style={{ textDecoration: 'none' }}>
+                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.2)' }}>
+                          🖼️
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-[#F1F5F9]">Thumbnail Generator</span>
+                            <span className="bg-[#22D3EE] text-[#05070D] text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                          </div>
+                          <div className="text-xs text-[#64748b] mt-0.5">AI-powered click-bait covers</div>
+                        </div>
+                      </div>
+                    </Link>
+                    {/* Divider */}
+                    <div style={{ margin: '4px 8px', height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                    {/* Row 3 — Script Templates */}
+                    <Link href="/templates" style={{ textDecoration: 'none' }}>
+                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.2)' }}>
+                          📋
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="text-sm font-bold text-[#F1F5F9]">Script Templates</div>
+                          <div className="text-xs text-[#64748b] mt-0.5">Ready-made viral scripts</div>
+                        </div>
+                      </div>
+                    </Link>
+                    {/* Row 4 — My Videos */}
+                    <Link href="/my-videos" style={{ textDecoration: 'none' }}>
+                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.2)' }}>
+                          🎥
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="text-sm font-bold text-[#F1F5F9]">My Videos</div>
+                          <div className="text-xs text-[#64748b] mt-0.5">All your generated videos</div>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
