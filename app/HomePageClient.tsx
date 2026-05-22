@@ -103,7 +103,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [authChecked, setAuthChecked] = useState(!!initialUser)
   const [prompt, setPromptText] = useState('')
   const [navOpen, setNavOpen] = useState(false)
-  const [featuresOpen, setFeaturesOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   // Push #077 — pricing card selected state. Pro is selected by default.
@@ -335,103 +334,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
           </Link>
 
-          {/* Center links — desktop. Push #080: Features dropdown. */}
+          {/* Center links — desktop. Push #134: 4 clean links, no dropdown. */}
           <div className="hidden items-center gap-7 md:flex">
-            <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
-
-            <a href="#how-it-works" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">How it Works</a>
-
-            {/* Features dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => setFeaturesOpen(true)}
-              onMouseLeave={() => setFeaturesOpen(false)}
-            >
-              <button
-                type="button"
-                className="flex items-center gap-1 text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                Features
-                <svg
-                  width="12" height="12" viewBox="0 0 12 12" fill="none"
-                  style={{ transition: 'transform 0.18s ease', transform: featuresOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                >
-                  <path d="M2 4l4 4 4-4" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-
-              {featuresOpen && (
-                /* Push #132 — dropdown sits at top:100% with paddingTop for
-                   visual gap so the mouse never crosses an empty zone and
-                   triggers onMouseLeave before the user can click. */
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    paddingTop: 10,
-                    zIndex: 100,
-                  }}
-                >
-                  <div
-                    style={{
-                      background: 'rgba(11,17,32,0.97)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 14,
-                      padding: '8px',
-                      minWidth: 240,
-                      boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-                      backdropFilter: 'blur(20px)',
-                    }}
-                  >
-                    {/* Row 1 — AI Video Generator */}
-                    <Link href="/generate" style={{ textDecoration: 'none' }}>
-                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(34,211,238,.12)', border: '1px solid rgba(34,211,238,.2)' }}>
-                          🎬
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="text-sm font-bold text-[#F1F5F9]">AI Video Generator</div>
-                          <div className="text-xs text-[#64748b] mt-0.5">Create viral Shorts in 60s</div>
-                        </div>
-                      </div>
-                    </Link>
-                    {/* Row 2 — Thumbnail Generator */}
-                    <Link href={THUMBNAIL_ROUTE} style={{ textDecoration: 'none' }}>
-                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.2)' }}>
-                          🖼️
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-[#F1F5F9]">Thumbnail Generator</span>
-                            <span className="bg-[#22D3EE] text-[#05070D] text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
-                          </div>
-                          <div className="text-xs text-[#64748b] mt-0.5">AI-powered click-bait covers</div>
-                        </div>
-                      </div>
-                    </Link>
-                    {/* Divider */}
-                    <div style={{ margin: '4px 8px', height: 1, background: 'rgba(255,255,255,0.06)' }} />
-                    {/* Row 3 — My Videos */}
-                    <Link href="/my-videos" style={{ textDecoration: 'none' }}>
-                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.2)' }}>
-                          🎥
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="text-sm font-bold text-[#F1F5F9]">My Videos</div>
-                          <div className="text-xs text-[#64748b] mt-0.5">All your generated videos</div>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
+            <Link href="/generate" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
+            <Link href={THUMBNAIL_ROUTE} className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
+            <Link href="/my-videos" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">My Videos</Link>
             <a href="#pricing" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
@@ -540,19 +447,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {navOpen && (
           <div className="md:hidden border-t border-white/[0.08] bg-[#0B1120]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
-              <Link onClick={() => setNavOpen(false)} href="/" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Home</Link>
-              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Generator</Link>
-              <Link
-                onClick={() => setNavOpen(false)}
-                href={THUMBNAIL_ROUTE}
-                className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]"
-              >
-                Thumbnail
-                <span className="bg-[#22D3EE] text-[#05070D] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
-                  NEW
-                </span>
-              </Link>
-              <a onClick={() => setNavOpen(false)} href="#how-it-works" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">How it Works</a>
+              <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
+              <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
+              <Link onClick={() => setNavOpen(false)} href="/my-videos" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">My Videos</Link>
               <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />

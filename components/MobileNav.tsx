@@ -3,13 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// Push #133 — synced with sidebar: Examples removed, Thumbnail elevated.
+// Push #134 — 4 clean nav items matching top navbar (no Home, no dropdown).
 const NAV_ITEMS = [
-  { href: '/',                    icon: '🏠', label: 'Home',      exact: true  },
-  { href: '/generate',            icon: '⚡', label: 'Generate',  exact: false },
+  { href: '/generate',            icon: '⚡', label: 'Generator', exact: false },
   { href: '/thumbnail-generator', icon: '🖼️', label: 'Thumbnail', exact: false },
   { href: '/my-videos',           icon: '📼', label: 'My Videos', exact: false },
-  { href: '/pricing',             icon: '💎', label: 'Credits',   exact: false },
+  { href: '/pricing',             icon: '💎', label: 'Pricing',   exact: false },
 ]
 
 export default function MobileNav() {
