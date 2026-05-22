@@ -37,7 +37,7 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-// Push #175 — flat pricing, no first-month discount.
+// Push #191 — updated pricing $4.99/$9.90 + tech-forward copy.
 function buildPricing() {
   return [
     {
@@ -45,26 +45,26 @@ function buildPricing() {
       name: 'Free',
       price: '$0',
       priceSub: 'forever',
-      tagline: 'Run your first AI video. Zero cost.',
+      tagline: 'Sign up free. Get 2 Fast Mode videos — no card needed.',
       features: [
-        '2 AI-generated Shorts',
+        '2 Fast Mode renders included',
         'Stock footage + AI voiceover',
-        'Watermark-free output',
-        'Try the engine',
+        'Auto-captions',
+        'Watermark-free MP4 output',
       ],
-      cta: { label: 'Run Free', href: '/signup' },
+      cta: { label: 'Start Free — No Card', href: '/signup' },
     },
     {
       tier: 'basic',
       name: 'Basic',
-      price: '$9.90',
+      price: '$4.99',
       priceSub: '/ month',
-      tagline: 'Automate 50 Shorts/month. $0.20 per render.',
+      tagline: '50 Fast Mode renders/month. Under $0.10 per video.',
       features: [
         '50 Fast Mode renders/month',
-        'Stock footage + AI voiceover',
-        'Auto-captions',
-        'Download MP4 output',
+        'AI writes script + voiceover',
+        'Auto-captions pipeline',
+        'Download watermark-free MP4',
         'My Videos history',
       ],
       cta: { label: 'Automate Now', href: '#checkout' },
@@ -72,15 +72,15 @@ function buildPricing() {
     {
       tier: 'pro',
       name: 'Pro',
-      price: '$19.90',
+      price: '$9.90',
       priceSub: '/ month',
       tagline: 'Full production pipeline. 100 renders + Cinematic AI Engine.',
       features: [
         '100 Fast Mode renders/month',
         'Cinematic AI Engine — AI-generated scenes',
         'Advanced generation controls',
-        'Auto-captions',
-        'Download MP4 output',
+        'Auto-captions pipeline',
+        'Download watermark-free MP4',
         'My Videos history',
       ],
       cta: { label: 'Deploy Full Pipeline', href: '#checkout' },
@@ -216,7 +216,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two paid plans, flat monthly price. Under $0.20 per video — less than a cup of coffee for a viral Short.
+            Two paid plans, flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
           </p>
         </div>
 
@@ -756,7 +756,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — $9.90/mo'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.99/mo'}
           </button>
           <button
             type="button"
@@ -776,7 +776,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Pro — $19.90/mo 🔥'}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.90/mo 🔥'}
           </button>
         </div>
       )}

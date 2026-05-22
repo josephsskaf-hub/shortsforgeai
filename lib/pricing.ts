@@ -1,6 +1,6 @@
-// Push #175 — single source of truth for plan pricing.
-// Basic = $9.90/month  (50 Fast Mode videos)
-// Pro   = $19.90/month (100 Fast Mode videos + 1 Cinematic/month)
+// Push #191 — updated pricing.
+// Basic = $4.99/month  (50 Fast Mode videos)
+// Pro   = $9.90/month (100 Fast Mode videos + 1 Cinematic/month)
 //
 // All checkout buttons on every surface link to /api/stripe/checkout?tier=...
 // The server route handles currency detection (BRL for BR users) and creates
@@ -34,8 +34,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   basic: {
     tier: 'basic',
     name: 'Basic',
-    price: 9.90,
-    priceLabel: '$9.90',
+    price: 4.99,
+    priceLabel: '$4.99',
     periodLabel: '/ month',
     credits: 50,
     cta: 'Automate Now',
@@ -44,8 +44,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   pro: {
     tier: 'pro',
     name: 'Pro',
-    price: 19.90,
-    priceLabel: '$19.90',
+    price: 9.90,
+    priceLabel: '$9.90',
     periodLabel: '/ month',
     credits: 100,
     cta: 'Deploy Full Pipeline',

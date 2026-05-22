@@ -21,17 +21,17 @@ import { PLANS } from '@/lib/pricing'
 // counts can't drift between the homepage, /pricing, and this in-flow
 // upgrade card.
 const FREE_FEATURES = [
-  '2 AI-generated Shorts',
+  '2 Fast Mode renders included',
   'Stock footage + AI voiceover',
-  'Watermark-free output',
-  'Try the engine',
+  'Auto-captions',
+  'Watermark-free MP4 output',
 ]
 
 const BASIC_FEATURES = [
   `${PLANS.basic.credits} Fast Mode renders/month`,
-  'Stock footage + AI voiceover',
-  'Auto-captions',
-  'Download MP4 output',
+  'AI writes script + voiceover',
+  'Auto-captions pipeline',
+  'Download watermark-free MP4',
   'My Videos history',
 ]
 
@@ -39,8 +39,8 @@ const PRO_FEATURES = [
   `${PLANS.pro.credits} Fast Mode renders/month`,
   'Cinematic AI Engine — AI-generated scenes',
   'Advanced generation controls',
-  'Auto-captions',
-  'Download MP4 output',
+  'Auto-captions pipeline',
+  'Download watermark-free MP4',
   'My Videos history',
 ]
 
@@ -139,7 +139,7 @@ export default function PricingCards() {
           name={PLANS.free.name}
           price={PLANS.free.priceLabel}
           period="/ month"
-          tagline="Run your first AI video. Zero cost."
+          tagline="Sign up free. Get 2 Fast Mode videos — no card needed."
           features={FREE_FEATURES}
           cta={null}
         />
@@ -149,7 +149,7 @@ export default function PricingCards() {
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          tagline="Automate 50 Shorts/month. $0.20 per render."
+          tagline="50 Fast Mode renders/month. Under $0.10 per video."
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
