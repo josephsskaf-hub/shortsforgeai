@@ -1,4 +1,5 @@
 import { openai } from '@/lib/openai'
+import { detectVisualCategory } from '@/lib/visualAssetCategories'
 
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1'
 const RUNWAY_VERSION = '2024-11-06'
@@ -213,10 +214,10 @@ function extractRunwayError(data: Record<string, unknown>, rawText: string, http
 
 // Push #128 — Scene carries cinematic description + explicit Pexels keywords.
 // Push #132 — Scene carries per-scene voiceover + caption from the same source.
-// Push #211 — Creative Director upgrade: Scene now includes scenePurpose,
-// stockSearchQuery (premium Pexels query), negativeVisualPrompt (what NOT to
-// show), and visualIntent (documentary aesthetic directive). These fields drive
-// the visual selection engine toward premium, realistic, on-topic footage.
+// Push #211 — Creative Director upgrade: 8-field schema with stockSearchQuery,
+// negativeVisualPrompt, scenePurpose, and visualIntent.
+// Push #212 — visualCategory added. Maps to lib/visualAssetCategories.ts for
+// verified whitelist-based stock footage selection (no toy rockets, etc.).
 export interface Scene {
   description: string          // cinematic prose for Runway image/video AI
   searchKeywords: string       // 2-4 concrete nouns for Pexels (legacy compat)
@@ -224,6 +225,7 @@ export interface Scene {
   negativeVisualPrompt: string // comma-separated list of visual elements to avoid
   scenePurpose: string         // HOOK | ESCALATION | DISCOVERY | EXPLANATION | PAYOFF | FINAL_LINE
   visualIntent: string         // documentary aesthetic directive for the visual engine
+  visualCategory: string       // maps to VISUAL_CATEGORIES in visualAssetCategories.ts
   voiceover: string            // narration line TTS will speak for this scene
   caption: string              // ≤8-word on-screen caption derived from voiceover
 }
@@ -245,21 +247,25 @@ export function shortCaptionFromVoiceover(text: string, maxWords = 8): string {
 export async function generateScenes(prompt: string, count = 4): Promise<Scene[]> {
   const safeCount = Math.max(1, Math.min(9, Math.floor(count)))
 
-  // Push #211 — Creative Director Engine. gpt-4o with 8-field scene schema,
-  // premium stockSearchQuery, negativeVisualPrompt per topic, scene purpose
-  // labels, and documentary visual intent directives. This replaces the
-  // 4-field gpt-4o-mini prompt that generated generic/wrong Pexels footage.
+  // Push #211 — Creative Director Engine. gpt-4o with 9-field scene schema.
+  // Push #212 — Added visualCategory field for verified whitelist selection.
   const systemPrompt = `You are a Creative Director for premium faceless YouTube Shorts. You plan scenes that feel like mini-documentaries — stunning real footage, no filler visuals.
 
-Your job is to return a JSON array of scene objects. Each scene object must include EXACTLY these 8 fields:
+Your job is to return a JSON array of scene objects. Each scene object must include EXACTLY these 9 fields:
 1. "description" — cinematic shot description (~15-25 words), visual + specific + subject + setting + lighting + camera motion + mood. 9:16 vertical framing.
 2. "searchKeywords" — 2-4 concrete nouns for Pexels stock search (legacy compat). NEVER abstract words.
-3. "stockSearchQuery" — optimized Pexels search phrase (5-10 words). Full cinematic query like "Falcon 9 rocket launch fire night slow motion" or "ancient Egyptian pyramid aerial desert sunrise". This is the PRIMARY search — make it specific and vivid.
+3. "stockSearchQuery" — optimized Pexels search phrase (5-10 words). Full cinematic query like "Falcon 9 rocket launch fire night slow motion". This is the PRIMARY search — make it specific and vivid.
 4. "negativeVisualPrompt" — comma-separated list of visual elements NOT to show for this topic. Be specific.
 5. "scenePurpose" — exactly one of: HOOK | ESCALATION | DISCOVERY | EXPLANATION | PAYOFF | FINAL_LINE
-6. "visualIntent" — documentary aesthetic directive in 1 sentence. How should the shot FEEL? (e.g. "IMAX-scale awe, slow push-in revealing ancient engineering precision")
-7. "voiceover" — one narration line with a concrete fact, escalation, or payoff (10-22 words). Exact TTS text. No filler like "imagine…" or "what if…".
-8. "caption" — ≤8-word on-screen caption paraphrasing the voiceover. Punchy fragment. No period.
+6. "visualIntent" — documentary aesthetic directive in 1 sentence. How should the shot FEEL?
+7. "visualCategory" — pick the SINGLE best matching category from this list:
+   rocket_launch, booster_landing, mission_control, earth_orbit, spacecraft,
+   pyramids, ancient_egypt, deep_ocean, underwater_science, underground_city,
+   ancient_engineering, ancient_city, desert_ruins, dna_lab, mystery_document,
+   library_archive, forensic_case, general_science, general_documentary
+   Pick the most specific category that matches the scene content.
+8. "voiceover" — one narration line with a concrete fact, escalation, or payoff (10-22 words). Exact TTS text. No filler like "imagine…" or "what if…".
+9. "caption" — ≤8-word on-screen caption paraphrasing the voiceover. Punchy fragment. No period.
 
 You always respond with a valid JSON array ONLY — no markdown, no code fences, no commentary.`
 
@@ -267,52 +273,59 @@ You always respond with a valid JSON array ONLY — no markdown, no code fences,
 
 "${prompt}"
 
-TOPIC-SPECIFIC VISUAL RULES — read carefully before writing stockSearchQuery and negativeVisualPrompt:
+TOPIC-SPECIFIC VISUAL RULES — read carefully before writing stockSearchQuery, negativeVisualPrompt, and visualCategory:
 
 ROCKETS / SPACE / ELON MUSK / SPACEX / NASA / STARSHIP / FALCON 9:
-  stockSearchQuery MUST include real rocket/space nouns: "rocket launch fire", "falcon 9 landing ocean", "rocket booster smoke", "space rocket night sky", "earth from space orbit", "rocket engine exhaust", "launch pad flames", "astronaut space station"
-  negativeVisualPrompt MUST include: "mission control screens, engineers at computers, office monitors, music studio, people at desks, cartoon rocket, toy rocket, animation"
+  stockSearchQuery MUST use real rocket/space nouns: "Falcon 9 rocket launch fire night", "rocket launchpad smoke", "rocket booster landing ocean", "Earth from space orbit", "rocket engine exhaust"
+  negativeVisualPrompt MUST include: "toy rocket, cartoon rocket, model rocket, music studio, random office, lifestyle people, animation, children playground"
+  visualCategory: use rocket_launch (for launch scenes), booster_landing (landing), mission_control (control room), earth_orbit (space view), spacecraft (orbiting vehicle)
 
 ANCIENT HISTORY / PYRAMIDS / CIVILIZATIONS / ARCHAEOLOGY:
-  stockSearchQuery: use actual place + noun → "ancient pyramid egypt aerial desert", "roman colosseum stone ruins", "aztec temple mexico jungle", "greek parthenon columns marble"
-  negativeVisualPrompt: "modern buildings, CGI reconstruction, cartoon, animation, actors in costume, green screen"
+  stockSearchQuery: "Great Pyramid Giza aerial desert", "ancient Egypt hieroglyphics temple wall", "Roman Colosseum ancient ruins stone"
+  negativeVisualPrompt: "modern buildings, CGI reconstruction, cartoon, animation, actors in costume"
+  visualCategory: pyramids, ancient_egypt, ancient_city, ancient_engineering, desert_ruins
 
 DEEP OCEAN / MARINE BIOLOGY / UNDERWATER:
-  stockSearchQuery: "deep ocean underwater dark", "bioluminescent jellyfish dark water", "whale shark reef coral", "ocean floor submarine lights"
-  negativeVisualPrompt: "swimming pool, aquarium tank, snorkeling holiday, cartoon fish, animation"
+  stockSearchQuery: "deep ocean submarine lights dark", "bioluminescent jellyfish dark water", "ocean floor dark footage"
+  negativeVisualPrompt: "swimming pool, aquarium tank glass, snorkeling holiday, cartoon fish, animation, beach holiday"
+  visualCategory: deep_ocean, underwater_science
 
 MONEY / FINANCE / WEALTH / BITCOIN:
-  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen", "cryptocurrency bitcoin gold coin"
+  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen"
   negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code"
+  visualCategory: general_documentary
 
 TECH / AI / SILICON VALLEY / COMPUTERS:
-  stockSearchQuery: "computer chip circuit board macro", "data center server racks", "code terminal dark screen", "robot arm factory precision"
-  negativeVisualPrompt: "clipart robot, cartoon AI, generic office, people smiling at laptop, stock photo handshake"
+  stockSearchQuery: "computer chip circuit board macro", "data center server racks", "code terminal dark screen"
+  negativeVisualPrompt: "clipart robot, cartoon AI, generic office, people smiling at laptop, stock handshake"
+  visualCategory: dna_lab or general_science
 
-SCENE PURPOSE FLOW for ${safeCount} scenes: Start with HOOK (scene 1), build through ESCALATION and DISCOVERY, use EXPLANATION for core facts, PAYOFF for the climax, FINAL_LINE for the call-to-action or mic-drop ending.
+SCENE PURPOSE FLOW for ${safeCount} scenes: Start with HOOK (scene 1), build through ESCALATION and DISCOVERY, use EXPLANATION for core facts, PAYOFF for the climax, FINAL_LINE for the mic-drop ending.
 
-Return ONLY a valid JSON array of exactly ${safeCount} objects with all 8 fields.
+Return ONLY a valid JSON array of exactly ${safeCount} objects with all 9 fields.
 
-Example of a PERFECT scene object (rockets topic):
+Example PERFECT scene (rockets topic):
 {
   "description": "Falcon 9 rocket ascending through dark night sky, twin engine plumes blazing white-orange, slow-motion vertical climb above launch pad",
   "searchKeywords": "rocket launch fire night",
   "stockSearchQuery": "Falcon 9 rocket launch fire night slow motion",
-  "negativeVisualPrompt": "mission control screens, engineers at computers, music studio, cartoon rocket, toy rocket",
+  "negativeVisualPrompt": "toy rocket, cartoon rocket, music studio, random office, animation",
   "scenePurpose": "HOOK",
-  "visualIntent": "IMAX-scale awe — viewer feels the raw power of 1.7 million pounds of thrust in the first 3 seconds",
+  "visualIntent": "IMAX-scale awe — viewer feels raw thrust power in the first 3 seconds",
+  "visualCategory": "rocket_launch",
   "voiceover": "SpaceX's Falcon 9 generates more thrust than 18 Boeing 747 engines at full power.",
   "caption": "More thrust than 18 jumbo jets"
 }
 
-Example of a PERFECT scene object (pyramids topic):
+Example PERFECT scene (pyramids topic):
 {
   "description": "Aerial drone shot pulling back from Great Pyramid apex, revealing full Giza plateau at golden hour, warm desert haze, cinematic wide",
   "searchKeywords": "pyramid egypt desert aerial",
   "stockSearchQuery": "Great Pyramid Giza aerial desert golden hour drone",
   "negativeVisualPrompt": "modern buildings, CGI reconstruction, cartoon, actors in costume",
   "scenePurpose": "DISCOVERY",
-  "visualIntent": "Planetary-scale perspective — the ancient stone structure dwarfs everything around it, triggering awe",
+  "visualIntent": "Planetary-scale perspective — ancient stone structure dwarfs everything, triggering awe",
+  "visualCategory": "pyramids",
   "voiceover": "The Great Pyramid was the tallest structure on Earth for 3,800 years — until a cathedral surpassed it in 1311.",
   "caption": "Tallest building for 3,800 years"
 }`
@@ -352,13 +365,15 @@ Example of a PERFECT scene object (pyramids topic):
         // Legacy fallback: plain string → use as description with safe defaults
         const description = item.trim()
         const voiceover = description
+        const autoCategory = detectVisualCategory(prompt, voiceover) ?? 'general_documentary'
         return {
           description,
           searchKeywords: prompt.slice(0, 40),
           stockSearchQuery: prompt.slice(0, 60),
-          negativeVisualPrompt: 'cartoon, animation, clipart',
+          negativeVisualPrompt: 'cartoon, animation, clipart, toy',
           scenePurpose: 'EXPLANATION',
           visualIntent: 'Documentary style, cinematic and grounded',
+          visualCategory: autoCategory,
           voiceover,
           caption: shortCaptionFromVoiceover(voiceover),
         }
@@ -371,18 +386,27 @@ Example of a PERFECT scene object (pyramids topic):
         const negativeVisualPrompt = (typeof obj.negativeVisualPrompt === 'string' ? obj.negativeVisualPrompt : '').trim()
         const scenePurpose = (typeof obj.scenePurpose === 'string' ? obj.scenePurpose : '').trim()
         const visualIntent = (typeof obj.visualIntent === 'string' ? obj.visualIntent : '').trim()
+        const rawVisualCategory = (typeof obj.visualCategory === 'string' ? obj.visualCategory : '').trim()
         const rawVoiceover = (typeof obj.voiceover === 'string' ? obj.voiceover : '').trim()
         const rawCaption = (typeof obj.caption === 'string' ? obj.caption : '').trim()
         if (description) {
           const voiceover = rawVoiceover || description
           const caption = shortCaptionFromVoiceover(rawCaption || voiceover)
+          const sqFinal = stockSearchQuery || searchKeywords || prompt.slice(0, 60)
+          // Prefer GPT-assigned visualCategory; fall back to auto-detection from content
+          const visualCategory =
+            rawVisualCategory ||
+            detectVisualCategory(sqFinal, voiceover) ||
+            'general_documentary'
+          console.log(`[scene] purpose=${scenePurpose || 'EXPLANATION'} category=${visualCategory} query="${sqFinal.slice(0, 60)}"`)
           return {
             description,
             searchKeywords: searchKeywords || prompt.slice(0, 40),
-            stockSearchQuery: stockSearchQuery || searchKeywords || prompt.slice(0, 60),
-            negativeVisualPrompt: negativeVisualPrompt || 'cartoon, animation, clipart',
+            stockSearchQuery: sqFinal,
+            negativeVisualPrompt: negativeVisualPrompt || 'cartoon, animation, clipart, toy',
             scenePurpose: scenePurpose || 'EXPLANATION',
             visualIntent: visualIntent || 'Documentary style, cinematic and grounded',
+            visualCategory,
             voiceover,
             caption,
           }
@@ -396,13 +420,15 @@ Example of a PERFECT scene object (pyramids topic):
   while (scenes.length < safeCount) {
     const description = `Cinematic vertical 9:16 shot inspired by: ${prompt}`
     const voiceover = `Here is something most people do not know about ${prompt}.`
+    const autoCategory = detectVisualCategory(prompt, voiceover) ?? 'general_documentary'
     scenes.push({
       description,
       searchKeywords: prompt.slice(0, 40),
       stockSearchQuery: prompt.slice(0, 60),
-      negativeVisualPrompt: 'cartoon, animation, clipart',
+      negativeVisualPrompt: 'cartoon, animation, clipart, toy',
       scenePurpose: 'EXPLANATION',
       visualIntent: 'Documentary style, cinematic and grounded',
+      visualCategory: autoCategory,
       voiceover,
       caption: shortCaptionFromVoiceover(voiceover),
     })

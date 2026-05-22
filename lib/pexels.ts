@@ -9,6 +9,20 @@
 // returns null/[] rather than throwing, so the caller can fall back to the
 // curated stock library in `lib/stockLibrary.ts` and the user still gets a
 // video.
+//
+// Push #210 — Space/rocket override: scrub Pexels-incompatible terms.
+// Push #211 — stockSearchQuery as primary premium query.
+// Push #212 — Verified Visual Asset Whitelist: category-based multi-query
+// search with URL slug rejection filtering. Never accept toy rockets,
+// cartoon pyramids, or music studios. Fallback hierarchy: exact clip →
+// fallback query clip → no result (stockLibrary handles the rest).
+
+import {
+  VISUAL_CATEGORIES,
+  detectVisualCategory,
+  isSlugRejected,
+  type VisualCategory,
+} from './visualAssetCategories'
 
 const PEXELS_API = 'https://api.pexels.com/videos'
 
@@ -25,15 +39,16 @@ interface PexelsVideo {
   width: number
   height: number
   duration: number
+  url: string          // Pexels page URL — slug is used for filtering
   video_files: PexelsVideoFile[]
 }
 
 /**
- * Search Pexels Videos for a query and return up to `perPage` portrait MP4
- * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
- * or the search fails — never throws.
+ * Search Pexels Videos for a query.
+ * Returns the full PexelsVideo objects so callers can inspect URLs for filtering.
+ * Returns [] when PEXELS_API_KEY is missing or the search fails — never throws.
  */
-export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
+async function searchPexelsVideoObjects(query: string, perPage = 5): Promise<PexelsVideo[]> {
   const apiKey = process.env.PEXELS_API_KEY
   if (!apiKey) return []
 
@@ -60,31 +75,62 @@ export async function searchPexelsVideos(query: string, perPage = 3): Promise<st
     return []
   }
 
-  const out: string[] = []
-  for (const v of data.videos ?? []) {
-    const files = (v.video_files ?? [])
-      .filter((f) => f.file_type === 'video/mp4' && f.quality !== 'hls')
-      .slice()
-      .sort((a, b) => b.width - a.width)
-    if (files.length === 0) continue
-    const hd = files.find((f) => f.quality === 'hd') ?? files[0]
-    if (hd?.link) out.push(hd.link)
-  }
-  return out
+  return data.videos ?? []
 }
 
 /**
- * Resolve a single best-match Pexels clip URL for a scene.
- *
- * Push #128 — accepts explicit `searchKeywords` (topic-specific, e.g.
- * "pyramid egypt desert") so Pexels gets the actual subject matter instead
- * of the first 3 words of a cinematic Runway description. Falls back to
- * stopword-filtered extraction from the description if keywords are empty.
+ * Pick the best MP4 file from a PexelsVideo — HD portrait preferred.
+ * Returns null if no valid MP4 found.
  */
-// Push #210 — keywords that, when present in the search query, signal a
-// space/rocket topic. We strip known bad Pexels terms (like "screens",
-// "engineers", "mission control") that return music studios or offices, and
-// ensure every space query contains at least one strong rocket visual noun.
+function pickBestFile(video: PexelsVideo): string | null {
+  const files = (video.video_files ?? [])
+    .filter((f) => f.file_type === 'video/mp4' && f.quality !== 'hls')
+    .slice()
+    .sort((a, b) => b.width - a.width)
+  if (files.length === 0) return null
+  const hd = files.find((f) => f.quality === 'hd') ?? files[0]
+  return hd?.link ?? null
+}
+
+/**
+ * Search Pexels, filter by negative terms via URL slug, return the first
+ * acceptable clip URL. Returns null if nothing passes the filter.
+ */
+async function searchAndFilter(
+  query: string,
+  category: VisualCategory | null,
+  sceneLabel: string,
+): Promise<string | null> {
+  const videos = await searchPexelsVideoObjects(query, 5)
+  if (videos.length === 0) return null
+
+  for (const video of videos) {
+    const pageUrl = video.url ?? ''
+    const negTerms = category?.negativeTerms ?? []
+
+    const rejected = pageUrl
+      ? isSlugRejected(pageUrl, negTerms, category?.id)
+      : false
+
+    if (rejected) {
+      const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? pageUrl.slice(-60)
+      console.log(`[visual] ${sceneLabel} rejected slug="${slug}" reason=negative_term`)
+      continue
+    }
+
+    const link = pickBestFile(video)
+    if (link) {
+      const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? ''
+      console.log(`[visual] ${sceneLabel} ACCEPTED slug="${slug}" url="${link.slice(0, 80)}"`)
+      return link
+    }
+  }
+
+  return null
+}
+
+// Push #210 — Space/rocket override. Kept for non-category queries as a
+// second safety net. Category system is the primary guard.
 const SPACE_TRIGGER_WORDS = new Set([
   'rocket', 'launch', 'spacex', 'falcon', 'booster', 'starship', 'nasa',
   'orbit', 'spacecraft', 'astronaut', 'reusable', 'elon', 'musk', 'raptor',
@@ -94,59 +140,130 @@ const SPACE_BANNED_TERMS = [
   'screens', 'engineers', 'mission control', 'monitors', 'control room',
   'people watching', 'team', 'technicians',
 ]
-const SPACE_BOOST_TERM = 'rocket launch fire'
+const SPACE_BOOST_TERM = 'rocket launch fire night'
 
-// Push #211 — Creative Director upgrade. `stockSearchQuery` is the primary
-// premium search phrase (e.g. "Falcon 9 rocket launch fire night slow motion")
-// produced by gpt-4o. It is used before `searchKeywords` when available.
+/**
+ * Resolve a single best-match Pexels clip URL for a scene.
+ *
+ * Push #212 — uses visual category system:
+ *   1. Detect category from stockSearchQuery + voiceover
+ *   2. Try category's allowedQueries in sequence (filtered by slug)
+ *   3. Fall through to stockSearchQuery (filtered)
+ *   4. Fall through to searchKeywords (filtered)
+ *   5. Fallback queries from category
+ *   6. Returns null if nothing passes (stockLibrary handles it)
+ */
 export async function getPexelsVideoForScene(
   searchKeywords: string,
   fallbackDescription?: string,
   stockSearchQuery?: string,
+  voiceoverHint?: string,
 ): Promise<string | null> {
-  // Push #211 — prefer the premium stockSearchQuery over the legacy keywords
-  const rawQuery = (stockSearchQuery ?? searchKeywords ?? '').replace(/[^a-zA-Z0-9 ]/g, ' ').trim()
-  let query = rawQuery
+  const primaryQuery = (stockSearchQuery ?? searchKeywords ?? '').trim()
+  const sceneHint = voiceoverHint ?? primaryQuery
 
-  // Push #210 — Space/rocket override: if the query triggers space keywords,
-  // scrub any Pexels-incompatible terms (screens, engineers, etc.) and ensure
-  // the query contains a strong rocket visual noun so Pexels returns real footage.
-  const queryLower = query.toLowerCase()
-  const isSpaceTopic = Array.from(SPACE_TRIGGER_WORDS).some((w) => queryLower.includes(w))
-  if (isSpaceTopic) {
-    let cleaned = query
-    for (const banned of SPACE_BANNED_TERMS) {
-      cleaned = cleaned.replace(new RegExp(banned, 'gi'), '').replace(/\s+/g, ' ').trim()
+  // Detect visual category
+  const categoryId = detectVisualCategory(primaryQuery, sceneHint)
+  const category = categoryId ? (VISUAL_CATEGORIES[categoryId] ?? null) : null
+
+  console.log(
+    `[visual] category="${categoryId ?? 'none'}" primaryQuery="${primaryQuery.slice(0, 60)}"`,
+  )
+
+  // ── Step 1: try each allowedQuery from the category (ordered, filtered) ──
+  if (category) {
+    for (const q of category.allowedQueries) {
+      const url = await searchAndFilter(q, category, `cat=${categoryId}`)
+      if (url) return url
+      console.log(`[visual] cat query MISS: "${q}"`)
     }
-    // If after cleaning we've lost all meaningful content, fall back to the boost term
-    if (!cleaned || cleaned.split(/\s+/).filter((w) => w.length > 2).length < 2) {
-      cleaned = SPACE_BOOST_TERM
-    }
-    query = cleaned
   }
 
-  // If no query yet, fall back to extracting meaningful words from the
-  // description — skip leading stopwords ("a", "the", "lone", etc.) so we
-  // don't search for "A lone photographer" on a pyramid video.
-  if (!query && fallbackDescription) {
+  // ── Step 2: try the stockSearchQuery (premium query from gpt-4o) ──
+  if (primaryQuery) {
+    // Push #210 safety net: scrub bad space terms from the raw query
+    let safeQuery = primaryQuery
+    const qLower = primaryQuery.toLowerCase()
+    const isSpace = Array.from(SPACE_TRIGGER_WORDS).some((w) => qLower.includes(w))
+    if (isSpace) {
+      let cleaned = primaryQuery
+      for (const banned of SPACE_BANNED_TERMS) {
+        cleaned = cleaned.replace(new RegExp(banned, 'gi'), '').replace(/\s+/g, ' ').trim()
+      }
+      if (!cleaned || cleaned.split(/\s+/).filter((w) => w.length > 2).length < 2) {
+        cleaned = SPACE_BOOST_TERM
+      }
+      safeQuery = cleaned
+      if (safeQuery !== primaryQuery) {
+        console.log(`[visual] space-scrubbed query: "${safeQuery}"`)
+      }
+    }
+
+    const url = await searchAndFilter(safeQuery, category, 'primary')
+    if (url) return url
+    console.log(`[visual] primary query MISS: "${safeQuery.slice(0, 60)}"`)
+  }
+
+  // ── Step 3: try searchKeywords (legacy fallback) ──
+  const kw = (searchKeywords ?? '').trim()
+  if (kw && kw !== primaryQuery) {
+    const url = await searchAndFilter(kw, category, 'keywords')
+    if (url) return url
+    console.log(`[visual] keywords MISS: "${kw}"`)
+  }
+
+  // ── Step 4: try category fallback queries ──
+  if (category && category.allowedQueries.length > 0) {
+    // Try broader single-word variants of each allowed query
+    const broadFallbacks = [
+      category.allowedQueries[0].split(' ').slice(0, 3).join(' '),
+      category.allowedQueries[1]?.split(' ').slice(0, 3).join(' ') ?? '',
+    ].filter(Boolean)
+
+    for (const q of broadFallbacks) {
+      const url = await searchAndFilter(q, category, 'broad_fallback')
+      if (url) return url
+    }
+  }
+
+  // ── Step 5: description-derived keywords as last resort ──
+  if (fallbackDescription) {
     const STOP = new Set([
       'a', 'an', 'the', 'this', 'that', 'in', 'on', 'at', 'of', 'is', 'are',
       'with', 'and', 'or', 'to', 'into', 'from', 'by', 'for', 'as', 'its',
       'lone', 'soft', 'golden', 'slow', 'gentle', 'cinematic', 'dramatic',
     ])
-    query = (fallbackDescription)
+    const derived = fallbackDescription
       .replace(/[^a-zA-Z0-9 ]/g, ' ')
       .split(/\s+/)
       .filter((w) => w.length > 2 && !STOP.has(w.toLowerCase()))
       .slice(0, 4)
       .join(' ')
       .trim()
+
+    if (derived) {
+      const url = await searchAndFilter(derived, category, 'description_derived')
+      if (url) return url
+      console.log(`[visual] description-derived MISS: "${derived}"`)
+    }
   }
 
-  if (!query) return null
+  console.log(`[visual] ALL queries exhausted — returning null for fallback`)
+  return null
+}
 
-  console.log(`[pexels] query="${query}" (stockSearchQuery="${stockSearchQuery ?? ''}" searchKeywords="${searchKeywords}")`)
-
-  const urls = await searchPexelsVideos(query, 1)
-  return urls[0] ?? null
+/**
+ * Search Pexels Videos for a query and return up to `perPage` portrait MP4
+ * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
+ * or the search fails — never throws.
+ * Kept for legacy callers outside the scene pipeline.
+ */
+export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
+  const videos = await searchPexelsVideoObjects(query, perPage)
+  const out: string[] = []
+  for (const v of videos) {
+    const link = pickBestFile(v)
+    if (link) out.push(link)
+  }
+  return out
 }

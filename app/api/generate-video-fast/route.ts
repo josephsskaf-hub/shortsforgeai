@@ -126,10 +126,19 @@ export async function POST(req: NextRequest) {
     // Curated stockLibrary is the fallback so we always return something.
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        // Push #211 — pass stockSearchQuery as primary premium query
-        const pexelsUrl = await getPexelsVideoForScene(scene.searchKeywords, scene.description, scene.stockSearchQuery)
+        // Push #212 — pass visualCategory + voiceover for whitelist-based filtering
+        const pexelsUrl = await getPexelsVideoForScene(
+          scene.searchKeywords,
+          scene.description,
+          scene.stockSearchQuery,
+          scene.voiceover,
+        )
         if (pexelsUrl) return pexelsUrl
-        const lib = pickLibraryClips(scene.searchKeywords || scene.description, 1, idx)
+        // stockLibrary fallback uses visualCategory for smarter tag matching
+        const libQuery = scene.visualCategory && scene.visualCategory !== 'general_documentary'
+          ? scene.visualCategory.replace(/_/g, ' ')
+          : (scene.searchKeywords || scene.description)
+        const lib = pickLibraryClips(libQuery, 1, idx)
         return lib[0]?.url ?? ''
       })
     )
