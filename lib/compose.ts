@@ -41,6 +41,14 @@ export interface ComposeInputs {
    * Optional: when absent the window falls back to the requested duration.
    */
   realAudioDuration?: number
+  /**
+   * Push #175 — optional pre-computed word-level timing from Whisper
+   * transcription. Each entry aligns with the corresponding caption segment
+   * produced by buildCaptionSegments(voiceoverScript, 7). When present, the
+   * caption builder uses these exact timestamps instead of the proportional
+   * word-count approximation, eliminating caption/narrator desync.
+   */
+  whisperTimings?: Array<{ time: number; duration: number }>
 }
 
 export interface CreatomateRenderState {
@@ -132,6 +140,95 @@ export function estimateMp3DurationSeconds(buffer: Buffer): number {
   const bytesPerSecond = TTS_MP3_BITRATE_BPS / 8
   const seconds = buffer.length / bytesPerSecond
   return Number.isFinite(seconds) && seconds > 0 ? seconds : 0
+}
+
+// ---------------------------------------------------------------------------
+// Push #175 — Whisper-based caption sync helpers
+// ---------------------------------------------------------------------------
+
+export interface WhisperWord {
+  word: string
+  start: number
+  end: number
+}
+
+/**
+ * Call OpenAI Whisper on the TTS audio buffer to obtain word-level timestamps.
+ * Returns an empty array if the call fails so a Whisper outage never blocks
+ * the render — proportional distribution is the fallback.
+ */
+export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<WhisperWord[]> {
+  try {
+    const { openai } = await import('@/lib/openai')
+    const blob = new Blob(
+      [new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)],
+      { type: 'audio/mpeg' },
+    )
+    const file = new File([blob], 'voiceover.mp3', { type: 'audio/mpeg' })
+    // verbose_json + word granularity returns {word, start, end} per token.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const transcription: any = await openai.audio.transcriptions.create({
+      model: 'whisper-1',
+      file: file as unknown as Parameters<typeof openai.audio.transcriptions.create>[0]['file'],
+      response_format: 'verbose_json',
+      timestamp_granularities: ['word'],
+    } as Parameters<typeof openai.audio.transcriptions.create>[0])
+    const words: WhisperWord[] = transcription?.words ?? []
+    console.log(`[compose] Whisper transcribed ${words.length} words`)
+    return words
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.warn('[compose] Whisper transcription failed, using proportional fallback:', msg)
+    return []
+  }
+}
+
+/**
+ * Map Whisper word-level timestamps to caption segment boundaries.
+ *
+ * Strategy: sequential word-count assignment.  Each caption segment owns
+ * the next N words from the Whisper transcript (N = word count of that
+ * segment's text).  The segment starts when its first word starts and ends
+ * when the next segment starts (or at the caption-window end for the last).
+ *
+ * Returns [{time, duration}] aligned 1:1 with `segments`, or [] on failure.
+ */
+export function mapWhisperTimingsToSegments(
+  words: WhisperWord[],
+  segments: Array<{ text: string }>,
+  totalAudioDuration: number,
+  ctaTailSeconds: number,
+): Array<{ time: number; duration: number }> {
+  if (words.length === 0 || segments.length === 0) return []
+
+  const result: Array<{ time: number; duration: number }> = []
+  let wIdx = 0
+
+  for (let i = 0; i < segments.length; i++) {
+    const nWords = Math.max(1, (segments[i].text ?? '').trim().split(/\s+/).filter(Boolean).length)
+
+    if (wIdx >= words.length) {
+      console.warn('[compose] mapWhisperTimings: ran out of words at segment', i)
+      return []
+    }
+
+    const segStartWord = words[wIdx]
+    const captionWindowEnd = Math.max(0, totalAudioDuration - ctaTailSeconds)
+    const isLast = i === segments.length - 1
+    const nextWordStart =
+      !isLast && wIdx + nWords < words.length
+        ? words[wIdx + nWords].start
+        : captionWindowEnd
+    const duration = Math.max(0.1, nextWordStart - segStartWord.start)
+
+    result.push({
+      time: Math.round(segStartWord.start * 1000) / 1000,
+      duration: Math.round(duration * 1000) / 1000,
+    })
+    wIdx += nWords
+  }
+
+  return result
 }
 
 function wordCount(s: string): number {
@@ -377,6 +474,7 @@ export function buildCreatomateSource({
   sceneCaptions,
   duration,
   realAudioDuration,
+  whisperTimings,
 }: ComposeInputs): Record<string, unknown> {
   const totalDuration = clamp(Math.round(duration), 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
@@ -483,20 +581,36 @@ export function buildCreatomateSource({
     const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
     const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
     const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
+    // Push #175 — use Whisper word-level timestamps when available. Fall back
+    // to proportional word-count distribution only when transcription was
+    // absent, failed, or returned a different segment count.
+    const hasWhisperTimings =
+      Array.isArray(whisperTimings) && whisperTimings.length === captionsClean.length
     let elapsed = 0
     captionsClean.forEach((segment, idx) => {
-      const portion = (wordCount(segment.text) || 1) / totalWords
-      const isLast = idx === captionsClean.length - 1
-      // Last slot absorbs rounding drift so captions fill the window exactly.
-      const slot = isLast ? Math.max(0.1, captionWindow - elapsed) : portion * captionWindow
+      let time: number
+      let slot: number
+      if (hasWhisperTimings) {
+        // Exact timings from Whisper — captions key to the narrator's actual
+        // speech; no elapsed tracking needed.
+        time = whisperTimings![idx].time
+        slot = whisperTimings![idx].duration
+      } else {
+        // Proportional fallback: each segment gets a slice proportional to
+        // word count. Last slot absorbs rounding drift.
+        const portion = (wordCount(segment.text) || 1) / totalWords
+        const isLast = idx === captionsClean.length - 1
+        slot = isLast ? Math.max(0.1, captionWindow - elapsed) : portion * captionWindow
+        time = elapsed
+        elapsed += slot
+      }
       const elementsForCaption = buildCaptionElements({
         text: segment.text,
-        time: round3(elapsed),
+        time: round3(time),
         duration: round3(slot),
         highlight: segment.highlight,
       })
       elements.push(...elementsForCaption)
-      elapsed += slot
     })
   }
 

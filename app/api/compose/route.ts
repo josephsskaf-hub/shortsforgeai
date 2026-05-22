@@ -4,12 +4,15 @@ import {
   buildCreatomateSource,
   estimateMp3DurationSeconds,
   generateTTS,
+  mapWhisperTimingsToSegments,
   pollCreatomateRender,
   scaleVoiceoverScript,
   submitCreatomateRender,
   targetWordCount,
+  transcribeTTSWithTimestamps,
   uploadVoiceoverToSupabase,
 } from '@/lib/compose'
+import { buildCaptionSegments } from '@/lib/openai'
 import { fetchUserPlan } from '@/lib/plan'
 
 export const maxDuration = 60
@@ -176,6 +179,32 @@ export async function POST(req: NextRequest) {
       `[compose] estimated TTS duration: ${realAudioDuration.toFixed(1)}s (requested ${duration}s)`,
     )
 
+    // Step 2b — Push #175: transcribe the TTS audio via Whisper to get
+    // word-level timestamps. These are mapped to caption segments so captions
+    // display in exact sync with the narrator voice. Non-fatal: if Whisper
+    // fails we fall through to proportional distribution in compose.ts.
+    let whisperTimings: Array<{ time: number; duration: number }> | undefined
+    try {
+      const whisperWords = await transcribeTTSWithTimestamps(audioBuffer)
+      if (whisperWords.length > 0) {
+        const captionSegs = buildCaptionSegments(scaledScript, 7)
+        if (captionSegs.length > 0) {
+          const audioDur = realAudioDuration > 0 ? realAudioDuration : duration
+          const mapped = mapWhisperTimingsToSegments(whisperWords, captionSegs, audioDur, 2.5)
+          if (mapped.length === captionSegs.length) {
+            whisperTimings = mapped
+            console.log(`[compose] Whisper sync: ${mapped.length} caption segments mapped`)
+          } else {
+            console.warn(
+              `[compose] Whisper mismatch (${mapped.length} vs ${captionSegs.length}) — proportional fallback`,
+            )
+          }
+        }
+      }
+    } catch (whisperErr) {
+      console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
+    }
+
     // Step 3 — Upload TTS to Supabase storage.
     let voiceoverUrl: string
     try {
@@ -228,6 +257,7 @@ export async function POST(req: NextRequest) {
         sceneCaptions,
         duration,
         realAudioDuration,
+        whisperTimings,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
