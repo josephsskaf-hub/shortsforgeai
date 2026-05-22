@@ -573,15 +573,17 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             e.preventDefault()
             goToGenerate()
           }}
-          className="mx-auto mt-8 flex w-full max-w-[770px] flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-6 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-8"
+          className="mx-auto mt-8 flex w-full max-w-[883px] flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[#0B1120] p-6 shadow-[0_18px_50px_rgba(0,0,0,.5)] focus-within:border-blue-500/60 sm:p-8"
+          style={{ minHeight: 368 }}
         >
           <textarea
             value={prompt}
             onChange={(e) => setPromptText(e.target.value)}
             placeholder="Or type your video idea here..."
             maxLength={5000}
-            rows={4}
+            rows={8}
             className="w-full flex-1 resize-none rounded-xl bg-transparent px-2 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#94A3B8] outline-none"
+            style={{ minHeight: 220 }}
           />
           <button
             type="submit"
