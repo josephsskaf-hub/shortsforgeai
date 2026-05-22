@@ -52,8 +52,8 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         className="md:hidden flex items-center justify-center flex-shrink-0"
         style={{
           width: 32, height: 32, borderRadius: 10, textDecoration: 'none',
-          background: '#151C2F',
-          border: '1px solid rgba(59,130,246,0.4)',
+          background: 'rgba(34,211,238,0.08)',
+          border: '1px solid rgba(34,211,238,0.35)',
           boxShadow: '0 0 14px rgba(34,211,238,0.3)',
         }}
         aria-label="Home"

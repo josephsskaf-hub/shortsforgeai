@@ -339,6 +339,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="hidden items-center gap-7 md:flex">
             <Link href="/" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Home</Link>
 
+            <a href="#how-it-works" className="text-sm font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">How it Works</a>
+
             {/* Features dropdown */}
             <div
               className="relative"
@@ -413,19 +415,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     </Link>
                     {/* Divider */}
                     <div style={{ margin: '4px 8px', height: 1, background: 'rgba(255,255,255,0.06)' }} />
-                    {/* Row 3 — Script Templates */}
-                    <Link href="/templates" style={{ textDecoration: 'none' }}>
-                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.2)' }}>
-                          📋
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="text-sm font-bold text-[#F1F5F9]">Script Templates</div>
-                          <div className="text-xs text-[#64748b] mt-0.5">Ready-made viral scripts</div>
-                        </div>
-                      </div>
-                    </Link>
-                    {/* Row 4 — My Videos */}
+                    {/* Row 3 — My Videos */}
                     <Link href="/my-videos" style={{ textDecoration: 'none' }}>
                       <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.05] transition" style={{ cursor: 'pointer' }}>
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: 'rgba(168,85,247,.12)', border: '1px solid rgba(168,85,247,.2)' }}>
@@ -562,6 +552,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   NEW
                 </span>
               </Link>
+              <a onClick={() => setNavOpen(false)} href="#how-it-works" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">How it Works</a>
               <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />

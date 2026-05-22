@@ -62,13 +62,13 @@ function NavItem({
       className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold relative"
       style={{
         background: active
-          ? 'rgba(37,99,235,0.18)'
+          ? 'rgba(34,211,238,0.10)'
           : hovered
           ? 'rgba(255,255,255,0.04)'
           : 'transparent',
-        color: active ? '#60A5FA' : hovered ? 'var(--text)' : 'var(--muted2)',
+        color: active ? '#22D3EE' : hovered ? 'var(--text)' : 'var(--muted2)',
         border: active
-          ? '1px solid rgba(59,130,246,0.32)'
+          ? '1px solid rgba(34,211,238,0.22)'
           : '1px solid transparent',
         textDecoration: 'none',
         fontSize: '0.88rem',
@@ -105,8 +105,8 @@ function NavItem({
         <span
           style={{
             fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.06em',
-            background: 'rgba(59,130,246,0.18)', color: '#60A5FA',
-            padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(59,130,246,0.3)',
+            background: 'rgba(34,211,238,0.15)', color: '#22D3EE',
+            padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(34,211,238,0.30)',
           }}
         >
           {badge}
@@ -306,7 +306,7 @@ export default function Sidebar({
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
               background: '#151C2F',
-              border: '1px solid rgba(59,130,246,0.4)',
+              border: '1px solid rgba(34,211,238,0.35)',
               boxShadow: '0 0 18px rgba(34,211,238,0.35)',
             }}
           >
@@ -391,10 +391,10 @@ export default function Sidebar({
                     width: 34, height: 34, borderRadius: 10, flexShrink: 0,
                     background: creditsZero
                       ? 'rgba(239,68,68,0.15)'
-                      : 'rgba(59,130,246,0.18)',
+                      : 'rgba(34,211,238,0.12)',
                     border: creditsZero
                       ? '1px solid rgba(239,68,68,0.3)'
-                      : '1px solid rgba(59,130,246,0.4)',
+                      : '1px solid rgba(34,211,238,0.30)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: creditsZero ? 'none' : '0 0 12px rgba(34,211,238,0.25)',
                   }}
@@ -407,7 +407,7 @@ export default function Sidebar({
                   <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
                 ) : (
                   <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#60A5FA', lineHeight: 1.1 }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#22D3EE', lineHeight: 1.1 }}>
                       {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
                       {/* Push #088 — Cinematic token badge. Only show when
                           the user has at least 1 token (Pro plan) so the
@@ -437,12 +437,12 @@ export default function Sidebar({
                   width: 30, height: 30, borderRadius: 9,
                   background: creditsZero
                     ? 'rgba(239,68,68,0.18)'
-                    : 'rgba(37,99,235,0.18)',
+                    : 'rgba(34,211,238,0.12)',
                   border: creditsZero
                     ? '1px solid rgba(239,68,68,0.35)'
-                    : '1px solid rgba(59,130,246,0.4)',
+                    : '1px solid rgba(34,211,238,0.30)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: creditsZero ? '#f87171' : '#60A5FA',
+                  color: creditsZero ? '#f87171' : '#22D3EE',
                   fontSize: '1.1rem', fontWeight: 900,
                   boxShadow: creditsZero ? 'none' : '0 0 10px rgba(34,211,238,0.2)',
                 }}
@@ -455,12 +455,12 @@ export default function Sidebar({
 
         {!isLoggedIn ? (
           <div className="px-3 pt-3 pb-3 flex-shrink-0">
-            <div style={{ borderRadius: 14, padding: '14px 14px', background: '#151C2F', border: '1px solid rgba(59,130,246,0.25)' }}>
+            <div style={{ borderRadius: 14, padding: '14px 14px', background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.18)' }}>
               <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#F5F7FF', marginBottom: 4 }}>⚡ 2 free credits</p>
               <p style={{ fontSize: '0.72rem', color: '#94A3B8', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
-                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#fff', background: '#2563EB', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}
+                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#05070D', background: 'linear-gradient(135deg, #22D3EE, #3B82F6)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,211,238,0.35)' }}
               >
                 ⚡ Get Started Free →
               </button>
@@ -472,7 +472,7 @@ export default function Sidebar({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fca5a5', margin: 0 }}>⚠️ No credits left</p>
               </div>
-              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#fff', background: '#2563EB', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#05070D', background: 'linear-gradient(135deg, #22D3EE, #3B82F6)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 Buy →
               </Link>
             </div>
