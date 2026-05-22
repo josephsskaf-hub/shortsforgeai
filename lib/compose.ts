@@ -476,7 +476,20 @@ export function buildCreatomateSource({
   realAudioDuration,
   whisperTimings,
 }: ComposeInputs): Record<string, unknown> {
-  const totalDuration = clamp(Math.round(duration), 5, 90)
+  // Push #199 — use the REAL TTS audio duration as the master timeline length
+  // instead of the user-requested duration. This eliminates both the "black
+  // screen at the end" (TTS shorter than requested) and the "narration cut off"
+  // (TTS longer than requested) problems. The user-selected duration still
+  // influences the word-count target in scaleVoiceoverScript, so "45s" still
+  // produces a ~45s video — but the exact length is now always driven by the
+  // actual audio, never by an arbitrary integer. We cap at 90s and floor at 5s
+  // as a sanity guard, and fall back to the requested duration if the TTS
+  // measurement failed or returned an implausible value.
+  const masterDuration =
+    realAudioDuration && realAudioDuration > 4 && realAudioDuration < 120
+      ? realAudioDuration
+      : duration
+  const totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
   if (cleanClips.length === 0) {
     throw new Error('No video clips provided to compose.')
@@ -545,12 +558,18 @@ export function buildCreatomateSource({
     fill_color: 'rgba(0,0,0,0.35)',
   })
 
-  // Track 4 — voiceover for the full duration.
+  // Track 4 — voiceover. Duration = actual audio length so Creatomate
+  // doesn't pad or truncate the audio file. totalDuration already equals
+  // realAudioDuration (see master-duration logic above), so this is a
+  // no-op in normal operation; it acts as an explicit guard for edge cases.
+  const audioDuration = round3(
+    masterDuration && masterDuration > 4 ? masterDuration : totalDuration
+  )
   elements.push({
     type: 'audio',
     track: 4,
     time: 0,
-    duration: totalDuration,
+    duration: audioDuration,
     source: voiceoverUrl,
     volume: '100%',
   })
