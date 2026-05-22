@@ -28,7 +28,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     priceLabel: '$0',
     periodLabel: 'forever',
     credits: 2,
-    cta: 'Start Free',
+    cta: 'Run Free',
     href: '/signup',
   },
   basic: {
@@ -38,7 +38,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     priceLabel: '$9.90',
     periodLabel: '/ month',
     credits: 50,
-    cta: 'Get Basic',
+    cta: 'Automate Now',
     href: '/api/stripe/checkout?tier=basic',
   },
   pro: {
@@ -48,7 +48,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     priceLabel: '$19.90',
     periodLabel: '/ month',
     credits: 100,
-    cta: 'Get Pro',
+    cta: 'Deploy Full Pipeline',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,
   },

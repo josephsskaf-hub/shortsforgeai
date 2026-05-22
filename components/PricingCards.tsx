@@ -21,26 +21,26 @@ import { PLANS } from '@/lib/pricing'
 // counts can't drift between the homepage, /pricing, and this in-flow
 // upgrade card.
 const FREE_FEATURES = [
-  `${PLANS.free.credits} Fast Mode videos`,
-  'Pexels footage + AI voiceover',
-  'Watermark-free MP4',
-  'Try the platform',
+  '2 AI-generated Shorts',
+  'Stock footage + AI voiceover',
+  'Watermark-free output',
+  'Try the engine',
 ]
 
 const BASIC_FEATURES = [
-  `${PLANS.basic.credits} Fast Mode videos/month`,
-  'Pexels footage + AI voiceover',
-  'Voiceover + captions',
-  'Download MP4',
+  `${PLANS.basic.credits} Fast Mode renders/month`,
+  'Stock footage + AI voiceover',
+  'Auto-captions',
+  'Download MP4 output',
   'My Videos history',
 ]
 
 const PRO_FEATURES = [
-  `${PLANS.pro.credits} Fast Mode videos/month`,
-  '🎬 Access to Cinematic Mode — AI-generated scenes',
+  `${PLANS.pro.credits} Fast Mode renders/month`,
+  'Cinematic AI Engine — AI-generated scenes',
   'Advanced generation controls',
-  'Voiceover + captions',
-  'Download MP4',
+  'Auto-captions',
+  'Download MP4 output',
   'My Videos history',
 ]
 
@@ -139,7 +139,7 @@ export default function PricingCards() {
           name={PLANS.free.name}
           price={PLANS.free.priceLabel}
           period="/ month"
-          tagline="Try the platform."
+          tagline="Run your first AI video. Zero cost."
           features={FREE_FEATURES}
           cta={null}
         />
@@ -149,7 +149,7 @@ export default function PricingCards() {
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          tagline={`${PLANS.basic.credits} Fast Mode videos/month.`}
+          tagline="Automate 50 Shorts/month. $0.20 per render."
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
@@ -170,7 +170,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline={`${PLANS.pro.credits} Fast Mode + Cinematic Mode unlocked.`}
+          tagline="Full production pipeline. 100 renders + Cinematic AI Engine."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight

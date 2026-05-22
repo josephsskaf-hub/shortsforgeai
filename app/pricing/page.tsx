@@ -45,41 +45,45 @@ function buildPricing() {
       name: 'Free',
       price: '$0',
       priceSub: 'forever',
+      tagline: 'Run your first AI video. Zero cost.',
       features: [
-        '2 Fast Mode videos to try',
-        'AI stock footage + voiceover',
-        'Watermark-free MP4',
+        '2 AI-generated Shorts',
+        'Stock footage + AI voiceover',
+        'Watermark-free output',
+        'Try the engine',
       ],
-      cta: { label: 'Start Free', href: '/signup' },
+      cta: { label: 'Run Free', href: '/signup' },
     },
     {
       tier: 'basic',
       name: 'Basic',
       price: '$9.90',
       priceSub: '/ month',
+      tagline: 'Automate 50 Shorts/month. $0.20 per render.',
       features: [
-        '50 Fast Mode videos/month',
-        'AI stock footage + voiceover',
-        'Voiceover + captions',
-        'Download MP4',
+        '50 Fast Mode renders/month',
+        'Stock footage + AI voiceover',
+        'Auto-captions',
+        'Download MP4 output',
         'My Videos history',
       ],
-      cta: { label: 'Get Basic', href: '#checkout' },
+      cta: { label: 'Automate Now', href: '#checkout' },
     },
     {
       tier: 'pro',
       name: 'Pro',
       price: '$19.90',
       priceSub: '/ month',
+      tagline: 'Full production pipeline. 100 renders + Cinematic AI Engine.',
       features: [
-        '100 Fast Mode videos/month',
-        '🎬 Access to Cinematic Mode — AI-generated scenes',
+        '100 Fast Mode renders/month',
+        'Cinematic AI Engine — AI-generated scenes',
         'Advanced generation controls',
-        'Voiceover + captions',
-        'Download MP4',
+        'Auto-captions',
+        'Download MP4 output',
         'My Videos history',
       ],
-      cta: { label: 'Get Pro', href: '#checkout' },
+      cta: { label: 'Deploy Full Pipeline', href: '#checkout' },
       highlight: true,
       popular: true,
     },
@@ -380,6 +384,11 @@ export default function PricingPage() {
                 <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
                   {p.priceSub}
                 </div>
+                {'tagline' in p && p.tagline && (
+                  <p className="mt-2 text-[12px] text-[#94A3B8] leading-snug">
+                    {p.tagline}
+                  </p>
+                )}
                 <ul className="mt-5 mb-6 flex flex-col gap-2.5">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-[13.5px] text-[#F1F5F9]">
