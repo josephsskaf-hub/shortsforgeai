@@ -491,7 +491,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   href="/signup"
                   className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
                 >
-                  Sign Up
+                  Start Free
                 </Link>
               </>
             )}
@@ -526,7 +526,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 href="/signup"
                 className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#05070D] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
               >
-                Sign Up
+                Start Free
               </Link>
             )}
             <button
@@ -592,7 +592,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     href="/signup"
                     className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#05070D] transition-colors hover:bg-cyan-300"
                   >
-                    Sign Up
+                    Start Free
                   </Link>
                 </>
               )}
