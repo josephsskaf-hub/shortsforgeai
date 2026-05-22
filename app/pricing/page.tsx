@@ -805,4 +805,6 @@ export default function PricingPage() {
           <a href="mailto:hello@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
         </div>
       </footer>
-    </div>
+    </div>
+  )
+}

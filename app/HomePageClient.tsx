@@ -1419,4 +1419,8 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
     `${PLANS.pro.credits} Fast Mode renders/month`,
     'Cinematic AI Engine — AI-generated scenes',
     'Advanced generation controls',
-    'Auto-captions engine'
+    'Auto-captions engine',
+    'Watermark-free MP4 output',
+    'My Videos history',
+  ]
+}

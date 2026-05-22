@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai, durationPlanFor, MICRO_KNOWLEDGE_SYSTEM_RULES, SAFE_COMPOSITION_RULES } from '@/lib/openai'
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 // Push #024A: richer creative brief. The legacy fields (title, summary, niche,
@@ -488,7 +488,7 @@ Return ONLY the JSON object — no markdown, no commentary.`
           max_tokens: 1600,
           response_format: { type: 'json_object' },
         },
-        { timeout: 25000 }
+        { timeout: 28000 }
       )
       const raw = completion.choices[0]?.message?.content?.trim() ?? ''
       if (!raw) throw new Error('Empty response from OpenAI')

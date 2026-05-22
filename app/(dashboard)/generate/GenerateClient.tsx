@@ -754,7 +754,7 @@ export default function GenerateClient() {
     setFinalVideoUrl(null)
     setPhase('analyzing')
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    const timeoutId = setTimeout(() => controller.abort(), 50000)
     try {
       const res = await fetch('/api/analyze-idea', {
         method: 'POST',
@@ -4533,3 +4533,4 @@ function GenerationProgressSteps({ step }: { step: number }) {
       })}
     </ol>
   )
+}

@@ -236,4 +236,7 @@ export async function POST(req: NextRequest) {
     return await buildAndRedirect(req, tier, false)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
-    console.error('[stripe/checko
+    console.error('[stripe/checkout POST] Unexpected error:', msg)
+    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 })
+  }
+}

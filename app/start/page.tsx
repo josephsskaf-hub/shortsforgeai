@@ -474,4 +474,153 @@ export default function StartPage() {
                 top: -12,
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background:
+                background: '#22D3EE',
+                color: '#05070D',
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                padding: '4px 14px',
+                borderRadius: 999,
+                boxShadow: '0 4px 18px rgba(34,211,238,.45)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🔥 Most Popular
+            </div>
+            <div
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 900,
+                letterSpacing: '.14em',
+                color: '#94A3B8',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Basic
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
+              <span
+                style={{
+                  fontSize: '2.6rem',
+                  fontWeight: 900,
+                  letterSpacing: '-0.02em',
+                  color: '#F5F7FF',
+                  lineHeight: 1,
+                }}
+              >
+                $4.99
+              </span>
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600 }}>/mo</span>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#22D3EE', fontWeight: 800, marginBottom: 6 }}>
+              50 Fast Mode renders/month · Under $0.10 per video
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '4px 16px',
+                marginBottom: 20,
+                fontSize: '0.8rem',
+                color: '#94A3B8',
+                fontWeight: 600,
+              }}
+            >
+              <span>✓ AI script + voiceover</span>
+              <span>✓ Auto-captions engine</span>
+              <span>✓ Watermark-free MP4</span>
+              <span>✓ My Videos history</span>
+            </div>
+            <Link
+              href="/signup?plan=basic"
+              className="block sm:inline-block w-full sm:w-auto"
+              style={{
+                padding: '15px 32px',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                color: '#FFFFFF',
+                fontWeight: 900,
+                fontSize: '1rem',
+                textDecoration: 'none',
+                boxShadow: '0 8px 28px rgba(34,211,238,.4)',
+                boxSizing: 'border-box',
+                minHeight: 52,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              Start 7-Day Free Trial →
+            </Link>
+            <p
+              style={{
+                fontSize: '0.78rem',
+                color: '#64748B',
+                marginTop: 10,
+                fontWeight: 600,
+              }}
+            >
+              No charge for 7 days. Cancel anytime.
+            </p>
+          </div>
+        </section>
+
+        {/* Second CTA — repeat the green button after pricing */}
+        <section style={{ textAlign: 'center', marginBottom: 40 }}>
+          <Link
+            href="/signup"
+            className="block sm:inline-block w-full sm:w-auto"
+            style={{
+              padding: '16px 28px',
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#FFFFFF',
+              fontSize: '1rem',
+              fontWeight: 900,
+              letterSpacing: '-0.01em',
+              textDecoration: 'none',
+              boxShadow: '0 8px 28px rgba(16,185,129,.40)',
+              boxSizing: 'border-box',
+              minHeight: 52,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            Generate My First Short Free →
+          </Link>
+          <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: 10, fontWeight: 600 }}>
+            No credit card · 2 videos free · Ready in 60s
+          </p>
+        </section>
+
+        {/* Trust bar */}
+        <section
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: 14,
+            fontSize: '0.78rem',
+            color: '#64748B',
+            fontWeight: 600,
+          }}
+        >
+          <span>🔒 Secure checkout</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>SSL encrypted</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>Cancel anytime</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>Money-back guarantee</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span>No contracts</span>
+        </section>
+      </div>
+      <Footer />
+    </main>
+  )
+}
