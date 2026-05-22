@@ -15,7 +15,7 @@ type Currency = 'usd' | 'brl'
 //   Basic:  $4.90 / month  (USD)  |  R$24.90 / month  (BRL)
 //   Pro:    $9.90 / month  (USD)  |  R$49.90 / month  (BRL)
 // Hosted payment links (direct, no session needed):
-//   Basic: https://buy.stripe.com/8x26oH8sR7nx2DVcF8gjC0p
+//   Basic: https://buy.stripe.com/14A28reRf6jtcev48CgjC0r
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   basic: {
