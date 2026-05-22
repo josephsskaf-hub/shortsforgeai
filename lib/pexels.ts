@@ -37,7 +37,7 @@ export async function searchPexelsVideos(query: string, perPage = 3): Promise<st
   const apiKey = process.env.PEXELS_API_KEY
   if (!apiKey) return []
 
-  const url = `${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait&size=medium`
+  const url = `${PEXELS_API}/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait&size=large`
   let res: Response
   try {
     res = await fetch(url, {

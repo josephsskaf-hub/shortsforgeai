@@ -387,6 +387,7 @@ interface CreatomateElement {
   font_family?: string
   font_size?: number
   font_weight?: string
+  enter_transition?: { type: string; duration: number }
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -447,6 +448,7 @@ export function buildCaptionElements({
     fill_color: '#ffffff',
     stroke_color: 'rgba(0,0,0,0.9)',
     stroke_width: 3,
+    enter_transition: { type: 'fade', duration: 0.15 },
   }
 
   try {
@@ -521,14 +523,19 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
+  // Push #202 — cross-dissolve between clips: every clip after the first
+  // gets enter_transition fade (0.4s) so there is never a hard cut/gap at
+  // clip boundaries. Creatomate blends adjacent clips on the same track
+  // at their shared boundary, producing a smooth dissolve at zero extra cost.
   const CLIP_LEN = 10
+  const TRANSITION_LEN = 0.4
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
     const segLen = round3(Math.min(CLIP_LEN, remaining))
     const url = cleanClips[i % cleanClips.length]
-    elements.push({
+    const elem: CreatomateElement = {
       type: 'video',
       track: 2,
       time: round3(cursor),
@@ -540,8 +547,12 @@ export function buildCreatomateSource({
       width: '100%',
       height: '100%',
       volume: '0%',
-    })
-    cursor += segLen
+    }
+    if (i > 0) {
+      elem.enter_transition = { type: 'fade', duration: TRANSITION_LEN }
+    }
+    elements.push(elem)
+    cursor = round3(cursor + segLen)
     i += 1
   }
 
