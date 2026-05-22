@@ -113,7 +113,7 @@ const GENERIC_ERROR = 'Video generation failed. Please try again.'
 const LOADER_MESSAGES = [
   'Analyzing viral angle…',
   'Writing scroll-stopping hook…',
-  'Building 35-second script…',
+  'Building cinematic script…',
   'Creating cinematic scene prompts…',
   'Optimizing captions and hashtags…',
 ]

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // identifies the SCRIPT-WIDE theme, then every per-scene keyword carries
     // a concrete noun from that theme — so a Mansa Musa script's "to recover"
     // line gets "ancient african empire" instead of generic wellness clips.
-    const prompt = `You are planning the visuals for a 35-second YouTube Short in the "${niche}" niche.
+    const prompt = `You are planning the visuals for a YouTube Short in the "${niche}" niche.
 
 SCRIPT:
 """

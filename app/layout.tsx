@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'ShortsForgeAI — Turn Ideas Into Viral YouTube Shorts in 60 Seconds',
   description:
-    'AI-powered YouTube Shorts generator. Write a topic, get a fully edited 35-second Short with voiceover, footage, and captions. Free to try.',
+    'AI-powered YouTube Shorts generator. Write a topic, get a fully edited Short with voiceover, footage, and captions. Free to try.',
   keywords: [
     'YouTube Shorts',
     'AI video generator',
