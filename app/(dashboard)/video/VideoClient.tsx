@@ -945,7 +945,7 @@ function Step4Stock({
       <div className="flex items-center gap-3 py-6">
         <Spinner />
         <span className="text-sm font-medium" style={{ color: 'var(--muted2)' }}>
-          Searching Pexels for perfect clips...
+          Scanning stock footage library...
         </span>
       </div>
     )

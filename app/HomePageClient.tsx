@@ -1400,27 +1400,27 @@ function ShowcaseVideoCard({
 function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   if (tier === 'free') {
     return [
-      `${PLANS.free.credits} Fast Mode videos`,
-      'Pexels footage + AI voiceover',
-      'Watermark-free MP4',
-      'Try the platform',
+      `${PLANS.free.credits} Fast Mode renders`,
+      'Stock footage library + neural voiceover',
+      'Watermark-free MP4 output',
+      'No credit card needed',
     ]
   }
   if (tier === 'basic') {
     return [
-      `${PLANS.basic.credits} Fast Mode videos/month`,
-      'Pexels footage + AI voiceover',
-      'Voiceover + captions',
-      'Download MP4',
+      `${PLANS.basic.credits} Fast Mode renders/month`,
+      'AI script + neural voiceover pipeline',
+      'Auto-captions engine',
+      'Watermark-free MP4 output',
       'My Videos history',
     ]
   }
   return [
-    `${PLANS.pro.credits} Fast Mode videos/month`,
-    '🎬 Access to Cinematic Mode — AI-generated scenes',
+    `${PLANS.pro.credits} Fast Mode renders/month`,
+    'Cinematic AI Engine — AI-generated scenes',
     'Advanced generation controls',
-    'Voiceover + captions',
-    'Download MP4',
+    'Auto-captions engine',
+    'Watermark-free MP4 output',
     'My Videos history',
   ]
 }
