@@ -183,6 +183,13 @@ export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<Whisp
   }
 }
 
+// Push #209 — Whisper's word-level timestamps are known to lag the actual
+// speech onset by ~0.3–0.5s (conservative alignment). Add the 0.15s caption
+// fade-in and you get the ~0.5s delay users observe. Subtracting this constant
+// from every Whisper-derived caption start time brings captions back in sync.
+// Clamped to 0 so the first caption never goes negative.
+const WHISPER_CAPTION_LEAD = 0.4 // seconds
+
 /**
  * Map Whisper word-level timestamps to caption segment boundaries.
  *
@@ -221,8 +228,13 @@ export function mapWhisperTimingsToSegments(
         : captionWindowEnd
     const duration = Math.max(0.1, nextWordStart - segStartWord.start)
 
+    // Apply WHISPER_CAPTION_LEAD: shift caption earlier to compensate for
+    // Whisper's conservative timestamps + the 0.15s fade-in visual delay.
+    const rawTime = segStartWord.start
+    const adjustedTime = Math.max(0, rawTime - WHISPER_CAPTION_LEAD)
+
     result.push({
-      time: Math.round(segStartWord.start * 1000) / 1000,
+      time: Math.round(adjustedTime * 1000) / 1000,
       duration: Math.round(duration * 1000) / 1000,
     })
     wIdx += nWords
