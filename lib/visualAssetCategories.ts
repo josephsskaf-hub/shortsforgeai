@@ -21,6 +21,16 @@ export interface VisualCategory {
   strictMode: boolean
 }
 
+// Push #239 — Fireworks/celebration footage looks like a rocket launch
+// (bright sparks against a dark sky), so Pexels kept returning it for
+// "SpaceX rocket launch" queries. Reject these slugs for every space topic.
+// Multi-word terms use dashes: the slug matcher converts "-" → "[- ]", so
+// "new-year" matches both "new-year" and "new year" in a slug.
+export const FIREWORKS_NEGATIVE_TERMS = [
+  'fireworks', 'firework', 'celebration', 'new-year', 'festival',
+  'pyrotechnic', 'sparkle', 'sparkler', 'feux', 'fuegos',
+]
+
 export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
   rocket_launch: {
     id: 'rocket_launch',
@@ -43,6 +53,8 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
       // an actual launch (the candle bug). They are never a rocket.
       'candle', 'candles', 'fireplace', 'campfire', 'bonfire', 'lighter',
       'match', 'matches', 'gas-stove', 'stove', 'lantern', 'torch',
+      // Push #239 — fireworks look like a launch against a dark sky.
+      ...FIREWORKS_NEGATIVE_TERMS,
     ],
     strictMode: true,
   },
@@ -63,6 +75,8 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
       // Push #235 — same flame false-positives as rocket_launch.
       'candle', 'candles', 'fireplace', 'campfire', 'bonfire', 'lighter',
       'match', 'matches', 'lantern', 'torch',
+      // Push #239 — fireworks look like a booster burn against a dark sky.
+      ...FIREWORKS_NEGATIVE_TERMS,
     ],
     strictMode: true,
   },
@@ -97,6 +111,8 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
     negativeTerms: [
       'cartoon', 'animation', 'animated', 'illustration', '3d-render', 'cgi',
       'game', 'drawing', 'plastic', 'globe-toy', 'miniature',
+      // Push #239 — fireworks against the night sky get mistaken for orbit shots.
+      ...FIREWORKS_NEGATIVE_TERMS,
     ],
     strictMode: true,
   },
@@ -114,6 +130,8 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
     negativeTerms: [
       'toy', 'cartoon', 'model-kit', 'plastic', 'kids', 'animation', 'game',
       'lego', 'drawing', 'illustration',
+      // Push #239 — fireworks against the night sky get mistaken for spacecraft.
+      ...FIREWORKS_NEGATIVE_TERMS,
     ],
     strictMode: true,
   },

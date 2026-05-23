@@ -21,6 +21,7 @@ import {
   VISUAL_CATEGORIES,
   detectVisualCategory,
   isSlugRejected,
+  FIREWORKS_NEGATIVE_TERMS,
   type VisualCategory,
 } from './visualAssetCategories'
 
@@ -100,13 +101,14 @@ async function searchAndFilter(
   query: string,
   category: VisualCategory | null,
   sceneLabel: string,
+  extraNegTerms: string[] = [],
 ): Promise<string | null> {
   const videos = await searchPexelsVideoObjects(query, 5)
   if (videos.length === 0) return null
 
   for (const video of videos) {
     const pageUrl = video.url ?? ''
-    const negTerms = category?.negativeTerms ?? []
+    const negTerms = [...(category?.negativeTerms ?? []), ...extraNegTerms]
 
     const rejected = pageUrl
       ? isSlugRejected(pageUrl, negTerms, category?.id)
@@ -199,7 +201,12 @@ export async function getPexelsVideoForScene(
       }
     }
 
-    const url = await searchAndFilter(safeQuery, category, 'primary')
+    const url = await searchAndFilter(
+      safeQuery,
+      category,
+      'primary',
+      isSpace ? FIREWORKS_NEGATIVE_TERMS : [],
+    )
     if (url) return url
     console.log(`[visual] primary query MISS: "${safeQuery.slice(0, 60)}"`)
   }
@@ -270,14 +277,23 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
   const q = (query ?? '').replace(/\s{2,}/g, ' ').trim()
   if (!q) return null
 
-  const direct = await searchAndFilter(q, null, 'user_exact')
+  // Push #239 — rocket/space queries pull in fireworks footage (bright sparks
+  // on a dark sky). The exact-query path skips the category override, so apply
+  // the fireworks rejection list directly when the query is space-related.
+  const qLower = q.toLowerCase()
+  const isSpace =
+    qLower.includes('space') ||
+    Array.from(SPACE_TRIGGER_WORDS).some((w) => qLower.includes(w))
+  const negTerms = isSpace ? FIREWORKS_NEGATIVE_TERMS : []
+
+  const direct = await searchAndFilter(q, null, 'user_exact', negTerms)
   if (direct) return direct
   console.log(`[visual] user_exact MISS: "${q.slice(0, 60)}"`)
 
   // Broaden ONLY within the user's own words (first 3 tokens) — never swap topic.
   const broad = q.split(/\s+/).slice(0, 3).join(' ')
   if (broad && broad.toLowerCase() !== q.toLowerCase()) {
-    const url = await searchAndFilter(broad, null, 'user_exact_broad')
+    const url = await searchAndFilter(broad, null, 'user_exact_broad', negTerms)
     if (url) return url
     console.log(`[visual] user_exact_broad MISS: "${broad}"`)
   }
