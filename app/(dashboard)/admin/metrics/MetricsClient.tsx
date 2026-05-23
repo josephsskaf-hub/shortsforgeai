@@ -47,6 +47,13 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
   const [secondsAgo, setSecondsAgo] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Push #233 — Basic/Pro checkout-button clicks from public.click_events,
+  // fetched from /api/admin/click-stats and polled alongside the metrics.
+  const [clickStats, setClickStats] = useState<{
+    basic: number | null
+    pro: number | null
+    available: boolean
+  } | null>(null)
 
   // Tick the "X s ago" clock every second
   useEffect(() => {
@@ -82,6 +89,31 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
 
     timerRef.current = setInterval(poll, POLL_MS)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [denied])
+
+  // Push #233 — load + poll click_events totals for the two new cards.
+  useEffect(() => {
+    if (denied) return
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/click-stats', { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json()
+        if (!cancelled && json) {
+          setClickStats({
+            basic: typeof json.basic === 'number' ? json.basic : null,
+            pro: typeof json.pro === 'number' ? json.pro : null,
+            available: !!json.available,
+          })
+        }
+      } catch {
+        // silent — keep showing whatever we already have
+      }
+    }
+    load()
+    const id = setInterval(load, POLL_MS)
+    return () => { cancelled = true; clearInterval(id) }
   }, [denied])
 
   if (denied || !metrics) {
@@ -196,6 +228,32 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
           {videoCards.map((c) => (
             <MetricCard key={c.label} card={c} />
           ))}
+        </Grid>
+      </Section>
+
+      <Section
+        title="Checkout clicks"
+        subtitle={
+          clickStats?.available === false
+            ? 'public.click_events table not present — run migration 008.'
+            : 'Tracked via public.click_events (POST /api/track-click).'
+        }
+      >
+        <Grid>
+          <MetricCard
+            card={{
+              label: 'Basic Clicks',
+              value: clickStats?.basic ?? null,
+              hint: clickStats?.available === false ? 'Run migration 008' : 'plan = basic',
+            }}
+          />
+          <MetricCard
+            card={{
+              label: 'Pro Clicks',
+              value: clickStats?.pro ?? null,
+              hint: clickStats?.available === false ? 'Run migration 008' : 'plan = pro',
+            }}
+          />
         </Grid>
       </Section>
 

@@ -11,6 +11,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { trackCheckoutClick } from '@/lib/trackClick'
 
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
@@ -138,6 +139,7 @@ export default function PricingPage() {
   function handleBuy(tier: 'basic' | 'pro') {
     setPurchasing(tier)
     trackPricingEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
+    trackCheckoutClick(tier)
     window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
 

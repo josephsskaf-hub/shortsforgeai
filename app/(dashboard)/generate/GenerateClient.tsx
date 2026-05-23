@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import PricingCards from '@/components/PricingCards'
 import OnboardingPanel from '@/components/OnboardingPanel'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
+import { trackCheckoutClick } from '@/lib/trackClick'
 
 interface TaskHandle {
   id: string
@@ -1117,6 +1118,7 @@ export default function GenerateClient() {
     tier: 'basic' | 'pro' = 'basic',
     currency: 'usd' | 'brl' = 'usd',
   ) {
+    trackCheckoutClick(tier)
     setUpgradeLoading(true)
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -1591,6 +1593,7 @@ export default function GenerateClient() {
             </p>
             <a
               href="/api/stripe/checkout?tier=pro"
+              onClick={() => trackCheckoutClick('pro')}
               style={{
                 display: 'block',
                 width: '100%',

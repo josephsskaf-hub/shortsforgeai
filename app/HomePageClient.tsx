@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
+import { trackCheckoutClick } from '@/lib/trackClick'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
 // Push #232 — exit-intent survey one-shot flag (renamed from the prior
@@ -405,6 +406,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // Stripe — no fetch, no await, no gesture breakage on any mobile browser.
   function handleStartPlan(tier: 'basic' | 'pro') {
     trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
+    trackCheckoutClick(tier)
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent('/pricing')}`)
       return
