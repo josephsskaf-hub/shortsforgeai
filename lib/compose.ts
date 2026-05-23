@@ -124,22 +124,116 @@ export async function generateTTS(script: string): Promise<Buffer> {
   return Buffer.from(await speech.arrayBuffer())
 }
 
-// OpenAI tts-1 emits constant-bitrate MP3 at ~128 kbps.
+// OpenAI tts-1 emits constant-bitrate MP3 at ~128 kbps — kept as fallback.
 const TTS_MP3_BITRATE_BPS = 128_000
 
+// MPEG Layer-3 bitrate lookup: [MPEG1/2 flag][bitrate index] → kbps
+// Index 0 = "free", index 15 = "bad" — both invalid.
+const MP3_BITRATE_MPEG1: ReadonlyArray<number> =
+  [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0]
+const MP3_BITRATE_MPEG2: ReadonlyArray<number> =
+  [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0]
+// MPEG1 sample-rate table (Hz); MPEG2 = half these, MPEG2.5 = quarter.
+const MP3_SAMPLERATE_MPEG1: ReadonlyArray<number> = [44100, 48000, 32000, 0]
+
 /**
- * Push #158 — estimate the real playback duration (seconds) of a TTS mp3
- * buffer without any external dependency. `music-metadata` is not installed,
- * so we use the size/bitrate relationship: at CBR, duration ≈ bytes * 8 /
- * bitrate. OpenAI tts-1 returns ~128 kbps mp3, so duration ≈ bytes / 16000.
+ * Push #158 / Push #223 — Parse the real playback duration (seconds) of a
+ * TTS MP3 buffer by scanning actual MPEG frame headers. This is accurate for
+ * both CBR and VBR files and correctly ignores ID3 tag bytes.
  *
- * Returns 0 when the buffer is empty/unparseable — callers MUST treat 0 as
- * "unknown" and fall back to the requested-duration window.
+ * Falls back to the old byte-rate estimate when no valid frames are found.
+ * Returns 0 for empty/unparseable buffers — callers treat 0 as "unknown" and
+ * fall back to the requested-duration window.
  */
 export function estimateMp3DurationSeconds(buffer: Buffer): number {
   if (!buffer || buffer.length === 0) return 0
-  const bytesPerSecond = TTS_MP3_BITRATE_BPS / 8
-  const seconds = buffer.length / bytesPerSecond
+
+  let offset = 0
+
+  // Skip ID3v2 tag — "ID3" + 2-byte version + 1-byte flags + 4-byte syncsafe size.
+  if (
+    buffer.length > 10 &&
+    buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33
+  ) {
+    const id3Size =
+      ((buffer[6] & 0x7f) << 21) |
+      ((buffer[7] & 0x7f) << 14) |
+      ((buffer[8] & 0x7f) << 7) |
+       (buffer[9] & 0x7f)
+    offset = 10 + id3Size
+  }
+
+  let totalSamples = 0
+  let sampleRate = 0
+  let frames = 0
+  const MAX_SEARCH_BYTES = 1024 // bytes to scan before giving up on sync
+
+  while (offset + 4 <= buffer.length) {
+    // Locate frame-sync word: 0xFF followed by 0xE? (top 11 bits all 1).
+    if (buffer[offset] !== 0xff || (buffer[offset + 1] & 0xe0) !== 0xe0) {
+      // Fast-forward up to MAX_SEARCH_BYTES if we lose sync.
+      const searchEnd = Math.min(offset + MAX_SEARCH_BYTES, buffer.length - 4)
+      let found = false
+      for (let s = offset + 1; s < searchEnd; s++) {
+        if (buffer[s] === 0xff && (buffer[s + 1] & 0xe0) === 0xe0) {
+          offset = s
+          found = true
+          break
+        }
+      }
+      if (!found) break
+      continue
+    }
+
+    const h = buffer.readUInt32BE(offset)
+
+    const versionBits  = (h >> 19) & 0x3  // 3=MPEG1, 2=MPEG2, 0=MPEG2.5, 1=reserved
+    const layerBits    = (h >> 17) & 0x3  // 3=Layer1, 2=Layer2, 1=Layer3, 0=reserved
+    const bitrateBits  = (h >> 12) & 0xf
+    const srBits       = (h >> 10) & 0x3
+    const paddingBit   = (h >>  9) & 0x1
+
+    // Reject reserved/bad combos.
+    if (
+      versionBits === 1 || layerBits === 0 ||
+      bitrateBits === 0 || bitrateBits === 0xf ||
+      srBits === 3
+    ) {
+      offset++
+      continue
+    }
+
+    // We only handle Layer 3 (most common for TTS output).
+    if (layerBits !== 1) { offset++; continue }
+
+    const isMpeg1 = versionBits === 3
+    const bitrateKbps = (isMpeg1 ? MP3_BITRATE_MPEG1 : MP3_BITRATE_MPEG2)[bitrateBits]
+    if (!bitrateKbps) { offset++; continue }
+
+    const srMpeg1 = MP3_SAMPLERATE_MPEG1[srBits]
+    if (!srMpeg1) { offset++; continue }
+    const sr = isMpeg1 ? srMpeg1 : (versionBits === 2 ? srMpeg1 / 2 : srMpeg1 / 4)
+
+    // Layer3 samples per frame: 1152 for MPEG1, 576 for MPEG2/2.5.
+    const samplesInFrame = isMpeg1 ? 1152 : 576
+
+    // Frame byte size = floor(144 * bitrate_bps / sample_rate) + padding.
+    const frameSize = Math.floor(144 * bitrateKbps * 1000 / sr) + paddingBit
+    if (frameSize < 4 || offset + frameSize > buffer.length) break
+
+    if (!sampleRate) sampleRate = sr
+    totalSamples += samplesInFrame
+    frames++
+    offset += frameSize
+  }
+
+  if (sampleRate && totalSamples > 0) {
+    const dur = totalSamples / sampleRate
+    if (Number.isFinite(dur) && dur > 0) return dur
+  }
+
+  // Fallback: CBR byte-rate estimate (original Push #158 logic).
+  const seconds = buffer.length / (TTS_MP3_BITRATE_BPS / 8)
   return Number.isFinite(seconds) && seconds > 0 ? seconds : 0
 }
 
