@@ -2654,6 +2654,54 @@ export default function GenerateClient() {
 // ─── Push #048 — Visual History ─────────────────────────────────────────────
 // Empty state when the user has no rows yet. Status chip on every card.
 // "Open" link is rendered only when video_url is present (completed runs).
+// Push #229 — robust thumbnail for the dashboard's recent-shorts cards.
+// `thumbnail_url` is the Creatomate snapshot, which is often null or points
+// at an expired/404 Creatomate CDN URL. The card previously painted it as a
+// bare CSS background with only a 🎬 glyph for the null case, so a broken or
+// expired URL rendered an empty/broken box. We now degrade gracefully: show
+// the snapshot image, fall back to the video's own first frame when the
+// snapshot is missing or fails to load (#t media fragment, metadata-only so
+// the clip isn't downloaded), and only show the glyph when there's no usable
+// media. Mirrors the fallback already used on the My Videos page.
+function RecentVideoThumb({ video }: { video: RecentVideo }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const hasThumb = !!video.thumbnail_url && !imgFailed
+  const canVideoFrame = !!video.video_url && video.status === 'completed'
+
+  if (hasThumb) {
+    return (
+      <img
+        src={video.thumbnail_url as string}
+        alt=""
+        loading="lazy"
+        onError={() => setImgFailed(true)}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    )
+  }
+
+  if (canVideoFrame) {
+    return (
+      <video
+        src={`${video.video_url}#t=0.5`}
+        muted
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    )
+  }
+
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{ color: 'rgba(147,197,253,.55)', fontSize: '1.8rem' }}
+    >
+      🎬
+    </div>
+  )
+}
+
 function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
   // null = still loading initial fetch
   if (videos === null) {
@@ -2757,21 +2805,13 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
               <div
                 className="rv-thumb"
                 style={{
-                  background: v.thumbnail_url
-                    ? `center / cover no-repeat url(${v.thumbnail_url})`
-                    : 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
+                  background: 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
                   aspectRatio: '9 / 16',
                   position: 'relative',
+                  overflow: 'hidden',
                 }}
               >
-                {!v.thumbnail_url && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ color: 'rgba(147,197,253,.55)', fontSize: '1.8rem' }}
-                  >
-                    🎬
-                  </div>
-                )}
+                <RecentVideoThumb video={v} />
                 <span
                   className="absolute"
                   style={{
