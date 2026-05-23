@@ -44,6 +44,23 @@ const CLIPS: LibraryClip[] = [
   // — Pexels CDN (only IDs verified to return 206 on direct GET) —
   { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['city', 'urban', 'technology', 'modern', 'business', 'money'] },
   { url: 'https://videos.pexels.com/video-files/857195/857195-hd_1280_720_25fps.mp4',     width: 1280, height: 720,  duration: 16, tags: ['space', 'cosmic', 'stars', 'sky', 'mystery', 'dark'] },
+  // Push #213 — NASA public-domain rocket footage. These are the primary clips
+  // for rocket_launch / booster_landing / earth_orbit categories. NASA footage
+  // is 100% public domain and visually correct (real launches, not CGI/abstract).
+  // SVS = NASA Scientific Visualization Studio (no auth required, direct GET).
+  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012700/a012716/20160908-OSIRIS_REx_Launch_Coverage_Excerpt_TWTR.mp4',
+    width: 1280, height: 720,  duration: 30,
+    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'nasa'] },
+  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012700/a012716/TWITTER_720-OSIRIS_REx_Launch_Broadcast_Rocket_Cam_Ascent.mp4',
+    width: 1280, height: 720,  duration: 40,
+    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'nasa', 'booster_landing'] },
+  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a010797/10797_Sounding_Rocket_MPEG4_1280X720_29.97.mp4',
+    width: 1280, height: 720,  duration: 60,
+    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'earth_orbit', 'nasa', 'spacecraft'] },
+  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012300/a012368/OSIRIS_launch.mp4',
+    width: 1920, height: 1080, duration: 90,
+    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa', 'mission_control'] },
+
   // Push #210 — additional space/rocket clips for the curated fallback.
   // Pexels IDs verified to contain real space/rocket footage (public CDN).
   { url: 'https://videos.pexels.com/video-files/2098405/2098405-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 14, tags: ['rocket', 'launch', 'space', 'fire'] },
@@ -76,12 +93,28 @@ const KEYWORD_TO_TAGS: Record<string, string[]> = {
   alien: ['space', 'mystery'], ufo: ['space', 'mystery', 'dark'], signal: ['space', 'mystery', 'technology'],
   satellite: ['space', 'technology'], telescope: ['space', 'technology'],
   // Push #210 — rocket/launch/SpaceX keywords → space tag so these always hit the space clip pool
-  rocket: ['rocket', 'space', 'launch'], launch: ['rocket', 'launch', 'space'],
-  booster: ['rocket', 'launch'], falcon: ['rocket', 'launch'], spacex: ['rocket', 'space', 'launch'],
-  starship: ['rocket', 'launch'], nasa: ['rocket', 'space'], astronaut: ['space', 'rocket'],
-  orbit: ['space', 'rocket'], reusable: ['rocket', 'launch'], exhaust: ['rocket', 'launch'],
-  elon: ['rocket', 'space'], musk: ['rocket', 'space'],
-  pad: ['rocket', 'launch'], engine: ['rocket', 'launch'], flames: ['rocket', 'launch'],
+  // Push #213 — added rocket_launch, booster_landing, earth_orbit, spacecraft, mission_control
+  //             as direct category names so route.ts priority mode resolves correctly.
+  rocket: ['rocket', 'rocket_launch', 'space', 'launch'],
+  launch: ['rocket', 'rocket_launch', 'launch', 'space'],
+  booster: ['rocket', 'rocket_launch', 'booster_landing', 'launch'],
+  falcon: ['rocket', 'rocket_launch', 'launch'],
+  spacex: ['rocket', 'rocket_launch', 'space', 'launch'],
+  starship: ['rocket', 'rocket_launch', 'launch'],
+  nasa: ['rocket', 'rocket_launch', 'space', 'nasa', 'mission_control'],
+  astronaut: ['space', 'rocket', 'earth_orbit', 'spacecraft'],
+  orbit: ['space', 'rocket', 'earth_orbit'],
+  reusable: ['rocket', 'rocket_launch', 'booster_landing', 'launch'],
+  exhaust: ['rocket', 'rocket_launch', 'launch'],
+  elon: ['rocket', 'rocket_launch', 'space'], musk: ['rocket', 'rocket_launch', 'space'],
+  pad: ['rocket', 'rocket_launch', 'launch'], engine: ['rocket', 'rocket_launch', 'launch'],
+  flames: ['rocket', 'rocket_launch', 'launch'],
+  // category name keywords (for direct route.ts libQuery lookup)
+  'rocket launch': ['rocket', 'rocket_launch', 'launch', 'nasa'],
+  'booster landing': ['rocket', 'booster_landing', 'launch', 'nasa'],
+  'earth orbit': ['space', 'earth_orbit', 'spacecraft', 'nasa'],
+  spacecraft: ['space', 'spacecraft', 'earth_orbit', 'nasa'],
+  'mission control': ['rocket', 'mission_control', 'nasa'],
 
   // Money / business / luxury
   money: ['money', 'business', 'luxury'], wealth: ['money', 'luxury'], rich: ['money', 'luxury'],

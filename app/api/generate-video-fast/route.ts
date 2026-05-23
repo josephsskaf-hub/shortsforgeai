@@ -121,12 +121,37 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 2 — Resolve each scene to a Pexels HD portrait clip using the
-    // topic-specific searchKeywords (NOT the cinematic description).
-    // Curated stockLibrary is the fallback so we always return something.
+    // Step 2 — Resolve each scene to a clip URL.
+    //
+    // Push #213 — Priority-mode for high-risk categories (rocket/space):
+    // Pexels search returns visually plausible but WRONG footage for space
+    // topics (abstract glows, CGI renders, jellyfish, mushroom shapes) because
+    // their slug doesn't contain negative terms like "toy" or "cartoon".
+    // Fix: for these categories, use the curated verified stockLibrary FIRST
+    // (which contains NASA public-domain footage), then fall back to Pexels.
+    // For all other categories, Pexels is tried first as before.
+    const STOCKLIB_PRIORITY_CATEGORIES = new Set([
+      'rocket_launch', 'booster_landing', 'earth_orbit', 'spacecraft', 'mission_control',
+    ])
+
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
-        // Push #212 — pass visualCategory + voiceover for whitelist-based filtering
+        const cat = scene.visualCategory ?? ''
+        const libQuery = cat && cat !== 'general_documentary'
+          ? cat.replace(/_/g, ' ')
+          : (scene.searchKeywords || scene.description)
+
+        // Push #213 — space/rocket: stockLibrary first (verified NASA footage)
+        if (STOCKLIB_PRIORITY_CATEGORIES.has(cat)) {
+          const lib = pickLibraryClips(libQuery, 3, idx)
+          const libUrl = lib[0]?.url ?? ''
+          if (libUrl) {
+            console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB_PRIORITY url=${libUrl.slice(0, 80)}`)
+            return libUrl
+          }
+        }
+
+        // All other categories: try Pexels first
         const pexelsUrl = await getPexelsVideoForScene(
           scene.searchKeywords,
           scene.description,
@@ -134,10 +159,8 @@ export async function POST(req: NextRequest) {
           scene.voiceover,
         )
         if (pexelsUrl) return pexelsUrl
-        // stockLibrary fallback uses visualCategory for smarter tag matching
-        const libQuery = scene.visualCategory && scene.visualCategory !== 'general_documentary'
-          ? scene.visualCategory.replace(/_/g, ' ')
-          : (scene.searchKeywords || scene.description)
+
+        // Final fallback: stockLibrary
         const lib = pickLibraryClips(libQuery, 1, idx)
         return lib[0]?.url ?? ''
       })
