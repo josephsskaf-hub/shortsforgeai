@@ -45,7 +45,19 @@ const SPEED_DIRECTIVE = /\bspeed\s*[:=]?\s*(\d+(?:\.\d+)?)/i
 
 // Lines that are configuration/stage directions, never narration. Dropped from
 // the spoken text so the narrator doesn't read "duration 45 seconds" out loud.
-const DIRECTIVE_LINE = /^\s*(speed|duration|voice|music|format|aspect|ratio|style|tone|language|idioma|velocidade)\s*[:=]/i
+// Push #238 adds platform/resolution/orientation and the multi-word "aspect
+// ratio" label so a leading metadata header block is stripped line-by-line.
+const DIRECTIVE_LINE = /^\s*(speed|duration|voice|music|format|aspect\s*ratio|aspect|ratio|resolution|platform|orientation|style|tone|language|idioma|velocidade)\s*[:=]/i
+
+// Push #238 — video-format spec lines that leak from a user's header block and
+// are NEVER narration, e.g. "YouTube Short format, 9:16, 1 legend only",
+// "Format: 9:16 vertical", "1 subtitle only". Matches when the line:
+//   - contains a 9:16 aspect ratio anywhere ("9:16", "9 : 16") — always a spec,
+//   - mentions a "YouTube Short(s) format" directive, or
+//   - ends with "<n> legend(s) only" / "subtitle(s) only".
+// Kept deliberately narrow so ordinary narration that merely says "YouTube" or
+// "format" survives.
+const FORMAT_SPEC_LINE = /\b9\s*:\s*16\b|youtube\s+shorts?\s+format|\b(legends?|subtitles?)\s+only\s*[.!]?$/i
 
 // A line that's nothing but dash/em-dash/en-dash decoration ("———", "-----").
 const DASH_ONLY_LINE = /^[\s—–-]+$/
@@ -58,7 +70,8 @@ const FENCED_LINE = /^[—–-]{1,3}\s*([\s\S]*?)\s*[—–-]{1,3}$/
  * Push #237 — true when a line is a section header / stage direction rather than
  * narration, so it must be dropped before the text is spoken or captioned.
  * Catches:
- *   - directive lines      (speed:/duration:/voice:/...)        [DIRECTIVE_LINE]
+ *   - directive lines      (speed:/duration:/voice:/format:/platform:/...)  [DIRECTIVE_LINE]
+ *   - format spec lines    ("YouTube Short format, 9:16, 1 legend only")    [FORMAT_SPEC_LINE]
  *   - markdown headers     ("## HOOK", "# Introduction")
  *   - dash-only separators ("———", "-----")
  *   - em-dash headers      ("— MICRO RECOMPENSA —", "— CTA —", "- HOOK -")
@@ -71,6 +84,7 @@ const FENCED_LINE = /^[—–-]{1,3}\s*([\s\S]*?)\s*[—–-]{1,3}$/
  */
 function isDroppableLine(line: string): boolean {
   if (DIRECTIVE_LINE.test(line)) return true
+  if (FORMAT_SPEC_LINE.test(line)) return true
   const t = line.trim()
   if (!t) return false
   if (DASH_ONLY_LINE.test(t)) return true
