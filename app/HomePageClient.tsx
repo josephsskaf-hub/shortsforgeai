@@ -17,7 +17,14 @@ import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
-const EXIT_INTENT_KEY = 'sfa_exit_intent_shown'
+// Push #232 — exit-intent survey one-shot flag (renamed from the prior
+// "free video" offer key so returning visitors see the new survey once).
+const EXIT_SHOWN_KEY = 'exitShown'
+const EXIT_REASONS = [
+  'Too expensive for me',
+  "I'm not sure it works",
+  "I'll come back later",
+] as const
 
 interface ShowcaseCard {
   category: string
@@ -116,8 +123,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // Push #171 — show a friendly "already subscribed" banner instead of a
   // red error when the API blocks a duplicate purchase attempt.
   const [alreadySubscribed, setAlreadySubscribed] = useState(false)
-  // Push #097 — exit-intent overlay state. One-shot per session.
+  // Push #232 — exit-intent survey state. One-shot per session, desktop
+  // only, after a 5s dwell. `exitReason` holds the selected radio option,
+  // `exitComment` the optional free-text, `exitSubmitting` guards the POST.
   const [showExitIntent, setShowExitIntent] = useState(false)
+  const [exitReason, setExitReason] = useState<string | null>(null)
+  const [exitComment, setExitComment] = useState('')
+  const [exitSubmitting, setExitSubmitting] = useState(false)
   // Push #104 — live "X Shorts created today" counter for the social
   // proof bar. Falls back to the API's baseline if the fetch fails.
   const [shortsToday, setShortsToday] = useState<number>(47)
@@ -275,31 +287,59 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     }
   }, [user])
 
-  // Push #097 — exit-intent overlay. Fires once per session when the
-  // cursor leaves the top of the viewport (the canonical "about to
-  // close the tab" gesture). Suppressed for signed-in users — they
-  // don't need the "get 1 free video" prompt.
+  // Push #232 — exit-intent survey. Fires once per session when the cursor
+  // leaves the top of the viewport (the canonical "about to close the tab"
+  // gesture). Gated to: desktop only (innerWidth > 768), a 5s minimum dwell
+  // so we don't ambush a visitor who immediately bounces, and one-shot via
+  // the `exitShown` sessionStorage flag. This component only renders on the
+  // public homepage, so the "public pages only" rule is satisfied by scope.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (user) return
+    if (window.innerWidth <= 768) return
     try {
-      if (sessionStorage.getItem(EXIT_INTENT_KEY) === '1') return
+      if (sessionStorage.getItem(EXIT_SHOWN_KEY) === '1') return
     } catch {
       // ignore
     }
+    const mountedAt = Date.now()
     function handleMouseLeave(e: MouseEvent) {
       if (e.clientY > 0) return
+      if (Date.now() - mountedAt < 5000) return
       try {
-        sessionStorage.setItem(EXIT_INTENT_KEY, '1')
+        sessionStorage.setItem(EXIT_SHOWN_KEY, '1')
       } catch {
         // ignore
       }
+      trackHomepageEvent('exit_survey_shown')
       setShowExitIntent(true)
       document.removeEventListener('mouseleave', handleMouseLeave)
     }
     document.addEventListener('mouseleave', handleMouseLeave)
     return () => document.removeEventListener('mouseleave', handleMouseLeave)
-  }, [user])
+  }, [])
+
+  // Push #232 — POST the exit survey to /api/exit-feedback (Supabase via
+  // service role) then close. keepalive lets the request finish even if the
+  // visitor closes the tab on the way out. Failures are swallowed — the
+  // modal must always close cleanly.
+  async function submitExitFeedback() {
+    if (exitSubmitting) return
+    setExitSubmitting(true)
+    trackHomepageEvent('exit_survey_submit')
+    try {
+      await fetch('/api/exit-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: exitReason, comment: exitComment.trim() }),
+        keepalive: true,
+      })
+    } catch {
+      // ignore — never block the close on a network failure
+    } finally {
+      setExitSubmitting(false)
+      setShowExitIntent(false)
+    }
+  }
 
   // Push #081 — Start Free routing rule. Logged-in users go straight to
   // /generate (with their prompt pre-filled if any). Logged-out users go
@@ -1329,19 +1369,23 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
       </section>
 
-      {/* ───────── Exit-intent overlay (Push #097) ───────── */}
+      {/* ───────── Exit-intent survey (Push #232) ─────────
+          A lightweight "why are you leaving?" survey: 3 quick reasons + an
+          optional comment, POSTed to /api/exit-feedback. Fade-in backdrop +
+          slide-up card; dark theme, cyan border, backdrop blur. */}
       {showExitIntent && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-labelledby="exit-intent-title"
+          aria-labelledby="exit-survey-title"
           onClick={() => setShowExitIntent(false)}
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-5 backdrop-blur-md"
           style={{ animation: 'sf-exit-fade .2s ease-out' }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-3xl border-2 border-cyan-400/40 bg-[#0B1120] p-8 text-center shadow-[0_30px_80px_rgba(0,0,0,.7),0_0_60px_rgba(34,211,238,.25)]"
+            className="relative w-full max-w-md rounded-3xl border-2 border-cyan-400/40 bg-[#0B1120] p-8 shadow-[0_30px_80px_rgba(0,0,0,.7),0_0_60px_rgba(34,211,238,.25)]"
+            style={{ animation: 'sf-exit-pop .28s cubic-bezier(.16,1,.3,1)' }}
           >
             <button
               type="button"
@@ -1351,36 +1395,75 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             >
               ×
             </button>
-            <div aria-hidden className="mb-2 text-4xl">👋</div>
             <h2
-              id="exit-intent-title"
+              id="exit-survey-title"
               className="text-balance text-2xl font-black tracking-tight text-[#F1F5F9]"
             >
-              Wait! Get <span className="text-[#10B981]">1 FREE video</span> before you go
+              Wait — before you go 👋
             </h2>
-            <p className="mx-auto mt-3 max-w-xs text-[14px] text-[#94A3B8]">
-              No credit card. No catch. Generate your first viral Short in 60 seconds.
+            <p className="mt-2 text-[14px] text-[#94A3B8]">
+              Help us improve. Why are you leaving?
             </p>
+
+            <div className="mt-5 flex flex-col gap-2.5" role="radiogroup" aria-label="Why are you leaving?">
+              {EXIT_REASONS.map((reason) => {
+                const selected = exitReason === reason
+                return (
+                  <button
+                    key={reason}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setExitReason(reason)}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-[14px] font-semibold transition ${
+                      selected
+                        ? 'border-cyan-400 bg-cyan-400/[0.08] text-[#F1F5F9] shadow-[0_0_18px_rgba(34,211,238,.2)]'
+                        : 'border-white/[0.1] bg-white/[0.02] text-[#CBD5E1] hover:border-cyan-400/40 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        selected ? 'border-cyan-400' : 'border-white/30'
+                      }`}
+                    >
+                      {selected && <span className="h-2 w-2 rounded-full bg-cyan-400" />}
+                    </span>
+                    {reason}
+                  </button>
+                )
+              })}
+            </div>
+
+            <textarea
+              value={exitComment}
+              onChange={(e) => setExitComment(e.target.value)}
+              placeholder="Anything else? (optional)"
+              maxLength={2000}
+              rows={3}
+              className="mt-4 w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.02] px-3 py-2.5 text-[14px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none transition focus:border-cyan-400/60"
+            />
+
             <button
               type="button"
-              onClick={() => {
-                trackHomepageEvent('exit_intent_cta_click')
-                setShowExitIntent(false)
-                goToGenerate()
-              }}
-              className="mt-6 w-full rounded-xl bg-[#10B981] px-6 py-4 text-base font-extrabold text-white shadow-[0_10px_30px_rgba(16,185,129,.4)] transition hover:bg-[#059669]"
+              onClick={submitExitFeedback}
+              disabled={exitSubmitting}
+              className="mt-5 w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
             >
-              Generate Free →
+              {exitSubmitting ? 'Sending…' : 'Send feedback & leave'}
             </button>
             <button
               type="button"
               onClick={() => setShowExitIntent(false)}
-              className="mt-3 text-[12px] text-[#94A3B8] underline hover:text-[#F1F5F9]"
+              className="mt-3 block w-full text-center text-[13px] font-semibold text-[#94A3B8] underline hover:text-[#F1F5F9]"
             >
-              No thanks, I&apos;ll pass
+              Actually, I&apos;ll stay
             </button>
           </div>
-          <style>{`@keyframes sf-exit-fade { from { opacity: 0; } to { opacity: 1; } }`}</style>
+          <style>{`
+            @keyframes sf-exit-fade { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes sf-exit-pop { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+          `}</style>
         </div>
       )}
 
