@@ -474,6 +474,8 @@ Duration: ~${duration} seconds (target word count is in the system prompt).
 Make every line teach something real and surprising.
 Follow the Hook → Micro-Knowledge → Escalation → Payoff structure exactly.
 
+TOPIC FIDELITY (critical): The ENTIRE brief must be specifically about "${prompt}". Every fact in the voiceover_script, every scene voiceover, every caption, and every visual_prompt must be directly about this exact topic — not about the broader genre, not a tangentially related subject, not generic filler. If the topic names a specific person, place, event, or thing, every beat must stay on that subject. Do not pad with vague mystery to reach the word count; reach it with more real facts about this topic.
+
 Detected niche hint: ${fallback.niche}
 Detected tone hint: ${fallback.tone}
 

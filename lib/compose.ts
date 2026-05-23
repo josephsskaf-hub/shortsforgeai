@@ -59,10 +59,18 @@ export interface CreatomateRenderState {
   error: string | null
 }
 
-// 2.5 words per second is a comfortable voiceover pace.
+// Push #234 — calibrated to the REAL TTS pace. OpenAI tts-1 (onyx) speaks at
+// ~4.0 words/second, so a script must contain ~duration × 4.0 words for the
+// narration to actually fill the requested duration. The old 2.5 wps figure
+// produced scripts that finished ~40% early, which (because the final video
+// length tracks the audio length) made every "45s" video come out ~27s.
+// Keep this in lockstep with durationPlanFor() in lib/openai.ts so the
+// analyze-idea script and the scale target agree (and scaleVoiceoverScript's
+// ±15% short-circuit usually skips an extra rewrite).
+const TTS_WORDS_PER_SECOND = 4.0
 export function targetWordCount(duration: number): number {
   const seconds = Math.max(5, Math.min(120, Math.round(duration)))
-  return Math.round(seconds * 2.5)
+  return Math.round(seconds * TTS_WORDS_PER_SECOND)
 }
 
 /**
@@ -113,13 +121,19 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
   return cleanInput
 }
 
-export async function generateTTS(script: string): Promise<Buffer> {
+// Push #234 — `speed` lets the compose route nudge narration length to the
+// requested duration after measuring the first pass. tts-1 accepts 0.25–4.0
+// (1.0 = natural). duration scales as 1/speed, so speed<1 lengthens and
+// speed>1 shortens. We clamp to a natural-sounding band before sending.
+export async function generateTTS(script: string, speed = 1.0): Promise<Buffer> {
   const input = script.length > 3800 ? script.slice(0, 3800) : script
+  const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(speed) ? speed : 1.0))
   const { openai } = await import('@/lib/openai')
   const speech = await openai.audio.speech.create({
     model: 'tts-1',
     voice: 'onyx',
     input,
+    speed: safeSpeed,
   })
   return Buffer.from(await speech.arrayBuffer())
 }
@@ -487,6 +501,8 @@ interface CreatomateElement {
   width?: string
   height?: string
   fit?: string
+  loop?: boolean
+  trim_start?: number
   volume?: string
   fill_color?: string
   stroke_color?: string
@@ -620,7 +636,8 @@ export function buildCreatomateSource({
   })
 
   // Track 2 — tile / loop the clips to fill the full duration.
-  // Each Runway clip is 10s. We loop them in order until we cover totalDuration.
+  // Clips are placed back-to-back with cumulative `time` (no gap, no overlap)
+  // until we cover totalDuration.
   //
   // fit: 'cover' is the right default for a 9:16 output canvas. Most clips
   // are already vertical 9:16 (Runway 720x1280, Pexels portrait HD), where
@@ -630,12 +647,20 @@ export function buildCreatomateSource({
   // strip on a black canvas (the black-screen bug); 'cover' fills the
   // frame with a centered crop. Track 1 still paints a dark background as
   // a safety net for any decode failure.
-  // Push #202 — cross-dissolve between clips: every clip after the first
-  // gets enter_transition fade (0.4s) so there is never a hard cut/gap at
-  // clip boundaries. Creatomate blends adjacent clips on the same track
-  // at their shared boundary, producing a smooth dissolve at zero extra cost.
+  //
+  // Push #234 — two black-frame fixes:
+  //   1. loop: true — stock clips are NOT all 10s (Pexels/cached clips vary
+  //      in length). When a clip is shorter than its slot, Creatomate would
+  //      otherwise hold a frozen/black frame for the remainder. Looping the
+  //      source fills the whole slot with motion instead of a black tail.
+  //   2. Removed the per-clip enter_transition fade (Push #202). Because
+  //      consecutive same-track clips do NOT overlap here, that fade animated
+  //      each clip in FROM the near-black track-1 background, producing a
+  //      visible dark dip at every clip boundary — the "gaps pretos" the user
+  //      reported. A clean hard cut has no such dip. We also trim the first
+  //      0.25s of each clip so any source fade-in-from-black is skipped.
   const CLIP_LEN = 10
-  const TRANSITION_LEN = 0.4
+  const CLIP_TRIM_START = 0.25
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
@@ -649,14 +674,13 @@ export function buildCreatomateSource({
       duration: segLen,
       source: url,
       fit: 'cover',
+      loop: true,
+      trim_start: CLIP_TRIM_START,
       x: '50%',
       y: '50%',
       width: '100%',
       height: '100%',
       volume: '0%',
-    }
-    if (i > 0) {
-      elem.enter_transition = { type: 'fade', duration: TRANSITION_LEN }
     }
     elements.push(elem)
     cursor = round3(cursor + segLen)

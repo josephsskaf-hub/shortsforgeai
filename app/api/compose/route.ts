@@ -20,7 +20,15 @@ export const maxDuration = 60
 // Push #064 — durations bumped to 30 / 45 / 60 in lockstep with
 // /api/generate-video. Legacy 10 / 50 kept here for backward
 // compatibility with any in-flight requests from the old client.
-const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60] as const
+// Push #234 — added 90: the client offers 45/60/90, and without 90 here a
+// 90s request silently coerced to 45 → the script was sized for 45s and the
+// final video came out ~half the requested length.
+const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
+
+// Push #234 — how far the measured narration may stray from the requested
+// duration before we re-synthesize the TTS at an adjusted speed to pull it
+// back in line. ±3s matches the product tolerance.
+const DURATION_TOLERANCE_SECONDS = 3
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
 
 interface ComposeBody {
@@ -174,10 +182,50 @@ export async function POST(req: NextRequest) {
 
     // Push #158 — measure the REAL narration length so captions key to the
     // actual audio, not the requested duration (which assumed 2.5 wps).
-    const realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
+    let realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
     console.log(
       `[compose] estimated TTS duration: ${realAudioDuration.toFixed(1)}s (requested ${duration}s)`,
     )
+
+    // Push #234 — corrective pass. The final video length tracks the audio
+    // length (see buildCreatomateSource), so if the first narration drifts more
+    // than the tolerance from the requested duration we re-synthesize once at an
+    // adjusted speed. duration scales as 1/speed, so speed = measured/requested
+    // pulls the length toward the target (clamped to a natural band in
+    // generateTTS). This is best-effort: any failure, or a result that isn't
+    // actually closer, keeps the original audio so compose never regresses.
+    if (
+      realAudioDuration > 4 &&
+      Math.abs(realAudioDuration - duration) > DURATION_TOLERANCE_SECONDS
+    ) {
+      const correctiveSpeed = realAudioDuration / duration
+      console.log(
+        `[compose] duration off by ${(realAudioDuration - duration).toFixed(1)}s — re-synthesizing at speed=${correctiveSpeed.toFixed(3)}`,
+      )
+      try {
+        const retryBuffer = await generateTTS(scaledScript, correctiveSpeed)
+        if (retryBuffer && retryBuffer.length > 0) {
+          const retryDuration = estimateMp3DurationSeconds(retryBuffer)
+          const improved =
+            retryDuration > 4 &&
+            Math.abs(retryDuration - duration) < Math.abs(realAudioDuration - duration)
+          if (improved) {
+            audioBuffer = retryBuffer
+            realAudioDuration = retryDuration
+            console.log(
+              `[compose] corrected TTS duration: ${retryDuration.toFixed(1)}s (requested ${duration}s)`,
+            )
+          } else {
+            console.log(
+              `[compose] corrective pass not closer (${retryDuration.toFixed(1)}s) — keeping original`,
+            )
+          }
+        }
+      } catch (retryErr) {
+        const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.warn('[compose] corrective TTS pass failed — keeping original:', msg)
+      }
+    }
 
     // Step 2b — Push #175: transcribe the TTS audio via Whisper to get
     // word-level timestamps. These are mapped to caption segments so captions

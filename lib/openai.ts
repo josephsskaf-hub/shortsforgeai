@@ -28,11 +28,16 @@ export interface ShortVideo {
 }
 
 // Push #064 — duration-aware narration sizing.
-//   30s → 75–90 words and 4 scenes
-//   45s → 110–135 words and 5 scenes (default)
-//   60s → 150–180 words and 6 scenes
-// Push #208 — added 90s tier.
-//   90s → 225–270 words and 9 scenes
+// Push #234 — RECALIBRATED to the real TTS pace. OpenAI tts-1 (onyx) speaks at
+// ~4.0 words/second, NOT the ~2.5 wps the old ranges assumed. Sizing scripts at
+// 2.5 wps meant a "45s" script of ~120 words finished narration in ~28s, so the
+// final video (whose length is driven by the actual audio in lib/compose.ts)
+// came out far shorter than the user requested. The ranges below target
+// duration × ~4.0 words so the narration actually fills the requested time.
+//   30s → 110–130 words and 4 scenes
+//   45s → 170–195 words and 5 scenes (default)
+//   60s → 225–255 words and 6 scenes
+//   90s → 340–380 words and 9 scenes
 export interface DurationPlan {
   duration: 30 | 45 | 60 | 90
   wordCountRange: [number, number]
@@ -40,10 +45,10 @@ export interface DurationPlan {
 }
 
 export function durationPlanFor(duration: number): DurationPlan {
-  if (duration <= 35) return { duration: 30, wordCountRange: [75, 90], sceneCount: 4 }
-  if (duration >= 80) return { duration: 90, wordCountRange: [225, 270], sceneCount: 9 }
-  if (duration >= 55) return { duration: 60, wordCountRange: [150, 180], sceneCount: 6 }
-  return { duration: 45, wordCountRange: [110, 135], sceneCount: 5 }
+  if (duration <= 35) return { duration: 30, wordCountRange: [110, 130], sceneCount: 4 }
+  if (duration >= 80) return { duration: 90, wordCountRange: [340, 380], sceneCount: 9 }
+  if (duration >= 55) return { duration: 60, wordCountRange: [225, 255], sceneCount: 6 }
+  return { duration: 45, wordCountRange: [170, 195], sceneCount: 5 }
 }
 
 // Push #065 — safe composition rules. Vertical 9:16 + bottom captions

@@ -273,6 +273,12 @@ You always respond with a valid JSON array ONLY — no markdown, no code fences,
 
 "${prompt}"
 
+TOPIC FIDELITY — the most important rule (read first):
+- Every single scene must be specifically and literally about "${prompt}". Do NOT drift to a broader category, a different but related subject, or generic stock filler.
+- Each scene's "voiceover" must state a concrete, verifiable fact about THIS exact topic — not about the genre in general.
+- Each scene's "stockSearchQuery" and "searchKeywords" must describe the literal subject of THAT scene's voiceover, so the footage on screen matches what is being narrated at that moment. If the voiceover names a specific place, person, object, or event, the search query must name it too.
+- The examples below are FORMAT references only. Copy their structure and specificity, never their subject — unless the user's topic actually is rockets, pyramids, etc.
+
 TOPIC-SPECIFIC VISUAL RULES — read carefully before writing stockSearchQuery, negativeVisualPrompt, and visualCategory:
 
 ROCKETS / SPACE / ELON MUSK / SPACEX / NASA / STARSHIP / FALCON 9:
