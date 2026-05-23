@@ -47,15 +47,49 @@ const SPEED_DIRECTIVE = /\bspeed\s*[:=]?\s*(\d+(?:\.\d+)?)/i
 // the spoken text so the narrator doesn't read "duration 45 seconds" out loud.
 const DIRECTIVE_LINE = /^\s*(speed|duration|voice|music|format|aspect|ratio|style|tone|language|idioma|velocidade)\s*[:=]/i
 
+// A line that's nothing but dash/em-dash/en-dash decoration ("———", "-----").
+const DASH_ONLY_LINE = /^[\s—–-]+$/
+// Markdown header line ("## HOOK", "# Introduction").
+const MARKDOWN_HEADER_LINE = /^\s*#{1,6}\s+\S/
+// Strips an em-dash/en-dash/hyphen fence from both ends ("— HOOK —" → "HOOK").
+const FENCED_LINE = /^[—–-]{1,3}\s*([\s\S]*?)\s*[—–-]{1,3}$/
+
+/**
+ * Push #237 — true when a line is a section header / stage direction rather than
+ * narration, so it must be dropped before the text is spoken or captioned.
+ * Catches:
+ *   - directive lines      (speed:/duration:/voice:/...)        [DIRECTIVE_LINE]
+ *   - markdown headers     ("## HOOK", "# Introduction")
+ *   - dash-only separators ("———", "-----")
+ *   - em-dash headers      ("— MICRO RECOMPENSA —", "— CTA —", "- HOOK -")
+ *   - ALL-CAPS stage cues  ("HOOK", "CTA", "BEAT 1", "SCENE 1", "BEAT 1:")
+ *
+ * An ALL-CAPS cue is detected as: after stripping any surrounding dash fence and
+ * leading markdown hashes, the remainder has an uppercase letter and NO lowercase
+ * letter — so normal sentence-case narration is never removed. Handles both the
+ * em-dash "—" and regular hyphen "-" fence variants.
+ */
+function isDroppableLine(line: string): boolean {
+  if (DIRECTIVE_LINE.test(line)) return true
+  const t = line.trim()
+  if (!t) return false
+  if (DASH_ONLY_LINE.test(t)) return true
+  if (MARKDOWN_HEADER_LINE.test(t)) return true
+  const fenced = FENCED_LINE.exec(t)
+  const body = (fenced ? fenced[1] : t).replace(/^#{1,6}\s*/, '').trim()
+  if (!body) return Boolean(fenced)
+  return /[A-Z]/.test(body) && !/[a-z]/.test(body)
+}
+
 /**
  * Strip residual bracketed directions (e.g. [HOOK], [Scene 2], leftover
- * markers), directive lines, and collapse whitespace. Used to turn a raw
- * narration chunk into clean spoken text.
+ * markers), directive / section-header / stage-direction lines, and collapse
+ * whitespace. Used to turn a raw narration chunk into clean spoken text.
  */
 function cleanNarration(raw: string): string {
   return raw
     .split(/\r?\n/)
-    .filter((line) => !DIRECTIVE_LINE.test(line))
+    .filter((line) => !isDroppableLine(line))
     .join(' ')
     // Remove any remaining bracketed stage directions / markers.
     .replace(/\[[^\]]*\]/g, ' ')
