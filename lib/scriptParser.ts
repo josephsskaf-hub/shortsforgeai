@@ -254,40 +254,43 @@ export function parseUserScript(raw: string): ParsedScript {
   const text = (raw ?? '').toString()
   const speed = parseSpeed(text)
 
-  // Walk the text marker-by-marker. The narration that PRECEDES each marker is
-  // the spoken line for that marker's clip — this matches the natural authoring
-  // format ("<narration> [Pexels: <query>]"). Any narration trailing the last
-  // marker is appended to the final segment so it isn't lost.
-  const segments: ParsedSegment[] = []
-  let lastIndex = 0
+  // Push #241 — pair each marker with the narration that FOLLOWS it.
+  //
+  // The channel's template puts the visual cue at the START of every beat line:
+  //   "[Pexels: <query>] <narration for this beat>"
+  // The earlier logic paired each marker with the text that PRECEDED it, which
+  // is correct only for the inverted "<narration> [Pexels]" layout. On the real
+  // marker-first scripts that off-by-one shifted every clip one beat out of sync
+  // with its narration: the first marker captured the (empty) metadata header,
+  // the hook line attached to the second clip's query, and so on down the whole
+  // script. Forward-pairing fixes it so segment N carries BOTH query N and
+  // narration N.
+  //
+  // Each marker owns the text from the end of its bracket up to the next marker
+  // (or the end of the script). Anything before the first marker is the metadata
+  // header block and is intentionally dropped from the per-segment narration —
+  // the full `narration` field below still re-derives the complete spoken text.
+  const markers: Array<{ start: number; end: number; query: string }> = []
   let m: RegExpExecArray | null
   PEXELS_MARKER.lastIndex = 0
   while ((m = PEXELS_MARKER.exec(text)) !== null) {
-    const precedingRaw = text.slice(lastIndex, m.index)
-    const voiceover = cleanNarration(precedingRaw)
-    const pexelsQuery = m[1].replace(/\s{2,}/g, ' ').trim()
-    if (pexelsQuery) {
-      segments.push({ voiceover, pexelsQuery })
-    }
-    lastIndex = PEXELS_MARKER.lastIndex
+    markers.push({
+      start: m.index,
+      end: PEXELS_MARKER.lastIndex,
+      query: m[1].replace(/\s{2,}/g, ' ').trim(),
+    })
+  }
+
+  const segments: ParsedSegment[] = []
+  for (let i = 0; i < markers.length; i++) {
+    const { end, query } = markers[i]
+    if (!query) continue
+    const followEnd = i + 1 < markers.length ? markers[i + 1].start : text.length
+    const voiceover = cleanNarration(text.slice(end, followEnd))
+    segments.push({ voiceover, pexelsQuery: query })
   }
 
   const hasMarkers = segments.length > 0
-
-  // Trailing narration after the final marker → append to the last segment so
-  // its spoken line is complete.
-  if (hasMarkers) {
-    const trailing = cleanNarration(text.slice(lastIndex))
-    if (trailing) {
-      const last = segments[segments.length - 1]
-      last.voiceover = [last.voiceover, trailing].filter(Boolean).join(' ').trim()
-    }
-    // A leading segment whose narration is empty (marker before any narration)
-    // still keeps its query — the visual is what matters; its voiceover may be
-    // filled by the next beat. We leave empty voiceovers as-is here and let the
-    // narration field below carry the full spoken text.
-  }
-
   const narration = cleanNarration(text)
 
   return { hasMarkers, segments, narration, speed }

@@ -669,11 +669,21 @@ export function buildCreatomateSource({
   //      0.25s of each clip so any source fade-in-from-black is skipped.
   const CLIP_LEN = 10
   const CLIP_TRIM_START = 0.25
+  // Push #241 — size each slot so EVERY clip appears, in order, within the audio
+  // window. The old fixed 10s slots overflowed the timeline and silently dropped
+  // the later clips: a 7-clip / ~52s verbatim script laid clips across 0–70s, so
+  // the video (which ends at the ~52s audio length) never reached its final
+  // skyline clip and footage drifted a full beat off the narration. Dividing the
+  // timeline by the clip count lands all clips on-screen and roughly on their
+  // beats. The CLIP_LEN cap preserves the old behavior when there are too few
+  // clips to fill the window (e.g. a 2-clip / 90s GPT-scene video): the loop
+  // re-cycles them at 10s each for the remainder instead of stretching one clip.
+  const slotLen = Math.min(CLIP_LEN, totalDuration / cleanClips.length)
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
     const remaining = totalDuration - cursor
-    const segLen = round3(Math.min(CLIP_LEN, remaining))
+    const segLen = round3(Math.min(slotLen, remaining))
     const url = cleanClips[i % cleanClips.length]
     const elem: CreatomateElement = {
       type: 'video',
