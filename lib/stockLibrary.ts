@@ -51,6 +51,14 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://archive.org/download/SampleVideo1280x7205mb/SampleVideo_1280x720_5mb.mp4', width: 1280, height: 720, duration: 13, tags: ['nature', 'wildlife', 'animal'] },
   { url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4', width: 1280, height: 720, duration: 596, tags: ['default'] },
   { url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4', width: 1280, height: 720, duration: 10, tags: ['default'] },
+
+  // — NASA / SpaceX rocket footage (archive.org, Public Domain) — Push #217 —
+  // Fix: CLIPS had zero clips tagged rocket/space, so rocket topics fell back to sea turtle.
+  { url: 'https://archive.org/download/504233main_ksc_120810_spacex_launch/504233main_ksc_120810_spacex_launch_512kb.mp4', width: 1280, height: 720, duration: 30, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa', 'spacex'] },
+  { url: 'https://archive.org/download/launch-maxt/4-Launch-MaxT-OP-854x480-24-1200kbps.mp4',                             width:  854, height: 480, duration: 17, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa'] },
+  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/2015-00153_Orion_BFCR_PT2_RELEASE.mp4',                  width: 1280, height: 720, duration: 73, tags: ['rocket', 'space', 'spacecraft', 'nasa', 'earth_orbit'] },
+  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/ACM_Static_test_QM2_08222019_public_edit.mp4',           width: 1280, height: 720, duration: 17, tags: ['rocket', 'space', 'nasa', 'spacecraft', 'rocket_launch'] },
+  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/Ascent-Abort-2-1080.ia.mp4',                             width: 1920, height:1080, duration: 60, tags: ['rocket', 'rocket_launch', 'space', 'nasa', 'spacecraft'] },
 ]
 
 // ─── Keyword → tag routing ───────────────────────────────────────────────────
