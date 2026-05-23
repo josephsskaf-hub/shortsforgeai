@@ -66,6 +66,24 @@ function cleanNarration(raw: string): string {
 }
 
 /**
+ * Push #236 — public, idempotent sanitizer for the TTS / caption boundary.
+ *
+ * Strips every bracketed marker ([Pexels: ...], [Scene 2], [HOOK], [Beat], ...),
+ * drops standalone directive lines (speed:/duration:/voice:/music:/...), and
+ * removes markdown emphasis so the narrator can never vocalize a stage
+ * direction. This is the single function every narration path should pass
+ * through before it is spoken or rendered as a caption.
+ *
+ * Why this exists: in some fall-back paths the RAW user prompt (markers and
+ * all) reached OpenAI TTS, so the voice read "[Pexels: rocket launch]" aloud.
+ * Running this at each TTS call site guarantees clean speech regardless of how
+ * the script was assembled. Safe to call on already-clean text — idempotent.
+ */
+export function stripScriptMarkers(raw: string): string {
+  return cleanNarration((raw ?? '').toString())
+}
+
+/**
  * Parse a clamped speed value from the raw script, or null when absent.
  * Clamped to the same 0.7–1.3 band generateTTS() accepts so an out-of-range
  * directive can't push the voice into unnatural territory.

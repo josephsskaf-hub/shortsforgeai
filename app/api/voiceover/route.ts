@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
+import { stripScriptMarkers } from '@/lib/scriptParser'
 
 export const maxDuration = 60
 
@@ -28,7 +29,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
-    const script = (body.script ?? '').trim()
+    // Push #236 — strip script markers/directives so the narrator never reads
+    // "[Pexels: ...]" or a "speed:" line aloud. Idempotent on clean input.
+    const script = stripScriptMarkers(body.script ?? '')
     if (!script) {
       return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     }

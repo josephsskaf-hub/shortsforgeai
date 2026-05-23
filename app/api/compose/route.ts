@@ -13,6 +13,7 @@ import {
   uploadVoiceoverToSupabase,
 } from '@/lib/compose'
 import { buildCaptionSegments } from '@/lib/openai'
+import { stripScriptMarkers } from '@/lib/scriptParser'
 import { fetchUserPlan } from '@/lib/plan'
 
 export const maxDuration = 60
@@ -99,7 +100,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'clip_urls is required.' }, { status: 400 })
     }
 
-    const voiceoverScript = (body.voiceover_script ?? '').toString().trim()
+    // Push #236 — sanitize at the boundary so NO script marker ([Pexels: ...],
+    // [Scene], [HOOK]), directive line (speed:/duration:/...), or markdown can
+    // reach TTS or the on-screen captions. This is the single server-side
+    // chokepoint every narration path flows through before it is both spoken
+    // (generateTTS) and rendered as caption text (buildCreatomateSource).
+    // Idempotent: verbatim scripts are already clean; raw-prompt fallbacks are
+    // cleaned here.
+    const voiceoverScript = stripScriptMarkers(body.voiceover_script ?? '')
     if (!voiceoverScript) {
       return NextResponse.json({ error: 'voiceover_script is required.' }, { status: 400 })
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
+import { stripScriptMarkers } from '@/lib/scriptParser'
 
 export const maxDuration = 300
 
@@ -127,7 +128,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const script = (body.script ?? '').trim()
+    // Push #236 — strip markers/directives so TTS never speaks a "[Pexels: ...]"
+    // marker or a "speed:" line. Idempotent on already-clean narration.
+    const script = stripScriptMarkers(body.script ?? '')
     const scenes = Array.isArray(body.scenes) ? body.scenes : []
     const stockClips = Array.isArray(body.stockClips) ? body.stockClips : []
 

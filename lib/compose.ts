@@ -6,6 +6,7 @@
 
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
+import { stripScriptMarkers } from '@/lib/scriptParser'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
@@ -126,7 +127,11 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
 // (1.0 = natural). duration scales as 1/speed, so speed<1 lengthens and
 // speed>1 shortens. We clamp to a natural-sounding band before sending.
 export async function generateTTS(script: string, speed = 1.0): Promise<Buffer> {
-  const input = script.length > 3800 ? script.slice(0, 3800) : script
+  // Push #236 — last line of defense: strip any residual script markers /
+  // directives so the narrator can never speak "[Pexels: ...]" or a "speed:"
+  // line, no matter what upstream produced `script`. Idempotent on clean text.
+  const cleaned = stripScriptMarkers(script)
+  const input = cleaned.length > 3800 ? cleaned.slice(0, 3800) : cleaned
   const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(speed) ? speed : 1.0))
   const { openai } = await import('@/lib/openai')
   const speech = await openai.audio.speech.create({
