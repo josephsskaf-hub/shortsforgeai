@@ -209,4 +209,14 @@ export function pickLibraryClip(query: string, sceneIndex = 0): LibraryClip {
 export function pickLibraryClips(query: string, count = 4, sceneIndex = 0): LibraryClip[] {
   const tags = tagsForQuery(query)
   let pool: LibraryClip[] = []
-  if (tags.length > 0) pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
+  if (tags.length > 0) pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
+  if (pool.length === 0) pool = CLIPS.filter((c) => !c.tags.includes('default'))
+  if (pool.length === 0) pool = CLIPS
+
+  const out: LibraryClip[] = []
+  for (let n = 0; n < Math.min(count, pool.length); n++) {
+    const idx = ((sceneIndex + n) % pool.length + pool.length) % pool.length
+    out.push(pool[idx])
+  }
+  return out
+}
