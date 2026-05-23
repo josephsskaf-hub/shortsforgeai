@@ -11,7 +11,7 @@
 //   the wrong state during hydration.
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
@@ -138,6 +138,19 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [showcaseVideos, setShowcaseVideos] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    // Push #228 — serve showcase URLs from a per-session cache so an
+    // in-session navigation back to the homepage doesn't refetch them.
+    try {
+      const cached = sessionStorage.getItem('sfa_showcase')
+      if (cached) {
+        const sv = JSON.parse(cached) as Record<string, string>
+        if (sv && typeof sv === 'object' && Object.keys(sv).length > 0) {
+          setShowcaseVideos(sv)
+          return
+        }
+      }
+    } catch { /* ignore */ }
+
     void fetch('/api/showcase-clips')
       .then((r) => r.json())
       .then((data: { clips?: Record<string, string | null> }) => {
@@ -145,6 +158,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         const sv: Record<string, string> = {}
         SHOWCASE_IDS.forEach((id, i) => { if (clips[id]) sv[`${i}`] = clips[id] as string })
         setShowcaseVideos(sv)
+        try { sessionStorage.setItem('sfa_showcase', JSON.stringify(sv)) } catch { /* ignore */ }
       })
       .catch(() => { /* fall back to gradient placeholders */ })
   }, [])
@@ -155,12 +169,29 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
   useEffect(() => {
     let cancelled = false
+    // Push #228 — seed the counters from a 5-minute sessionStorage cache
+    // and skip the network entirely while it's fresh. The API already sets
+    // s-maxage=300, so this just extends that cache to in-session client
+    // navigations and avoids a counter fetch on every mount.
+    try {
+      const cached = sessionStorage.getItem('sfa_stats')
+      if (cached) {
+        const { count, total, ts } = JSON.parse(cached)
+        if (typeof count === 'number') setShortsToday(count)
+        if (typeof total === 'number') setShortsTotal(total)
+        if (typeof ts === 'number' && Date.now() - ts < 300_000) return
+      }
+    } catch { /* ignore */ }
+
     fetch('/api/stats')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (cancelled || !d) return
         if (typeof d.count === 'number') setShortsToday(d.count)
         if (typeof d.total === 'number') setShortsTotal(d.total)
+        try {
+          sessionStorage.setItem('sfa_stats', JSON.stringify({ count: d.count, total: d.total, ts: Date.now() }))
+        } catch { /* ignore */ }
       })
       .catch(() => {/* keep the baseline fallback */})
     return () => {
@@ -618,29 +649,31 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>{/* end hero content */}
 
         {/* Push #227 — InVideo-style prompt box. Type a topic → generate.
-            Single prominent input + inline button (stacks on mobile). The
-            idea is stashed via goToGenerate so it survives the signup hop
-            for logged-out visitors. */}
+            Push #228 — back to a tall textarea (like the pre-#227 card) for
+            longer ideas, keeping the new cyan-accent styling and button.
+            The idea is stashed via goToGenerate so it survives the signup
+            hop for logged-out visitors. */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
             trackHomepageEvent('hero_prompt_box_submit')
             goToGenerate()
           }}
-          className="mx-auto mt-8 flex w-full max-w-[640px] flex-col gap-3 rounded-2xl border border-white/[0.1] bg-[#0B1120]/90 p-3 shadow-[0_18px_50px_rgba(0,0,0,.5)] backdrop-blur-md transition focus-within:border-cyan-400/60 sm:flex-row sm:items-center sm:gap-2 sm:p-2.5"
+          className="mx-auto mt-8 flex w-full max-w-[640px] flex-col gap-4 rounded-2xl border border-white/[0.1] bg-[#0B1120]/90 p-4 shadow-[0_18px_50px_rgba(0,0,0,.5)] backdrop-blur-md transition focus-within:border-cyan-400/60 sm:p-5"
         >
-          <input
-            type="text"
+          <textarea
             value={prompt}
             onChange={(e) => setPromptText(e.target.value)}
             placeholder={'Type your video topic… e.g. "10 facts about Elon Musk"'}
-            maxLength={300}
-            className="w-full flex-1 rounded-xl bg-transparent px-4 py-3.5 text-[15px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none"
+            maxLength={5000}
+            rows={7}
+            className="w-full flex-1 resize-none rounded-xl bg-transparent px-3 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none"
+            style={{ minHeight: 200 }}
           />
           <button
             type="submit"
             disabled={submitting}
-            className="w-full shrink-0 rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60 sm:w-auto"
+            className="w-full shrink-0 rounded-xl bg-[#22D3EE] px-6 py-4 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
           >
             {submitting ? 'Loading…' : 'Generate My Short →'}
           </button>
@@ -781,22 +814,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 background: 'linear-gradient(135deg, #22D3EE22 0%, #0B1120 70%)',
               }}
             >
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                aria-hidden
+              <LazyVideo
                 className="absolute inset-0 h-full w-full object-cover"
-              >
-                {showcaseVideos['0'] && <source src={showcaseVideos['0']} type="video/mp4" />}
-                {showcaseVideos['3'] && <source src={showcaseVideos['3']} type="video/mp4" />}
-                <source
-                  src="https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4"
-                  type="video/mp4"
-                />
-              </video>
+                sources={[
+                  showcaseVideos['0'],
+                  showcaseVideos['3'],
+                  'https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4',
+                ].filter(Boolean) as string[]}
+              />
               <div
                 aria-hidden
                 className="absolute inset-0 pointer-events-none"
@@ -1240,6 +1265,70 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   )
 }
 
+// Push #228 — lazily-loaded looping video. The element is always mounted
+// (so the IntersectionObserver has a node to watch) but its <source>s and
+// network load are deferred until it scrolls within `rootMargin` of the
+// viewport. preload="none" + manual play() keeps off-screen clips off the
+// network entirely — the homepage was loading every showcase + preview
+// clip eagerly, which was the main source of lag.
+function LazyVideo({
+  sources,
+  className,
+  style,
+}: {
+  sources: string[]
+  className?: string
+  style?: CSSProperties
+}) {
+  const [inView, setInView] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const srcKey = sources.join('|')
+
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  // Once visible (or when the source list resolves while already visible),
+  // attach sources, (re)load and play.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!inView || !el) return
+    el.load()
+    el.play().catch(() => {/* autoplay blocked — first frame still shows */})
+  }, [inView, srcKey])
+
+  return (
+    <video
+      ref={videoRef}
+      muted
+      loop
+      playsInline
+      preload="none"
+      aria-hidden
+      className={className}
+      style={style}
+    >
+      {inView && sources.map((s) => <source key={s} src={s} type="video/mp4" />)}
+    </video>
+  )
+}
+
 // Showcase card with an embedded looping video poster. The video element
 // is the visual heart of the card; the gradient backdrop is both the
 // initial paint (before the first frame) and the fallback if the CDN
@@ -1260,14 +1349,41 @@ function ShowcaseVideoCard({
   // the video immediately so it renders as soon as the first frame lands.
   const isPlaying = true // keep for overlay logic compat
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  // Push #228 — defer each card's clip until it scrolls near the viewport.
+  // Six clips loading + autoplaying at once on mount was the main homepage
+  // perf cost; the gradient poster shows until then.
+  const [inView, setInView] = useState(false)
 
-  // Autoplay full time — no hover needed.
   useEffect(() => {
-    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
-  }, [card.videoUrl])
+    const el = cardRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  // Play once the clip mounts (it only mounts after inView + a URL exists).
+  useEffect(() => {
+    if (inView && videoRef.current) {
+      videoRef.current.play().catch(() => {/* autoplay blocked */})
+    }
+  }, [inView, card.videoUrl])
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
+    <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
       {/* 9:16 vertical preview — matches the YouTube Shorts format the
           rest of the product is built around. */}
       <div
@@ -1288,7 +1404,7 @@ function ShowcaseVideoCard({
           }}
         />
 
-        {!videoFailed && card.videoUrl && (
+        {!videoFailed && card.videoUrl && inView && (
           <video
             ref={videoRef}
             src={card.videoUrl}
@@ -1296,11 +1412,10 @@ function ShowcaseVideoCard({
             muted
             loop
             playsInline
-            // Push #108 — preload="auto" so first frames land immediately
-            // for the homepage showcase (6 short Mixkit clips, total ~few
-            // MB). My Videos cards keep preload="none" — that grid can
-            // have dozens of rows.
-            preload="auto"
+            // Push #228 — preload="none" + IntersectionObserver gating
+            // (the `inView` guard above). Each clip now loads only when its
+            // card scrolls near the viewport instead of all six on mount.
+            preload="none"
             onError={() => setVideoFailed(true)}
             className="absolute inset-0 h-full w-full object-cover z-0 group-hover:scale-[1.02] transition-transform duration-500 ease-out"
             style={{ opacity: 1, transform: 'translateZ(0)' }}
