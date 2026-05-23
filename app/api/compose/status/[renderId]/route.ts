@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { pollCreatomateRender } from '@/lib/compose'
+import { persistRenderAssets } from '@/lib/renderAssets'
 
-export const maxDuration = 30
+// Push #230 — bumped 30→60 to give the post-render asset migration
+// (download Creatomate video + thumbnail, re-upload to Supabase Storage)
+// headroom on the single "done" poll. Matches /api/generate-video-fast.
+export const maxDuration = 60
 // Push #050 — this route reads auth cookies and writes to the videos
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
@@ -230,6 +234,11 @@ export async function GET(
       let creditsRemaining: number | null = null
       const cost = creditCostFor(quality)
 
+      // Push #230 — URL returned to the client. Defaults to the Creatomate
+      // output; upgraded to the permanent Supabase URL after the asset
+      // migration runs on the first "done" poll.
+      let responseVideoUrl = state.url
+
       // Push #088 — Cinematic renders (any non-'fast' quality) no longer
       // deduct from `video_credits`. They were already paid for by a
       // cinematic_token consumed upstream in /api/generate-video. Only
@@ -310,6 +319,32 @@ export async function GET(
         // the call site too, so we can confirm in Vercel logs that the
         // helper is reached AND see its result without having to dig
         // through the internal log lines.
+        // Push #230 — copy the Creatomate output + thumbnail into permanent
+        // Supabase Storage URLs BEFORE persisting, so the history row never
+        // stores a Creatomate CDN URL that later expires. Best-effort and
+        // bounded: on any failure persistRenderAssets returns the original
+        // Creatomate URLs, so this can never block the user's video.
+        let finalVideoUrl = state.url
+        let finalThumbUrl = state.snapshotUrl
+        try {
+          const migrated = await persistRenderAssets({
+            userId: user.id,
+            renderId,
+            videoUrl: state.url,
+            snapshotUrl: state.snapshotUrl,
+          })
+          finalVideoUrl = migrated.videoUrl
+          finalThumbUrl = migrated.thumbnailUrl
+          responseVideoUrl = migrated.videoUrl
+          console.log('[history] asset migration result:', JSON.stringify({
+            video_migrated: migrated.videoUrl !== state.url,
+            thumb_migrated: !!migrated.thumbnailUrl && migrated.thumbnailUrl !== state.snapshotUrl,
+          }))
+        } catch (e) {
+          console.warn('[history] asset migration threw — keeping Creatomate URLs:',
+            e instanceof Error ? e.message : String(e))
+        }
+
         console.log('[history] attempting persist…', JSON.stringify({
           render_id: renderId,
           user_id_prefix: user.id.slice(0, 8),
@@ -321,8 +356,8 @@ export async function GET(
           const result = await persistCompletedVideo({
             userId: user.id,
             renderId,
-            videoUrl: state.url,
-            snapshotUrl: state.snapshotUrl,
+            videoUrl: finalVideoUrl,
+            snapshotUrl: finalThumbUrl,
             quality,
             duration,
             topic,
@@ -349,7 +384,7 @@ export async function GET(
           const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.com>'
           if (RESEND_API_KEY && user.email) {
             const safeTopic = (topic || 'your topic').replace(/[<>]/g, '')
-            const safeVideoUrl = state.url.replace(/"/g, '')
+            const safeVideoUrl = finalVideoUrl.replace(/"/g, '')
             const html = `
               <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0a0a1a;color:#fff;padding:32px;border-radius:16px;">
                 <h1 style="color:#34d399;font-size:24px;margin:0 0 8px">Your Short is ready! ⚡</h1>
@@ -386,7 +421,7 @@ export async function GET(
 
       return NextResponse.json({
         phase: 'done',
-        final_video_url: state.url,
+        final_video_url: responseVideoUrl,
         progress: 100,
         creditsDeducted,
         creditsRemaining,
