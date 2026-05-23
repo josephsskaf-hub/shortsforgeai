@@ -52,13 +52,17 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4', width: 1280, height: 720, duration: 596, tags: ['default'] },
   { url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4', width: 1280, height: 720, duration: 10, tags: ['default'] },
 
-  // — NASA / SpaceX rocket footage (archive.org, Public Domain) — Push #217 —
+  // — NASA / SpaceX rocket footage (archive.org, Public Domain) — Push #217, revised #219 —
   // Fix: CLIPS had zero clips tagged rocket/space, so rocket topics fell back to sea turtle.
+  // Every clip below visually shows a rocket lifting off / ascending. Ground-level
+  // static-fire and ambiguous "resource reel" clips were removed in #219 because they
+  // looked like a candle flame / capsule graphics rather than a launch.
   { url: 'https://archive.org/download/504233main_ksc_120810_spacex_launch/504233main_ksc_120810_spacex_launch_512kb.mp4', width: 1280, height: 720, duration: 30, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa', 'spacex'] },
   { url: 'https://archive.org/download/launch-maxt/4-Launch-MaxT-OP-854x480-24-1200kbps.mp4',                             width:  854, height: 480, duration: 17, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa'] },
-  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/2015-00153_Orion_BFCR_PT2_RELEASE.mp4',                  width: 1280, height: 720, duration: 73, tags: ['rocket', 'space', 'spacecraft', 'nasa', 'earth_orbit'] },
-  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/ACM_Static_test_QM2_08222019_public_edit.mp4',           width: 1280, height: 720, duration: 17, tags: ['rocket', 'space', 'nasa', 'spacecraft', 'rocket_launch'] },
-  { url: 'https://archive.org/download/NASA-Orion-Resource-Reel/Ascent-Abort-2-1080.ia.mp4',                             width: 1920, height:1080, duration: 60, tags: ['rocket', 'rocket_launch', 'space', 'nasa', 'spacecraft'] },
+  // Added #219 — verified 206 on direct GET, all show a rocket ascending.
+  { url: 'https://archive.org/download/Ares1-xTestRocketLaunches/ksc_102909_aresIx_launch_1080.mp4',                      width:  854, height: 480, duration:186, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa'] },
+  { url: 'https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4',                              width: 1280, height: 720, duration:110, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa', 'spacex'] },
+  { url: 'https://archive.org/download/NASAKennedy-RxFwUG9PiYM/NASAKennedy-RxFwUG9PiYM.mp4',                              width: 1280, height: 720, duration:152, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa'] },
 ]
 
 // ─── Keyword → tag routing ───────────────────────────────────────────────────
@@ -205,14 +209,4 @@ export function pickLibraryClip(query: string, sceneIndex = 0): LibraryClip {
 export function pickLibraryClips(query: string, count = 4, sceneIndex = 0): LibraryClip[] {
   const tags = tagsForQuery(query)
   let pool: LibraryClip[] = []
-  if (tags.length > 0) pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
-  if (pool.length === 0) pool = CLIPS.filter((c) => !c.tags.includes('default'))
-  if (pool.length === 0) pool = CLIPS
-
-  const out: LibraryClip[] = []
-  for (let n = 0; n < Math.min(count, pool.length); n++) {
-    const idx = ((sceneIndex + n) % pool.length + pool.length) % pool.length
-    out.push(pool[idx])
-  }
-  return out
-}
+  if (tags.length > 0) pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
