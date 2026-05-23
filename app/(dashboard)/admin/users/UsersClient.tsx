@@ -260,6 +260,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                   <Th>Joined</Th>
                   <Th align="right">Credits</Th>
                   <Th align="right">Videos</Th>
+                  <Th align="center">Used Credit</Th>
                   <Th>Last Video</Th>
                   <Th>Plan</Th>
                 </tr>
@@ -275,6 +276,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                     <Td>{fmtDate(u.created_at)}</Td>
                     <Td align="right">{fmt(u.credits)}</Td>
                     <Td align="right">{fmt(u.videos_count)}</Td>
+                    <Td align="center">{u.videos_count >= 1 ? '✅ Yes' : '❌ No'}</Td>
                     <Td>{fmtDate(u.last_video_at)}</Td>
                     <Td>{u.plan || '—'}</Td>
                   </tr>
@@ -409,7 +411,7 @@ function Th({
   align = 'left',
 }: {
   children: React.ReactNode
-  align?: 'left' | 'right'
+  align?: 'left' | 'right' | 'center'
 }) {
   return (
     <th
@@ -432,7 +434,7 @@ function Td({
   mono,
 }: {
   children: React.ReactNode
-  align?: 'left' | 'right'
+  align?: 'left' | 'right' | 'center'
   mono?: boolean
 }) {
   return (
