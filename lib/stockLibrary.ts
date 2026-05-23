@@ -41,16 +41,11 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/cld-sample-video.mp4',    width: 1280, height: 720,  duration: 14, tags: ['city', 'luxury', 'lifestyle', 'business', 'money', 'technology'] },
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',             width: 1280, height: 720,  duration: 12, tags: ['psychology', 'people', 'lifestyle', 'celebrity'] },
 
-  // — Pexels CDN (only IDs verified to return 206 on direct GET) —
-  // Push #214 — merged duplicate 2098989 entry; combined city + rocket tags.
-  // NASA SVS URLs removed (svs.gsfc.nasa.gov returns HTTP 403 to server-side fetches).
-  // These Pexels CDN clips are the primary rocket/space footage for the curated library.
-  { url: 'https://videos.pexels.com/video-files/2098405/2098405-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 14, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'booster_landing'] },
-  { url: 'https://videos.pexels.com/video-files/3654268/3654268-hd_1280_720_30fps.mp4',   width: 1280, height: 720,  duration: 13, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'earth_orbit', 'spacecraft'] },
-  { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['rocket', 'launch', 'space', 'city', 'urban', 'technology', 'modern', 'business', 'money'] },
-  { url: 'https://videos.pexels.com/video-files/857195/857195-hd_1280_720_25fps.mp4',     width: 1280, height: 720,  duration: 16, tags: ['space', 'cosmic', 'stars', 'sky', 'mystery', 'dark'] },
-  { url: 'https://videos.pexels.com/video-files/3576378/3576378-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 12, tags: ['nature', 'forest', 'mystery', 'dark', 'horror'] },
-  { url: 'https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4',  width: 1920, height: 1080, duration: 14, tags: ['city', 'urban', 'street', 'lifestyle', 'luxury'] },
+  // — Pexels CDN REMOVED in Push #215 —
+  // videos.pexels.com/video-files/... returns HTTP 403 when Creatomate fetches
+  // server-side (Pexels CDN blocks cloud provider IPs without browser headers).
+  // Real Pexels footage now comes exclusively via the PEXELS_API_KEY search path
+  // in pexels.ts → URLs returned by the API are session-authorized and work.
 
   // — Archive.org / Blender / test-videos.co.uk (verified 206 on direct GET) —
   { url: 'https://archive.org/download/SampleVideo1280x7205mb/SampleVideo_1280x720_5mb.mp4', width: 1280, height: 720, duration: 13, tags: ['nature', 'wildlife', 'animal'] },

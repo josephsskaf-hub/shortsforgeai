@@ -123,16 +123,16 @@ export async function POST(req: NextRequest) {
 
     // Step 2 — Resolve each scene to a clip URL.
     //
-    // Push #213 — Priority-mode for high-risk categories (rocket/space):
-    // Pexels search returns visually plausible but WRONG footage for space
-    // topics (abstract glows, CGI renders, jellyfish, mushroom shapes) because
-    // their slug doesn't contain negative terms like "toy" or "cartoon".
-    // Fix: for these categories, use the curated verified stockLibrary FIRST
-    // (which contains NASA public-domain footage), then fall back to Pexels.
-    // For all other categories, Pexels is tried first as before.
-    const STOCKLIB_PRIORITY_CATEGORIES = new Set([
-      'rocket_launch', 'booster_landing', 'earth_orbit', 'spacecraft', 'mission_control',
-    ])
+    // Push #215 — Removed STOCKLIB_PRIORITY mode (Push #213/214).
+    // Root cause: ALL Pexels CDN URLs (videos.pexels.com/video-files/...) return
+    // HTTP 403 when Creatomate fetches them server-side. NASA SVS also 403s.
+    // The only stockLibrary URLs that work server-side are Cloudinary demo.
+    // Priority mode was forcing broken URLs → always 403 for rocket topics.
+    //
+    // Fix: always try Pexels API first (PEXELS_API_KEY must be set in Vercel
+    // for this to return real results). The visual category + slug filter from
+    // Push #212 (pexels.ts) still applies to reject abstract/wrong footage.
+    // Fallback: stockLibrary (Cloudinary demo clips — wrong content but renders).
 
     const clipUrls: string[] = await Promise.all(
       scenes.map(async (scene, idx) => {
@@ -141,28 +141,23 @@ export async function POST(req: NextRequest) {
           ? cat.replace(/_/g, ' ')
           : (scene.searchKeywords || scene.description)
 
-        // Push #213 — space/rocket: stockLibrary first (verified NASA footage)
-        if (STOCKLIB_PRIORITY_CATEGORIES.has(cat)) {
-          const lib = pickLibraryClips(libQuery, 3, idx)
-          const libUrl = lib[0]?.url ?? ''
-          if (libUrl) {
-            console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB_PRIORITY url=${libUrl.slice(0, 80)}`)
-            return libUrl
-          }
-        }
-
-        // All other categories: try Pexels first
+        // Try Pexels API first (requires PEXELS_API_KEY env var)
         const pexelsUrl = await getPexelsVideoForScene(
           scene.searchKeywords,
           scene.description,
           scene.stockSearchQuery,
           scene.voiceover,
         )
-        if (pexelsUrl) return pexelsUrl
+        if (pexelsUrl) {
+          console.log(`[clip] scene=${idx + 1} category=${cat} PEXELS url=${pexelsUrl.slice(0, 80)}`)
+          return pexelsUrl
+        }
 
-        // Final fallback: stockLibrary
+        // Final fallback: stockLibrary (only Cloudinary demo URLs are server-accessible)
         const lib = pickLibraryClips(libQuery, 1, idx)
-        return lib[0]?.url ?? ''
+        const libUrl = lib[0]?.url ?? ''
+        console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB url=${libUrl.slice(0, 80)}`)
+        return libUrl
       })
     )
 
