@@ -130,7 +130,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // the page never hard-codes a CDN that can go private. Start empty so
   // gradient placeholders show immediately; hydrate on mount.
   const [showcaseVideos, setShowcaseVideos] = useState<Record<string, string>>({})
-  const [phoneVideos, setPhoneVideos] = useState<Record<string, string>>({})
 
   useEffect(() => {
     void fetch('/api/showcase-clips')
@@ -138,14 +137,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       .then((data: { clips?: Record<string, string | null> }) => {
         const clips = data.clips ?? {}
         const sv: Record<string, string> = {}
-        const pv: Record<string, string> = {}
         SHOWCASE_IDS.forEach((id, i) => { if (clips[id]) sv[`${i}`] = clips[id] as string })
-        if (clips['finance'])    pv['finance']    = clips['finance']    as string
-        if (clips['mystery'])    pv['mystery']    = clips['mystery']    as string
-        if (clips['travel'])     pv['travel']     = clips['travel']     as string
-        if (clips['psychology']) pv['psychology'] = clips['psychology'] as string
         setShowcaseVideos(sv)
-        setPhoneVideos(pv)
       })
       .catch(() => { /* fall back to gradient placeholders */ })
   }, [])
@@ -531,8 +524,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           }}
         />
       <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16" style={{ zIndex: 2 }}>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-12">
-        <div className="flex-1 min-w-0 text-center lg:text-left">
+        <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl text-[#F1F5F9]">
           Turn Any Idea Into a{' '}
           <span
@@ -543,7 +535,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </span>{' '}
           — in 60 Seconds
         </h1>
-        <p className="mx-auto lg:mx-0 mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
+        <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
           AI writes the script, finds the footage, adds captions and music. You just download and upload.
         </p>
 
@@ -557,7 +549,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {/* Push #097 — primary green go-button + trust microcopy. The
             textarea below is preserved for high-intent visitors who
             already know what they want to make. */}
-        <div className="mx-auto lg:mx-0 mt-8 flex w-full max-w-[770px] flex-col items-center lg:items-start justify-center gap-3">
+        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3">
           <button
             type="button"
             onClick={() => {
@@ -573,13 +565,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             No credit card required · 2 free videos · Ready in 60 seconds
           </p>
         </div>
-        </div>{/* end hero left column */}
-
-        {/* Push #218 — hero phone mockup (right column). 9:16 auto-playing,
-            muted, looping clip pulled from /api/showcase-clips so the hero
-            reads as "alive with video" like InVideo's landing page. */}
-        <HeroPhone src={showcaseVideos['0'] || showcaseVideos['1'] || phoneVideos['travel'] || ''} />
-        </div>{/* end hero split row */}
+        </div>{/* end hero content */}
 
         {/* Single clean prompt card — kept for visitors with an idea ready */}
         <form
@@ -678,26 +664,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
       </section>
       </div>{/* end hero background video wrapper */}
-
-      {/* ───────── Recent Shorts carousel ─────────
-          Push #218 — phone-frame video cards directly under the hero so the
-          page reads as "alive with video" the moment a visitor lands. Each
-          card auto-plays a muted, looping clip from /api/showcase-clips with
-          a Viral Score badge (top-right) and a title overlay (bottom). */}
-      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-2 pb-12 sm:px-6 sm:pb-16">
-        <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
-            Recent Shorts
-          </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            Fresh Shorts, made by AI in seconds
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Real output from ShortsForgeAI — pick a vibe and generate your own.
-          </p>
-        </div>
-        <PhoneCardRow videoCounter={shortsTotal} phoneVideos={phoneVideos} />
-      </section>
 
       {/* ───────── AI Video Showcase ───────── */}
       {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
@@ -1115,202 +1081,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <a href="mailto:hello@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
         </div>
       </footer>
-    </div>
-  )
-}
-
-// Push #218 — hero phone mockup (right column of the split hero). A 9:16
-// auto-playing, muted, looping clip framed like a phone, mirroring how
-// InVideo's landing hero feels "alive with video". The clip src is hydrated
-// from /api/showcase-clips; the gradient frame is the natural placeholder
-// while the fetch is in flight. Isolated into its own component so the JSX
-// parser doesn't cascade errors through the large hero section.
-function HeroPhone({ src }: { src: string }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
-  }, [src])
-  return (
-    <div className="mt-12 flex shrink-0 justify-center lg:mt-0">
-      <div className="relative" style={{ width: 280 }}>
-        {/* Teal glow behind the phone so it pops off the dark hero. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -inset-6 rounded-[2.75rem] opacity-50"
-          style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.35), transparent 70%)', filter: 'blur(32px)' }}
-        />
-        <div
-          className="relative overflow-hidden rounded-3xl border-2 border-gray-700 bg-[#08080f] shadow-[0_30px_90px_rgba(0,0,0,0.65)]"
-          style={{ aspectRatio: '9 / 16' }}
-        >
-          {/* Phone notch */}
-          <div
-            aria-hidden
-            className="absolute z-20 rounded-full"
-            style={{ top: 12, left: '50%', transform: 'translateX(-50%)', width: 72, height: 6, background: 'rgba(0,0,0,0.6)' }}
-          />
-          {/* Gradient placeholder — visible until the first frame paints and as
-              the fallback if the clip never loads. */}
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{ background: 'radial-gradient(circle at 30% 25%, rgba(34,211,238,0.22), #08080f 65%)' }}
-          />
-          {src && (
-            <video
-              ref={videoRef}
-              src={src}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
-          {/* Cinematic top/bottom fade for legible overlays */}
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'linear-gradient(180deg,rgba(8,8,15,.35) 0%,transparent 26%,transparent 60%,rgba(8,8,15,.88) 100%)' }}
-          />
-          {/* Viral Score badge — top-right */}
-          <div className="absolute right-3 top-3 z-20">
-            <span
-              className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.1em] backdrop-blur-md"
-              style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.45)' }}
-            >
-              🔥 98 Viral Score
-            </span>
-          </div>
-          {/* Caption overlay — bottom */}
-          <div className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-5 pt-8">
-            <p className="text-center text-[12px] font-bold leading-tight text-white/90">
-              What NASA hides about the Moon
-            </p>
-            <p className="mt-1 text-center text-[10px] font-semibold text-cyan-300/80">Made with ShortsForgeAI</p>
-          </div>
-        </div>
-        <p className="mt-3 text-center text-[11px] font-semibold text-[#475569]">Auto-generated in 60 sec</p>
-      </div>
-    </div>
-  )
-}
-
-// Sub-component for a single phone card — autoplay full time (no hover needed).
-// Push #218 — added a Viral Score badge (top-right) and moved the category tag
-// to top-left so each card reads like a real Short with a performance signal.
-function PhoneCard({ src, label, accent, tag, viral }: { src: string; label: string; accent: string; tag: string; viral: number }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
-  }, [src])
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div
-        className="relative w-full overflow-hidden mx-auto transition-transform duration-300 hover:-translate-y-1"
-        style={{ aspectRatio: '9/16', maxWidth: 210, borderRadius: 26, border: '2px solid #374151', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#08080f' }}
-      >
-        <div
-          className="absolute z-20 rounded-full"
-          style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.5)' }}
-        />
-        {src && <video
-          ref={videoRef}
-          src={src}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        />}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(180deg,rgba(8,8,15,.45) 0%,transparent 30%,transparent 58%,rgba(8,8,15,.9) 100%)' }}
-        />
-        {/* Category tag — top-left */}
-        <div className="absolute top-3 left-3 z-10">
-          <span
-            className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
-            style={{ background: accent + '22', color: accent, border: '1px solid ' + accent + '44' }}
-          >
-            {tag}
-          </span>
-        </div>
-        {/* Viral Score badge — top-right */}
-        <div className="absolute top-3 right-3 z-10">
-          <span
-            className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider backdrop-blur-md"
-            style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.45)' }}
-          >
-            🔥 {viral}
-          </span>
-        </div>
-        {/* Title overlay — bottom */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-4 pt-6">
-          <p className="text-[10.5px] font-bold text-white/95 text-center leading-tight">{label}</p>
-        </div>
-      </div>
-      <p className="text-[13px] font-bold text-center" style={{ color: accent }}>{label}</p>
-    </div>
-  )
-}
-
-// Push #126 — 3 phone-frame preview cards for the "Real Shorts" section.
-// Each card renders a Pexels free vertical clip that plays on hover in a
-// phone-shaped container, with a gradient overlay and caption, matching how
-// Pictory / InVideo showcase their output. Isolated component to keep JSX clean.
-function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number; phoneVideos?: Record<string, string> }) {
-  // Push #150 — hardcoded Pexels portrait fallbacks so the cards never render
-  // black when the /api/showcase-clips lookup returns no portrait match for a
-  // given query (finance and history were the consistent offenders).
-  const cards = [
-    {
-      src: phoneVideos['finance'] ?? 'https://videos.pexels.com/video-files/3163534/3163534-uhd_1440_2560_25fps.mp4',
-      label: '📈 Money Facts Short',
-      accent: '#34D399',
-      tag: 'Finance',
-      viral: 96,
-    },
-    {
-      src: phoneVideos['mystery'] ?? 'https://videos.pexels.com/video-files/5466163/5466163-uhd_1440_2560_25fps.mp4',
-      label: '🏛️ History Mystery Short',
-      accent: '#A78BFA',
-      tag: 'History',
-      viral: 92,
-    },
-    {
-      src: phoneVideos['travel'] ?? 'https://videos.pexels.com/video-files/2231346/2231346-hd_1080_1920_24fps.mp4',
-      label: '🌍 Travel Facts Short',
-      accent: '#22D3EE',
-      tag: 'Travel',
-      viral: 89,
-    },
-    {
-      // Push #151 — psychology had been reusing the finance URL; swap in a
-      // distinct verified-working Cloudinary clip (lifestyle/people, tagged
-      // "psychology" in lib/stockLibrary.ts) so each card plays unique
-      // footage. object-cover crops it cleanly into the 9:16 phone frame.
-      src: phoneVideos['psychology'] ?? 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',
-      label: '💰 Money Psychology Short',
-      accent: '#F59E0B',
-      tag: 'Psychology',
-      viral: 94,
-    },
-  ]
-  return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-3xl mx-auto items-start">
-        {cards.map((card) => (
-          <PhoneCard key={card.src} src={card.src} label={card.label} accent={card.accent} tag={card.tag} viral={card.viral} />
-        ))}
-      </div>
-      <p className="mt-8 text-center text-[13px] font-semibold text-[#94A3B8]">
-        {'⚡ Over '}
-        <span className="text-[#F1F5F9] font-bold">{videoCounter.toLocaleString('en-US')} videos</span>
-        {' generated — and counting'}
-      </p>
     </div>
   )
 }
