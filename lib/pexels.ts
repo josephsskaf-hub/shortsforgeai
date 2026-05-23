@@ -253,6 +253,39 @@ export async function getPexelsVideoForScene(
 }
 
 /**
+ * Push #235 — Resolve a clip URL for an EXACT user-supplied query.
+ *
+ * When a user writes `[Pexels: SpaceX Starship launch closeup]`, they have
+ * already done the work of choosing the perfect footage. This path searches
+ * that query DIRECTLY and deliberately skips the category `allowedQueries`
+ * override that `getPexelsVideoForScene` applies first — that override is what
+ * replaced specific user queries with generic ones like "rocket launch fire
+ * night" and surfaced a candle clip. We only fall back to a 3-word broadening
+ * of the user's own query, never to a different topic.
+ *
+ * Returns null when nothing is found so the caller can fall back to the
+ * curated stockLibrary.
+ */
+export async function getPexelsVideoForExactQuery(query: string): Promise<string | null> {
+  const q = (query ?? '').replace(/\s{2,}/g, ' ').trim()
+  if (!q) return null
+
+  const direct = await searchAndFilter(q, null, 'user_exact')
+  if (direct) return direct
+  console.log(`[visual] user_exact MISS: "${q.slice(0, 60)}"`)
+
+  // Broaden ONLY within the user's own words (first 3 tokens) — never swap topic.
+  const broad = q.split(/\s+/).slice(0, 3).join(' ')
+  if (broad && broad.toLowerCase() !== q.toLowerCase()) {
+    const url = await searchAndFilter(broad, null, 'user_exact_broad')
+    if (url) return url
+    console.log(`[visual] user_exact_broad MISS: "${broad}"`)
+  }
+
+  return null
+}
+
+/**
  * Search Pexels Videos for a query and return up to `perPage` portrait MP4
  * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
  * or the search fails — never throws.

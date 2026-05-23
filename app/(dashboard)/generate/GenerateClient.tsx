@@ -159,6 +159,13 @@ export default function GenerateClient() {
   const [mode, setMode] = useState<GenerationMode>('fast')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
+  // Push #235 — when the user pastes a script with explicit [Pexels:] markers,
+  // generate-video-fast returns the verbatim narration, captions, and a parsed
+  // speed. We stash them here so kickCompose forwards the user's exact words +
+  // speed instead of re-deriving narration from the analyze-idea brief.
+  const [fastVoiceover, setFastVoiceover] = useState<string | null>(null)
+  const [fastCaptions, setFastCaptions] = useState<string[] | null>(null)
+  const [ttsSpeed, setTtsSpeed] = useState<number | null>(null)
   const [renderId, setRenderId] = useState<string | null>(null)
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
@@ -606,8 +613,17 @@ export default function GenerateClient() {
 
     async function kickCompose() {
       try {
-        const voiceoverScript = buildVoiceoverScript(prompt, analysis)
-        const sceneCaptions = buildSceneCaptions(analysis, scenes, duration)
+        // Push #235 — when the fast endpoint returned a verbatim user script,
+        // narrate THAT (and its captions) instead of the analyze-idea brief, and
+        // forward the user's requested speed so compose skips word-count scaling.
+        const voiceoverScript =
+          fastVoiceover && fastVoiceover.trim().length > 0
+            ? fastVoiceover
+            : buildVoiceoverScript(prompt, analysis)
+        const sceneCaptions =
+          fastCaptions && fastCaptions.length > 0
+            ? fastCaptions
+            : buildSceneCaptions(analysis, scenes, duration)
 
         const res = await fetch('/api/compose', {
           method: 'POST',
@@ -620,6 +636,7 @@ export default function GenerateClient() {
             duration,
             topic: prompt,
             quality,
+            ...(ttsSpeed != null ? { speed: ttsSpeed } : {}),
           }),
         })
         const data = await res.json()
@@ -873,6 +890,9 @@ export default function GenerateClient() {
     setTasks([])
     setScenes([])
     setClipUrls([])
+    setFastVoiceover(null)
+    setFastCaptions(null)
+    setTtsSpeed(null)
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
@@ -912,6 +932,19 @@ export default function GenerateClient() {
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+        // Push #235 — verbatim mode: keep the user's narration/captions/speed so
+        // compose narrates exactly what they wrote at the speed they asked for.
+        if (data.verbatim) {
+          setFastVoiceover(
+            typeof data.voiceover_script === 'string' ? data.voiceover_script : null,
+          )
+          setFastCaptions(Array.isArray(data.scene_captions) ? data.scene_captions : null)
+          setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
+        } else {
+          setFastVoiceover(null)
+          setFastCaptions(null)
+          setTtsSpeed(null)
+        }
         setGenerateProgress(100)
         setPhase('clips_ready')
       } catch (err: unknown) {

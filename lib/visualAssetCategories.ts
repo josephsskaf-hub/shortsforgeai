@@ -39,6 +39,10 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
       'game', 'skateboard', 'studio', 'music', 'party', 'miniature', 'paper',
       'craft', 'diy', 'kids', 'birthday', 'plastic', 'lego', 'water-rocket',
       'water-bottle', 'hobby', 'amateur',
+      // Push #235 — "fire/flames/night" queries kept returning these instead of
+      // an actual launch (the candle bug). They are never a rocket.
+      'candle', 'candles', 'fireplace', 'campfire', 'bonfire', 'lighter',
+      'match', 'matches', 'gas-stove', 'stove', 'lantern', 'torch',
     ],
     strictMode: true,
   },
@@ -56,6 +60,9 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
     negativeTerms: [
       'toy', 'cartoon', 'model', 'animation', 'illustration', 'game', 'kids',
       'child', 'plastic', 'lego', 'paper', 'amateur',
+      // Push #235 — same flame false-positives as rocket_launch.
+      'candle', 'candles', 'fireplace', 'campfire', 'bonfire', 'lighter',
+      'match', 'matches', 'lantern', 'torch',
     ],
     strictMode: true,
   },

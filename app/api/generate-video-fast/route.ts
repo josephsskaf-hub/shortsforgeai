@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { generateScenes } from '@/lib/runway'
+import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
-import { getPexelsVideoForScene } from '@/lib/pexels'
+import { getPexelsVideoForScene, getPexelsVideoForExactQuery } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 import { ensureAccessibleUrl } from '@/lib/videoCache'
+import { parseUserScript } from '@/lib/scriptParser'
 
 export const maxDuration = 60
 
@@ -105,21 +106,46 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 1 — Generate scenes: each scene has a cinematic description
-    // (for Runway) and explicit searchKeywords (for Pexels stock search).
-    // Push #128 — previously, searchKeywords were the first 3 words of the
-    // cinematic description, causing totally wrong footage ("A lone photographer"
-    // for a pyramid prompt). Now GPT returns topic-specific keywords.
+    // Push #235 — Verbatim mode. If the user authored the script with explicit
+    // `[Pexels: QUERY]` markers, honor them literally: each marker becomes a
+    // scene whose footage query and spoken line come straight from the user.
+    // We do NOT send the script to GPT in this case — the whole point is that
+    // the user already chose the perfect clip and wrote the exact narration.
+    const parsedScript = parseUserScript(prompt)
+    const verbatim = parsedScript.hasMarkers && parsedScript.segments.length > 0
+
+    // Step 1 — Build scenes.
+    //   - Verbatim: one scene per [Pexels: ...] marker, query + narration as-is.
+    //   - Otherwise: GPT plans scenes (each with a cinematic description and
+    //     topic-specific Pexels keywords). Push #235 widened the prompt window
+    //     from 400 → 1200 chars so longer briefs keep their topic fidelity.
     let scenes: Scene[]
-    try {
-      scenes = await generateScenes(prompt.slice(0, 400), clipCount)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[generate-fast] scene generation failed:', msg)
-      return NextResponse.json(
-        { error: 'Failed to plan scenes. Please try a different prompt.' },
-        { status: 500 }
+    if (verbatim) {
+      scenes = parsedScript.segments.slice(0, 12).map((seg) => ({
+        description: seg.pexelsQuery,
+        searchKeywords: seg.pexelsQuery,
+        stockSearchQuery: seg.pexelsQuery,
+        negativeVisualPrompt: '',
+        scenePurpose: 'EXPLANATION',
+        visualIntent: 'User-specified footage',
+        visualCategory: 'general_documentary',
+        voiceover: seg.voiceover,
+        caption: shortCaptionFromVoiceover(seg.voiceover || seg.pexelsQuery),
+      }))
+      console.log(
+        `[generate-fast] VERBATIM mode: ${scenes.length} user-specified clip(s); speed=${parsedScript.speed ?? 'default'}`,
       )
+    } else {
+      try {
+        scenes = await generateScenes(prompt.slice(0, 1200), clipCount)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[generate-fast] scene generation failed:', msg)
+        return NextResponse.json(
+          { error: 'Failed to plan scenes. Please try a different prompt.' },
+          { status: 500 }
+        )
+      }
     }
 
     // Step 2 — Resolve each scene to a clip URL.
@@ -143,7 +169,9 @@ export async function POST(req: NextRequest) {
           : (scene.searchKeywords || scene.description)
 
         // Final fallback: stockLibrary (Cloudinary demo — always server-accessible)
-        const lib = pickLibraryClips(libQuery, 1, idx)
+        // In verbatim mode the user's own query routes the fallback too, so even
+        // the safety net stays on-topic.
+        const lib = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 1, idx)
         const fallbackUrl = lib[0]?.url ?? ''
 
         // Try Pexels API first (requires PEXELS_API_KEY env var).
@@ -151,12 +179,19 @@ export async function POST(req: NextRequest) {
         // Creatomate can download them. ensureAccessibleUrl() downloads the clip
         // from Pexels server-side (our Vercel is authorized) and caches it in
         // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
-        const pexelsUrl = await getPexelsVideoForScene(
-          scene.searchKeywords,
-          scene.description,
-          scene.stockSearchQuery,
-          scene.voiceover,
-        )
+        //
+        // Push #235 — verbatim mode searches the user's EXACT query directly,
+        // bypassing the category allowedQueries override that would otherwise
+        // swap "SpaceX Starship launch closeup" for a generic "rocket fire night"
+        // (which surfaced a candle clip). Non-verbatim keeps the GPT/category path.
+        const pexelsUrl = verbatim
+          ? await getPexelsVideoForExactQuery(scene.stockSearchQuery)
+          : await getPexelsVideoForScene(
+              scene.searchKeywords,
+              scene.description,
+              scene.stockSearchQuery,
+              scene.voiceover,
+            )
         if (pexelsUrl) {
           const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
           console.log(`[clip] scene=${idx + 1} category=${cat} CACHED url=${cachedUrl.slice(0, 80)}`)
@@ -185,10 +220,15 @@ export async function POST(req: NextRequest) {
     // ≤8-word readable on-screen paraphrase. We log both so any future
     // drift between captions and narration is debuggable from server logs.
     const sceneCaptions = scenes.map((s) => s.caption)
-    const voiceoverScript = scenes
+    // Push #235 — in verbatim mode the spoken text is the user's own narration
+    // (markers/directives already stripped by the parser). Prefer it so what is
+    // narrated is exactly what the user wrote; otherwise join the scene lines.
+    const sceneJoinedVoiceover = scenes
       .map((s) => s.voiceover)
       .filter((v) => typeof v === 'string' && v.trim().length > 0)
       .join(' ')
+    const voiceoverScript =
+      verbatim && parsedScript.narration ? parsedScript.narration : sceneJoinedVoiceover
 
     console.log(
       '[generate-fast] scenes:',
@@ -219,6 +259,11 @@ export async function POST(req: NextRequest) {
       scene_captions: sceneCaptions,
       voiceover_script: voiceoverScript,
       clip_urls: filtered,
+      // Push #235 — when the user authored the script verbatim, tell the client
+      // so it forwards this narration (not the analyze-idea brief) and the
+      // requested TTS speed to /api/compose.
+      verbatim,
+      speed: parsedScript.speed,
     })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)

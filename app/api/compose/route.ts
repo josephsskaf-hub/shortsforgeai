@@ -39,6 +39,10 @@ interface ComposeBody {
   duration?: number
   topic?: string
   quality?: string
+  // Push #235 — explicit TTS speed from a user-authored script ("speed: 1.05").
+  // When present, compose uses the narration verbatim at this speed and skips
+  // both the word-count scaling and the duration corrective re-synthesis.
+  speed?: number
 }
 
 export async function POST(req: NextRequest) {
@@ -116,6 +120,15 @@ export async function POST(req: NextRequest) {
       return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
     })()
 
+    // Push #235 — explicit user speed. When supplied (verbatim mode), the
+    // narration is the user's exact text spoken at this rate; we don't rewrite
+    // the word count and we don't slow the voice to fill the requested duration.
+    // Clamped to the same natural band generateTTS() enforces.
+    const explicitSpeed: number | null = (() => {
+      const s = Number(body.speed)
+      return Number.isFinite(s) && s > 0 ? Math.max(0.7, Math.min(1.3, s)) : null
+    })()
+
     // Push #087 — Cinematic-tier renders (anything other than 'fast') must
     // come from a Pro user. Fast Mode renders skip the gate so Free + Basic
     // users can still produce videos via the Pexels pipeline.
@@ -139,15 +152,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1 — Scale the voiceover script to the right word count.
+    // Push #235 — verbatim mode (explicit speed) skips scaling entirely: the
+    // user wrote the exact narration, so rewriting it to a word-count target
+    // would defeat the purpose. The video length then tracks the user's script
+    // spoken at their chosen speed.
     let scaledScript: string
-    try {
-      scaledScript = await scaleVoiceoverScript(voiceoverScript, targetWordCount(duration))
-      if (!scaledScript) scaledScript = voiceoverScript
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[compose] script scaling failed:', msg)
-      // Non-fatal — fall back to the raw script.
+    if (explicitSpeed != null) {
       scaledScript = voiceoverScript
+      console.log(
+        `[compose] verbatim narration (speed=${explicitSpeed}) — skipping word-count scaling`,
+      )
+    } else {
+      try {
+        scaledScript = await scaleVoiceoverScript(voiceoverScript, targetWordCount(duration))
+        if (!scaledScript) scaledScript = voiceoverScript
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[compose] script scaling failed:', msg)
+        // Non-fatal — fall back to the raw script.
+        scaledScript = voiceoverScript
+      }
     }
 
     // Step 2 — Generate TTS.
@@ -156,9 +180,9 @@ export async function POST(req: NextRequest) {
     )
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(scaledScript)
+      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0)
       console.log(
-        `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg`,
+        `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
       )
     } catch (err) {
       // Surface the FULL error object so OpenAI-side issues (rate limit,
@@ -195,6 +219,7 @@ export async function POST(req: NextRequest) {
     // generateTTS). This is best-effort: any failure, or a result that isn't
     // actually closer, keeps the original audio so compose never regresses.
     if (
+      explicitSpeed == null &&
       realAudioDuration > 4 &&
       Math.abs(realAudioDuration - duration) > DURATION_TOLERANCE_SECONDS
     ) {
