@@ -297,12 +297,14 @@ export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<Whisp
   }
 }
 
-// Push #209 — Whisper's word-level timestamps are known to lag the actual
-// speech onset by ~0.3–0.5s (conservative alignment). Add the 0.15s caption
-// fade-in and you get the ~0.5s delay users observe. Subtracting this constant
-// from every Whisper-derived caption start time brings captions back in sync.
-// Clamped to 0 so the first caption never goes negative.
-const WHISPER_CAPTION_LEAD = 0.4 // seconds
+// Push #240 — captions were appearing AHEAD of the narration. The earlier
+// Push #209 "lead" subtracted 0.4s from every Whisper timestamp, which
+// over-corrected and pushed captions earlier than the spoken word. Whisper's
+// word `start` already marks when the word is spoken relative to the audio,
+// and Creatomate plays that audio from t=0, so the correct nudge is a small
+// POSITIVE offset: it lands each caption with — or a hair after — the voice,
+// never before it. Clamped to 0 so the first caption never goes negative.
+const CAPTION_SYNC_OFFSET = 0.3 // seconds, added to each caption start
 
 /**
  * Map Whisper word-level timestamps to caption segment boundaries.
@@ -342,10 +344,11 @@ export function mapWhisperTimingsToSegments(
         : captionWindowEnd
     const duration = Math.max(0.1, nextWordStart - segStartWord.start)
 
-    // Apply WHISPER_CAPTION_LEAD: shift caption earlier to compensate for
-    // Whisper's conservative timestamps + the 0.15s fade-in visual delay.
+    // Push #240 — shift the caption slightly LATER so it never precedes the
+    // spoken word (the prior negative lead made captions appear ahead of the
+    // voice). Clamped to 0 so the first caption never goes negative.
     const rawTime = segStartWord.start
-    const adjustedTime = Math.max(0, rawTime - WHISPER_CAPTION_LEAD)
+    const adjustedTime = Math.max(0, rawTime + CAPTION_SYNC_OFFSET)
 
     result.push({
       time: Math.round(adjustedTime * 1000) / 1000,

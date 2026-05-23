@@ -65,6 +65,91 @@ const DASH_ONLY_LINE = /^[\s—–-]+$/
 const MARKDOWN_HEADER_LINE = /^\s*#{1,6}\s+\S/
 // Strips an em-dash/en-dash/hyphen fence from both ends ("— HOOK —" → "HOOK").
 const FENCED_LINE = /^[—–-]{1,3}\s*([\s\S]*?)\s*[—–-]{1,3}$/
+// Push #240 — an editing bullet point ("- Total length: ~52s", "- ZERO black
+// frames"). Hyphen + space + text. Never narration. Note: section headers that
+// use a hyphen fence ("- HOOK -") are detected as headers BEFORE this rule runs
+// in cleanNarration, so this never swallows a header.
+const BULLET_LINE = /^\s*-\s+\S/
+
+// Push #240 — section-aware parsing.
+//
+// A user's full template is divided into named sections fenced like "— HOOK —"
+// or "— VOICE (ElevenLabs) —". Some sections are NARRATION (their body text is
+// spoken) and some are METADATA (their body is production notes that must never
+// be spoken or captioned). The old line-by-line filter missed the metadata
+// section bodies because the headers carry mixed-case parentheticals ("VOICE
+// (ElevenLabs)", "EDITING (CapCut)") that defeat the ALL-CAPS heuristic, so the
+// header AND its content leaked into the narration.
+//
+// These are the metadata-only section names (normalized: lowercased, dashes →
+// spaces, parentheticals and digits stripped). When the parser enters one of
+// these sections it drops every line until the next named section header.
+const NON_NARRATION_SECTION_KEYWORDS = new Set([
+  'on screen legend',
+  'legend',
+  'voice',
+  'editing',
+  'capcut',
+  'elevenlabs',
+  'notes',
+  'instructions',
+])
+
+/**
+ * Normalize a section header body for keyword matching: lowercase, strip
+ * parentheticals ("(1 only)", "(ElevenLabs)"), strip digits ("MICRO
+ * RECOMPENSA 1" → "micro recompensa"), turn dashes into spaces ("ON-SCREEN" →
+ * "on screen"), and collapse whitespace.
+ */
+function normalizeSectionName(body: string): string {
+  return body
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[0-9]+/g, ' ')
+    .replace(/[—–-]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/**
+ * If `line` is a named section header ("— HOOK —", "## VOICE", "- CTA -"),
+ * return its normalized name; otherwise null. Pure dash decoration ("———") is
+ * NOT a named header — it returns null so it can't reset the section mode.
+ */
+function sectionHeaderName(line: string): string | null {
+  const t = line.trim()
+  if (!t) return null
+  if (DASH_ONLY_LINE.test(t)) return null
+  let body: string | null = null
+  const fenced = FENCED_LINE.exec(t)
+  if (fenced) {
+    body = fenced[1]
+  } else if (MARKDOWN_HEADER_LINE.test(t)) {
+    body = t.replace(/^#{1,6}\s*/, '')
+  }
+  if (body === null) return null
+  return normalizeSectionName(body)
+}
+
+/**
+ * True when a (normalized) section name is a metadata-only section whose body
+ * must be dropped. Matches an exact keyword, a multi-word keyword as a
+ * substring, or a single-word keyword as a whole word (so compound headers like
+ * "voiceover notes" still match "notes" without "legend" matching "legendary").
+ */
+function isNonNarrationSection(name: string): boolean {
+  if (!name) return false
+  if (NON_NARRATION_SECTION_KEYWORDS.has(name)) return true
+  const words = name.split(' ')
+  for (const kw of NON_NARRATION_SECTION_KEYWORDS) {
+    if (kw.includes(' ')) {
+      if (name.includes(kw)) return true
+    } else if (words.includes(kw)) {
+      return true
+    }
+  }
+  return false
+}
 
 /**
  * Push #237 — true when a line is a section header / stage direction rather than
@@ -88,6 +173,7 @@ function isDroppableLine(line: string): boolean {
   const t = line.trim()
   if (!t) return false
   if (DASH_ONLY_LINE.test(t)) return true
+  if (BULLET_LINE.test(t)) return true
   if (MARKDOWN_HEADER_LINE.test(t)) return true
   const fenced = FENCED_LINE.exec(t)
   const body = (fenced ? fenced[1] : t).replace(/^#{1,6}\s*/, '').trim()
@@ -97,13 +183,33 @@ function isDroppableLine(line: string): boolean {
 
 /**
  * Strip residual bracketed directions (e.g. [HOOK], [Scene 2], leftover
- * markers), directive / section-header / stage-direction lines, and collapse
- * whitespace. Used to turn a raw narration chunk into clean spoken text.
+ * markers), directive / section-header / stage-direction lines, metadata
+ * section bodies, and collapse whitespace. Turns a raw narration chunk into
+ * clean spoken text.
+ *
+ * Push #240 — section-aware. Walks the lines tracking whether we're inside a
+ * metadata-only section ("— VOICE —", "— EDITING —", "— ON-SCREEN LEGEND —").
+ * A named section header always drops the header line itself and either enters
+ * (metadata) or exits (narration) metadata mode; while in metadata mode EVERY
+ * line is dropped until the next named header. Dash-only decoration does not
+ * change the mode. This handles mixed-case headers like "VOICE (ElevenLabs)"
+ * that the ALL-CAPS line heuristic could not catch.
  */
 function cleanNarration(raw: string): string {
-  return raw
-    .split(/\r?\n/)
-    .filter((line) => !isDroppableLine(line))
+  const kept: string[] = []
+  let inMetadataSection = false
+  for (const line of raw.split(/\r?\n/)) {
+    const section = sectionHeaderName(line)
+    if (section !== null) {
+      // Named header: drop the header line, switch mode based on its kind.
+      inMetadataSection = isNonNarrationSection(section)
+      continue
+    }
+    if (inMetadataSection) continue
+    if (isDroppableLine(line)) continue
+    kept.push(line)
+  }
+  return kept
     .join(' ')
     // Remove any remaining bracketed stage directions / markers.
     .replace(/\[[^\]]*\]/g, ' ')
