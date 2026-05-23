@@ -144,6 +144,19 @@ const SPACE_BANNED_TERMS = [
 ]
 const SPACE_BOOST_TERM = 'rocket launch fire night'
 
+// Push #243 — slug rejection list for the EXACT-query (verbatim) space path.
+// That path searches with category=null, so the global strict terms ('toy',
+// 'model', 'cartoon', …) are NOT applied — only FIREWORKS_NEGATIVE_TERMS were.
+// A test surfaced a toy-rocket clip (id 7106747) and a desert clip (id 7106862)
+// for "rocket launch night sky" / "SpaceX Starship launch closeup" because
+// neither slug hit a fireworks term. Reuse the rocket_launch category's full
+// negative list (toy/model/candle/fireworks/…) and add the desert terms so a
+// sandy landscape can never stand in for a launch.
+const SPACE_EXACT_NEGATIVE_TERMS = [
+  ...VISUAL_CATEGORIES.rocket_launch.negativeTerms,
+  'desert', 'sand', 'dune', 'dunes', 'sahara',
+]
+
 // Push #242 — progressive semantic fallbacks for verbatim (exact) queries.
 // Pexels has no footage for many over-specific subjects (SpaceX/Starship are
 // licensed, so "SpaceX Starship launch closeup" returns 0), and a 3-word
@@ -166,8 +179,19 @@ const SEMANTIC_FALLBACK_GROUPS: ReadonlyArray<{ triggers: RegExp; queries: strin
   },
   {
     // Private jets / aviation — covers "private jets on tarmac sunset".
-    triggers: /\b(jet|aircraft|airplane|aeroplane|airliner|tarmac|aviation|cockpit|runway)\b/i,
-    queries: ['private jet', 'luxury aircraft', 'airplane runway', 'airplane'],
+    // Push #243 — the old chain ('private jet' → 'luxury aircraft' →
+    // 'airplane runway' → 'airplane') still missed: Pexels has plenty of plane
+    // footage but almost nothing tagged "private jet" / "luxury aircraft" in
+    // portrait, so the chain fell through to the curated Cloudinary clip (the
+    // elephants.mp4 mismatch). Step DOWN to broad, high-inventory terms Pexels
+    // actually has so the viewer still sees on-topic footage:
+    //   original → private jet → airplane → airport → flight → travel → …
+    triggers: /\b(jet|jets|plane|planes|aircraft|airplane|aeroplane|airliner|tarmac|aviation|cockpit|runway|airport|flight)\b/i,
+    queries: [
+      'private jet', 'airplane', 'airport', 'flight',
+      'plane takeoff', 'aircraft runway', 'travel',
+      'luxury travel', 'business travel', 'sky travel',
+    ],
   },
 ]
 
@@ -322,7 +346,8 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
     const key = c.toLowerCase()
     if (tried.has(key)) return null
     tried.add(key)
-    const negTerms = isSpaceQuery(c) ? FIREWORKS_NEGATIVE_TERMS : []
+    // Push #243 — widen space rejection beyond fireworks (toy rocket / desert leak).
+    const negTerms = isSpaceQuery(c) ? SPACE_EXACT_NEGATIVE_TERMS : []
     const url = await searchAndFilter(c, null, label, negTerms)
     if (!url) console.log(`[visual] ${label} MISS: "${c.slice(0, 60)}"`)
     return url

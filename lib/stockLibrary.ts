@@ -141,7 +141,24 @@ const KEYWORD_TO_TAGS: Record<string, string[]> = {
   // City / urban
   city: ['city', 'urban'], urban: ['city', 'urban'], street: ['city', 'urban'],
   building: ['city', 'urban'], skyscraper: ['city', 'urban'],
+
+  // Aviation / travel — Push #243. There is no plane clip in the pool, so route
+  // aviation/travel queries to the professional city/business/luxury clip
+  // (cld-sample-video) instead of letting them fall through to the animal demo
+  // clips (the elephants.mp4 mismatch). On-brand for the finance channel.
+  jet: ['luxury', 'business', 'city'], jets: ['luxury', 'business', 'city'],
+  plane: ['city', 'business'], airplane: ['city', 'business'], aircraft: ['city', 'business'],
+  aviation: ['luxury', 'business'], tarmac: ['luxury', 'business'], cockpit: ['luxury', 'business'],
+  flight: ['city', 'business'], airport: ['city', 'business'], runway: ['luxury', 'business'],
+  travel: ['city', 'luxury', 'lifestyle'],
 }
+
+// Push #243 — neutral, professional pool for queries that match no specific
+// tag. The channel is finance / billionaire / knowledge, so a city/business/
+// luxury clip reads as on-brand; the animal demo clips (elephants, sea turtle,
+// dog) and Big Buck Bunny never should. Before this, an unmatched query like
+// "private jets on tarmac sunset" rotated into elephants.mp4.
+const NEUTRAL_FALLBACK_TAGS = ['city', 'business', 'money', 'luxury', 'lifestyle', 'technology']
 
 const STOP_WORDS = new Set([
   'a','an','the','of','in','on','to','at','for','with','by','from','as','about',
@@ -190,7 +207,13 @@ export function pickLibraryClip(query: string, sceneIndex = 0): LibraryClip {
     pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
   }
   if (pool.length === 0) {
-    // No tag match → use the entire pool minus the "default-only" Big Buck Bunny
+    // No tag match → prefer the neutral professional pool (city/business/luxury)
+    // over the animal demo clips, which were the source of the elephants.mp4
+    // mismatch on finance/aviation queries.
+    pool = CLIPS.filter((c) => c.tags.some((t) => NEUTRAL_FALLBACK_TAGS.includes(t)))
+  }
+  if (pool.length === 0) {
+    // Still nothing → entire pool minus the "default-only" Big Buck Bunny
     // entries (kept as a last resort).
     pool = CLIPS.filter((c) => !c.tags.includes('default'))
   }
@@ -210,6 +233,8 @@ export function pickLibraryClips(query: string, count = 4, sceneIndex = 0): Libr
   const tags = tagsForQuery(query)
   let pool: LibraryClip[] = []
   if (tags.length > 0) pool = CLIPS.filter((c) => c.tags.some((t) => tags.includes(t)))
+  // Push #243 — neutral professional pool before the broad animal-inclusive pool.
+  if (pool.length === 0) pool = CLIPS.filter((c) => c.tags.some((t) => NEUTRAL_FALLBACK_TAGS.includes(t)))
   if (pool.length === 0) pool = CLIPS.filter((c) => !c.tags.includes('default'))
   if (pool.length === 0) pool = CLIPS
 
