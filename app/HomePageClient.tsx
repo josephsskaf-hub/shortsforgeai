@@ -531,9 +531,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           }}
         />
       <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16" style={{ zIndex: 2 }}>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
-        <div className="flex-1 min-w-0 text-center">
-        <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl text-[#F1F5F9]">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-12">
+        <div className="flex-1 min-w-0 text-center lg:text-left">
+        <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl text-[#F1F5F9]">
           Turn Any Idea Into a{' '}
           <span
             className="text-[#22D3EE]"
@@ -543,7 +543,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </span>{' '}
           — in 60 Seconds
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
+        <p className="mx-auto lg:mx-0 mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
           AI writes the script, finds the footage, adds captions and music. You just download and upload.
         </p>
 
@@ -557,7 +557,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {/* Push #097 — primary green go-button + trust microcopy. The
             textarea below is preserved for high-intent visitors who
             already know what they want to make. */}
-        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3">
+        <div className="mx-auto lg:mx-0 mt-8 flex w-full max-w-[770px] flex-col items-center lg:items-start justify-center gap-3">
           <button
             type="button"
             onClick={() => {
@@ -573,6 +573,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             No credit card required · 2 free videos · Ready in 60 seconds
           </p>
         </div>
+        </div>{/* end hero left column */}
+
+        {/* Push #218 — hero phone mockup (right column). 9:16 auto-playing,
+            muted, looping clip pulled from /api/showcase-clips so the hero
+            reads as "alive with video" like InVideo's landing page. */}
+        <HeroPhone src={showcaseVideos['0'] || showcaseVideos['1'] || phoneVideos['travel'] || ''} />
+        </div>{/* end hero split row */}
 
         {/* Single clean prompt card — kept for visitors with an idea ready */}
         <form
@@ -669,11 +676,28 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </span>
           </p>
         </div>
-        </div>
-
-        </div>
       </section>
       </div>{/* end hero background video wrapper */}
+
+      {/* ───────── Recent Shorts carousel ─────────
+          Push #218 — phone-frame video cards directly under the hero so the
+          page reads as "alive with video" the moment a visitor lands. Each
+          card auto-plays a muted, looping clip from /api/showcase-clips with
+          a Viral Score badge (top-right) and a title overlay (bottom). */}
+      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-2 pb-12 sm:px-6 sm:pb-16">
+        <div className="mb-10 text-center">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            Recent Shorts
+          </div>
+          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+            Fresh Shorts, made by AI in seconds
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
+            Real output from ShortsForgeAI — pick a vibe and generate your own.
+          </p>
+        </div>
+        <PhoneCardRow videoCounter={shortsTotal} phoneVideos={phoneVideos} />
+      </section>
 
       {/* ───────── AI Video Showcase ───────── */}
       {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
@@ -740,25 +764,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <span className="text-cyan-400 font-bold">— @moneyfacts_creator</span>
           </span>
         </div>
-      </section>
-
-      {/* ───────── Real Shorts Showcase ─────────
-          Push #126 — 3 phone-frame video cards replacing the old
-          "Demo video coming soon" placeholder. Cards auto-play free
-          Pexels clips to show the product output in a premium way. */}
-      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-4 pb-12 sm:px-6 sm:pb-16">
-        <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
-            Real Results
-          </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            Real Shorts created with ShortsForgeAI
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            See what our AI generates in seconds.
-          </p>
-        </div>
-        <PhoneCardRow videoCounter={shortsTotal} phoneVideos={phoneVideos} />
       </section>
 
       {/* ───────── How It Works ─────────
@@ -1099,7 +1104,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
             <Link href="/#pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
-          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5 · #199</span></p>
+          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5 · #218</span></p>
         </div>
         {/* Push #116 — legal + contact strip under the main footer row. */}
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
@@ -1114,48 +1119,88 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   )
 }
 
-// Push #126 — hero demo video column (desktop only). Isolated into its own
-// component so the TypeScript JSX parser doesn't cascade errors through the
-// large hero section when encountering the video element.
-function HeroVideo() {
+// Push #218 — hero phone mockup (right column of the split hero). A 9:16
+// auto-playing, muted, looping clip framed like a phone, mirroring how
+// InVideo's landing hero feels "alive with video". The clip src is hydrated
+// from /api/showcase-clips; the gradient frame is the natural placeholder
+// while the fetch is in flight. Isolated into its own component so the JSX
+// parser doesn't cascade errors through the large hero section.
+function HeroPhone({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
+  }, [src])
   return (
-    <div className="hidden lg:block w-52 xl:w-60 shrink-0 self-center">
-      <div
-        className="relative overflow-hidden rounded-3xl border border-white/10 shadow-[0_0_48px_rgba(34,211,238,0.2)]"
-        style={{ aspectRatio: '9/16' }}
-      >
-        <video
-          src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="absolute inset-0 w-full h-full object-cover"
+    <div className="mt-12 flex shrink-0 justify-center lg:mt-0">
+      <div className="relative" style={{ width: 280 }}>
+        {/* Teal glow behind the phone so it pops off the dark hero. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-6 rounded-[2.75rem] opacity-50"
+          style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.35), transparent 70%)', filter: 'blur(32px)' }}
         />
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.45) 0%,transparent 28%,transparent 65%,rgba(5,7,13,.75) 100%)' }}
-        />
-        <div className="absolute top-4 left-0 right-0 flex justify-center">
-          <span
-            className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
-            style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.35)' }}
-          >
-            AI Short
-          </span>
+          className="relative overflow-hidden rounded-3xl border-2 border-gray-700 bg-[#08080f] shadow-[0_30px_90px_rgba(0,0,0,0.65)]"
+          style={{ aspectRatio: '9 / 16' }}
+        >
+          {/* Phone notch */}
+          <div
+            aria-hidden
+            className="absolute z-20 rounded-full"
+            style={{ top: 12, left: '50%', transform: 'translateX(-50%)', width: 72, height: 6, background: 'rgba(0,0,0,0.6)' }}
+          />
+          {/* Gradient placeholder — visible until the first frame paints and as
+              the fallback if the clip never loads. */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{ background: 'radial-gradient(circle at 30% 25%, rgba(34,211,238,0.22), #08080f 65%)' }}
+          />
+          {src && (
+            <video
+              ref={videoRef}
+              src={src}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          {/* Cinematic top/bottom fade for legible overlays */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'linear-gradient(180deg,rgba(8,8,15,.35) 0%,transparent 26%,transparent 60%,rgba(8,8,15,.88) 100%)' }}
+          />
+          {/* Viral Score badge — top-right */}
+          <div className="absolute right-3 top-3 z-20">
+            <span
+              className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.1em] backdrop-blur-md"
+              style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.45)' }}
+            >
+              🔥 98 Viral Score
+            </span>
+          </div>
+          {/* Caption overlay — bottom */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-5 pt-8">
+            <p className="text-center text-[12px] font-bold leading-tight text-white/90">
+              What NASA hides about the Moon
+            </p>
+            <p className="mt-1 text-center text-[10px] font-semibold text-cyan-300/80">Made with ShortsForgeAI</p>
+          </div>
         </div>
-        <div className="absolute bottom-4 left-0 right-0 text-center px-2">
-          <p className="text-[10px] font-bold text-white/80">Made with ShortsForgeAI</p>
-        </div>
+        <p className="mt-3 text-center text-[11px] font-semibold text-[#475569]">Auto-generated in 60 sec</p>
       </div>
-      <p className="mt-2 text-center text-[11px] text-[#475569] font-semibold">Auto-generated in 60 sec</p>
     </div>
   )
 }
 
 // Sub-component for a single phone card — autoplay full time (no hover needed).
-function PhoneCard({ src, label, accent, tag }: { src: string; label: string; accent: string; tag: string }) {
+// Push #218 — added a Viral Score badge (top-right) and moved the category tag
+// to top-left so each card reads like a real Short with a performance signal.
+function PhoneCard({ src, label, accent, tag, viral }: { src: string; label: string; accent: string; tag: string; viral: number }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
     if (videoRef.current) videoRef.current.play().catch(() => {/* autoplay blocked */})
@@ -1163,12 +1208,12 @@ function PhoneCard({ src, label, accent, tag }: { src: string; label: string; ac
   return (
     <div className="flex flex-col items-center gap-3">
       <div
-        className="relative w-full overflow-hidden mx-auto"
-        style={{ aspectRatio: '9/16', maxWidth: 200, borderRadius: 26, border: '3px solid rgba(255,255,255,0.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#0B1120' }}
+        className="relative w-full overflow-hidden mx-auto transition-transform duration-300 hover:-translate-y-1"
+        style={{ aspectRatio: '9/16', maxWidth: 210, borderRadius: 26, border: '2px solid #374151', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', background: '#08080f' }}
       >
         <div
           className="absolute z-20 rounded-full"
-          style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.45)' }}
+          style={{ top: 10, left: '50%', transform: 'translateX(-50%)', width: 54, height: 5, background: 'rgba(0,0,0,0.5)' }}
         />
         {src && <video
           ref={videoRef}
@@ -1182,18 +1227,29 @@ function PhoneCard({ src, label, accent, tag }: { src: string; label: string; ac
         />}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(180deg,rgba(5,7,13,.40) 0%,transparent 30%,transparent 60%,rgba(5,7,13,.85) 100%)' }}
+          style={{ background: 'linear-gradient(180deg,rgba(8,8,15,.45) 0%,transparent 30%,transparent 58%,rgba(8,8,15,.9) 100%)' }}
         />
-        <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
+        {/* Category tag — top-left */}
+        <div className="absolute top-3 left-3 z-10">
           <span
-            className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
+            className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest backdrop-blur-md"
             style={{ background: accent + '22', color: accent, border: '1px solid ' + accent + '44' }}
           >
             {tag}
           </span>
         </div>
+        {/* Viral Score badge — top-right */}
+        <div className="absolute top-3 right-3 z-10">
+          <span
+            className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider backdrop-blur-md"
+            style={{ background: 'rgba(34,211,238,0.18)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.45)' }}
+          >
+            🔥 {viral}
+          </span>
+        </div>
+        {/* Title overlay — bottom */}
         <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-4 pt-6">
-          <p className="text-[10px] font-bold text-white/90 text-center leading-tight">{label}</p>
+          <p className="text-[10.5px] font-bold text-white/95 text-center leading-tight">{label}</p>
         </div>
       </div>
       <p className="text-[13px] font-bold text-center" style={{ color: accent }}>{label}</p>
@@ -1215,18 +1271,21 @@ function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number
       label: '📈 Money Facts Short',
       accent: '#34D399',
       tag: 'Finance',
+      viral: 96,
     },
     {
       src: phoneVideos['mystery'] ?? 'https://videos.pexels.com/video-files/5466163/5466163-uhd_1440_2560_25fps.mp4',
       label: '🏛️ History Mystery Short',
       accent: '#A78BFA',
       tag: 'History',
+      viral: 92,
     },
     {
       src: phoneVideos['travel'] ?? 'https://videos.pexels.com/video-files/2231346/2231346-hd_1080_1920_24fps.mp4',
       label: '🌍 Travel Facts Short',
       accent: '#22D3EE',
       tag: 'Travel',
+      viral: 89,
     },
     {
       // Push #151 — psychology had been reusing the finance URL; swap in a
@@ -1237,13 +1296,14 @@ function PhoneCardRow({ videoCounter, phoneVideos = {} }: { videoCounter: number
       label: '💰 Money Psychology Short',
       accent: '#F59E0B',
       tag: 'Psychology',
+      viral: 94,
     },
   ]
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-3xl mx-auto items-start">
         {cards.map((card) => (
-          <PhoneCard key={card.src} src={card.src} label={card.label} accent={card.accent} tag={card.tag} />
+          <PhoneCard key={card.src} src={card.src} label={card.label} accent={card.accent} tag={card.tag} viral={card.viral} />
         ))}
       </div>
       <p className="mt-8 text-center text-[13px] font-semibold text-[#94A3B8]">
