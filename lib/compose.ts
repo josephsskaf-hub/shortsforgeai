@@ -236,8 +236,14 @@ export function estimateMp3DurationSeconds(buffer: Buffer): number {
     // Layer3 samples per frame: 1152 for MPEG1, 576 for MPEG2/2.5.
     const samplesInFrame = isMpeg1 ? 1152 : 576
 
-    // Frame byte size = floor(144 * bitrate_bps / sample_rate) + padding.
-    const frameSize = Math.floor(144 * bitrateKbps * 1000 / sr) + paddingBit
+    // Frame byte size = floor(coeff * bitrate_bps / sample_rate) + padding,
+    // where coeff = samplesPerFrame / 8 (144 for MPEG1 Layer3 = 1152/8, 72 for
+    // MPEG2/2.5 Layer3 = 576/8). Push #242: this was hardcoded to 144, so for a
+    // 24 kHz MPEG2 stream (OpenAI tts-1's output) every frameSize came out 2x too
+    // large; the scanner then skipped every other frame and reported HALF the
+    // real duration — the "32s audio rendered as a 16s video" bug.
+    const frameSizeCoeff = isMpeg1 ? 144 : 72
+    const frameSize = Math.floor(frameSizeCoeff * bitrateKbps * 1000 / sr) + paddingBit
     if (frameSize < 4 || offset + frameSize > buffer.length) break
 
     if (!sampleRate) sampleRate = sr

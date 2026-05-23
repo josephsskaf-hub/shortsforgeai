@@ -144,6 +144,33 @@ const SPACE_BANNED_TERMS = [
 ]
 const SPACE_BOOST_TERM = 'rocket launch fire night'
 
+// Push #242 — progressive semantic fallbacks for verbatim (exact) queries.
+// Pexels has no footage for many over-specific subjects (SpaceX/Starship are
+// licensed, so "SpaceX Starship launch closeup" returns 0), and a 3-word
+// broadening of the SAME words ("SpaceX Starship launch") still misses. Rather
+// than fall straight through to the curated Cloudinary clip (the elephants.mp4
+// mismatch), step DOWN to progressively more generic queries within the SAME
+// semantic topic so the viewer still sees on-topic footage. The chain is tried
+// in order and stops at the first query that returns an accepted clip.
+const SEMANTIC_FALLBACK_GROUPS: ReadonlyArray<{ triggers: RegExp; queries: string[] }> = [
+  {
+    // Rockets / spaceflight — covers "rocket launch night sky" and
+    // "SpaceX Starship launch closeup".
+    triggers: /\b(rocket|spacex|starship|falcon|booster|liftoff|blast-?off|launch\s*pad)\b/i,
+    queries: ['rocket launch', 'space rocket', 'spacecraft', 'space launch'],
+  },
+  {
+    // Spacecraft / orbital hardware (no launch keyword).
+    triggers: /\b(spacecraft|satellite|orbit|space\s*station|astronaut|capsule)\b/i,
+    queries: ['spacecraft', 'satellite orbit', 'earth from space'],
+  },
+  {
+    // Private jets / aviation — covers "private jets on tarmac sunset".
+    triggers: /\b(jet|aircraft|airplane|aeroplane|airliner|tarmac|aviation|cockpit|runway)\b/i,
+    queries: ['private jet', 'luxury aircraft', 'airplane runway', 'airplane'],
+  },
+]
+
 /**
  * Resolve a single best-match Pexels clip URL for a scene.
  *
@@ -279,23 +306,47 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
 
   // Push #239 — rocket/space queries pull in fireworks footage (bright sparks
   // on a dark sky). The exact-query path skips the category override, so apply
-  // the fireworks rejection list directly when the query is space-related.
-  const qLower = q.toLowerCase()
-  const isSpace =
-    qLower.includes('space') ||
-    Array.from(SPACE_TRIGGER_WORDS).some((w) => qLower.includes(w))
-  const negTerms = isSpace ? FIREWORKS_NEGATIVE_TERMS : []
+  // the fireworks rejection list directly when the query is space-related. We
+  // recompute this per candidate below so generic rocket fallbacks are guarded too.
+  const isSpaceQuery = (s: string): boolean => {
+    const lower = s.toLowerCase()
+    return lower.includes('space') || Array.from(SPACE_TRIGGER_WORDS).some((w) => lower.includes(w))
+  }
 
-  const direct = await searchAndFilter(q, null, 'user_exact', negTerms)
+  // Single attempt against Pexels, deduped so we never re-search the same query
+  // twice as the chain narrows. Returns the accepted clip URL or null.
+  const tried = new Set<string>()
+  const attempt = async (candidate: string, label: string): Promise<string | null> => {
+    const c = candidate.replace(/\s{2,}/g, ' ').trim()
+    if (!c) return null
+    const key = c.toLowerCase()
+    if (tried.has(key)) return null
+    tried.add(key)
+    const negTerms = isSpaceQuery(c) ? FIREWORKS_NEGATIVE_TERMS : []
+    const url = await searchAndFilter(c, null, label, negTerms)
+    if (!url) console.log(`[visual] ${label} MISS: "${c.slice(0, 60)}"`)
+    return url
+  }
+
+  // 1) Exact user query, verbatim — never altered (verbatim mode stays intact).
+  const direct = await attempt(q, 'user_exact')
   if (direct) return direct
-  console.log(`[visual] user_exact MISS: "${q.slice(0, 60)}"`)
 
-  // Broaden ONLY within the user's own words (first 3 tokens) — never swap topic.
-  const broad = q.split(/\s+/).slice(0, 3).join(' ')
-  if (broad && broad.toLowerCase() !== q.toLowerCase()) {
-    const url = await searchAndFilter(broad, null, 'user_exact_broad', negTerms)
-    if (url) return url
-    console.log(`[visual] user_exact_broad MISS: "${broad}"`)
+  // 2) Broaden ONLY within the user's own words (first 3 tokens) — same topic.
+  const broadUrl = await attempt(q.split(/\s+/).slice(0, 3).join(' '), 'user_exact_broad')
+  if (broadUrl) return broadUrl
+
+  // 3) Push #242 — progressive semantic fallbacks. When the user's own words
+  //    return nothing (over-specific / licensed subject), step down to a generic
+  //    on-topic query so the clip still matches the narration instead of falling
+  //    through to an unrelated Cloudinary clip. Only the first matching group runs.
+  for (const group of SEMANTIC_FALLBACK_GROUPS) {
+    if (!group.triggers.test(q)) continue
+    for (const fq of group.queries) {
+      const url = await attempt(fq, 'semantic_fallback')
+      if (url) return url
+    }
+    break
   }
 
   return null
