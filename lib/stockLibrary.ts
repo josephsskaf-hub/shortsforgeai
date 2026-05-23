@@ -42,30 +42,13 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',             width: 1280, height: 720,  duration: 12, tags: ['psychology', 'people', 'lifestyle', 'celebrity'] },
 
   // — Pexels CDN (only IDs verified to return 206 on direct GET) —
-  { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['city', 'urban', 'technology', 'modern', 'business', 'money'] },
+  // Push #214 — merged duplicate 2098989 entry; combined city + rocket tags.
+  // NASA SVS URLs removed (svs.gsfc.nasa.gov returns HTTP 403 to server-side fetches).
+  // These Pexels CDN clips are the primary rocket/space footage for the curated library.
+  { url: 'https://videos.pexels.com/video-files/2098405/2098405-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 14, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'booster_landing'] },
+  { url: 'https://videos.pexels.com/video-files/3654268/3654268-hd_1280_720_30fps.mp4',   width: 1280, height: 720,  duration: 13, tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'earth_orbit', 'spacecraft'] },
+  { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['rocket', 'launch', 'space', 'city', 'urban', 'technology', 'modern', 'business', 'money'] },
   { url: 'https://videos.pexels.com/video-files/857195/857195-hd_1280_720_25fps.mp4',     width: 1280, height: 720,  duration: 16, tags: ['space', 'cosmic', 'stars', 'sky', 'mystery', 'dark'] },
-  // Push #213 — NASA public-domain rocket footage. These are the primary clips
-  // for rocket_launch / booster_landing / earth_orbit categories. NASA footage
-  // is 100% public domain and visually correct (real launches, not CGI/abstract).
-  // SVS = NASA Scientific Visualization Studio (no auth required, direct GET).
-  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012700/a012716/20160908-OSIRIS_REx_Launch_Coverage_Excerpt_TWTR.mp4',
-    width: 1280, height: 720,  duration: 30,
-    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'nasa'] },
-  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012700/a012716/TWITTER_720-OSIRIS_REx_Launch_Broadcast_Rocket_Cam_Ascent.mp4',
-    width: 1280, height: 720,  duration: 40,
-    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'fire', 'nasa', 'booster_landing'] },
-  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a010797/10797_Sounding_Rocket_MPEG4_1280X720_29.97.mp4',
-    width: 1280, height: 720,  duration: 60,
-    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'earth_orbit', 'nasa', 'spacecraft'] },
-  { url: 'https://svs.gsfc.nasa.gov/vis/a010000/a012300/a012368/OSIRIS_launch.mp4',
-    width: 1920, height: 1080, duration: 90,
-    tags: ['rocket', 'rocket_launch', 'launch', 'space', 'nasa', 'mission_control'] },
-
-  // Push #210 — additional space/rocket clips for the curated fallback.
-  // Pexels IDs verified to contain real space/rocket footage (public CDN).
-  { url: 'https://videos.pexels.com/video-files/2098405/2098405-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 14, tags: ['rocket', 'launch', 'space', 'fire'] },
-  { url: 'https://videos.pexels.com/video-files/3654268/3654268-hd_1280_720_30fps.mp4',   width: 1280, height: 720,  duration: 13, tags: ['rocket', 'launch', 'space', 'fire'] },
-  { url: 'https://videos.pexels.com/video-files/2098989/2098989-uhd_2560_1440_30fps.mp4', width: 2560, height: 1440, duration: 15, tags: ['rocket', 'launch', 'space', 'technology', 'city'] },
   { url: 'https://videos.pexels.com/video-files/3576378/3576378-hd_1280_720_25fps.mp4',   width: 1280, height: 720,  duration: 12, tags: ['nature', 'forest', 'mystery', 'dark', 'horror'] },
   { url: 'https://videos.pexels.com/video-files/1093662/1093662-hd_1920_1080_30fps.mp4',  width: 1920, height: 1080, duration: 14, tags: ['city', 'urban', 'street', 'lifestyle', 'luxury'] },
 
