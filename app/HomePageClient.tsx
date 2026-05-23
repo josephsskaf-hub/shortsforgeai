@@ -484,13 +484,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Hero ─────────
           Push #080 — full-width background video behind the hero.
+          Push #224 — increased min-height, better cinematic fallback clip,
+          opacity raised to 0.30 for more visual presence.
           Dark overlay keeps text legible. */}
-      <div className="relative overflow-hidden">
-        {/* Push #207 — background video: uses the same dark cinematic Pexels
-            clip already fetched for the showcase (space/tech theme). Falls
-            back to a known dark sample until the fetch resolves. Opacity
-            raised to 0.22 so it reads as "things happening" without
-            competing with the headline or CTAs above it. */}
+      <div className="relative overflow-hidden" style={{ minHeight: '88vh' }}>
+        {/* Background video: uses Pexels showcase clip (fetched client-side,
+            so it works from the browser). Falls back to a dark cinematic
+            archive.org clip rather than a cartoon placeholder. Multiple
+            fallbacks ensure something always plays. */}
         <video
           autoPlay
           muted
@@ -503,13 +504,19 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            opacity: 0.22,
+            opacity: 0.30,
             zIndex: 0,
             pointerEvents: 'none',
-            transition: 'opacity 1.2s ease',
+            transition: 'opacity 1.4s ease',
           }}
-          src={showcaseVideos['0'] || showcaseVideos['1'] || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'}
-        />
+        >
+          {/* Pexels showcase clips load client-side (browser → CDN is fine) */}
+          {showcaseVideos['0'] && <source src={showcaseVideos['0']} type="video/mp4" />}
+          {showcaseVideos['1'] && <source src={showcaseVideos['1']} type="video/mp4" />}
+          {/* Dark cinematic fallbacks from archive.org — verified public domain */}
+          <source src="https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4" type="video/mp4" />
+          <source src="https://archive.org/download/Ares1-xTestRocketLaunches/ksc_102909_aresIx_launch_1080.mp4" type="video/mp4" />
+        </video>
         {/* Gradient overlay — darker at top/bottom, lighter in the middle
             so the video is visible in the hero body without washing out
             the nav or the CTA section at the bottom. */}
@@ -518,12 +525,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(180deg, rgba(5,7,13,0.82) 0%, rgba(5,7,13,0.30) 40%, rgba(5,7,13,0.30) 60%, rgba(5,7,13,0.90) 100%)',
+            background: 'linear-gradient(180deg, rgba(5,7,13,0.80) 0%, rgba(5,7,13,0.22) 35%, rgba(5,7,13,0.22) 65%, rgba(5,7,13,0.92) 100%)',
             zIndex: 1,
             pointerEvents: 'none',
           }}
         />
-      <section className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24 sm:pb-16" style={{ zIndex: 2 }}>
+      <section className="relative mx-auto max-w-6xl px-4 pt-20 pb-12 sm:px-6 sm:pt-32 sm:pb-20" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl text-[#F1F5F9]">
           Turn Any Idea Into a{' '}
