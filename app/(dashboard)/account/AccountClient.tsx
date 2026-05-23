@@ -29,7 +29,7 @@ function isTabKey(v: string | null | undefined): v is TabKey {
   return v === 'members' || v === 'profile' || v === 'manage' || v === 'usage'
 }
 
-const PLAN_LIMITS = { free: 2, basic: 50, pro: 100 } as const
+const PLAN_LIMITS = { free: 1, basic: 50, pro: 100 } as const
 const PLAN_COLORS = {
   free: { color: '#94A3B8', bg: 'rgba(148,163,184,.1)', border: 'rgba(148,163,184,.2)' },
   basic: { color: '#22D3EE', bg: 'rgba(34,211,238,.1)', border: 'rgba(34,211,238,.2)' },

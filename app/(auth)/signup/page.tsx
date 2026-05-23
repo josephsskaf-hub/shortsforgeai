@@ -236,7 +236,7 @@ export default function SignupPage() {
                 {[
                   'AI writes the script in 60 seconds',
                   'Stock footage + voiceover included',
-                  '2 free videos, no credit card',
+                  '1 free video, no credit card',
                 ].map((line) => (
                   <li
                     key={line}
@@ -356,7 +356,7 @@ export default function SignupPage() {
                   Create your AI Short
                 </h1>
                 <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-                  Free trial, 2 videos included.
+                  Free trial, 1 video included.
                 </p>
 
                 <GoogleSignInButton onError={(msg) => setError(msg)} />

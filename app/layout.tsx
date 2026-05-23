@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ShortsForgeAI — Viral YouTube Shorts in 60 Seconds',
     description:
-      'AI writes, voices, and edits your YouTube Shorts automatically. Join 500+ creators. 2 free videos, no credit card.',
+      'AI writes, voices, and edits your YouTube Shorts automatically. Join 500+ creators. 1 free video, no credit card.',
     url: 'https://shortsforgeai.vercel.app',
     siteName: 'ShortsForgeAI',
     images: [

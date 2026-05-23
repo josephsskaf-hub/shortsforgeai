@@ -21,7 +21,7 @@ import { PLANS } from '@/lib/pricing'
 // counts can't drift between the homepage, /pricing, and this in-flow
 // upgrade card.
 const FREE_FEATURES = [
-  '2 Fast Mode renders included',
+  '1 Fast Mode render included',
   'Stock footage + AI voiceover',
   'Auto-captions',
   'Watermark-free MP4 output',
@@ -139,7 +139,7 @@ export default function PricingCards() {
           name={PLANS.free.name}
           price={PLANS.free.priceLabel}
           period="/ month"
-          tagline="Sign up free. Get 2 Fast Mode videos — no card needed."
+          tagline="Sign up free. Get 1 Fast Mode video — no card needed."
           features={FREE_FEATURES}
           cta={null}
         />

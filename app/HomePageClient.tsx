@@ -214,7 +214,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // Push #097 — exit-intent overlay. Fires once per session when the
   // cursor leaves the top of the viewport (the canonical "about to
   // close the tab" gesture). Suppressed for signed-in users — they
-  // don't need the "get 2 free videos" prompt.
+  // don't need the "get 1 free video" prompt.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (user) return
@@ -569,7 +569,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate Your First Short Free →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            No credit card required · 2 free videos · Ready in 60 seconds
+            No credit card required · 1 free video · Ready in 60 seconds
           </p>
         </div>
         </div>{/* end hero content */}
@@ -1030,7 +1030,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               id="exit-intent-title"
               className="text-balance text-2xl font-black tracking-tight text-[#F1F5F9]"
             >
-              Wait! Get <span className="text-[#10B981]">2 FREE videos</span> before you go
+              Wait! Get <span className="text-[#10B981]">1 FREE video</span> before you go
             </h2>
             <p className="mx-auto mt-3 max-w-xs text-[14px] text-[#94A3B8]">
               No credit card. No catch. Generate your first viral Short in 60 seconds.

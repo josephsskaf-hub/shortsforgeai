@@ -456,7 +456,7 @@ export default function Sidebar({
         {!isLoggedIn ? (
           <div className="px-3 pt-3 pb-3 flex-shrink-0">
             <div style={{ borderRadius: 14, padding: '14px 14px', background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.18)' }}>
-              <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#F5F7FF', marginBottom: 4 }}>⚡ 2 free credits</p>
+              <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#F5F7FF', marginBottom: 4 }}>⚡ 1 free credit</p>
               <p style={{ fontSize: '0.72rem', color: '#94A3B8', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
               <button
                 onClick={() => setShowAuthModal(true)}

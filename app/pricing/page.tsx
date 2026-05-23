@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'No! Sign up free and get 2 videos included. No card required.',
+    a: 'No! Sign up free and get 1 video included. No card required.',
   },
   {
     q: 'How fast are videos generated?',
@@ -45,9 +45,9 @@ function buildPricing() {
       name: 'Free',
       price: '$0',
       priceSub: 'forever',
-      tagline: 'Sign up free. Get 2 Fast Mode videos — no card needed.',
+      tagline: 'Sign up free. Get 1 Fast Mode video — no card needed.',
       features: [
-        '2 Fast Mode renders included',
+        '1 Fast Mode render included',
         'Stock footage + AI voiceover',
         'Auto-captions',
         'Watermark-free MP4 output',
@@ -299,7 +299,7 @@ export default function PricingPage() {
           }}>
             Your first video is on us —{' '}
             <span style={{ color: '#A78BFA' }}>sign up free</span> and get{' '}
-            <span style={{ color: '#22D3EE' }}>2 Fast Mode videos instantly</span>,
+            <span style={{ color: '#22D3EE' }}>1 Fast Mode video instantly</span>,
             no card required.
           </span>
         </a>
@@ -567,7 +567,7 @@ export default function PricingPage() {
                 {[
                   {
                     label: 'Fast Mode (AI stock footage + voiceover)',
-                    free: '✅ 2 videos',
+                    free: '✅ 1 video',
                     basic: '✅ 50 / month',
                     pro: '✅ 100 / month',
                   },

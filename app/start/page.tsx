@@ -161,7 +161,7 @@ export default function StartPage() {
               fontWeight: 600,
             }}
           >
-            2 free videos included · No credit card · Cancel anytime
+            1 free video included · No credit card · Cancel anytime
           </p>
         </section>
 
@@ -408,7 +408,7 @@ export default function StartPage() {
               },
               {
                 q: "What's included in the free plan?",
-                a: '2 complete Fast Mode videos, no credit card required. Full quality, watermark-free MP4 output. Upgrade only when you\'re ready.',
+                a: '1 complete Fast Mode video, no credit card required. Full quality, watermark-free MP4 output. Upgrade only when you\'re ready.',
               },
               {
                 q: 'What happens after my free videos?',
@@ -593,7 +593,7 @@ export default function StartPage() {
             Generate My First Short Free →
           </Link>
           <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: 10, fontWeight: 600 }}>
-            No credit card · 2 videos free · Ready in 60s
+            No credit card · 1 video free · Ready in 60s
           </p>
         </section>
 

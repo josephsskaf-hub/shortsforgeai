@@ -467,11 +467,11 @@ export default function GenerateClient() {
   }, [phase])
 
   // Push #098 — welcome banner gating. Only shown on first visit when the
-  // user still has >=2 credits and hasn't dismissed it. localStorage write
+  // user still has >=1 credit and hasn't dismissed it. localStorage write
   // happens in the dismiss handler so a refresh between mount and dismiss
   // re-shows the banner (intentional — they didn't acknowledge yet).
   useEffect(() => {
-    if (credits === null || credits < 2) {
+    if (credits === null || credits < 1) {
       setShowWelcome(false)
       return
     }
@@ -2485,7 +2485,7 @@ export default function GenerateClient() {
                   🎁 Know a creator? Send them this
                 </p>
                 <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
-                  Share ShortsForgeAI — they get 2 free videos, you help grow the community
+                  Share ShortsForgeAI — they get 1 free video, you help grow the community
                 </p>
                 <div className="flex gap-2 justify-center flex-wrap">
                   <a
@@ -4332,7 +4332,7 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
-        🎉 Welcome! You have 2 free videos. Generate your first Short now!
+        🎉 Welcome! You have 1 free video. Generate your first Short now!
       </span>
       <button
         type="button"

@@ -1,11 +1,11 @@
 // Run this in Supabase SQL editor if `video_credits` doesn't exist:
-// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS video_credits integer DEFAULT 2;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS video_credits integer DEFAULT 1;
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Free-tier default: 2 video credits on signup (push #020 pricing policy).
-const DEFAULT_CREDITS = 2
+// Free-tier default: 1 video credit on signup (push #020 pricing policy).
+const DEFAULT_CREDITS = 1
 
 export async function GET() {
   try {

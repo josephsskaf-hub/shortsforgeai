@@ -27,7 +27,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     price: 0,
     priceLabel: '$0',
     periodLabel: 'forever',
-    credits: 2,
+    credits: 1,
     cta: 'Run Free',
     href: '/signup',
   },

@@ -19,9 +19,9 @@ export interface PlanInfo {
 
 // Fallback thresholds for legacy rows that have no `plan` and no `is_pro`
 // signal. Tuned to the new 50/100 grant model: Pro grants 100, Basic
-// grants 50, Free starts at 2. Anyone with >50 credits must be Pro
+// grants 50, Free starts at 1. Anyone with >50 credits must be Pro
 // (Basic can't exceed its grant). Anyone with >2 credits is at least Basic
-// (Free maxes out at 2).
+// (Free maxes out at 1).
 const PRO_CREDIT_THRESHOLD = 51
 const BASIC_CREDIT_THRESHOLD = 3
 

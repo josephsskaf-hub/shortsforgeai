@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'ShortsForgeAI — Turn Any Idea Into a Viral YouTube Short',
   description:
-    'AI writes the script, finds footage, adds captions & music. Ready in 60 seconds. 2 free videos, no credit card.',
+    'AI writes the script, finds footage, adds captions & music. Ready in 60 seconds. 1 free video, no credit card.',
   robots: {
     index: false,
     follow: true,

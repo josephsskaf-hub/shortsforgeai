@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
               <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 8px;">${greeting}</p>
               <p style="color:#94a3b8;font-size:15px;margin:0 0 28px;line-height:1.6;">Welcome to <strong style="color:#c7d2fe;">ShortsForgeAI</strong> 🎬</p>
               <div style="background:rgba(59, 130, 246,0.12);border:1px solid rgba(59, 130, 246,0.25);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-                <p style="color:#60A5FA;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credits are waiting</p>
-                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">2 free video credits</p>
+                <p style="color:#60A5FA;font-size:13px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin:0 0 8px;">🎁 Your free credit is waiting</p>
+                <p style="color:#c7d2fe;font-size:24px;font-weight:900;margin:0 0 4px;">1 free video credit</p>
                 <p style="color:#64748b;font-size:13px;margin:0;line-height:1.5;">Enough to try ShortsForgeAI before upgrading — vertical 9:16 Shorts, ready to upload.</p>
               </div>
               <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;width:100%;">
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
 Welcome to ShortsForgeAI! 🎬
 
-You have 2 free video credits waiting — enough to try ShortsForgeAI before upgrading.
+You have 1 free video credit waiting — enough to try ShortsForgeAI before upgrading.
 Every Short comes with:
 - AI script + neural voiceover pipeline
 - Auto-captions engine
@@ -126,7 +126,7 @@ shortsforgeai.com`
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [email],
-        subject: '⚡ Your 2 free AI video credits are ready',
+        subject: '⚡ Your 1 free AI video credit is ready',
         html,
         text,
       }),
