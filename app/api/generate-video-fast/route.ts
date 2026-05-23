@@ -5,6 +5,7 @@ import { generateScenes } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
 import { getPexelsVideoForScene } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
+import { ensureAccessibleUrl } from '@/lib/videoCache'
 
 export const maxDuration = 60
 
@@ -141,7 +142,15 @@ export async function POST(req: NextRequest) {
           ? cat.replace(/_/g, ' ')
           : (scene.searchKeywords || scene.description)
 
-        // Try Pexels API first (requires PEXELS_API_KEY env var)
+        // Final fallback: stockLibrary (Cloudinary demo — always server-accessible)
+        const lib = pickLibraryClips(libQuery, 1, idx)
+        const fallbackUrl = lib[0]?.url ?? ''
+
+        // Try Pexels API first (requires PEXELS_API_KEY env var).
+        // Push #216 — Pexels CDN URLs are proxied through Supabase Storage so
+        // Creatomate can download them. ensureAccessibleUrl() downloads the clip
+        // from Pexels server-side (our Vercel is authorized) and caches it in
+        // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
         const pexelsUrl = await getPexelsVideoForScene(
           scene.searchKeywords,
           scene.description,
@@ -149,15 +158,14 @@ export async function POST(req: NextRequest) {
           scene.voiceover,
         )
         if (pexelsUrl) {
-          console.log(`[clip] scene=${idx + 1} category=${cat} PEXELS url=${pexelsUrl.slice(0, 80)}`)
-          return pexelsUrl
+          const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
+          console.log(`[clip] scene=${idx + 1} category=${cat} CACHED url=${cachedUrl.slice(0, 80)}`)
+          return cachedUrl
         }
 
-        // Final fallback: stockLibrary (only Cloudinary demo URLs are server-accessible)
-        const lib = pickLibraryClips(libQuery, 1, idx)
-        const libUrl = lib[0]?.url ?? ''
-        console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB url=${libUrl.slice(0, 80)}`)
-        return libUrl
+        // No Pexels result — use Cloudinary stockLibrary fallback
+        console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB url=${fallbackUrl.slice(0, 80)}`)
+        return fallbackUrl
       })
     )
 
