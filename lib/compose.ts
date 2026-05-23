@@ -337,8 +337,31 @@ export function mapWhisperTimingsToSegments(
     const nWords = Math.max(1, (segments[i].text ?? '').trim().split(/\s+/).filter(Boolean).length)
 
     if (wIdx >= words.length) {
-      console.warn('[compose] mapWhisperTimings: ran out of words at segment', i)
-      return []
+      // Push #244 — Whisper ran out of words before all segments were processed.
+      // Previously this returned [] causing full proportional fallback (no sync).
+      // Instead: fill remaining segments proportionally from the last mapped
+      // timestamp to the caption-window end so Whisper data is not wasted.
+      console.warn('[compose] mapWhisperTimings: ran out of words at segment', i, '— filling remainder proportionally')
+      const captionWindowEnd = Math.max(0, totalAudioDuration - ctaTailSeconds)
+      const lastEntry = result[result.length - 1]
+      const fillStart = lastEntry ? lastEntry.time + lastEntry.duration : 0
+      const remaining = segments.slice(i)
+      const remainWords = remaining.reduce(
+        (sum, s) => sum + Math.max(1, (s.text ?? '').trim().split(/\s+/).filter(Boolean).length),
+        0,
+      )
+      const fillWindow = Math.max(0.1, captionWindowEnd - fillStart)
+      let localElapsed = fillStart
+      for (const rem of remaining) {
+        const remWords = Math.max(1, (rem.text ?? '').trim().split(/\s+/).filter(Boolean).length)
+        const slot = Math.max(0.1, (remWords / remainWords) * fillWindow)
+        result.push({
+          time: Math.round(localElapsed * 1000) / 1000,
+          duration: Math.round(slot * 1000) / 1000,
+        })
+        localElapsed += slot
+      }
+      return result
     }
 
     const segStartWord = words[wIdx]
@@ -888,62 +911,4 @@ export async function pollCreatomateRender(renderId: string): Promise<Creatomate
     case 'succeeded':
       status = 'succeeded'
       break
-    case 'failed':
-      status = 'failed'
-      break
-    case 'cancelled':
-      status = 'cancelled'
-      break
-    case 'planned':
-      status = 'planned'
-      break
-    case 'waiting':
-      status = 'waiting'
-      break
-    case 'transcribing':
-      status = 'transcribing'
-      break
-    case 'rendering':
-      status = 'rendering'
-      break
-    default:
-      status = 'unknown'
-  }
-
-  let progress: number
-  if (typeof data.progress === 'number' && data.progress >= 0 && data.progress <= 100) {
-    progress = Math.round(data.progress)
-  } else {
-    switch (status) {
-      case 'planned':
-        progress = 5
-        break
-      case 'waiting':
-        progress = 10
-        break
-      case 'transcribing':
-        progress = 25
-        break
-      case 'rendering':
-        progress = 60
-        break
-      case 'succeeded':
-        progress = 100
-        break
-      case 'failed':
-      case 'cancelled':
-        progress = 0
-        break
-      default:
-        progress = 15
-    }
-  }
-
-  return {
-    status,
-    progress,
-    url: typeof data.url === 'string' ? data.url : null,
-    snapshotUrl: typeof data.snapshot_url === 'string' ? data.snapshot_url : null,
-    error: typeof data.error_message === 'string' ? data.error_message : null,
-  }
-}
+    case 'f

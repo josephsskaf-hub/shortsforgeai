@@ -108,7 +108,12 @@ async function searchAndFilter(
 
   for (const video of videos) {
     const pageUrl = video.url ?? ''
-    const negTerms = [...(category?.negativeTerms ?? []), ...extraNegTerms]
+    // Push #244 — always reject fireworks/celebration footage globally.
+    // Previously FIREWORKS_NEGATIVE_TERMS were only applied to space queries,
+    // letting fireworks clips slip through on "New York skyline", "golden hour",
+    // "celebration" etc. Apply them as a universal baseline so no query ever
+    // returns fireworks regardless of topic.
+    const negTerms = [...FIREWORKS_NEGATIVE_TERMS, ...(category?.negativeTerms ?? []), ...extraNegTerms]
 
     const rejected = pageUrl
       ? isSlugRejected(pageUrl, negTerms, category?.id)
@@ -342,53 +347,4 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
   const tried = new Set<string>()
   const attempt = async (candidate: string, label: string): Promise<string | null> => {
     const c = candidate.replace(/\s{2,}/g, ' ').trim()
-    if (!c) return null
-    const key = c.toLowerCase()
-    if (tried.has(key)) return null
-    tried.add(key)
-    // Push #243 — widen space rejection beyond fireworks (toy rocket / desert leak).
-    const negTerms = isSpaceQuery(c) ? SPACE_EXACT_NEGATIVE_TERMS : []
-    const url = await searchAndFilter(c, null, label, negTerms)
-    if (!url) console.log(`[visual] ${label} MISS: "${c.slice(0, 60)}"`)
-    return url
-  }
-
-  // 1) Exact user query, verbatim — never altered (verbatim mode stays intact).
-  const direct = await attempt(q, 'user_exact')
-  if (direct) return direct
-
-  // 2) Broaden ONLY within the user's own words (first 3 tokens) — same topic.
-  const broadUrl = await attempt(q.split(/\s+/).slice(0, 3).join(' '), 'user_exact_broad')
-  if (broadUrl) return broadUrl
-
-  // 3) Push #242 — progressive semantic fallbacks. When the user's own words
-  //    return nothing (over-specific / licensed subject), step down to a generic
-  //    on-topic query so the clip still matches the narration instead of falling
-  //    through to an unrelated Cloudinary clip. Only the first matching group runs.
-  for (const group of SEMANTIC_FALLBACK_GROUPS) {
-    if (!group.triggers.test(q)) continue
-    for (const fq of group.queries) {
-      const url = await attempt(fq, 'semantic_fallback')
-      if (url) return url
-    }
-    break
-  }
-
-  return null
-}
-
-/**
- * Search Pexels Videos for a query and return up to `perPage` portrait MP4
- * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
- * or the search fails — never throws.
- * Kept for legacy callers outside the scene pipeline.
- */
-export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
-  const videos = await searchPexelsVideoObjects(query, perPage)
-  const out: string[] = []
-  for (const v of videos) {
-    const link = pickBestFile(v)
-    if (link) out.push(link)
-  }
-  return out
-}
+    if (!c
