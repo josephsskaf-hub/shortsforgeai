@@ -55,6 +55,7 @@ export interface CreatomateRenderState {
   status: 'planned' | 'waiting' | 'transcribing' | 'rendering' | 'succeeded' | 'failed' | 'cancelled' | 'unknown'
   progress: number
   url: string | null
+  snapshotUrl: string | null
   error: string | null
 }
 
@@ -734,6 +735,7 @@ export async function pollCreatomateRender(renderId: string): Promise<Creatomate
   const data = (await res.json()) as {
     status?: string
     url?: string
+    snapshot_url?: string
     error_message?: string
     progress?: number
   }
@@ -799,6 +801,7 @@ export async function pollCreatomateRender(renderId: string): Promise<Creatomate
     status,
     progress,
     url: typeof data.url === 'string' ? data.url : null,
+    snapshotUrl: typeof data.snapshot_url === 'string' ? data.snapshot_url : null,
     error: typeof data.error_message === 'string' ? data.error_message : null,
   }
 }

@@ -47,6 +47,7 @@ async function persistCompletedVideo(args: {
   userId: string
   renderId: string
   videoUrl: string
+  snapshotUrl: string | null
   quality: Quality
   duration: number
   topic: string
@@ -72,6 +73,7 @@ async function persistCompletedVideo(args: {
     user_id: args.userId,
     title: args.topic.slice(0, 200) || 'Untitled Short',
     final_video_url: args.videoUrl,
+    thumbnail_url: args.snapshotUrl ?? null,
     status: 'completed',
     duration: args.duration,
     quality: args.quality,
@@ -115,6 +117,7 @@ async function persistCompletedVideo(args: {
     user_id: args.userId,
     status: 'completed',
     video_url: args.videoUrl,
+    thumbnail_url: args.snapshotUrl ?? null,
     credits_used: args.creditsUsed,
     topic: args.topic,
     duration: args.duration,
@@ -319,6 +322,7 @@ export async function GET(
             userId: user.id,
             renderId,
             videoUrl: state.url,
+            snapshotUrl: state.snapshotUrl,
             quality,
             duration,
             topic,
