@@ -3014,19 +3014,15 @@ function PipelineStages({
 // (<50). Layout is compact — two-column score / rating header on desktop,
 // stacks on mobile.
 function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
-  const { viralScore, hookRating, retentionNotes, thumbnailTexts, openingCaption, improvementSuggestions } = vi
+  const { viralScore, improvementSuggestions } = vi
   const accent =
     viralScore >= 75
-      ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong viral signal' }
+      ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong' }
       : viralScore >= 50
-      ? { color: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)', label: 'Could be sharper' }
+      ? { color: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)', label: 'Good' }
       : { color: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)', label: 'Needs work' }
-  const ratingLabel: Record<HookRating, string> = {
-    weak: 'Weak',
-    medium: 'Medium',
-    strong: 'Strong',
-    excellent: 'Excellent',
-  }
+
+  const topSuggestions = improvementSuggestions.slice(0, 2)
 
   return (
     <section
@@ -3037,167 +3033,60 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
         boxShadow: `0 0 28px ${accent.bg}`,
       }}
     >
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div>
-          <div
-            className="text-xs font-black uppercase tracking-widest mb-1"
-            style={{ color: 'var(--muted)' }}
-          >
-            Viral Intelligence
-          </div>
-          <h3 className="font-black text-lg sm:text-xl" style={{ color: 'var(--text)' }}>
-            Hook performance forecast
-          </h3>
+      <div className="flex flex-col items-center text-center">
+        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+          Viral Score
         </div>
-        <div className="flex items-stretch gap-3">
-          <div
-            className="rounded-xl px-4 py-2 text-center"
-            style={{
-              background: accent.bg,
-              border: `1px solid ${accent.border}`,
-              minWidth: 92,
-            }}
-          >
-            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
-              Score
-            </div>
-            <div className="font-black" style={{ color: accent.color, fontSize: '1.6rem', lineHeight: 1.1 }}>
-              {viralScore}
-              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 800 }}>/100</span>
-            </div>
-          </div>
-          <div
-            className="rounded-xl px-4 py-2 flex flex-col justify-center"
-            style={{
-              background: 'rgba(255,255,255,.03)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
-              Hook
-            </div>
-            <div className="font-black text-sm" style={{ color: accent.color }}>
-              {ratingLabel[hookRating]}
-            </div>
-          </div>
+        <div className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+          <span className="font-black" style={{ color: accent.color, fontSize: '4rem', lineHeight: 1 }}>
+            {viralScore}
+          </span>
+          <span className="font-black" style={{ color: 'var(--muted)', fontSize: '1.1rem' }}>
+            / 100
+          </span>
         </div>
-      </div>
-
-      <div className="vi-grid">
-        {retentionNotes.length > 0 && (
-          <div
-            className="rounded-xl p-4"
-            style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
-          >
-            <div
-              className="text-[10px] font-black uppercase tracking-widest mb-2"
-              style={{ color: '#93c5fd' }}
-            >
-              Retention notes
-            </div>
-            <ul className="space-y-1.5 text-xs" style={{ color: 'var(--text2)', paddingLeft: 0, listStyle: 'none' }}>
-              {retentionNotes.map((n, i) => (
-                <li key={i} style={{ display: 'flex', gap: 6 }}>
-                  <span style={{ color: accent.color, fontWeight: 800 }}>•</span>
-                  <span style={{ lineHeight: 1.5 }}>{n}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div
-          className="rounded-xl p-4 flex flex-col gap-3"
-          style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}
-        >
-          {thumbnailTexts.length > 0 && (
-            <div>
-              <div
-                className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ color: '#93c5fd' }}
-              >
-                Thumbnail text ideas
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {thumbnailTexts.map((t, i) => (
-                  <span
-                    key={i}
-                    className="text-xs font-black"
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: 999,
-                      background: accent.bg,
-                      border: `1px solid ${accent.border}`,
-                      color: accent.color,
-                      letterSpacing: '0.02em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {openingCaption && (
-            <div>
-              <div
-                className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ color: '#93c5fd' }}
-              >
-                Opening caption (0-2s)
-              </div>
-              <p
-                className="text-sm font-bold"
-                style={{ color: 'var(--text)', lineHeight: 1.45, margin: 0 }}
-              >
-                “{openingCaption}”
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {improvementSuggestions.length > 0 && (
-        <div
-          className="rounded-xl p-4 mt-3"
+        <span
+          className="font-black text-xs mt-2"
           style={{
-            background: 'rgba(34, 211, 238,.06)',
-            border: '1px solid rgba(34, 211, 238,.30)',
+            padding: '4px 12px',
+            borderRadius: 999,
+            background: accent.bg,
+            border: `1px solid ${accent.border}`,
+            color: accent.color,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
           }}
         >
-          <div
-            className="text-[10px] font-black uppercase tracking-widest mb-2"
-            style={{ color: '#22D3EE' }}
-          >
-            How to push the score higher
-          </div>
-          <ul className="space-y-1.5 text-xs" style={{ color: 'var(--text2)', paddingLeft: 0, listStyle: 'none' }}>
-            {improvementSuggestions.map((n, i) => (
-              <li key={i} style={{ display: 'flex', gap: 6 }}>
-                <span style={{ color: '#22D3EE', fontWeight: 800 }}>→</span>
-                <span style={{ lineHeight: 1.5 }}>{n}</span>
-              </li>
-            ))}
-          </ul>
+          Hook: {accent.label}
+        </span>
+      </div>
+
+      {topSuggestions.length > 0 && (
+        <div className="flex flex-col gap-2 mt-5">
+          {topSuggestions.map((n, i) => (
+            <div
+              key={i}
+              className="rounded-xl px-4 py-3 flex items-center gap-3"
+              style={{
+                background: 'rgba(34, 211, 238,.06)',
+                border: '1px solid rgba(34, 211, 238,.30)',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ color: '#22D3EE', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>→</span>
+              <span className="text-xs font-bold" style={{ color: 'var(--text2)', lineHeight: 1.45, flex: 1 }}>
+                {n}
+              </span>
+              <span
+                className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                style={{ color: '#22D3EE' }}
+              >
+                Apply
+              </span>
+            </div>
+          ))}
         </div>
       )}
-
-      <p className="text-[11px] mt-3" style={{ color: 'var(--muted)' }}>
-        Forecast is a guide, not a guarantee — real-world performance depends on thumbnail, posting time, and audience match.
-      </p>
-
-      <style jsx>{`
-        .vi-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-        @media (max-width: 720px) {
-          .vi-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
     </section>
   )
 }
