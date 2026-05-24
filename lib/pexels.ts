@@ -102,8 +102,15 @@ async function searchAndFilter(
   category: VisualCategory | null,
   sceneLabel: string,
   extraNegTerms: string[] = [],
+  // Push #245 — positive slug guard. When provided, at least one of these
+  // terms must appear in the Pexels video slug or the clip is rejected.
+  // Prevents semantically-correct searches from accepting totally off-topic
+  // results (e.g. "a-mother-and-son-playing" returned for "rocket launch").
+  requiredSlugTerms: string[] = [],
 ): Promise<string | null> {
-  const videos = await searchPexelsVideoObjects(query, 5)
+  // Push #245 — search more results so the positive guard has more candidates.
+  const perPage = requiredSlugTerms.length > 0 ? 15 : 5
+  const videos = await searchPexelsVideoObjects(query, perPage)
   if (videos.length === 0) return null
 
   for (const video of videos) {
@@ -123,6 +130,19 @@ async function searchAndFilter(
       const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? pageUrl.slice(-60)
       console.log(`[visual] ${sceneLabel} rejected slug="${slug}" reason=negative_term`)
       continue
+    }
+
+    // Push #245 — positive guard: slug must contain at least one required term.
+    if (requiredSlugTerms.length > 0 && pageUrl) {
+      const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? ''
+      const slugLower = slug.toLowerCase()
+      const hasRequired = requiredSlugTerms.some((t) =>
+        new RegExp(`\\b${t.toLowerCase().replace(/-/g, '[- ]')}\\b`).test(slugLower),
+      )
+      if (!hasRequired) {
+        console.log(`[visual] ${sceneLabel} rejected slug="${slug}" reason=missing_required_term`)
+        continue
+      }
     }
 
     const link = pickBestFile(video)
@@ -170,17 +190,33 @@ const SPACE_EXACT_NEGATIVE_TERMS = [
 // mismatch), step DOWN to progressively more generic queries within the SAME
 // semantic topic so the viewer still sees on-topic footage. The chain is tried
 // in order and stops at the first query that returns an accepted clip.
-const SEMANTIC_FALLBACK_GROUPS: ReadonlyArray<{ triggers: RegExp; queries: string[] }> = [
+// Push #245 — each group now carries an optional `requiredSlugTerms` list.
+// When present, the Pexels result slug must contain at least one of these words
+// or the clip is rejected. This prevents Pexels returning totally off-topic
+// results (e.g. "a-mother-and-son-playing" for "rocket launch night sky")
+// when the search index has no matching portrait clips for an over-specific query.
+const SEMANTIC_FALLBACK_GROUPS: ReadonlyArray<{
+  triggers: RegExp
+  queries: string[]
+  requiredSlugTerms?: string[]
+}> = [
   {
     // Rockets / spaceflight — covers "rocket launch night sky" and
     // "SpaceX Starship launch closeup".
     triggers: /\b(rocket|spacex|starship|falcon|booster|liftoff|blast-?off|launch\s*pad)\b/i,
     queries: ['rocket launch', 'space rocket', 'spacecraft', 'space launch'],
+    // Push #245 — require at least one rocket/space term in slug so "a-mother-
+    // and-son-playing" and similar off-topic results are always rejected.
+    requiredSlugTerms: [
+      'rocket', 'launch', 'space', 'spacecraft', 'nasa', 'falcon',
+      'blast', 'liftoff', 'orbit', 'fire', 'flame', 'smoke', 'exhaust',
+    ],
   },
   {
     // Spacecraft / orbital hardware (no launch keyword).
     triggers: /\b(spacecraft|satellite|orbit|space\s*station|astronaut|capsule)\b/i,
     queries: ['spacecraft', 'satellite orbit', 'earth from space'],
+    requiredSlugTerms: ['space', 'spacecraft', 'satellite', 'orbit', 'earth', 'planet', 'astronaut'],
   },
   {
     // Private jets / aviation — covers "private jets on tarmac sunset".
@@ -196,6 +232,11 @@ const SEMANTIC_FALLBACK_GROUPS: ReadonlyArray<{ triggers: RegExp; queries: strin
       'private jet', 'airplane', 'airport', 'flight',
       'plane takeoff', 'aircraft runway', 'travel',
       'luxury travel', 'business travel', 'sky travel',
+    ],
+    // Push #245 — require aviation/travel related slug for aviation queries.
+    requiredSlugTerms: [
+      'airplane', 'aircraft', 'plane', 'jet', 'airport', 'flight',
+      'runway', 'aviation', 'airline', 'travel', 'sky', 'cockpit',
     ],
   },
 ]
@@ -345,6 +386,61 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
   // Single attempt against Pexels, deduped so we never re-search the same query
   // twice as the chain narrows. Returns the accepted clip URL or null.
   const tried = new Set<string>()
-  const attempt = async (candidate: string, label: string): Promise<string | null> => {
+  const attempt = async (
+    candidate: string,
+    label: string,
+    requiredSlugTerms: string[] = [],
+  ): Promise<string | null> => {
     const c = candidate.replace(/\s{2,}/g, ' ').trim()
-    if (!c
+    if (!c) return null
+    const key = c.toLowerCase()
+    if (tried.has(key)) return null
+    tried.add(key)
+    // Push #243 — widen space rejection beyond fireworks (toy rocket / desert leak).
+    const negTerms = isSpaceQuery(c) ? SPACE_EXACT_NEGATIVE_TERMS : []
+    const url = await searchAndFilter(c, null, label, negTerms, requiredSlugTerms)
+    if (!url) console.log(`[visual] ${label} MISS: "${c.slice(0, 60)}"`)
+    return url
+  }
+
+  // 1) Exact user query, verbatim — never altered (verbatim mode stays intact).
+  const direct = await attempt(q, 'user_exact')
+  if (direct) return direct
+
+  // 2) Broaden ONLY within the user's own words (first 3 tokens) — same topic.
+  const broadUrl = await attempt(q.split(/\s+/).slice(0, 3).join(' '), 'user_exact_broad')
+  if (broadUrl) return broadUrl
+
+  // 3) Push #242 — progressive semantic fallbacks. When the user's own words
+  //    return nothing (over-specific / licensed subject), step down to a generic
+  //    on-topic query so the clip still matches the narration instead of falling
+  //    through to an unrelated Cloudinary clip. Only the first matching group runs.
+  // Push #245 — pass requiredSlugTerms from the group so off-topic Pexels
+  // results are rejected even for generic fallback queries.
+  for (const group of SEMANTIC_FALLBACK_GROUPS) {
+    if (!group.triggers.test(q)) continue
+    for (const fq of group.queries) {
+      const url = await attempt(fq, 'semantic_fallback', group.requiredSlugTerms ?? [])
+      if (url) return url
+    }
+    break
+  }
+
+  return null
+}
+
+/**
+ * Search Pexels Videos for a query and return up to `perPage` portrait MP4
+ * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
+ * or the search fails — never throws.
+ * Kept for legacy callers outside the scene pipeline.
+ */
+export async function searchPexelsVideos(query: string, perPage = 3): Promise<string[]> {
+  const videos = await searchPexelsVideoObjects(query, perPage)
+  const out: string[] = []
+  for (const v of videos) {
+    const link = pickBestFile(v)
+    if (link) out.push(link)
+  }
+  return out
+}
