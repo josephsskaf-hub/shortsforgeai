@@ -911,4 +911,62 @@ export async function pollCreatomateRender(renderId: string): Promise<Creatomate
     case 'succeeded':
       status = 'succeeded'
       break
-    case 'f
+    case 'failed':
+      status = 'failed'
+      break
+    case 'cancelled':
+      status = 'cancelled'
+      break
+    case 'planned':
+      status = 'planned'
+      break
+    case 'waiting':
+      status = 'waiting'
+      break
+    case 'transcribing':
+      status = 'transcribing'
+      break
+    case 'rendering':
+      status = 'rendering'
+      break
+    default:
+      status = 'unknown'
+  }
+
+  let progress: number
+  if (typeof data.progress === 'number' && data.progress >= 0 && data.progress <= 100) {
+    progress = Math.round(data.progress)
+  } else {
+    switch (status) {
+      case 'planned':
+        progress = 5
+        break
+      case 'waiting':
+        progress = 10
+        break
+      case 'transcribing':
+        progress = 25
+        break
+      case 'rendering':
+        progress = 60
+        break
+      case 'succeeded':
+        progress = 100
+        break
+      case 'failed':
+      case 'cancelled':
+        progress = 0
+        break
+      default:
+        progress = 15
+    }
+  }
+
+  return {
+    status,
+    progress,
+    url: typeof data.url === 'string' ? data.url : null,
+    snapshotUrl: typeof data.snapshot_url === 'string' ? data.snapshot_url : null,
+    error: typeof data.error_message === 'string' ? data.error_message : null,
+  }
+}
