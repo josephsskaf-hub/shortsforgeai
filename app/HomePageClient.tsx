@@ -819,43 +819,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </h2>
         </div>
 
-        <div className="grid items-center gap-8 md:grid-cols-2">
-          {/* Left — the prompt that was used, as a terminal bubble */}
-          <div className="flex flex-col gap-5">
-            <div className="rounded-2xl border border-white/[0.1] bg-[#0B1120] p-5 shadow-[0_18px_50px_rgba(0,0,0,.4)]">
-              <div className="mb-3 flex items-center gap-1.5">
-                <span aria-hidden className="h-3 w-3 rounded-full bg-[#FF5F56]" />
-                <span aria-hidden className="h-3 w-3 rounded-full bg-[#FFBD2E]" />
-                <span aria-hidden className="h-3 w-3 rounded-full bg-[#27C93F]" />
-                <span className="ml-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#64748B]">
-                  your prompt
-                </span>
-              </div>
-              <p className="font-mono text-[15px] leading-relaxed text-[#F1F5F9]">
-                <span className="text-[#34D399]">$ </span>
-                &ldquo;10 facts about Elon Musk&rdquo;
-                <span
-                  aria-hidden
-                  className="ml-0.5 inline-block h-[18px] w-[8px] translate-y-[3px] animate-pulse bg-cyan-400"
-                />
-              </p>
-            </div>
-            <p className="text-[14px] leading-relaxed text-[#94A3B8]">
-              One sentence in. A fully edited vertical Short out — script,
-              voiceover, footage, captions and music, all generated automatically.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                trackHomepageEvent('real_output_cta_click')
-                goToShowcase('10 surprising facts about Elon Musk')
-              }}
-              className="self-start rounded-xl bg-[#10B981] px-7 py-3.5 text-[15px] font-extrabold text-white shadow-[0_10px_30px_rgba(16,185,129,.4)] transition hover:bg-[#059669]"
-            >
-              Generate Your Own →
-            </button>
-          </div>
+        <div className="flex justify-center">
 
+          {/* Push #246 — removed "YOUR PROMPT" terminal bubble (Elon Musk example). Now just the video. */}
           {/* Right — the generated Short, 9:16 vertical with caption mock */}
           <div className="mx-auto w-full max-w-[300px]">
             <div
