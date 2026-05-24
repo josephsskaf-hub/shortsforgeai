@@ -463,8 +463,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
           </Link>
 
-          {/* Center links — desktop. Push #135: full-width layout, larger text. */}
-          <div className="hidden items-center gap-9 md:flex">
+          {/* Center links — desktop. Push #251: flex-1 + justify-center mirrors
+              footer center group so links align symmetrically in both bars. */}
+          <div className="hidden flex-1 items-center justify-center gap-9 md:flex">
             <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <Link href="/my-videos" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">My Videos</Link>
@@ -1351,8 +1352,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Footer ───────── */}
       <footer className="relative z-10 mt-16 border-t border-white/[0.08]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2.5">
+        {/* Push #251 — footer uses same 3-column pattern as the nav:
+            logo (fixed) | links (flex-1 centered) | copyright (fixed).
+            min-w balances both sides so links are truly centered. */}
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:px-6">
+          <div className="flex items-center gap-2.5 sm:min-w-[160px]">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B1120] border border-blue-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
@@ -1362,13 +1366,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <span>ShortsForge</span><span className="text-cyan-400">AI</span>
             </span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <div className="flex flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Home</Link>
-            <Link href="/generate" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Generator</Link>
+            <Link href="/generate" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">AI Generator</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
+            <Link href="/my-videos" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">My Videos</Link>
             <Link href="/#pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
-          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5 · #218</span></p>
+          <p className="text-[11.5px] text-[#94A3B8] sm:min-w-[160px] sm:text-right">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5</span></p>
         </div>
         {/* Push #116 — legal + contact strip under the main footer row. */}
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
