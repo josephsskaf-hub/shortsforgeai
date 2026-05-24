@@ -443,10 +443,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Top Nav ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
-        {/* Push #250 — align nav inner container to max-w-6xl px-4 sm:px-6,
-            matching hero, showcase, how-it-works, pricing, and footer sections
-            so the logo/links/buttons are perfectly flush with page content. */}
-        <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        {/* Push #252 — full-width nav bar matching the footer; both use the
+            same px-6 sm:px-10 padding so logo/links/buttons are flush. */}
+        <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1352,10 +1351,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Footer ───────── */}
       <footer className="relative z-10 mt-16 border-t border-white/[0.08]">
-        {/* Push #251 — footer uses same 3-column pattern as the nav:
-            logo (fixed) | links (flex-1 centered) | copyright (fixed).
-            min-w balances both sides so links are truly centered. */}
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 sm:flex-row sm:px-6">
+        {/* Push #252 — full-width footer matching the nav; same px-6 sm:px-10
+            padding so both bars align at identical left/right edges. */}
+        <div className="flex w-full flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:px-10">
           <div className="flex items-center gap-2.5 sm:min-w-[160px]">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B1120] border border-blue-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1367,7 +1365,6 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </span>
           </div>
           <div className="flex flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            <Link href="/" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Home</Link>
             <Link href="/generate" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">AI Generator</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
             <Link href="/my-videos" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">My Videos</Link>
@@ -1376,7 +1373,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <p className="text-[11.5px] text-[#94A3B8] sm:min-w-[160px] sm:text-right">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5</span></p>
         </div>
         {/* Push #116 — legal + contact strip under the main footer row. */}
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
+        <div className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-6 pb-6 sm:px-10">
           <Link href="/terms" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Terms of Service</Link>
           <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
           <Link href="/privacy" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Privacy Policy</Link>
