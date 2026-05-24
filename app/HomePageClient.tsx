@@ -18,9 +18,13 @@ import { PLANS, PLAN_LIST } from '@/lib/pricing'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
-// Push #232 — exit-intent survey one-shot flag (renamed from the prior
-// "free video" offer key so returning visitors see the new survey once).
-const EXIT_SHOWN_KEY = 'exitShown'
+// Push #250 — exit-intent survey flags. Both stored in localStorage so they
+// persist across sessions. EXIT_SHOWN_KEY gates the show (30-day cooldown);
+// EXIT_RESPONDED_KEY is set when the user actually submits — that flag
+// suppresses the survey permanently for users who already answered.
+const EXIT_SHOWN_KEY = 'exitShown_v2_ts'  // stores timestamp of last show
+const EXIT_RESPONDED_KEY = 'exitResponded'  // set permanently on submit
+const EXIT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 const EXIT_REASONS = [
   'Too expensive for me',
   "I'm not sure it works",
@@ -298,16 +302,21 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     if (typeof window === 'undefined') return
     if (window.innerWidth <= 768) return
     try {
-      if (sessionStorage.getItem(EXIT_SHOWN_KEY) === '1') return
+      // Never show to users who already responded
+      if (localStorage.getItem(EXIT_RESPONDED_KEY) === '1') return
+      // Respect 30-day cooldown between shows
+      const lastShown = Number(localStorage.getItem(EXIT_SHOWN_KEY) ?? '0')
+      if (lastShown && Date.now() - lastShown < EXIT_COOLDOWN_MS) return
     } catch {
       // ignore
     }
     const mountedAt = Date.now()
     function handleMouseLeave(e: MouseEvent) {
       if (e.clientY > 0) return
-      if (Date.now() - mountedAt < 5000) return
+      // 15s minimum dwell before showing (up from 5s)
+      if (Date.now() - mountedAt < 15000) return
       try {
-        sessionStorage.setItem(EXIT_SHOWN_KEY, '1')
+        localStorage.setItem(EXIT_SHOWN_KEY, String(Date.now()))
       } catch {
         // ignore
       }
@@ -337,6 +346,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     } catch {
       // ignore — never block the close on a network failure
     } finally {
+      // Push #250 — mark permanently responded so this user never sees the
+      // survey again, even across sessions and devices that share localStorage.
+      try { localStorage.setItem(EXIT_RESPONDED_KEY, '1') } catch { /* ignore */ }
       setExitSubmitting(false)
       setShowExitIntent(false)
     }
@@ -431,7 +443,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
       {/* ───────── Top Nav ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
-        <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10 lg:px-16">
+        {/* Push #250 — align nav inner container to max-w-6xl px-4 sm:px-6,
+            matching hero, showcase, how-it-works, pricing, and footer sections
+            so the logo/links/buttons are perfectly flush with page content. */}
+        <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
