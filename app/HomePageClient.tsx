@@ -604,53 +604,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </nav>
 
       {/* ───────── Hero ─────────
-          Push #080 — full-width background video behind the hero.
-          Push #224 — increased min-height, better cinematic fallback clip,
-          opacity raised to 0.30 for more visual presence.
-          Dark overlay keeps text legible. */}
-      <div className="relative overflow-hidden" style={{ minHeight: '88vh' }}>
-        {/* Background video: uses Pexels showcase clip (fetched client-side,
-            so it works from the browser). Falls back to a dark cinematic
-            archive.org clip rather than a cartoon placeholder. Multiple
-            fallbacks ensure something always plays. */}
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: 0.30,
-            zIndex: 0,
-            pointerEvents: 'none',
-            transition: 'opacity 1.4s ease',
-          }}
-        >
-          {/* Pexels showcase clips load client-side (browser → CDN is fine) */}
-          {showcaseVideos['0'] && <source src={showcaseVideos['0']} type="video/mp4" />}
-          {showcaseVideos['1'] && <source src={showcaseVideos['1']} type="video/mp4" />}
-          {/* Dark cinematic fallbacks from archive.org — verified public domain */}
-          <source src="https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4" type="video/mp4" />
-          <source src="https://archive.org/download/Ares1-xTestRocketLaunches/ksc_102909_aresIx_launch_1080.mp4" type="video/mp4" />
-        </video>
-        {/* Gradient overlay — darker at top/bottom, lighter in the middle
-            so the video is visible in the hero body without washing out
-            the nav or the CTA section at the bottom. */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(180deg, rgba(5,7,13,0.80) 0%, rgba(5,7,13,0.22) 35%, rgba(5,7,13,0.22) 65%, rgba(5,7,13,0.92) 100%)',
-            zIndex: 1,
-            pointerEvents: 'none',
-          }}
-        />
+          Push #248 — removed background video (was loading showcase clips
+          behind the hero text). Cleaner solid-dark hero without the
+          autoplay video. */}
+      <div style={{ minHeight: '88vh' }}>
       <section className="relative mx-auto max-w-6xl px-4 pt-20 pb-12 sm:px-6 sm:pt-32 sm:pb-20" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl text-[#F1F5F9]">
@@ -807,17 +764,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ever sign up. Video reuses the client-hydrated showcase clips
           with an archive.org public-domain fallback. */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 pt-10 pb-14 sm:px-6">
-        <div className="mb-9 text-center">
-          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.18em] text-cyan-400">
-            Real output
-          </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            See what ShortsForge generates in{' '}
-            <span style={{ color: '#22D3EE', textShadow: '0 0 24px rgba(34,211,238,0.45)' }}>
-              35 seconds
-            </span>
-          </h2>
-        </div>
+        {/* Push #248 — removed "Real output" label + "generates in 35 seconds"
+            heading. User did not like this copy. Now just shows the video. */}
 
         <div className="flex justify-center">
 

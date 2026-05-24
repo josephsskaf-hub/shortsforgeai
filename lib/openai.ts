@@ -102,6 +102,22 @@ const HIGHLIGHT_CANDIDATES = [
   // Push #081 — broaden the keyword pool so finance/luxury topics also
   // get a colored caption word, not just mystery scripts.
   'wealth', 'rare', 'shocking', 'banned', 'leaked', 'exposed',
+  // Push #248 — expand to space/science, impact, and money power words so
+  // the highlight fires on virtually any topic, not just thriller scripts.
+  // Space / science
+  'stunning', 'incredible', 'powerful', 'massive', 'extreme', 'blazing',
+  'burning', 'launch', 'orbit', 'reusable', 'fastest', 'largest',
+  'highest', 'deepest', 'greatest', 'perfect',
+  // General impact
+  'amazing', 'insane', 'dangerous', 'deadly', 'critical', 'unbelievable',
+  'terrifying', 'devastating', 'explosive', 'dark',
+  // Finance / money
+  'billion', 'trillion', 'million', 'richest', 'wealthiest', 'profits',
+  'savings', 'expensive', 'priceless', 'free',
+  // Viral action words
+  'revealed', 'proof', 'warned', 'survived', 'failed', 'saved',
+  'changed', 'destroyed', 'invented', 'built', 'created', 'broke',
+  'record', 'never', 'always', 'first', 'last',
 ]
 
 const STOPWORDS = new Set([
