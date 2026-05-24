@@ -758,57 +758,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       </section>
       </div>{/* end hero background video wrapper */}
 
-      {/* ───────── Real Output Preview (Push #227) ─────────
-          Shows a real vertical Short next to the exact prompt that made
-          it, so a first-time visitor sees the actual output before they
-          ever sign up. Video reuses the client-hydrated showcase clips
-          with an archive.org public-domain fallback. */}
-      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-10 pb-14 sm:px-6">
-        {/* Push #248 — removed "Real output" label + "generates in 35 seconds"
-            heading. User did not like this copy. Now just shows the video. */}
-
-        <div className="flex justify-center">
-
-          {/* Push #246 — removed "YOUR PROMPT" terminal bubble (Elon Musk example). Now just the video. */}
-          {/* Right — the generated Short, 9:16 vertical with caption mock */}
-          <div className="mx-auto w-full max-w-[300px]">
-            <div
-              className="relative overflow-hidden rounded-3xl border border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,.6)]"
-              style={{
-                aspectRatio: '9 / 16',
-                background: 'linear-gradient(135deg, #22D3EE22 0%, #0B1120 70%)',
-              }}
-            >
-              <LazyVideo
-                className="absolute inset-0 h-full w-full object-cover"
-                sources={[
-                  showcaseVideos['0'],
-                  showcaseVideos['3'],
-                  'https://archive.org/download/NASAKennedy-4vkqBfv8OMM/NASAKennedy-4vkqBfv8OMM.mp4',
-                ].filter(Boolean) as string[]}
-              />
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    'linear-gradient(180deg, rgba(11,17,32,0.35) 0%, rgba(11,17,32,0) 30%, rgba(11,17,32,0) 60%, rgba(11,17,32,0.78) 100%)',
-                }}
-              />
-              <div className="absolute bottom-5 left-1/2 w-[88%] -translate-x-1/2 text-center">
-                <span className="rounded-md bg-black/55 px-2 py-1 text-[15px] font-black uppercase leading-tight text-white">
-                  #3 He nearly went broke in 2008
-                </span>
-              </div>
-              <div className="absolute right-3 top-3">
-                <span className="rounded-md bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] text-white">
-                  9:16
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Push #248 — Real Output section removed entirely (heading + video).
+          User did not like this section. */}
 
       {/* ───────── AI Video Showcase ───────── */}
       {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
