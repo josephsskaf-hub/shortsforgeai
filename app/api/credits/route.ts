@@ -4,8 +4,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Free-tier default: 1 video credit on signup (push #020 pricing policy).
-const DEFAULT_CREDITS = 1
+// Push #270 — no free credits on signup. Paid plans only.
+const DEFAULT_CREDITS = 0
 
 export async function GET() {
   try {
@@ -29,9 +29,9 @@ export async function GET() {
       if (error.code === '42703' || error.message?.includes('video_credits')) {
         return NextResponse.json({ credits: DEFAULT_CREDITS, migrationNeeded: true })
       }
-      // No row found (new user before profiles row exists) — give them the free tier.
+      // No row found (new user before profiles row exists) — 0 credits until paid.
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ credits: DEFAULT_CREDITS })
+        return NextResponse.json({ credits: 0 })
       }
       // Don't fall back to DEFAULT_CREDITS on an unknown error — that would hide a
       // real DB failure and let users start a generation they can't actually pay for.
