@@ -680,6 +680,12 @@ export function buildCaptionElements({
   duration: number
   highlight?: string | null
 }): CreatomateElement[] {
+  // Push #272 — reduced font sizes to prevent caption overflow.
+  // White caption: 76→52, y:74%→79%. Yellow keyword: 96→64, y:69%→67%.
+  // Old 5% gap between layers was too small — when the white caption wrapped
+  // to 2+ lines it collided with the yellow keyword above it. Now the keyword
+  // sits at 67% and the white pill at 79% (12% gap = ~230px), eliminating
+  // the overlap for all caption lengths.
   const baseCaption: CreatomateElement = {
     type: 'text',
     track: 5,
@@ -687,10 +693,10 @@ export function buildCaptionElements({
     duration,
     text,
     x: '50%',
-    y: '74%',
+    y: '79%',
     width: '88%',
     font_family: 'Montserrat',
-    font_size: 76,
+    font_size: 52,
     font_weight: '800',
     fill_color: '#ffffff',
     stroke_color: 'rgba(0,0,0,0.95)',
@@ -705,12 +711,10 @@ export function buildCaptionElements({
   try {
     const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
     if (candidate && candidate.trim().length > 0) {
-      // White base caption stays on track 5.
-      // Yellow keyword "pop" appears on track 7 (above base caption in z-order).
-      // Push #257 — moved from y:64% → y:69% so the pop sits just above the
-      // white caption pill (at 74%) instead of floating in the mid-screen.
-      // The 5% gap = ~96px in a 1920px canvas — enough breathing room without
-      // the two layers colliding.
+      // White base caption stays on track 5 (y:79%).
+      // Yellow keyword "pop" appears on track 7 (y:67%) — 12% above the white pill.
+      // 12% gap on a 1920px canvas ≈ 230px, which fully clears the white caption
+      // even when it wraps to 2 lines at font_size 52.
       const keywordPop: CreatomateElement = {
         type: 'text',
         track: 7,
@@ -718,10 +722,10 @@ export function buildCaptionElements({
         duration,
         text: candidate.toUpperCase(),
         x: '50%',
-        y: '69%',
+        y: '67%',
         width: '88%',
         font_family: 'Montserrat',
-        font_size: 96,
+        font_size: 64,
         font_weight: '900',
         fill_color: HIGHLIGHT_COLOR,
         stroke_color: 'rgba(0,0,0,0.95)',
@@ -899,13 +903,14 @@ export function buildCreatomateSource({
   //   This is less accurate but always produces something on screen.
   if (Array.isArray(whisperWords) && whisperWords.length > 0) {
     // Direct path — perfect sync guaranteed.
-    // Push #263 — 5 words/chunk (was 7). Faster on-screen pacing matches
-    // high-retention Shorts: captions change ~40% more frequently.
+    // Push #272 — 4 words/chunk (was 5). Shorter chunks prevent the caption
+    // pill from wrapping to 3 lines which caused visual collision with the
+    // yellow keyword pop above it.
     const directCaps = buildCaptionsFromWhisperWords(
       whisperWords,
       masterDuration,
       CTA_TAIL_SECONDS,
-      5,
+      4,
     )
     for (const cap of directCaps) {
       elements.push(...buildCaptionElements({
@@ -917,8 +922,8 @@ export function buildCreatomateSource({
     }
   } else {
     // Proportional fallback — script segments with word-count proportional slots.
-    // Push #263 — 5 words/chunk (was 7) for faster Shorts pacing.
-    const scriptSegments = buildCaptionSegments(voiceoverScript, 5)
+    // Push #272 — 4 words/chunk (was 5). Matches directCaps limit above.
+    const scriptSegments = buildCaptionSegments(voiceoverScript, 4)
     const captionsClean: CaptionSegment[] = scriptSegments.length > 0
       ? scriptSegments
       : sceneCaptions
