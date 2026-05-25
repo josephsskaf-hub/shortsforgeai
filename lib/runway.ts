@@ -262,7 +262,11 @@ Your job is to return a JSON array of scene objects. Each scene object must incl
    rocket_launch, booster_landing, mission_control, earth_orbit, spacecraft,
    pyramids, ancient_egypt, deep_ocean, underwater_science, underground_city,
    ancient_engineering, ancient_city, desert_ruins, dna_lab, mystery_document,
-   library_archive, forensic_case, general_science, general_documentary
+   library_archive, forensic_case,
+   billionaire_wealth, money_finance,
+   psychology_mindset, technology_ai, historical_war, nature_geography,
+   health_body, crime_mystery, animal_wildlife,
+   general_science, general_documentary
    Pick the most specific category that matches the scene content.
 8. "voiceover" — one narration line (10-22 words). MUST include at least one SPECIFIC number, name, date, dollar amount, or comparison — no vague claims. Exact TTS text. No filler like "imagine…", "what if…", or "most people don't know…".
 9. "caption" — ≤8-word on-screen caption paraphrasing the voiceover. Punchy fragment. No period.
@@ -323,10 +327,41 @@ HISTORICAL EVENTS / WARS / EMPIRES / ANCIENT CIVILIZATIONS:
   negativeVisualPrompt: "modern cartoon, CGI reconstruction, video game graphics, actors in bad costumes"
   visualCategory: ancient_city or ancient_engineering or library_archive or general_documentary
 
-TECH / AI / SILICON VALLEY / COMPUTERS:
-  stockSearchQuery: "computer chip circuit board macro", "data center server racks", "code terminal dark screen"
-  negativeVisualPrompt: "clipart robot, cartoon AI, generic office, people smiling at laptop, stock handshake"
-  visualCategory: dna_lab or general_science
+TECH / AI / SILICON VALLEY / COMPUTERS / ALGORITHMS:
+  stockSearchQuery: "computer chip circuit board macro", "data center server racks dark glow", "code terminal dark screen", "neural network visualization digital"
+  negativeVisualPrompt: "clipart robot, cartoon AI, generic office, people smiling at laptop, stock handshake, animation"
+  visualCategory: technology_ai
+
+PSYCHOLOGY / MINDSET / BEHAVIOR / HABITS / BRAIN SCIENCE:
+  stockSearchQuery: "human brain neuron dark close", "mind silhouette shadow dramatic", "psychology experiment laboratory"
+  negativeVisualPrompt: "portrait, headshot, smiling person, generic office, cartoon brain, clipart"
+  visualCategory: psychology_mindset
+  NOTE: voiceover MUST cite a specific study, percentage, or named psychological effect
+
+HISTORICAL WARS / BATTLES / MILITARY SECRETS / WEAPONS:
+  stockSearchQuery: "vintage war archive footage historical", "war memorial monument stone", "old military equipment museum"
+  negativeVisualPrompt: "video game, cartoon, CGI, actors in bad costume, modern soldier movie"
+  visualCategory: historical_war
+
+GEOGRAPHY / MOUNTAINS / NATURE / LANDSCAPES:
+  stockSearchQuery: use EXACT place name — "Mount Everest summit aerial drone", "Amazon jungle aerial", "volcano eruption lava night"
+  negativeVisualPrompt: "tourist selfie, cartoon map, animation, holiday-people"
+  visualCategory: nature_geography
+
+ANIMALS / WILDLIFE / NATURE DOCUMENTARY:
+  stockSearchQuery: use specific animal + behavior — "lion hunting savanna cinematic", "eagle flying aerial slow motion", "shark deep ocean dark"
+  negativeVisualPrompt: "cartoon, animation, zoo-enclosure glass, pet playing, kids"
+  visualCategory: animal_wildlife
+
+HEALTH / HUMAN BODY / BIOLOGY / MEDICINE:
+  stockSearchQuery: "human body anatomy organ dark", "medical brain scan x-ray", "microscope bacteria cell dark"
+  negativeVisualPrompt: "smiling nurse commercial, cartoon body, clipart, happy doctor"
+  visualCategory: health_body
+
+TRUE CRIME / MYSTERIES / CONSPIRACIES / DARK HISTORY:
+  stockSearchQuery: "crime scene tape dark night", "detective folder documents dark", "dark forest fog abandoned"
+  negativeVisualPrompt: "cartoon alien, comedy, bright happy scene, UFO clipart, kids show"
+  visualCategory: crime_mystery
 
 SCENE PURPOSE FLOW for ${safeCount} scenes: Start with HOOK (scene 1), build through ESCALATION and DISCOVERY, use EXPLANATION for core facts, PAYOFF for the climax, FINAL_LINE for the mic-drop ending.
 

@@ -385,6 +385,135 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
     ],
     strictMode: false,
   },
+
+  // Push #264 — psychology / mindset / behavior
+  psychology_mindset: {
+    id: 'psychology_mindset',
+    label: 'Psychology / Mindset / Human Behavior',
+    allowedQueries: [
+      'human brain neuron synapse dark close',
+      'mind silhouette shadow dramatic dark',
+      'neurons firing brain activity dark visualization',
+      'person thinking shadow contemplation dark',
+      'psychology experiment research laboratory',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'toy', 'kids',
+      'portrait', 'headshot', 'smiling-man', 'smiling-woman',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — technology / AI / computers / data
+  technology_ai: {
+    id: 'technology_ai',
+    label: 'Technology / AI / Computers / Data',
+    allowedQueries: [
+      'computer chip circuit board macro close',
+      'data center server racks dark blue glow',
+      'code terminal dark screen green text',
+      'neural network visualization digital dark',
+      'cyber security hacker dark screen code',
+      'technology circuit board abstract macro',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'toy', 'kids',
+      'person-smiling', 'headshot', 'portrait', 'office-worker', 'handshake',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — historical wars / military / battles
+  historical_war: {
+    id: 'historical_war',
+    label: 'Historical War / Military / Battles',
+    allowedQueries: [
+      'vintage war footage black white archive historical',
+      'old military equipment historical museum',
+      'war memorial monument stone historical',
+      'antique weapons armor museum display',
+      'historical battlefield aerial ruins',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'game', 'video-game', 'toy', 'kids',
+      'action-figure', 'lego', 'plastic', 'costume', 'acting', '3d-render',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — geography / nature / landscapes
+  nature_geography: {
+    id: 'nature_geography',
+    label: 'Geography / Nature / Landscapes',
+    allowedQueries: [
+      'aerial mountain range snow drone cinematic',
+      'jungle rainforest aerial green dense',
+      'ocean coastline aerial dramatic sunset',
+      'desert landscape sand dunes aerial golden',
+      'waterfall cliff aerial natural dramatic',
+      'volcano eruption lava dramatic night',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'toy',
+      'tourist-selfie', 'holiday-people', 'kids',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — health / human body / medicine
+  health_body: {
+    id: 'health_body',
+    label: 'Health / Human Body / Medicine',
+    allowedQueries: [
+      'human body anatomy organ close dark',
+      'medical laboratory test tubes research',
+      'x-ray scan medical imaging dark',
+      'microscope bacteria cell research lab',
+      'hospital medical equipment dark dramatic',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'toy', 'kids',
+      'nurse-smiling', 'doctor-smiling', 'patient-happy', 'commercial',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — true crime / mystery investigation / dark
+  crime_mystery: {
+    id: 'crime_mystery',
+    label: 'True Crime / Mystery / Dark Investigation',
+    allowedQueries: [
+      'crime scene dark tape police night',
+      'detective investigation folder documents dark',
+      'dark forest abandoned building night fog',
+      'old photograph faded black white crime',
+      'prison bars dark dramatic shadows',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'comedy', 'kids', 'toy',
+      'smiling', 'celebration', 'party', 'bright-happy',
+    ],
+    strictMode: false,
+  },
+
+  // Push #264 — animals / wildlife / nature documentary
+  animal_wildlife: {
+    id: 'animal_wildlife',
+    label: 'Animal Facts / Wildlife / Nature Documentary',
+    allowedQueries: [
+      'lion predator hunting savanna cinematic',
+      'eagle hawk flying aerial slow motion',
+      'shark deep ocean dark dramatic',
+      'elephant wildlife savanna dramatic cinematic',
+      'wolf pack hunting forest dark',
+      'whale ocean surface aerial dramatic',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'toy', 'kids', 'pet-play',
+      'zoo-enclosure-glass', 'aquarium-tank-glass', 'dog-park-playing',
+    ],
+    strictMode: false,
+  },
 }
 
 // Global negative terms that apply to ALL categories in strict mode.
@@ -440,6 +569,15 @@ export function detectVisualCategory(
   // then money_finance for pure finance topics without a named person.
   if (/billionaire|ultra.wealthy|top.1.percent|richest.man|wealthiest|net.worth.*billion|warren.buffett|jeff.bezos|elon.musk.*wealth|mark.zuckerberg.*wealth|luxury.habit|luxury.lifestyle|wealth.habit/.test(combined)) return 'billionaire_wealth'
   if (/bitcoin|crypto|investing|stock.market|wall.street|compound.interest|savings.account|financial.freedom|personal.finance|money.tip|credit.card.trick/.test(combined)) return 'money_finance'
+
+  // Push #264 — new niche categories
+  if (/psychology|dopamine|serotonin|brain.hack|cognitive.bias|dark.psychology|manipulation.tactic|behavioral.science|mental.model|subconscious|unconscious.mind|ego|amygdala|prefrontal/.test(combined)) return 'psychology_mindset'
+  if (/artificial.intelligence|machine.learning|neural.network|deep.learning|semiconductor|microchip|data.center|cyber.attack|hacker|silicon.valley|quantum.computer|circuit.board/.test(combined)) return 'technology_ai'
+  if (/world.war|ww1|ww2|wwii|wwi|battle.of|siege.of|d.day|vietnam.war|cold.war|nuclear.bomb|atomic.bomb|military.secret|classified.operation|special.forces|navy.seal|secret.weapon|arms.race/.test(combined)) return 'historical_war'
+  if (/mount.everest|k2|himalaya|amazon.river|amazon.jungle|sahara|volcano|eruption|glacier|grand.canyon|rainforest|arctic|antarctica|deepest.ocean|highest.mountain/.test(combined)) return 'nature_geography'
+  if (/human.body|human.heart|immune.system|cancer.cell|virus.*body|bacteria.*body|gut.microbiome|nervous.system|hormones|insulin|cortisol|adrenaline|metabolism|gene.*health/.test(combined)) return 'health_body'
+  if (/true.crime|serial.killer|cold.case|unsolved.murder|disappearance|missing.person|fbi.investigation|cia.secret|government.cover|conspiracy|illuminati|secret.society|strange.disappearance|paranormal/.test(combined)) return 'crime_mystery'
+  if (/lion.hunt|shark.attack|eagle.hunt|wolf.pack|apex.predator|animal.kill|wildlife.documentary|migration.animal|bizarre.animal|animal.evolution|animal.fact|most.dangerous.animal|predator.prey/.test(combined)) return 'animal_wildlife'
 
   return null
 }
