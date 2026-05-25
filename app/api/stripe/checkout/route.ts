@@ -155,7 +155,7 @@ async function buildAndRedirect(
       },
     ],
     mode: 'subscription',
-    success_url: `${appUrl}/checkout/success?success=true`,
+    success_url: `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${unitAmount}`,
     cancel_url: `${appUrl}/checkout/cancelled`,
     metadata: {
       supabase_user_id: user.id,

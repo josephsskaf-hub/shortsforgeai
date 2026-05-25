@@ -20,7 +20,7 @@ export default function CheckoutSuccessPage() {
         body: JSON.stringify({
           event_name: 'payment_success',
           name: 'payment_success',
-          path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
+          path: window.location?.pathname,
         }),
         keepalive: true,
       }).catch(() => {})
@@ -29,18 +29,17 @@ export default function CheckoutSuccessPage() {
     }
 
     // Google Ads purchase conversion — fires once per checkout session.
-    // The base gtag tag (AW-18156258081) is already loaded in app/layout.tsx.
-    // send_to format: 'AW-<CONVERSION_ID>/<CONVERSION_LABEL>'
-    // To get the label: Google Ads → Metas → Resumo → click "Compra" →
-    //   Ações de conversão → click "Compra" row → Tab "Configuração da tag"
-    //   Copy the label from the gtag snippet, e.g. 'AW-18156258081/AbCdEfGhIjKl'
+    // currency and amount come from the Stripe checkout route via URL params
+    // so the value is always correct (USD for international, BRL for Brazil).
     try {
-      if (typeof window !== 'undefined' && typeof (window as Window & { gtag?: Function }).gtag === 'function') {
+      if (typeof (window as Window & { gtag?: Function }).gtag === 'function') {
+        const sp = new URLSearchParams(window.location.search)
+        const gtagCurrency = (sp.get('currency') ?? 'usd').toUpperCase()
+        const gtagAmount   = Number(sp.get('amount') ?? 490) / 100
         ;(window as Window & { gtag: Function }).gtag('event', 'conversion', {
           send_to: 'AW-18156258081/NL4bCKXEwa4cEKGGytFD',
-          // value and currency improve bid optimisation — use lowest plan price
-          value: 4.90,
-          currency: 'BRL',
+          value: gtagAmount,
+          currency: gtagCurrency,
         })
       }
     } catch {
