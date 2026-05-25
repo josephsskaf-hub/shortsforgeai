@@ -18,7 +18,7 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'No! Sign up free and get 1 video included. No card required.',
+    a: 'Yes, a card is required to subscribe. Plans start at $4.90/month with no contracts — cancel anytime.',
   },
   {
     q: 'How fast are videos generated?',
@@ -38,23 +38,11 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-// Push #191 — updated pricing $4.90/$9.90 + tech-forward copy.
+// Push #267 — removed Free card. Pricing page now shows only Basic + Pro.
+// Free tier still exists for new signups via /signup, but is not shown here
+// to avoid users exploiting the $0 entry point.
 function buildPricing() {
   return [
-    {
-      tier: 'free',
-      name: 'Free',
-      price: '$0',
-      priceSub: 'forever',
-      tagline: 'Sign up free. Get 1 Fast Mode video — no card needed.',
-      features: [
-        '1 Fast Mode render included',
-        'Stock footage + AI voiceover',
-        'Auto-captions',
-        'Watermark-free MP4 output',
-      ],
-      cta: { label: 'Start Free — No Card', href: '/signup' },
-    },
     {
       tier: 'basic',
       name: 'Basic',
@@ -218,7 +206,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two paid plans, flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
+            Two plans, flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
           </p>
         </div>
 
@@ -278,35 +266,9 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Push #125 — "Your first video is on us" announcement banner.
-            Full-width, gradient purple/blue, links to /start (the free
-            signup flow) so the visitor can act on it immediately. */}
-        <a
-          href="/start"
-          className="mx-auto mb-8 flex max-w-3xl items-center justify-center gap-3 rounded-2xl px-5 py-4 text-center transition hover:opacity-90"
-          style={{
-            background: 'linear-gradient(135deg, rgba(124,58,237,0.25) 0%, rgba(6,182,212,0.20) 100%)',
-            border: '1px solid rgba(124,58,237,0.45)',
-            boxShadow: '0 8px 32px rgba(124,58,237,0.18)',
-            textDecoration: 'none',
-            display: 'flex',
-          }}
-        >
-          <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>🎬</span>
-          <span style={{
-            fontSize: '0.925rem',
-            fontWeight: 800,
-            color: '#F1F5F9',
-            lineHeight: 1.4,
-          }}>
-            Your first video is on us —{' '}
-            <span style={{ color: '#A78BFA' }}>sign up free</span> and get{' '}
-            <span style={{ color: '#22D3EE' }}>1 Fast Mode video instantly</span>,
-            no card required.
-          </span>
-        </a>
+        {/* Push #267 — Free banner removed with Free card */}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 max-w-3xl mx-auto">
           {buildPricing().map((p) => {
             const isPaid = p.tier === 'basic' || p.tier === 'pro'
             const isSelected = isPaid && selectedPlan === p.tier
