@@ -264,7 +264,7 @@ Your job is to return a JSON array of scene objects. Each scene object must incl
    ancient_engineering, ancient_city, desert_ruins, dna_lab, mystery_document,
    library_archive, forensic_case, general_science, general_documentary
    Pick the most specific category that matches the scene content.
-8. "voiceover" — one narration line with a concrete fact, escalation, or payoff (10-22 words). Exact TTS text. No filler like "imagine…" or "what if…".
+8. "voiceover" — one narration line (10-22 words). MUST include at least one SPECIFIC number, name, date, dollar amount, or comparison — no vague claims. Exact TTS text. No filler like "imagine…", "what if…", or "most people don't know…".
 9. "caption" — ≤8-word on-screen caption paraphrasing the voiceover. Punchy fragment. No period.
 
 You always respond with a valid JSON array ONLY — no markdown, no code fences, no commentary.`
@@ -296,10 +296,32 @@ DEEP OCEAN / MARINE BIOLOGY / UNDERWATER:
   negativeVisualPrompt: "swimming pool, aquarium tank glass, snorkeling holiday, cartoon fish, animation, beach holiday"
   visualCategory: deep_ocean, underwater_science
 
-MONEY / FINANCE / WEALTH / BITCOIN:
-  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen"
-  negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code"
+MONEY / FINANCE / WEALTH / BITCOIN / INVESTING / STOCK MARKET:
+  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen", "bitcoin crypto coin gold"
+  negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code, fake smile business"
   visualCategory: general_documentary
+
+BILLIONAIRES / ENTREPRENEURS (Elon Musk, Jeff Bezos, Mark Zuckerberg, Warren Buffett, etc.):
+  stockSearchQuery: use their name + context: "Elon Musk Tesla factory", "Jeff Bezos Amazon warehouse", "Silicon Valley tech office", "luxury private jet interior"
+  negativeVisualPrompt: "cartoon character, clipart, fake smile stock photo, generic office handshake"
+  visualCategory: general_documentary
+  NOTE: voiceover MUST name the specific person and cite a real dollar amount, year, or fact
+
+COUNTRIES / PLACES / GEOGRAPHY / MOUNTAINS / CITIES:
+  stockSearchQuery: use the EXACT place name: "Mount Everest Himalaya snow summit aerial", "Amazon river jungle aerial drone", "Tokyo city skyline night neon", "Dubai skyscraper aerial desert"
+  negativeVisualPrompt: "cartoon map, animation, tourist selfie, generic city skyline, fake aerial render"
+  visualCategory: general_documentary or desert_ruins (for historical sites)
+  NOTE: each scene should show a DIFFERENT visual aspect of the place (aerial, street level, landmark, nature)
+
+MYSTERIES / CONSPIRACIES / PARANORMAL / DISAPPEARANCES / UNSOLVED CASES:
+  stockSearchQuery: "dark forest night fog", "abandoned building interior dark", "old newspaper archive", "classified document paper", "detective crime scene tape"
+  negativeVisualPrompt: "cartoon alien, UFO clipart, cheap horror movie, animation, comedy sketch, daylight happy scene"
+  visualCategory: mystery_document or library_archive or general_documentary
+
+HISTORICAL EVENTS / WARS / EMPIRES / ANCIENT CIVILIZATIONS:
+  stockSearchQuery: use specific historical nouns: "World War 2 vintage footage", "Roman Colosseum ruins stone", "medieval castle stone wall", "ancient manuscript parchment close-up"
+  negativeVisualPrompt: "modern cartoon, CGI reconstruction, video game graphics, actors in bad costumes"
+  visualCategory: ancient_city or ancient_engineering or library_archive or general_documentary
 
 TECH / AI / SILICON VALLEY / COMPUTERS:
   stockSearchQuery: "computer chip circuit board macro", "data center server racks", "code terminal dark screen"

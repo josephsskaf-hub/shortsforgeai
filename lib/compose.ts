@@ -547,6 +547,11 @@ interface CreatomateElement {
   font_family?: string
   font_size?: number
   font_weight?: string
+  // Push #256 — caption pill background + rounded corners
+  background_color?: string
+  background_x_padding?: string
+  background_y_padding?: string
+  border_radius?: number
   enter_transition?: { type: string; duration: number }
 }
 
@@ -582,6 +587,16 @@ function round3(v: number): number {
  * the plain white caption element — a failed highlight decision can
  * never break the render.
  */
+// Push #256 — Caption quality overhaul:
+//   1. Larger font (58→76) + heavier stroke (3→4) for mobile readability.
+//   2. Lower position (68%→74%) — closer to the bottom where viewers look on Shorts.
+//   3. Dark pill background (background_color + padding) so captions read on
+//      any footage, removing the need for a dense stroke alone.
+//   4. Word-level highlight: instead of coloring the whole line yellow, we keep
+//      the base caption in white and emit a SECOND element on track 7 showing
+//      just the highlight keyword in large yellow — creating the "word pop"
+//      effect seen in high-retention Shorts. CTA lives on track 6 (last 2.5s)
+//      and captions end before CTA starts, so tracks 5/7 never conflict with 6.
 export function buildCaptionElements({
   text,
   time,
@@ -600,26 +615,47 @@ export function buildCaptionElements({
     duration,
     text,
     x: '50%',
-    y: '68%',
-    width: '86%',
+    y: '74%',
+    width: '88%',
     font_family: 'Montserrat',
-    font_size: 58,
+    font_size: 76,
     font_weight: '800',
     fill_color: '#ffffff',
-    stroke_color: 'rgba(0,0,0,0.9)',
-    stroke_width: 3,
-    enter_transition: { type: 'fade', duration: 0.15 },
+    stroke_color: 'rgba(0,0,0,0.95)',
+    stroke_width: 4,
+    background_color: 'rgba(0,0,0,0.55)',
+    background_x_padding: '5%',
+    background_y_padding: '2%',
+    border_radius: 8,
+    enter_transition: { type: 'fade', duration: 0.1 },
   }
 
   try {
     const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
     if (candidate && candidate.trim().length > 0) {
-      return [{ ...baseCaption, fill_color: HIGHLIGHT_COLOR }]
+      // White base caption stays on track 5.
+      // Yellow keyword "pop" appears on track 7 (above base caption in z-order).
+      const keywordPop: CreatomateElement = {
+        type: 'text',
+        track: 7,
+        time,
+        duration,
+        text: candidate.toUpperCase(),
+        x: '50%',
+        y: '64%',
+        width: '88%',
+        font_family: 'Montserrat',
+        font_size: 96,
+        font_weight: '900',
+        fill_color: HIGHLIGHT_COLOR,
+        stroke_color: 'rgba(0,0,0,0.95)',
+        stroke_width: 5,
+        enter_transition: { type: 'pop', duration: 0.12 },
+      }
+      return [baseCaption, keywordPop]
     }
     return [baseCaption]
   } catch {
-    // Any failure picking the highlight falls back to plain white —
-    // the render must never depend on the highlight decision.
     return [baseCaption]
   }
 }
@@ -697,7 +733,16 @@ export function buildCreatomateSource({
   //      reported. A clean hard cut has no such dip. We also trim the first
   //      0.25s of each clip so any source fade-in-from-black is skipped.
   const CLIP_LEN = 10
-  const CLIP_TRIM_START = 0.25
+  // Push #256 — reduced from 0.25→0.1. Pexels/Supabase-cached clips rarely have
+  // a source fade-in; 0.1s (3 frames) is enough to skip any brief dark frame
+  // at the clip head without eating into useful footage.
+  const CLIP_TRIM_START = 0.1
+  // Push #256 — micro-overlap to prevent the rendering gap at clip boundaries.
+  // Each clip element is made 0.06s longer than its timeline slot, so it
+  // slightly overlaps the next clip on the same track. Creatomate renders the
+  // later element (higher array index) on top, giving a seamless hard cut with
+  // no black flash between clips.
+  const CLIP_GAP_OVERLAP = 0.06
   // Push #241 — size each slot so EVERY clip appears, in order, within the audio
   // window. The old fixed 10s slots overflowed the timeline and silently dropped
   // the later clips: a 7-clip / ~52s verbatim script laid clips across 0–70s, so
@@ -718,7 +763,7 @@ export function buildCreatomateSource({
       type: 'video',
       track: 2,
       time: round3(cursor),
-      duration: segLen,
+      duration: round3(segLen + CLIP_GAP_OVERLAP), // micro-overlap → no gap
       source: url,
       fit: 'cover',
       loop: true,
