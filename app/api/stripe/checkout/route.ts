@@ -135,14 +135,8 @@ async function buildAndRedirect(
     }
   }
 
-  // Push #259 — 7-day free trial. First-time subscribers get to use the
-  // product before being charged. Trial users receive 10 trial credits at
-  // checkout completion (enough to test the product). Full plan credits are
-  // granted when the first real payment succeeds after the trial period.
-  // Returning active subscribers skip the trial (is_trial: 'false' in metadata).
-  const isExistingActiveSub = profile?.is_pro === true
-  const addTrial = !isExistingActiveSub
-
+  // Push #265 — remove free trial. No more trial_period_days: payment is
+  // required upfront. Credits are granted immediately at checkout completion.
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     payment_method_types: ['card'],
@@ -152,9 +146,7 @@ async function buildAndRedirect(
           currency,
           product_data: {
             name: plan.name,
-            description: addTrial
-              ? `${plan.description} — 7-day free trial`
-              : plan.description,
+            description: plan.description,
           },
           unit_amount: unitAmount,
           recurring: { interval: 'month' },
@@ -169,15 +161,12 @@ async function buildAndRedirect(
       supabase_user_id: user.id,
       tier,
       plan_credits: String(plan.credits),
-      is_trial: addTrial ? 'true' : 'false',
     },
     subscription_data: {
-      ...(addTrial ? { trial_period_days: 7 } : {}),
       metadata: {
         supabase_user_id: user.id,
         tier,
         plan_credits: String(plan.credits),
-        is_trial: addTrial ? 'true' : 'false',
       },
     },
   }
@@ -243,21 +232,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ─── POST handler (kept for backward compat / non-iOS clients) ──────────────
-export async function POST(req: NextRequest) {
-  try {
-    let tier: Tier = 'basic'
-    try {
-      const body = await req.json().catch(() => null)
-      if (body?.tier === 'pro') tier = 'pro'
-      else if (body?.tier === 'basic' || body?.tier === 'creator') tier = 'basic'
-    } catch {
-      // ignore body parse errors and use default tier
-    }
-    return await buildAndRedirect(req, tier, false)
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[stripe/checkout POST] Unexpected error:', msg)
-    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 })
-  }
-}
+// ─── POST handl

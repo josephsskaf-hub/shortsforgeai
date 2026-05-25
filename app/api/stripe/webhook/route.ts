@@ -118,18 +118,13 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Path B: Subscription checkout (push #020) ──
-        // Push #259 — free trial support. When is_trial='true' (set by the
-        // checkout route for first-time subscribers), grant only 10 trial
-        // credits so the user can test the product before being charged. Full
-        // plan credits are granted on the first real payment via
-        // invoice.payment_succeeded (billing_reason='subscription_cycle').
+        // Push #265 — no free trial. Full plan credits are granted immediately
+        // at checkout completion. is_trial metadata removed.
         const userId = session.metadata?.supabase_user_id
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
         const tier = session.metadata?.tier === 'pro' ? 'pro' : 'basic'
-        const isTrial = session.metadata?.is_trial === 'true'
         const planCredits = tier === 'pro' ? 100 : 50
-        const TRIAL_CREDITS = 10
 
         if (!userId) break
 
@@ -142,10 +137,7 @@ export async function POST(req: NextRequest) {
           .single()
 
         const current = currentProfile?.video_credits ?? 0
-        // Trial sessions get 10 credits to test the product.
-        // Full-plan sessions (re-subscriptions, no trial) get full plan credits.
-        const creditsToGrant = isTrial ? TRIAL_CREDITS : planCredits
-        const next = current + creditsToGrant
+        const next = current + planCredits
 
         // Push #088 — Pro plan also includes 1 cinematic token / month.
         // Basic stays at 0 (Cinematic is Pro-exclusive). We use a separate
@@ -168,7 +160,7 @@ export async function POST(req: NextRequest) {
         if (subUpdErr) {
           console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
         } else {
-          console.log(`[stripe webhook] subscription start: ${tier} trial=${isTrial} (+${creditsToGrant} credits, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
+          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits} credits, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
         }
 
         break
@@ -260,80 +252,4 @@ export async function POST(req: NextRequest) {
           .eq('id', renewalUserId)
 
         if (renewErr) {
-          console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
-        } else {
-          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
-        }
-        break
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
-        const isActive =
-          subscription.status === 'active' || subscription.status === 'trialing'
-
-        await supabase
-          .from('profiles')
-          .update({
-            is_pro: isActive,
-            stripe_subscription_id: subscription.id,
-          })
-          .eq('stripe_customer_id', customerId)
-
-        break
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
-
-        // Push #088 — wipe cinematic_tokens on cancellation so a former
-        // Pro user can't keep a stranded Runway token after their plan
-        // lapses. Regular credits stay (they were already paid for).
-        await supabase
-          .from('profiles')
-          .update({
-            is_pro: false,
-            plan: 'free',
-            stripe_subscription_id: null,
-            cinematic_tokens: 0,
-          })
-          .eq('stripe_customer_id', customerId)
-
-        break
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
-        const customerId = invoice.customer as string
-
-        if (!customerId) {
-          console.warn('[stripe webhook] payment_failed without customer id')
-          break
-        }
-
-        const { error: revokeErr } = await supabase
-          .from('profiles')
-          .update({ is_pro: false, plan: 'free' })
-          .eq('stripe_customer_id', customerId)
-
-        if (revokeErr) {
-          console.error('[stripe webhook] failed to revoke access on payment_failed:', revokeErr.message, customerId)
-        } else {
-          console.log('[stripe webhook] revoked access for customer:', customerId)
-        }
-        break
-      }
-
-      default:
-        // Unhandled event type — log and continue
-        console.log('Unhandled webhook event type:', event.type)
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook handler error:', error)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
-  }
-}
+          console.error('[stripe webhook] renewal credit refill failed:'
