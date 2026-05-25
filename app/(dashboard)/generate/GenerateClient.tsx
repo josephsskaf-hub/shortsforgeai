@@ -1777,63 +1777,8 @@ export default function GenerateClient() {
             </p>
           </div>
 
-          {/* Push #084 — Media & quality only applies to Cinematic Mode.
-              Push #087 — also requires Pro plan; if a Free/Basic user
-              somehow lands here (state already snaps mode to 'fast' in an
-              effect) we still hide the cards. Fast Mode runs Pexels + TTS
-              at a fixed 1-credit cost. */}
-          {mode === 'cinematic' && (
-          <div className="mt-5">
-            <div
-              className="text-xs font-black uppercase tracking-widest mb-2"
-              style={{ color: 'var(--muted)' }}
-            >
-              Media & quality
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {QUALITY_OPTIONS.map((q) => {
-                const selected = quality === q.key
-                return (
-                  <button
-                    key={q.key}
-                    onClick={() => setQuality(q.key)}
-                    className="rounded-xl p-4 text-left"
-                    style={{
-                      background: selected ? 'rgba(59, 130, 246,.10)' : 'rgba(255,255,255,.03)',
-                      border: selected ? '1px solid rgba(59, 130, 246,.55)' : '1px solid var(--border)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      boxShadow: selected ? '0 0 22px rgba(59, 130, 246,.15)' : 'none',
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span>{q.icon}</span>
-                      <span
-                        className="text-sm font-black"
-                        style={{ color: selected ? '#3B82F6' : 'var(--text)' }}
-                      >
-                        {q.title}
-                      </span>
-                      <span
-                        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: 'rgba(59, 130, 246,.14)',
-                          color: '#3B82F6',
-                          border: '1px solid rgba(59, 130, 246,.3)',
-                        }}
-                      >
-                        {q.credits} credit{q.credits > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      {q.desc}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          )}
+          {/* Push #266 — Media & Quality selector removed from Cinematic mode.
+              Quality is fixed at 'basic_ai' (the default) — no user choice needed. */}
 
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <div>
