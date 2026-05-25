@@ -1,13 +1,10 @@
-// Push #061 — Conversion Funnel Dashboard.
-// Server-rendered counts pulled from public.events via the staging
-// Supabase project (service role when available, falling back to the
-// cookie-scoped client). Gated to the two admin emails — anyone else
-// gets a plain "Access denied" card. The page never crashes if the
-// public.events table is missing — every metric just shows as 0.
+// Push #254 — Funnel page rebuilt. Queries auth.users + profiles + videos
+// directly (same logic as the API route) so SSR always shows real data.
 
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
-import FunnelClient, { type FunnelData } from './FunnelClient'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import FunnelClient from './FunnelClient'
+import type { FunnelData } from '@/app/api/admin/funnel/route'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,100 +14,95 @@ const ADMIN_EMAILS = new Set([
   'joseph-test@shortsforgeai.com',
 ])
 
-// Each metric is the sum of one or more event names. Legacy push-#060
-// names are aliased onto the new push-#061 names so the dashboard keeps
-// reporting accurate totals through the rollout.
-const EVENT_ALIASES: Record<string, string[]> = {
-  homepage_view: ['homepage_view'],
-  generate_page_view: ['generate_page_view'],
-  analyze_idea_clicked: ['analyze_idea_clicked'],
-  video_generation_started: ['video_generation_started', 'generate_started'],
-  video_generation_completed: ['video_generation_completed', 'generate_completed'],
-  video_generation_failed: ['video_generation_failed', 'generate_failed'],
-  pricing_view: ['pricing_view'],
-  basic_checkout_clicked: ['basic_checkout_clicked', 'checkout_basic_click'],
-  pro_checkout_clicked: ['pro_checkout_clicked', 'checkout_pro_click'],
-  payment_success: ['payment_success'],
-  checkout_cancelled: ['checkout_cancelled'],
-}
-
-async function countByName(
-  supabase: SupabaseClient,
-  name: string,
-): Promise<number | null> {
-  try {
-    const { count, error } = await supabase
-      .from('events')
-      .select('id', { head: true, count: 'exact' })
-      .eq('name', name)
-    if (error) return null
-    return typeof count === 'number' ? count : null
-  } catch {
-    return null
-  }
-}
-
-async function metricCount(
-  supabase: SupabaseClient,
-  metricKey: keyof typeof EVENT_ALIASES,
-): Promise<number> {
-  const names = EVENT_ALIASES[metricKey] ?? [metricKey]
-  let total = 0
-  for (const n of names) {
-    const c = await countByName(supabase, n)
-    if (typeof c === 'number') total += c
-  }
-  return total
+function pct(n: number, d: number): string {
+  return d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '—'
 }
 
 export default async function AdminFunnelPage() {
   const cookieClient = createClient()
-  const {
-    data: { user },
-  } = await cookieClient.auth.getUser()
-
+  const { data: { user } } = await cookieClient.auth.getUser()
   const email = user?.email?.toLowerCase() ?? ''
   if (!user || !ADMIN_EMAILS.has(email)) {
     return <FunnelClient denied />
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const serviceClient: SupabaseClient | null =
-    supabaseUrl && serviceKey
-      ? createServiceClient(supabaseUrl, serviceKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
-        })
-      : null
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const admin = createServiceClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 
-  // Probe events table availability. If it's missing we still render the
-  // funnel with all-zero counts and a banner explaining the situation.
-  let eventsAvailable = true
-  const probeClient: SupabaseClient = serviceClient ?? (cookieClient as unknown as SupabaseClient)
+  const now = Date.now()
+  const weekAgo  = now - 7  * 24 * 60 * 60 * 1000
+  const monthAgo = now - 30 * 24 * 60 * 60 * 1000
+
+  // auth.users
+  const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const authUsers = authData?.users ?? []
+  let newThisWeek = 0, newThisMonth = 0
+  for (const u of authUsers) {
+    const t = u.created_at ? new Date(u.created_at).getTime() : 0
+    if (t >= weekAgo)  newThisWeek++
+    if (t >= monthAgo) newThisMonth++
+  }
+
+  // profiles
+  let proUsers = 0, basicUsers = 0, paidNoCredits = 0
   try {
-    const probe = await probeClient
-      .from('events')
-      .select('id', { head: true, count: 'exact' })
-      .limit(1)
-    if (probe.error) {
-      const code = (probe.error as { code?: string }).code ?? ''
-      if (code === '42P01' || /does not exist|relation/.test(probe.error.message ?? '')) {
-        eventsAvailable = false
+    const { data: profs } = await admin.from('profiles').select('id, plan, is_pro, video_credits')
+    if (Array.isArray(profs)) {
+      for (const row of profs as Array<{ id: string; plan?: string | null; is_pro?: boolean | null; video_credits?: number | null }>) {
+        const p = (row.plan ?? (row.is_pro ? 'pro' : null) ?? '').toLowerCase()
+        if (p === 'pro')   proUsers++
+        else if (p === 'basic') basicUsers++
+        if ((p === 'pro' || p === 'basic') && (!row.video_credits || row.video_credits <= 0)) paidNoCredits++
       }
     }
-  } catch {
-    eventsAvailable = false
-  }
+  } catch { /* ignore */ }
 
-  // Zero out everything if the table isn't present.
-  const counts: Record<string, number> = {}
-  for (const k of Object.keys(EVENT_ALIASES)) {
-    counts[k] = eventsAvailable ? await metricCount(probeClient, k) : 0
-  }
+  // videos
+  let totalVideos = 0, videosThisWeek = 0
+  const uWithVideo = new Set<string>()
+  try {
+    const { data: vids } = await admin.from('videos').select('user_id, created_at')
+    if (Array.isArray(vids)) {
+      for (const row of vids as Array<{ user_id?: string | null; created_at?: string | null }>) {
+        totalVideos++
+        if (row.user_id) uWithVideo.add(row.user_id)
+        if (row.created_at && new Date(row.created_at).getTime() >= weekAgo) videosThisWeek++
+      }
+    }
+  } catch { /* ignore */ }
+
+  const freeUsers  = authUsers.length - proUsers - basicUsers
+  const paidUsers  = proUsers + basicUsers
 
   const data: FunnelData = {
-    eventsAvailable,
-    counts: counts as FunnelData['counts'],
+    eventsAvailable: false,
+    realStats: {
+      totalUsers:     authUsers.length,
+      newThisWeek,
+      newThisMonth,
+      proUsers,
+      basicUsers,
+      freeUsers,
+      usersWithVideos: uWithVideo.size,
+      totalVideos,
+      videosThisWeek,
+      paidNoCredits,
+    },
+    rates: {
+      signupToVideo: pct(uWithVideo.size, authUsers.length),
+      signupToPaid:  pct(paidUsers,       authUsers.length),
+      videoToPaid:   pct(paidUsers,       uWithVideo.size),
+      basicToPro:    pct(proUsers,        paidUsers),
+    },
+    counts: {
+      homepage_view: 0, generate_page_view: 0, analyze_idea_clicked: 0,
+      video_generation_started: 0, video_generation_completed: 0,
+      video_generation_failed: 0, pricing_view: 0, basic_checkout_clicked: 0,
+      pro_checkout_clicked: 0, payment_success: 0, checkout_cancelled: 0,
+    },
   }
 
   return <FunnelClient data={data} viewerEmail={email} />

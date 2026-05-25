@@ -1,29 +1,14 @@
 'use client'
 
-// Push #066 — Conversion Funnel Dashboard (client).
-// Now auto-polls /api/admin/funnel every 30 s — no manual refresh needed.
-// Shows a "Last updated X s ago" indicator and a pulsing dot while refreshing.
-// The page server component still seeds the initial data on first render.
+// Push #254 — Funnel rebuilt on real DB data (auth.users + profiles + videos).
+// Old version showed all-zeros because public.events table doesn't exist.
+// New version pulls live counts and computes real conversion rates.
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import type { FunnelData } from '@/app/api/admin/funnel/route'
 
-export interface FunnelData {
-  eventsAvailable: boolean
-  counts: {
-    homepage_view: number
-    generate_page_view: number
-    analyze_idea_clicked: number
-    video_generation_started: number
-    video_generation_completed: number
-    video_generation_failed: number
-    pricing_view: number
-    basic_checkout_clicked: number
-    pro_checkout_clicked: number
-    payment_success: number
-    checkout_cancelled: number
-  }
-}
+export type { FunnelData }
 
 interface Props {
   data?: FunnelData
@@ -33,13 +18,6 @@ interface Props {
 
 function fmt(v: number): string {
   return v.toLocaleString('en-US')
-}
-
-function pct(num: number, denom: number): string {
-  if (!denom || denom <= 0) return '—'
-  const ratio = (num / denom) * 100
-  if (!Number.isFinite(ratio)) return '—'
-  return `${ratio.toFixed(1)}%`
 }
 
 const POLL_MS = 30_000
@@ -54,9 +32,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
 
   useEffect(() => {
     clockRef.current = setInterval(() => {
-      if (lastUpdated) {
-        setSecondsAgo(Math.round((Date.now() - lastUpdated.getTime()) / 1000))
-      }
+      if (lastUpdated) setSecondsAgo(Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     }, 1000)
     return () => { if (clockRef.current) clearInterval(clockRef.current) }
   }, [lastUpdated])
@@ -74,9 +50,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           setLastUpdated(new Date())
           setSecondsAgo(0)
         }
-      } catch {
-        // silent — keep showing stale data
-      } finally {
+      } catch { /* silent */ } finally {
         setRefreshing(false)
       }
     }
@@ -87,55 +61,23 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   if (denied || !data) {
     return (
       <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
-        <div
-          className="rounded-2xl p-8 text-center"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-        >
+        <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
           <div className="text-5xl mb-3">🔒</div>
-          <h1 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
-            Access denied.
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>
-            This page is only available to staging admins.
-          </p>
+          <h1 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>Access denied.</h1>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>Admin only.</p>
         </div>
       </div>
     )
   }
 
-  const c = data.counts
-  const checkoutClicks = c.basic_checkout_clicked + c.pro_checkout_clicked
-
-  const steps = [
-    { label: 'Homepage views', value: c.homepage_view, hint: 'homepage_view' },
-    { label: 'Generate page views', value: c.generate_page_view, hint: 'generate_page_view' },
-    { label: 'Analyze clicks', value: c.analyze_idea_clicked, hint: 'analyze_idea_clicked' },
-    { label: 'Videos started', value: c.video_generation_started, hint: 'video_generation_started' },
-    { label: 'Videos completed', value: c.video_generation_completed, hint: 'video_generation_completed' },
-    { label: 'Videos failed', value: c.video_generation_failed, hint: 'video_generation_failed' },
-    { label: 'Pricing views', value: c.pricing_view, hint: 'pricing_view' },
-    { label: 'Basic checkout clicks', value: c.basic_checkout_clicked, hint: 'basic_checkout_clicked' },
-    { label: 'Pro checkout clicks', value: c.pro_checkout_clicked, hint: 'pro_checkout_clicked' },
-    { label: 'Payment success', value: c.payment_success, hint: 'payment_success' },
-  ]
-
-  const rates = [
-    { label: 'Homepage → Generate', value: pct(c.generate_page_view, c.homepage_view) },
-    { label: 'Generate → Analyze', value: pct(c.analyze_idea_clicked, c.generate_page_view) },
-    { label: 'Analyze → Completed', value: pct(c.video_generation_completed, c.analyze_idea_clicked) },
-    { label: 'Completed → Pricing', value: pct(c.pricing_view, c.video_generation_completed) },
-    { label: 'Pricing → Checkout', value: pct(checkoutClicks, c.pricing_view) },
-    { label: 'Checkout → Payment', value: pct(c.payment_success, checkoutClicks) },
-  ]
+  const s = data.realStats
+  const r = data.rates
 
   return (
     <div className="px-4 sm:px-6 py-7 pb-20 max-w-5xl mx-auto">
       <header className="mb-6">
-        <div
-          className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#93c5fd' }}
-        >
-          Admin · Staging
+        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: '#93c5fd' }}>
+          Admin · Live
         </div>
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
@@ -143,125 +85,106 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
               Conversion Funnel
             </h1>
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              Live counts from public.events on the staging Supabase project. Signed in as {viewerEmail}.
+              Live from auth.users + profiles + videos. Signed in as {viewerEmail}.
             </p>
           </div>
           <RefreshIndicator refreshing={refreshing} secondsAgo={secondsAgo} lastUpdated={lastUpdated} />
         </div>
-
         <AdminNav active="funnel" />
       </header>
 
-      {!data.eventsAvailable && (
-        <div
-          className="rounded-xl px-4 py-3 mb-6"
-          style={{
-            background: 'rgba(34, 211, 238,.08)',
-            border: '1px solid rgba(34, 211, 238,.25)',
-            color: '#22D3EE',
-            fontSize: '0.82rem',
-          }}
-        >
-          public.events table not found. All counts shown as 0. Run
-          <code className="mx-1 px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,0,0,.3)' }}>
-            supabase/migrations/005_events_staging.sql
-          </code>
-          in the staging Supabase SQL editor to enable tracking.
-        </div>
-      )}
+      {/* ── Row 1: Growth ─────────────────────────────────────────────────── */}
+      <Section title="Growth">
+        <Card label="Total users"      value={fmt(s.totalUsers)}    hint="all signups"         accent="#22d3ee" />
+        <Card label="New this week"    value={fmt(s.newThisWeek)}   hint="last 7 days"         accent="#34d399" />
+        <Card label="New this month"   value={fmt(s.newThisMonth)}  hint="last 30 days"        accent="#60a5fa" />
+        <Card label="Videos this week" value={fmt(s.videosThisWeek)} hint="last 7 days"        accent="#a78bfa" />
+      </Section>
 
-      <section className="mb-7">
-        <h2
-          className="font-black tracking-tight mb-3"
-          style={{ fontSize: '0.95rem', color: 'var(--text)' }}
-        >
-          Funnel steps
-        </h2>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
-        >
-          {steps.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl p-4"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
-            >
-              <div
-                className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                {s.label}
-              </div>
-              <div
-                className="font-black"
-                style={{ fontSize: '1.7rem', lineHeight: 1.1, color: 'var(--text)' }}
-              >
-                {fmt(s.value)}
-              </div>
-              <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>
-                {s.hint}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* ── Row 2: Plans ──────────────────────────────────────────────────── */}
+      <Section title="Subscribers">
+        <Card label="Pro"   value={fmt(s.proUsers)}   hint="plan = pro"   accent="#34d399" />
+        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#60a5fa" />
+        <Card label="Free"  value={fmt(s.freeUsers)}  hint="no paid plan" accent="#94a3b8" />
+        <Card
+          label="Paid · 0 credits ⚠️"
+          value={fmt(s.paidNoCredits)}
+          hint="check Stripe webhook"
+          accent={s.paidNoCredits > 0 ? '#f87171' : '#34d399'}
+        />
+      </Section>
 
-      <section className="mb-7">
-        <h2
-          className="font-black tracking-tight mb-3"
-          style={{ fontSize: '0.95rem', color: 'var(--text)' }}
-        >
-          Conversion rates
-        </h2>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
-        >
-          {rates.map((r) => (
-            <div
-              key={r.label}
-              className="rounded-xl p-4"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
-            >
-              <div
-                className="text-[10px] font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--muted)' }}
-              >
-                {r.label}
-              </div>
-              <div
-                className="font-black"
-                style={{ fontSize: '1.7rem', lineHeight: 1.1, color: 'var(--text)' }}
-              >
-                {r.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* ── Row 3: Video activity ─────────────────────────────────────────── */}
+      <Section title="Video activity">
+        <Card label="Total videos"      value={fmt(s.totalVideos)}    hint="all time"             accent="#f59e0b" />
+        <Card label="Users w/ videos"   value={fmt(s.usersWithVideos)} hint="made ≥ 1 video"      accent="#f59e0b" />
+        <Card label="Avg per user"
+          value={s.usersWithVideos > 0 ? (s.totalVideos / s.usersWithVideos).toFixed(1) : '—'}
+          hint="videos / active users"
+          accent="#fbbf24"
+        />
+        <Card label="Activation rate"   value={r.signupToVideo}       hint="signed up → video"    accent="#fbbf24" />
+      </Section>
+
+      {/* ── Row 4: Conversion rates ───────────────────────────────────────── */}
+      <Section title="Conversion rates">
+        <RateCard label="Signup → Video"  value={r.signupToVideo} sub={`${s.usersWithVideos} / ${s.totalUsers}`} />
+        <RateCard label="Signup → Paid"   value={r.signupToPaid}  sub={`${s.proUsers + s.basicUsers} / ${s.totalUsers}`} />
+        <RateCard label="Video → Paid"    value={r.videoToPaid}   sub={`${s.proUsers + s.basicUsers} / ${s.usersWithVideos}`} />
+        <RateCard label="Basic → Pro"     value={r.basicToPro}    sub={`${s.proUsers} / ${s.proUsers + s.basicUsers}`} />
+      </Section>
     </div>
   )
 }
 
-function RefreshIndicator({
-  refreshing,
-  secondsAgo,
-  lastUpdated,
-}: {
-  refreshing: boolean
-  secondsAgo: number
-  lastUpdated: Date | null
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-6">
+      <h2 className="font-black tracking-tight mb-3" style={{ fontSize: '0.88rem', color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {title}
+      </h2>
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Card({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
+  return (
+    <div className="rounded-xl p-4" style={{ background: 'rgba(11,17,32,0.85)', border: `1px solid ${accent ? accent + '33' : 'var(--border)'}` }}>
+      <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: accent ?? 'var(--muted)' }}>
+        {label}
+      </div>
+      <div className="font-black" style={{ fontSize: '1.7rem', lineHeight: 1.1, color: accent ?? 'var(--text)' }}>
+        {value}
+      </div>
+      {hint && <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>{hint}</p>}
+    </div>
+  )
+}
+
+function RateCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+  const isGood = value !== '—' && parseFloat(value) >= 10
+  const accent = value === '—' ? '#94a3b8' : isGood ? '#34d399' : '#f59e0b'
+  return (
+    <div className="rounded-xl p-4" style={{ background: 'rgba(11,17,32,0.85)', border: `1px solid ${accent}33` }}>
+      <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+        {label}
+      </div>
+      <div className="font-black" style={{ fontSize: '1.9rem', lineHeight: 1.1, color: accent }}>
+        {value}
+      </div>
+      <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>{sub}</p>
+    </div>
+  )
+}
+
+function RefreshIndicator({ refreshing, secondsAgo, lastUpdated }: { refreshing: boolean; secondsAgo: number; lastUpdated: Date | null }) {
   if (!lastUpdated) return null
   return (
     <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
-      {refreshing && (
-        <span
-          className="inline-block w-2 h-2 rounded-full animate-pulse"
-          style={{ background: '#22d3ee' }}
-        />
-      )}
+      {refreshing && <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: '#22d3ee' }} />}
       <span>Updated {secondsAgo}s ago</span>
     </div>
   )
@@ -274,17 +197,10 @@ function AdminNav({ active }: { active: string }) {
     { label: 'Users', href: '/admin/users', key: 'users' },
   ]
   return (
-    <nav className="flex gap-1">
+    <nav className="flex gap-1 mt-4">
       {tabs.map((t) => (
-        <Link
-          key={t.key}
-          href={t.href}
-          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-          style={{
-            background: active === t.key ? 'var(--accent)' : 'transparent',
-            color: active === t.key ? '#fff' : 'var(--muted)',
-          }}
-        >
+        <Link key={t.key} href={t.href} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+          style={{ background: active === t.key ? 'var(--accent)' : 'transparent', color: active === t.key ? '#fff' : 'var(--muted)' }}>
           {t.label}
         </Link>
       ))}
