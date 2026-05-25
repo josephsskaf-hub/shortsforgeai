@@ -226,6 +226,70 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
         </div>
       </section>
 
+      {/* Push #255 — Paid subscribers spotlight table */}
+      {users && users.filter(u => {
+        const p = (u.plan ?? '').toLowerCase()
+        return p === 'pro' || p === 'basic'
+      }).length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: '#94a3b8' }}>
+            Paid Subscribers
+          </h2>
+          <div className="rounded-2xl overflow-x-auto" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'rgba(11,17,32,0.5)' }}>
+                  <Th>Email</Th>
+                  <Th>Name</Th>
+                  <Th>Plan</Th>
+                  <Th align="right">Credits left</Th>
+                  <Th align="right">Videos made</Th>
+                  <Th>Joined</Th>
+                  <Th>Last video</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {users
+                  .filter(u => {
+                    const p = (u.plan ?? '').toLowerCase()
+                    return p === 'pro' || p === 'basic'
+                  })
+                  .sort((a, b) => {
+                    // Pro first, then by join date
+                    const ap = (a.plan ?? '').toLowerCase()
+                    const bp = (b.plan ?? '').toLowerCase()
+                    if (ap !== bp) return ap === 'pro' ? -1 : 1
+                    return a.created_at < b.created_at ? 1 : -1
+                  })
+                  .map(u => (
+                    <tr key={u.id} style={{ borderTop: '1px solid var(--border)' }}>
+                      <Td mono>{u.email || '—'}</Td>
+                      <Td>{u.name || '—'}</Td>
+                      <Td><PlanBadge plan={u.plan} credits={u.credits} /></Td>
+                      <Td align="right">
+                        <span style={{
+                          fontWeight: 700,
+                          color: u.credits === null ? '#94a3b8'
+                            : u.credits <= 0 ? '#f87171'
+                            : u.credits <= 5 ? '#fbbf24'
+                            : '#34d399',
+                          fontSize: '0.95rem',
+                        }}>
+                          {u.credits === null ? '—' : u.credits}
+                        </span>
+                      </Td>
+                      <Td align="right">{fmt(u.videos_count)}</Td>
+                      <Td>{fmtDate(u.created_at)}</Td>
+                      <Td>{fmtDate(u.last_video_at)}</Td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section
         className="rounded-2xl"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
