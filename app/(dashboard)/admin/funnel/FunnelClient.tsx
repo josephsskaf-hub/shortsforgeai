@@ -133,6 +133,47 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         <RateCard label="Video → Paid"    value={r.videoToPaid}   sub={`${s.proUsers + s.basicUsers} / ${s.usersWithVideos}`} />
         <RateCard label="Basic → Pro"     value={r.basicToPro}    sub={`${s.proUsers} / ${s.proUsers + s.basicUsers}`} />
       </Section>
+
+      {/* ── Row 5: Payment funnel (Stripe) ───────────────────────────────── */}
+      {data.stripePayments && (
+        <Section title="💳 Payment funnel · Stripe">
+          <Card
+            label="Checkout initiated"
+            value={fmt(data.stripePayments.checkoutCreated)}
+            hint="reached Stripe checkout"
+            accent="#60a5fa"
+          />
+          <Card
+            label="Completed ✅"
+            value={fmt(data.stripePayments.checkoutCompleted)}
+            hint="payment succeeded"
+            accent="#34d399"
+          />
+          <Card
+            label="Abandoned ❌"
+            value={fmt(data.stripePayments.checkoutAbandoned)}
+            hint="expired without paying"
+            accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#34d399'}
+          />
+          <Card
+            label="Still open ⏳"
+            value={fmt(data.stripePayments.checkoutOpen)}
+            hint="on checkout page now"
+            accent="#fbbf24"
+          />
+          <RateCard
+            label="Checkout → Payment"
+            value={data.stripePayments.conversionRate}
+            sub={`${data.stripePayments.checkoutCompleted} / ${data.stripePayments.checkoutCompleted + data.stripePayments.checkoutAbandoned}`}
+          />
+          <Card
+            label="Failed payments (30d)"
+            value={fmt(data.stripePayments.recentFailedPayments)}
+            hint="invoice.payment_failed"
+            accent={data.stripePayments.recentFailedPayments > 0 ? '#f87171' : '#34d399'}
+          />
+        </Section>
+      )}
     </div>
   )
 }

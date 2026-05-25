@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { stripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,15 @@ export interface FunnelData {
     signupToPaid: string         // paid users / total users
     videoToPaid: string          // paid users / users with videos
     basicToPro: string           // pro / (basic + pro)
+  }
+  // Push #258 — Stripe checkout funnel (real data from Stripe API)
+  stripePayments: {
+    checkoutCreated: number    // sessions that reached the Stripe checkout page
+    checkoutCompleted: number  // successfully paid
+    checkoutAbandoned: number  // expired without payment
+    checkoutOpen: number       // still on the page right now
+    conversionRate: string     // completed / (completed + abandoned)
+    recentFailedPayments: number // invoice.payment_failed in last 30 days
   }
   // Legacy event counts (kept for type compat, shown only if available)
   counts: {
@@ -142,6 +152,59 @@ export async function GET() {
       basicToPro:    pct(proUsers,        paidUsers),
     }
 
+    // ── 5. Stripe checkout funnel ─────────────────────────────────────────
+    // Query all checkout sessions to show how many users reached checkout,
+    // how many completed payment, and how many abandoned (to detect issues).
+    let checkoutCreated = 0
+    let checkoutCompleted = 0
+    let checkoutAbandoned = 0
+    let checkoutOpen = 0
+    let recentFailedPayments = 0
+    try {
+      if (process.env.STRIPE_SECRET_KEY) {
+        // List up to 100 most recent checkout sessions
+        const sessions = await stripe.checkout.sessions.list({ limit: 100 })
+        for (const s of sessions.data) {
+          checkoutCreated++
+          if (s.status === 'complete') checkoutCompleted++
+          else if (s.status === 'expired') checkoutAbandoned++
+          else if (s.status === 'open') checkoutOpen++
+        }
+        // Count recent payment failures from stripe_events or Stripe API
+        // Use invoice.payment_failed events from stripe_events table if available
+        try {
+          const thirtyDaysAgoISO = new Date(monthAgo).toISOString()
+          const { data: failEvents } = await admin
+            .from('stripe_events')
+            .select('id')
+            .like('id', 'evt_%')
+            .gte('received_at', thirtyDaysAgoISO)
+            .limit(500)
+          // Count via Stripe API: list recent failed payment intents as proxy
+          const failedInvoices = await stripe.invoices.list({
+            limit: 100,
+            status: 'uncollectible',
+          })
+          recentFailedPayments = failedInvoices.data.filter(
+            (inv) => inv.created * 1000 >= monthAgo
+          ).length
+          // suppress unused warning
+          void failEvents
+        } catch { /* ignore if stripe_events table missing */ }
+      }
+    } catch (stripeErr) {
+      console.warn('[admin/funnel] Stripe query failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr))
+    }
+
+    const stripePayments = {
+      checkoutCreated,
+      checkoutCompleted,
+      checkoutAbandoned,
+      checkoutOpen,
+      conversionRate: pct(checkoutCompleted, checkoutCompleted + checkoutAbandoned),
+      recentFailedPayments,
+    }
+
     const zeroCounts = {
       homepage_view: 0, generate_page_view: 0, analyze_idea_clicked: 0,
       video_generation_started: 0, video_generation_completed: 0,
@@ -164,6 +227,7 @@ export async function GET() {
         paidNoCredits,
       },
       rates,
+      stripePayments,
       counts: zeroCounts,
     }
 

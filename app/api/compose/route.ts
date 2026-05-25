@@ -4,15 +4,14 @@ import {
   buildCreatomateSource,
   estimateMp3DurationSeconds,
   generateTTS,
-  mapWhisperTimingsToSegments,
   pollCreatomateRender,
   scaleVoiceoverScript,
   submitCreatomateRender,
   targetWordCount,
   transcribeTTSWithTimestamps,
   uploadVoiceoverToSupabase,
+  type WhisperWord,
 } from '@/lib/compose'
-import { buildCaptionSegments } from '@/lib/openai'
 import { stripScriptMarkers } from '@/lib/scriptParser'
 import { fetchUserPlan } from '@/lib/plan'
 
@@ -260,27 +259,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 2b — Push #175: transcribe the TTS audio via Whisper to get
-    // word-level timestamps. These are mapped to caption segments so captions
-    // display in exact sync with the narrator voice. Non-fatal: if Whisper
-    // fails we fall through to proportional distribution in compose.ts.
-    let whisperTimings: Array<{ time: number; duration: number }> | undefined
+    // Step 2b — Push #258: transcribe the TTS audio via Whisper to get
+    // word-level timestamps for DIRECT caption building. Captions are now
+    // built from Whisper words directly (not mapped from script segments),
+    // eliminating drift from number expansion (e.g. "63%" → "sixty three
+    // percent"). Non-fatal: if Whisper fails the proportional fallback runs.
+    let whisperWords: WhisperWord[] | undefined
     try {
-      const whisperWords = await transcribeTTSWithTimestamps(audioBuffer)
-      if (whisperWords.length > 0) {
-        const captionSegs = buildCaptionSegments(scaledScript, 7)
-        if (captionSegs.length > 0) {
-          const audioDur = realAudioDuration > 0 ? realAudioDuration : duration
-          const mapped = mapWhisperTimingsToSegments(whisperWords, captionSegs, audioDur, 2.5)
-          if (mapped.length === captionSegs.length) {
-            whisperTimings = mapped
-            console.log(`[compose] Whisper sync: ${mapped.length} caption segments mapped`)
-          } else {
-            console.warn(
-              `[compose] Whisper mismatch (${mapped.length} vs ${captionSegs.length}) — proportional fallback`,
-            )
-          }
-        }
+      const words = await transcribeTTSWithTimestamps(audioBuffer)
+      if (words.length > 0) {
+        whisperWords = words
+        console.log(`[compose] Whisper sync: ${words.length} words for direct caption build`)
+      } else {
+        console.warn('[compose] Whisper returned 0 words — proportional fallback')
       }
     } catch (whisperErr) {
       console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
@@ -338,7 +329,7 @@ export async function POST(req: NextRequest) {
         sceneCaptions,
         duration,
         realAudioDuration,
-        whisperTimings,
+        whisperWords,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
