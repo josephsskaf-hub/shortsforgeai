@@ -37,10 +37,10 @@ export default function CheckoutSuccessPage() {
     try {
       if (typeof window !== 'undefined' && typeof (window as Window & { gtag?: Function }).gtag === 'function') {
         ;(window as Window & { gtag: Function }).gtag('event', 'conversion', {
-          send_to: 'AW-18156258081/REPLACE_WITH_COMPRA_LABEL',
-          // value and currency are optional but improve bid optimisation
-          // value: 4.90,
-          // currency: 'BRL',
+          send_to: 'AW-18156258081/NL4bCKXEwa4cEKGGytFD',
+          // value and currency improve bid optimisation — use lowest plan price
+          value: 4.90,
+          currency: 'BRL',
         })
       }
     } catch {
