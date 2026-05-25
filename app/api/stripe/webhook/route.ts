@@ -118,14 +118,18 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Path B: Subscription checkout (push #020) ──
-        // The new pricing grants the user their plan's monthly credits up
-        // front when they complete checkout. Subsequent renewals are handled
-        // by `invoice.payment_succeeded`.
+        // Push #259 — free trial support. When is_trial='true' (set by the
+        // checkout route for first-time subscribers), grant only 10 trial
+        // credits so the user can test the product before being charged. Full
+        // plan credits are granted on the first real payment via
+        // invoice.payment_succeeded (billing_reason='subscription_cycle').
         const userId = session.metadata?.supabase_user_id
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
         const tier = session.metadata?.tier === 'pro' ? 'pro' : 'basic'
+        const isTrial = session.metadata?.is_trial === 'true'
         const planCredits = tier === 'pro' ? 100 : 50
+        const TRIAL_CREDITS = 10
 
         if (!userId) break
 
@@ -138,7 +142,10 @@ export async function POST(req: NextRequest) {
           .single()
 
         const current = currentProfile?.video_credits ?? 0
-        const next = current + planCredits
+        // Trial sessions get 10 credits to test the product.
+        // Full-plan sessions (re-subscriptions, no trial) get full plan credits.
+        const creditsToGrant = isTrial ? TRIAL_CREDITS : planCredits
+        const next = current + creditsToGrant
 
         // Push #088 — Pro plan also includes 1 cinematic token / month.
         // Basic stays at 0 (Cinematic is Pro-exclusive). We use a separate
@@ -161,18 +168,60 @@ export async function POST(req: NextRequest) {
         if (subUpdErr) {
           console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
         } else {
-          console.log(`[stripe webhook] subscription start: ${tier} plan=${tier} (+${planCredits}, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
+          console.log(`[stripe webhook] subscription start: ${tier} trial=${isTrial} (+${creditsToGrant} credits, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
         }
 
         break
       }
 
+      case 'checkout.session.expired': {
+        // Push #259 — track abandoned checkouts so we can measure drop-off.
+        // Supabase SQL to create the table (run once in the SQL editor):
+        //
+        //   create table if not exists public.checkout_abandoned (
+        //     id uuid default gen_random_uuid() primary key,
+        //     user_id uuid references auth.users(id),
+        //     tier text,
+        //     currency text,
+        //     amount_total bigint,
+        //     stripe_session_id text unique,
+        //     expired_at timestamptz default now()
+        //   );
+        const expiredSession = event.data.object as Stripe.Checkout.Session
+        const abandonedUserId = expiredSession.metadata?.supabase_user_id ?? null
+        const abandonedTier = expiredSession.metadata?.tier ?? null
+
+        try {
+          const { error: abanErr } = await supabase
+            .from('checkout_abandoned')
+            .insert({
+              user_id: abandonedUserId,
+              tier: abandonedTier,
+              currency: expiredSession.currency,
+              amount_total: expiredSession.amount_total,
+              stripe_session_id: expiredSession.id,
+            })
+          if (abanErr && abanErr.code !== '42P01' && abanErr.code !== '23505') {
+            // 42P01 = table doesn't exist yet (migration not applied — non-fatal)
+            // 23505 = duplicate — already recorded
+            console.error('[stripe webhook] checkout_abandoned insert error:', abanErr.code, abanErr.message)
+          } else {
+            console.log(`[stripe webhook] checkout abandoned: session=${expiredSession.id} user=${abandonedUserId} tier=${abandonedTier}`)
+          }
+        } catch (abanCatch) {
+          console.warn('[stripe webhook] checkout_abandoned insert threw:', abanCatch)
+        }
+        break
+      }
+
       case 'invoice.payment_succeeded': {
         // Subscription renewal — refill the user's monthly credit allowance.
-        // First invoices are also `payment_succeeded`, but the idempotent
-        // stripe_events guard plus `billing_reason !== 'subscription_create'`
-        // keeps us from double-granting the initial credits already handled in
-        // `checkout.session.completed`.
+        // Push #259 — also handles the first real payment after a free trial
+        // (billing_reason='subscription_cycle'): grants full plan credits,
+        // replacing the 10 trial credits issued at checkout.session.completed.
+        // Skip subscription_create billing reason — those credits are already
+        // handled by checkout.session.completed (or are 10 trial credits for
+        // trial sessions that don't need renewal-level re-grants yet).
         const invoice = event.data.object as Stripe.Invoice & { billing_reason?: string; subscription?: string }
         const billingReason = invoice.billing_reason
         if (billingReason === 'subscription_create') break
@@ -211,80 +260,4 @@ export async function POST(req: NextRequest) {
           .eq('id', renewalUserId)
 
         if (renewErr) {
-          console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
-        } else {
-          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
-        }
-        break
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
-        const isActive =
-          subscription.status === 'active' || subscription.status === 'trialing'
-
-        await supabase
-          .from('profiles')
-          .update({
-            is_pro: isActive,
-            stripe_subscription_id: subscription.id,
-          })
-          .eq('stripe_customer_id', customerId)
-
-        break
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
-
-        // Push #088 — wipe cinematic_tokens on cancellation so a former
-        // Pro user can't keep a stranded Runway token after their plan
-        // lapses. Regular credits stay (they were already paid for).
-        await supabase
-          .from('profiles')
-          .update({
-            is_pro: false,
-            plan: 'free',
-            stripe_subscription_id: null,
-            cinematic_tokens: 0,
-          })
-          .eq('stripe_customer_id', customerId)
-
-        break
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
-        const customerId = invoice.customer as string
-
-        if (!customerId) {
-          console.warn('[stripe webhook] payment_failed without customer id')
-          break
-        }
-
-        const { error: revokeErr } = await supabase
-          .from('profiles')
-          .update({ is_pro: false, plan: 'free' })
-          .eq('stripe_customer_id', customerId)
-
-        if (revokeErr) {
-          console.error('[stripe webhook] failed to revoke access on payment_failed:', revokeErr.message, customerId)
-        } else {
-          console.log('[stripe webhook] revoked access for customer:', customerId)
-        }
-        break
-      }
-
-      default:
-        // Unhandled event type — log and continue
-        console.log('Unhandled webhook event type:', event.type)
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook handler error:', error)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
-  }
-}
+          console.error('[stripe webhook] renewal credit refill failed:'
