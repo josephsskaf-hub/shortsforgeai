@@ -105,17 +105,34 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
     let newToday = 0
     let withVideos = 0
     let totalVideos = 0
+    // Push #253 — plan breakdown + credit health
+    let pro = 0
+    let basic = 0
+    let free = 0
+    let paidNoCredits = 0 // paid users with 0 or null credits (flag for credit issues)
     for (const u of users) {
       const t = u.created_at ? new Date(u.created_at).getTime() : 0
       if (t >= todayTs) newToday++
       if (u.videos_count > 0) withVideos++
       totalVideos += u.videos_count
+      const p = (u.plan ?? '').toLowerCase()
+      if (p === 'pro') pro++
+      else if (p === 'basic') basic++
+      else free++
+      // Flag paid users whose credits are 0 or null (likely an issue)
+      if ((p === 'pro' || p === 'basic') && (u.credits === null || u.credits <= 0)) {
+        paidNoCredits++
+      }
     }
     return {
       total: users.length,
       newToday,
       withVideos,
       totalVideos,
+      pro,
+      basic,
+      free,
+      paidNoCredits,
     }
   }, [users])
 
@@ -178,30 +195,33 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
         <AdminNav active="users" />
       </header>
 
+      {/* Push #253 — row 1: traffic stats */}
+      <section className="mb-3">
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
+        >
+          <MetricCard label="Total users"           value={stats?.total ?? null}       hint="auth.users" />
+          <MetricCard label="New today"             value={stats?.newToday ?? null}     hint="signed up since 00:00 local" />
+          <MetricCard label="Users with videos"     value={stats?.withVideos ?? null}   hint="videos_count > 0" />
+          <MetricCard label="Total videos"          value={stats?.totalVideos ?? null}  hint="sum across all users" />
+        </div>
+      </section>
+
+      {/* Push #253 — row 2: plan breakdown + credit health */}
       <section className="mb-6">
         <div
           className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
         >
+          <MetricCard label="Pro subscribers"   value={stats?.pro   ?? null} hint="plan = pro"   accent="#34d399" />
+          <MetricCard label="Basic subscribers" value={stats?.basic ?? null} hint="plan = basic" accent="#60a5fa" />
+          <MetricCard label="Free users"        value={stats?.free  ?? null} hint="no paid plan" accent="#94a3b8" />
           <MetricCard
-            label="Total users"
-            value={stats?.total ?? null}
-            hint="auth.users"
-          />
-          <MetricCard
-            label="New today"
-            value={stats?.newToday ?? null}
-            hint="signed up since 00:00 local"
-          />
-          <MetricCard
-            label="Users with videos"
-            value={stats?.withVideos ?? null}
-            hint="videos_count > 0"
-          />
-          <MetricCard
-            label="Total videos generated"
-            value={stats?.totalVideos ?? null}
-            hint="sum across all users"
+            label="Paid · 0 credits ⚠️"
+            value={stats?.paidNoCredits ?? null}
+            hint="pro/basic with no credits"
+            accent={stats?.paidNoCredits ? '#f87171' : '#34d399'}
           />
         </div>
       </section>
@@ -278,7 +298,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                     <Td align="right">{fmt(u.videos_count)}</Td>
                     <Td align="center">{u.videos_count >= 1 ? '✅ Yes' : '❌ No'}</Td>
                     <Td>{fmtDate(u.last_video_at)}</Td>
-                    <Td>{u.plan || '—'}</Td>
+                    <Td><PlanBadge plan={u.plan} credits={u.credits} /></Td>
                   </tr>
                 ))}
               </tbody>
@@ -337,10 +357,12 @@ function MetricCard({
   label,
   value,
   hint,
+  accent,
 }: {
   label: string
   value: number | null
   hint?: string
+  accent?: string
 }) {
   const isAvailable = value !== null && value !== undefined
   return (
@@ -348,12 +370,12 @@ function MetricCard({
       className="rounded-xl p-4"
       style={{
         background: 'rgba(11,17,32,0.85)',
-        border: '1px solid var(--border)',
+        border: `1px solid ${accent ? `${accent}33` : 'var(--border)'}`,
       }}
     >
       <div
         className="text-[10px] font-black uppercase tracking-widest mb-2"
-        style={{ color: 'var(--muted)' }}
+        style={{ color: accent ?? 'var(--muted)' }}
       >
         {label}
       </div>
@@ -362,7 +384,7 @@ function MetricCard({
         style={{
           fontSize: '1.7rem',
           lineHeight: 1.1,
-          color: isAvailable ? 'var(--text)' : 'var(--muted2)',
+          color: isAvailable ? (accent ?? 'var(--text)') : 'var(--muted2)',
         }}
       >
         {isAvailable ? fmt(value) : '—'}
@@ -374,6 +396,44 @@ function MetricCard({
       )}
     </div>
   )
+}
+
+// Push #253 — colored plan badge for the table
+function PlanBadge({ plan, credits }: { plan: string | null; credits: number | null }) {
+  const p = (plan ?? '').toLowerCase()
+  if (p === 'pro') {
+    const hasCredits = credits !== null && credits > 0
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span
+          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
+          style={{ background: 'rgba(52,211,153,.12)', color: '#34d399', border: '1px solid rgba(52,211,153,.3)' }}
+        >
+          Pro
+        </span>
+        {!hasCredits && (
+          <span title="0 credits — check webhook" style={{ color: '#f87171', fontSize: 12 }}>⚠️</span>
+        )}
+      </span>
+    )
+  }
+  if (p === 'basic') {
+    const hasCredits = credits !== null && credits > 0
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span
+          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
+          style={{ background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}
+        >
+          Basic
+        </span>
+        {!hasCredits && (
+          <span title="0 credits — check webhook" style={{ color: '#f87171', fontSize: 12 }}>⚠️</span>
+        )}
+      </span>
+    )
+  }
+  return <span style={{ color: 'var(--muted)', fontSize: 12 }}>Free</span>
 }
 
 function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
