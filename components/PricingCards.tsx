@@ -128,21 +128,11 @@ export default function PricingCards() {
         </div>
       )}
 
-      {/* Push #050 — explicit 1-col on mobile, 3-col from md up. The old
-          `auto-fit minmax(240px, 1fr)` could leave 2 cards side-by-side on
-          narrow tablets and was reported as crammed on iPhone widths in
-          some browsers; explicit responsive cols make the breakpoint
-          predictable. */}
-      <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '64rem' }}>
-        <PlanCard
-          tier="free"
-          name={PLANS.free.name}
-          price={PLANS.free.priceLabel}
-          period="/ month"
-          tagline="Sign up free. Get 1 Fast Mode video — no card needed."
-          features={FREE_FEATURES}
-          cta={null}
-        />
+      {/* Push #262 — 2-card layout: Basic (left) + Pro (right). Free card
+          removed — it's the default plan and doesn't need a purchase CTA.
+          Grid switches from 3-col to 2-col so the two paid options sit
+          side-by-side with more breathing room. */}
+      <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-2" style={{ maxWidth: '44rem' }}>
 
         <PlanCard
           tier="basic"
@@ -170,7 +160,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline="Full production pipeline. 100 renders + Cinematic AI Engine."
+          tagline="100 Fast Mode renders + 1 free Cinematic (Runway AI) video/month."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight
@@ -375,3 +365,4 @@ function PlanCard({
     </div>
   )
 }
+                                                                                                    
