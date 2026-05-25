@@ -29,6 +29,10 @@ const FAQS: { q: string; a: string }[] = [
     a: 'Yes, cancel from your account settings at any time. No contracts, no commitments.',
   },
   {
+    q: 'Is there a money-back guarantee?',
+    a: 'Yes — both Basic and Pro come with a 7-day money-back guarantee. If you\'re not satisfied, email us within 7 days of your purchase and we\'ll refund 100%. No questions asked.',
+  },
+  {
     q: 'What’s the difference between Fast Mode and Cinematic Mode?',
     a: 'Fast Mode uses our AI to write, voice, and edit with curated stock footage and is included in all plans. Cinematic Mode uses Runway AI to generate custom scenes — available on Pro.',
   },
@@ -448,7 +452,7 @@ export default function PricingPage() {
             <span className="text-[#34D399]">✓</span> Instant access
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#34D399]">✓</span> Money-back guarantee
+            <span className="text-[#34D399]">✓</span> 7-day money-back guarantee
           </span>
         </div>
 
@@ -666,10 +670,10 @@ export default function PricingPage() {
             </div>
             <div>
               <div className="text-[14px] font-black text-[#F1F5F9] mb-1">
-                30-day money-back guarantee
+                7-day money-back guarantee — both plans
               </div>
               <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
-                If you&apos;re not happy in the first 30 days, email us and we&apos;ll refund 100%. No questions asked.
+                If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked. Works for Basic and Pro.
               </p>
             </div>
           </div>
