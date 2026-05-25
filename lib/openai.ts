@@ -118,6 +118,19 @@ const HIGHLIGHT_CANDIDATES = [
   'revealed', 'proof', 'warned', 'survived', 'failed', 'saved',
   'changed', 'destroyed', 'invented', 'built', 'created', 'broke',
   'record', 'never', 'always', 'first', 'last',
+  // Push #263 — scale/quantity words TTS speaks as digits or words
+  'hundred', 'thousand', 'percent',
+  // Superlatives and uniqueness
+  'only', 'top', 'worst', 'best', 'zero', 'tallest', 'coldest', 'hottest',
+  'longest', 'shortest', 'heaviest', 'lightest', 'oldest', 'youngest',
+  // Investigation / history
+  'classified', 'locked', 'stolen', 'buried', 'sealed', 'collapsed', 'killed', 'died',
+  // Psychology / behavior
+  'brain', 'dopamine', 'fear', 'control', 'habit', 'trap', 'hook',
+  // Technology
+  'hacked', 'encrypted', 'automated', 'artificial', 'programmed',
+  // General impact
+  'entire', 'total', 'pure', 'actual', 'true', 'false', 'illegal',
 ]
 
 const STOPWORDS = new Set([
@@ -139,11 +152,25 @@ export function pickHighlightWord(caption: string): string | null {
   const text = (caption ?? '').trim()
   if (!text) return null
   const tokens = text.split(/\s+/)
+
+  // Pass 0 — numeric tokens get HIGHEST priority. Push #263: $X, X%, 4-digit
+  // years, and large numbers are the most impactful highlights in viral Shorts.
+  // Covers both Whisper output ("63%") and scripted text ("$4.90").
+  for (const tok of tokens) {
+    const raw = tok.replace(/[.,;!?:]+$/, '')
+    if (/^\$[\d,]+(\.[\d]+)?[bmtk]?$/i.test(raw)) return raw   // $X.Xb
+    if (/^\d+(\.\d+)?%$/.test(raw)) return raw                  // X%
+    if (/^\d{1,3}(,\d{3})+$/.test(raw)) return raw               // 1,000+
+    if (/^[12][0-9]{3}$/.test(raw)) return raw                    // year 1000–2099
+    if (/^\d+$/.test(raw) && parseInt(raw, 10) >= 100) return raw  // ≥100
+  }
+
   // Pass 1 — explicit candidate word.
   for (const tok of tokens) {
     const c = cleanWord(tok)
     if (HIGHLIGHT_CANDIDATES.includes(c)) return tok.replace(/[.,;!?:]+$/, '')
   }
+
   // Pass 2 — fall back to the last non-stopword (often the noun/adjective
   // that carries the meaning).
   for (let i = tokens.length - 1; i >= 0; i--) {

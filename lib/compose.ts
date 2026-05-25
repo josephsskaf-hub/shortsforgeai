@@ -324,7 +324,10 @@ export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<Whisp
 // and Creatomate plays that audio from t=0, so the correct nudge is a small
 // POSITIVE offset: it lands each caption with — or a hair after — the voice,
 // never before it. Clamped to 0 so the first caption never goes negative.
-const CAPTION_SYNC_OFFSET = 0.3 // seconds, added to each caption start
+// Push #263 — reduced from 0.3 → 0.15. Whisper timestamps are accurate to
+// ~50ms; 0.3s was visibly lagging captions behind the voice. 0.15s keeps a
+// tiny guard without perceptible delay.
+const CAPTION_SYNC_OFFSET = 0.15 // seconds, added to each caption start
 
 /**
  * Map Whisper word-level timestamps to caption segment boundaries.
@@ -896,11 +899,13 @@ export function buildCreatomateSource({
   //   This is less accurate but always produces something on screen.
   if (Array.isArray(whisperWords) && whisperWords.length > 0) {
     // Direct path — perfect sync guaranteed.
+    // Push #263 — 5 words/chunk (was 7). Faster on-screen pacing matches
+    // high-retention Shorts: captions change ~40% more frequently.
     const directCaps = buildCaptionsFromWhisperWords(
       whisperWords,
       masterDuration,
       CTA_TAIL_SECONDS,
-      7,
+      5,
     )
     for (const cap of directCaps) {
       elements.push(...buildCaptionElements({
@@ -912,7 +917,8 @@ export function buildCreatomateSource({
     }
   } else {
     // Proportional fallback — script segments with word-count proportional slots.
-    const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+    // Push #263 — 5 words/chunk (was 7) for faster Shorts pacing.
+    const scriptSegments = buildCaptionSegments(voiceoverScript, 5)
     const captionsClean: CaptionSegment[] = scriptSegments.length > 0
       ? scriptSegments
       : sceneCaptions
