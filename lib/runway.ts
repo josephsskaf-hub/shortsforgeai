@@ -297,14 +297,14 @@ DEEP OCEAN / MARINE BIOLOGY / UNDERWATER:
   visualCategory: deep_ocean, underwater_science
 
 MONEY / FINANCE / WEALTH / BITCOIN / INVESTING / STOCK MARKET:
-  stockSearchQuery: "dollar bills cash money", "gold bars vault bank", "wall street trading floor", "stock market ticker screen", "bitcoin crypto coin gold"
-  negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code, fake smile business"
-  visualCategory: general_documentary
+  stockSearchQuery: "dollar bills cash hands counting close", "gold coins pile wealth", "stock market graph chart laptop", "wall street trading floor monitors", "bitcoin cryptocurrency coin gold shiny"
+  negativeVisualPrompt: "cartoon money, clipart, piggy bank toy, abstract digital rain, green matrix code, portrait, headshot, smiling businessman, generic office handshake"
+  visualCategory: money_finance
 
 BILLIONAIRES / ENTREPRENEURS (Elon Musk, Jeff Bezos, Mark Zuckerberg, Warren Buffett, etc.):
-  stockSearchQuery: use their name + context: "Elon Musk Tesla factory", "Jeff Bezos Amazon warehouse", "Silicon Valley tech office", "luxury private jet interior"
-  negativeVisualPrompt: "cartoon character, clipart, fake smile stock photo, generic office handshake"
-  visualCategory: general_documentary
+  stockSearchQuery: AVOID portrait/face queries. Use cinematic location/object queries: "wall street trading floor screens", "gold bars vault bank luxury", "luxury penthouse interior city view night", "sports car driving city night", "private jet interior cabin luxury", "dollar bills cash stacks money close", "skyscraper aerial city skyline night"
+  negativeVisualPrompt: "cartoon character, clipart, portrait, headshot, selfie, smiling man, businessman portrait, face close-up, beard man, generic office handshake, team meeting"
+  visualCategory: billionaire_wealth
   NOTE: voiceover MUST name the specific person and cite a real dollar amount, year, or fact
 
 COUNTRIES / PLACES / GEOGRAPHY / MOUNTAINS / CITIES:

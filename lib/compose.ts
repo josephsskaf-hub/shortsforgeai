@@ -635,6 +635,10 @@ export function buildCaptionElements({
     if (candidate && candidate.trim().length > 0) {
       // White base caption stays on track 5.
       // Yellow keyword "pop" appears on track 7 (above base caption in z-order).
+      // Push #257 — moved from y:64% → y:69% so the pop sits just above the
+      // white caption pill (at 74%) instead of floating in the mid-screen.
+      // The 5% gap = ~96px in a 1920px canvas — enough breathing room without
+      // the two layers colliding.
       const keywordPop: CreatomateElement = {
         type: 'text',
         track: 7,
@@ -642,7 +646,7 @@ export function buildCaptionElements({
         duration,
         text: candidate.toUpperCase(),
         x: '50%',
-        y: '64%',
+        y: '69%',
         width: '88%',
         font_family: 'Montserrat',
         font_size: 96,

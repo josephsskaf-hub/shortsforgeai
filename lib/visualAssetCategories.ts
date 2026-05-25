@@ -333,6 +333,58 @@ export const VISUAL_CATEGORIES: Record<string, VisualCategory> = {
     ],
     strictMode: false,
   },
+
+  // Push #257 — billionaire / wealth / luxury content.
+  // "general_documentary" was previously returned by GPT for these topics but
+  // didn't exist in VISUAL_CATEGORIES, so no negative-term filtering ran at
+  // all — Pexels returned portrait shots of businessmen/beards. This category
+  // enforces portrait rejection and ensures cinematic b-roll (cash, gold,
+  // city nights, luxury interiors) instead of talking-head shots.
+  billionaire_wealth: {
+    id: 'billionaire_wealth',
+    label: 'Billionaire / Wealth / Luxury Lifestyle',
+    allowedQueries: [
+      'wall street stock trading floor screens',
+      'gold bars vault bank luxury',
+      'dollar bills cash stacks money close',
+      'luxury penthouse interior city view night',
+      'sports car driving city night luxury',
+      'private jet interior cabin luxury',
+      'skyscraper aerial city skyline night',
+      'stock market chart data screen',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'drawing',
+      // Portrait / face rejection — the main bug this fixes.
+      'portrait', 'headshot', 'selfie', 'smiling-man', 'smiling-woman',
+      'businessman-portrait', 'professional-headshot', 'face-close',
+      'man-looking', 'beard-man', 'person-smiling',
+      // Generic office filler.
+      'handshake', 'meeting', 'team', 'office-worker', 'whiteboard',
+    ],
+    strictMode: false,
+  },
+
+  // Push #257 — money / personal finance content (investing, crypto, savings).
+  money_finance: {
+    id: 'money_finance',
+    label: 'Money / Personal Finance / Investing',
+    allowedQueries: [
+      'dollar bills cash hands counting close',
+      'stock market graph chart laptop screen',
+      'gold coins coins pile wealth',
+      'credit card payment bank',
+      'cryptocurrency bitcoin coin gold shiny',
+      'trading floor stock exchange monitor',
+      'investment portfolio phone coffee table',
+    ],
+    negativeTerms: [
+      'cartoon', 'animation', 'clipart', 'illustration', 'piggy-bank-toy',
+      'drawing', 'kids', 'portrait', 'headshot', 'smiling-man', 'smiling-woman',
+      'generic-office', 'handshake',
+    ],
+    strictMode: false,
+  },
 }
 
 // Global negative terms that apply to ALL categories in strict mode.
@@ -381,6 +433,13 @@ export function detectVisualCategory(
   if (/manuscript|parchment|ancient.document|scroll|ancient.text/.test(combined)) return 'mystery_document'
   if (/library|archive.*book|book.*archive/.test(combined)) return 'library_archive'
   if (/forensic|crime.scene|evidence.collect|investigat/.test(combined)) return 'forensic_case'
+
+  // Push #257 — Billionaire / wealth / money topics.
+  // Must run BEFORE the space check that catches "elon.musk" for SpaceX content.
+  // Ordered: billionaire_wealth first (more specific person+money context),
+  // then money_finance for pure finance topics without a named person.
+  if (/billionaire|ultra.wealthy|top.1.percent|richest.man|wealthiest|net.worth.*billion|warren.buffett|jeff.bezos|elon.musk.*wealth|mark.zuckerberg.*wealth|luxury.habit|luxury.lifestyle|wealth.habit/.test(combined)) return 'billionaire_wealth'
+  if (/bitcoin|crypto|investing|stock.market|wall.street|compound.interest|savings.account|financial.freedom|personal.finance|money.tip|credit.card.trick/.test(combined)) return 'money_finance'
 
   return null
 }
