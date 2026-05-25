@@ -9,11 +9,13 @@ import Stripe from 'stripe'
 export const dynamic = 'force-dynamic'
 
 type Tier = 'basic' | 'pro'
-type Currency = 'usd' | 'brl'
+type Currency = 'usd' | 'brl' | 'inr'
 
-// Push #193 — updated pricing.
-//   Basic:  $4.90 / month  (USD)  |  R$24.90 / month  (BRL)
-//   Pro:    $9.90 / month  (USD)  |  R$49.90 / month  (BRL)
+// Push #273 — multi-currency support.
+//   Basic:  $4.90 / month  (USD)  |  R$24.90 / month  (BRL)  |  ₹399 / month  (INR)
+//   Pro:    $9.90 / month  (USD)  |  R$49.90 / month  (BRL)  |  ₹799 / month  (INR)
+// Currency is auto-detected from the visitor's IP country (Vercel header).
+// Payment methods are automatic (Stripe chooses card / UPI / PIX / etc. per country).
 // Hosted payment links (direct, no session needed):
 //   Basic: https://buy.stripe.com/14A28reRf6jtcev48CgjC0r
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
@@ -30,10 +32,19 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
 }
 
-// Amounts in the smallest currency unit (cents / centavos).
+// Amounts in the smallest currency unit (cents / centavos / paise).
+// INR: ₹399 = 39900 paise (Basic), ₹799 = 79900 paise (Pro).
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 490,  brl: 2490 },
-  pro:   { usd: 990,  brl: 4990 },
+  basic: { usd: 490,  brl: 2490, inr: 39900 },
+  pro:   { usd: 990,  brl: 4990, inr: 79900 },
+}
+
+// Map Vercel IP-country header → billing currency.
+// Everyone not explicitly mapped gets USD.
+function resolveCurrency(country: string): Currency {
+  if (country === 'BR') return 'brl'
+  if (country === 'IN') return 'inr'
+  return 'usd'
 }
 
 // ─── Shared checkout-session builder ────────────────────────────────────────
@@ -60,7 +71,7 @@ async function buildAndRedirect(
   }
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: Currency = country === 'BR' ? 'brl' : 'usd'
+  const currency: Currency = resolveCurrency(country)
   const plan = TIERS[tier]
   const unitAmount = TIER_PRICES[tier][currency]
 
@@ -135,11 +146,15 @@ async function buildAndRedirect(
     }
   }
 
-  // Push #265 — remove free trial. No more trial_period_days: payment is
-  // required upfront. Credits are granted immediately at checkout completion.
+  // Push #273 — automatic_payment_methods replaces hardcoded ['card'].
+  // Stripe now picks the best method per country/currency automatically:
+  //   IN + INR → shows UPI, RuPay, cards
+  //   BR + BRL → shows PIX, cards (if PIX enabled in Stripe dashboard)
+  //   US + USD → shows cards, Link, etc.
+  // Credits are granted immediately at checkout completion (no trial).
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
-    payment_method_types: ['card'],
+    automatic_payment_methods: { enabled: true },
     line_items: [
       {
         price_data: {
