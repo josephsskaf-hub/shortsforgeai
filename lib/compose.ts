@@ -4,6 +4,7 @@
 // module load) when it isn't needed. The TTS / script-scaling functions
 // dynamically import it below.
 
+import { toFile } from 'openai'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 import { stripScriptMarkers } from '@/lib/scriptParser'
@@ -48,8 +49,17 @@ export interface ComposeInputs {
    * produced by buildCaptionSegments(voiceoverScript, 7). When present, the
    * caption builder uses these exact timestamps instead of the proportional
    * word-count approximation, eliminating caption/narrator desync.
+   * @deprecated in Push #258 — prefer whisperWords for drift-free captions
    */
   whisperTimings?: Array<{ time: number; duration: number }>
+  /**
+   * Push #258 — raw Whisper word-level timestamps. When present, captions are
+   * built DIRECTLY from these words (grouped into ≤7-word chunks) rather than
+   * mapping script-text segments to Whisper timing. This eliminates the word-
+   * count drift bug where numbers spoken differently by TTS (e.g. "63%" as
+   * "sixty three percent") caused captions to desync from the narrator's voice.
+   */
+  whisperWords?: WhisperWord[]
 }
 
 export interface CreatomateRenderState {
@@ -280,11 +290,15 @@ export interface WhisperWord {
 export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<WhisperWord[]> {
   try {
     const { openai } = await import('@/lib/openai')
-    const blob = new Blob(
+    // Push #258 — use openai's `toFile` helper instead of `new File(...)`.
+    // `File` is a Web API not available in Node.js 18 (Vercel's default
+    // runtime). `toFile` works in both Node.js 18 and 20 and sets the correct
+    // filename + MIME type the Whisper API requires.
+    const audioBlob = new Blob(
       [new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)],
       { type: 'audio/mpeg' },
     )
-    const file = new File([blob], 'voiceover.mp3', { type: 'audio/mpeg' })
+    const file = await toFile(audioBlob, 'voiceover.mp3', { type: 'audio/mpeg' })
     // verbose_json + word granularity returns {word, start, end} per token.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const transcription: any = await openai.audio.transcriptions.create({
@@ -384,6 +398,61 @@ export function mapWhisperTimingsToSegments(
       duration: Math.round(duration * 1000) / 1000,
     })
     wIdx += nWords
+  }
+
+  return result
+}
+
+/**
+ * Push #258 — Build caption segments DIRECTLY from Whisper word timestamps.
+ *
+ * Why this replaces the old script→Whisper mapping approach:
+ *   The old flow grouped script words into 7-word chunks then looked up those
+ *   chunks' timings from Whisper. Numbers caused drift: "63%" is 1 word in
+ *   the script but TTS speaks it as "sixty three percent" (3 Whisper words).
+ *   Each such mismatch shifted subsequent captions earlier until by the end
+ *   the captions were several beats ahead of the narrator.
+ *
+ *   This function bypasses the script entirely. It takes Whisper's own words
+ *   (the ACTUAL spoken transcript) and groups them into ≤maxWords chunks.
+ *   Caption text comes from Whisper, timing comes from Whisper — perfect
+ *   sync is guaranteed regardless of how numbers or abbreviations are spoken.
+ */
+export function buildCaptionsFromWhisperWords(
+  words: WhisperWord[],
+  totalAudioDuration: number,
+  ctaTailSeconds: number,
+  maxWords = 7,
+): Array<{ text: string; time: number; duration: number; highlight: string | null }> {
+  if (words.length === 0) return []
+
+  // Only include words that start before the caption window ends (i.e. before the CTA).
+  const captionWindowEnd = Math.max(0, totalAudioDuration - ctaTailSeconds)
+  const windowWords = words.filter((w) => w.start < captionWindowEnd)
+  if (windowWords.length === 0) return []
+
+  const result: Array<{ text: string; time: number; duration: number; highlight: string | null }> = []
+
+  for (let i = 0; i < windowWords.length; i += maxWords) {
+    const chunk = windowWords.slice(i, i + maxWords)
+    const text = chunk.map((w) => w.word).join(' ').trim()
+    if (!text) continue
+
+    // Caption starts when its first word is spoken (+ sync offset).
+    const rawStart = chunk[0].start
+    const adjustedStart = Math.max(0, rawStart + CAPTION_SYNC_OFFSET)
+
+    // Caption ends when next chunk's first word starts, or at window end.
+    const nextChunk = windowWords[i + maxWords]
+    const endTime = nextChunk ? nextChunk.start : captionWindowEnd
+    const duration = Math.max(0.1, endTime - rawStart)
+
+    result.push({
+      text,
+      time: round3(adjustedStart),
+      duration: round3(duration),
+      highlight: pickHighlightWord(text),
+    })
   }
 
   return result
@@ -677,6 +746,7 @@ export function buildCreatomateSource({
   duration,
   realAudioDuration,
   whisperTimings,
+  whisperWords,
 }: ComposeInputs): Record<string, unknown> {
   // Push #199 — use the REAL TTS audio duration as the master timeline length
   // instead of the user-requested duration. This eliminates both the "black
@@ -812,63 +882,62 @@ export function buildCreatomateSource({
     volume: '100%',
   })
 
-  // Track 5 — captions. Push #066 — ≤7-word viral-style segments with a
-  // per-segment highlight word so the renderer can paint the line yellow
-  // when an impactful keyword is present. Caption text comes from the
-  // voiceover script first so it matches what the narrator says; falls back
-  // to scene descriptions only when no script is available.
+  // Track 5 (+ Track 7 for keyword pops) — captions.
   //
-  // Push #158 — two desync fixes:
-  //   1. The window is sized to the REAL measured audio duration
-  //      (realAudioDuration - CTA tail), not the requested duration. The
-  //      old code assumed a fixed 2.5 wps pace the TTS never actually hit.
-  //   2. Slots are word-count-proportional, not equal width — a 2-word
-  //      caption no longer holds the screen as long as a 7-word one, so
-  //      captions track the narration cadence instead of drifting.
-  const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
-  const captionsClean: CaptionSegment[] = scriptSegments.length > 0
-    ? scriptSegments
-    : sceneCaptions
-        .map((c) => (c ?? '').toString().trim())
-        .filter((c) => c.length > 0)
-        .map((text) => ({ text, highlight: pickHighlightWord(text) }))
-  if (captionsClean.length > 0) {
-    // Real audio is usually shorter than the requested duration; cap at
-    // totalDuration so a long take can't push captions past the video end.
-    const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
-    const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
-    const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
-    // Push #175 — use Whisper word-level timestamps when available. Fall back
-    // to proportional word-count distribution only when transcription was
-    // absent, failed, or returned a different segment count.
-    const hasWhisperTimings =
-      Array.isArray(whisperTimings) && whisperTimings.length === captionsClean.length
-    let elapsed = 0
-    captionsClean.forEach((segment, idx) => {
-      let time: number
-      let slot: number
-      if (hasWhisperTimings) {
-        // Exact timings from Whisper — captions key to the narrator's actual
-        // speech; no elapsed tracking needed.
-        time = whisperTimings![idx].time
-        slot = whisperTimings![idx].duration
-      } else {
-        // Proportional fallback: each segment gets a slice proportional to
-        // word count. Last slot absorbs rounding drift.
+  // Push #258 — DIRECT WHISPER PATH (primary, drift-free):
+  //   When whisperWords are available, captions are built directly from Whisper's
+  //   own transcript words grouped into ≤7-word chunks. Caption text + timing both
+  //   come from Whisper, so there is zero possibility of desync caused by number
+  //   expansion (e.g. script "63%" vs TTS "sixty three percent"). This replaces the
+  //   old script-segment → Whisper-timing mapping that drifted on number-heavy scripts.
+  //
+  // PROPORTIONAL FALLBACK (when Whisper is unavailable):
+  //   Falls back to script-text segments with word-count-proportional timing.
+  //   This is less accurate but always produces something on screen.
+  if (Array.isArray(whisperWords) && whisperWords.length > 0) {
+    // Direct path — perfect sync guaranteed.
+    const directCaps = buildCaptionsFromWhisperWords(
+      whisperWords,
+      masterDuration,
+      CTA_TAIL_SECONDS,
+      7,
+    )
+    for (const cap of directCaps) {
+      elements.push(...buildCaptionElements({
+        text: cap.text,
+        time: cap.time,
+        duration: cap.duration,
+        highlight: cap.highlight,
+      }))
+    }
+  } else {
+    // Proportional fallback — script segments with word-count proportional slots.
+    const scriptSegments = buildCaptionSegments(voiceoverScript, 7)
+    const captionsClean: CaptionSegment[] = scriptSegments.length > 0
+      ? scriptSegments
+      : sceneCaptions
+          .map((c) => (c ?? '').toString().trim())
+          .filter((c) => c.length > 0)
+          .map((text) => ({ text, highlight: pickHighlightWord(text) }))
+    if (captionsClean.length > 0) {
+      const measured = realAudioDuration && realAudioDuration > 0 ? realAudioDuration : totalDuration
+      const captionWindow = Math.max(2, Math.min(measured, totalDuration) - CTA_TAIL_SECONDS)
+      const totalWords = captionsClean.reduce((sum, c) => sum + wordCount(c.text), 0) || captionsClean.length
+      let elapsed = 0
+      captionsClean.forEach((segment, idx) => {
         const portion = (wordCount(segment.text) || 1) / totalWords
         const isLast = idx === captionsClean.length - 1
-        slot = isLast ? Math.max(0.1, captionWindow - elapsed) : portion * captionWindow
-        time = elapsed
+        const slot = isLast ? Math.max(0.1, captionWindow - elapsed) : portion * captionWindow
+        const time = elapsed
         elapsed += slot
-      }
-      const elementsForCaption = buildCaptionElements({
-        text: segment.text,
-        time: round3(time),
-        duration: round3(slot),
-        highlight: segment.highlight,
+        elements.push(...buildCaptionElements({
+          text: segment.text,
+          time: round3(time),
+          duration: round3(slot),
+          highlight: segment.highlight,
+        }))
       })
-      elements.push(...elementsForCaption)
-    })
+    }
   }
 
   // Track 6 — CTA in the final 2.5s.
