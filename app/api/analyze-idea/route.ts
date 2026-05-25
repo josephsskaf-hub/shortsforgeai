@@ -483,6 +483,11 @@ Return ONLY the JSON object — no markdown, no commentary.`
 
     let brief: CreativeBrief = fallback
     try {
+      // Push #260 — disable OpenAI SDK retries. The SDK retries 2× by default;
+      // with a 28s timeout that means worst-case 28s × 3 = 84s total, which
+      // blows past Vercel's 60s function limit and causes a 504. With
+      // maxRetries:0, a slow OpenAI response throws after 28s and we fall
+      // through to the fallbackBrief instead of timing out the whole function.
       const completion = await openai.chat.completions.create(
         {
           model: 'gpt-4o-mini',
@@ -495,7 +500,7 @@ Return ONLY the JSON object — no markdown, no commentary.`
           max_tokens: duration >= 80 ? 3200 : 1800,
           response_format: { type: 'json_object' },
         },
-        { timeout: 28000 }
+        { timeout: 28000, maxRetries: 0 }
       )
       const raw = completion.choices[0]?.message?.content?.trim() ?? ''
       if (!raw) throw new Error('Empty response from OpenAI')
