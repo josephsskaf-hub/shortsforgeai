@@ -244,13 +244,17 @@ function PlanCard({
       tabIndex={isPaid ? 0 : undefined}
       aria-pressed={isPaid ? isSelected : undefined}
       onClick={() => {
-        if (isPaid && onSelect) onSelect()
+        // Push #261 — card click goes directly to checkout (1-click flow).
+        // Previously clicking the card only selected it visually; the user
+        // had to click the CTA button separately. Now both the card and the
+        // button trigger checkout immediately.
+        if (isPaid && cta) cta.onClick()
       }}
       onKeyDown={(e) => {
-        if (!isPaid || !onSelect) return
+        if (!isPaid || !cta) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onSelect()
+          cta.onClick()
         }
       }}
       className="rounded-2xl p-6 relative overflow-hidden flex flex-col transition-all duration-200"
@@ -336,7 +340,6 @@ function PlanCard({
         <button
           onClick={(e) => {
             e.stopPropagation()
-            if (isPaid && onSelect) onSelect()
             cta.onClick()
           }}
           disabled={cta.loading}
