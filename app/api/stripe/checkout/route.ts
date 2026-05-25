@@ -243,4 +243,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ─── POST handl
+// ─── POST handler (kept for backward compat / non-iOS clients) ──────────────
+export async function POST(req: NextRequest) {
+  try {
+    let tier: Tier = 'basic'
+    try {
+      const body = await req.json().catch(() => null)
+      if (body?.tier === 'pro') tier = 'pro'
+      else if (body?.tier === 'basic' || body?.tier === 'creator') tier = 'basic'
+    } catch {
+      // ignore body parse errors and use default tier
+    }
+    return await buildAndRedirect(req, tier, false)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[stripe/checkout POST] Unexpected error:', msg)
+    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 })
+  }
+}

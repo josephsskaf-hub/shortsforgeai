@@ -260,4 +260,80 @@ export async function POST(req: NextRequest) {
           .eq('id', renewalUserId)
 
         if (renewErr) {
-          console.error('[stripe webhook] renewal credit refill failed:'
+          console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
+        } else {
+          console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
+        }
+        break
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription
+        const customerId = subscription.customer as string
+        const isActive =
+          subscription.status === 'active' || subscription.status === 'trialing'
+
+        await supabase
+          .from('profiles')
+          .update({
+            is_pro: isActive,
+            stripe_subscription_id: subscription.id,
+          })
+          .eq('stripe_customer_id', customerId)
+
+        break
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription
+        const customerId = subscription.customer as string
+
+        // Push #088 — wipe cinematic_tokens on cancellation so a former
+        // Pro user can't keep a stranded Runway token after their plan
+        // lapses. Regular credits stay (they were already paid for).
+        await supabase
+          .from('profiles')
+          .update({
+            is_pro: false,
+            plan: 'free',
+            stripe_subscription_id: null,
+            cinematic_tokens: 0,
+          })
+          .eq('stripe_customer_id', customerId)
+
+        break
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice
+        const customerId = invoice.customer as string
+
+        if (!customerId) {
+          console.warn('[stripe webhook] payment_failed without customer id')
+          break
+        }
+
+        const { error: revokeErr } = await supabase
+          .from('profiles')
+          .update({ is_pro: false, plan: 'free' })
+          .eq('stripe_customer_id', customerId)
+
+        if (revokeErr) {
+          console.error('[stripe webhook] failed to revoke access on payment_failed:', revokeErr.message, customerId)
+        } else {
+          console.log('[stripe webhook] revoked access for customer:', customerId)
+        }
+        break
+      }
+
+      default:
+        // Unhandled event type — log and continue
+        console.log('Unhandled webhook event type:', event.type)
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('Webhook handler error:', error)
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
+  }
+}
