@@ -20,7 +20,6 @@ interface AdminUserRow {
   videos_count: number
   last_video_at: string | null
   plan: string | null
-  checkout_abandoned: boolean
 }
 
 interface Props {
@@ -125,11 +124,6 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
         paidNoCredits++
       }
     }
-    // Push #274 — count abandoned checkouts
-    let checkoutAbandoned = 0
-    for (const u of users) {
-      if (u.checkout_abandoned) checkoutAbandoned++
-    }
     return {
       total: users.length,
       newToday,
@@ -139,7 +133,6 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
       basic,
       free,
       paidNoCredits,
-      checkoutAbandoned,
     }
   }, [users])
 
@@ -230,52 +223,8 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
             hint="pro/basic with no credits"
             accent={stats?.paidNoCredits ? '#f87171' : '#34d399'}
           />
-          <MetricCard
-            label="Checkout abandonado 🔥"
-            value={stats?.checkoutAbandoned ?? null}
-            hint="Stripe customer criado, sem plano pago"
-            accent={stats?.checkoutAbandoned ? '#fb923c' : '#94a3b8'}
-          />
         </div>
       </section>
-
-      {/* Push #274 — Checkout abandoned spotlight table */}
-      {users && users.filter(u => u.checkout_abandoned).length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: '#fb923c' }}>
-            🔥 Checkout Abandonado — leads quentes
-          </h2>
-          <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
-            Esses usuários criaram um customer no Stripe mas não finalizaram o pagamento. São os mais próximos de converter.
-          </p>
-          <div className="rounded-2xl overflow-x-auto" style={{ background: 'var(--card)', border: '1px solid rgba(251,146,60,0.3)' }}>
-            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'rgba(11,17,32,0.5)' }}>
-                  <Th>Email</Th>
-                  <Th>Name</Th>
-                  <Th>Joined</Th>
-                  <Th align="right">Videos made</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {users
-                  .filter(u => u.checkout_abandoned)
-                  .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-                  .map(u => (
-                    <tr key={u.id} style={{ borderTop: '1px solid var(--border)' }}>
-                      <Td mono>{u.email || '—'}</Td>
-                      <Td>{u.name || '—'}</Td>
-                      <Td>{fmtDate(u.created_at)}</Td>
-                      <Td align="right">{fmt(u.videos_count)}</Td>
-                    </tr>
-                  ))
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       {/* Push #255 — Paid subscribers spotlight table */}
       {users && users.filter(u => {
@@ -539,4 +488,91 @@ function PlanBadge({ plan, credits }: { plan: string | null; credits: number | n
         <span
           className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
           style={{ background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}
-        
+        >
+          Basic
+        </span>
+        {!hasCredits && (
+          <span title="0 credits — check webhook" style={{ color: '#f87171', fontSize: 12 }}>⚠️</span>
+        )}
+      </span>
+    )
+  }
+  return <span style={{ color: 'var(--muted)', fontSize: 12 }}>Free</span>
+}
+
+function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
+  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users'; label: string; href: string }> = [
+    { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
+    { key: 'funnel', label: 'Funnel', href: '/admin/funnel' },
+    { key: 'users', label: 'Users', href: '/admin/users' },
+  ]
+  return (
+    <nav className="mt-4 flex items-center gap-2 flex-wrap">
+      {tabs.map((t) => {
+        const isActive = t.key === active
+        return (
+          <Link
+            key={t.key}
+            href={t.href}
+            className="text-xs font-bold rounded-lg px-3 py-1.5"
+            style={{
+              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
+              color: isActive ? '#22D3EE' : 'var(--muted2)',
+              textDecoration: 'none',
+            }}
+          >
+            {t.label}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
+function Th({
+  children,
+  align = 'left',
+}: {
+  children: React.ReactNode
+  align?: 'left' | 'right' | 'center'
+}) {
+  return (
+    <th
+      className="font-black uppercase tracking-widest"
+      style={{
+        fontSize: '0.62rem',
+        color: 'var(--muted)',
+        textAlign: align,
+        padding: '10px 14px',
+      }}
+    >
+      {children}
+    </th>
+  )
+}
+
+function Td({
+  children,
+  align = 'left',
+  mono,
+}: {
+  children: React.ReactNode
+  align?: 'left' | 'right' | 'center'
+  mono?: boolean
+}) {
+  return (
+    <td
+      style={{
+        padding: '10px 14px',
+        color: 'var(--text)',
+        textAlign: align,
+        fontFamily: mono ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : undefined,
+        fontSize: mono ? '0.82rem' : undefined,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </td>
+  )
+}

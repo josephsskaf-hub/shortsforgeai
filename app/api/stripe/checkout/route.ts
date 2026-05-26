@@ -228,4 +228,21 @@ async function buildAndRedirect(
 }
 
 // ─── GET handler (iOS Safari safe — server-side redirect) ────────────────────
-// Buttons set window.location.href = '/api/stripe/che
+// Buttons set window.location.href = '/api/stripe/checkout?tier=basic' so
+// the browser navigates synchronously (no await / no gesture-chain break).
+export async function GET(req: NextRequest) {
+  try {
+    const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
+    const tier: Tier = tierParam === 'pro' ? 'pro' : 'basic'
+    return await buildAndRedirect(req, tier, true)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[stripe/checkout GET] Unexpected error:', msg)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+    return NextResponse.redirect(
+      `${appUrl}/pricing?checkout_error=${encodeURIComponent('An unexpected error occurred. Please try again.')}`
+    )
+  }
+}
+
+// ─── POST handl
