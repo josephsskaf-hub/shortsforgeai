@@ -27,4 +27,17 @@ export async function GET(request: Request) {
         const lastSignIn = data.user?.last_sign_in_at
         if (createdAt && lastSignIn) {
           const diffMs = Math.abs(new Date(lastSignIn).getTime() - new Date(createdAt).getTime())
-          isNewUser = diffMs < 10_000 // within 10 
+          isNewUser = diffMs < 10_000 // within 10 s → brand-new account
+        }
+      } catch {
+        /* ignore */
+      }
+      const dest = isNewUser
+        ? `${origin}/pricing?signup=1`
+        : `${origin}${resolveDestination(rawNext, false)}`
+      return NextResponse.redirect(dest)
+    }
+  }
+
+  return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+}
