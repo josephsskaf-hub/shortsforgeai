@@ -2239,87 +2239,133 @@ export default function GenerateClient() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-3 mt-7">
+              {/* Push #296 — redesigned action section. Download is the primary
+                  CTA (big green button, full width). Secondary actions in a
+                  compact row below. WhatsApp added for mobile sharing. */}
+              <div
+                className="mt-7 w-full flex flex-col items-center gap-3"
+                style={{ maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}
+              >
+                {/* Primary: big green Download */}
                 <a
                   href={finalVideoUrl}
                   download={`shortsforgeai-${duration}s.mp4`}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+                  className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-                    border: 'none',
-                    color: '#fff',
+                    background: 'linear-gradient(135deg, #22C55E, #15803D)',
                     textDecoration: 'none',
-                    boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+                    boxShadow: '0 8px 28px rgba(34,197,94,.45)',
+                    letterSpacing: '-0.01em',
+                    fontSize: '1rem',
                   }}
                 >
-                  ⬇ Download MP4
+                  <span style={{ fontSize: '1.15rem' }}>⬇</span>
+                  Download Your Short ({duration}s · MP4)
                 </a>
+
+                {/* Secondary row: preview + copy + whatsapp + more + X */}
+                <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                  <a
+                    href={finalVideoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    style={{
+                      background: 'rgba(255,255,255,.06)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    ▶ Preview
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    style={{
+                      background: copied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.06)',
+                      border: copied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
+                      color: copied ? '#34d399' : 'var(--text)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {copied ? '✓ Copied!' : '🔗 Copy link'}
+                  </button>
+                  {/* WhatsApp — great for mobile / creator sharing */}
+                  <a
+                    href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A shortsforgeai.com`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    style={{
+                      background: 'rgba(37,211,102,.10)',
+                      border: '1px solid rgba(37,211,102,.35)',
+                      color: '#25D366',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    📲 WhatsApp
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    style={{
+                      background: 'rgba(255,255,255,.06)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    📤 More
+                  </button>
+                  {/* Push #101 — one-click X intent for organic distribution. */}
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at shortsforgeai.com %23YouTubeShorts %23AIVideo`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    style={{
+                      background: 'rgba(255,255,255,.06)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    𝕏 Share
+                  </a>
+                </div>
+
+                {/* Quick-access to YouTube Studio right from the result page */}
                 <a
-                  href={finalVideoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
-                  style={{
-                    background: 'rgba(255,255,255,.05)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ▶ Open in New Tab
-                </a>
-                <button
-                  type="button"
-                  onClick={handleCopyUrl}
-                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
-                  style={{
-                    background: copied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.05)',
-                    border: copied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
-                    color: copied ? '#34d399' : 'var(--text)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {copied ? '✓ Copied' : '🔗 Copy URL'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
-                  style={{
-                    background: 'rgba(255,255,255,.05)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  📤 Share
-                </button>
-                {/* Push #101 — one-click X intent for organic distribution.
-                    Opens in a new tab with prefilled copy + hashtags. */}
-                <a
-                  href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at shortsforgeai.com %23YouTubeShorts %23AIVideo`}
+                  href="https://studio.youtube.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl px-5 py-2.5 text-sm font-bold"
+                  className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
                   style={{
-                    background: 'rgba(255,255,255,.05)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
+                    background: 'rgba(255,0,0,.08)',
+                    border: '1px solid rgba(255,0,0,.28)',
+                    color: '#ff4444',
                     textDecoration: 'none',
-                    cursor: 'pointer',
                   }}
                 >
-                  𝕏 Share on X
+                  <span>▶</span> Upload to YouTube Studio
                 </a>
               </div>
 
-              {/* Push #156 — Next-steps guide. Collapsible checklist that walks
-                  the user from a finished render to a published Short. */}
+              {/* Push #156 — Next-steps guide. Open by default (Push #296)
+                  so users always see the 3-step publishing flow. */}
               <details
+                open
                 className="rounded-2xl mt-6 w-full"
                 style={{
                   maxWidth: 480,
@@ -2331,7 +2377,7 @@ export default function GenerateClient() {
                   className="cursor-pointer select-none px-5 py-3 text-sm font-black"
                   style={{ color: '#22D3EE', listStyle: 'none' }}
                 >
-                  What to do next ▾
+                  ✅ What to do next ▾
                 </summary>
                 <div className="px-5 pb-5 pt-1 flex flex-col gap-3">
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
