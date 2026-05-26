@@ -623,9 +623,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           behind the hero text). Cleaner solid-dark hero without the
           autoplay video. */}
       <div style={{ minHeight: '88vh' }}>
-      <section className="relative mx-auto max-w-6xl px-4 pt-20 pb-12 sm:px-6 sm:pt-32 sm:pb-20" style={{ zIndex: 2 }}>
+      <section className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
-        <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl text-[#F1F5F9]">
+        <h1 className="text-balance text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl text-[#F1F5F9]">
           Turn Any Idea Into a{' '}
           <span
             className="text-[#22D3EE]"
@@ -682,7 +682,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             trackHomepageEvent('hero_prompt_box_submit')
             goToGenerate()
           }}
-          className="mx-auto mt-8 flex w-full max-w-[640px] flex-col gap-4 rounded-2xl border border-white/[0.1] bg-[#0B1120]/90 p-4 shadow-[0_18px_50px_rgba(0,0,0,.5)] backdrop-blur-md transition focus-within:border-cyan-400/60 sm:p-5"
+          className="mx-auto mt-8 flex w-full max-w-[760px] flex-col gap-4 rounded-2xl border border-white/[0.1] bg-[#0B1120]/90 p-4 shadow-[0_18px_50px_rgba(0,0,0,.5)] backdrop-blur-md transition focus-within:border-cyan-400/60 sm:p-5"
         >
           <textarea
             value={prompt}
@@ -691,7 +691,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             maxLength={5000}
             rows={7}
             className="w-full flex-1 resize-none rounded-xl bg-transparent px-3 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none"
-            style={{ minHeight: 200 }}
+            style={{ minHeight: 240 }}
           />
           <button
             type="submit"
