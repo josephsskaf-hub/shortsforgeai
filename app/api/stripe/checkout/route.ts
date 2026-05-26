@@ -146,15 +146,13 @@ async function buildAndRedirect(
     }
   }
 
-  // Push #273 — automatic_payment_methods replaces hardcoded ['card'].
-  // Stripe now picks the best method per country/currency automatically:
-  //   IN + INR → shows UPI, RuPay, cards
-  //   BR + BRL → shows PIX, cards (if PIX enabled in Stripe dashboard)
-  //   US + USD → shows cards, Link, etc.
+  // Push #273 — multi-currency (USD/BRL/INR). Payment methods via explicit list
+  // so the Stripe SDK version stays compatible with subscription mode.
+  // Stripe dashboard controls which methods are active per currency/country.
   // Credits are granted immediately at checkout completion (no trial).
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
-    automatic_payment_methods: { enabled: true },
+    payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
@@ -230,21 +228,4 @@ async function buildAndRedirect(
 }
 
 // ─── GET handler (iOS Safari safe — server-side redirect) ────────────────────
-// Buttons set window.location.href = '/api/stripe/checkout?tier=basic' so
-// the browser navigates synchronously (no await / no gesture-chain break).
-export async function GET(req: NextRequest) {
-  try {
-    const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
-    const tier: Tier = tierParam === 'pro' ? 'pro' : 'basic'
-    return await buildAndRedirect(req, tier, true)
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[stripe/checkout GET] Unexpected error:', msg)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
-    return NextResponse.redirect(
-      `${appUrl}/pricing?checkout_error=${encodeURIComponent('An unexpected error occurred. Please try again.')}`
-    )
-  }
-}
-
-// ─── POST handl
+// Buttons set window.location.href = '/api/stripe/che
