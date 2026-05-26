@@ -12,21 +12,28 @@ export const viewport: Viewport = {
   maximumScale: 5,
 }
 
+// Push #297 — meta title + description rewritten for Google Ads Quality
+// Score alignment. Matching keyword density between ad copy and landing
+// page increases relevance score → better Ad Rank → higher CTR.
 export const metadata: Metadata = {
-  title: 'ShortsForgeAI — Turn Ideas Into Viral YouTube Shorts in 60 Seconds',
+  title: 'ShortsForgeAI — AI YouTube Shorts Generator · From $4.90/mo',
   description:
-    'AI-powered YouTube Shorts generator. Write a topic, get a fully edited Short with voiceover, footage, and captions. Free to try.',
+    'Turn any topic into a viral YouTube Short in 60 seconds. AI writes the script, finds footage, adds voiceover & captions. From $4.90/mo · 7-day money-back guarantee.',
   keywords: [
-    'YouTube Shorts',
+    'YouTube Shorts generator',
+    'AI YouTube Shorts creator',
+    'AI short video generator',
+    'make YouTube Shorts automatically',
+    'YouTube Shorts maker AI',
     'AI video generator',
-    'short form video',
-    'YouTube automation',
-    'viral shorts',
+    'viral shorts creator',
+    'YouTube automation tool',
+    'short form video AI',
   ],
   openGraph: {
-    title: 'ShortsForgeAI — Viral YouTube Shorts in 60 Seconds',
+    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'AI writes, voices, and edits your YouTube Shorts automatically. Join 500+ creators. 1 free video, no credit card.',
+      'Type a topic. AI writes, voices & edits your YouTube Short automatically. From $4.90/mo · 7-day money-back guarantee · No editing skills needed.',
     url: 'https://shortsforgeai.vercel.app',
     siteName: 'ShortsForgeAI',
     images: [
@@ -40,9 +47,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ShortsForgeAI — Viral YouTube Shorts in 60 Seconds',
+    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'AI writes, voices, and edits your YouTube Shorts. Free to try.',
+      'Type a topic. AI writes, voices & edits your YouTube Short in 60 seconds. From $4.90/mo · Try free today.',
     images: ['https://shortsforgeai.vercel.app/og-image.png'],
   },
   icons: {
