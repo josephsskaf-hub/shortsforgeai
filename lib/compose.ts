@@ -708,36 +708,11 @@ export function buildCaptionElements({
     enter_transition: { type: 'fade', duration: 0.1 },
   }
 
-  try {
-    const candidate = (highlight && highlight.trim()) || pickHighlightWord(text)
-    if (candidate && candidate.trim().length > 0) {
-      // White base caption stays on track 5 (y:79%).
-      // Yellow keyword "pop" appears on track 7 (y:67%) — 12% above the white pill.
-      // 12% gap on a 1920px canvas ≈ 230px, which fully clears the white caption
-      // even when it wraps to 2 lines at font_size 52.
-      const keywordPop: CreatomateElement = {
-        type: 'text',
-        track: 7,
-        time,
-        duration,
-        text: candidate.toUpperCase(),
-        x: '50%',
-        y: '67%',
-        width: '88%',
-        font_family: 'Montserrat',
-        font_size: 64,
-        font_weight: '900',
-        fill_color: HIGHLIGHT_COLOR,
-        stroke_color: 'rgba(0,0,0,0.95)',
-        stroke_width: 5,
-        enter_transition: { type: 'pop', duration: 0.12 },
-      }
-      return [baseCaption, keywordPop]
-    }
-    return [baseCaption]
-  } catch {
-    return [baseCaption]
-  }
+  // Push #277 — remove yellow keyword pop (track 7). The two-layer approach
+  // (white caption on track 5 + yellow word on track 7) was rendering as two
+  // visible subtitle lines which looked like duplicate/random captions to viewers.
+  // Single white caption only — clean, no confusion, timing already perfect.
+  return [baseCaption]
 }
 
 /**
@@ -1099,3 +1074,4 @@ export async function pollCreatomateRender(renderId: string): Promise<Creatomate
     error: typeof data.error_message === 'string' ? data.error_message : null,
   }
 }
+                                                                                                                                                                                                                                                                                                                
