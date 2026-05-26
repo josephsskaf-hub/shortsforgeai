@@ -143,4 +143,6 @@ shortsforgeai.com`
     return NextResponse.json({ sent: true, id: data.id })
   } catch (err) {
     console.error('[send-welcome] Unexpected error:', err)
-    return NextRes
+    return NextResponse.json({ sent: false, error: 'Welcome email could not be sent.' })
+  }
+}
