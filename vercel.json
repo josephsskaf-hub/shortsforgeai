@@ -3,6 +3,5 @@
     {
       "path": "/api/cron/reset-cinematic-tokens",
       "schedule": "0 0 1 * *"
-    }
-  ]
-}
+    },
+    {
