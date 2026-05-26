@@ -88,7 +88,12 @@ export interface CreatomateRenderState {
 // Keep this in lockstep with durationPlanFor() in lib/openai.ts so the
 // analyze-idea script and the scale target agree (and scaleVoiceoverScript's
 // ±15% short-circuit usually skips an extra rewrite).
-const TTS_WORDS_PER_SECOND = 4.0
+// Push #295 — recalibrated to tts-1-hd actual pace (~3.1 wps).
+// Push #292 upgraded the TTS model from tts-1 → tts-1-hd but this constant
+// was never updated. tts-1-hd speaks noticeably slower (~3.1 wps vs ~4.0 wps),
+// so scripts sized at 4.0 wps were ~29% too long → every "45s" video came out
+// ~1:06. Dropping to 3.1 keeps generated audio in the requested window.
+const TTS_WORDS_PER_SECOND = 3.1
 export function targetWordCount(duration: number): number {
   const seconds = Math.max(5, Math.min(120, Math.round(duration)))
   return Math.round(seconds * TTS_WORDS_PER_SECOND)

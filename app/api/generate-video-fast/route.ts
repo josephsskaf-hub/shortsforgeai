@@ -161,48 +161,73 @@ export async function POST(req: NextRequest) {
     // Push #212 (pexels.ts) still applies to reject abstract/wrong footage.
     // Fallback: stockLibrary (Cloudinary demo clips — wrong content but renders).
 
-    const clipUrls: string[] = await Promise.all(
-      scenes.map(async (scene, idx) => {
-        const cat = scene.visualCategory ?? ''
-        const libQuery = cat && cat !== 'general_documentary'
-          ? cat.replace(/_/g, ' ')
-          : (scene.searchKeywords || scene.description)
+    // Push #295 — switched from Promise.all to sequential to enable cross-scene
+    // deduplication. Two bugs fixed here:
+    //
+    // Bug 1 (wrong clips): libQuery was built from visualCategory name
+    // (e.g. "general documentary") instead of the GPT-generated stockSearchQuery
+    // (e.g. "Nazi soldiers WW2 Europe invasion"). Fixed: stockSearchQuery is now
+    // the primary source, with searchKeywords and description as fallbacks.
+    //
+    // Bug 2 (repeated clips): Promise.all ran all Pexels fetches concurrently
+    // with no dedup — the same top-ranking URL came back for similar queries.
+    // Fixed: usedPexelsUrls Set tracks every raw Pexels URL already assigned;
+    // if a duplicate is returned we skip Pexels and use stockLibrary instead
+    // (which uses idx as a seed, so each scene gets a different library clip).
+    const usedPexelsUrls = new Set<string>()
+    const clipUrls: string[] = []
 
-        // Final fallback: stockLibrary (Cloudinary demo — always server-accessible)
-        // In verbatim mode the user's own query routes the fallback too, so even
-        // the safety net stays on-topic.
-        const lib = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 1, idx)
-        const fallbackUrl = lib[0]?.url ?? ''
+    for (let idx = 0; idx < scenes.length; idx++) {
+      const scene = scenes[idx]
+      const cat = scene.visualCategory ?? ''
 
-        // Try Pexels API first (requires PEXELS_API_KEY env var).
-        // Push #216 — Pexels CDN URLs are proxied through Supabase Storage so
-        // Creatomate can download them. ensureAccessibleUrl() downloads the clip
-        // from Pexels server-side (our Vercel is authorized) and caches it in
-        // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
-        //
-        // Push #235 — verbatim mode searches the user's EXACT query directly,
-        // bypassing the category allowedQueries override that would otherwise
-        // swap "SpaceX Starship launch closeup" for a generic "rocket fire night"
-        // (which surfaced a candle clip). Non-verbatim keeps the GPT/category path.
-        const pexelsUrl = verbatim
-          ? await getPexelsVideoForExactQuery(scene.stockSearchQuery)
-          : await getPexelsVideoForScene(
-              scene.searchKeywords,
-              scene.description,
-              scene.stockSearchQuery,
-              scene.voiceover,
-            )
-        if (pexelsUrl) {
-          const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
-          console.log(`[clip] scene=${idx + 1} category=${cat} CACHED url=${cachedUrl.slice(0, 80)}`)
-          return cachedUrl
+      // Bug 1 fix: prefer GPT's specific stockSearchQuery over the generic
+      // visual category name. Falls back to searchKeywords, then description.
+      const libQuery = scene.stockSearchQuery ||
+        scene.searchKeywords ||
+        (cat && cat !== 'general_documentary' ? cat.replace(/_/g, ' ') : scene.description)
+
+      // Final fallback: stockLibrary (Cloudinary demo — always server-accessible)
+      // In verbatim mode the user's own query routes the fallback too, so even
+      // the safety net stays on-topic.
+      const lib = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 1, idx)
+      const fallbackUrl = lib[0]?.url ?? ''
+
+      // Try Pexels API first (requires PEXELS_API_KEY env var).
+      // Push #216 — Pexels CDN URLs are proxied through Supabase Storage so
+      // Creatomate can download them. ensureAccessibleUrl() downloads the clip
+      // from Pexels server-side (our Vercel is authorized) and caches it in
+      // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
+      //
+      // Push #235 — verbatim mode searches the user's EXACT query directly,
+      // bypassing the category allowedQueries override that would otherwise
+      // swap "SpaceX Starship launch closeup" for a generic "rocket fire night"
+      // (which surfaced a candle clip). Non-verbatim keeps the GPT/category path.
+      const rawPexelsUrl = verbatim
+        ? await getPexelsVideoForExactQuery(scene.stockSearchQuery)
+        : await getPexelsVideoForScene(
+            scene.searchKeywords,
+            scene.description,
+            scene.stockSearchQuery,
+            scene.voiceover,
+          )
+
+      // Bug 2 fix: skip Pexels URL if it was already used by a prior scene.
+      const pexelsUrl = rawPexelsUrl && !usedPexelsUrls.has(rawPexelsUrl) ? rawPexelsUrl : null
+
+      if (pexelsUrl) {
+        usedPexelsUrls.add(pexelsUrl)
+        const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
+        console.log(`[clip] scene=${idx + 1} category=${cat} query="${libQuery.slice(0, 40)}" CACHED url=${cachedUrl.slice(0, 80)}`)
+        clipUrls.push(cachedUrl)
+      } else {
+        if (rawPexelsUrl && usedPexelsUrls.has(rawPexelsUrl)) {
+          console.log(`[clip] scene=${idx + 1} category=${cat} DEDUP — pexels url already used, falling back to STOCKLIB`)
         }
-
-        // No Pexels result — use Cloudinary stockLibrary fallback
         console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB url=${fallbackUrl.slice(0, 80)}`)
-        return fallbackUrl
-      })
-    )
+        clipUrls.push(fallbackUrl)
+      }
+    }
 
     const filtered = clipUrls.filter((u) => typeof u === 'string' && u.length > 0)
     if (filtered.length === 0) {
