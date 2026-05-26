@@ -125,7 +125,7 @@ export default function StartPage() {
             </span>
           </p>
           <p style={{ fontSize: '0.9rem', color: '#64748B', margin: 0 }}>
-            Ready in 60 seconds. Start free — no card needed.
+            Ready in 60 seconds. Plans from $4.90/month.
           </p>
         </section>
 
@@ -151,7 +151,7 @@ export default function StartPage() {
               justifyContent: 'center',
             }}
           >
-            Generate My First Short Free →
+            Start Generating Shorts →
           </Link>
           <p
             style={{
@@ -161,7 +161,7 @@ export default function StartPage() {
               fontWeight: 600,
             }}
           >
-            1 free video included · No credit card · Cancel anytime
+            From $4.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </section>
 
@@ -553,7 +553,7 @@ export default function StartPage() {
                 justifyContent: 'center',
               }}
             >
-              Start 7-Day Free Trial →
+              Start Generating Shorts →
             </Link>
             <p
               style={{
@@ -563,7 +563,7 @@ export default function StartPage() {
                 fontWeight: 600,
               }}
             >
-              No charge for 7 days. Cancel anytime.
+              From $4.90/month · 7-day money-back guarantee · Cancel anytime.
             </p>
           </div>
         </section>
@@ -590,10 +590,10 @@ export default function StartPage() {
               justifyContent: 'center',
             }}
           >
-            Generate My First Short Free →
+            Start Generating Shorts →
           </Link>
           <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: 10, fontWeight: 600 }}>
-            No credit card · 1 video free · Ready in 60s
+            From $4.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </section>
 
@@ -617,4 +617,10 @@ export default function StartPage() {
           <span style={{ opacity: 0.4 }}>·</span>
           <span>Money-back guarantee</span>
           <span style={{ opacity: 0.4 }}>·</span>
-          <span
+          <span>No contracts</span>
+        </section>
+      </div>
+      <Footer />
+    </main>
+  )
+}
