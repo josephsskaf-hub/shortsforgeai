@@ -12,6 +12,9 @@ import { stripScriptMarkers } from '@/lib/scriptParser'
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
 const CTA_TAIL_SECONDS = 2.5
+// Push #293 — Background music volume. 18% keeps the phonk audible and
+// energetic without competing with the narrator. InVideo uses 15-20% range.
+const MUSIC_VOLUME = '18%'
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
@@ -60,6 +63,13 @@ export interface ComposeInputs {
    * "sixty three percent") caused captions to desync from the narrator's voice.
    */
   whisperWords?: WhisperWord[]
+  /**
+   * Push #293 — Optional background music URL (Pixabay phonk/motivational).
+   * When present, added as track 8 at MUSIC_VOLUME volume, looping under the
+   * voiceover for the full video duration. Volume is kept low so the narrator
+   * stays clear and dominant.
+   */
+  musicUrl?: string | null
 }
 
 export interface CreatomateRenderState {
@@ -732,6 +742,7 @@ export function buildCreatomateSource({
   realAudioDuration,
   whisperTimings,
   whisperWords,
+  musicUrl,
 }: ComposeInputs): Record<string, unknown> {
   // Push #199 — use the REAL TTS audio duration as the master timeline length
   // instead of the user-requested duration. This eliminates both the "black
@@ -991,6 +1002,23 @@ export function buildCreatomateSource({
     stroke_color: 'rgba(99,102,241,0.9)',
     stroke_width: 2,
   })
+
+  // Track 8 — background music (Push #293).
+  // Phonk / motivational track from Pixabay at low volume, looping under
+  // the voiceover. Starts at t=0, runs the full video duration. The loop
+  // flag re-cycles the track if the video is longer than the audio file.
+  if (musicUrl) {
+    elements.push({
+      type: 'audio',
+      track: 8,
+      time: 0,
+      duration: totalDuration,
+      source: musicUrl,
+      volume: MUSIC_VOLUME,
+      loop: true,
+    })
+    console.log(`[compose] background music added: ${musicUrl.slice(0, 80)}`)
+  }
 
   return {
     output_format: 'mp4',

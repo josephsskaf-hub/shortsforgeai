@@ -14,6 +14,7 @@ import {
 } from '@/lib/compose'
 import { stripScriptMarkers } from '@/lib/scriptParser'
 import { fetchUserPlan } from '@/lib/plan'
+import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
 
 export const maxDuration = 60
 
@@ -320,6 +321,14 @@ export async function POST(req: NextRequest) {
       `[compose] caption source: re-segmented scaled script (${scaledScript.split(/\s+/).filter(Boolean).length} words); scene_captions fallback available=${haveSceneCaptions}`,
     )
 
+    // Push #293 — fetch background music. Best-effort: never block the render.
+    let musicUrl: string | null = null
+    try {
+      musicUrl = await getBackgroundMusicUrl()
+    } catch (err) {
+      console.warn('[compose] music fetch failed, continuing without music:', err instanceof Error ? err.message : String(err))
+    }
+
     let source: Record<string, unknown>
     try {
       source = buildCreatomateSource({
@@ -330,6 +339,7 @@ export async function POST(req: NextRequest) {
         duration,
         realAudioDuration,
         whisperWords,
+        musicUrl,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
