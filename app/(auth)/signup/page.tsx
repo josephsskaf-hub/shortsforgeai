@@ -555,4 +555,17 @@ export default function SignupPage() {
                   <Link
                     href="/login"
                     className="font-semibold transition-colors"
-                    style={{ co
+                    style={{ color: 'var(--indigo-light)' }}
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </>
+  )
+}
