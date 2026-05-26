@@ -10,7 +10,7 @@
 // launch offer.
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
@@ -18,7 +18,7 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to subscribe. Plans start at $4.90/month with no contracts — cancel anytime.',
+    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Basic is $4.90/month and Pro is $9.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -46,27 +46,14 @@ const FAQS: { q: string; a: string }[] = [
 // Free tier still exists for new signups via /signup, but is not shown here
 // to avoid users exploiting the $0 entry point.
 function buildPricing() {
+  // Pro first — anchor pricing: user sees $9.90 first, then $4.90 looks like a deal.
   return [
-    {
-      tier: 'basic',
-      name: 'Basic',
-      price: '$4.90',
-      priceSub: '/ month',
-      tagline: '50 Fast Mode renders/month. Under $0.10 per video.',
-      features: [
-        '50 Fast Mode renders/month',
-        'AI writes script + voiceover',
-        'Auto-captions pipeline',
-        'Download watermark-free MP4',
-        'My Videos history',
-      ],
-      cta: { label: 'Automate Now', href: '#checkout' },
-    },
     {
       tier: 'pro',
       name: 'Pro',
       price: '$9.90',
       priceSub: '/ month',
+      trialLine: '3 days free · then $9.90/mo',
       tagline: 'Full production pipeline. 100 renders + Cinematic AI Engine.',
       features: [
         '100 Fast Mode renders/month',
@@ -76,9 +63,25 @@ function buildPricing() {
         'Download watermark-free MP4',
         'My Videos history',
       ],
-      cta: { label: 'Deploy Full Pipeline', href: '#checkout' },
+      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
       highlight: true,
       popular: true,
+    },
+    {
+      tier: 'basic',
+      name: 'Basic',
+      price: '$4.90',
+      priceSub: '/ month',
+      trialLine: '3 days free · then $4.90/mo',
+      tagline: '50 Fast Mode renders/month. Under $0.10 per video.',
+      features: [
+        '50 Fast Mode renders/month',
+        'AI writes script + voiceover',
+        'Auto-captions pipeline',
+        'Download watermark-free MP4',
+        'My Videos history',
+      ],
+      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
     },
   ]
 }
@@ -124,6 +127,11 @@ export default function PricingPage() {
   // scrolling back up to the cards.
   const [showStickyCta, setShowStickyCta] = useState<boolean>(false)
 
+  // Conversion — exit-intent modal. Fires once when the user's cursor
+  // leaves the viewport through the top (typical "closing tab" motion).
+  const [showExitModal, setShowExitModal] = useState<boolean>(false)
+  const exitShownRef = useRef(false)
+
   // Push #173 — iOS Safari blocks window.location.href inside async/await
   // (user gesture chain is severed after the first await). Fix: navigate
   // directly to the GET checkout endpoint which does a server-side 302
@@ -156,6 +164,19 @@ export default function PricingPage() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Conversion — exit-intent: fire modal once when cursor exits through top
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !exitShownRef.current) {
+        exitShownRef.current = true
+        setShowExitModal(true)
+      }
+    }
+    document.addEventListener('mouseleave', onMouseLeave)
+    return () => document.removeEventListener('mouseleave', onMouseLeave)
   }, [])
 
   return (
@@ -200,6 +221,56 @@ export default function PricingPage() {
         </div>
       </nav>
 
+      {/* ───────── Exit-intent modal ───────── */}
+      {showExitModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setShowExitModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl p-7 text-center"
+            style={{
+              background: '#0B1120',
+              border: '1px solid rgba(34,211,238,.35)',
+              boxShadow: '0 0 60px rgba(34,211,238,.15)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowExitModal(false)}
+              className="absolute top-3 right-4 text-[#94A3B8] hover:text-white text-xl font-bold"
+              aria-label="Close"
+            >×</button>
+            <div className="text-4xl mb-3">⚡</div>
+            <h2 className="text-2xl font-black text-[#F1F5F9] mb-2">
+              Wait — 3 days on us.
+            </h2>
+            <p className="text-[14px] text-[#94A3B8] mb-5 leading-relaxed">
+              Start your free 3-day trial right now. No charge today.<br />
+              Cancel anytime before Day 4 and you owe nothing.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setShowExitModal(false); handleBuy('basic') }}
+              className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
+              style={{ background: 'linear-gradient(135deg,#3B82F6,#22D3EE)', boxShadow: '0 8px 24px rgba(59,130,246,.4)' }}
+            >
+              Try Basic Free — $4.90/mo after →
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowExitModal(false); handleBuy('pro') }}
+              className="w-full rounded-xl py-3 text-[14px] font-extrabold text-[#F1F5F9] mb-3"
+              style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}
+            >
+              Try Pro Free — $9.90/mo after →
+            </button>
+            <p className="text-[11px] text-[#475569]">No charge for 3 days · Cancel before Day 4 = $0</p>
+          </div>
+        </div>
+      )}
+
       {/* ───────── Pricing ───────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-16 sm:px-6 sm:pt-16">
         <div className="mb-10 text-center">
@@ -212,6 +283,21 @@ export default function PricingPage() {
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
             Two plans, flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
           </p>
+
+          {/* Social proof stats row */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {[
+              { icon: '🎬', label: '1,200+ Shorts created' },
+              { icon: '⭐', label: '4.8 / 5 average rating' },
+              { icon: '🔒', label: '7-day money-back guarantee' },
+              { icon: '⚡', label: '3-day free trial — no charge today' },
+            ].map(({ icon, label }) => (
+              <div key={label} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#94A3B8]">
+                <span>{icon}</span>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Push #116 — ROI calculator mini-widget. Maps Shorts/week →
@@ -297,12 +383,10 @@ export default function PricingPage() {
                   }
                 }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
-                  // Push #117 — mobile-first ordering. Pro card jumps to
-                  // the top of the stack on small screens so the
-                  // recommended plan is the first thing a phone user
-                  // sees; desktop keeps the Free → Basic → Pro reading
-                  // order.
-                  p.tier === 'pro' ? 'order-first md:order-none' : ''
+                  // Conversion — Pro always first on all screen sizes.
+                  // buildPricing() already returns Pro first; the order
+                  // class here is a no-op safety net.
+                  ''
                 } ${
                   isPaid ? 'cursor-pointer' : ''
                 } ${
@@ -384,7 +468,7 @@ export default function PricingPage() {
                         : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
                     }`}
                   >
-                    {purchasing === p.tier ? 'Starting…' : `${ctaLabel} →`}
+                    {purchasing === p.tier ? 'Starting trial…' : `${ctaLabel} →`}
                   </button>
                 ) : (
                   <a
@@ -403,10 +487,9 @@ export default function PricingPage() {
                     {ctaLabel} →
                   </a>
                 )}
-                {/* Push #160 — removed trial copy; charge starts immediately. */}
                 {isPaid && (
                   <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
-                    Cancel anytime
+                    {'trialLine' in p ? (p as { trialLine: string }).trialLine : 'Cancel anytime'}
                   </p>
                 )}
               </div>
@@ -724,7 +807,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — $4.90/mo'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic — Try Free 3 Days'}
           </button>
           <button
             type="button"
@@ -744,7 +827,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Pro — $9.90/mo 🔥'}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro — Try Free 3 Days 🔥'}
           </button>
         </div>
       )}

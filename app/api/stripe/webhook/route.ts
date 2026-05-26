@@ -117,19 +117,22 @@ export async function POST(req: NextRequest) {
           break
         }
 
-        // ── Path B: Subscription checkout (push #020) ──
-        // Push #265 — no free trial. Full plan credits are granted immediately
-        // at checkout completion. is_trial metadata removed.
+        // ── Path B: Subscription checkout ──
         const userId = session.metadata?.supabase_user_id
         const customerId = session.customer as string
         const subscriptionId = session.subscription as string
         const tier = session.metadata?.tier === 'pro' ? 'pro' : 'basic'
-        const planCredits = tier === 'pro' ? 100 : 50
 
         if (!userId) break
 
-        // Read current balance so the initial plan grant adds to (not replaces)
-        // any free credits the user still had unspent.
+        // Conversion — 3-day trial: if payment_status is 'no_payment_required'
+        // the subscription is in trial. Grant 5 preview credits so the user
+        // can experience the product before paying; full credits are granted
+        // by the invoice.payment_succeeded handler on Day 4 first charge.
+        const isTrial = session.payment_status === 'no_payment_required'
+        const planCredits = tier === 'pro' ? 100 : 50
+        const creditsToGrant = isTrial ? 5 : planCredits
+
         const { data: currentProfile } = await supabase
           .from('profiles')
           .select('video_credits')
@@ -137,30 +140,27 @@ export async function POST(req: NextRequest) {
           .single()
 
         const current = currentProfile?.video_credits ?? 0
-        const next = current + planCredits
+        const next = current + creditsToGrant
 
         // Push #088 — Pro plan also includes 1 cinematic token / month.
-        // Basic stays at 0 (Cinematic is Pro-exclusive). We use a separate
-        // column so the user can't accidentally drain their 100 Fast Mode
-        // credits on Runway renders.
         const cinematicTokensForTier = tier === 'pro' ? 1 : 0
 
         const { error: subUpdErr } = await supabase
           .from('profiles')
           .update({
             is_pro: true,
-            plan: tier,
+            plan: isTrial ? `${tier}_trial` : tier,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             video_credits: next,
-            cinematic_tokens: cinematicTokensForTier,
+            cinematic_tokens: isTrial ? 0 : cinematicTokensForTier,
           })
           .eq('id', userId)
 
         if (subUpdErr) {
           console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
         } else {
-          console.log(`[stripe webhook] subscription start: ${tier} (+${planCredits} credits, cin=${cinematicTokensForTier}) → user ${userId} (now ${next})`)
+          console.log(`[stripe webhook] ${isTrial ? 'TRIAL' : 'subscription'} start: ${tier} (+${creditsToGrant} credits) → user ${userId} (now ${next})`)
         }
 
         break
@@ -207,13 +207,12 @@ export async function POST(req: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
-        // Subscription renewal — refill the user's monthly credit allowance.
-        // Push #259 — also handles the first real payment after a free trial
-        // (billing_reason='subscription_cycle'): grants full plan credits,
-        // replacing the 10 trial credits issued at checkout.session.completed.
-        // Skip subscription_create billing reason — those credits are already
-        // handled by checkout.session.completed (or are 10 trial credits for
-        // trial sessions that don't need renewal-level re-grants yet).
+        // Handles two cases:
+        // 1. Monthly renewal (billing_reason='subscription_cycle') — refill credits.
+        // 2. First real payment after 3-day trial (billing_reason='subscription_cycle')
+        //    — upgrades user from 5 trial credits to full plan credits.
+        // Skip subscription_create: non-trial subscriptions already get full
+        // credits via checkout.session.completed (payment_status='paid').
         const invoice = event.data.object as Stripe.Invoice & { billing_reason?: string; subscription?: string }
         const billingReason = invoice.billing_reason
         if (billingReason === 'subscription_create') break
