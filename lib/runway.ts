@@ -280,7 +280,11 @@ You always respond with a valid JSON array ONLY — no markdown, no code fences,
 TOPIC FIDELITY — the most important rule (read first):
 - Every single scene must be specifically and literally about "${prompt}". Do NOT drift to a broader category, a different but related subject, or generic stock filler.
 - Each scene's "voiceover" must state a concrete, verifiable fact about THIS exact topic — not about the genre in general.
-- Each scene's "stockSearchQuery" and "searchKeywords" must describe the literal subject of THAT scene's voiceover, so the footage on screen matches what is being narrated at that moment. If the voiceover names a specific place, person, object, or event, the search query must name it too.
+- Each scene's "stockSearchQuery" MUST be derived from the LITERAL CONTENT of THAT SCENE'S OWN voiceover line. Read the voiceover sentence, identify the most visual noun phrase or action in it, and build the stockSearchQuery from those exact words. The footage shown on screen must match what is BEING SAID at that moment — not just the general topic.
+  - voiceover "He crossed the Sahara with 60,000 soldiers" → stockSearchQuery "sahara desert caravan camel crossing" ✓ (NOT "ancient african king")
+  - voiceover "K2 has a 29% fatality rate" → stockSearchQuery "k2 mountain summit steep dangerous" ✓ (NOT just "mountain climbing")
+  - voiceover "The stock market lost 89% in 3 years" → stockSearchQuery "stock market crash graph falling 1929" ✓ (NOT "wall street general")
+  - voiceover "Bezos earns $4,000 every second" → stockSearchQuery "dollar bills cash stacks wealth" ✓ (NOT "amazon logo")
 - The examples below are FORMAT references only. Copy their structure and specificity, never their subject — unless the user's topic actually is rockets, pyramids, etc.
 
 TOPIC-SPECIFIC VISUAL RULES — read carefully before writing stockSearchQuery, negativeVisualPrompt, and visualCategory:
@@ -400,7 +404,7 @@ Example PERFECT scene (pyramids topic):
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.6,
+      temperature: 0.4,
       max_tokens: 1800,
     },
     { timeout: 35000 }

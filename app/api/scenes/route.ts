@@ -69,39 +69,50 @@ SCRIPT:
 ${script}
 """
 
-STEP 1 — Extract the TOPIC SUBJECT: identify the 1-2 main proper nouns or concrete subjects that the script is about (e.g. "mansa musa", "mount everest", "wall street crash", "black hole", "elon musk"). Call this the TOPIC ANCHOR. Write it down before proceeding.
+STEP 1 — Identify the TOPIC ANCHOR: the 1-2 main proper nouns or concrete subjects the script is about (e.g. "mansa musa", "mount everest", "wall street crash", "jeff bezos"). Write it down.
 
-STEP 2 — Extract the SCRIPT-WIDE THEME in 2-4 concrete visual nouns (e.g. "ancient mali kingdom gold", "snow mountain summit", "stock market trading floor").
+STEP 2 — Extract the SCRIPT-WIDE THEME in 2-4 concrete visual nouns (e.g. "ancient mali kingdom gold trade", "himalayan snow summit climb", "nasdaq trading floor crash").
 
-STEP 3 — Split the script into 4-6 cinematic scenes (durations sum to the script's natural length). For EACH scene output 3 concrete visual search phrases (searchKeywords) that a stock-video site like Pexels would actually return matching portrait footage for.
+STEP 3 — For EACH scene, read the exact narration text and extract the NARRATION VISUAL ANCHOR: the most specific visual element literally mentioned or implied IN THAT SENTENCE. This is a named person, specific place, object, action, or event described by those exact words.
+  - Narration "He crossed the Sahara with 60,000 soldiers" → Narration Visual Anchor = "sahara desert crossing army caravan"
+  - Narration "He gave away so much gold it crashed the Egyptian economy" → Narration Visual Anchor = "gold coins pile medieval africa"
+  - Narration "Earned $75 billion in a single year" → Narration Visual Anchor = "dollar bills cash stacks wealth"
+  - Narration "K2 has killed 1 in every 4 climbers who summit it" → Narration Visual Anchor = "k2 mountain summit snow steep"
+  - Narration "The stock market lost 89% of its value in 3 years" → Narration Visual Anchor = "stock market crash graph falling"
+  Write down the Narration Visual Anchor for each scene before proceeding.
 
-Rules for searchKeywords (CRITICAL):
+STEP 4 — Split the script into 4-6 cinematic scenes (durations sum to the script's natural length). For EACH scene output 3 searchKeywords using the Narration Visual Anchors from Step 3.
+
+Rules for searchKeywords (CRITICAL — read every rule):
   1. EXACTLY 3 phrases per scene, lowercase, 2-4 words each, no punctuation, no hashtags.
-  2. Order: most specific FIRST, broader LAST.
-  3. The FIRST keyword of EVERY scene MUST include the TOPIC ANCHOR or a direct visual synonym of it. This is the most important rule — it ensures the footage always matches what the user asked for.
-       - Topic "mansa musa" → first keyword must contain "mansa musa" OR "african king" OR "mali empire"
-       - Topic "mount everest" → first keyword must contain "mount everest" OR "himalaya peak"
-       - Topic "black hole" → first keyword must contain "black hole" OR "space galaxy" OR "event horizon"
-       - Topic "jeff bezos" → first keyword must contain "jeff bezos" OR "amazon ceo"
-  4. Every phrase MUST contain at least one CONCRETE VISUAL NOUN (a place, object, person, landscape). Without a concrete noun, Pexels returns generic lifestyle clips that ruin the video.
-  5. For ABSTRACT narration lines ("to recover", "the lesson", "imagine this", "the truth"), anchor EVERY keyword to the STEP 2 theme:
-       narration "to recover"   + theme "wall street crash"   → ["wall street bull statue", "stock trader cheering", "nasdaq stock screen"]
-       narration "the lesson"   + theme "ancient mali empire" → ["mali ancient ruins", "african gold coins", "desert trade caravan"]
-  6. NEVER use these standalone: "recover", "lesson", "imagine", "truth", "secret", "story", "people", "thing", "moment", "feeling", "ranking", "list", "facts", "amazing", "shocking".
-  7. Good examples:
-       Narration "The highest mountain stands 8,849 meters tall" (topic: mount everest):
-         ["mount everest summit", "himalaya mountain peak", "alpine snow landscape"]
-       Narration "He earned 75 billion dollars in one year" (topic: jeff bezos):
-         ["jeff bezos portrait", "amazon headquarters building", "stack of money cash"]
-       Narration "It started with a single trade" (topic: wall street crash):
-         ["wall street trading floor", "stock market screen", "new york stock exchange"]
+  2. Order: most specific FIRST (tied to the exact narration sentence), broader LAST.
+  3. searchKeywords[0] MUST come directly from the STEP 3 NARRATION VISUAL ANCHOR for that scene — it must describe the specific visual that matches WHAT IS BEING SAID IN THAT EXACT NARRATION LINE, not just the general topic.
+       - Narration "crossed the sahara" → searchKeywords[0] = "sahara desert caravan" ✓ (NOT just "mansa musa")
+       - Narration "gave away gold in cairo" → searchKeywords[0] = "gold coins pile cairo" ✓ (NOT just "mali empire")
+       - Narration "K2 summit death zone" → searchKeywords[0] = "k2 mountain summit" ✓ (NOT just "mountain climbing")
+  4. searchKeywords[1] = broader setting or context of THIS scene's narration (era, location, mood — 2-4 words).
+  5. searchKeywords[2] = topic anchor fallback — includes the STEP 1 TOPIC ANCHOR or a direct visual synonym of it as a safety net.
+  6. Every phrase MUST contain at least one CONCRETE VISUAL NOUN (place, object, person, landscape). No abstract words.
+  7. For ABSTRACT narration lines ("the secret", "the lesson", "imagine this"), anchor searchKeywords[0] to the most visual element of the STEP 3 Narration Visual Anchor, not the abstract word itself:
+       Narration "the lesson every trader ignores" + theme "wall street crash" → searchKeywords[0] = "wall street trading floor monitors"
+       Narration "the truth about wealth" + theme "billionaire habits" → searchKeywords[0] = "gold bars vault luxury interior"
+  8. NEVER use these standalone: "recover", "lesson", "imagine", "truth", "secret", "story", "people", "thing", "moment", "feeling", "ranking", "list", "facts", "amazing", "shocking".
+  9. Perfect examples:
+       Narration "He crossed the Sahara with 60,000 soldiers and 12,000 slaves carrying gold" (topic: mansa musa):
+         ["sahara desert caravan gold", "ancient mali empire trade", "mansa musa african king"]
+       Narration "K2 has a 29% fatality rate — deadlier than Everest" (topic: k2 mountain):
+         ["k2 mountain summit snow", "himalaya steep cliff ice", "mountain climber death zone"]
+       Narration "The stock market dropped 89% between 1929 and 1932" (topic: wall street crash):
+         ["stock market crash graph", "wall street trading floor", "new york stock exchange 1929"]
+       Narration "Bezos earns $4,000 every second — more than most Americans make in a year" (topic: jeff bezos):
+         ["dollar bills cash stacks", "amazon warehouse interior", "jeff bezos wealth luxury"]
 
 Return ONLY a JSON array. Each object MUST contain:
 - sceneNumber (int, starting at 1)
 - duration (int seconds)
 - narration (the exact words spoken in this scene)
-- visualDescription (cinematic, dark, fast-paced — what should literally be on screen)
-- searchKeywords (array of EXACTLY 3 lowercase visual phrases per the rules above, most specific first)
+- visualDescription (cinematic, dark, fast-paced — what should literally be on screen, tied to the narration)
+- searchKeywords (array of EXACTLY 3 lowercase visual phrases per the rules above, narration-specific first)
 - searchQuery (same as searchKeywords[0])
 - emotionalTone (one short phrase, e.g. "tense", "uplifting", "shocking")
 
@@ -111,16 +122,16 @@ No markdown, no code fences. Raw JSON array only.`
     try {
       completion = await openai.chat.completions.create(
         {
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
               content:
-                'You are a cinematic video director. Always respond with valid JSON only — no markdown, no code blocks, no extra text.',
+                'You are a cinematic video director and stock footage expert. Always respond with valid JSON only — no markdown, no code blocks, no extra text. Your searchKeywords must be derived from the literal content of each narration sentence, not just the general topic.',
             },
             { role: 'user', content: prompt },
           ],
-          temperature: 0.7,
+          temperature: 0.4,
           // Push #208 — raised to 2000 to support 90s / 9-scene scripts.
           max_tokens: 2000,
         },

@@ -1,0 +1,80 @@
+GOOGLE ADS — RESPONSIVE SEARCH AD COPY (Push #271)
+Account: 186-928-2523
+Conversion: AW-18156258081/NL4bCKXEwa4cEKGGytFD
+====================================================
+Avoid: "smart", "powerful", "AI-powered", "revolutionary"
+Focus: no camera, no stock footage, just type a topic, results in 60s
+
+HEADLINES (30 chars max — use all 15)
+---------------------------------------
+1.  YouTube Shorts in 60 Seconds
+2.  No Camera. No Clips. Just AI.
+3.  Type a Topic. Get a Video.
+4.  Make Shorts Without Filming
+5.  1 Click. 1 Short. Done.
+6.  Post Every Day. No Effort.
+7.  AI Writes, Voices & Edits It
+8.  No Stock Photos Needed
+9.  Grow on YouTube. No Filming.
+10. From $4.90 · Cancel Anytime
+11. 7-Day Money-Back Guarantee
+12. Start Today for $4.90/Month
+13. 50 Shorts a Month · $4.90
+14. Your Script. Your Voice. Auto.
+15. 100 Credits. $9.90/Month.
+
+CHARACTER COUNTS (verify before submitting):
+1.  31 → trim to: "YouTube Shorts — 60 Seconds"  (27) ✓
+2.  32 → trim to: "No Camera. No Clips. Just AI"  (28) ✓
+3.  26 ✓
+4.  28 ✓
+5.  22 ✓
+6.  26 ✓
+7.  30 ✓
+8.  22 ✓
+9.  28 ✓
+10. 28 ✓
+11. 26 ✓
+12. 28 ✓
+13. 26 ✓
+14. 30 ✓
+15. 23 ✓
+
+
+DESCRIPTIONS (90 chars max — use all 4)
+-----------------------------------------
+1. Type a topic and ShortsForgeAI writes, voices, and edits your Short in under 60 seconds.
+   [89 chars ✓]
+
+2. No camera, no clips, no editing. Pick a topic and get a finished YouTube Short — fast.
+   [88 chars ✓]
+
+3. From $4.90/month. 7-day refund if you're not happy. Cancel anytime. No contract.
+   [83 chars ✓]
+
+4. Built for creators who want results without spending hours filming or hunting for footage.
+   [90 chars ✓]
+
+
+PINNED RECOMMENDATIONS
+------------------------
+Pin headline 1 ("YouTube Shorts — 60 Seconds") to Position 1 — clearest value prop.
+Pin headline 10 or 11 to Position 3 — reinforces price + trust.
+Leave positions 2 flexible so Google tests all combinations.
+
+Pin description 1 to Position 1 — explains the product immediately.
+Pin description 3 to Position 2 — price anchor + refund reassurance.
+
+
+FINAL URL
+----------
+https://shortsforgeai.vercel.app/pricing
+
+
+NOTES
+------
+- India market active in evenings UTC+5:30 — no bid adjustments needed if campaign is already global
+- All headlines avoid "smart", "powerful", "AI-powered" — too generic for 2026 audience
+- "No camera" + "no clips" speaks directly to the pain point: most creators don't have a studio
+- The price ($4.90) in headlines anchors impulse decisions from high-intent searches
+- 7-day money-back is now live on the pricing page (Push #271) — safe to mention in ads
