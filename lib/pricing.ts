@@ -54,4 +54,4 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   },
 }
 
-export const PLAN_LIST: PlanConfig[] = [PLANS.free, PLANS.basic, PLANS.pro]
+// Push #276 — remove free card from all surfaces. Only paid plans shown.

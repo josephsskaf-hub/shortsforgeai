@@ -663,10 +663,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             disabled={submitting}
             className="animate-btn-pulse w-full sm:w-auto rounded-xl bg-[#10B981] px-9 py-4 text-base sm:text-lg font-extrabold text-white shadow-[0_10px_32px_rgba(16,185,129,.45)] transition hover:bg-[#059669] hover:shadow-[0_12px_40px_rgba(16,185,129,.55)] disabled:opacity-60"
           >
-            {submitting ? 'Loading…' : 'Generate Your First Short Free →'}
+            {submitting ? 'Loading…' : 'Start Generating Shorts →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            No credit card required · 1 free video · Ready in 60 seconds
+            From $4.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </div>
         </div>{/* end hero content */}
@@ -980,47 +980,38 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Choose a plan
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Start creating AI Shorts with credits. Upgrade when you need more videos.
+            Flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        {/* Push #276 — 2-col grid, free plan removed from all surfaces */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:max-w-2xl md:mx-auto">
           {PLAN_LIST.map((plan) => {
-            const isPaid = plan.tier === 'basic' || plan.tier === 'pro'
-            const isSelected = isPaid && selectedPlan === plan.tier
+            const isSelected = selectedPlan === plan.tier
             const isRecommended = !!plan.recommended
-            // Push #081 — Free plan CTA respects auth state. Logged-in
-            // users skip /signup and go straight to /generate so the
-            // CTA never asks them to re-create an account.
-            const planHref =
-              plan.tier === 'free' && user ? '/generate' : plan.href
+            const planHref = plan.href
             const isExternal = planHref.startsWith('http')
 
             const features = featureListFor(plan.tier)
             const ctaLabel = isSelected
               ? plan.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
-              : plan.tier === 'free' && user
-                ? 'Open Generator'
-                : plan.cta
+              : plan.cta
 
             return (
               <div
                 key={plan.tier}
-                role={isPaid ? 'button' : undefined}
-                tabIndex={isPaid ? 0 : undefined}
-                aria-pressed={isPaid ? isSelected : undefined}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
                 onClick={() => {
-                  if (isPaid) setSelectedPlan(plan.tier as 'basic' | 'pro')
+                  setSelectedPlan(plan.tier as 'basic' | 'pro')
                 }}
                 onKeyDown={(e) => {
-                  if (!isPaid) return
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     setSelectedPlan(plan.tier as 'basic' | 'pro')
                   }
                 }}
-                className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
-                  isPaid ? 'cursor-pointer' : ''
-                } ${
+                className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? 'border-2 border-[#3B82F6] bg-[#0D1830] shadow-[0_0_28px_rgba(59,130,246,0.3)]'
                     : isRecommended
@@ -1059,51 +1050,31 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                     </li>
                   ))}
                 </ul>
-                {isPaid ? (
-                  <button
-                    type="button"
-                    disabled={checkoutTier !== null && checkoutTier !== plan.tier}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedPlan(plan.tier as 'basic' | 'pro')
-                      handleStartPlan(plan.tier as 'basic' | 'pro')
-                    }}
-                    className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
-                      isRecommended || isSelected
-                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
-                    }`}
-                  >
-                    {checkoutTier === plan.tier ? 'Starting…' : `${ctaLabel} →`}
-                  </button>
-                ) : (
-                  <a
-                    href={planHref}
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener noreferrer' : undefined}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                    }}
-                    className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
-                      isRecommended || isSelected
-                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
-                    }`}
-                  >
-                    {ctaLabel} →
-                  </a>
-                )}
-                {/* Push #175 — per-tier value highlight under each CTA. */}
+                {/* Push #276 — all plans are paid, single button variant */}
+                <button
+                  type="button"
+                  disabled={checkoutTier !== null && checkoutTier !== plan.tier}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedPlan(plan.tier as 'basic' | 'pro')
+                    handleStartPlan(plan.tier as 'basic' | 'pro')
+                  }}
+                  className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
+                    isRecommended || isSelected
+                      ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                  }`}
+                >
+                  {checkoutTier === plan.tier ? 'Starting…' : `${ctaLabel} →`}
+                </button>
+                {/* Push #276 — per-tier value highlight (paid plans only) */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
-                  {plan.tier === 'free' && 'No credit card required'}
                   {plan.tier === 'basic' && '50 Fast Mode videos/month'}
                   {plan.tier === 'pro' && '100 Fast Mode + Cinematic Mode unlocked.'}
                 </p>
-                {(plan.tier === 'basic' || plan.tier === 'pro') && (
-                  <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
-                    Cancel anytime
-                  </p>
-                )}
+                <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
+                  7-day money-back guarantee · Cancel anytime
+                </p>
               </div>
             )
           })}
@@ -1626,14 +1597,10 @@ function ShowcaseVideoCard({
 
 // Marketing feature copy lives next to the home page so it can be tuned
 // without touching the canonical PLANS config.
+// Push #276 — free tier removed from all marketing surfaces.
 function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   if (tier === 'free') {
-    return [
-      `${PLANS.free.credits} Fast Mode renders`,
-      'Stock footage library + neural voiceover',
-      'Watermark-free MP4 output',
-      'No credit card needed',
-    ]
+    return [] // free plan no longer shown
   }
   if (tier === 'basic') {
     return [
@@ -1653,3 +1620,4 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
     'My Videos history',
   ]
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              

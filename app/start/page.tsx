@@ -407,12 +407,12 @@ export default function StartPage() {
                 a: 'Under 60 seconds in Fast Mode. Type your topic → click Generate → download your MP4. That\'s it.',
               },
               {
-                q: "What's included in the free plan?",
-                a: '1 complete Fast Mode video, no credit card required. Full quality, watermark-free MP4 output. Upgrade only when you\'re ready.',
+                q: 'Which plan should I pick?',
+                a: 'Basic ($4.90/month) gives you 50 Fast Mode videos — plenty for daily posting. Pro ($9.90/month) adds 100 Fast Mode videos plus 1 Cinematic (Runway AI) video per month. Both come with a 7-day money-back guarantee.',
               },
               {
-                q: 'What happens after my free videos?',
-                a: 'Basic is $4.90/month (50 videos) and Pro is $9.90/month (100 videos + Cinematic AI Engine). Cancel anytime — no contracts.',
+                q: 'Can I cancel anytime?',
+                a: 'Yes — cancel any time directly from your account page. No contracts, no questions. If you\'re not happy in the first 7 days, we\'ll refund you.',
               },
               {
                 q: 'Will my channel get flagged for AI content?',
@@ -617,10 +617,4 @@ export default function StartPage() {
           <span style={{ opacity: 0.4 }}>·</span>
           <span>Money-back guarantee</span>
           <span style={{ opacity: 0.4 }}>·</span>
-          <span>No contracts</span>
-        </section>
-      </div>
-      <Footer />
-    </main>
-  )
-}
+          <span
