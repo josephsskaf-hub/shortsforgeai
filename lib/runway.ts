@@ -254,7 +254,7 @@ export async function generateScenes(prompt: string, count = 4): Promise<Scene[]
 Your job is to return a JSON array of scene objects. Each scene object must include EXACTLY these 9 fields:
 1. "description" — cinematic shot description (~15-25 words), visual + specific + subject + setting + lighting + camera motion + mood. 9:16 vertical framing.
 2. "searchKeywords" — 2-4 concrete nouns for Pexels stock search (legacy compat). NEVER abstract words.
-3. "stockSearchQuery" — optimized Pexels search phrase (5-10 words). Full cinematic query like "Falcon 9 rocket launch fire night slow motion". This is the PRIMARY search — make it specific and vivid.
+3. "stockSearchQuery" — optimized Pexels search phrase (5-10 words). PREPEND a shot type to every query: "aerial drone", "close-up macro", "wide establishing", "medium shot", "low angle", or "POV". Vary across scenes. Example: "aerial drone Falcon 9 rocket launch night", "close-up macro gold coins pile", "wide establishing Great Pyramid Giza desert". The shot type narrows the search to the right camera angle AND signals visual variety to the viewer.
 4. "negativeVisualPrompt" — comma-separated list of visual elements NOT to show for this topic. Be specific.
 5. "scenePurpose" — exactly one of: HOOK | ESCALATION | DISCOVERY | EXPLANATION | PAYOFF | FINAL_LINE
 6. "visualIntent" — documentary aesthetic directive in 1 sentence. How should the shot FEEL?
@@ -368,6 +368,8 @@ TRUE CRIME / MYSTERIES / CONSPIRACIES / DARK HISTORY:
   visualCategory: crime_mystery
 
 SCENE PURPOSE FLOW for ${safeCount} scenes: Start with HOOK (scene 1), build through ESCALATION and DISCOVERY, use EXPLANATION for core facts, PAYOFF for the climax, FINAL_LINE for the mic-drop ending.
+
+SHOT TYPE VARIETY RULE: Across all ${safeCount} scenes, use a DIFFERENT shot type prefix in each stockSearchQuery. Never use the same shot type twice in a row. The ideal sequence mixes scale (aerial → close-up → wide → medium → POV) to create the cinematic variety viewers expect from professional Shorts.
 
 Return ONLY a valid JSON array of exactly ${safeCount} objects with all 9 fields.
 

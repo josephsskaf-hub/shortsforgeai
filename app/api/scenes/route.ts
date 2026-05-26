@@ -112,7 +112,8 @@ Return ONLY a JSON array. Each object MUST contain:
 - duration (int seconds)
 - narration (the exact words spoken in this scene)
 - visualDescription (cinematic, dark, fast-paced — what should literally be on screen, tied to the narration)
-- searchKeywords (array of EXACTLY 3 lowercase visual phrases per the rules above, narration-specific first)
+- shotType (exactly one of: "aerial drone" | "close-up macro" | "wide establishing" | "medium shot" | "low angle" | "POV" — vary across scenes, never the same 3 in a row)
+- searchKeywords (array of EXACTLY 3 lowercase visual phrases per the rules above. PREPEND the shotType to searchKeywords[0], e.g. "aerial drone sahara desert caravan" or "close-up macro gold coins pile")
 - searchQuery (same as searchKeywords[0])
 - emotionalTone (one short phrase, e.g. "tense", "uplifting", "shocking")
 
