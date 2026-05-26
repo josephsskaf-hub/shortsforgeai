@@ -48,7 +48,9 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'}/generate`,
+        // Push #281 — redirect new users to /pricing after email confirmation
+        // so they see the plans before trying to generate (0 credits at signup).
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'}/pricing`,
       },
     })
 
@@ -98,7 +100,8 @@ export default function SignupPage() {
       /* non-blocking */
     }
 
-    router.push('/generate')
+    // Push #281 — send new users to pricing, not generate (0 credits until paid)
+    router.push('/pricing')
     router.refresh()
   }
 
@@ -552,17 +555,4 @@ export default function SignupPage() {
                   <Link
                     href="/login"
                     className="font-semibold transition-colors"
-                    style={{ color: 'var(--indigo-light)' }}
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-      <Footer />
-    </>
-  )
-}
+                    style={{ co
