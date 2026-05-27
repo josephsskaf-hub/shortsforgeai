@@ -271,7 +271,7 @@ export default function DashboardClient({
             : viralTopics.map(topic => {
                 // Push #305 — vertical-specific color theming (matches /viral-now page)
                 const c = VERTICAL_COLORS[topic.vertical] ?? DEFAULT_VERTICAL
-                const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&autogenerate=1&duration=${topic.duration}`
+                const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&duration=${topic.duration}`
                 return (
                   <button
                     key={topic.slot}

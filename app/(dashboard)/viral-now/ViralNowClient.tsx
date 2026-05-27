@@ -45,7 +45,7 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
       return
     }
     setGenerating(topic.slot)
-    const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&autogenerate=1&duration=${topic.duration}`
+    const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&duration=${topic.duration}`
     router.push(url)
   }
 

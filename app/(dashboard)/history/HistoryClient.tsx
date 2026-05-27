@@ -54,6 +54,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [videos] = useState(initialVideos)
   const [playing, setPlaying] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Set<string>>(new Set())
 
   /* ── Empty state ── */
   if (videos.length === 0) {
@@ -195,7 +196,35 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                 }}
               >
                 <div style={{ position: 'absolute', inset: 0 }}>
-                  {isPlaying ? (
+                  {errors.has(video.id) ? (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(11,17,32,0.95)',
+                        gap: 10,
+                        padding: 16,
+                      }}
+                    >
+                      <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                      <span style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: 700, textAlign: 'center' }}>
+                        Video unavailable
+                      </span>
+                      <a
+                        href={video.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        style={{ fontSize: '0.7rem', color: '#22D3EE', textDecoration: 'underline' }}
+                      >
+                        ⬇ Download
+                      </a>
+                    </div>
+                  ) : isPlaying ? (
                     <video
                       src={video.video_url}
                       autoPlay
@@ -203,6 +232,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       playsInline
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onEnded={() => setPlaying(null)}
+                      onError={() => setErrors(prev => new Set([...prev, video.id]))}
                     />
                   ) : (
                     <button
@@ -296,6 +326,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     href={video.video_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    download
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -313,6 +344,29 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     }}
                   >
                     ⬇ Download
+                  </a>
+
+                  <a
+                    href="https://studio.youtube.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      padding: '6px 8px',
+                      borderRadius: 8,
+                      background: 'rgba(239,68,68,0.1)',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      color: '#F87171',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    ▶ YouTube
                   </a>
 
                   {video.youtube_description && (

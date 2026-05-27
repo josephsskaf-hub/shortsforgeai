@@ -4278,8 +4278,8 @@ function ModeSelector({
   const proHasToken = isPro && cinematicTokens > 0
 
   const fastFeatures = ['Premium visual library', 'AI voice synthesis', 'Ready in ~60 seconds']
-  const aiFeatures = ['fal.ai Wan 2.1 AI video', 'Real AI-generated scenes', '~3-5 min render']
-  const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', '~5 minute render']
+  const aiFeatures = ['fal.ai Wan 2.1 AI video', 'Real AI-generated scenes', 'Full AI-generated visuals']
+  const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', 'Premium AI render']
 
   return (
     <div className="mt-5">
@@ -4313,15 +4313,15 @@ function ModeSelector({
               Fast Mode
             </span>
             <div className="ml-auto flex items-center gap-1.5">
-              <span
+                <span
                 className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
                 style={{
-                  background: 'rgba(52,211,153,.12)',
-                  color: '#34d399',
-                  border: '1px solid rgba(52,211,153,.25)',
+                  background: 'rgba(34,211,238,.15)',
+                  color: '#22D3EE',
+                  border: '1px solid rgba(34,211,238,.3)',
                 }}
               >
-                Default
+                NEW ⚡
               </span>
               <span
                 className="text-xs font-bold px-2 py-0.5 rounded-full"
