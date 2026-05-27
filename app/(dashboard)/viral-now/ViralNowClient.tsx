@@ -74,7 +74,7 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
       {/* Cards */}
       <div className="flex flex-col gap-4">
         {loading
-          ? [1, 2, 3].map(i => (
+          ? [1, 2, 3, 4, 5, 6].map(i => (
               <div
                 key={i}
                 className="rounded-[20px]"
