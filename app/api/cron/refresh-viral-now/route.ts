@@ -297,12 +297,22 @@ PAYOFF: You can't delete these biases. But naming them is the first step to catc
   },
 ]
 
-function pickTopicsForDate(dateStr: string) {
-  // Deterministic shuffle — same date always gives the same 3 topics
-  const seed = parseInt(dateStr.replace(/-/g, ''), 10)
+function pickTopicsForWindow(dateStr: string, hourBlock: number) {
+  // Push #324 — 6 topics per window, rotate every 5h
+  const seed = parseInt(dateStr.replace(/-/g, ''), 10) + hourBlock * 7919
   const n = seed % TOPIC_POOL.length
   const pool = [...TOPIC_POOL.slice(n), ...TOPIC_POOL.slice(0, n)]
-  return [pool[0], pool[1], pool[2]]
+  const picked: typeof TOPIC_POOL = []
+  const usedVerticals = new Set<string>()
+  for (const t of pool) {
+    if (picked.length >= 6) break
+    if (!usedVerticals.has(t.vertical)) { picked.push(t); usedVerticals.add(t.vertical) }
+  }
+  for (const t of pool) {
+    if (picked.length >= 6) break
+    if (!picked.includes(t)) picked.push(t)
+  }
+  return picked.slice(0, 6)
 }
 
 export async function GET(req: NextRequest) {
@@ -317,8 +327,10 @@ export async function GET(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
-    const today = new Date().toISOString().split('T')[0]
-    const picked = pickTopicsForDate(today)
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    const hourBlock = Math.floor(now.getUTCHours() / 5)
+    const picked = pickTopicsForWindow(today, hourBlock)
 
     const rows = picked.map((t, i) => ({
       date: today,
@@ -337,8 +349,8 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    console.log('[refresh-viral-now] updated topics for', today)
-    return NextResponse.json({ ok: true, date: today, count: rows.length })
+    console.log('[refresh-viral-now] updated 6 topics for', today, 'block', hourBlock)
+    return NextResponse.json({ ok: true, date: today, hourBlock, count: rows.length })
   } catch (err) {
     console.error('[refresh-viral-now] error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
