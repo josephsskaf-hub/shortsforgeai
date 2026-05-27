@@ -1,6 +1,6 @@
 'use client'
 
-// Push #319 - My Videos v2: query from videos table, show rendered video cards with player
+// Push #323 - My Videos: show first frame via preload=metadata; no more black cards
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -86,7 +86,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           <div className="text-5xl mb-4">🎬</div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>No videos yet</h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-            Generate your first AI Short and it'll appear here automatically.
+            Generate your first AI Short and it’ll appear here automatically.
           </p>
           <Link
             href="/generate"
@@ -189,7 +189,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                 style={{
                   position: 'relative',
                   width: '100%',
-                  paddingTop: '177.78%', // 9:16 ratio
+                  paddingTop: '177.78%',
                   background: '#000',
                   overflow: 'hidden',
                 }}
@@ -234,48 +234,54 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       onError={() => setErrors(prev => new Set([...prev, video.id]))}
                     />
                   ) : (
-                    <button
+                    <div
                       onClick={() => setPlaying(video.id)}
                       style={{
                         width: '100%',
                         height: '100%',
-                        background: video.thumbnail_url
-                          ? `url(${video.thumbnail_url}) center/cover no-repeat`
-                          : 'linear-gradient(180deg, rgba(11,17,32,0.3) 0%, rgba(11,17,32,0.8) 100%)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 12,
-                        padding: 16,
                         position: 'relative',
+                        cursor: 'pointer',
+                        background: '#000',
                       }}
                     >
-                      {/* Dark overlay on top of thumbnail so play button is always visible */}
-                      {video.thumbnail_url && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', pointerEvents: 'none' }} />
-                      )}
+                      {/* Video preview — first frame shown via preload="metadata" */}
+                      <video
+                        src={video.video_url}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                      {/* Dark overlay so play button is always visible */}
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', pointerEvents: 'none' }} />
+                      {/* Play button */}
                       <div
                         style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          background: 'rgba(34,211,238,0.18)',
-                          border: '2px solid rgba(34,211,238,0.6)',
+                          position: 'absolute',
+                          inset: 0,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: '0 0 18px rgba(34,211,238,0.3)',
-                          flexShrink: 0,
-                          position: 'relative',
-                          zIndex: 1,
+                          pointerEvents: 'none',
                         }}
                       >
-                        <span style={{ fontSize: 15, marginLeft: 2, color: '#22D3EE' }}>▶</span>
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'rgba(34,211,238,0.18)',
+                            border: '2px solid rgba(34,211,238,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 0 18px rgba(34,211,238,0.3)',
+                          }}
+                        >
+                          <span style={{ fontSize: 15, marginLeft: 2, color: '#22D3EE' }}>▶</span>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   )}
                 </div>
               </div>
