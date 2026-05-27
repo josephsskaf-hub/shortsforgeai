@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Push #305 — detect pre-written viral scripts so GPT splits scenes at the
-    // correct structural boundaries (HOOK / MICRO RECOMPENSA / ESCALADA / PAYOFF)
+    // correct structural boundaries (HOOK / MICRO REWARD / ESCALATION / PAYOFF)
     // rather than guessing from narration length alone.
     const isViralScript =
       /\bHOOK\b/i.test(script) && /MICRO REWARD|PAYOFF/i.test(script)
