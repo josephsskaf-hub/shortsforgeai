@@ -1,5 +1,5 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v2.5 ✅ (estável — commit #310, deploy READY)
+# App versão atual: v2.6 ✅ (estável — commit #317, deploy READY)
 
 ## ✅ Status da v2.5 (confirmado em 27/05/2026)
 - AUTO-STRUCTURE: qualquer prompt manual agora passa por /api/generate-script antes de analyze-idea (#310)
