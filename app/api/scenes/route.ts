@@ -55,15 +55,15 @@ export async function POST(req: NextRequest) {
     // correct structural boundaries (HOOK / MICRO RECOMPENSA / ESCALADA / PAYOFF)
     // rather than guessing from narration length alone.
     const isViralScript =
-      /\bHOOK\b/i.test(script) && /MICRO RECOMPENSA|PAYOFF/i.test(script)
+      /\bHOOK\b/i.test(script) && /MICRO REWARD|PAYOFF/i.test(script)
 
     const viralSplitNote = isViralScript
       ? `\n\nSCRIPT STRUCTURE NOTE: This script uses the 5-element viral formula. Split scenes at the structural markers:
 - HOOK section → Scene 1
-- Each MICRO RECOMPENSA → its own scene
-- ESCALADA → second-to-last scene
+- Each MICRO REWARD → its own scene
+- ESCALATION → second-to-last scene
 - PAYOFF → final scene
-Never merge two MICRO RECOMPENSA sections into one scene. Use the exact narration text from each section.`
+Never merge two MICRO REWARD sections into one scene. Use the exact narration text from each section.`
       : ''
 
     // searchKeywords fixes a long-standing bug where generic 2-3-word queries
@@ -212,24 +212,4 @@ No markdown, no code fences. Raw JSON array only.`
       // never queries an empty list.
       const baseQuery = (s.searchQuery ?? '').toString().trim().toLowerCase()
       if (baseQuery && !cleaned.includes(baseQuery)) cleaned.push(baseQuery)
-      // Last resort: derive a query from visualDescription so we have something.
-      if (cleaned.length === 0) {
-        const vd = (s.visualDescription ?? '').toString().trim().toLowerCase()
-        if (vd) cleaned.push(vd.split(/\s+/).slice(0, 3).join(' '))
-      }
-      const searchKeywords = cleaned.slice(0, 3)
-      return {
-        ...s,
-        searchKeywords,
-        // Mirror the top keyword into searchQuery for legacy callers.
-        searchQuery: searchKeywords[0] || (s.searchQuery ?? ''),
-      }
-    })
-
-    return NextResponse.json({ scenes })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[scenes] unexpected error:', msg)
-    return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })
-  }
-}
+      // Last resort: derive a query from visualDescription so 

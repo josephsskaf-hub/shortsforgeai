@@ -476,13 +476,13 @@ export async function POST(req: NextRequest) {
     // and creates tight synergy between prompt content and the final video.
     const isViralScript =
       /HOOK\s*\(/i.test(prompt) ||
-      (/\bHOOK\b/i.test(prompt) && /MICRO RECOMPENSA|PAYOFF/i.test(prompt))
+      (/\bHOOK\b/i.test(prompt) && /MICRO REWARD|PAYOFF/i.test(prompt))
 
     const viralScriptInstruction = isViralScript
-      ? `\n\nCRITICAL — PRE-WRITTEN VIRAL SCRIPT: The prompt above is ALREADY a complete viral script with the 5-element structure (HOOK → MICRO RECOMPENSA × 3-5 → ESCALADA → PAYOFF). You MUST map sections to scenes EXACTLY as follows:
+      ? `\n\nCRITICAL — PRE-WRITTEN VIRAL SCRIPT: The prompt above is ALREADY a complete viral script with the 5-element structure (HOOK → MICRO REWARD × 3-5 → ESCALATION → PAYOFF). You MUST map sections to scenes EXACTLY as follows:
 - HOOK section → Scene 1 voiceover (use verbatim, do NOT rewrite)
-- Each MICRO RECOMPENSA → its own scene voiceover (verbatim, no paraphrase)
-- ESCALADA section → second-to-last scene voiceover (verbatim)
+- Each MICRO REWARD → its own scene voiceover (verbatim, no paraphrase)
+- ESCALATION section → second-to-last scene voiceover (verbatim)
 - PAYOFF section → final scene voiceover (verbatim)
 Your ONLY creative task is to write a punchy 6-8 word caption and a cinematic visual_prompt for each scene — the voiceover text comes directly from the script sections above, word for word. Do NOT invent new content or condense the voiceovers.`
       : ''
@@ -574,41 +574,4 @@ Return ONLY the JSON object — no markdown, no commentary.`
         fallbackViralIntelligence(hook, niche),
       )
 
-      brief = {
-        viral_title,
-        hook,
-        summary,
-        niche,
-        tone,
-        voiceover_script,
-        scenes,
-        music_mood,
-        pacing_notes,
-        youtube_title,
-        youtube_description,
-        hashtags,
-        provider_prompt,
-        detected_duration_seconds: detectDurationFromPrompt(prompt),
-        viral_intelligence,
-        // Legacy compatibility
-        title: viral_title,
-        // Push #132 — `scenePlan` is the legacy field the GenerateClient feeds
-    // into /api/compose as `scene_captions`. It MUST be the readable per-scene
-    // captions (≤8 word fragments paraphrasing each scene's voiceover) — not
-    // the cinematic `visual_prompt`, which is a camera/lighting description
-    // and reads as garbage when shown as a caption strip.
-    scenePlan: scenes.map((s) => s.caption),
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[analyze-idea] OpenAI failed:', msg)
-      brief = fallback
-    }
-
-    return NextResponse.json(brief)
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[analyze-idea] unexpected error:', msg)
-    return NextResponse.json({ error: 'Analysis failed. Please try again.' }, { status: 500 })
-  }
-}
+     
