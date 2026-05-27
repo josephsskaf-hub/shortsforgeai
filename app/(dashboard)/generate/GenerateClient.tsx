@@ -760,6 +760,38 @@ export default function GenerateClient() {
     return /\bHOOK\b/i.test(text) && (/\bMICRO REWARD\b/i.test(text) || /\bPAYOFF\b/i.test(text))
   }
 
+  // Push #313 — strip structural markers from the script preview so users
+  // never see "HOOK (0-2s):", "MICRO REWARD 1:", "[Pexels: xxx]" etc.
+  // The full structured prompt is still stored in state for the API calls —
+  // this function is display-only.
+  function cleanScriptPreview(text: string): string {
+    return text
+      .split('\n')
+      .filter(line => {
+        const t = line.trim()
+        if (!t) return false
+        // Drop section headers: HOOK, MICRO REWARD, ESCALATION, PAYOFF (EN + PT)
+        if (/^(HOOK|GANCHO)[\s:(]/i.test(t)) return false
+        if (/^(MICRO REWARD|MICRO RECOMPENSA)\s+\d/i.test(t)) return false
+        if (/^(ESCALATION|ESCALADA)[\s:]/i.test(t)) return false
+        if (/^(PAYOFF|PAGAMENTO)[\s:]/i.test(t)) return false
+        // Drop YouTube Short format header lines
+        if (/\b9\s*:\s*16\b|youtube\s+shorts?\s+format/i.test(t)) return false
+        // Drop bullet/editing notes lines starting with "- "
+        if (/^\s*-\s+(Total|ZERO|Cut|Hold|One legend|Voice|Editing)/i.test(t)) return false
+        // Drop lines that are ALL CAPS with no lowercase (structural stage directions)
+        const noSpecial = t.replace(/[^a-zA-Z]/g, '')
+        if (noSpecial.length > 0 && noSpecial === noSpecial.toUpperCase() && noSpecial.length < 40) return false
+        return true
+      })
+      .map(line =>
+        // Remove [Pexels: xxx] markers inline
+        line.replace(/\[\s*pexels\s*[:\-–]?\s*[^\]]+\]/gi, '').trim()
+      )
+      .filter(Boolean)
+      .join('\n\n')
+  }
+
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean; skipPreview?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const rawSource = (override ?? prompt).trim()
@@ -2013,8 +2045,8 @@ export default function GenerateClient() {
             </span>
           </div>
           <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            value={cleanScriptPreview(prompt)}
+            readOnly
             className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed min-h-[280px] sm:min-h-[380px] mb-4"
             style={{
               background: 'rgba(0,0,0,.3)',
@@ -2022,8 +2054,9 @@ export default function GenerateClient() {
               color: 'var(--text)',
               outline: 'none',
               resize: 'vertical',
-              fontFamily: 'monospace',
+              fontFamily: 'inherit',
               fontSize: 13,
+              lineHeight: 1.7,
             }}
           />
           <div className="flex gap-3 flex-wrap">
