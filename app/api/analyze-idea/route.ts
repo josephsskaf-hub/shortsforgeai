@@ -448,37 +448,40 @@ function stripPexelsMarker(body: string): string {
 }
 
 function parseViralScriptSections(text: string): ViralSection[] | null {
-  const hasHook = /\bHOOK\b/i.test(text)
-  const hasMR = /\bMICRO REWARD\b/i.test(text)
-  const hasPayoff = /\bPAYOFF\b/i.test(text)
+  // Push #312 — detect BOTH English and Portuguese marker variants so any
+  // legacy prompt or Supabase row with Portuguese text (“MICRO RECOMPENSA”,
+  // “ESCALADA”, “GANCHO”) is parsed correctly and headers are NEVER spoken.
+  const hasHook = /\b(HOOK|GANCHO)\b/i.test(text)
+  const hasMR = /\b(MICRO REWARD|MICRO RECOMPENSA)\b/i.test(text)
+  const hasPayoff = /\b(PAYOFF|PAGAMENTO|RECOMPENSA FINAL)\b/i.test(text)
   if (!hasHook || (!hasMR && !hasPayoff)) return null
 
   const sections: ViralSection[] = []
-  // Split on lines that begin a new section header
-  const parts = text.split(/\n(?=(?:HOOK|MICRO REWARD\s+\d|ESCALATION|PAYOFF)[\s:(])/i)
+  // Split on lines that begin a new section header (English or Portuguese)
+  const parts = text.split(/\n(?=(?:HOOK|GANCHO|MICRO REWARD\s+\d|MICRO RECOMPENSA\s+\d|ESCALATION|ESCALADA|PAYOFF|PAGAMENTO)[\s:(])/i)
 
   for (const part of parts) {
     const trimmed = part.trim()
     if (!trimmed) continue
-    if (/^HOOK[\s:(]/i.test(trimmed)) {
+    if (/^(HOOK|GANCHO)[\s:(]/i.test(trimmed)) {
       const raw = trimmed
-        .replace(/^HOOK[^:\n]*:\s*/i, '')
-        .replace(/^HOOK\s+/i, '')
+        .replace(/^(HOOK|GANCHO)[^:\n]*:\s*/i, '')
+        .replace(/^(HOOK|GANCHO)\s+/i, '')
         .trim()
         .replace(/^[“”]|[“”]$/g, '')
         .trim()
       const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'hook', text: body })
-    } else if (/^MICRO REWARD\s+\d/i.test(trimmed)) {
-      const raw = trimmed.replace(/^MICRO REWARD\s+\d+[:\s]*/i, '').trim()
+    } else if (/^(MICRO REWARD|MICRO RECOMPENSA)\s+\d/i.test(trimmed)) {
+      const raw = trimmed.replace(/^(MICRO REWARD|MICRO RECOMPENSA)\s+\d+[:\s]*/i, '').trim()
       const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'micro_reward', text: body })
-    } else if (/^ESCALATION/i.test(trimmed)) {
-      const raw = trimmed.replace(/^ESCALATION[:\s]*/i, '').trim()
+    } else if (/^(ESCALATION|ESCALADA)/i.test(trimmed)) {
+      const raw = trimmed.replace(/^(ESCALATION|ESCALADA)[:\s]*/i, '').trim()
       const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'escalation', text: body })
-    } else if (/^PAYOFF/i.test(trimmed)) {
-      const raw = trimmed.replace(/^PAYOFF[:\s]*/i, '').trim()
+    } else if (/^(PAYOFF|PAGAMENTO|RECOMPENSA FINAL)/i.test(trimmed)) {
+      const raw = trimmed.replace(/^(PAYOFF|PAGAMENTO|RECOMPENSA FINAL)[:\s]*/i, '').trim()
       const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'payoff', text: body })
     }
