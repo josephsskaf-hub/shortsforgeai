@@ -233,6 +233,7 @@ function RefreshIndicator({ refreshing, secondsAgo, lastUpdated }: { refreshing:
 
 function AdminNav({ active }: { active: string }) {
   const tabs = [
+    { label: 'CEO', href: '/admin/ceo', key: 'ceo' },
     { label: 'Metrics', href: '/admin/metrics', key: 'metrics' },
     { label: 'Funnel', href: '/admin/funnel', key: 'funnel' },
     { label: 'Users', href: '/admin/users', key: 'users' },

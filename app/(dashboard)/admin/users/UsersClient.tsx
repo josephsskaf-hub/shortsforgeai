@@ -551,8 +551,9 @@ function PlanBadge({ plan, credits }: { plan: string | null; credits: number | n
   return <span style={{ color: 'var(--muted)', fontSize: 12 }}>Free</span>
 }
 
-function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' }) {
-  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users'; label: string; href: string }> = [
+function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' | 'ceo' }) {
+  const tabs: Array<{ key: 'metrics' | 'funnel' | 'users' | 'ceo'; label: string; href: string }> = [
+    { key: 'ceo', label: 'CEO', href: '/admin/ceo' },
     { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
     { key: 'funnel', label: 'Funnel', href: '/admin/funnel' },
     { key: 'users', label: 'Users', href: '/admin/users' },
