@@ -433,6 +433,49 @@ function coerceScenes(raw: unknown, fallbacks: SceneBrief[], maxScenes = 9): Sce
   return out.length >= 3 ? out : fallbacks
 }
 
+// Push #307 — Parse structured viral script sections from a Viral Now prompt.
+// Returns null when the prompt is not a pre-written viral script.
+interface ViralSection {
+  type: 'hook' | 'micro_reward' | 'escalation' | 'payoff'
+  text: string
+}
+
+function parseViralScriptSections(text: string): ViralSection[] | null {
+  const hasHook = /\bHOOK\b/i.test(text)
+  const hasMR = /\bMICRO REWARD\b/i.test(text)
+  const hasPayoff = /\bPAYOFF\b/i.test(text)
+  if (!hasHook || (!hasMR && !hasPayoff)) return null
+
+  const sections: ViralSection[] = []
+  // Split on lines that begin a new section header
+  const parts = text.split(/\n(?=(?:HOOK|MICRO REWARD\s+\d|ESCALATION|PAYOFF)[\s:(])/i)
+
+  for (const part of parts) {
+    const trimmed = part.trim()
+    if (!trimmed) continue
+    if (/^HOOK[\s:(]/i.test(trimmed)) {
+      const body = trimmed
+        .replace(/^HOOK[^:\n]*:\s*/i, '')
+        .replace(/^HOOK\s+/i, '')
+        .trim()
+        .replace(/^["“]|["”]$/g, '')
+        .trim()
+      if (body) sections.push({ type: 'hook', text: body })
+    } else if (/^MICRO REWARD\s+\d/i.test(trimmed)) {
+      const body = trimmed.replace(/^MICRO REWARD\s+\d+[:\s]*/i, '').trim()
+      if (body) sections.push({ type: 'micro_reward', text: body })
+    } else if (/^ESCALATION/i.test(trimmed)) {
+      const body = trimmed.replace(/^ESCALATION[:\s]*/i, '').trim()
+      if (body) sections.push({ type: 'escalation', text: body })
+    } else if (/^PAYOFF/i.test(trimmed)) {
+      const body = trimmed.replace(/^PAYOFF[:\s]*/i, '').trim()
+      if (body) sections.push({ type: 'payoff', text: body })
+    }
+  }
+
+  return sections.length >= 3 ? sections : null
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -466,6 +509,120 @@ export async function POST(req: NextRequest) {
     // Push #208 — added 90s; removed 30s (replaced by 45s minimum).
     const requestedDuration = Number(body.duration) || 45
     const duration = [45, 60, 90].includes(requestedDuration) ? requestedDuration : 45
+
+    // Push #307 — VIRAL SCRIPT FAST PATH ─────────────────────────────────────
+    // When the prompt is a pre-written Viral Now script (HOOK/MICRO REWARD/
+    // ESCALATION/PAYOFF sections), parse the voiceovers directly in code so
+    // they survive into the video VERBATIM. GPT is only asked for the visual
+    // layer (visual_prompt + caption). This is the only reliable way to
+    // guarantee specific facts (e.g. "Sodder children, DB Cooper, Beaumont")
+    // reach the final video instead of being replaced by generic mystery copy.
+    const viralSections = parseViralScriptSections(prompt)
+    if (viralSections) {
+      const fallbackV = fallbackBrief(prompt)
+      const DURATIONS: Record<string, number> = { hook: 4, micro_reward: 8, escalation: 6, payoff: 5 }
+      const sceneList = viralSections.map((s, i) => ({
+        scene_number: i + 1,
+        typeLabel: s.type.replace('_', ' ').toUpperCase(),
+        duration_seconds: DURATIONS[s.type] ?? 7,
+        voiceover: s.text,
+      }))
+
+      const visualUserMsg = `You are a cinematic video director. The voiceover for each scene below is FIXED — do NOT change, summarize, or rewrite it. Generate ONLY the visual layer.
+
+For each scene return a JSON object with exactly:
+- scene_number (int)
+- caption (max 6 words, punchy fragment, no period — summarize the voiceover in 6 words)
+- highlight (the single most striking word in the caption)
+- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content)
+- duration_seconds (int)
+
+Also return at the top level:
+- viral_title (catchy ≤80 char title)
+- youtube_title (≤100 chars with #shorts)
+- youtube_description (2-4 sentences)
+- hashtags (array of 8 strings with # prefix)
+- music_mood (one phrase)
+- niche (one word)
+- tone (one phrase)
+
+SCENES TO VISUALIZE:
+${sceneList.map(s => `Scene ${s.scene_number} [${s.typeLabel}] (${s.duration_seconds}s):\n${s.voiceover}`).join('\n\n')}
+
+Return valid JSON only: { "viral_title": "...", "youtube_title": "...", "youtube_description": "...", "hashtags": [...], "music_mood": "...", "niche": "...", "tone": "...", "scenes": [{...}] }`
+
+      try {
+        const completion = await openai.chat.completions.create(
+          {
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are a cinematic video director. Return valid JSON only — no markdown, no code blocks.' },
+              { role: 'user', content: visualUserMsg },
+            ],
+            temperature: 0.5,
+            max_tokens: 2000,
+            response_format: { type: 'json_object' },
+          },
+          { timeout: 28000, maxRetries: 0 }
+        )
+        const raw = completion.choices[0]?.message?.content?.trim() ?? ''
+        const data = JSON.parse(raw) as Record<string, unknown>
+        const rawScenes = Array.isArray(data.scenes) ? (data.scenes as Record<string, unknown>[]) : []
+
+        // Merge: GPT provides visuals, our parser provides voiceovers
+        const scenes: SceneBrief[] = sceneList.map((s, i) => {
+          const gpt = rawScenes[i] ?? {}
+          return {
+            scene_number: s.scene_number,
+            duration_seconds: asNumber(gpt.duration_seconds, s.duration_seconds),
+            caption: clampCaption(asString(gpt.caption, s.voiceover.split(' ').slice(0, 6).join(' '))),
+            highlight: asString(gpt.highlight, '') || null,
+            visual_prompt: clampToProviderLimit(asString(gpt.visual_prompt, fallbackV.scenes[i]?.visual_prompt ?? '')),
+            voiceover: s.voiceover, // ← exact parsed text, NEVER replaced
+          }
+        })
+
+        const hookText = scenes[0]?.voiceover ?? ''
+        const viral_title = asString(data.viral_title, hookText.slice(0, 80))
+        const niche = asString(data.niche, fallbackV.niche)
+        const tone = asString(data.tone, fallbackV.tone)
+        const voiceover_script = scenes.map(s => s.voiceover).join(' ')
+        const youtube_title = asString(data.youtube_title, viral_title).slice(0, 120)
+        const youtube_description = asString(data.youtube_description, fallbackV.youtube_description).slice(0, 600)
+        let hashtags = asStringArray(data.hashtags).slice(0, 8)
+        hashtags = hashtags.map(h => h.replace(/\s+/g, '')).map(h => h.startsWith('#') ? h : `#${h}`).filter(h => h.length > 1)
+        if (hashtags.length === 0) hashtags = fallbackV.hashtags
+        const music_mood = asString(data.music_mood, fallbackV.music_mood)
+        const provider_prompt = clampToProviderLimit(scenes.map(s => s.visual_prompt).join(' '))
+        const vi = fallbackViralIntelligence(hookText, niche)
+
+        const viralBrief: CreativeBrief = {
+          viral_title,
+          hook: hookText,
+          summary: voiceover_script.slice(0, 300),
+          niche,
+          tone,
+          voiceover_script,
+          scenes,
+          music_mood,
+          pacing_notes: 'fast cuts every 2–3s, hold on payoff for impact',
+          youtube_title,
+          youtube_description,
+          hashtags,
+          provider_prompt,
+          detected_duration_seconds: duration,
+          viral_intelligence: vi,
+          title: viral_title,
+          scenePlan: scenes.map(s => s.caption),
+        }
+        return NextResponse.json(viralBrief)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[analyze-idea] viral fast-path failed, falling through to normal path:', msg)
+        // Fall through to normal GPT path below
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const fallback = fallbackBrief(prompt)
 
@@ -574,4 +731,35 @@ Return ONLY the JSON object — no markdown, no commentary.`
         fallbackViralIntelligence(hook, niche),
       )
 
-     
+      brief = {
+        viral_title,
+        hook,
+        summary,
+        niche,
+        tone,
+        voiceover_script,
+        scenes,
+        music_mood,
+        pacing_notes,
+        youtube_title,
+        youtube_description,
+        hashtags,
+        provider_prompt,
+        detected_duration_seconds: detectDurationFromPrompt(prompt),
+        viral_intelligence,
+        title: viral_title,
+        scenePlan: scenes.map((s) => s.caption),
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[analyze-idea] OpenAI failed:', msg)
+      brief = fallback
+    }
+
+    return NextResponse.json(brief)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[analyze-idea] unexpected error:', msg)
+    return NextResponse.json({ error: 'Analysis failed. Please try again.' }, { status: 500 })
+  }
+}
