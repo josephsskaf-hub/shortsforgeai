@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 const NAV_ITEMS = [
   { href: '/generate',            icon: '⚡', label: 'Generator', exact: false },
   { href: '/thumbnail-generator', icon: '🖼️', label: 'Thumbnail', exact: false },
-  { href: '/my-videos',           icon: '📼', label: 'My Videos', exact: false },
+  { href: '/dashboard',            icon: '🔥', label: 'Viral Now', exact: true  },
   { href: '/pricing',             icon: '💎', label: 'Pricing',   exact: false },
 ]
 
