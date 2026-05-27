@@ -1,5 +1,5 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v2.6 ✅ (estável — commit #317, deploy READY)
+# App versão atual: v2.7 ✅ (estável — commit #319, deploy READY)
 
 ## ✅ Status da v2.5 (confirmado em 27/05/2026)
 - AUTO-STRUCTURE: qualquer prompt manual agora passa por /api/generate-script antes de analyze-idea (#310)
@@ -10,6 +10,8 @@
 - Dashboard viral cards: cores por vertical (billionaire=amber, mystery=purple, country=blue) (#305)
 - Nav: "My Videos" substituído por "🔥 Viral Now" em sidebar, mobile nav, e top menu (#302-303)
 - Commits chave desta versão:
+  - #319: My Videos v2 — /history page rewritten to query `videos` table; 9:16 video grid cards with click-to-play, download, expandable description; title extracted from HOOK line in topic field
+  - #320: My Videos: thumbnail support + HomePageClient footer fix — thumbnail_url as background on play button; dark overlay; play icon z-indexed; fixed footer /my-videos → /history link
   - #310: AUTO-STRUCTURE — /api/generate-script transforma qualquer tópico em script estruturado antes de analyze-idea; fast-path sempre ativa; usuário digita tema livre
   - #309: Fix: restore all truncated route files (cron + viral-now + scenes + analyze-idea)
   - #307: VIRAL FAST-PATH — parseViralScriptSections() em código; voiceovers NUNCA reescritos pelo GPT

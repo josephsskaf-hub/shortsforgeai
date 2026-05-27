@@ -210,7 +210,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       style={{
                         width: '100%',
                         height: '100%',
-                        background: 'linear-gradient(180deg, rgba(11,17,32,0.3) 0%, rgba(11,17,32,0.8) 100%)',
+                        background: video.thumbnail_url
+                          ? `url(${video.thumbnail_url}) center/cover no-repeat`
+                          : 'linear-gradient(180deg, rgba(11,17,32,0.3) 0%, rgba(11,17,32,0.8) 100%)',
                         border: 'none',
                         cursor: 'pointer',
                         display: 'flex',
@@ -219,8 +221,13 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                         justifyContent: 'center',
                         gap: 12,
                         padding: 16,
+                        position: 'relative',
                       }}
                     >
+                      {/* Dark overlay on top of thumbnail so play button is always visible */}
+                      {video.thumbnail_url && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', pointerEvents: 'none' }} />
+                      )}
                       <div
                         style={{
                           width: 52,
@@ -233,6 +240,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                           justifyContent: 'center',
                           boxShadow: '0 0 24px rgba(34,211,238,0.3)',
                           flexShrink: 0,
+                          position: 'relative',
+                          zIndex: 1,
                         }}
                       >
                         <span style={{ fontSize: 20, marginLeft: 3, color: '#22D3EE' }}>▶</span>
