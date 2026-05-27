@@ -1,9 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+// Push #301 — Viral Now topic type
+interface ViralTopic {
+  slot: number
+  emoji: string
+  label: string
+  title: string
+  prompt: string
+  duration: number
+  vertical: string
+}
 
 interface DashboardClientProps {
   isPro: boolean
@@ -24,6 +35,11 @@ export default function DashboardClient({
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [videoPrompt, setVideoPrompt] = useState('')
 
+  // Push #301 — Viral Now
+  const [viralTopics, setViralTopics] = useState<ViralTopic[]>([])
+  const [viralLoading, setViralLoading] = useState(true)
+  const viralFetchedRef = useRef(false)
+
   function handleVideoGenerate() {
     const p = videoPrompt.trim()
     if (!p) {
@@ -34,6 +50,17 @@ export default function DashboardClient({
     // so the user never sees a second "type a prompt" screen.
     router.push(`/generate?prompt=${encodeURIComponent(p)}&autoanalyze=1`)
   }
+
+  // Push #301 — Fetch Viral Now topics once on mount
+  useEffect(() => {
+    if (viralFetchedRef.current) return
+    viralFetchedRef.current = true
+    fetch('/api/viral-now', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.topics)) setViralTopics(d.topics) })
+      .catch(() => {})
+      .finally(() => setViralLoading(false))
+  }, [])
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -161,6 +188,99 @@ export default function DashboardClient({
         >
           ✍️ Create Video
         </Link>
+      </div>
+
+      {/* ── 🔥 Push #301: Viral Now ── */}
+      <div className="mb-7">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: '#ef4444', boxShadow: '0 0 8px rgba(239,68,68,.8)', animation: 'pulse 1.4s ease-in-out infinite' }}
+            />
+            <span className="font-black text-sm" style={{ color: 'var(--text)' }}>🔥 Viral Now</span>
+            <span
+              className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.25)', color: '#f87171' }}
+            >
+              Trending Today
+            </span>
+          </div>
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>1 click → auto-generate</span>
+        </div>
+
+        {/* Cards grid */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {viralLoading
+            ? [1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className="rounded-[16px] px-4 py-4"
+                  style={{
+                    background: 'rgba(255,255,255,.03)',
+                    border: '1px solid var(--border)',
+                    height: 120,
+                    animation: 'pulse 1.4s ease-in-out infinite',
+                  }}
+                />
+              ))
+            : viralTopics.map(topic => {
+                const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&autogenerate=1&duration=${topic.duration}`
+                return (
+                  <button
+                    key={topic.slot}
+                    type="button"
+                    onClick={() => router.push(url)}
+                    className="text-left rounded-[16px] px-4 py-4 transition-all"
+                    style={{
+                      background: 'rgba(11,17,32,0.85)',
+                      border: '1px solid rgba(239,68,68,.22)',
+                      boxShadow: '0 0 24px rgba(239,68,68,.07)',
+                      cursor: 'pointer',
+                      width: '100%',
+                    }}
+                    onMouseEnter={e => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,.5)'
+                      ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 32px rgba(239,68,68,.18)'
+                    }}
+                    onMouseLeave={e => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,.22)'
+                      ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 24px rgba(239,68,68,.07)'
+                    }}
+                  >
+                    {/* Pill label */}
+                    <div className="mb-2">
+                      <span
+                        className="text-xs font-black px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(239,68,68,.14)', color: '#f87171', border: '1px solid rgba(239,68,68,.25)' }}
+                      >
+                        {topic.label}
+                      </span>
+                    </div>
+                    {/* Title */}
+                    <p className="font-black text-sm leading-tight mb-3" style={{ color: 'var(--text)' }}>
+                      {topic.title}
+                    </p>
+                    {/* CTA row */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: 'var(--muted)' }}>
+                        ⏱ {topic.duration}s · Fast Mode
+                      </span>
+                      <span
+                        className="text-xs font-black px-3 py-1.5 rounded-lg text-white"
+                        style={{
+                          background: 'linear-gradient(135deg, #ef4444, #f97316)',
+                          boxShadow: '0 3px 12px rgba(239,68,68,.4)',
+                        }}
+                      >
+                        ⚡ Generate →
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+        </div>
       </div>
 
       {/* ── 🎬 NEW: AI Video Generator (RunwayML) ── */}

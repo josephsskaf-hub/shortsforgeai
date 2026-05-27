@@ -879,6 +879,19 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
+  // Push #301 — Auto-trigger generate when URL has ?autogenerate=1 and analysis is done
+  // Used by Viral Now cards: user clicks → analyze runs → generate fires automatically.
+  const autoGenerateFiredRef = useRef(false)
+  useEffect(() => {
+    const autoGen = searchParams?.get('autogenerate') === '1'
+    if (!autoGen) return
+    if (phase !== 'options') return
+    if (autoGenerateFiredRef.current) return
+    autoGenerateFiredRef.current = true
+    handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, searchParams])
+
   async function handleGenerate() {
     const trimmed = prompt.trim()
     if (!trimmed) {
