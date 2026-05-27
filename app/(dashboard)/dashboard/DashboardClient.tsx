@@ -371,7 +371,7 @@ export default function DashboardClient({
             🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: 'var(--muted2)' }}>
-            1 free credit on signup — just sign in.
+            2 free credits on signup — just sign in.
           </p>
         </div>
       )}
