@@ -256,7 +256,7 @@ export default function DashboardClient({
         {/* Cards grid */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {viralLoading
-            ? [1, 2, 3].map(i => (
+            ? [1, 2, 3, 4, 5, 6].map(i => (
                 <div
                   key={i}
                   className="rounded-[16px] px-4 py-4"
