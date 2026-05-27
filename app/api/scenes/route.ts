@@ -212,4 +212,24 @@ No markdown, no code fences. Raw JSON array only.`
       // never queries an empty list.
       const baseQuery = (s.searchQuery ?? '').toString().trim().toLowerCase()
       if (baseQuery && !cleaned.includes(baseQuery)) cleaned.push(baseQuery)
-      // Last resort: derive a query from visualDescription so 
+      // Last resort: derive a query from visualDescription so we have something.
+      if (cleaned.length === 0) {
+        const vd = (s.visualDescription ?? '').toString().trim().toLowerCase()
+        if (vd) cleaned.push(vd.split(/\s+/).slice(0, 3).join(' '))
+      }
+      const searchKeywords = cleaned.slice(0, 3)
+      return {
+        ...s,
+        searchKeywords,
+        // Mirror the top keyword into searchQuery for legacy callers.
+        searchQuery: searchKeywords[0] || (s.searchQuery ?? ''),
+      }
+    })
+
+    return NextResponse.json({ scenes })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[scenes] unexpected error:', msg)
+    return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })
+  }
+}
