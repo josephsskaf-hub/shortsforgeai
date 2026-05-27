@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import HistoryClient from './HistoryClient'
+import MyVideosClient from './HistoryClient'
 
-export default async function HistoryPage() {
+export default async function MyVideosPage() {
   const supabase = createClient()
 
   const {
@@ -11,12 +11,13 @@ export default async function HistoryPage() {
 
   if (!user) redirect('/login')
 
-  const { data: generations } = await supabase
-    .from('generations')
-    .select('id, niche, content, created_at')
+  const { data: videos } = await supabase
+    .from('videos')
+    .select('id, video_url, thumbnail_url, topic, youtube_description, hashtags, status, quality_mode, credits_used, created_at')
     .eq('user_id', user.id)
+    .eq('status', 'completed')
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(100)
 
-  return <HistoryClient generations={generations ?? []} />
+  return <MyVideosClient videos={videos ?? []} />
 }
