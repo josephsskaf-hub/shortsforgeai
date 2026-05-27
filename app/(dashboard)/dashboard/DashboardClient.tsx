@@ -5,6 +5,16 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+// Push #317 — YouTube analytics types
+interface ChannelStats {
+  subscriberCount: number
+  viewCount: number
+  videoCount: number
+  channelTitle: string
+  channelId: string
+  thumbnailUrl: string | null
+}
+
 // Push #301 — Viral Now topic type
 interface ViralTopic {
   slot: number
@@ -50,6 +60,11 @@ export default function DashboardClient({
   const [viralLoading, setViralLoading] = useState(true)
   const viralFetchedRef = useRef(false)
 
+  // Push #317 — YouTube channel stats
+  const [ytStats, setYtStats] = useState<ChannelStats | null>(null)
+  const [ytConnected, setYtConnected] = useState<boolean | null>(null)
+  const ytFetchedRef = useRef(false)
+
   function handleVideoGenerate() {
     const p = videoPrompt.trim()
     if (!p) {
@@ -71,6 +86,24 @@ export default function DashboardClient({
       .catch(() => {})
       .finally(() => setViralLoading(false))
   }, [])
+
+  // Push #317 — Fetch YouTube status + stats once on mount (logged-in only)
+  useEffect(() => {
+    if (!isLoggedIn || ytFetchedRef.current) return
+    ytFetchedRef.current = true
+    fetch('/api/youtube/status')
+      .then(r => r.json())
+      .then(d => {
+        setYtConnected(!!d.connected)
+        if (d.connected) {
+          fetch('/api/youtube/analytics')
+            .then(r => r.json())
+            .then(a => { if (a.channelStats) setYtStats(a.channelStats) })
+            .catch(() => {})
+        }
+      })
+      .catch(() => setYtConnected(false))
+  }, [isLoggedIn])
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -396,6 +429,103 @@ export default function DashboardClient({
 
       {/* Push #031 removed the Top Picks grid that lived here. Credit
           balance card follows directly after the hero CTA now. */}
+
+      {/* ── Push #317: YouTube channel analytics ── */}
+      {isLoggedIn && ytConnected !== null && (
+        <div
+          className="rounded-[20px] px-5 py-4 mb-5"
+          style={{
+            background: 'rgba(11,17,32,0.85)',
+            border: ytConnected ? '1px solid rgba(255,0,0,.22)' : '1px solid var(--border)',
+          }}
+        >
+          {ytConnected && ytStats ? (
+            <>
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                  style={{ background: 'rgba(255,0,0,.12)', border: '1px solid rgba(255,0,0,.3)' }}
+                >
+                  ▶
+                </div>
+                <div>
+                  <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted)', fontSize: '0.6rem' }}>
+                    YouTube Channel
+                  </div>
+                  <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>
+                    {ytStats.channelTitle}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { fetch('/api/youtube/disconnect', { method: 'POST' }).then(() => { setYtConnected(false); setYtStats(null) }) }}
+                  className="ml-auto text-xs"
+                  style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Disconnect
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Subscribers', value: ytStats.subscriberCount.toLocaleString() },
+                  { label: 'Total Views', value: ytStats.viewCount.toLocaleString() },
+                  { label: 'Videos', value: ytStats.videoCount.toLocaleString() },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-xl p-3 text-center"
+                    style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,0,0,.12)' }}
+                  >
+                    <div className="font-black text-base" style={{ color: '#ff4444' }}>{value}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : ytConnected && !ytStats ? (
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                style={{ background: 'rgba(255,0,0,.12)', border: '1px solid rgba(255,0,0,.3)' }}
+              >
+                ▶
+              </div>
+              <div className="text-sm" style={{ color: 'var(--muted)' }}>Loading channel stats…</div>
+            </div>
+          ) : (
+            // Not connected
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                  style={{ background: 'rgba(255,255,255,.05)', border: '1px solid var(--border)' }}
+                >
+                  ▶
+                </div>
+                <div>
+                  <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted)', fontSize: '0.6rem' }}>
+                    YouTube
+                  </div>
+                  <div className="text-sm" style={{ color: 'var(--muted2)' }}>Connect to auto-upload & track analytics</div>
+                </div>
+              </div>
+              <a
+                href="/api/youtube/auth"
+                className="rounded-xl px-4 py-2 text-xs font-bold"
+                style={{
+                  background: 'rgba(255,0,0,.12)',
+                  border: '1px solid rgba(255,0,0,.3)',
+                  color: '#ff4444',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ▶ Connect YouTube
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Credit balance ── */}
       {isLoggedIn && (

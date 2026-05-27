@@ -258,6 +258,12 @@ export default function GenerateClient() {
   // don't trigger re-renders mid-backoff.
   const [playerFailed, setPlayerFailed] = useState(false)
 
+  // Push #317 — YouTube auto-upload state
+  const [ytConnected, setYtConnected] = useState<boolean | null>(null) // null = not yet checked
+  const [ytUploading, setYtUploading] = useState(false)
+  const [ytResult, setYtResult] = useState<{ videoId: string; youtubeUrl: string } | null>(null)
+  const [ytError, setYtError] = useState<string | null>(null)
+
   // Idempotency flag for /api/compose/status — once we see `done` we tell the
   // server not to deduct credits again on subsequent polls.
   const deductedRef = useRef<boolean>(false)
@@ -284,6 +290,17 @@ export default function GenerateClient() {
     trackEvent('generate_page_view')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Push #317 — check YouTube connection status once when the done screen appears.
+  useEffect(() => {
+    if (phase !== 'done') return
+    if (ytConnected !== null) return // already checked
+    fetch('/api/youtube/status')
+      .then((r) => r.json())
+      .then((d) => setYtConnected(!!d.connected))
+      .catch(() => setYtConnected(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
   // Push #188 — fire Google Ads conversion when arriving from OAuth signup
   // (/auth/callback sets ?signup=1 for brand-new accounts).
@@ -1387,6 +1404,34 @@ export default function GenerateClient() {
       router.push('/pricing')
     } finally {
       setUpgradeLoading(false)
+    }
+  }
+
+  // Push #317 — upload the finished video directly to YouTube.
+  async function handleYouTubeUpload() {
+    if (!finalVideoUrl) return
+    if (ytUploading) return
+    setYtUploading(true)
+    setYtError(null)
+    try {
+      const res = await fetch('/api/youtube/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoUrl: finalVideoUrl,
+          title: analysis?.title ?? 'My Short',
+          description: analysis?.youtubeDescription ?? '',
+          tags: analysis?.hashtags?.map((h) => h.replace(/^#/, '')) ?? [],
+          privacyStatus: 'public',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      setYtResult(data)
+    } catch (err) {
+      setYtError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+    } finally {
+      setYtUploading(false)
     }
   }
 
@@ -2731,21 +2776,57 @@ export default function GenerateClient() {
                   </a>
                 </div>
 
-                {/* Quick-access to YouTube Studio right from the result page */}
-                <a
-                  href="https://studio.youtube.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
-                  style={{
-                    background: 'rgba(255,0,0,.08)',
-                    border: '1px solid rgba(255,0,0,.28)',
-                    color: '#ff4444',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <span>▶</span> Upload to YouTube Studio
-                </a>
+                {/* Push #317 — YouTube upload: connect or post directly */}
+                {ytResult ? (
+                  // Upload succeeded — show link to the live Short
+                  <a
+                    href={ytResult.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
+                    style={{
+                      background: 'rgba(34,197,94,.10)',
+                      border: '1px solid rgba(34,197,94,.40)',
+                      color: '#4ade80',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    ✅ Short posted! View on YouTube ↗
+                  </a>
+                ) : ytConnected === false ? (
+                  // Not connected — invite to connect
+                  <a
+                    href="/api/youtube/auth"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
+                    style={{
+                      background: 'rgba(255,0,0,.08)',
+                      border: '1px solid rgba(255,0,0,.28)',
+                      color: '#ff4444',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <span>▶</span> Connect YouTube to auto-upload
+                  </a>
+                ) : (
+                  // Connected (or still checking) — show upload button
+                  <button
+                    type="button"
+                    onClick={handleYouTubeUpload}
+                    disabled={ytUploading || ytConnected === null}
+                    className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
+                    style={{
+                      background: ytUploading ? 'rgba(255,0,0,.04)' : 'rgba(255,0,0,.08)',
+                      border: '1px solid rgba(255,0,0,.28)',
+                      color: ytUploading ? '#ff888888' : '#ff4444',
+                      cursor: ytUploading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {ytUploading ? '⏳ Uploading to YouTube…' : <><span>▶</span> Post to YouTube</>}
+                  </button>
+                )}
+                {ytError && (
+                  <p className="text-xs text-center mt-1" style={{ color: '#f87171' }}>{ytError}</p>
+                )}
               </div>
 
               {/* Push #156 — Next-steps guide. Open by default (Push #296)
@@ -2776,7 +2857,8 @@ export default function GenerateClient() {
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
                     <span style={{ color: '#22D3EE', fontWeight: 800 }}>2</span>
                     <span>
-                      <span style={{ color: 'var(--text)', fontWeight: 700 }}>Upload to YouTube</span> — open{' '}
+                      <span style={{ color: 'var(--text)', fontWeight: 700 }}>Post to YouTube</span>{' '}
+                      — click the red "Post to YouTube" button above to upload directly. Or open{' '}
                       <a
                         href="https://studio.youtube.com"
                         target="_blank"
@@ -2785,7 +2867,7 @@ export default function GenerateClient() {
                       >
                         studio.youtube.com
                       </a>{' '}
-                      and create a new Short.
+                      manually.
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
