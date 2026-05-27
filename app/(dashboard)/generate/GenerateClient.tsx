@@ -114,7 +114,7 @@ const GENERIC_ERROR = 'Video generation failed. Please try again.'
 // phases. They rotate on a timer (purely cosmetic — real progress comes
 // from the API state machine) so the wait feels intentional, not empty.
 const LOADER_MESSAGES = [
-  'Analyzing viral angle…',
+  'Structuring your viral script…',
   'Writing scroll-stopping hook…',
   'Building cinematic script…',
   'Creating cinematic scene prompts…',
@@ -749,10 +749,16 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, renderId, quality])
 
+  // Push #310 — detect whether a prompt already has the viral structure markers
+  // that parseViralScriptSections() expects. If it does, skip /api/generate-script.
+  function promptHasViralMarkers(text: string): boolean {
+    return /\bHOOK\b/i.test(text) && (/\bMICRO REWARD\b/i.test(text) || /\bPAYOFF\b/i.test(text))
+  }
+
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
-    const source = (override ?? prompt).trim()
-    if (!source) {
+    const rawSource = (override ?? prompt).trim()
+    if (!rawSource) {
       setError('Please describe your video idea first.')
       return
     }
@@ -763,7 +769,6 @@ export default function GenerateClient() {
     trackEvent('analyze_idea_clicked')
     trackEvent('generate_started')
     trackEvent('video_generation_started', { duration, quality })
-    if (override !== undefined) setPrompt(override)
     setError(null)
     setAnalysis(null)
     setScenes([])
@@ -773,6 +778,36 @@ export default function GenerateClient() {
     setRenderId(null)
     setFinalVideoUrl(null)
     setPhase('analyzing')
+
+    // Push #310 — auto-structure step. If the raw prompt doesn't have viral
+    // markers (HOOK / MICRO REWARD / PAYOFF), call /api/generate-script first
+    // to produce a structured script. This ensures parseViralScriptSections()
+    // in analyze-idea always fires the fast-path, so GPT never rewrites the
+    // user's voiceovers and Pexels gets specific search terms every time.
+    let source = rawSource
+    if (!promptHasViralMarkers(rawSource)) {
+      try {
+        const sgRes = await fetch('/api/generate-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: rawSource }),
+        })
+        if (sgRes.ok) {
+          const sgData = await sgRes.json()
+          if (typeof sgData.script === 'string' && sgData.script.trim()) {
+            source = sgData.script.trim()
+            setPrompt(source)
+          }
+        }
+        // If generate-script fails for any reason, we fall through with the
+        // original raw prompt — degraded but not broken.
+      } catch {
+        // Non-blocking — proceed with rawSource if the extra step throws.
+      }
+    } else {
+      if (override !== undefined) setPrompt(override)
+    }
+
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 50000)
     try {

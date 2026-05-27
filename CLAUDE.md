@@ -1,26 +1,28 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v2.4 ✅ (estável — commit #307, deploy READY)
+# App versão atual: v2.5 ✅ (estável — commit #310, deploy READY)
 
-## ✅ Status da v2.4 (confirmado em 27/05/2026)
+## ✅ Status da v2.5 (confirmado em 27/05/2026)
+- AUTO-STRUCTURE: qualquer prompt manual agora passa por /api/generate-script antes de analyze-idea (#310)
+- Fast-path ativa 100% das vezes — usuário nunca precisa saber de HOOK/MICRO REWARD (#310)
 - Viral Now: 3 cards trending diários em /viral-now + dashboard, 1 click = gera vídeo
 - Viral script fast-path: voiceovers parsed EM CÓDIGO — GPT só gera visual layer (#307)
 - Marcadores todos em inglês: HOOK, MICRO REWARD, ESCALATION, PAYOFF (#306)
 - Dashboard viral cards: cores por vertical (billionaire=amber, mystery=purple, country=blue) (#305)
 - Nav: "My Videos" substituído por "🔥 Viral Now" em sidebar, mobile nav, e top menu (#302-303)
 - Commits chave desta versão:
-  - #301: Viral Now — tabela Supabase, API route, cards no dashboard, cron 6AM UTC
-  - #302: Sidebar + MobileNav — My Videos → Viral Now
-  - #303: Homepage top menu + página dedicada /viral-now
-  - #304: Prompts reescritos com formula viral completa (Hook+MR×3-5+Escalation+Payoff)
+  - #310: AUTO-STRUCTURE — /api/generate-script transforma qualquer tópico em script estruturado antes de analyze-idea; fast-path sempre ativa; usuário digita tema livre
+  - #309: Fix: restore all truncated route files (cron + viral-now + scenes + analyze-idea)
+  - #307: VIRAL FAST-PATH — parseViralScriptSections() em código; voiceovers NUNCA reescritos pelo GPT
+  - #306: Marcadores em inglês: MICRO REWARD/ESCALATION/RHYTHM
   - #305: analyze-idea detecta scripts virais → cores por vertical no dashboard
-  - #306: Substituição de MICRO RECOMPENSA/ESCALADA/RITMO → MICRO REWARD/ESCALATION/RHYTHM (inglês)
-  - #307: VIRAL FAST-PATH — parseViralScriptSections() em código; voiceovers NUNCA reescritos pelo GPT; GPT só adiciona visual_prompt + caption; garantia de conteúdo específico no vídeo
+  - #301–303: Viral Now — tabela Supabase, API route, cards no dashboard, nav
 
-## Arquitetura do pipeline de geração (v2.4)
-1. Usuário clica card Viral Now → `/generate?prompt=FULL_SCRIPT&autoanalyze=1&autogenerate=1&duration=45`
-2. `analyze-idea` recebe o script → `parseViralScriptSections()` detecta HOOK/MICRO REWARD/ESCALATION/PAYOFF em código TypeScript → voiceovers extraídos verbatim → GPT-4o-mini só gera visual_prompt + caption por cena (temperature 0.5)
-3. `scenes` recebe voiceover_script → detecta markers → divide exatamente em HOOK/MR/ESCALATION/PAYOFF → busca B-roll correto no Pexels
-4. Vídeo composto com cenas alinhadas à formula viral, conteúdo específico garantido (ex: Sodder children, DB Cooper, Beaumont)
+## Arquitetura do pipeline de geração (v2.5)
+1. Usuário digita qualquer coisa → GenerateClient chama /api/generate-script se não houver marcadores
+2. generate-script (GPT-4o-mini, temp 0.7) → script estruturado com HOOK/MICRO REWARD/ESCALATION/PAYOFF
+3. Script estruturado → `analyze-idea` → `parseViralScriptSections()` detecta marcadores → voiceovers verbatim → GPT só gera visual_prompt + caption
+4. `scenes` → busca B-roll específico no Pexels com os termos derivados do voiceover real
+5. Vídeo com conteúdo específico garantido — sem menina aleatória, sem narração genérica
 
 ## ⚠️ REGRA CRÍTICA: ao modificar componentes, sempre buscar os pares
 - Sidebar.tsx → verificar MobileNav.tsx e HomePageClient.tsx (nav do top menu público)
