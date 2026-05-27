@@ -160,12 +160,12 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
         ))}
       </div>
 
-      {/* Video grid — 9:16 cards */}
+      {/* Video grid — compact 9:16 cards, 2-3 per row on mobile */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: '10px',
         }}
       >
         {videos.map((video) => {
@@ -179,10 +179,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               style={{
                 background: 'rgba(11,17,32,0.9)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 16,
+                borderRadius: 12,
                 overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,.3)',
-                backdropFilter: 'blur(12px)',
+                boxShadow: '0 2px 12px rgba(0,0,0,.3)',
               }}
             >
               {/* 9:16 video area */}
@@ -260,21 +259,21 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       )}
                       <div
                         style={{
-                          width: 52,
-                          height: 52,
+                          width: 40,
+                          height: 40,
                           borderRadius: '50%',
                           background: 'rgba(34,211,238,0.18)',
                           border: '2px solid rgba(34,211,238,0.6)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: '0 0 24px rgba(34,211,238,0.3)',
+                          boxShadow: '0 0 18px rgba(34,211,238,0.3)',
                           flexShrink: 0,
                           position: 'relative',
                           zIndex: 1,
                         }}
                       >
-                        <span style={{ fontSize: 20, marginLeft: 3, color: '#22D3EE' }}>▶</span>
+                        <span style={{ fontSize: 15, marginLeft: 2, color: '#22D3EE' }}>▶</span>
                       </div>
                     </button>
                   )}
@@ -282,14 +281,14 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               </div>
 
               {/* Info below video */}
-              <div style={{ padding: '10px 12px 12px' }}>
+              <div style={{ padding: '7px 8px 8px' }}>
                 <p
                   style={{
-                    fontSize: '0.78rem',
+                    fontSize: '0.7rem',
                     fontWeight: 700,
                     color: 'var(--text)',
-                    lineHeight: 1.35,
-                    marginBottom: 6,
+                    lineHeight: 1.3,
+                    marginBottom: 5,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
@@ -299,15 +298,15 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   {title}
                 </p>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>{formatDate(video.created_at)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>{formatDate(video.created_at)}</span>
                   {video.quality_mode && (
                     <span
                       style={{
-                        fontSize: '0.6rem',
+                        fontSize: '0.55rem',
                         fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: 6,
+                        padding: '1px 4px',
+                        borderRadius: 4,
                         background: video.quality_mode === 'cinematic' ? 'rgba(139,92,246,0.15)' : 'rgba(34,211,238,0.1)',
                         border: `1px solid ${video.quality_mode === 'cinematic' ? 'rgba(139,92,246,0.3)' : 'rgba(34,211,238,0.2)'}`,
                         color: video.quality_mode === 'cinematic' ? '#A78BFA' : '#22D3EE',
@@ -315,13 +314,13 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                         letterSpacing: '0.04em',
                       }}
                     >
-                      {video.quality_mode === 'cinematic' ? '✨ AI' : '⚡ Fast'}
+                      {video.quality_mode === 'cinematic' ? '✨ AI' : '⚡'}
                     </span>
                   )}
                 </div>
 
                 {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 4 }}>
                   <a
                     href={video.video_url}
                     target="_blank"
@@ -332,18 +331,18 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: 4,
-                      padding: '6px 8px',
-                      borderRadius: 8,
+                      gap: 3,
+                      padding: '5px 4px',
+                      borderRadius: 6,
                       background: 'rgba(34,211,238,0.08)',
                       border: '1px solid rgba(34,211,238,0.2)',
                       color: '#22D3EE',
-                      fontSize: '0.68rem',
+                      fontSize: '0.6rem',
                       fontWeight: 700,
                       textDecoration: 'none',
                     }}
                   >
-                    ⬇ Download
+                    ⬇
                   </a>
 
                   <a
@@ -351,40 +350,39 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
+                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: 4,
-                      padding: '6px 8px',
-                      borderRadius: 8,
+                      gap: 3,
+                      padding: '5px 4px',
+                      borderRadius: 6,
                       background: 'rgba(239,68,68,0.1)',
                       border: '1px solid rgba(239,68,68,0.25)',
                       color: '#F87171',
-                      fontSize: '0.68rem',
+                      fontSize: '0.6rem',
                       fontWeight: 700,
                       textDecoration: 'none',
-                      whiteSpace: 'nowrap',
                     }}
                   >
-                    ▶ YouTube
+                    ▶ YT
                   </a>
 
                   {video.youtube_description && (
                     <button
                       onClick={() => setExpanded(isExpanded ? null : video.id)}
                       style={{
-                        padding: '6px 8px',
-                        borderRadius: 8,
+                        padding: '5px 6px',
+                        borderRadius: 6,
                         background: 'rgba(255,255,255,0.04)',
                         border: '1px solid rgba(255,255,255,0.08)',
                         color: 'var(--muted)',
-                        fontSize: '0.68rem',
+                        fontSize: '0.6rem',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        whiteSpace: 'nowrap',
                       }}
                     >
-                      {isExpanded ? '▲' : '▼'} Info
+                      {isExpanded ? '▲' : '▼'}
                     </button>
                   )}
                 </div>
