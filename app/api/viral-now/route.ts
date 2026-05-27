@@ -75,6 +75,14 @@ PAYOFF: [Pexels: world globe travel adventure passport] The world does not run o
   },
 ]
 
+// Push #314 — reject Supabase rows that still contain pre-#306 Portuguese
+// markers (MICRO RECOMPENSA, ESCALADA, GANCHO). If the cron wrote stale rows
+// before a deploy finished, those rows would silently serve Portuguese prompts.
+// This guard makes the API fall back to English FALLBACK_TOPICS instead.
+function hasPortugueseMarkers(prompt: string): boolean {
+  return /\b(MICRO RECOMPENSA|ESCALADA|GANCHO|RECOMPENSA FINAL|PAGAMENTO)\b/i.test(prompt)
+}
+
 export async function GET() {
   try {
     const supabase = createClient(
@@ -92,7 +100,10 @@ export async function GET() {
 
     if (error) throw error
 
-    const topics = data && data.length === 3 ? data : FALLBACK_TOPICS
+    // Only use Supabase rows if we have all 3 AND none contain Portuguese markers
+    const dbRowsAreClean = data && data.length === 3 &&
+      !data.some((t: { prompt: string }) => hasPortugueseMarkers(t.prompt))
+    const topics = dbRowsAreClean ? data : FALLBACK_TOPICS
 
     return NextResponse.json({ topics, date: today })
   } catch (err) {
