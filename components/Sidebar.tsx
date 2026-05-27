@@ -352,6 +352,7 @@ export default function Sidebar({
               after the generator. */}
           <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
           <NavItem href="/viral-now" icon="🔥" label="Viral Now" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+          <NavItem href="/history" icon="📂" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #080 — examples removed (demodé). Was:
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}
@@ -615,8 +616,3 @@ export default function Sidebar({
           </div>
         </div>
       </aside>
-
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} defaultTab="signup" />}
-    </>
-  )
-}
