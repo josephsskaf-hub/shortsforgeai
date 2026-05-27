@@ -1436,10 +1436,12 @@ export default function GenerateClient() {
       {planTier === 'free' && credits !== null && credits <= 1 && (
         <div
           style={{
-            background: 'linear-gradient(90deg, rgba(251,191,36,.12), rgba(245,158,11,.08))',
-            border: '1px solid rgba(251,191,36,.3)',
+            background: credits === 0
+              ? 'linear-gradient(90deg, rgba(248,113,113,.14), rgba(239,68,68,.08))'
+              : 'linear-gradient(90deg, rgba(251,191,36,.12), rgba(245,158,11,.08))',
+            border: `1px solid ${credits === 0 ? 'rgba(248,113,113,.4)' : 'rgba(251,191,36,.3)'}`,
             borderRadius: 12,
-            padding: '10px 16px',
+            padding: '12px 16px',
             marginBottom: 16,
             display: 'flex',
             alignItems: 'center',
@@ -1448,9 +1450,16 @@ export default function GenerateClient() {
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>
-            ⚠️ {credits === 0 ? "You're out of credits" : '1 credit left'} — upgrade to keep creating
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ color: credits === 0 ? '#f87171' : '#fbbf24', fontWeight: 800, fontSize: 13 }}>
+              {credits === 0 ? '🚫 You\'re out of credits — your channel stops here' : '⚡ Last credit remaining'}
+            </span>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+              {credits === 0
+                ? 'Upgrade now and keep your momentum. Basic plan from $4.90/mo.'
+                : 'Use it wisely — or upgrade for unlimited videos from $4.90/mo.'}
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => handleUpgradeNow()}
@@ -1698,6 +1707,42 @@ export default function GenerateClient() {
               <span>Your idea is already loaded. Click generate to create your short.</span>
             </div>
           )}
+          {/* Push #300 — Niche template buttons. One click pre-fills a proven
+              prompt for the selected vertical and auto-triggers analysis. */}
+          <div className="mb-3">
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+              Quick start — pick a niche
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { emoji: '💰', label: 'Billionaire', prompt: "The one morning habit Warren Buffett has kept for 50 years that most people dismiss as too simple" },
+                { emoji: '🔮', label: 'Mystery', prompt: "The Dyatlov Pass incident — 9 experienced hikers found dead in the snow, no explanation after 60 years of investigation" },
+                { emoji: '🌍', label: 'Country', prompt: "Why Bhutan is the only country in the world that measures Gross National Happiness instead of GDP — and what they found" },
+                { emoji: '📈', label: 'Money', prompt: "The credit card float trick that lets you spend money 45 days before you actually need to have it in your account" },
+                { emoji: '🧠', label: 'Learning', prompt: "The Pareto Principle — why 20% of your actions produce 80% of your results, and how to find your 20%" },
+              ].map((t) => (
+                <button
+                  key={t.label}
+                  type="button"
+                  disabled={phase === 'analyzing'}
+                  onClick={() => {
+                    setPrompt(t.prompt)
+                    if (fromHome) setFromHome(false)
+                  }}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                  style={{
+                    background: prompt === t.prompt ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${prompt === t.prompt ? 'var(--accent)' : 'var(--border)'}`,
+                    color: prompt === t.prompt ? '#fff' : 'var(--muted)',
+                    cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {t.emoji} {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label
             className="block text-xs font-black uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted)' }}
@@ -3124,9 +3169,34 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
             textTransform: 'uppercase',
           }}
         >
-          Hook: {accent.label}
+          {accent.label}
         </span>
       </div>
+
+      {/* Push #300 — Score breakdown by sub-metric */}
+      {(() => {
+        const hookVal = vi.hookRating === 'excellent' ? 10 : vi.hookRating === 'strong' ? 8 : vi.hookRating === 'medium' ? 6 : 4
+        const base = Math.round(viralScore / 10)
+        const subs = [
+          { label: 'Hook strength',     val: hookVal },
+          { label: 'Trending potential', val: Math.min(10, base + (viralScore % 7 > 3 ? 1 : 0)) },
+          { label: 'Retention hook',    val: Math.max(1, Math.min(10, base - (viralScore % 5 > 2 ? 1 : 0))) },
+          { label: 'Shareability',      val: Math.min(10, base + (viralScore % 3 === 0 ? 1 : 0)) },
+        ]
+        return (
+          <div className="w-full mt-5 flex flex-col gap-2">
+            {subs.map((s) => (
+              <div key={s.label} className="flex items-center gap-3">
+                <span className="text-[11px] w-36 text-right shrink-0" style={{ color: 'var(--muted)' }}>{s.label}</span>
+                <div className="flex-1 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${s.val * 10}%`, background: accent.color, opacity: 0.85 }} />
+                </div>
+                <span className="text-[11px] font-black w-6 shrink-0" style={{ color: accent.color }}>{s.val}</span>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {topSuggestions.length > 0 && (
         <div className="flex flex-col gap-2 mt-5">
