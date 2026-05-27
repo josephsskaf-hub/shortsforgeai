@@ -351,7 +351,7 @@ export default function Sidebar({
               lever for Shorts performance, so we surface this tool right
               after the generator. */}
           <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
-          <NavItem href="/dashboard" icon="🔥" label="Viral Now" exact={true} pathname={pathname} onClick={onClose} badge="NEW" />
+          <NavItem href="/viral-now" icon="🔥" label="Viral Now" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
           {/* Push #080 — examples removed (demodé). Was:
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}

@@ -20,6 +20,7 @@ const pageTitles: Record<string, string> = {
   '/create': 'Create Video',
   '/generate': 'Generate New Short',
   '/my-videos': 'My Videos',
+  '/viral-now': '🔥 Viral Now',
   '/examples': 'Examples',
   '/history': 'Shorts Packs', // legacy — kept reachable but no longer primary
   '/pricing': 'Pricing',
