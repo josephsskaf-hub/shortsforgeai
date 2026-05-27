@@ -1,5 +1,5 @@
-// Push #304 — Viral Now: returns today's 3 trending topic cards
-// Prompts are fully structured with the 5-element viral formula:
+// Push #324 — Viral Now: returns today's 6 trending topic cards (expanded from 3)
+// Rotates every 5h via cron. Prompts use the 5-element viral formula:
 // HOOK → MICRO REWARD ×3-5 → ESCALATION → RHYTHM → PAYOFF
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -72,7 +72,73 @@ ESCALATION: [Pexels: handcuffs arrest law enforcement serious] Three countries. 
 PAYOFF: [Pexels: world globe travel adventure passport] The world does not run on the same rules everywhere. Know before you go. Follow for more.`,
     duration: 45,
     vertical: 'country',
+  },,
+  {
+    slot: 4,
+    emoji: '📈',
+    label: '📈 Finance',
+    title: '5 money traps keeping you broke',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK (0-2s): [Pexels: empty wallet credit cards debt stress] 5 money habits that feel normal — but are silently making you poorer every single month.
+
+MICRO REWARD 1: [Pexels: credit card swipe purchase shopping] Trap one — minimum credit card payments. 5,000 dollars at 24 percent APR, minimum payments: you pay 9,000 in interest over 22 years. More than double what you borrowed.
+
+MICRO REWARD 2: [Pexels: luxury car dealership new car purchase] Trap two — new car. A 35,000 dollar car loses 20 percent the moment you drive off the lot. 7,000 dollars gone in 5 minutes.
+
+MICRO REWARD 3: [Pexels: salary raise promotion celebration office] Trap three — lifestyle creep. Every raise you get, spending rises to match it. Five years later you make more and save the same amount.
+
+MICRO REWARD 4: [Pexels: hospital bill emergency medical expense] Trap four — no emergency fund. One unexpected bill puts you back to zero or into debt.
+
+ESCALATION: [Pexels: person stressed finances laptop bills] Most people are in 3 or more of these traps right now and do not even know it.
+
+PAYOFF: [Pexels: notebook pen financial plan budgeting] Financial freedom is not about making more. It is about stopping the leaks. Save this. Check yourself tonight.`,
+    duration: 45,
+    vertical: 'money',
   },
+  {
+    slot: 5,
+    emoji: '🧠',
+    label: '🧠 Learning',
+    title: '3 mental models that change how you think',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK (0-2s): [Pexels: brain neural network glowing thinking concept] 3 thinking tools used by Elon Musk, Warren Buffett, and Charlie Munger — that 99 percent of people have never heard of.
+
+MICRO REWARD 1: [Pexels: rocket launch spacex engineering blueprint] First Principles Thinking. The rocket industry said launches cost 65 million dollars. Musk asked what the raw materials cost. 2 million. He built SpaceX.
+
+MICRO REWARD 2: [Pexels: chess board strategy planning moves] Inversion. Charlie Munger says do not just ask how to succeed — ask what would definitely make you fail. Then avoid those things.
+
+MICRO REWARD 3: [Pexels: calendar clock decision planning future] The 10-10-10 Rule. Before any big decision: how will I feel in 10 minutes? 10 months? 10 years? Most regrets come from decisions that felt good in 10 minutes and terrible in 10 years.
+
+ESCALATION: [Pexels: billionaire executive office strategy whiteboard] Three tools. All free. All used by the wealthiest decision-makers alive. None taught in school.
+
+PAYOFF: [Pexels: person reading book knowledge learning desk] You do not need a higher IQ. You need better thinking frameworks. Save this.`,
+    duration: 45,
+    vertical: 'learning',
+  },
+  {
+    slot: 6,
+    emoji: '🌍',
+    label: '🌍 Countries',
+    title: 'K2 kills 1 in 4 climbers — here is why',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK (0-2s): [Pexels: mountain peak summit dangerous altitude extreme] Everest has a 1 percent death rate. K2 has 25 percent. Here is why the second-highest mountain is the most lethal.
+
+MICRO REWARD 1: [Pexels: ice glacier hanging serac mountain danger] The Bottleneck — a 45-degree ice gully directly beneath a hanging glacier the size of a 10-story building. In 2008, it collapsed. Eleven climbers died in one day. There is no alternative route.
+
+MICRO REWARD 2: [Pexels: helicopter mountain rescue emergency altitude] No rescue above base camp. On Everest, helicopters reach climbers at 7,000 meters. On K2, the shape makes it physically impossible. If something goes wrong high on the mountain, you walk out or you die.
+
+MICRO REWARD 3: [Pexels: mountaineers summit celebration nepal team] K2 was never summited in winter until January 2021. A Nepali team did it in minus 65 degrees with 200 kilometer per hour winds. They sang their national anthem at the top.
+
+ESCALATION: [Pexels: mountain statistics climbing records deadly] 377 summits. 91 deaths. One in four who reach the top did not survive. That ratio has held for 70 years.
+
+PAYOFF: [Pexels: k2 mountain dramatic landscape wide shot] Everest gets the fame. K2 gets the respect. The deadliest mountain is not the tallest one. Follow for more.`,
+    duration: 45,
+    vertical: 'country',
+  },
+
 ]
 
 // Push #314 — reject Supabase rows that still contain pre-#306 Portuguese
@@ -101,7 +167,7 @@ export async function GET() {
     if (error) throw error
 
     // Only use Supabase rows if we have all 3 AND none contain Portuguese markers
-    const dbRowsAreClean = data && data.length === 3 &&
+    const dbRowsAreClean = data && data.length >= 6 &&
       !data.some((t: { prompt: string }) => hasPortugueseMarkers(t.prompt))
     const topics = dbRowsAreClean ? data : FALLBACK_TOPICS
 
