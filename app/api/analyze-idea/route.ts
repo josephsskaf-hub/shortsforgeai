@@ -262,10 +262,23 @@ function fallbackBrief(prompt: string): CreativeBrief {
   }
 }
 
-function buildSystemPrompt(duration: number): string {
+// Push #316 — language support
+type AnalyzeLanguage = 'en' | 'pt' | 'es'
+
+function languageInstruction(language: AnalyzeLanguage): string {
+  if (language === 'pt') {
+    return `\nLANGUAGE: Generate all voiceover text, title, description, hashtags, and captions in Brazilian Portuguese (pt-BR). Visual prompts must stay in English (Pexels/Runway search requires English). JSON field names stay in English.`
+  }
+  if (language === 'es') {
+    return `\nLANGUAGE: Generate all voiceover text, title, description, hashtags, and captions in Spanish (Latin American, es-419). Visual prompts must stay in English (Pexels/Runway search requires English). JSON field names stay in English.`
+  }
+  return '' // English is the default
+}
+
+function buildSystemPrompt(duration: number, language: AnalyzeLanguage = 'en'): string {
   const plan = durationPlanFor(duration)
   const [minWords, maxWords] = plan.wordCountRange
-  return `You are a YouTube Shorts creative director specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Your job is to produce a complete creative brief for a ${plan.duration} second Short built around real, verifiable facts that escalate to a satisfying payoff.
+  return `You are a YouTube Shorts creative director specializing in addictive micro-knowledge content. Every script must feel like Netflix knowledge dopamine — short, real, surprising, and satisfying. Your job is to produce a complete creative brief for a ${plan.duration} second Short built around real, verifiable facts that escalate to a satisfying payoff.${languageInstruction(language)}
 
 The brief MUST include: a viral_title, a brutal hook for the first 1-2 seconds, a scene-by-scene breakdown with cinematic visual prompts (never generic), captions of MAX 6-8 words, full voiceover_script (made of real micro-knowledge beats, not vague mystery), music_mood, pacing_notes, youtube_title, youtube_description, and hashtags.
 
@@ -503,7 +516,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string; duration?: number }
+    let body: { prompt?: string; duration?: number; language?: string }
     try {
       body = await req.json()
     } catch {
@@ -514,6 +527,10 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
+
+    // Push #316 — language selection (en | pt | es), defaults to English.
+    const language: AnalyzeLanguage =
+      body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
     if (prompt.length > 5000) {
       return NextResponse.json({ error: 'Prompt is too long (5000 chars max).' }, { status: 400 })
     }
@@ -681,7 +698,7 @@ Return ONLY the JSON object — no markdown, no commentary.`
         {
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: buildSystemPrompt(duration) },
+            { role: 'system', content: buildSystemPrompt(duration, language) },
             { role: 'user', content: userMsg },
           ],
           temperature: 0.85,

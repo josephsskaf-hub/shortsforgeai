@@ -44,6 +44,12 @@ interface ComposeBody {
   // When present, compose uses the narration verbatim at this speed and skips
   // both the word-count scaling and the duration corrective re-synthesis.
   speed?: number
+  // Push #316 — output language (en | pt | es). The OpenAI TTS model is
+  // multilingual and auto-detects the language of the input text, so the same
+  // 'onyx' voice narrates in Portuguese or Spanish when the script is in that
+  // language. We accept and log the param for observability but no voice switch
+  // is required.
+  language?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -129,6 +135,9 @@ export async function POST(req: NextRequest) {
       return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' ? q : 'basic_ai'
     })()
 
+    // Push #316 — output language. OpenAI TTS auto-detects from the script text.
+    const language = body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
+
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
     // narration is the user's exact text spoken at this rate; we don't rewrite
     // the word count and we don't slow the voice to fill the requested duration.
@@ -187,7 +196,7 @@ export async function POST(req: NextRequest) {
 
     // Step 2 — Generate TTS.
     console.log(
-      `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s`,
+      `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s language=${language}`,
     )
     let audioBuffer: Buffer
     try {

@@ -165,6 +165,8 @@ export default function GenerateClient() {
   // Cinematic Mode keeps the Runway path. Quality tiers above only apply to
   // Cinematic Mode; Fast Mode pins the effective quality to 'fast' on submit.
   const [mode, setMode] = useState<GenerationMode>('fast')
+  // Push #316 — output language selector (en | pt | es).
+  const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
   // Push #235 — when the user pastes a script with explicit [Pexels:] markers,
@@ -712,6 +714,7 @@ export default function GenerateClient() {
             duration,
             topic: prompt,
             quality,
+            language,
             ...(ttsSpeed != null ? { speed: ttsSpeed } : {}),
           }),
         })
@@ -901,7 +904,7 @@ export default function GenerateClient() {
         const sgRes = await fetch('/api/generate-script', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic: rawSource }),
+          body: JSON.stringify({ topic: rawSource, language }),
         })
         if (sgRes.ok) {
           const sgData = await sgRes.json()
@@ -936,7 +939,7 @@ export default function GenerateClient() {
         headers: { 'Content-Type': 'application/json' },
         // Push #064 — pass duration so analyze-idea can size word count
         // and scene count to match the user's selection.
-        body: JSON.stringify({ prompt: source, duration }),
+        body: JSON.stringify({ prompt: source, duration, language }),
         signal: controller.signal,
       })
       if (res.status === 401) {
@@ -1087,7 +1090,7 @@ export default function GenerateClient() {
         const res = await fetch('/api/generate-video-cinematic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration }),
+          body: JSON.stringify({ prompt: trimmed, duration, language }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
@@ -1122,7 +1125,7 @@ export default function GenerateClient() {
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration }),
+          body: JSON.stringify({ prompt: trimmed, duration, language }),
         })
         const data = await res.json()
         if (res.status === 401) {
@@ -2042,6 +2045,43 @@ export default function GenerateClient() {
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
               Longer videos give the AI more room to build a complete story.
+            </p>
+          </div>
+
+          {/* Push #316 — Language selector (EN / PT / ES) */}
+          <div className="mt-5">
+            <div
+              className="text-xs font-black uppercase tracking-widest mb-2"
+              style={{ color: 'var(--muted)' }}
+            >
+              Language
+            </div>
+            <div className="flex gap-2">
+              {([
+                { code: 'en' as const, label: '🇺🇸 English' },
+                { code: 'pt' as const, label: '🇧🇷 Portuguese' },
+                { code: 'es' as const, label: '🇪🇸 Spanish' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => setLanguage(opt.code)}
+                  className="rounded-full px-4 py-1.5 text-sm font-bold"
+                  style={{
+                    background: language === opt.code ? '#3B82F6' : 'rgba(255,255,255,.04)',
+                    border: language === opt.code ? '1px solid rgba(59, 130, 246,.65)' : '1px solid var(--border)',
+                    color: language === opt.code ? '#FFFFFF' : 'var(--muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+              Script, voiceover, and captions will be generated in the selected language.
             </p>
           </div>
 
