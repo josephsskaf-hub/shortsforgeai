@@ -440,6 +440,13 @@ interface ViralSection {
   text: string
 }
 
+// Push #311 — strip [Pexels: xxx] markers from a voiceover body so TTS
+// never reads them aloud while generate-video-fast still sees them in the
+// raw prompt and enters verbatim mode.
+function stripPexelsMarker(body: string): string {
+  return body.replace(/^\s*\[\s*pexels\s*[:\-–]?\s*[^\]]+\]\s*/i, '').trim()
+}
+
 function parseViralScriptSections(text: string): ViralSection[] | null {
   const hasHook = /\bHOOK\b/i.test(text)
   const hasMR = /\bMICRO REWARD\b/i.test(text)
@@ -454,21 +461,25 @@ function parseViralScriptSections(text: string): ViralSection[] | null {
     const trimmed = part.trim()
     if (!trimmed) continue
     if (/^HOOK[\s:(]/i.test(trimmed)) {
-      const body = trimmed
+      const raw = trimmed
         .replace(/^HOOK[^:\n]*:\s*/i, '')
         .replace(/^HOOK\s+/i, '')
         .trim()
-        .replace(/^["“]|["”]$/g, '')
+        .replace(/^[“”]|[“”]$/g, '')
         .trim()
+      const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'hook', text: body })
     } else if (/^MICRO REWARD\s+\d/i.test(trimmed)) {
-      const body = trimmed.replace(/^MICRO REWARD\s+\d+[:\s]*/i, '').trim()
+      const raw = trimmed.replace(/^MICRO REWARD\s+\d+[:\s]*/i, '').trim()
+      const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'micro_reward', text: body })
     } else if (/^ESCALATION/i.test(trimmed)) {
-      const body = trimmed.replace(/^ESCALATION[:\s]*/i, '').trim()
+      const raw = trimmed.replace(/^ESCALATION[:\s]*/i, '').trim()
+      const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'escalation', text: body })
     } else if (/^PAYOFF/i.test(trimmed)) {
-      const body = trimmed.replace(/^PAYOFF[:\s]*/i, '').trim()
+      const raw = trimmed.replace(/^PAYOFF[:\s]*/i, '').trim()
+      const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'payoff', text: body })
     }
   }

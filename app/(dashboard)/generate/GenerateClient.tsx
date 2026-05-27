@@ -56,8 +56,13 @@ interface Analysis {
 }
 
 // Pipeline state machine — described in push #028.
+// Push #311 — added 'script_preview': shown after auto-structure completes
+// but before analyze-idea fires, so the user can review/edit the structured
+// script before burning a credit. Auto-skipped when ?autogenerate=1 (Viral Now).
 type Phase =
   | 'idle'
+  | 'scripting'     // generate-script is running (auto-structure step)
+  | 'script_preview' // structured script ready — user reviews before generating
   | 'analyzing'
   | 'options'
   | 'generating'    // Runway producing clips
@@ -755,7 +760,7 @@ export default function GenerateClient() {
     return /\bHOOK\b/i.test(text) && (/\bMICRO REWARD\b/i.test(text) || /\bPAYOFF\b/i.test(text))
   }
 
-  async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean }) {
+  async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean; skipPreview?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const rawSource = (override ?? prompt).trim()
     if (!rawSource) {
@@ -777,15 +782,18 @@ export default function GenerateClient() {
     setClipUrls([])
     setRenderId(null)
     setFinalVideoUrl(null)
-    setPhase('analyzing')
 
-    // Push #310 — auto-structure step. If the raw prompt doesn't have viral
+    // Push #310/311 — auto-structure step. If the raw prompt doesn't have viral
     // markers (HOOK / MICRO REWARD / PAYOFF), call /api/generate-script first
-    // to produce a structured script. This ensures parseViralScriptSections()
-    // in analyze-idea always fires the fast-path, so GPT never rewrites the
-    // user's voiceovers and Pexels gets specific search terms every time.
+    // to produce a structured script with [Pexels: xxx] hints per beat.
+    // This ensures parseViralScriptSections() fires the fast-path AND
+    // generate-video-fast enters verbatim mode for precise footage every time.
     let source = rawSource
-    if (!promptHasViralMarkers(rawSource)) {
+    const needsStructuring = !promptHasViralMarkers(rawSource)
+
+    if (needsStructuring) {
+      // Push #311 — show scripting phase so the user knows something is happening
+      setPhase('scripting')
       try {
         const sgRes = await fetch('/api/generate-script', {
           method: 'POST',
@@ -804,9 +812,18 @@ export default function GenerateClient() {
       } catch {
         // Non-blocking — proceed with rawSource if the extra step throws.
       }
+
+      // Push #311 — show script preview for manual flow unless caller requests
+      // skip (autoanalyze from Viral Now cards, where the script is pre-written).
+      if (!opts?.skipPreview && source !== rawSource) {
+        setPhase('script_preview')
+        return // GenerateClient will wait for user to click "Looks good, generate"
+      }
     } else {
       if (override !== undefined) setPrompt(override)
     }
+
+    setPhase('analyzing')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 50000)
@@ -902,7 +919,14 @@ export default function GenerateClient() {
     }
   }
 
+  // Push #311 — continue from script_preview phase when user confirms.
+  // Called by the "Looks good, generate →" button in the preview card.
+  async function handleConfirmScript() {
+    await handleAnalyze(undefined, { skipPreview: true })
+  }
+
   // Auto-trigger analyze when URL has ?autoanalyze=1&prompt=… (topic quick-start)
+  // Push #311 — Viral Now cards skip the preview step (scripts are pre-written).
   useEffect(() => {
     const sp = searchParams?.get('prompt') ?? ''
     const auto = searchParams?.get('autoanalyze') === '1'
@@ -910,7 +934,7 @@ export default function GenerateClient() {
     const key = sp.trim()
     if (autoAnalyzeKeyRef.current === key) return
     autoAnalyzeKeyRef.current = key
-    handleAnalyze(sp, { fromTopic: true })
+    handleAnalyze(sp, { fromTopic: true, skipPreview: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -1435,7 +1459,8 @@ export default function GenerateClient() {
   const nextStepsDescription =
     analysis?.youtubeDescription?.trim() || analysis?.title?.trim() || ''
 
-  const showStep1 = phase === 'idle' || phase === 'analyzing'
+  const showStep1 = phase === 'idle' || phase === 'analyzing' || phase === 'scripting'
+  const showScriptPreview = phase === 'script_preview'
   const showStep2 = phase === 'options'
   const showRender =
     phase === 'generating' ||
@@ -1546,14 +1571,15 @@ export default function GenerateClient() {
                   color: '#3B82F6',
                 }}
               >
-                {showStep1 ? 'Step 1 — Your Idea' : showStep2 ? 'Step 2 — Creative Brief' : 'Step 3 — Generate'}
+                {showStep1 ? 'Step 1 — Your Idea' : showScriptPreview ? 'Step 2 — Review Script' : showStep2 ? 'Step 3 — Creative Brief' : 'Step 4 — Generate'}
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-              {showStep1 ? 'Create Your Short ⚡' : '🎬 Generate a Real AI Short'}
+              {showStep1 ? 'Create Your Short ⚡' : showScriptPreview ? '✍️ Your Script is Ready' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
               {showStep1 && 'Type any topic → AI writes, voices & edits your Short in ~60 seconds'}
+              {showScriptPreview && 'Review your script before we generate the video. Edit anything you want.'}
               {showStep2 && 'Pick duration and quality, then generate.'}
               {showRender && 'Rendering your vertical 9:16 Short.'}
             </p>
@@ -1940,6 +1966,23 @@ export default function GenerateClient() {
           subsequent screens focused on the active generation. */}
       {showStep1 && <PricingCards />}
 
+      {phase === 'scripting' && (
+        <section
+          className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+        >
+          <Spinner />
+          <div>
+            <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+              Writing your viral script…
+            </div>
+            <div className="text-sm" style={{ color: 'var(--muted2)' }}>
+              Structuring hook, facts, escalation, and payoff for your topic.
+            </div>
+          </div>
+        </section>
+      )}
+
       {phase === 'analyzing' && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
@@ -1953,6 +1996,64 @@ export default function GenerateClient() {
             <div className="text-sm" style={{ color: 'var(--muted2)' }}>
               Detecting niche, drafting a title, and outlining the scenes.
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── STEP 1.5: Script Preview ── Push #311 ── */}
+      {showScriptPreview && (
+        <section
+          className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <span style={{ fontSize: 20 }}>✍️</span>
+            <span className="font-black text-sm" style={{ color: 'var(--text)' }}>
+              AI wrote this script for your video — review and edit before generating
+            </span>
+          </div>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed min-h-[280px] sm:min-h-[380px] mb-4"
+            style={{
+              background: 'rgba(0,0,0,.3)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              outline: 'none',
+              resize: 'vertical',
+              fontFamily: 'monospace',
+              fontSize: 13,
+            }}
+          />
+          <div className="flex gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={outOfCredits() ? openOutOfCreditsModal : handleConfirmScript}
+              className="rounded-xl px-6 py-3 font-black text-sm"
+              style={{
+                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(59,130,246,.35)',
+              }}
+            >
+              Looks good — Generate Video ⚡
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPhase('idle'); setPrompt('') }}
+              className="rounded-xl px-4 py-3 font-bold text-sm"
+              style={{
+                background: 'rgba(255,255,255,.05)',
+                border: '1px solid var(--border)',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+              }}
+            >
+              Start over
+            </button>
           </div>
         </section>
       )}
@@ -2716,6 +2817,50 @@ export default function GenerateClient() {
               copiedSection={copiedSection}
               onCopy={copySection}
             />
+          )}
+
+          {/* Push #311 — Performance tracking nudge. After the video is done,
+              prompt the user to come back and track how it performed on YouTube.
+              Simple clipboard copy of a reminder — no backend needed yet. */}
+          {phase === 'done' && finalVideoUrl && (
+            <div
+              className="gv-card rounded-2xl p-4 mb-6"
+              style={{
+                background: 'rgba(16,185,129,.06)',
+                border: '1px solid rgba(16,185,129,.25)',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <span style={{ fontSize: 20, lineHeight: 1 }}>📊</span>
+                <div>
+                  <div className="font-black text-sm mb-1" style={{ color: '#34d399' }}>
+                    Track this video after you post
+                  </div>
+                  <div className="text-xs leading-relaxed mb-3" style={{ color: 'var(--muted2)' }}>
+                    Once it&apos;s live on YouTube, come back and tell us how it performed.
+                    We&apos;ll use that data to make your next Viral Now cards smarter.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reminder = `ShortsForgeAI — track this video performance:\nPrompt: ${prompt.slice(0, 80)}...\nGenerated: ${new Date().toLocaleDateString()}\nYouTube link: [paste here]`
+                      navigator.clipboard.writeText(reminder).catch(() => {})
+                      setCopiedSection('perf_reminder')
+                      setTimeout(() => setCopiedSection((c) => (c === 'perf_reminder' ? null : c)), 1800)
+                    }}
+                    className="rounded-lg px-4 py-2 text-xs font-bold"
+                    style={{
+                      background: 'rgba(16,185,129,.15)',
+                      border: '1px solid rgba(16,185,129,.35)',
+                      color: '#34d399',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copiedSection === 'perf_reminder' ? '✓ Copied reminder!' : '📋 Copy reminder to track later'}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Push #047 — Next Action block. Replaces the simple "Start over"

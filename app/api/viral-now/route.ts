@@ -6,8 +6,9 @@ import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
-// Fallback pool — prompts already contain the full viral structure so the
-// generator receives a rich, ready-to-use script blueprint, not just a topic.
+// Push #311 — FALLBACK_TOPICS updated with [Pexels: xxx] markers per beat.
+// generate-video-fast's parseUserScript() detects these and enters verbatim
+// mode: each marker becomes a precise Pexels search, eliminating random footage.
 const FALLBACK_TOPICS = [
   {
     slot: 1,
@@ -16,17 +17,17 @@ const FALLBACK_TOPICS = [
     title: 'The 3 rules billionaires never break',
     prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
 
-HOOK (0-2s): "Billionaires don't get rich by accident — they follow 3 rules most people never learn."
+HOOK (0-2s): [Pexels: gold coins stack luxury wealth] Billionaires do not get rich by accident — they follow 3 rules most people never learn.
 
-MICRO REWARD 1: Rule #1 — they never sell their winners. Warren Buffett has held Coca-Cola stock for 35 years. Every time he almost sold, he lost nothing. Every time he held, he made millions more.
+MICRO REWARD 1: [Pexels: stock market chart upward growth monitor] Rule one — never sell your winners. Warren Buffett has held Coca-Cola stock for 35 years. Every time he almost sold, he lost nothing. Every time he held, he made millions more.
 
-MICRO REWARD 2: Rule #2 — they pay themselves in assets, not cash. Elon Musk takes a $1 salary. Jeff Bezos's net worth is 99% stock. Cash loses value. Assets multiply.
+MICRO REWARD 2: [Pexels: businessman minimal office desk working] Rule two — pay yourself in assets, not cash. Elon Musk takes a one dollar salary. Jeff Bezos net worth is 99 percent stock. Cash loses value. Assets multiply.
 
-MICRO REWARD 3: Rule #3 — they obsess over one number. Not revenue. Not followers. Return on invested capital. If a dollar in doesn't make more than a dollar out, they cut it immediately.
+MICRO REWARD 3: [Pexels: financial spreadsheet calculator numbers close] Rule three — obsess over one number: return on invested capital. If a dollar in does not make more than a dollar out, they cut it immediately.
 
-ESCALATION: And here's what separates the top 0.01% — they combine all three at once. Low salary. Assets that compound. Zero tolerance for bad investments.
+ESCALATION: [Pexels: skyscraper corporate headquarters city aerial] The top 0.01 percent combine all three at once. Low salary. Assets that compound. Zero tolerance for bad investments.
 
-PAYOFF: The average person saves money. Billionaires build systems that make money while they sleep. Start with Rule #1 today.`,
+PAYOFF: [Pexels: person sleeping peacefully while money grows] The average person saves money. Billionaires build systems that make money while they sleep. Start with rule one today. Follow for more.`,
     duration: 45,
     vertical: 'billionaire',
   },
@@ -37,17 +38,17 @@ PAYOFF: The average person saves money. Billionaires build systems that make mon
     title: 'The disappearance nobody solved',
     prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
 
-HOOK (0-2s): "In 1947, a woman was found dead in a locked room — with a smile on her face. Nobody has ever explained what happened."
+HOOK (0-2s): [Pexels: dark foggy empty street night crime scene] In 1947, a woman was found dead in a locked room with a smile on her face. Nobody has ever explained what happened.
 
-MICRO REWARD 1: The Black Dahlia case. Elizabeth Short was found in Los Angeles, perfectly posed, with no blood at the scene — despite being brutally murdered. The killer washed the body, arranged it, and vanished. 77 years later, zero arrests.
+MICRO REWARD 1: [Pexels: crime scene tape police investigation dark] The Black Dahlia case. Elizabeth Short was found in Los Angeles, perfectly posed, with no blood at the scene despite being brutally murdered. The killer washed the body, arranged it, and vanished. 77 years later, zero arrests.
 
-MICRO REWARD 2: The Sodder children — on Christmas night 1945, a house fire killed zero adults but 5 children simply disappeared. No remains were ever found. A private investigator received a photo in the mail 23 years later. It looked exactly like one of the missing kids.
+MICRO REWARD 2: [Pexels: old house fire smoke ruins abandoned] The Sodder children — on Christmas night 1945, a house fire killed zero adults but five children simply disappeared. No remains were ever found. A private investigator received a photo in the mail 23 years later that looked exactly like one of the missing kids.
 
-MICRO REWARD 3: The Tamam Shud case — a man was found dead on an Australian beach in 1948. No identity. No cause of death. In his pocket: a scrap of paper with the words "Tamam Shud" — Persian for "it is ended." The book it was torn from was found in a car nearby. Inside: an uncracked code that has never been deciphered.
+MICRO REWARD 3: [Pexels: sandy beach ocean shore mysterious] The Tamam Shud case — a man was found dead on an Australian beach in 1948. No identity. No cause of death. In his pocket: a scrap of paper with words from a book no one could trace. Inside: an uncracked code never deciphered.
 
-ESCALATION: Three cases. Three countries. Zero answers. The scariest part? All three happened within 3 years of each other.
+ESCALATION: [Pexels: world map three locations highlighted mystery] Three cases. Three countries. Zero answers. All three happened within three years of each other.
 
-PAYOFF: Some mysteries don't get solved. They get buried. Save this — and ask yourself: what else are we not being told?`,
+PAYOFF: [Pexels: closed cold case file documents archive] Some mysteries do not get solved. They get buried. Save this and ask yourself: what else are we not being told. Follow for more.`,
     duration: 45,
     vertical: 'mystery',
   },
@@ -58,17 +59,17 @@ PAYOFF: Some mysteries don't get solved. They get buried. Save this — and ask 
     title: 'Countries with insane hidden rules',
     prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
 
-HOOK (0-2s): "These 3 countries will arrest you for things you do every single day."
+HOOK (0-2s): [Pexels: international airport passport control border] These three countries will arrest you for things you do every single day.
 
-MICRO REWARD 1: Singapore. Chewing gum has been illegal since 1992. Not just selling it — importing it. First offense: a $100,000 fine. The law was passed because gum was jamming the doors of the MRT subway system and costing millions in repairs. They simply banned it. Zero exceptions.
+MICRO REWARD 1: [Pexels: singapore city skyline clean streets mrt] Singapore. Chewing gum has been illegal since 1992. Not just selling it — importing it. First offense: a 100,000 dollar fine. The law was passed because gum was jamming the MRT subway doors and costing millions in repairs. They simply banned it. Zero exceptions.
 
-MICRO REWARD 2: Bhutan. This country charges tourists $200 per day just to enter — by law. Not a hotel, not a tour. Just the right to be there. They call it the "happiness tax." Fewer tourists. More happiness. GDP per person is higher than most of their neighbors.
+MICRO REWARD 2: [Pexels: bhutan mountain monastery himalaya landscape] Bhutan. This country charges tourists 200 dollars per day just to enter — by law. Not a hotel, not a tour. Just the right to be there. They call it the happiness tax. Fewer tourists. More happiness.
 
-MICRO REWARD 3: North Korea. Tourists are allowed — but you cannot take a photo without permission. Every shot must be approved by your government-assigned guide. One wrong photo of a soldier, a broken building, or an empty street can get you detained. Several Americans have spent years in custody for a single image.
+MICRO REWARD 3: [Pexels: north korea pyongyang military street soldiers] North Korea. Tourists are allowed but you cannot take a photo without permission. One wrong photo of a soldier or an empty street can get you detained. Several Americans have spent years in custody for a single image.
 
-ESCALATION: Three countries. Three totally different reasons. But the same result — break the rule and you don't get a warning.
+ESCALATION: [Pexels: handcuffs arrest law enforcement serious] Three countries. Three totally different reasons. But the same result — break the rule and you do not get a warning.
 
-PAYOFF: The world doesn't run on the same rules everywhere. Know before you go.`,
+PAYOFF: [Pexels: world globe travel adventure passport] The world does not run on the same rules everywhere. Know before you go. Follow for more.`,
     duration: 45,
     vertical: 'country',
   },
