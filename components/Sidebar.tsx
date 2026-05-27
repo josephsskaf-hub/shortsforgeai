@@ -616,3 +616,8 @@ export default function Sidebar({
           </div>
         </div>
       </aside>
+
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} defaultTab="signup" />}
+    </>
+  )
+}
