@@ -1,27 +1,30 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v2.2 ✅ (estável — commit #287, deploy READY)
+# App versão atual: v2.3 ✅ (estável — commit #305, deploy READY)
 
-## ✅ Status da v2.2 (confirmado em 26/05/2026)
-- Home page: carregando corretamente, sem crash
-- Planos: Basic $4.90 / Pro $9.90 visíveis, sem card free
-- Legenda dupla: corrigida — só 1 legenda branca (sem palavras amarelas)
-- Geração de vídeo: funcionando — "5 Ocean Secrets" gerado com sucesso (45s, viral score 85/100)
-- Coerência visual: pipeline `generateScenes()` operacional
-- Funil de signup: novos usuários vão direto para /pricing (não /generate)
-- Welcome email: atualizado — sem texto "crédito grátis" (removido no #270)
-- Hero: menos padding no topo, h1 menor, prompt box maior (#284)
+## ✅ Status da v2.3 (confirmado em 27/05/2026)
+- Viral Now: 3 cards trending diários em /viral-now + dashboard, 1 click = gera vídeo
+- Viral Now formula: prompts embeds Hook + Micro Recompensa x3-5 + Escalada + Payoff (#304)
+- Sinergias de geração: analyze-idea detecta scripts virais estruturados e usa voiceovers verbatim (#305)
+- Scenes route: divide cenas corretamente nos marcadores HOOK/MR/ESCALADA/PAYOFF (#305)
+- Dashboard viral cards: cores por vertical (billionaire=amber, mystery=purple, country=blue) (#305)
+- Nav: "My Videos" substituído por "🔥 Viral Now" em sidebar, mobile nav, e top menu (#302-303)
 - Commits chave desta versão:
-  - #277: removida legenda amarela dupla (`buildCaptionElements` → só `baseCaption`)
-  - #278: `HomePageClient.tsx` sem null bytes
-  - #279: `app/start/page.tsx` truncation fix (SWC parse error corrigido)
-  - #280: `lib/pricing.ts` — export `PLAN_LIST` restaurado (crash `.map()` corrigido)
-  - #281: `app/auth/callback/route.ts` + `signup/page.tsx` — novos usuários → /pricing
-  - #282: `app/api/send-welcome/route.ts` — welcome email sem cópia de crédito grátis
-  - #283: `lib/pricing.ts` — export duplicado `PLAN_LIST` removido (TS2300 corrigido)
-  - #284: `HomePageClient.tsx` — hero padding reduzido, h1 menor, prompt box maior
-  - #285: `signup/page.tsx` — CRLF→LF (SWC parse error corrigido)
-  - #286: `send-welcome/route.ts` — truncation fix (eof SWC error corrigido)
-  - #287: `auth/callback/route.ts` — truncation fix (eof SWC error corrigido)
+  - #301: Viral Now — tabela Supabase, API route, cards no dashboard, cron 6AM UTC
+  - #302: Sidebar + MobileNav — My Videos → Viral Now
+  - #303: Homepage top menu + página dedicada /viral-now
+  - #304: Prompts reescritos com formula viral completa (Hook+MR×3-5+Escalada+Payoff)
+  - #305: analyze-idea detecta scripts virais → preserva voiceovers verbatim; scenes route divide por marcadores; dashboard cards cor por vertical
+
+## Arquitetura do pipeline de geração
+1. Usuário clica card Viral Now → `/generate?prompt=FULL_SCRIPT&autoanalyze=1&autogenerate=1&duration=45`
+2. `analyze-idea` recebe o script estruturado → detecta HOOK/MICRO RECOMPENSA/PAYOFF → GPT usa voiceovers verbatim, só gera visual_prompt + captions
+3. `scenes` recebe voiceover_script → detecta markers → divide exatamente em HOOK/MR/ESCALADA/PAYOFF → busca B-roll correto no Pexels
+4. Vídeo composto com cenas alinhadas à formula viral
+
+## ⚠️ REGRA CRÍTICA: ao modificar componentes, sempre buscar os pares
+- Sidebar.tsx → verificar MobileNav.tsx e HomePageClient.tsx (nav do top menu público)
+- Viral Now cards → verificar DashboardClient.tsx E ViralNowClient.tsx (ambos renderizam cards)
+- viral-now/route.ts (FALLBACK_TOPICS) → verificar cron/refresh-viral-now/route.ts (TOPIC_POOL)
 
 ## ⚠️ REGRA CRÍTICA — InVideo
 **SEMPRE usar modo AUTOPILOT. NUNCA usar Agent One Pro.**

@@ -51,6 +51,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Script is required.' }, { status: 400 })
     }
 
+    // Push #305 — detect pre-written viral scripts so GPT splits scenes at the
+    // correct structural boundaries (HOOK / MICRO RECOMPENSA / ESCALADA / PAYOFF)
+    // rather than guessing from narration length alone.
+    const isViralScript =
+      /\bHOOK\b/i.test(script) && /MICRO RECOMPENSA|PAYOFF/i.test(script)
+
+    const viralSplitNote = isViralScript
+      ? `\n\nSCRIPT STRUCTURE NOTE: This script uses the 5-element viral formula. Split scenes at the structural markers:
+- HOOK section → Scene 1
+- Each MICRO RECOMPENSA → its own scene
+- ESCALADA → second-to-last scene
+- PAYOFF → final scene
+Never merge two MICRO RECOMPENSA sections into one scene. Use the exact narration text from each section.`
+      : ''
+
     // searchKeywords fixes a long-standing bug where generic 2-3-word queries
     // ("ranking", "list", "facts") matched random Pexels footage that had
     // nothing to do with the narration. The model emits a priority list of
@@ -63,7 +78,7 @@ export async function POST(req: NextRequest) {
     // a concrete noun from that theme — so a Mansa Musa script's "to recover"
     // line gets "ancient african empire" instead of generic wellness clips.
     const prompt = `You are a STOCK FOOTAGE DIRECTOR planning visuals for a YouTube Short in the "${niche}" niche.
-
+${viralSplitNote}
 SCRIPT:
 """
 ${script}

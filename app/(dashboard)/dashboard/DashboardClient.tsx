@@ -23,6 +23,16 @@ interface DashboardClientProps {
   isLoggedIn: boolean
 }
 
+// Push #305 — vertical-specific colors for Viral Now cards (matches /viral-now page)
+const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string; text: string; hover: string }> = {
+  billionaire: { bg: 'rgba(11,17,32,0.85)', border: 'rgba(251,191,36,.28)', pill: 'rgba(251,191,36,.15)', text: '#fbbf24', hover: 'rgba(251,191,36,.5)' },
+  money:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(34,197,94,.28)',  pill: 'rgba(34,197,94,.15)',  text: '#4ade80', hover: 'rgba(34,197,94,.5)'  },
+  mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(168,85,247,.28)', pill: 'rgba(168,85,247,.15)', text: '#c084fc', hover: 'rgba(168,85,247,.5)' },
+  country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(59,130,246,.28)', pill: 'rgba(59,130,246,.15)', text: '#60a5fa', hover: 'rgba(59,130,246,.5)' },
+  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(236,72,153,.28)', pill: 'rgba(236,72,153,.15)', text: '#f472b6', hover: 'rgba(236,72,153,.5)' },
+}
+const DEFAULT_VERTICAL = { bg: 'rgba(11,17,32,0.85)', border: 'rgba(239,68,68,.22)', pill: 'rgba(239,68,68,.14)', text: '#f87171', hover: 'rgba(239,68,68,.5)' }
+
 // Push #031 removed the dashboard "Top Picks" niche grid. Topic shortcuts
 // live in the homepage hero textarea + quick-tag chips now.
 
@@ -226,6 +236,8 @@ export default function DashboardClient({
                 />
               ))
             : viralTopics.map(topic => {
+                // Push #305 — vertical-specific color theming (matches /viral-now page)
+                const c = VERTICAL_COLORS[topic.vertical] ?? DEFAULT_VERTICAL
                 const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&autogenerate=1&duration=${topic.duration}`
                 return (
                   <button
@@ -234,26 +246,26 @@ export default function DashboardClient({
                     onClick={() => router.push(url)}
                     className="text-left rounded-[16px] px-4 py-4 transition-all"
                     style={{
-                      background: 'rgba(11,17,32,0.85)',
-                      border: '1px solid rgba(239,68,68,.22)',
-                      boxShadow: '0 0 24px rgba(239,68,68,.07)',
+                      background: c.bg,
+                      border: `1px solid ${c.border}`,
+                      boxShadow: `0 0 24px ${c.pill}`,
                       cursor: 'pointer',
                       width: '100%',
                     }}
                     onMouseEnter={e => {
-                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,.5)'
-                      ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 32px rgba(239,68,68,.18)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = c.hover
+                      ;(e.currentTarget as HTMLElement).style.boxShadow = `0 0 32px ${c.pill}`
                     }}
                     onMouseLeave={e => {
-                      ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,.22)'
-                      ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 24px rgba(239,68,68,.07)'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = c.border
+                      ;(e.currentTarget as HTMLElement).style.boxShadow = `0 0 24px ${c.pill}`
                     }}
                   >
                     {/* Pill label */}
                     <div className="mb-2">
                       <span
                         className="text-xs font-black px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(239,68,68,.14)', color: '#f87171', border: '1px solid rgba(239,68,68,.25)' }}
+                        style={{ background: c.pill, color: c.text, border: `1px solid ${c.border}` }}
                       >
                         {topic.label}
                       </span>
@@ -270,8 +282,8 @@ export default function DashboardClient({
                       <span
                         className="text-xs font-black px-3 py-1.5 rounded-lg text-white"
                         style={{
-                          background: 'linear-gradient(135deg, #ef4444, #f97316)',
-                          boxShadow: '0 3px 12px rgba(239,68,68,.4)',
+                          background: `linear-gradient(135deg, ${c.text}, #ef4444)`,
+                          boxShadow: `0 3px 12px ${c.pill}`,
                         }}
                       >
                         ⚡ Generate →

@@ -469,6 +469,24 @@ export async function POST(req: NextRequest) {
 
     const fallback = fallbackBrief(prompt)
 
+    // Push #305 — detect pre-written viral scripts (from Viral Now cards).
+    // When the prompt already has the 5-element viral formula embedded,
+    // instruct GPT to use those exact voiceover lines VERBATIM instead of
+    // rewriting them. This preserves the Hook/MR/Escalada/Payoff structure
+    // and creates tight synergy between prompt content and the final video.
+    const isViralScript =
+      /HOOK\s*\(/i.test(prompt) ||
+      (/\bHOOK\b/i.test(prompt) && /MICRO RECOMPENSA|PAYOFF/i.test(prompt))
+
+    const viralScriptInstruction = isViralScript
+      ? `\n\nCRITICAL — PRE-WRITTEN VIRAL SCRIPT: The prompt above is ALREADY a complete viral script with the 5-element structure (HOOK → MICRO RECOMPENSA × 3-5 → ESCALADA → PAYOFF). You MUST map sections to scenes EXACTLY as follows:
+- HOOK section → Scene 1 voiceover (use verbatim, do NOT rewrite)
+- Each MICRO RECOMPENSA → its own scene voiceover (verbatim, no paraphrase)
+- ESCALADA section → second-to-last scene voiceover (verbatim)
+- PAYOFF section → final scene voiceover (verbatim)
+Your ONLY creative task is to write a punchy 6-8 word caption and a cinematic visual_prompt for each scene — the voiceover text comes directly from the script sections above, word for word. Do NOT invent new content or condense the voiceovers.`
+      : ''
+
     const userMsg = `Create an addictive micro-knowledge YouTube Short about: ${prompt}.
 Duration: ~${duration} seconds (target word count is in the system prompt).
 Make every line teach something real and surprising.
@@ -478,7 +496,7 @@ TOPIC FIDELITY (critical): The ENTIRE brief must be specifically about "${prompt
 
 Detected niche hint: ${fallback.niche}
 Detected tone hint: ${fallback.tone}
-
+${viralScriptInstruction}
 Return ONLY the JSON object — no markdown, no commentary.`
 
     let brief: CreativeBrief = fallback
