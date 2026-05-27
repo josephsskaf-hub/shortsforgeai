@@ -30,7 +30,7 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 // duration before we re-synthesize the TTS at an adjusted speed to pull it
 // back in line. ±3s matches the product tolerance.
 const DURATION_TOLERANCE_SECONDS = 3
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
 
 interface ComposeBody {
   generationId?: string
@@ -125,7 +125,8 @@ export async function POST(req: NextRequest) {
 
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
-      return q === 'fast' || q === 'basic' || q === 'pro' ? q : 'basic_ai'
+      // Push #315 — added cinematic_ai for fal.ai Wan 2.1 mode (3 credits).
+      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' ? q : 'basic_ai'
     })()
 
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
@@ -145,7 +146,9 @@ export async function POST(req: NextRequest) {
     // the way in, so by the time we reach /api/compose the user paid for
     // the render. We do NOT decrement again here. We only verify the
     // upstream gate held (plan === pro) as defense in depth.
-    if (quality !== 'fast') {
+    // Push #315 — cinematic_ai (fal.ai mode) uses credits, not Pro plan.
+    // Only the old Runway-based modes (basic, basic_ai, pro) require Pro.
+    if (quality !== 'fast' && quality !== 'cinematic_ai') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(

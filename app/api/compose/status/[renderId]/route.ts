@@ -12,17 +12,19 @@ export const maxDuration = 60
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
 
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
   // The UI display lives in app/(dashboard)/generate/GenerateClient.tsx — keep
   // these two in sync when adjusting prices. Push #084 added 'fast' = 1
   // credit for the Pexels + TTS Fast Mode pipeline. Basic / Basic AI = 15,
-  // Pro = 20.
+  // Pro = 20. Push #315 added 'cinematic_ai' = 3 for fal.ai Wan 2.1.
   switch (quality) {
     case 'fast':
       return 1
+    case 'cinematic_ai':
+      return 3
     case 'pro':
       return 20
     case 'basic':
@@ -243,7 +245,8 @@ export async function GET(
       // deduct from `video_credits`. They were already paid for by a
       // cinematic_token consumed upstream in /api/generate-video. Only
       // Fast Mode still draws from the regular credit pool.
-      const shouldDeductCredits = quality === 'fast'
+      // Push #315 — cinematic_ai also deducts from video_credits (3 credits).
+      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.

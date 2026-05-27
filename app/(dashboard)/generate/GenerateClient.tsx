@@ -65,7 +65,8 @@ type Phase =
   | 'script_preview' // structured script ready — user reviews before generating
   | 'analyzing'
   | 'options'
-  | 'generating'    // Runway producing clips
+  | 'generating'    // Runway producing clips (or fal.ai submission)
+  | 'fal_polling'   // Push #315 — polling fal.ai clip status until all done
   | 'clips_ready'   // brief transition state — kicks off /api/compose
   | 'composing'     // Creatomate rendering the final video
   | 'done'
@@ -79,8 +80,10 @@ type Phase =
 type Duration = 45 | 60 | 90
 // Push #084 — added 'fast' for the Pexels + TTS cheap pipeline (1 credit).
 // Cinematic quality tiers (basic / basic_ai / pro) still flow through Runway.
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro'
-type GenerationMode = 'fast' | 'cinematic'
+// Push #315 — added 'cinematic_ai' for fal.ai Wan 2.1 mode.
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
+// Push #315 — added 'cinematic_ai' for fal.ai Wan 2.1 mode (3 credits, no Pro required).
+type GenerationMode = 'fast' | 'cinematic_ai' | 'cinematic'
 
 const DURATION_OPTIONS: { value: Duration; label: string }[] = [
   { value: 45, label: '45s — Recommended ⭐' },
@@ -171,6 +174,9 @@ export default function GenerateClient() {
   const [fastVoiceover, setFastVoiceover] = useState<string | null>(null)
   const [fastCaptions, setFastCaptions] = useState<string[] | null>(null)
   const [ttsSpeed, setTtsSpeed] = useState<number | null>(null)
+  // Push #315 — fal.ai polling state for Cinematic AI mode.
+  const [falRequestIds, setFalRequestIds] = useState<(string | null)[]>([])
+  const [falClipsDone, setFalClipsDone] = useState<{ done: number; total: number }>({ done: 0, total: 0 })
   const [renderId, setRenderId] = useState<string | null>(null)
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
@@ -436,14 +442,13 @@ export default function GenerateClient() {
     }
   }, [planTier, mode, cinematicTokens])
 
-  // Push #087 — Fast Mode 4-step staged progress. Auto-advances every
-  // ~8s while Fast Mode is mid-generation so the long single roundtrip
-  // feels like progress instead of a stalled spinner.
+  // Push #087 — Fast/CinematicAI 4-step staged progress. Auto-advances every
+  // ~8s while mid-generation so the long single roundtrip feels like progress.
   useEffect(() => {
-    if (mode !== 'fast') return
-    const inFastLoading =
-      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
-    if (!inFastLoading) {
+    if (mode !== 'fast' && mode !== 'cinematic_ai') return
+    const inLoading =
+      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
+    if (!inLoading) {
       setFastStep(0)
       return
     }
@@ -462,7 +467,7 @@ export default function GenerateClient() {
   //   40s+   : ⚡ Rendering your Short...
   useEffect(() => {
     const isGenerating =
-      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
+      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!isGenerating) {
       setProgressStep(0)
       return
@@ -532,7 +537,7 @@ export default function GenerateClient() {
   // leave a loading phase so the next run starts at message 0.
   useEffect(() => {
     const inLoadingPhase =
-      phase === 'generating' || phase === 'clips_ready' || phase === 'composing'
+      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!inLoadingPhase) {
       setLoaderTick(0)
       return
@@ -606,6 +611,72 @@ export default function GenerateClient() {
       }
     }
   }, [phase, tasks])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // PHASE: fal_polling  →  Push #315 — poll fal.ai clip status every 6s.
+  // When all clips are done (or failed), collect URLs and move to clips_ready.
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'fal_polling') return
+    if (falRequestIds.length === 0) return
+    let cancelled = false
+
+    async function pollFal() {
+      try {
+        const idsEncoded = encodeURIComponent(JSON.stringify(falRequestIds))
+        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}`, { cache: 'no-store' })
+        const data = await res.json()
+        if (cancelled) return
+
+        if (!res.ok) {
+          if (res.status === 502) {
+            setError(data?.error ?? 'AI clip generation failed. Please try again.')
+            setPhase('failed')
+            return
+          }
+          // Retry on other errors
+          pollTimerRef.current = setTimeout(pollFal, 6000)
+          return
+        }
+
+        const done = typeof data.done === 'number' ? data.done : 0
+        const total = typeof data.total === 'number' ? data.total : falRequestIds.length
+        setFalClipsDone({ done, total })
+        setGenerateProgress(total > 0 ? Math.round((done / total) * 85) : 0)
+
+        if (data.allDone) {
+          // Collect all successful clip URLs
+          const urls: string[] = (data.clips ?? [])
+            .filter((c: { status: string; url: string | null }) => c.status === 'done' && c.url)
+            .map((c: { url: string }) => c.url)
+
+          if (urls.length === 0) {
+            setError('All AI clips failed to generate. Please try again.')
+            setPhase('failed')
+            return
+          }
+
+          setClipUrls(urls)
+          setGenerateProgress(100)
+          setPhase('clips_ready')
+          return
+        }
+
+        // Not all done yet — keep polling
+        pollTimerRef.current = setTimeout(pollFal, 6000)
+      } catch (err) {
+        if (cancelled) return
+        console.error('[generate] fal poll error:', err)
+        pollTimerRef.current = setTimeout(pollFal, 8000)
+      }
+    }
+
+    pollTimerRef.current = setTimeout(pollFal, 4000)
+    return () => {
+      cancelled = true
+      if (pollTimerRef.current) { clearTimeout(pollTimerRef.current); pollTimerRef.current = null }
+    }
+  }, [phase, falRequestIds])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
@@ -997,6 +1068,8 @@ export default function GenerateClient() {
     setFastVoiceover(null)
     setFastCaptions(null)
     setTtsSpeed(null)
+    setFalRequestIds([])
+    setFalClipsDone({ done: 0, total: 0 })
     setRenderId(null)
     setFinalVideoUrl(null)
     setGenerateProgress(0)
@@ -1008,6 +1081,42 @@ export default function GenerateClient() {
     // Push #084 — Fast Mode skips Runway and resolves Pexels clips
     // synchronously, then jumps straight to the compose phase. Cinematic
     // Mode keeps the existing Runway path with its polling state machine.
+    // Push #315 — Cinematic AI mode submits to fal.ai queue, then polls.
+    if (mode === 'cinematic_ai') {
+      try {
+        const res = await fetch('/api/generate-video-cinematic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: trimmed, duration }),
+        })
+        const data = await res.json()
+        if (res.status === 401) { router.push('/login?redirect=/generate'); return }
+        if (res.status === 402) {
+          setError(`Cinematic AI needs 3 credits. You have ${data?.balance ?? 0}.`)
+          setPhase('failed'); return
+        }
+        if (!res.ok) {
+          setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
+          setPhase('failed'); return
+        }
+        setQuality('cinematic_ai')
+        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
+        setScenes(Array.isArray(data.scenes) ? data.scenes : [])
+        setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
+        setFastCaptions(Array.isArray(data.scene_captions) ? data.scene_captions : null)
+        setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
+        const ids = Array.isArray(data.fal_request_ids) ? data.fal_request_ids : []
+        setFalRequestIds(ids)
+        setFalClipsDone({ done: 0, total: ids.filter((id: string | null) => id !== null).length })
+        setPhase('fal_polling')
+      } catch (err) {
+        console.error('[generate] cinematic-ai threw:', err)
+        setError(GENERIC_ERROR)
+        setPhase('failed')
+      }
+      return
+    }
+
     if (mode === 'fast') {
       try {
         const res = await fetch('/api/generate-video-fast', {
@@ -1485,6 +1594,8 @@ export default function GenerateClient() {
   // per-quality cost from QUALITY_OPTIONS.
   const selectedCost = mode === 'fast'
     ? 1
+    : mode === 'cinematic_ai'
+    ? 3
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
@@ -1496,6 +1607,7 @@ export default function GenerateClient() {
   const showStep2 = phase === 'options'
   const showRender =
     phase === 'generating' ||
+    phase === 'fal_polling' ||
     phase === 'clips_ready' ||
     phase === 'composing' ||
     phase === 'done' ||
@@ -1504,7 +1616,11 @@ export default function GenerateClient() {
   const statusMessage = (() => {
     switch (phase) {
       case 'generating':
-        return 'Creating cinematic visuals…'
+        return 'Submitting to AI generator…'
+      case 'fal_polling':
+        return falClipsDone.total > 0
+          ? `🤖 Generating AI clips… ${falClipsDone.done}/${falClipsDone.total} done`
+          : 'Generating AI clips…'
       case 'clips_ready':
         return 'Generating voiceover & captions…'
       case 'composing':
@@ -1520,6 +1636,7 @@ export default function GenerateClient() {
 
   const headlineProgress = (() => {
     if (phase === 'generating') return Math.min(70, Math.round(generateProgress * 0.7))
+    if (phase === 'fal_polling') return 10 + Math.round(generateProgress * 0.6)
     if (phase === 'clips_ready') return 72
     if (phase === 'composing') return 75 + Math.round(renderProgress * 0.25)
     if (phase === 'done') return 100
@@ -1936,11 +2053,13 @@ export default function GenerateClient() {
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
                 {mode === 'fast'
                   ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
+                  : mode === 'cinematic_ai'
+                  ? `🤖 ${selectedCost} credits • AI Video (fal.ai) • ~3-5 min render.`
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
               {/* Push #087 — credit-balance awareness right under the CTA.
                   Three states: low (<5), empty (=0), and silent (healthy). */}
-              {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0)) && (
+              {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
                 <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
                   No credits left. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
                 </p>
@@ -2237,7 +2356,7 @@ export default function GenerateClient() {
       {/* ── Render / Done / Failed ── */}
       {showRender && (
         <>
-          {(phase === 'generating' || phase === 'clips_ready' || phase === 'composing') && (
+          {(phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing') && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
@@ -2815,8 +2934,8 @@ export default function GenerateClient() {
                     : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}
                 </span>
                 <span>·</span>
-                <span style={{ color: mode === 'fast' ? '#34d399' : '#fbbf24', fontWeight: 700 }}>
-                  {mode === 'fast' ? 'Fast Mode ⚡' : 'Cinematic 🎬'}
+                <span style={{ color: mode === 'fast' ? '#34d399' : mode === 'cinematic_ai' ? '#fcd34d' : '#fbbf24', fontWeight: 700 }}>
+                  {mode === 'fast' ? 'Fast Mode ⚡' : mode === 'cinematic_ai' ? 'AI Video 🤖' : 'Cinematic 🎬'}
                 </span>
               </div>
 
@@ -3220,7 +3339,7 @@ function PipelineStages({
   //  4. Rendering final video — Creatomate render bulk (`composing`)
   //  5. Preparing download    — terminal `done` + final URL fetch
   const visualsDone = phase === 'clips_ready' || phase === 'composing' || phase === 'done'
-  const visualsActive = phase === 'generating'
+  const visualsActive = phase === 'generating' || phase === 'fal_polling'
 
   const voiceoverActive = phase === 'clips_ready' || (phase === 'composing' && renderProgress < 25)
   const voiceoverDone = phase === 'composing' && renderProgress >= 25
@@ -4037,6 +4156,7 @@ function ModeSelector({
   const proHasToken = isPro && cinematicTokens > 0
 
   const fastFeatures = ['Premium visual library', 'AI voice synthesis', 'Ready in ~60 seconds']
+  const aiFeatures = ['fal.ai Wan 2.1 AI video', 'Real AI-generated scenes', '~3-5 min render']
   const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', '~5 minute render']
 
   return (
@@ -4047,7 +4167,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Fast Mode — always available */}
         <button
           type="button"
@@ -4098,6 +4218,60 @@ function ModeSelector({
             {fastFeatures.map((f) => (
               <li key={f} className="flex items-center gap-1.5">
                 <span style={{ color: '#34d399', fontSize: '0.6rem' }}>●</span>
+                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </button>
+
+        {/* Push #315 — Cinematic AI (fal.ai Wan 2.1). Available to all users, 3 credits. */}
+        <button
+          type="button"
+          onClick={() => setMode('cinematic_ai')}
+          className="rounded-xl p-4 text-left"
+          style={{
+            background: mode === 'cinematic_ai' ? 'rgba(245,158,11,.10)' : 'rgba(255,255,255,.03)',
+            border: mode === 'cinematic_ai' ? '1.5px solid rgba(245,158,11,.55)' : '1.5px solid var(--border)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            boxShadow: mode === 'cinematic_ai' ? '0 0 28px rgba(245,158,11,.15)' : 'none',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-base">🤖</span>
+            <span
+              className="text-sm font-black"
+              style={{ color: mode === 'cinematic_ai' ? '#fcd34d' : 'var(--text)' }}
+            >
+              AI Video
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span
+                className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                style={{
+                  background: 'rgba(245,158,11,.15)',
+                  color: '#fcd34d',
+                  border: '1px solid rgba(245,158,11,.25)',
+                }}
+              >
+                New ✨
+              </span>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: 'rgba(245,158,11,.18)',
+                  color: '#fcd34d',
+                  border: '1px solid rgba(245,158,11,.3)',
+                }}
+              >
+                3 credits
+              </span>
+            </div>
+          </div>
+          <ul className="space-y-1">
+            {aiFeatures.map((f) => (
+              <li key={f} className="flex items-center gap-1.5">
+                <span style={{ color: '#fcd34d', fontSize: '0.6rem' }}>●</span>
                 <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
               </li>
             ))}
