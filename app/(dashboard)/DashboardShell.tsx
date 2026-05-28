@@ -55,8 +55,8 @@ export default function DashboardShell({
         style={{ width: 500, height: 500, background: '#3B82F6', bottom: -150, left: 300, opacity: 0.04, filter: 'blur(110px)', zIndex: 0 }}
       />
 
-      {/* Desktop sidebar spacer */}
-      <div className="hidden md:block flex-shrink-0" style={{ width: 240 }} />
+      {/* Desktop sidebar spacer — must match Sidebar width (248px) */}
+      <div className="hidden md:block flex-shrink-0" style={{ width: 248 }} />
 
       {/* Desktop sidebar (always open).
           Push #052 — wrapped in `hidden md:block` so the fixed 248px aside

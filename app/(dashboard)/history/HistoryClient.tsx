@@ -166,8 +166,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: '10px',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))',
+          gap: '12px',
         }}
       >
         {videos.map((video) => {

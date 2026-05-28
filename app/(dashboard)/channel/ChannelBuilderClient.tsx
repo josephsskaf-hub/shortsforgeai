@@ -90,12 +90,17 @@ export default function ChannelBuilderClient() {
     <div className="px-4 md:px-6 py-7 pb-20">
       {/* Header */}
       <div className="mb-7">
-        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: 'var(--indigo-light)' }}>
+        <div
+          className="font-black uppercase mb-2 flex items-center gap-2"
+          style={{ fontSize: '0.65rem', letterSpacing: '0.18em', color: '#22D3EE' }}
+        >
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
           Faceless Channel Builder
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
         </div>
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.45rem', color: 'var(--text)', lineHeight: 1.1 }}>
+            <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Build Your{' '}
               <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Viral Channel

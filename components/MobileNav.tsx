@@ -25,7 +25,7 @@ export default function MobileNav() {
         paddingBottom: 'max(env(safe-area-inset-bottom), 6px)',
       }}
     >
-      <div className="flex items-stretch" style={{ height: 58 }}>
+      <div className="flex items-stretch" style={{ height: 62 }}>
         {NAV_ITEMS.map((item) => {
           const active = item.exact
             ? pathname === item.href
@@ -36,18 +36,22 @@ export default function MobileNav() {
               key={item.href}
               href={item.href}
               className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all"
-              style={{ textDecoration: 'none' }}
+              style={{
+                textDecoration: 'none',
+                background: active ? 'rgba(34,211,238,0.05)' : 'transparent',
+              }}
             >
-              {/* Active top bar */}
+              {/* Active top indicator */}
               {active && (
                 <span
                   className="absolute top-0"
                   style={{
-                    left: '22%',
-                    right: '22%',
+                    left: '20%',
+                    right: '20%',
                     height: 2,
                     background: 'linear-gradient(90deg, #22D3EE, #3B82F6)',
                     borderRadius: '0 0 4px 4px',
+                    boxShadow: '0 0 8px rgba(34,211,238,0.5)',
                   }}
                 />
               )}
@@ -55,12 +59,15 @@ export default function MobileNav() {
               {/* Icon */}
               <span
                 style={{
-                  fontSize: '1.2rem',
+                  fontSize: '1.25rem',
                   lineHeight: 1,
                   filter: active
-                    ? 'drop-shadow(0 0 7px rgba(34,211,238,0.65))'
+                    ? 'drop-shadow(0 0 8px rgba(34,211,238,0.7))'
                     : 'none',
                   transition: 'filter 0.18s ease',
+                  transform: active ? 'scale(1.08)' : 'scale(1)',
+                  transitionProperty: 'filter, transform',
+                  transitionDuration: '0.18s',
                 }}
               >
                 {item.icon}
@@ -69,11 +76,11 @@ export default function MobileNav() {
               {/* Label */}
               <span
                 style={{
-                  fontSize: '0.58rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.05em',
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
                   textTransform: 'uppercase' as const,
-                  color: active ? '#22D3EE' : '#94A3B8',
+                  color: active ? '#22D3EE' : '#64748B',
                   transition: 'color 0.18s ease',
                 }}
               >

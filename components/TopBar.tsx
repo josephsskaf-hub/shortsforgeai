@@ -43,7 +43,11 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         }}
         aria-label="Toggle menu"
       >
-        ☰
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect y="2" width="16" height="1.5" rx="1" fill="currentColor" />
+          <rect y="7.25" width="16" height="1.5" rx="1" fill="currentColor" />
+          <rect y="12.5" width="16" height="1.5" rx="1" fill="currentColor" />
+        </svg>
       </button>
 
       {/* Mobile logo link */}
