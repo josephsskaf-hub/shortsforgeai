@@ -37,6 +37,8 @@ interface ShowcaseCard {
   prompt: string
   accent: string
   videoUrl: string
+  captions: string[]
+  genTime: number
 }
 
 // Push #132 — SHOWCASE no longer hard-codes any CDN URLs. Video URLs are
@@ -50,36 +52,48 @@ const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
     title: 'What NASA hides about the Moon',
     prompt: 'Cinematic space mystery short about unexplained Moon anomalies that NASA never explained',
     accent: '#22D3EE',
+    captions: ['NASA lost footage from the Moon...', 'They never showed you THIS', 'What was really up there?'],
+    genTime: 54,
   },
   {
     category: 'History Facts',
     title: 'The Roman invention we still use',
     prompt: 'Fast-paced history facts short about a Roman invention that still powers daily life today',
     accent: '#F59E0B',
+    captions: ['Romans invented something you use daily', "Most history books skip this part", 'The invention that changed everything'],
+    genTime: 61,
   },
   {
     category: 'Hidden Places',
     title: 'Cities erased from every map',
     prompt: 'Dark cinematic short about real hidden cities that governments removed from world maps',
     accent: '#A78BFA',
+    captions: ["These cities officially don't exist", 'Governments wiped them from every map', 'But people still live there...'],
+    genTime: 48,
   },
   {
     category: 'Cold Case',
     title: 'The case that broke the FBI',
     prompt: 'Suspenseful cold case short about an unsolved FBI investigation with chilling details',
     accent: '#F87171',
+    captions: ['This case made 200 FBI agents quit', 'No fingerprints. No witnesses.', 'It was never solved.'],
+    genTime: 57,
   },
   {
     category: 'Weird Facts',
     title: 'Facts your brain refuses to believe',
     prompt: 'Punchy weird facts short with 5 facts that sound fake but are 100% true',
     accent: '#34D399',
+    captions: ['Your brain will say this is fake', "But it's 100% verified", 'Ready to feel small?'],
+    genTime: 44,
   },
   {
     category: 'Money Psychology',
     title: 'Why the rich think differently',
     prompt: 'Money psychology short about the mental habits that separate the wealthy from everyone else',
     accent: '#60A5FA',
+    captions: ['Billionaires think about money differently', 'This one habit changes everything', 'Most people will never learn this'],
+    genTime: 59,
   },
 ]
 // IDs must match SHOWCASE_QUERIES in /api/showcase-clips/route.ts
@@ -418,7 +432,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // Stripe — no fetch, no await, no gesture breakage on any mobile browser.
   function handleStartPlan(tier: 'starter' | 'basic' | 'pro') {
     trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
-    trackCheckoutClick(tier)
+    if (tier === 'basic' || tier === 'pro') trackCheckoutClick(tier)
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent('/pricing')}`)
       return
@@ -666,7 +680,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Start Generating Shorts →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            From $2.90/month · 7-day money-back guarantee · Cancel anytime
+            From $4.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </div>
         </div>{/* end hero content */}
@@ -784,17 +798,17 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             className="mb-3 text-[11px] font-extrabold uppercase tracking-[.18em] text-cyan-400 flex items-center justify-center gap-3"
           >
             <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
-            Create Your First AI Short
+            Real AI Output — No Editing Required
             <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9] mb-3">
-            Pick a style.{' '}
+            This is what your AI{' '}
             <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              AI does the rest.
+              generates in 60s.
             </span>
           </h2>
           <p className="mx-auto max-w-lg text-[14px] text-[#94A3B8] leading-relaxed">
-            Choose a format below — the AI writes the hook, records the voiceover, cuts the scenes and renders your Short automatically.
+            Each Short below was created from a single topic — AI wrote the script, recorded the voiceover, picked the footage and added captions automatically.
           </p>
         </div>
 
@@ -1317,6 +1331,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <style>{`
             @keyframes sf-exit-fade { from { opacity: 0; } to { opacity: 1; } }
             @keyframes sf-exit-pop { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes waveBar { from { transform: scaleY(0.4); } to { transform: scaleY(1.4); } }
           `}</style>
         </div>
       )}
@@ -1435,17 +1450,13 @@ function ShowcaseVideoCard({
 }) {
   const [videoFailed, setVideoFailed] = useState(false)
   // Push #131 — removed opacity gating (videoReady/isPlaying states).
-  // Video was staying at opacity:0 because canplay/playing events don't
-  // reliably fire on Google CDN clips across all browsers. The gradient
-  // div behind the video acts as the natural load placeholder — just show
-  // the video immediately so it renders as soon as the first frame lands.
   const isPlaying = true // keep for overlay logic compat
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const cardRef = useRef<HTMLDivElement | null>(null)
-  // Push #228 — defer each card's clip until it scrolls near the viewport.
-  // Six clips loading + autoplaying at once on mount was the main homepage
-  // perf cost; the gradient poster shows until then.
   const [inView, setInView] = useState(false)
+  // Caption cycling — rotates through the card's caption lines every 2.5s
+  const [captionIdx, setCaptionIdx] = useState(0)
+  const [captionVisible, setCaptionVisible] = useState(true)
 
   useEffect(() => {
     const el = cardRef.current
@@ -1473,6 +1484,19 @@ function ShowcaseVideoCard({
       videoRef.current.play().catch(() => {/* autoplay blocked */})
     }
   }, [inView, card.videoUrl])
+
+  // Cycle through captions with a fade transition
+  useEffect(() => {
+    if (!inView) return
+    const interval = setInterval(() => {
+      setCaptionVisible(false)
+      setTimeout(() => {
+        setCaptionIdx((prev) => (prev + 1) % card.captions.length)
+        setCaptionVisible(true)
+      }, 300)
+    }, 2800)
+    return () => clearInterval(interval)
+  }, [inView, card.captions.length])
 
   return (
     <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120] transition-all duration-200 hover:border-blue-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
@@ -1537,7 +1561,58 @@ function ShowcaseVideoCard({
           </span>
         </div>
 
-        {/* Format badge — bottom-left, matches the 9:16 product spec. */}
+        {/* "Generated in Xs" badge — top-right */}
+        <div className="absolute top-3 right-3 z-20">
+          <span
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] backdrop-blur-md"
+            style={{
+              background: 'rgba(16,185,129,.18)',
+              border: '1px solid rgba(16,185,129,.45)',
+              color: '#34D399',
+            }}
+          >
+            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#34D399', boxShadow: '0 0 6px #34D399' }} />
+            AI · {card.genTime}s
+          </span>
+        </div>
+
+        {/* Animated caption overlay — bottom of video, mimics real Short captions */}
+        <div className="absolute bottom-10 left-0 right-0 z-20 flex justify-center px-3">
+          <div
+            style={{
+              background: 'rgba(0,0,0,0.72)',
+              borderRadius: 6,
+              padding: '5px 10px',
+              maxWidth: '90%',
+              textAlign: 'center',
+              transition: 'opacity 0.3s ease',
+              opacity: captionVisible ? 1 : 0,
+            }}
+          >
+            <span className="text-[11px] sm:text-[12px] font-bold text-white leading-tight">
+              {card.captions[captionIdx]}
+            </span>
+          </div>
+        </div>
+
+        {/* Audio waveform animation — bottom right */}
+        <div className="absolute bottom-3 right-3 z-20 flex items-end gap-[2px]" aria-hidden>
+          {[3, 6, 4, 7, 5, 8, 4, 6, 3].map((h, i) => (
+            <div
+              key={i}
+              style={{
+                width: 2,
+                height: h,
+                borderRadius: 1,
+                background: card.accent,
+                opacity: 0.8,
+                animation: `waveBar 0.9s ease-in-out ${i * 0.08}s infinite alternate`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Format badge — bottom-left */}
         <div className="absolute bottom-3 left-3 z-20">
           <span
             className="rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] backdrop-blur-md"
@@ -1551,11 +1626,6 @@ function ShowcaseVideoCard({
           </span>
         </div>
 
-        {/* Push #108 — central play affordance. Driven by `isPlaying`
-            (the `playing` media event) so the overlay clears the moment
-            frames actually start painting, not when the network metadata
-            arrives. Kept mounted so the fade-out animates instead of
-            popping. */}
         {!videoFailed && (
           <div
             className={`absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-300 ${
