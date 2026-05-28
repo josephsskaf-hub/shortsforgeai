@@ -221,7 +221,7 @@ export default function DashboardClient({
         </p>
 
         <Link
-          href="/create"
+          href="/generate"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
             background: 'linear-gradient(135deg, #2563EB 0%, #2563EB 55%, #22D3EE 100%)',
