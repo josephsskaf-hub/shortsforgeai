@@ -26,8 +26,10 @@ function extractTitle(topic: string | null): string {
     const t = hookMatch[1].replace(/\[Pexels:[^\]]*\]/g, '').trim()
     return t.length > 90 ? t.slice(0, 87) + '…' : t
   }
-  // Fallback: first non-header line
-  const lines = topic.split('\n').map((l) => l.trim()).filter(
+  // Fallback: first non-header line, stripping any [Pexels: ...] tags
+  const lines = topic.split('\n').map((l) => {
+    return l.trim().replace(/\[Pexels:[^\]]*\]/gi, '').trim()
+  }).filter(
     (l) => l.length > 15 && !l.startsWith('YouTube Short') && !l.startsWith('HOOK') && !l.startsWith('MICRO')
   )
   if (lines[0]) return lines[0].slice(0, 90)
