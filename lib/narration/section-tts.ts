@@ -66,16 +66,25 @@ export function splitIntoSections(
   const sections: ScriptSection[] = []
 
   const flush = (): void => {
-    const text = currentLines
+    let text = currentLines
       .map((l) => l.trim())
       .filter((l) => l.length > 0)
       .join(' ')
       .trim()
     if (text) {
+      // Phase 5: Auto-pause for mystery/conspiracy PAYOFF — prepend "..."
+      // so the TTS model reads a real dramatic pause before the reveal.
+      if (
+        currentType === 'payoff' &&
+        (persona.id === 'dark-mystery' || persona.id === 'conspiracy')
+      ) {
+        text = '... ' + text
+      }
       sections.push({
         type: currentType,
         text,
-        speedMultiplier: resolveMultiplier(currentType, persona),
+        // Phase 4: apply jitter so successive videos have subtle speed variation
+        speedMultiplier: withJitter(resolveMultiplier(currentType, persona)),
       })
     }
     currentLines = []
@@ -126,6 +135,14 @@ export function splitIntoSections(
 
   // Filter out sections with no usable text
   return sections.filter((s) => s.text.length > 3)
+}
+
+// ─── Phase 4: Speed micro-jitter ─────────────────────────────────────────────
+// ±3% random variation so successive videos on the same topic never sound
+// identical — natural human-like rhythm variation, imperceptible as an artefact.
+const JITTER_RANGE = 0.03
+function withJitter(base: number): number {
+  return base * (1 - JITTER_RANGE + Math.random() * JITTER_RANGE * 2)
 }
 
 // ─── Speed multiplier resolution ─────────────────────────────────────────────

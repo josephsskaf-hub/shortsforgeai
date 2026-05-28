@@ -128,15 +128,20 @@ export function detectNiche(script: string, vertical?: string): ContentNiche {
 /**
  * Select the best VoicePersona for the given script + vertical.
  *
- * @param script - The narration text (used for keyword detection)
- * @param vertical - Channel vertical hint (e.g. 'mystery', 'finance', 'geography')
- * @param userTier - User's subscription tier (free | premium | cinematic)
+ * @param script    - The narration text (used for keyword detection)
+ * @param vertical  - Channel vertical hint (e.g. 'mystery', 'finance', 'geography')
+ * @param userTier  - User's subscription tier (free | premium | cinematic)
+ * @param language  - Output language ('en' | 'pt' | 'es'). Non-English scripts
+ *                    get a language override: 'fable' → 'nova' for pt/es since
+ *                    fable is strongly English-accented; nova sounds most natural
+ *                    in Brazilian Portuguese and Latin Spanish.
  * @returns The VoicePersona to use for TTS generation
  */
 export function selectPersonaForScript(
   script: string,
   vertical?: string,
   userTier: 'free' | 'premium' | 'cinematic' = 'free',
+  language: 'en' | 'pt' | 'es' = 'en',
 ): VoicePersona {
   const niche = detectNiche(script, vertical)
   const mapping = NICHE_PERSONA_MAP[niche]
@@ -147,24 +152,42 @@ export function selectPersonaForScript(
   // Cinematic tier: try cinematic → primary → secondary
   if (userTier === 'cinematic' && mapping.cinematic) {
     const p = getPersona(mapping.cinematic)
-    if (p) return p
+    if (p) return applyLanguageOverride(p, language)
   }
 
   // Premium tier: primary persona regardless of its own tier
   if (userTier === 'premium' || userTier === 'cinematic') {
     const p = getPersona(mapping.primary)
-    if (p) return p
+    if (p) return applyLanguageOverride(p, language)
   }
 
   // Free tier: try primary if it's free, else fall back to secondary
   const primary = getPersona(mapping.primary)
-  if (primary?.tier === 'free') return primary
+  if (primary?.tier === 'free') return applyLanguageOverride(primary, language)
 
   const secondary = getPersona(mapping.secondary)
-  if (secondary?.tier === 'free') return secondary
+  if (secondary?.tier === 'free') return applyLanguageOverride(secondary, language)
 
   // Ultimate fallback — storyteller is always free
-  return VOICE_PERSONAS.find((p) => p.id === 'storyteller')!
+  return applyLanguageOverride(VOICE_PERSONAS.find((p) => p.id === 'storyteller')!, language)
+}
+
+/**
+ * Phase 3 — Language-aware voice override.
+ * 'fable' is strongly English-accented and sounds unnatural in Portuguese/Spanish.
+ * We swap it to 'nova' which handles pt-BR and es-419 most naturally while
+ * preserving all other persona settings (speed, multipliers, tier, etc.).
+ */
+function applyLanguageOverride(
+  persona: VoicePersona,
+  language: 'en' | 'pt' | 'es',
+): VoicePersona {
+  if (language === 'en') return persona
+  // fable is the most English-accented voice — swap to nova for pt/es
+  if (persona.voice === 'fable') {
+    return { ...persona, voice: 'nova' }
+  }
+  return persona
 }
 
 /**
@@ -175,8 +198,9 @@ export function describeVoiceSelection(
   script: string,
   vertical?: string,
   userTier: 'free' | 'premium' | 'cinematic' = 'free',
+  language: 'en' | 'pt' | 'es' = 'en',
 ): string {
   const niche = detectNiche(script, vertical)
-  const persona = selectPersonaForScript(script, vertical, userTier)
-  return `niche=${niche} vertical=${vertical ?? 'unknown'} tier=${userTier} → persona=${persona.id} voice=${persona.voice} speed=${persona.defaultSpeed}`
+  const persona = selectPersonaForScript(script, vertical, userTier, language)
+  return `niche=${niche} vertical=${vertical ?? 'unknown'} tier=${userTier} lang=${language} → persona=${persona.id} voice=${persona.voice} speed=${persona.defaultSpeed}`
 }

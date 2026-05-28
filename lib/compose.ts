@@ -164,6 +164,7 @@ export async function generateTTS(
   speed = 1.0,
   vertical?: string,
   userTier: 'free' | 'premium' | 'cinematic' = 'free',
+  language: 'en' | 'pt' | 'es' = 'en',
 ): Promise<Buffer> {
   // Push #236 — last line of defense: strip any residual script markers /
   // directives so the narrator can never speak "[Pexels: ...]" or a "speed:"
@@ -175,11 +176,11 @@ export async function generateTTS(
   let baseSpeed = speed
 
   if (vertical) {
-    const persona = selectPersonaForScript(cleaned, vertical, userTier)
+    const persona = selectPersonaForScript(cleaned, vertical, userTier, language)
     resolvedVoice = persona.voice
     baseSpeed = persona.defaultSpeed * speed
     console.log(
-      `[compose] Narration Engine: ${describeVoiceSelection(cleaned, vertical, userTier)}`,
+      `[compose] Narration Engine: ${describeVoiceSelection(cleaned, vertical, userTier, language)}`,
     )
 
     // ── Phase 2: Section-level speed modulation ────────────────────────────

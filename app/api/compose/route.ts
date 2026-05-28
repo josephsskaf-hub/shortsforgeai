@@ -15,6 +15,7 @@ import {
 import { stripScriptMarkers } from '@/lib/scriptParser'
 import { fetchUserPlan } from '@/lib/plan'
 import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
+import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 
 export const maxDuration = 60
 
@@ -214,7 +215,7 @@ export async function POST(req: NextRequest) {
     )
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier)
+      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier, language)
       console.log(
         `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
       )
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
         `[compose] duration off by ${(realAudioDuration - duration).toFixed(1)}s — re-synthesizing at speed=${correctiveSpeed.toFixed(3)}`,
       )
       try {
-        const retryBuffer = await generateTTS(scaledScript, correctiveSpeed, vertical, narrationTier)
+        const retryBuffer = await generateTTS(scaledScript, correctiveSpeed, vertical, narrationTier, language)
         if (retryBuffer && retryBuffer.length > 0) {
           const retryDuration = estimateMp3DurationSeconds(retryBuffer)
           const improved =
@@ -303,6 +304,11 @@ export async function POST(req: NextRequest) {
     } catch (whisperErr) {
       console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
     }
+
+    // Phase 5 — Detect persona for response metadata (observability + future UI).
+    const detectedPersonaId: string | undefined = vertical
+      ? selectPersonaForScript(scaledScript, vertical, narrationTier, language).id
+      : undefined
 
     // Step 3 — Upload TTS to Supabase storage.
     let voiceoverUrl: string
@@ -402,6 +408,7 @@ export async function POST(req: NextRequest) {
       quality,
       duration,
       voiceover_url: voiceoverUrl,
+      persona_id: detectedPersonaId,
     })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
