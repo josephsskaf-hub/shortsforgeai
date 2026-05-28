@@ -17,6 +17,10 @@ const VERTICAL_COLORS: Record<string, string> = {
   history:     '#d97706',
   science:     '#14b8a6',
   health:      '#22c55e',
+  space:       '#0ea5e9',
+  nature:      '#4ade80',
+  technology:  '#a78bfa',
+  crime:       '#f87171',
 }
 
 // ── Badge styles ─────────────────────────────────────────────────────────────
@@ -303,7 +307,7 @@ export default function ViralNowClient() {
           gap: 16,
         }}>
           {loading
-            ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+            ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
             : topics.map(topic => (
                 <TopicCard
                   key={topic.id}

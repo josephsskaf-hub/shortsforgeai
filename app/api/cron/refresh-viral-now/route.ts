@@ -295,6 +295,78 @@ ESCALATION: Three bugs. All in every human brain. All running silently right now
 
 PAYOFF: You can't delete these biases. But naming them is the first step to catching them. Save this — and ask which one cost you most this week.`,
   },
+  {
+    emoji: '🚀', label: '🚀 Space',
+    title: 'What NASA found on Mars they never announced',
+    duration: 45, vertical: 'space',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK: "NASA sent a rover to Mars. What it found in the first 90 days never made the press release."
+
+MICRO REWARD 1: The methane spike. Curiosity detected methane on Mars repeatedly. On Earth, 90% of atmospheric methane comes from living organisms. Mars has no volcanoes to explain it. The spikes are seasonal. Scientists published one cautious paper, then went quiet.
+
+MICRO REWARD 2: Organic molecules. Perseverance found complex organic compounds in Jezero Crater in 2022. Not life, but the building blocks. The same chemistry that existed on Earth 3.8 billion years ago before life appeared. NASA called it tantalizing. The press briefings stopped.
+
+MICRO REWARD 3: Underground liquid water. MARSIS radar detected a liquid water lake under Mars's south pole, 20 km wide, 1.5 km deep. In 2018. The discovery barely made headlines for 48 hours. Then silence.
+
+ESCALATION: Three separate data points. Methane. Organics. Liquid water. Each announced once. Each immediately downplayed. No follow-up missions targeting those exact sites. The James Webb Space Telescope has not been pointed at Mars.
+
+PAYOFF: Maybe it's all geology. Or maybe the most significant discovery in human history is being processed very carefully. Save this.`,
+  },
+  {
+    emoji: '🦎', label: '🦎 Nature',
+    title: 'The most dangerous animals you never worry about',
+    duration: 45, vertical: 'nature',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK: "The animal that kills more humans per year than sharks, wolves, and lions combined fits in your hand."
+
+MICRO REWARD 1: The mosquito. 725,000 human deaths per year. Malaria, dengue, yellow fever, Zika. Every 2 minutes a child dies from malaria. Sharks kill roughly 10 people annually. The mosquito is 72,000 times deadlier. We make movies about sharks.
+
+MICRO REWARD 2: The hippopotamus. 500 deaths per year. Faster than a human at 30 kilometers per hour, with a bite force of 8,100 Newtons, enough to bite a boat in half. Highly territorial. Attacks without provocation. Safari guides call them the most dangerous animal in Africa. Tourists photograph them at the waterline.
+
+MICRO REWARD 3: The freshwater snail. 200,000 deaths per year. It carries schistosomiasis, a parasitic disease that destroys kidneys and liver. The snail doesn't bite. You just swim through infected water. Second most deadly parasitic disease after malaria. Most people have never heard of it.
+
+ESCALATION: Bonus: the cone snail. Beautiful, slow, found on beaches. One species fires a harpoon-like tooth in any direction including backwards. Its venom has no antidote. 70% fatality rate if untreated. Tourists pick them up for photos.
+
+PAYOFF: The deadliest things in nature are rarely the ones with teeth. Save this.`,
+  },
+  {
+    emoji: '📱', label: '📱 Tech',
+    title: 'Big Tech knows more about you than your family does',
+    duration: 45, vertical: 'technology',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK: "Your phone knows things about you that your closest friends will never know."
+
+MICRO REWARD 1: Location history. Google stores your GPS coordinates every few minutes, permanently, by default. A 2023 federal court case revealed Google had location data for 592 million users going back to 2009. That is 14 years of everywhere you have been. Your commute. Your doctor. Who you visited at 2am.
+
+MICRO REWARD 2: Voice data. Siri, Alexa, and Google Assistant process voice on remote servers. In 2019, Apple contractors admitted to regularly hearing private conversations, including medical discussions and couples arguing. Apple paused the program. Then quietly restarted it. It was in the terms of service on page 37.
+
+MICRO REWARD 3: Behavioral fingerprint. TikTok and Instagram track your scroll speed, pause duration, and which faces you linger on, even if you never like or comment. They know what you want before you do.
+
+ESCALATION: Data brokers. There are 4,000 companies in the US whose only business is buying and selling personal data. They have your income estimate, political affiliation, and health conditions inferred from purchase history. You cannot opt out of most of them.
+
+PAYOFF: You are not the customer. You are the product. Save this, then go check your Google location history at myactivity.google.com.`,
+  },
+  {
+    emoji: '🔍', label: '🔍 Crime',
+    title: 'The cases that broke every investigator who touched them',
+    duration: 45, vertical: 'crime',
+    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
+
+HOOK: "Three cases so disturbing that lead investigators requested reassignment. None were ever solved."
+
+MICRO REWARD 1: The Zodiac Cipher. In 1969, the Zodiac Killer sent a 340-character encrypted message claiming it contained his identity. The FBI, NSA, and GCHQ all tried to crack it. It took 51 years. In 2020, three amateur cryptographers finally decoded it. The message said only: I am not afraid of the gas chamber because it will send me to paradise. He was never caught.
+
+MICRO REWARD 2: Tamam Shud. In 1948, an unidentified man was found dead on an Australian beach. No ID. No cause of death. Hidden in his pocket: a torn paper reading Tamam Shud, Persian for it is finished, torn from a rare book found nearby. Inside the book: an uncracked code and a phone number. 76 years later, no identity, no cause, no explanation.
+
+MICRO REWARD 3: DB Cooper. In 1971, a man hijacked a flight, demanded 200,000 dollars, parachuted over the Pacific Northwest, and was never found. The FBI investigated for 45 years before suspending the case in 2016. In 1980, a child found bills matching the serial numbers. No body. No parachute.
+
+ESCALATION: In all three cases, investigators described the same experience. Certainty that the answer was almost in reach, followed by a dead end that made no logical sense. Two FBI agents on the Zodiac case developed insomnia.
+
+PAYOFF: Some cases do not get solved. Not because the evidence is not there, but because whoever left it knew exactly what they were doing. Save this.`,
+  },
 ]
 
 function pickTopicsForWindow(dateStr: string, hourBlock: number) {
@@ -305,14 +377,14 @@ function pickTopicsForWindow(dateStr: string, hourBlock: number) {
   const picked: typeof TOPIC_POOL = []
   const usedVerticals = new Set<string>()
   for (const t of pool) {
-    if (picked.length >= 6) break
+    if (picked.length >= 8) break
     if (!usedVerticals.has(t.vertical)) { picked.push(t); usedVerticals.add(t.vertical) }
   }
   for (const t of pool) {
-    if (picked.length >= 6) break
+    if (picked.length >= 8) break
     if (!picked.includes(t)) picked.push(t)
   }
-  return picked.slice(0, 6)
+  return picked.slice(0, 8)
 }
 
 export async function GET(req: NextRequest) {
@@ -349,7 +421,7 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    console.log('[refresh-viral-now] updated 6 topics for', today, 'block', hourBlock)
+    console.log('[refresh-viral-now] updated 8 topics for', today, 'block', hourBlock)
     return NextResponse.json({ ok: true, date: today, hourBlock, count: rows.length })
   } catch (err) {
     console.error('[refresh-viral-now] error:', err)

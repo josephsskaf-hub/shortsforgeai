@@ -40,6 +40,10 @@ const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string
   mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(168,85,247,.28)', pill: 'rgba(168,85,247,.15)', text: '#c084fc', hover: 'rgba(168,85,247,.5)' },
   country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(59,130,246,.28)', pill: 'rgba(59,130,246,.15)', text: '#60a5fa', hover: 'rgba(59,130,246,.5)' },
   learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(236,72,153,.28)', pill: 'rgba(236,72,153,.15)', text: '#f472b6', hover: 'rgba(236,72,153,.5)' },
+  space:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(14,165,233,.28)', pill: 'rgba(14,165,233,.15)', text: '#38bdf8', hover: 'rgba(14,165,233,.5)' },
+  nature:      { bg: 'rgba(11,17,32,0.85)', border: 'rgba(74,222,128,.28)', pill: 'rgba(74,222,128,.15)', text: '#86efac', hover: 'rgba(74,222,128,.5)' },
+  technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(167,139,250,.28)', pill: 'rgba(167,139,250,.15)', text: '#c4b5fd', hover: 'rgba(167,139,250,.5)' },
+  crime:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(248,113,113,.28)', pill: 'rgba(248,113,113,.15)', text: '#fca5a5', hover: 'rgba(248,113,113,.5)' },
 }
 const DEFAULT_VERTICAL = { bg: 'rgba(11,17,32,0.85)', border: 'rgba(239,68,68,.22)', pill: 'rgba(239,68,68,.14)', text: '#f87171', hover: 'rgba(239,68,68,.5)' }
 
@@ -256,7 +260,7 @@ export default function DashboardClient({
         {/* Cards grid */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {viralLoading
-            ? [1, 2, 3, 4, 5, 6].map(i => (
+            ? [1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                 <div
                   key={i}
                   className="rounded-[16px] px-4 py-4"

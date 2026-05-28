@@ -844,6 +844,148 @@ ESCALATION: [Pexels: andrew huberman neuroscience protocol research] The protoco
 
 PAYOFF: [Pexels: person energized morning focus confidence shower] 60 seconds of discomfort. 4 hours of neurochemical advantage. The protocol is free. The equipment is already in your bathroom. Save this — then try it tomorrow morning and pay attention to what happens at 10am.`,
   },
+  // ── SPACE ────────────────────────────────────────────────────────────────────
+  {
+    id: 'space-01',
+    slot: 0,
+    emoji: '🚀',
+    label: '🚀 Space',
+    category: 'Space Secrets',
+    title: 'What NASA found on Mars they never announced',
+    hook: "NASA sent a rover to Mars. What it discovered wasn't in any press release.",
+    description: 'The unexplained methane spikes, organic molecules, and why scientists went quiet about certain data.',
+    badge: 'Viral',
+    viralScore: 96,
+    duration: 45,
+    vertical: 'space',
+    prompt: `YouTube Short format, 9:16, 1 legend only
+
+HOOK: [Pexels: mars surface red planet rover NASA space] NASA sent a rover to Mars. What it found in the first 90 days never made the press release.
+
+MICRO REWARD 1: [Pexels: methane gas detection science lab chemical] The methane spike: Curiosity detected methane on Mars repeatedly. On Earth, 90% of atmospheric methane comes from living organisms. Mars has no volcanoes to explain it. The spikes are seasonal. Scientists published one cautious paper, then went quiet.
+
+MICRO REWARD 2: [Pexels: organic molecules chemistry carbon compounds] Organic molecules: Perseverance found complex organic compounds in Jezero Crater in 2022. Not life but the building blocks. The same chemistry that existed on Earth 3.8 billion years ago before life appeared. NASA called it "tantalizing." The press briefings stopped.
+
+MICRO REWARD 3: [Pexels: mars subsurface water ice radar signal] Underground water: MARSIS radar detected a liquid water lake under Mars's south pole 20 km wide and 1.5 km deep. Liquid. In 2018. The discovery barely made headlines for 48 hours. Scientists said brine kept liquid by salts. Or something else.
+
+ESCALATION: [Pexels: NASA scientist researcher lab quiet classified] The pattern: three separate data points. Methane. Organics. Liquid water. Each announced once. Each immediately downplayed. No follow-up missions targeting those exact sites. The James Webb Space Telescope has the power to detect biosignatures from Mars's atmosphere. It has not been pointed there.
+
+PAYOFF: [Pexels: night sky stars universe planet space] Maybe it's all geology. Maybe the silence is just bureaucratic caution. Or maybe the most significant discovery in human history requires more than a press release. Save this and watch what NASA does not say next.`,
+  },
+  {
+    id: 'space-02',
+    slot: 0,
+    emoji: '🌌',
+    label: '🌌 Space',
+    category: 'Mind-Bending Space',
+    title: '5 space facts that break your brain',
+    hook: 'The universe contains facts so strange that physics professors refuse to teach them first.',
+    description: 'Five verified space facts that rewire how you see reality from time dilation to the observable universe edge.',
+    badge: 'Hot',
+    viralScore: 93,
+    duration: 45,
+    vertical: 'space',
+    prompt: `YouTube Short format, 9:16, 1 legend only
+
+HOOK: [Pexels: galaxy nebula deep space cosmos universe] Five space facts so strange, physicists don't lead with them because students drop the class.
+
+MICRO REWARD 1: [Pexels: GPS satellite orbit clock time signal] Fact 1: Your GPS is wrong without Einstein. Satellites move fast enough that time runs slow for them by 7 microseconds per day. They also sit higher in gravity so time runs fast by 45 microseconds per day. Net drift: 38 microseconds daily. Without relativistic correction baked into every GPS chip, navigation would be off by 11 kilometers per day. Time dilation is not theory. It's engineering.
+
+MICRO REWARD 2: [Pexels: observable universe edge light years distance] Fact 2: The observable universe is a sphere around YOU. Not around Earth. Around wherever you stand. Because light can only travel so far since the Big Bang, every observer in the universe is the center of their own observable bubble. There is no center. There is no edge. Every point is both.
+
+MICRO REWARD 3: [Pexels: star death supernova light years explosion] Fact 3: Every atom in your body was forged in a dying star. Hydrogen from the Big Bang. Everything else carbon, iron, oxygen only forms in stellar cores. When stars explode they scatter those atoms across space. You are literally made of star remnants. Not metaphorically. Chemically.
+
+ESCALATION: [Pexels: black hole event horizon light gravity] Fact 4: Nothing crosses a black hole's event horizon from outside ever. From your reference frame, an object falling in slows to a stop, redshifts to black, and freezes there at the edge forever. You never see it cross. The universe ends before that happens.
+
+PAYOFF: [Pexels: cosmos infinite universe human small insignificant] Fact 5: In 2 trillion years every galaxy beyond our local group will be permanently invisible, accelerating away faster than light. Future civilizations will see nothing but darkness and conclude they are alone. The evidence we have now that the universe is vast and full is only visible in this narrow window of cosmic time. Save this.`,
+  },
+
+  // ── NATURE ───────────────────────────────────────────────────────────────────
+  {
+    id: 'nature-01',
+    slot: 0,
+    emoji: '🦎',
+    label: '🦎 Nature',
+    category: 'Deadly Nature',
+    title: 'The most dangerous animals you never worry about',
+    hook: 'The animal that kills more humans per year than sharks, wolves, and lions combined fits in your hand.',
+    description: 'The real global kill rankings and why the deadliest creatures are the ones nobody fears.',
+    badge: 'Trending',
+    viralScore: 91,
+    duration: 45,
+    vertical: 'nature',
+    prompt: `YouTube Short format, 9:16, 1 legend only
+
+HOOK: [Pexels: mosquito insect close up macro bite] The animal that kills more humans per year than sharks, wolves, and lions combined fits in your hand.
+
+MICRO REWARD 1: [Pexels: mosquito malaria tropical disease Africa] Number 1: the mosquito. 725,000 human deaths per year. Malaria, dengue, yellow fever, Zika. Every 2 minutes a child dies from malaria. Sharks kill roughly 10 people annually. The mosquito is 72,000 times deadlier. We make movies about sharks.
+
+MICRO REWARD 2: [Pexels: hippopotamus hippo river Africa water] Number 2: the hippopotamus. 500 deaths per year. Faster than a human at 30 km per hour, with 50 cm tusks and a bite force of 8,100 Newtons, enough to bite a boat in half. Hippos are highly territorial and attack without provocation. Safari guides call them the most dangerous animal in Africa. Tourists photograph them at the waterline.
+
+MICRO REWARD 3: [Pexels: freshwater snail water schistosomiasis tropical] Number 3: the freshwater snail. 200,000 deaths per year. It carries schistosomiasis, a parasitic disease that slowly destroys kidneys and liver. The snail doesn't bite. You just swim through infected water. It's the second most deadly parasitic disease after malaria. Most people have never heard of it.
+
+ESCALATION: [Pexels: cone snail shell beautiful deadly ocean beach] Bonus: the cone snail. Beautiful, slow, and found on beaches. One species has a harpoon-like tooth that fires in any direction including backwards. Its venom has no antidote. A 2-inch shell. A 70% fatality rate if untreated. Tourists pick them up for photos.
+
+PAYOFF: [Pexels: nature wildlife danger beauty deadly animals] The deadliest things in nature are rarely the ones with teeth. Save this and maybe don't go swimming in sub-Saharan freshwater lakes this summer.`,
+  },
+
+  // ── TECHNOLOGY ───────────────────────────────────────────────────────────────
+  {
+    id: 'tech-01',
+    slot: 0,
+    emoji: '📱',
+    label: '📱 Tech',
+    category: 'Big Tech Secrets',
+    title: 'Big Tech knows more about you than your family does',
+    hook: 'Your phone knows things about you that your closest friends will never know.',
+    description: 'The exact data points collected and what companies legally do with it.',
+    badge: 'Hot',
+    viralScore: 95,
+    duration: 45,
+    vertical: 'technology',
+    prompt: `YouTube Short format, 9:16, 1 legend only
+
+HOOK: [Pexels: smartphone phone screen data privacy technology] Your phone knows things about you that your closest friends will never know.
+
+MICRO REWARD 1: [Pexels: GPS location tracking map data privacy] Location history: Google stores your GPS coordinates every few minutes, permanently, by default. In 2023, a federal court case revealed Google had location data for 592 million users going back to 2009. That is 14 years of everywhere you have been. Your commute. Your doctor's office. Who you visited at 2am. All stored. All searchable.
+
+MICRO REWARD 2: [Pexels: microphone voice assistant listening phone speaker] Voice data: Siri, Alexa, and Google Assistant process voice data on remote servers. In 2019, Apple contractors admitted to regularly hearing private conversations including medical discussions, couples arguing, and business deals. Apple paused the program. Then quietly restarted it. The terms of service you agreed to authorized it on page 37.
+
+MICRO REWARD 3: [Pexels: scroll behavior app usage time analytics screen] Behavioral fingerprint: TikTok and Instagram track your scroll speed, pause duration, and which faces you linger on, even if you never like or comment. A leaked 2022 TikTok internal document described manually boosting certain content into feeds based on behavioral patterns. They know what you want before you do.
+
+ESCALATION: [Pexels: data broker personal information sale privacy] Data brokers: There are 4,000 companies in the US whose only business is buying and selling personal data. They have your name, address, income estimate, political affiliation, health conditions inferred from purchase history, and relationship status. You cannot opt out of most of them. You probably do not know their names.
+
+PAYOFF: [Pexels: digital privacy security phone lock screen] You are not the customer. You are the product and the product profile is more detailed than anything your family knows about you. Save this. Then go check your Google location history at myactivity.google.com.`,
+  },
+
+  // ── CRIME ────────────────────────────────────────────────────────────────────
+  {
+    id: 'crime-01',
+    slot: 0,
+    emoji: '🔍',
+    label: '🔍 Crime',
+    category: 'Unsolved Cases',
+    title: 'The cases that broke every investigator who touched them',
+    hook: 'Three cases so disturbing that lead investigators requested reassignment. None were ever solved.',
+    description: 'The Zodiac Cipher, the Tamam Shud case, and DB Cooper — cold cases where every clue led to a dead end.',
+    badge: 'Viral',
+    viralScore: 97,
+    duration: 45,
+    vertical: 'crime',
+    prompt: `YouTube Short format, 9:16, 1 legend only
+
+HOOK: [Pexels: detective crime scene investigation mystery dark] Three cases so disturbing that lead investigators requested reassignment. None were ever solved.
+
+MICRO REWARD 1: [Pexels: zodiac cipher code letter cryptography mystery] The Zodiac Cipher: In 1969, the Zodiac Killer sent a 340-character encrypted message to the San Francisco Chronicle claiming it contained his identity. The FBI, NSA, and GCHQ all attempted to crack it. It remained unsolved for 51 years. In 2020, three amateur cryptographers cracked it. The message inside said only: I am not afraid of the gas chamber because it will send me to paradise. He was never caught.
+
+MICRO REWARD 2: [Pexels: mysterious body beach unknown identity case] Tamam Shud: In 1948, an unidentified man was found dead on an Australian beach. No ID. No cause of death. In his hidden pocket: a torn scrap of paper reading Tamam Shud, Persian for it is finished, torn from a rare book found in a nearby car. Inside the book: an uncracked code and a phone number. The number led to a woman who denied knowing him. A child she had around that time showed the same rare dental abnormality as the dead man. 76 years later: no identity, no cause, no explanation.
+
+MICRO REWARD 3: [Pexels: airplane hijack money parachute forest mystery crime] DB Cooper: In 1971, a man hijacked a commercial flight, demanded $200,000 in cash, parachuted out over the Pacific Northwest, and was never found. The FBI investigated for 45 years before suspending the case in 2016. In 1980, a child found $5,800 in deteriorated bills matching the serial numbers. No body. No parachute. No trace.
+
+ESCALATION: [Pexels: cold case file unsolved police investigation evidence] The pattern: in all three cases, investigators with access to the full evidence described the same experience. A growing certainty that the answer was almost in reach, followed by a dead end that made no logical sense. Two FBI agents on the Zodiac case developed insomnia. The Tamam Shud lead investigator said it was the case that followed me home every night for 30 years.
+
+PAYOFF: [Pexels: mystery darkness unsolved question mark shadow night] Some cases do not get solved. Not because the evidence is not there, but because whoever left it knew exactly what they were doing. Save this if you want to go deeper.`,
+  },
 ]
 
 function seededShuffle<T>(arr: T[], seed: number): T[] {
@@ -866,14 +1008,14 @@ export function getViralNowTopics(): ViralTopic[] {
   const picked: ViralTopic[] = []
   const usedVerticals = new Set<string>()
   for (const t of shuffled) {
-    if (picked.length >= 6) break
+    if (picked.length >= 8) break
     if (!usedVerticals.has(t.vertical)) { picked.push(t); usedVerticals.add(t.vertical) }
   }
   for (const t of shuffled) {
-    if (picked.length >= 6) break
+    if (picked.length >= 8) break
     if (!picked.includes(t)) picked.push(t)
   }
-  return picked.slice(0, 6).map((t, i) => ({ ...t, slot: i + 1 }))
+  return picked.slice(0, 8).map((t, i) => ({ ...t, slot: i + 1 }))
 }
 
 export function getNextRefreshMs(): number {

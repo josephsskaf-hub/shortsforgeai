@@ -1599,19 +1599,6 @@ function ShowcaseVideoCard({
           ))}
         </div>
 
-        {/* Format badge — bottom-left */}
-        <div className="absolute bottom-3 left-3 z-20">
-          <span
-            className="rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] backdrop-blur-md"
-            style={{
-              background: 'rgba(11,17,32,.55)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#F1F5F9',
-            }}
-          >
-            9:16
-          </span>
-        </div>
 
         {!videoFailed && (
           <div
