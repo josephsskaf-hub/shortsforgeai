@@ -1,140 +1,342 @@
 'use client'
 
-// Push #303 — Viral Now: dedicated page — 3 trending topic cards, 1 click = video
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import type { ViralTopic } from '@/lib/viralTopics'
+import { getNextRefreshMs } from '@/lib/viralTopics'
 
-interface ViralTopic {
-  slot: number
-  emoji: string
-  label: string
-  title: string
-  prompt: string
-  duration: number
-  vertical: string
+// ── Vertical color map ───────────────────────────────────────────────────────
+const VERTICAL_COLORS: Record<string, string> = {
+  billionaire: '#f59e0b',
+  money:       '#10b981',
+  mystery:     '#8b5cf6',
+  country:     '#3b82f6',
+  learning:    '#06b6d4',
+  ai:          '#6366f1',
+  psychology:  '#ec4899',
+  history:     '#d97706',
+  science:     '#14b8a6',
+  health:      '#22c55e',
 }
 
-const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string; text: string }> = {
-  billionaire: { bg: 'rgba(251,191,36,.07)', border: 'rgba(251,191,36,.25)', pill: 'rgba(251,191,36,.15)', text: '#fbbf24' },
-  money:       { bg: 'rgba(34,197,94,.07)',  border: 'rgba(34,197,94,.25)',  pill: 'rgba(34,197,94,.15)',  text: '#4ade80' },
-  mystery:     { bg: 'rgba(168,85,247,.07)', border: 'rgba(168,85,247,.25)', pill: 'rgba(168,85,247,.15)', text: '#c084fc' },
-  country:     { bg: 'rgba(59,130,246,.07)', border: 'rgba(59,130,246,.25)', pill: 'rgba(59,130,246,.15)', text: '#60a5fa' },
-  learning:    { bg: 'rgba(236,72,153,.07)', border: 'rgba(236,72,153,.25)', pill: 'rgba(236,72,153,.15)', text: '#f472b6' },
+// ── Badge styles ─────────────────────────────────────────────────────────────
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  'Hot':           { bg: 'rgba(239,68,68,0.18)',   color: '#ef4444' },
+  'Trending':      { bg: 'rgba(249,115,22,0.18)',  color: '#f97316' },
+  'High Retention':{ bg: 'rgba(59,130,246,0.18)',  color: '#3b82f6' },
+  'Viral':         { bg: 'rgba(139,92,246,0.18)',  color: '#8b5cf6' },
 }
 
-export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return '0h 0m'
+  const totalMinutes = Math.floor(ms / 60000)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${h}h ${m}m`
+}
+
+function todayLabel(): string {
+  return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+// ── Skeleton card ─────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{
+      background: 'var(--card)',
+      border: '1px solid var(--border)',
+      borderRadius: 14,
+      padding: '18px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      minHeight: 210,
+      animation: 'pulse 1.6s ease-in-out infinite',
+    }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ width: 90, height: 22, borderRadius: 6, background: 'var(--border)' }} />
+        <div style={{ flex: 1 }} />
+        <div style={{ width: 40, height: 22, borderRadius: 6, background: 'var(--border)' }} />
+        <div style={{ width: 60, height: 22, borderRadius: 6, background: 'var(--border)' }} />
+      </div>
+      <div style={{ width: '85%', height: 18, borderRadius: 6, background: 'var(--border)' }} />
+      <div style={{ width: '100%', height: 14, borderRadius: 6, background: 'var(--border)' }} />
+      <div style={{ width: '70%', height: 14, borderRadius: 6, background: 'var(--border)' }} />
+      <div style={{ width: '50%', height: 12, borderRadius: 6, background: 'var(--border)', marginTop: 4 }} />
+      <div style={{ width: '100%', height: 38, borderRadius: 8, background: 'var(--border)', marginTop: 'auto' }} />
+    </div>
+  )
+}
+
+// ── Topic card ────────────────────────────────────────────────────────────────
+function TopicCard({ topic, onGenerate }: { topic: ViralTopic; onGenerate: (t: ViralTopic) => void }) {
+  const vertColor = VERTICAL_COLORS[topic.vertical] ?? '#6366f1'
+  const badge = BADGE_STYLES[topic.badge] ?? BADGE_STYLES['Trending']
+
+  return (
+    <div style={{
+      background: 'var(--card)',
+      border: `1px solid var(--border)`,
+      borderRadius: 14,
+      padding: '18px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      transition: 'border-color 0.2s, transform 0.15s',
+      cursor: 'default',
+    }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = vertColor
+        ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'
+        ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'
+      }}
+    >
+      {/* Top row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {/* Label pill */}
+        <span style={{
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          padding: '3px 9px',
+          borderRadius: 20,
+          background: vertColor + '22',
+          color: vertColor,
+          letterSpacing: '0.01em',
+          whiteSpace: 'nowrap',
+        }}>
+          {topic.label}
+        </span>
+        <span style={{ flex: 1 }} />
+        {/* Viral score */}
+        <span style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          color: 'var(--muted2, #9ca3af)',
+        }}>
+          🔥 {topic.viralScore}
+        </span>
+        {/* Badge pill */}
+        <span style={{
+          fontSize: '0.68rem',
+          fontWeight: 600,
+          padding: '3px 8px',
+          borderRadius: 20,
+          background: badge.bg,
+          color: badge.color,
+          whiteSpace: 'nowrap',
+        }}>
+          {topic.badge}
+        </span>
+      </div>
+
+      {/* Title */}
+      <p style={{
+        margin: 0,
+        fontSize: '1.05rem',
+        fontWeight: 900,
+        lineHeight: 1.25,
+        color: 'var(--foreground)',
+        letterSpacing: '-0.01em',
+      }}>
+        {topic.title}
+      </p>
+
+      {/* Hook */}
+      <p style={{
+        margin: 0,
+        fontSize: '0.8rem',
+        fontStyle: 'italic',
+        color: 'var(--muted2, #9ca3af)',
+        lineHeight: 1.45,
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical' as const,
+        overflow: 'hidden',
+      }}>
+        {topic.hook}
+      </p>
+
+      {/* Description */}
+      <p style={{
+        margin: 0,
+        fontSize: '0.72rem',
+        color: 'var(--muted, #6b7280)',
+        lineHeight: 1.4,
+        display: '-webkit-box',
+        WebkitLineClamp: 1,
+        WebkitBoxOrient: 'vertical' as const,
+        overflow: 'hidden',
+      }}>
+        {topic.description}
+      </p>
+
+      {/* CTA button */}
+      <button
+        onClick={() => onGenerate(topic)}
+        style={{
+          marginTop: 'auto',
+          padding: '10px 0',
+          width: '100%',
+          borderRadius: 9,
+          border: 'none',
+          background: `linear-gradient(90deg, ${vertColor}, #ef4444)`,
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: '0.82rem',
+          letterSpacing: '0.01em',
+          cursor: 'pointer',
+          transition: 'opacity 0.15s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+      >
+        Generate Short →
+      </button>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function ViralNowClient() {
   const router = useRouter()
   const [topics, setTopics] = useState<ViralTopic[]>([])
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState<number | null>(null)
-  const fetchedRef = useRef(false)
+  const [countdown, setCountdown] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
 
+  // Fetch topics
   useEffect(() => {
-    if (fetchedRef.current) return
-    fetchedRef.current = true
-    fetch('/api/viral-now', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d?.topics)) setTopics(d.topics) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    async function load() {
+      try {
+        setLoading(true)
+        const res = await fetch('/api/viral-now', { cache: 'no-store' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        setTopics(data.topics ?? [])
+      } catch (err) {
+        console.error('[ViralNowClient] fetch error:', err)
+        setError('Could not load topics. Please refresh.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
-  function handleGenerate(topic: ViralTopic) {
-    if (!isLoggedIn) {
-      router.push('/login?redirect=/viral-now')
-      return
+  // Countdown timer — updates every 30s
+  useEffect(() => {
+    function tick() {
+      const ms = getNextRefreshMs()
+      setCountdown(formatCountdown(ms))
     }
-    setGenerating(topic.slot)
+    tick()
+    const id = setInterval(tick, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  const handleGenerate = useCallback((topic: ViralTopic) => {
     const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&duration=${topic.duration}`
     router.push(url)
-  }
-
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  }, [router])
 
   return (
-    <div className="px-4 md:px-6 py-6 pb-28 md:pb-10 max-w-2xl mx-auto">
+    <div style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>
 
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="w-2.5 h-2.5 rounded-full"
-            style={{ background: '#ef4444', boxShadow: '0 0 10px rgba(239,68,68,.9)', animation: 'pulse 1.4s ease-in-out infinite' }}
-          />
-          <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#f87171' }}>Live · Updated Daily</span>
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: '1.6rem',
+            fontWeight: 900,
+            color: 'var(--foreground)',
+            letterSpacing: '-0.02em',
+          }}>
+            🔥 Viral Now
+          </h1>
+          {/* Pulsing red dot */}
+          <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <span style={{
+              display: 'inline-block',
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#ef4444',
+              boxShadow: '0 0 0 0 rgba(239,68,68,0.6)',
+              animation: 'viralPulse 1.8s ease-out infinite',
+            }} />
+          </span>
         </div>
-        <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.6rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
-          🔥 Viral Now
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-          3 topics trending today — {today}. One click generates the video automatically.
+        <p style={{
+          margin: 0,
+          fontSize: '0.82rem',
+          color: 'var(--muted, #6b7280)',
+        }}>
+          {todayLabel()} &middot; Refreshes in{' '}
+          <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>
+            {countdown || '…'}
+          </span>
         </p>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-4">
-        {loading
-          ? [1, 2, 3, 4, 5, 6].map(i => (
-              <div
-                key={i}
-                className="rounded-[20px]"
-                style={{ height: 140, background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)', animation: 'pulse 1.4s ease-in-out infinite' }}
-              />
-            ))
-          : topics.map(topic => {
-              const c = VERTICAL_COLORS[topic.vertical] ?? VERTICAL_COLORS.money
-              const isGen = generating === topic.slot
-              return (
-                <div
-                  key={topic.slot}
-                  className="rounded-[20px] px-5 py-5"
-                  style={{ background: c.bg, border: `1px solid ${c.border}`, boxShadow: `0 0 40px ${c.bg}` }}
-                >
-                  {/* Pill + duration row */}
-                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                    <span
-                      className="text-xs font-black px-2.5 py-1 rounded-full"
-                      style={{ background: c.pill, color: c.text, border: `1px solid ${c.border}` }}
-                    >
-                      {topic.label}
-                    </span>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>
-                      ⏱ {topic.duration}s · Fast Mode
-                    </span>
-                  </div>
+      {/* ── Grid ── */}
+      {error ? (
+        <div style={{
+          padding: '32px',
+          textAlign: 'center',
+          color: '#ef4444',
+          fontSize: '0.9rem',
+          background: 'rgba(239,68,68,0.08)',
+          borderRadius: 12,
+          border: '1px solid rgba(239,68,68,0.2)',
+        }}>
+          {error}
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 16,
+        }}>
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+            : topics.map(topic => (
+                <TopicCard
+                  key={topic.id}
+                  topic={topic}
+                  onGenerate={handleGenerate}
+                />
+              ))
+          }
+        </div>
+      )}
 
-                  {/* Title */}
-                  <h2 className="font-black mb-4" style={{ fontSize: '1.1rem', color: 'var(--text)', lineHeight: 1.25 }}>
-                    {topic.title}
-                  </h2>
-
-                  {/* CTA button */}
-                  <button
-                    type="button"
-                    onClick={() => handleGenerate(topic)}
-                    disabled={isGen}
-                    className="w-full rounded-xl py-3 text-sm font-black text-white transition-all"
-                    style={{
-                      background: isGen
-                        ? 'rgba(255,255,255,.08)'
-                        : `linear-gradient(135deg, ${c.text}, #ef4444)`,
-                      border: 'none',
-                      cursor: isGen ? 'default' : 'pointer',
-                      boxShadow: isGen ? 'none' : `0 4px 20px ${c.bg}`,
-                      letterSpacing: '0.02em',
-                    }}
-                  >
-                    {isGen ? '⏳ Sending to generator…' : '⚡ Generate This Video →'}
-                  </button>
-                </div>
-              )
-            })}
-      </div>
-
-      {/* Footer note */}
-      <p className="text-center text-xs mt-6" style={{ color: 'var(--muted)' }}>
-        Topics refresh every day at 6 AM UTC · Powered by ShortsForgeAI
+      {/* ── Footer ── */}
+      <p style={{
+        marginTop: 32,
+        textAlign: 'center',
+        fontSize: '0.72rem',
+        color: 'var(--muted, #6b7280)',
+      }}>
+        6 topics &middot; Refreshes every 4 hours &middot; Powered by ShortsForgeAI
       </p>
+
+      {/* ── Keyframes via style tag ── */}
+      <style>{`
+        @keyframes viralPulse {
+          0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+          70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+          100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.45; }
+        }
+      `}</style>
     </div>
   )
 }
