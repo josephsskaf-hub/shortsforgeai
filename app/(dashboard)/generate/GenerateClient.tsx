@@ -1273,13 +1273,26 @@ export default function GenerateClient() {
       try {
         // Phase 3 — if a BrollPlan is available, pass the pexelsQuery values
         // per scene so generate-video-fast can use more specific Pexels searches.
+        // #349 — also send brollScenes with the full multi-query list, relevance
+        // score and planned duration so the route can run multi-query search +
+        // the relevance-aware fallback hierarchy. brollQueries stays for compat.
         const brollQueries = brollPlan
           ? brollPlan.scenes.map((s) => ({ sceneNumber: s.sceneNumber, pexelsQuery: s.pexelsQuery }))
+          : undefined
+        const brollScenes = brollPlan
+          ? brollPlan.scenes.map((s) => ({
+              sceneNumber: s.sceneNumber,
+              pexelsQuery: s.pexelsQuery,
+              pexelsQueries: s.pexelsQueries,
+              relevanceScore: s.relevanceScore,
+              durationSeconds: s.durationSeconds,
+              scenePurpose: s.scenePurpose,
+            }))
           : undefined
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries, brollScenes }),
         })
         const data = await res.json()
         if (res.status === 401) {

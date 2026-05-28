@@ -430,6 +430,57 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
 }
 
 /**
+ * Push #349 — Multi-query relevance search for the B-roll Intelligence pipeline.
+ *
+ * The AI Visual Director emits 3-5 Pexels queries per scene, ordered from most
+ * specific to least specific. This helper tries them in that order and returns
+ * the FIRST clip found, so a scene keeps its most-relevant footage whenever
+ * possible and only broadens when the specific query has no inventory. We never
+ * sacrifice semantic relevance to fill the timeline — the caller's fallback
+ * hierarchy (extend previous relevant clip → stockLibrary) takes over only when
+ * EVERY query here comes up empty.
+ *
+ * Each query goes through `getPexelsVideoForExactQuery`, which keeps the AI's
+ * exact wording (no category-override rewrite) and applies the existing
+ * slug-rejection / semantic-fallback guards.
+ *
+ * @param queries          Ordered queries (most specific first).
+ * @param minRelevanceHint Narration text, used only for logging context.
+ * @returns The first accepted clip URL, or null if all queries fail.
+ */
+export async function getPexelsVideoForQueries(
+  queries: string[],
+  minRelevanceHint?: string,
+): Promise<string | null> {
+  const cleaned = (queries ?? [])
+    .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+    .map((q) => q.trim())
+
+  if (cleaned.length === 0) return null
+
+  const hint = (minRelevanceHint ?? '').slice(0, 50)
+  const failed: string[] = []
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const q = cleaned[i]
+    const url = await getPexelsVideoForExactQuery(q)
+    if (url) {
+      console.log(
+        `[pexels-multi] HIT query[${i + 1}/${cleaned.length}]="${q}"${failed.length ? ` (after misses: ${failed.map((f) => `"${f}"`).join(', ')})` : ''}${hint ? ` for="${hint}"` : ''}`,
+      )
+      return url
+    }
+    failed.push(q)
+    console.log(`[pexels-multi] MISS query[${i + 1}/${cleaned.length}]="${q}"`)
+  }
+
+  console.log(
+    `[pexels-multi] ALL ${cleaned.length} queries failed${hint ? ` for="${hint}"` : ''} — caller will use fallback hierarchy`,
+  )
+  return null
+}
+
+/**
  * Search Pexels Videos for a query and return up to `perPage` portrait MP4
  * URLs, HD preferred. Returns an empty array when PEXELS_API_KEY is missing
  * or the search fails — never throws.

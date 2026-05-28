@@ -52,6 +52,8 @@ export interface BrollScene {
   negativePrompt: string
   relevanceScore?: number
   pexelsQuery: string
+  /** 3-5 Pexels search queries, most specific first. pexelsQuery === pexelsQueries[0]. */
+  pexelsQueries?: string[]
 }
 
 export interface BrollPlan {

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
-import { getPexelsVideoForScene, getPexelsVideoForExactQuery } from '@/lib/pexels'
+import { getPexelsVideoForScene, getPexelsVideoForExactQuery, getPexelsVideoForQueries } from '@/lib/pexels'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 import { ensureAccessibleUrl } from '@/lib/videoCache'
 import { parseUserScript } from '@/lib/scriptParser'
@@ -31,6 +31,27 @@ function clipCountForDuration(d: Duration): number {
   // Stock clips are usually >10s, but we still ask for N distinct clips so
   // Creatomate has variety. We cap at 9 to support 90s videos.
   return Math.max(2, Math.min(9, Math.ceil(d / 10)))
+}
+
+// Push #349 — B-roll relevance fallback. When a scene's Pexels search comes up
+// empty (or only returns a clip already used), a REPEATED RELEVANT clip beats a
+// FRESH IRRELEVANT one. This walks backwards through the clips already placed
+// and returns the most recent real Pexels-sourced clip (cached to Supabase, or
+// a raw pexels.com URL when caching was skipped). Curated stockLibrary fallbacks
+// (Cloudinary/archive.org) are intentionally skipped — they're generic filler,
+// not topic-matched footage, so we never "extend" into them.
+function findPreviousRelevantClip(
+  clipUrls: string[],
+  usedPexelsUrls: Set<string>,
+  currentIdx: number,
+): string | null {
+  for (let i = clipUrls.length - 1; i >= 0; i--) {
+    const url = clipUrls[i]
+    if (url && (url.includes('supabase') || url.includes('pexels'))) {
+      return url
+    }
+  }
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -69,11 +90,23 @@ export async function POST(req: NextRequest) {
     // background fetch), the BrollPlan's AI-directed pexelsQuery values are
     // passed here so every scene gets a specific, topic-matched stock search
     // instead of the generic GPT scene description.
+    // Push #349 — `brollScenes` carries the full per-scene metadata from the
+    // BrollPlan (multi-query list, relevance score, planned duration). It
+    // supersedes `brollQueries` (single query per scene), which is kept for
+    // backward compat with older clients that only sent one query.
     let body: {
       prompt?: string
       duration?: number
       language?: string
       brollQueries?: Array<{ sceneNumber: number; pexelsQuery: string }>
+      brollScenes?: Array<{
+        sceneNumber: number
+        pexelsQuery?: string
+        pexelsQueries?: string[]
+        relevanceScore?: number
+        durationSeconds?: number
+        scenePurpose?: string
+      }>
     }
     try {
       body = await req.json()
@@ -100,15 +133,61 @@ export async function POST(req: NextRequest) {
     // When provided, these AI-directed queries replace the generic GPT scene
     // queries for Pexels searches, giving each scene highly specific footage.
     const brollQueryMap = new Map<number, string>()
+
+    // Push #349 — richer per-scene metadata map. Holds the multi-query list,
+    // relevance score and planned duration so the clip loop can run the
+    // relevance-aware fallback hierarchy. Keyed by 1-based sceneNumber.
+    type BrollSceneMeta = {
+      pexelsQuery?: string
+      pexelsQueries?: string[]
+      relevanceScore?: number
+      durationSeconds?: number
+      scenePurpose?: string
+    }
+    const brollSceneMap = new Map<number, BrollSceneMeta>()
+
+    if (Array.isArray(body.brollScenes)) {
+      for (const entry of body.brollScenes) {
+        if (typeof entry.sceneNumber !== 'number') continue
+        const queries = Array.isArray(entry.pexelsQueries)
+          ? entry.pexelsQueries
+              .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+              .map((q) => q.trim())
+          : []
+        const single =
+          typeof entry.pexelsQuery === 'string' && entry.pexelsQuery.trim()
+            ? entry.pexelsQuery.trim()
+            : queries[0]
+        brollSceneMap.set(entry.sceneNumber, {
+          pexelsQuery: single,
+          pexelsQueries: queries.length > 0 ? queries : single ? [single] : undefined,
+          relevanceScore: typeof entry.relevanceScore === 'number' ? entry.relevanceScore : undefined,
+          durationSeconds: typeof entry.durationSeconds === 'number' ? entry.durationSeconds : undefined,
+          scenePurpose: typeof entry.scenePurpose === 'string' ? entry.scenePurpose : undefined,
+        })
+        if (single) brollQueryMap.set(entry.sceneNumber, single)
+      }
+    }
+
+    // Backward compat: `brollQueries` (single query per scene). Only fills gaps
+    // not already covered by the richer `brollScenes` map above.
     if (Array.isArray(body.brollQueries)) {
       for (const entry of body.brollQueries) {
-        if (typeof entry.sceneNumber === 'number' && typeof entry.pexelsQuery === 'string' && entry.pexelsQuery.trim()) {
+        if (
+          typeof entry.sceneNumber === 'number' &&
+          typeof entry.pexelsQuery === 'string' &&
+          entry.pexelsQuery.trim() &&
+          !brollQueryMap.has(entry.sceneNumber)
+        ) {
           brollQueryMap.set(entry.sceneNumber, entry.pexelsQuery.trim())
         }
       }
-      if (brollQueryMap.size > 0) {
-        console.log(`[generate-fast] BrollPlan active: ${brollQueryMap.size} AI-directed scene queries`)
-      }
+    }
+
+    if (brollQueryMap.size > 0) {
+      console.log(
+        `[generate-fast] BrollPlan active: ${brollQueryMap.size} AI-directed scene queries (${brollSceneMap.size} with full metadata)`,
+      )
     }
 
     // Upfront credit balance check. Deduction happens in /api/compose/status
@@ -205,14 +284,36 @@ export async function POST(req: NextRequest) {
     for (let idx = 0; idx < scenes.length; idx++) {
       const scene = scenes[idx]
       const cat = scene.visualCategory ?? ''
+      const sceneNo = idx + 1
 
+      // Push #349 — pull this scene's BrollPlan metadata (1-based sceneNumber).
+      const brollMeta = brollSceneMap.get(sceneNo)
       // v3.0 Phase 1: if a BrollPlan provided a specific AI-directed pexelsQuery
       // for this scene, use it as the primary search — it's far more specific
       // (e.g. "Wall Street trading floor 1987 crash") than GPT's generic scene
-      // description. Scene numbers are 1-based; idx is 0-based.
-      const brollOverride = brollQueryMap.get(idx + 1)
+      // description.
+      const brollOverride = brollQueryMap.get(sceneNo)
+      const relevanceScore = brollMeta?.relevanceScore
+      const purpose = (brollMeta?.scenePurpose ?? scene.scenePurpose ?? '').toString()
+      const durationSeconds = brollMeta?.durationSeconds
+      const scoreLabel = typeof relevanceScore === 'number' ? String(relevanceScore) : 'n/a'
+      const durLabel = typeof durationSeconds === 'number' ? `${durationSeconds}` : '?'
 
-      // Bug 1 fix: prefer GPT's specific stockSearchQuery over the generic
+      // Push #349 — Timeline balancing. A tiny trailing gap (<3s) isn't worth a
+      // fresh Pexels search (and a brand-new clip flashing for under 3 seconds
+      // looks jarring) — just extend whatever clip preceded it so the timeline
+      // stays full and visually coherent. Only fires when we know the planned
+      // duration (BrollPlan metadata present) and there is a prior clip.
+      if (typeof durationSeconds === 'number' && durationSeconds < 3 && clipUrls.length > 0) {
+        const prevUrl = clipUrls[clipUrls.length - 1]
+        clipUrls.push(prevUrl)
+        console.log(
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="(gap)" source=FALLBACK-A score=${scoreLabel} GAP<3s url=${prevUrl.slice(0, 60)}`,
+        )
+        continue
+      }
+
+      // Bug 1 fix (#295): prefer GPT's specific stockSearchQuery over the generic
       // visual category name. Falls back to searchKeywords, then description.
       // v3.0: BrollPlan override takes priority over all other sources.
       const libQuery = brollOverride ||
@@ -226,6 +327,12 @@ export async function POST(req: NextRequest) {
       const lib = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 1, idx)
       const fallbackUrl = lib[0]?.url ?? ''
 
+      // Push #349 — multi-query support. When the BrollPlan supplies an ordered
+      // list of queries (most specific first), try them all via the multi-query
+      // helper so the scene keeps its most-relevant footage and only broadens
+      // when the specific term has no inventory.
+      const brollQueries = brollMeta?.pexelsQueries ?? (brollOverride ? [brollOverride] : null)
+
       // Try Pexels API first (requires PEXELS_API_KEY env var).
       // Push #216 — Pexels CDN URLs are proxied through Supabase Storage so
       // Creatomate can download them. ensureAccessibleUrl() downloads the clip
@@ -233,35 +340,87 @@ export async function POST(req: NextRequest) {
       // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
       //
       // Push #235 — verbatim mode searches the user's EXACT query directly,
-      // bypassing the category allowedQueries override that would otherwise
-      // swap "SpaceX Starship launch closeup" for a generic "rocket fire night"
-      // (which surfaced a candle clip). Non-verbatim keeps the GPT/category path.
-      // v3.0 Phase 1: BrollPlan override → use exact query directly (same path
-      // as verbatim mode) so the AI Visual Director's specific query is honored
-      // without any GPT/category filtering that would dilute the specificity.
-      const rawPexelsUrl = verbatim || brollOverride
-        ? await getPexelsVideoForExactQuery(brollOverride ?? scene.stockSearchQuery)
-        : await getPexelsVideoForScene(
-            scene.searchKeywords,
-            scene.description,
-            scene.stockSearchQuery,
-            scene.voiceover,
-          )
+      // bypassing the category allowedQueries override. Non-verbatim keeps the
+      // GPT/category path. v3.0: BrollPlan override → exact query, same path.
+      let rawPexelsUrl: string | null
+      let primarySource: string
+      let queryUsed: string
+      if (brollQueries && brollQueries.length > 0) {
+        rawPexelsUrl = await getPexelsVideoForQueries(brollQueries, scene.voiceover)
+        primarySource = 'BROLLPLAN'
+        queryUsed = brollQueries[0]
+      } else if (verbatim) {
+        rawPexelsUrl = await getPexelsVideoForExactQuery(scene.stockSearchQuery)
+        primarySource = 'VERBATIM'
+        queryUsed = scene.stockSearchQuery
+      } else {
+        rawPexelsUrl = await getPexelsVideoForScene(
+          scene.searchKeywords,
+          scene.description,
+          scene.stockSearchQuery,
+          scene.voiceover,
+        )
+        primarySource = 'PEXELS'
+        queryUsed = libQuery
+      }
 
-      // Bug 2 fix: skip Pexels URL if it was already used by a prior scene.
-      const pexelsUrl = rawPexelsUrl && !usedPexelsUrls.has(rawPexelsUrl) ? rawPexelsUrl : null
+      // Bug 2 fix (#295): skip a Pexels URL already used by a prior scene.
+      const isDuplicate = !!rawPexelsUrl && usedPexelsUrls.has(rawPexelsUrl)
+      const pexelsUrl = rawPexelsUrl && !isDuplicate ? rawPexelsUrl : null
 
       if (pexelsUrl) {
         usedPexelsUrls.add(pexelsUrl)
         const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
-        const querySource = brollOverride ? 'BROLLPLAN' : (verbatim ? 'VERBATIM' : 'GPT')
-        console.log(`[clip] scene=${idx + 1} source=${querySource} query="${libQuery.slice(0, 40)}" CACHED url=${cachedUrl.slice(0, 80)}`)
         clipUrls.push(cachedUrl)
-      } else {
-        if (rawPexelsUrl && usedPexelsUrls.has(rawPexelsUrl)) {
-          console.log(`[clip] scene=${idx + 1} category=${cat} DEDUP — pexels url already used, falling back to STOCKLIB`)
+
+        // Push #349 — relevance threshold. Pexels is the only REAL footage
+        // source, so we never reject a Pexels clip on score alone — but a
+        // sub-75 score means the AI flagged a weak match, so log it loudly for
+        // debugging from server logs.
+        if (typeof relevanceScore === 'number' && relevanceScore < 75) {
+          console.warn(
+            `[clip] scene=${sceneNo} LOW-RELEVANCE score=${relevanceScore} — keeping Pexels clip (only real footage source)`,
+          )
         }
-        console.log(`[clip] scene=${idx + 1} category=${cat} STOCKLIB url=${fallbackUrl.slice(0, 80)}`)
+        console.log(
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=${primarySource} score=${scoreLabel} url=${cachedUrl.slice(0, 60)}`,
+        )
+        continue
+      }
+
+      // Pexels returned nothing usable (no result, or a duplicate of an earlier
+      // scene). Enter the smart fallback hierarchy.
+      if (isDuplicate) {
+        console.log(`[clip] scene=${sceneNo} DEDUP — pexels url already used, entering fallback`)
+      }
+
+      // Fallback A: extend the most recent real (Pexels-sourced) clip. A repeated
+      // RELEVANT clip beats a fresh IRRELEVANT stockLibrary clip — this is also
+      // what we want when relevanceScore < 60 (the curated clip is very unlikely
+      // to match an already-weak scene).
+      const previousRelevantUrl = findPreviousRelevantClip(clipUrls, usedPexelsUrls, idx)
+
+      // Fallback B: stockLibrary (Cloudinary demo). Only when there is no prior
+      // relevant clip to extend.
+      const libUrl = previousRelevantUrl ?? fallbackUrl
+
+      if (libUrl) {
+        const fbSource = previousRelevantUrl ? 'FALLBACK-A' : 'FALLBACK-B'
+        if (previousRelevantUrl) {
+          console.log(`[clip] scene=${sceneNo} FALLBACK-A: extending previous relevant clip`)
+        } else {
+          console.log(`[clip] scene=${sceneNo} FALLBACK-B: stockLibrary url=${fallbackUrl.slice(0, 60)}`)
+        }
+        console.log(
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=${fbSource} score=${scoreLabel} url=${libUrl.slice(0, 60)}`,
+        )
+        clipUrls.push(libUrl)
+      } else {
+        // Absolute last resort — no prior clip AND no stockLibrary match. Push
+        // the (empty) fallback; it is filtered out below.
+        console.log(
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=STOCKLIB score=${scoreLabel} url=(none)`,
+        )
         clipUrls.push(fallbackUrl)
       }
     }

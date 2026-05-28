@@ -79,10 +79,22 @@ Return JSON with:
         ? parsed.visualIntent.trim()
         : scene.visualIntent
 
+    // #349 — keep pexelsQueries in sync. The regenerated (more specific) query
+    // must lead the multi-query list, otherwise generate-video-fast (which now
+    // prefers pexelsQueries over the single pexelsQuery) would still search the
+    // old low-relevance terms. Put the new query first, keep the prior ones as
+    // broader fallbacks, deduped.
+    const priorQueries = scene.pexelsQueries ?? [scene.pexelsQuery]
+    const newPexelsQueries = [
+      newPexelsQuery,
+      ...priorQueries.filter((q) => q && q.toLowerCase() !== newPexelsQuery.toLowerCase()),
+    ]
+
     return {
       ...scene,
       brollPrompt: newBrollPrompt,
       pexelsQuery: newPexelsQuery,
+      pexelsQueries: newPexelsQueries,
       visualIntent: newVisualIntent,
     }
   } catch (err) {

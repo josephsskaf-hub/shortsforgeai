@@ -27,6 +27,21 @@ CRITICAL RULES:
 5. Payoff scenes: confirming, resolving, satisfying
 6. Every visual MUST directly reinforce the exact meaning of the narration
 
+HARD NEGATIVE RULES — never select footage that contradicts the narration:
+- Ancient Rome / history: NO modern skyscrapers, NO contemporary offices
+- Finance / Wall Street: NO beaches, forests, or random lifestyle shots
+- AI / technology: NO generic nature unless script explicitly mentions nature
+- War / history: NO modern unrelated soldiers unless period matches
+- Luxury / money: NO random shopping mall footage unless context fits
+- Mystery / dark topics: NO bright cheerful footage, NO beaches
+
+VISUAL THEME CONSISTENCY — each video should have a coherent visual language:
+- Ancient history: ruins, maps, statues, manuscripts, cinematic reenactment
+- Money/finance: trading floors, charts, banks, offices, luxury but relevant
+- AI/future: servers, neural networks, robots, interfaces, labs, data centers
+- Mystery: dark rooms, archives, documents, shadows, cinematic close-ups
+- Geography/countries: drone landscapes, local streets, landmarks, culture
+
 Return JSON only. No explanation.`
 
 const VALID_MOODS: VisualMood[] = [
@@ -146,7 +161,7 @@ Generate the visual layer for these ${scenesWithMeta.length} scenes. For each sc
 - caption (max 6 words, punchy fragment)
 - keywords (array of 3-5 concrete visual nouns, no adjectives)
 - brollPrompt (150-350 chars: specific, concrete visual description — NO generic visuals)
-- pexelsQuery (2-3 concrete nouns only, lowercase, perfect for stock footage search)
+- pexelsQueries (array of 3-5 search queries for stock footage; each query is 2-4 concrete nouns, lowercase; ORDER from most specific to least specific so a fallback can broaden the search if the first query has no footage)
 - relevanceScore (int 0-100: how well this visual reinforces the exact narration meaning)
 
 SCENES:
@@ -197,8 +212,15 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
     const rawGptPrompt = asStr(gpt.brollPrompt, '')
     const brollPrompt = rawGptPrompt.length > 20 ? rawGptPrompt : builtPrompt.brollPrompt
 
+    // pexelsQueries: prefer the GPT array (3-5, most-specific-first), falling back
+    // to the legacy single pexelsQuery, then the built prompt's query. The first
+    // entry is mirrored into pexelsQuery for backward compatibility with callers
+    // that still read a single string.
+    const gptQueries = asStrArr(gpt.pexelsQueries).filter((q) => q.length > 2)
     const rawGptQuery = asStr(gpt.pexelsQuery, '')
-    const pexelsQuery = rawGptQuery.length > 2 ? rawGptQuery : builtPrompt.pexelsQuery
+    const legacyQuery = rawGptQuery.length > 2 ? rawGptQuery : builtPrompt.pexelsQuery
+    const pexelsQueries = gptQueries.length > 0 ? gptQueries : [legacyQuery]
+    const pexelsQuery = pexelsQueries[0]
 
     const caption = asStr(
       gpt.caption,
@@ -224,6 +246,7 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
       negativePrompt: builtPrompt.negativePrompt,
       relevanceScore: asNum(gpt.relevanceScore, 70),
       pexelsQuery,
+      pexelsQueries,
     }
   })
 
