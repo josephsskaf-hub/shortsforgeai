@@ -18,7 +18,7 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Starter is $2.90/month, Basic is $4.90/month, and Pro is $9.90/month.',
+    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Spark is $2.90/month, Basic is $4.90/month, and Pro is $9.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -86,11 +86,11 @@ function buildPricing() {
     },
     {
       tier: 'starter',
-      name: 'Starter',
+      name: 'Spark ✨',
       price: '$2.90',
       priceSub: '/ month',
       trialLine: '3 days free · then $2.90/mo',
-      tagline: '15 Fast Mode renders/month. Under $0.20 per video.',
+      tagline: '15 AI Short videos/month. Just $0.19 per video.',
       features: [
         '15 Fast Mode renders/month',
         'AI writes script + voiceover',
@@ -381,7 +381,7 @@ export default function PricingPage() {
             const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
             const isSelected = isPaid && selectedPlan === p.tier
             const ctaLabel = isSelected
-              ? p.tier === 'starter' ? 'Continue with Starter' : p.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
+              ? p.tier === 'starter' ? 'Continue with Spark' : p.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
               : p.cta.label
             const isExternal = p.cta.href.startsWith('http')
             return (
@@ -625,7 +625,7 @@ export default function PricingPage() {
                     Free
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
-                    Starter
+                    Spark
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
                     Basic
@@ -834,7 +834,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'starter' ? 'Loading…' : 'Starter $2.90'}
+            {purchasing === 'starter' ? 'Loading…' : 'Spark $2.90'}
           </button>
           <button
             type="button"

@@ -118,12 +118,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [submitting, setSubmitting] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   // Push #077 — pricing card selected state. Pro is selected by default.
-  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('pro')
   // Push #081 — credits pill in header. null while loading; never shown
   // when logged out. We only fetch once auth is confirmed so we don't
   // hammer the credits route during the unauth flash.
   const [credits, setCredits] = useState<number | null>(null)
-  const [checkoutTier, setCheckoutTier] = useState<'basic' | 'pro' | null>(null)
+  const [checkoutTier, setCheckoutTier] = useState<'starter' | 'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   // Push #171 — show a friendly "already subscribed" banner instead of a
   // red error when the API blocks a duplicate purchase attempt.
@@ -416,7 +416,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // async/await (user gesture chain severed after first await). Fix: navigate
   // directly to the GET checkout endpoint which does a server-side 302 to
   // Stripe — no fetch, no await, no gesture breakage on any mobile browser.
-  function handleStartPlan(tier: 'basic' | 'pro') {
+  function handleStartPlan(tier: 'starter' | 'basic' | 'pro') {
     trackHomepageEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
     trackCheckoutClick(tier)
     if (!user) {
@@ -666,7 +666,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Start Generating Shorts →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            From $4.90/month · 7-day money-back guarantee · Cancel anytime
+            From $2.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </div>
         </div>{/* end hero content */}
@@ -980,11 +980,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Choose a plan
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
+            Three plans, starting at $2.90/month. Under $0.20 per Short — less than a cup of coffee for a viral video.
           </p>
         </div>
-        {/* Push #276 — 2-col grid, free plan removed from all surfaces */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:max-w-2xl md:mx-auto">
+        {/* Push #339 — 3-col grid: Spark + Basic + Pro */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:max-w-4xl md:mx-auto">
           {PLAN_LIST.map((plan) => {
             const isSelected = selectedPlan === plan.tier
             const isRecommended = !!plan.recommended
@@ -993,7 +993,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
             const features = featureListFor(plan.tier)
             const ctaLabel = isSelected
-              ? plan.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
+              ? plan.tier === 'starter' ? 'Continue with Spark' : plan.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
               : plan.cta
 
             return (
@@ -1003,12 +1003,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 tabIndex={0}
                 aria-pressed={isSelected}
                 onClick={() => {
-                  setSelectedPlan(plan.tier as 'basic' | 'pro')
+                  setSelectedPlan(plan.tier as 'starter' | 'basic' | 'pro')
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    setSelectedPlan(plan.tier as 'basic' | 'pro')
+                    setSelectedPlan(plan.tier as 'starter' | 'basic' | 'pro')
                   }
                 }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 cursor-pointer ${
@@ -1056,8 +1056,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   disabled={checkoutTier !== null && checkoutTier !== plan.tier}
                   onClick={(e) => {
                     e.stopPropagation()
-                    setSelectedPlan(plan.tier as 'basic' | 'pro')
-                    handleStartPlan(plan.tier as 'basic' | 'pro')
+                    setSelectedPlan(plan.tier as 'starter' | 'basic' | 'pro')
+                    handleStartPlan(plan.tier as 'starter' | 'basic' | 'pro')
                   }}
                   className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                     isRecommended || isSelected
@@ -1069,8 +1069,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </button>
                 {/* Push #276 — per-tier value highlight (paid plans only) */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
+                  {plan.tier === 'starter' && '15 Short videos/month · just $0.19 each'}
                   {plan.tier === 'basic' && '50 Fast Mode videos/month'}
-                  {plan.tier === 'pro' && '100 Fast Mode + Cinematic Mode unlocked.'}
+                  {plan.tier === 'pro' && '100 Fast Mode + ✨ AI Generated unlocked.'}
                 </p>
                 <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
                   7-day money-back guarantee · Cancel anytime
@@ -1598,9 +1599,18 @@ function ShowcaseVideoCard({
 // Marketing feature copy lives next to the home page so it can be tuned
 // without touching the canonical PLANS config.
 // Push #276 — free tier removed from all marketing surfaces.
-function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
+function featureListFor(tier: 'free' | 'starter' | 'basic' | 'pro'): string[] {
   if (tier === 'free') {
     return [] // free plan no longer shown
+  }
+  if (tier === 'starter') {
+    return [
+      `${PLANS.starter.credits} Fast Mode renders/month`,
+      'AI script + neural voiceover pipeline',
+      'Auto-captions engine',
+      'Watermark-free MP4 output',
+      'My Videos history',
+    ]
   }
   if (tier === 'basic') {
     return [
@@ -1613,7 +1623,7 @@ function featureListFor(tier: 'free' | 'basic' | 'pro'): string[] {
   }
   return [
     `${PLANS.pro.credits} Fast Mode renders/month`,
-    'Cinematic AI Engine — AI-generated scenes',
+    '✨ AI Generated scenes (fal.ai)',
     'Advanced generation controls',
     'Auto-captions engine',
     'Watermark-free MP4 output',

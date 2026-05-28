@@ -21,10 +21,18 @@ import { PLANS } from '@/lib/pricing'
 // counts can't drift between the homepage, /pricing, and this in-flow
 // upgrade card.
 const FREE_FEATURES = [
-  '1 Fast Mode render included',
+  '3 Fast Mode renders included',
   'Stock footage + AI voiceover',
   'Auto-captions',
   'Watermark-free MP4 output',
+]
+
+const STARTER_FEATURES = [
+  `${PLANS.starter.credits} Fast Mode renders/month`,
+  'AI writes script + voiceover',
+  'Auto-captions pipeline',
+  'Download watermark-free MP4',
+  'My Videos history',
 ]
 
 const BASIC_FEATURES = [
@@ -37,7 +45,7 @@ const BASIC_FEATURES = [
 
 const PRO_FEATURES = [
   `${PLANS.pro.credits} Fast Mode renders/month`,
-  'Cinematic AI Engine — AI-generated scenes',
+  '✨ AI Generated scenes (fal.ai)',
   'Advanced generation controls',
   'Auto-captions pipeline',
   'Download watermark-free MP4',
@@ -45,7 +53,7 @@ const PRO_FEATURES = [
 ]
 
 export default function PricingCards() {
-  const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
+  const [purchasing, setPurchasing] = useState<'starter' | 'basic' | 'pro' | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Push #171 — show a clear "already subscribed" banner instead of
   // silently redirecting to /generate on duplicate purchase attempts.
@@ -53,13 +61,13 @@ export default function PricingCards() {
   // Push #077 — pricing card selected state. Pro is the recommended
   // default. Card click selects (does NOT trigger Stripe); CTA button
   // click navigates to Stripe.
-  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('pro')
 
   // Push #173 — use direct GET navigation to bypass iOS Safari async block.
   // The server-side GET handler creates the Stripe session and issues a 302
   // redirect, so no fetch/await is needed here and the user gesture is
   // preserved across all browsers including mobile Safari.
-  function handleBuy(tier: 'basic' | 'pro') {
+  function handleBuy(tier: 'starter' | 'basic' | 'pro') {
     setPurchasing(tier)
     window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
@@ -128,11 +136,29 @@ export default function PricingCards() {
         </div>
       )}
 
-      {/* Push #262 — 2-card layout: Basic (left) + Pro (right). Free card
-          removed — it's the default plan and doesn't need a purchase CTA.
-          Grid switches from 3-col to 2-col so the two paid options sit
-          side-by-side with more breathing room. */}
-      <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-2" style={{ maxWidth: '44rem' }}>
+      {/* Push #339 — 3-card layout: Spark + Basic + Pro. */}
+      <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '62rem' }}>
+
+        <PlanCard
+          tier="starter"
+          name={PLANS.starter.name}
+          price={PLANS.starter.priceLabel}
+          period="/ month"
+          tagline="15 AI Short videos/month. Just $0.19 per video."
+          features={STARTER_FEATURES}
+          selected={selectedPlan === 'starter'}
+          onSelect={() => setSelectedPlan('starter')}
+          cta={{
+            label:
+              purchasing === 'starter'
+                ? 'Loading…'
+                : selectedPlan === 'starter'
+                  ? 'Continue with Spark'
+                  : PLANS.starter.cta,
+            onClick: () => handleBuy('starter'),
+            loading: purchasing === 'starter',
+          }}
+        />
 
         <PlanCard
           tier="basic"
@@ -160,7 +186,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline="100 Fast Mode renders + 1 free Cinematic (Runway AI) video/month."
+          tagline="100 Fast Mode renders + ✨ AI Generated scenes/month."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight
@@ -196,7 +222,7 @@ function PlanCard({
   onSelect,
   cta,
 }: {
-  tier: 'free' | 'basic' | 'pro'
+  tier: 'free' | 'starter' | 'basic' | 'pro'
   name: string
   price: string
   period: string
@@ -209,7 +235,7 @@ function PlanCard({
   onSelect?: () => void
   cta: { label: string; onClick: () => void; loading?: boolean } | null
 }) {
-  const isPaid = tier === 'basic' || tier === 'pro'
+  const isPaid = tier === 'starter' || tier === 'basic' || tier === 'pro'
   const isSelected = !!selected
 
   function background(): string {

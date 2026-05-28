@@ -22,7 +22,7 @@ type Currency = 'usd' | 'brl' | 'inr'
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   starter: {
-    name: 'ShortsForgeAI — Starter',
+    name: 'ShortsForgeAI — Spark',
     description: '15 Fast Mode videos / month',
     credits: 15,
   },

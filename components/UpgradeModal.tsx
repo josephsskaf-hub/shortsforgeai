@@ -67,7 +67,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           <span className="grad-text">free renders</span>
         </h2>
         <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
-          Activate a plan to keep your pipeline running — from $4.90/mo.
+          Activate a plan to keep your pipeline running — from $2.90/mo.
         </p>
 
         {/* Features */}

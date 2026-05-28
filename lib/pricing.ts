@@ -6,7 +6,7 @@
 // The server route handles currency detection (BRL for BR users) and creates
 // the Stripe session. No Stripe payment-link URLs live here.
 
-export type PlanTier = 'free' | 'basic' | 'pro'
+export type PlanTier = 'free' | 'starter' | 'basic' | 'pro'
 
 export interface PlanConfig {
   tier: PlanTier
@@ -27,9 +27,21 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     price: 0,
     priceLabel: '$0',
     periodLabel: 'forever',
-    credits: 1,
+    credits: 3,
     cta: 'Run Free',
     href: '/signup',
+  },
+  // Push #339 — Starter plan at $2.90/mo (15 credits). Entry-level for creators
+  // who want to test the product before committing to Basic or Pro.
+  starter: {
+    tier: 'starter',
+    name: 'Spark',
+    price: 2.90,
+    priceLabel: '$2.90',
+    periodLabel: '/ month',
+    credits: 15,
+    cta: 'Ignite My Channel',
+    href: '/api/stripe/checkout?tier=starter',
   },
   basic: {
     tier: 'basic',
@@ -55,4 +67,5 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
 }
 
 // Push #276 — remove free card from all surfaces. Only paid plans shown.
-export const PLAN_LIST: PlanConfig[] = [PLANS.basic, PLANS.pro]
+// Push #339 — Starter added as the entry-level paid plan.
+export const PLAN_LIST: PlanConfig[] = [PLANS.starter, PLANS.basic, PLANS.pro]
