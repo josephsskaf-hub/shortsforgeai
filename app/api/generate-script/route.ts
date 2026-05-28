@@ -21,6 +21,10 @@ import { openai } from '@/lib/openai'
 // Push #316 — added `language` param (en | pt | es). Voiceover sentences are
 // generated in the chosen language; [Pexels: ...] cues and section headers
 // stay in English so Pexels search and parseViralScriptSections() keep working.
+//
+// Narration Engine (Phase 1) — system prompt now includes CINEMATIC NARRATION
+// RULES that instruct GPT to write scripts with natural dramatic punctuation
+// ("...", em-dashes, sentence rhythm variation) so the AI voice sounds cinematic.
 
 type Language = 'en' | 'pt' | 'es'
 
@@ -32,13 +36,13 @@ function buildSystemPrompt(language: Language): string {
       ? `LANGUAGE: Write all voiceover sentences in Spanish (es-419 Latin American). Keep [Pexels: ...] cues and section headers (HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, PAYOFF) in English — the video engine requires them in English. Only the spoken narration text changes language.`
       : `LANGUAGE: Write everything in US English.`
 
-  return `You are a viral YouTube Shorts scriptwriter. Your job is to take any topic and write a tight, punchy script in the exact structure below. The script will be fed into an AI video generator — so every line you write becomes the voiceover, word for word. Write for a US audience aged 18–34.
+  return `You are a world-class viral YouTube Shorts scriptwriter AND voice director. Your job is to take any topic and write a tight, punchy, CINEMATIC script in the exact structure below. The script will be fed word-for-word into a premium AI text-to-speech voice — so how you write determines how it SOUNDS. Write for a US audience aged 18-34.
 
 ${langInstruction}
 
 OUTPUT FORMAT — use EXACTLY these headers, in this exact order. Each section MUST start with a [Pexels: search term] footage cue, immediately followed by the voiceover text.
 
-HOOK (0-2s): [Pexels: FOOTAGE_CUE] Voiceover sentence here (≤12 words, pattern interrupt or number).
+HOOK (0-2s): [Pexels: FOOTAGE_CUE] Voiceover sentence here (12 words max, pattern interrupt or number).
 
 MICRO REWARD 1: [Pexels: FOOTAGE_CUE] First concrete fact — specific name, number, date, or place.
 
@@ -51,7 +55,7 @@ ESCALATION: [Pexels: FOOTAGE_CUE] One sentence raising the stakes. More intense 
 PAYOFF: [Pexels: FOOTAGE_CUE] The "save this" moment. One line that reframes everything. End with a follow CTA in the chosen language.
 
 FOOTAGE CUE RULES (critical — this directly controls what video clip plays):
-- 2–5 lowercase words describing what should be ON SCREEN during this beat
+- 2-5 lowercase words describing what should be ON SCREEN during this beat
 - Must be a VISUAL you can film: objects, places, actions, settings — never abstract concepts
 - Must match what the voiceover is SAYING at that exact moment, not just the topic
 - Avoid person names (Pexels has no paparazzi footage of Warren Buffett)
@@ -59,12 +63,21 @@ FOOTAGE CUE RULES (critical — this directly controls what video clip plays):
 - Bad: "success", "billionaire", "mystery", "the answer", "time"
 
 VOICEOVER RULES:
-- Total script: 130–170 words (narrated at 1.05x speed = ~45–55 seconds)
+- Total script: 130-170 words (narrated at 1.05x speed = ~45-55 seconds)
 - Every fact must be specific: names, numbers, dates, places — never vague
 - ESCALATION must feel more intense than MICRO REWARD 3
 - PAYOFF must feel like a revelation, not a summary
 - Do NOT invent quotes from real people
 - Do NOT use the word "millionaire" — use "billionaire" or a different word
+
+CINEMATIC NARRATION RULES (this is what separates premium from generic AI videos):
+- HOOK must be the most energetic, fastest-paced line in the entire script. Short sentences. Punchy.
+- Use "..." for dramatic pauses before shocking reveals. The AI voice reads "..." as a real pause.
+- Use em-dashes to create a beat before a key word: "No one knew — until now."
+- Short sentences hit harder than long ones. Mix 3-word punches with 12-word reveals.
+- ESCALATION and PAYOFF must feel like the narrator is leaning in, speaking slower, with weight.
+- Vary sentence length deliberately: short. short. LONGER sentence that builds tension. Short punch.
+- PAYOFF is the slowest, most deliberate moment — write it that way with careful punctuation and weight.
 
 Respond with ONLY the script. No intro, no explanation, no markdown, no code blocks.`
 }
@@ -110,7 +123,7 @@ export async function POST(req: NextRequest) {
         { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `Write a viral YouTube Short script about this topic:\n\n${topic}`,
+          content: 'Write a viral YouTube Short script about this topic:\n\n' + topic,
         },
       ],
     })

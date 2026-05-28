@@ -50,6 +50,10 @@ interface ComposeBody {
   // language. We accept and log the param for observability but no voice switch
   // is required.
   language?: string
+  // Phase 1 Narration Engine — content vertical hint (e.g. 'mystery', 'finance',
+  // 'geography'). Forwarded from analyze-idea via GenerateClient so the persona
+  // selector can pick the right voice + speed profile for the niche.
+  vertical?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -138,6 +142,16 @@ export async function POST(req: NextRequest) {
     // Push #316 — output language. OpenAI TTS auto-detects from the script text.
     const language = body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
 
+    // Phase 1 Narration Engine — content vertical from analyze-idea (e.g. 'mystery',
+    // 'finance', 'geography'). Used by selectPersonaForScript() inside generateTTS()
+    // to pick the right voice persona for the niche.
+    const vertical = typeof body.vertical === 'string' && body.vertical.trim()
+      ? body.vertical.trim().toLowerCase()
+      : undefined
+    // Map render quality → narration tier so premium/cinematic users get better personas.
+    const narrationTier: 'free' | 'premium' | 'cinematic' =
+      quality === 'cinematic_ai' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
+
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
     // narration is the user's exact text spoken at this rate; we don't rewrite
     // the word count and we don't slow the voice to fill the requested duration.
@@ -200,7 +214,7 @@ export async function POST(req: NextRequest) {
     )
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0)
+      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier)
       console.log(
         `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
       )
@@ -248,7 +262,7 @@ export async function POST(req: NextRequest) {
         `[compose] duration off by ${(realAudioDuration - duration).toFixed(1)}s — re-synthesizing at speed=${correctiveSpeed.toFixed(3)}`,
       )
       try {
-        const retryBuffer = await generateTTS(scaledScript, correctiveSpeed)
+        const retryBuffer = await generateTTS(scaledScript, correctiveSpeed, vertical, narrationTier)
         if (retryBuffer && retryBuffer.length > 0) {
           const retryDuration = estimateMp3DurationSeconds(retryBuffer)
           const improved =

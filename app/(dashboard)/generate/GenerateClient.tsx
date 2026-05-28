@@ -739,6 +739,9 @@ export default function GenerateClient() {
             topic: prompt,
             quality,
             language,
+            // Narration Engine (Phase 1) — pass the detected niche as vertical
+            // so compose auto-selects the best AI voice persona for the content.
+            vertical: analysis?.niche ?? undefined,
             ...(ttsSpeed != null ? { speed: ttsSpeed } : {}),
           }),
         })

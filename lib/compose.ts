@@ -8,6 +8,7 @@ import { toFile } from 'openai'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 import { stripScriptMarkers } from '@/lib/scriptParser'
+import { selectPersonaForScript, describeVoiceSelection } from '@/lib/narration/niche-mapping'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
@@ -151,18 +152,49 @@ export async function scaleVoiceoverScript(rawScript: string, targetWords: numbe
 // requested duration after measuring the first pass. tts-1 accepts 0.25–4.0
 // (1.0 = natural). duration scales as 1/speed, so speed<1 lengthens and
 // speed>1 shortens. We clamp to a natural-sounding band before sending.
-export async function generateTTS(script: string, speed = 1.0): Promise<Buffer> {
+//
+// Narration Engine (Phase 1) — `vertical` enables automatic persona selection.
+// When provided, generateTTS picks the OpenAI TTS voice and base speed that
+// best match the content niche (mystery→onyx slow, finance→onyx normal,
+// curiosities→fable fast, geography→echo measured, etc.).
+// When absent, falls back to the legacy onyx/1.0 behaviour.
+export async function generateTTS(
+  script: string,
+  speed = 1.0,
+  vertical?: string,
+  userTier: 'free' | 'premium' | 'cinematic' = 'free',
+): Promise<Buffer> {
   // Push #236 — last line of defense: strip any residual script markers /
   // directives so the narrator can never speak "[Pexels: ...]" or a "speed:"
   // line, no matter what upstream produced `script`. Idempotent on clean text.
   const cleaned = stripScriptMarkers(script)
   const input = cleaned.length > 3800 ? cleaned.slice(0, 3800) : cleaned
-  const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(speed) ? speed : 1.0))
+
+  // ── Narration Engine: persona-driven voice + speed selection ──────────────
+  // When a vertical is provided, auto-select the best persona for the content.
+  // The external speed param (corrective pass from compose) is treated as a
+  // MULTIPLIER on top of the persona's base speed, so the duration correction
+  // still works correctly while the voice character is preserved.
+  let resolvedVoice: 'alloy' | 'echo' | 'fable' | 'nova' | 'onyx' | 'shimmer' = 'onyx'
+  let resolvedSpeed = speed
+
+  if (vertical) {
+    const persona = selectPersonaForScript(cleaned, vertical, userTier)
+    resolvedVoice = persona.voice
+    // Persona base speed × corrective multiplier, clamped to TTS limits.
+    // e.g. dark-mystery base=0.92, corrective=1.05 → 0.97 (still slower than default)
+    resolvedSpeed = persona.defaultSpeed * speed
+    console.log(
+      `[compose] Narration Engine: ${describeVoiceSelection(cleaned, vertical, userTier)}`,
+    )
+  }
+
+  const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(resolvedSpeed) ? resolvedSpeed : 1.0))
   const { openai } = await import('@/lib/openai')
   // Push #292 — upgraded tts-1 → tts-1-hd for noticeably clearer voice.
   const speech = await openai.audio.speech.create({
     model: 'tts-1-hd',
-    voice: 'onyx',
+    voice: resolvedVoice,
     input,
     speed: safeSpeed,
   })
