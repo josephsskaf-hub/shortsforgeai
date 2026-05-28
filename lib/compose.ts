@@ -9,6 +9,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import { buildCaptionSegments, pickHighlightWord, type CaptionSegment } from '@/lib/openai'
 import { stripScriptMarkers } from '@/lib/scriptParser'
 import { selectPersonaForScript, describeVoiceSelection } from '@/lib/narration/niche-mapping'
+import { splitIntoSections, hasViralSections } from '@/lib/narration/section-tts'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
 const CTA_TEXT = 'shortsforgeai.com'
@@ -168,30 +169,54 @@ export async function generateTTS(
   // directives so the narrator can never speak "[Pexels: ...]" or a "speed:"
   // line, no matter what upstream produced `script`. Idempotent on clean text.
   const cleaned = stripScriptMarkers(script)
-  const input = cleaned.length > 3800 ? cleaned.slice(0, 3800) : cleaned
 
-  // ── Narration Engine: persona-driven voice + speed selection ──────────────
-  // When a vertical is provided, auto-select the best persona for the content.
-  // The external speed param (corrective pass from compose) is treated as a
-  // MULTIPLIER on top of the persona's base speed, so the duration correction
-  // still works correctly while the voice character is preserved.
+  // ── Phase 1: Narration Engine — persona-driven voice + speed ──────────────
   let resolvedVoice: 'alloy' | 'echo' | 'fable' | 'nova' | 'onyx' | 'shimmer' = 'onyx'
-  let resolvedSpeed = speed
+  let baseSpeed = speed
 
   if (vertical) {
     const persona = selectPersonaForScript(cleaned, vertical, userTier)
     resolvedVoice = persona.voice
-    // Persona base speed × corrective multiplier, clamped to TTS limits.
-    // e.g. dark-mystery base=0.92, corrective=1.05 → 0.97 (still slower than default)
-    resolvedSpeed = persona.defaultSpeed * speed
+    baseSpeed = persona.defaultSpeed * speed
     console.log(
       `[compose] Narration Engine: ${describeVoiceSelection(cleaned, vertical, userTier)}`,
     )
+
+    // ── Phase 2: Section-level speed modulation ────────────────────────────
+    // When the script has HOOK/MICRO REWARD/ESCALATION/PAYOFF markers, TTS
+    // each section at its own speed (hook fast, payoff slow) and concatenate
+    // the raw MP3 frames. Falls back to single-pass if no markers detected.
+    if (hasViralSections(script)) {
+      const sections = splitIntoSections(script, persona)
+      if (sections && sections.length >= 2) {
+        console.log(
+          `[compose] Phase 2 sectioned TTS: ${sections.length} sections`,
+          sections.map((s) => `${s.type}×${s.speedMultiplier.toFixed(2)}`).join(', '),
+        )
+        const { openai } = await import('@/lib/openai')
+        const buffers: Buffer[] = []
+        for (const section of sections) {
+          // section speed = persona.defaultSpeed × sectionMultiplier × corrective(speed)
+          const sectionSpeed = persona.defaultSpeed * section.speedMultiplier * speed
+          const safeSection = Math.max(0.7, Math.min(1.3, sectionSpeed))
+          const input = section.text.length > 3800 ? section.text.slice(0, 3800) : section.text
+          const speech = await openai.audio.speech.create({
+            model: 'tts-1-hd',
+            voice: resolvedVoice,
+            input,
+            speed: safeSection,
+          })
+          buffers.push(Buffer.from(await speech.arrayBuffer()))
+        }
+        return Buffer.concat(buffers)
+      }
+    }
   }
 
-  const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(resolvedSpeed) ? resolvedSpeed : 1.0))
+  // ── Single-pass TTS (no vertical, or no sections detected) ────────────────
+  const input = cleaned.length > 3800 ? cleaned.slice(0, 3800) : cleaned
+  const safeSpeed = Math.max(0.7, Math.min(1.3, Number.isFinite(baseSpeed) ? baseSpeed : 1.0))
   const { openai } = await import('@/lib/openai')
-  // Push #292 — upgraded tts-1 → tts-1-hd for noticeably clearer voice.
   const speech = await openai.audio.speech.create({
     model: 'tts-1-hd',
     voice: resolvedVoice,
