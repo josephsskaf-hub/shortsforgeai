@@ -1,5 +1,7 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v2.8 ✅ (estável — commit #326, deploy READY)
+# App versão atual: v3.0-dev 🚧 (Phase 1 B-roll Intelligence in progress)
+# v3.0 IN PROGRESS — Phase 1: B-roll Intelligence System (Visual Director)
+# New files: lib/broll/*, app/api/generate-broll-plan, app/api/regenerate-scene, components/video/VisualDirector, components/video/SceneCard
 
 ## ✅ Status da v2.5 (confirmado em 27/05/2026)
 - AUTO-STRUCTURE: qualquer prompt manual agora passa por /api/generate-script antes de analyze-idea (#310)
