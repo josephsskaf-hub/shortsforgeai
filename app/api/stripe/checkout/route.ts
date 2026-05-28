@@ -8,18 +8,24 @@ import Stripe from 'stripe'
 // and fail to read Supabase auth cookies on every request.
 export const dynamic = 'force-dynamic'
 
-type Tier = 'basic' | 'pro'
+type Tier = 'starter' | 'basic' | 'pro'
 type Currency = 'usd' | 'brl' | 'inr'
 
 // Push #273 — multi-currency support.
-//   Basic:  $4.90 / month  (USD)  |  R$24.90 / month  (BRL)  |  ₹399 / month  (INR)
-//   Pro:    $9.90 / month  (USD)  |  R$49.90 / month  (BRL)  |  ₹799 / month  (INR)
+//   Starter: $2.90 / month  (USD)  |  R$14.90 / month  (BRL)  |  ₹249 / month  (INR)
+//   Basic:   $4.90 / month  (USD)  |  R$24.90 / month  (BRL)  |  ₹399 / month  (INR)
+//   Pro:     $9.90 / month  (USD)  |  R$49.90 / month  (BRL)  |  ₹799 / month  (INR)
 // Currency is auto-detected from the visitor's IP country (Vercel header).
 // Payment methods are automatic (Stripe chooses card / UPI / PIX / etc. per country).
 // Hosted payment links (direct, no session needed):
 //   Basic: https://buy.stripe.com/14A28reRf6jtcev48CgjC0r
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
+  starter: {
+    name: 'ShortsForgeAI — Starter',
+    description: '15 Fast Mode videos / month',
+    credits: 15,
+  },
   basic: {
     name: 'ShortsForgeAI — Basic',
     description: '50 Fast Mode videos / month',
@@ -33,10 +39,11 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 }
 
 // Amounts in the smallest currency unit (cents / centavos / paise).
-// INR: ₹399 = 39900 paise (Basic), ₹799 = 79900 paise (Pro).
+// INR: ₹249 = 24900 paise (Starter), ₹399 = 39900 paise (Basic), ₹799 = 79900 paise (Pro).
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  basic: { usd: 490,  brl: 2490, inr: 39900 },
-  pro:   { usd: 990,  brl: 4990, inr: 79900 },
+  starter: { usd: 290,  brl: 1490, inr: 24900 },
+  basic:   { usd: 490,  brl: 2490, inr: 39900 },
+  pro:     { usd: 990,  brl: 4990, inr: 79900 },
 }
 
 // Map Vercel IP-country header → billing currency.
@@ -234,7 +241,7 @@ async function buildAndRedirect(
 export async function GET(req: NextRequest) {
   try {
     const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
-    const tier: Tier = tierParam === 'pro' ? 'pro' : 'basic'
+    const tier: Tier = tierParam === 'pro' ? 'pro' : tierParam === 'starter' ? 'starter' : 'basic'
     return await buildAndRedirect(req, tier, true)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)

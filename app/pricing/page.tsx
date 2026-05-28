@@ -18,7 +18,7 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Basic is $4.90/month and Pro is $9.90/month.',
+    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Starter is $2.90/month, Basic is $4.90/month, and Pro is $9.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -34,7 +34,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What’s the difference between Fast Mode and Cinematic Mode?',
-    a: 'Fast Mode uses our AI to write, voice, and edit with curated stock footage and is included in all plans. Cinematic Mode uses Runway AI to generate custom scenes — available on Pro.',
+    a: 'Fast Mode uses our AI to write, voice, and edit with curated stock footage and is included in all plans. AI Generated Mode uses fal.ai to generate fully AI-rendered custom scenes — available on Pro only.',
   },
   {
     q: 'What counts as 1 credit?',
@@ -42,9 +42,10 @@ const FAQS: { q: string; a: string }[] = [
   },
 ]
 
-// Push #267 — removed Free card. Pricing page now shows only Basic + Pro.
+// Push #267 — removed Free card. Pricing page now shows only paid plans.
 // Free tier still exists for new signups via /signup, but is not shown here
 // to avoid users exploiting the $0 entry point.
+// Push #339 — added Starter plan at $2.90/mo (15 credits).
 function buildPricing() {
   // Pro first — anchor pricing: user sees $9.90 first, then $4.90 looks like a deal.
   return [
@@ -83,6 +84,22 @@ function buildPricing() {
       ],
       cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
     },
+    {
+      tier: 'starter',
+      name: 'Starter',
+      price: '$2.90',
+      priceSub: '/ month',
+      trialLine: '3 days free · then $2.90/mo',
+      tagline: '15 Fast Mode renders/month. Under $0.20 per video.',
+      features: [
+        '15 Fast Mode renders/month',
+        'AI writes script + voiceover',
+        'Auto-captions pipeline',
+        'Download watermark-free MP4',
+        'My Videos history',
+      ],
+      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
+    },
   ]
 }
 
@@ -105,7 +122,7 @@ function trackPricingEvent(name: string): void {
 
 export default function PricingPage() {
   // Push #077 — pricing card selected state. Pro is selected by default.
-  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'pro' | null>('pro')
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('pro')
 
   // Push #099 — open FAQ index for the accordion (null = all collapsed). First
   // question is open by default so the section reads as scannable, not empty.
@@ -113,7 +130,7 @@ export default function PricingPage() {
   // Push #114 — CTA state. `purchasing` is the tier whose button shows
   // "Loading…" while the API call is in flight; `checkoutError` surfaces
   // any server-returned error below the cards.
-  const [purchasing, setPurchasing] = useState<'basic' | 'pro' | null>(null)
+  const [purchasing, setPurchasing] = useState<'starter' | 'basic' | 'pro' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   // Push #171 — show a friendly "already subscribed" info banner instead of
   // silently redirecting to /generate when the API blocks a duplicate purchase.
@@ -136,10 +153,11 @@ export default function PricingPage() {
   // (user gesture chain is severed after the first await). Fix: navigate
   // directly to the GET checkout endpoint which does a server-side 302
   // redirect to Stripe. No fetch(), no await, no gesture breakage.
-  function handleBuy(tier: 'basic' | 'pro') {
+  function handleBuy(tier: 'starter' | 'basic' | 'pro') {
     setPurchasing(tier)
-    trackPricingEvent(tier === 'basic' ? 'basic_checkout_clicked' : 'pro_checkout_clicked')
-    trackCheckoutClick(tier)
+    const eventName = tier === 'pro' ? 'pro_checkout_clicked' : tier === 'starter' ? 'starter_checkout_clicked' : 'basic_checkout_clicked'
+    trackPricingEvent(eventName)
+    trackCheckoutClick(tier as 'basic' | 'pro')
     window.location.href = `/api/stripe/checkout?tier=${tier}`
   }
 
@@ -281,7 +299,7 @@ export default function PricingPage() {
             Simple, credit-based pricing.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two plans, flat monthly price. Under $0.10 per video — less than a cup of coffee for a viral Short.
+            Three plans, flat monthly price. As low as $2.90/mo — less than a cup of coffee for a viral Short.
           </p>
 
           {/* Social proof stats row */}
@@ -358,12 +376,12 @@ export default function PricingPage() {
 
         {/* Push #267 — Free banner removed with Free card */}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
           {buildPricing().map((p) => {
-            const isPaid = p.tier === 'basic' || p.tier === 'pro'
+            const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
             const isSelected = isPaid && selectedPlan === p.tier
             const ctaLabel = isSelected
-              ? p.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
+              ? p.tier === 'starter' ? 'Continue with Starter' : p.tier === 'basic' ? 'Continue with Basic' : 'Continue with Pro'
               : p.cta.label
             const isExternal = p.cta.href.startsWith('http')
             return (
@@ -373,13 +391,13 @@ export default function PricingPage() {
                 tabIndex={isPaid ? 0 : undefined}
                 aria-pressed={isPaid ? isSelected : undefined}
                 onClick={() => {
-                  if (isPaid) setSelectedPlan(p.tier as 'basic' | 'pro')
+                  if (isPaid) setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
                 }}
                 onKeyDown={(e) => {
                   if (!isPaid) return
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    setSelectedPlan(p.tier as 'basic' | 'pro')
+                    setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
                   }
                 }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
@@ -459,8 +477,8 @@ export default function PricingPage() {
                     disabled={purchasing !== null && purchasing !== p.tier}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setSelectedPlan(p.tier as 'basic' | 'pro')
-                      handleBuy(p.tier as 'basic' | 'pro')
+                      setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
+                      handleBuy(p.tier as 'starter' | 'basic' | 'pro')
                     }}
                     className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                       p.highlight || isSelected
@@ -597,7 +615,7 @@ export default function PricingPage() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0B1120]">
-            <table className="w-full min-w-[640px] text-left text-[13.5px]">
+            <table className="w-full min-w-[700px] text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="px-5 py-4 text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
@@ -605,6 +623,9 @@ export default function PricingPage() {
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
                     Free
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                    Starter
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
                     Basic
@@ -618,31 +639,36 @@ export default function PricingPage() {
                 {[
                   {
                     label: 'Fast Mode (AI stock footage + voiceover)',
-                    free: '✅ 1 video',
+                    free: '✅ 3 videos',
+                    starter: '✅ 15 / month',
                     basic: '✅ 50 / month',
                     pro: '✅ 100 / month',
                   },
                   {
-                    label: 'Cinematic Mode (Runway AI)',
+                    label: 'AI Generated Mode (fal.ai)',
                     free: '—',
+                    starter: '—',
                     basic: '—',
                     pro: '✅ Included',
                   },
                   {
                     label: 'Render time',
                     free: '~60s',
+                    starter: '~60s',
                     basic: '~60s',
                     pro: '60s or ~5 min',
                   },
                   {
                     label: 'Watermark-free MP4',
                     free: '✅',
+                    starter: '✅',
                     basic: '✅',
                     pro: '✅',
                   },
                   {
                     label: 'Priority support',
                     free: '—',
+                    starter: 'Email',
                     basic: 'Email',
                     pro: 'Priority',
                   },
@@ -650,6 +676,7 @@ export default function PricingPage() {
                   <tr key={row.label} className="border-b border-white/[0.04] last:border-0">
                     <td className="px-5 py-3.5 font-semibold text-[#F1F5F9]">{row.label}</td>
                     <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.free}</td>
+                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.starter}</td>
                     <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.basic}</td>
                     <td className="px-5 py-3.5 text-center font-bold text-cyan-300">{row.pro}</td>
                   </tr>
@@ -659,8 +686,8 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
-            Cinematic Mode uses Runway AI to generate fully synthetic, AI-rendered scenes — exclusive to Pro.
-            Fast Mode stays available within your monthly credit balance.
+            ✨ AI Generated Mode uses fal.ai to generate custom AI scenes — exclusive to Pro.
+            Fast Mode stays available within your monthly credit balance on all plans.
           </p>
         </div>
 
@@ -786,28 +813,47 @@ export default function PricingPage() {
             borderTop: '1px solid rgba(255,255,255,.08)',
             padding: '12px 16px',
             display: 'flex',
-            gap: 10,
+            gap: 8,
             zIndex: 50,
           }}
         >
+          <button
+            type="button"
+            disabled={purchasing !== null && purchasing !== 'starter'}
+            onClick={() => handleBuy('starter')}
+            style={{
+              flex: 1,
+              padding: '12px 8px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid rgba(255,255,255,.10)',
+              color: '#94A3B8',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              minHeight: 48,
+            }}
+          >
+            {purchasing === 'starter' ? 'Loading…' : 'Starter $2.90'}
+          </button>
           <button
             type="button"
             disabled={purchasing !== null && purchasing !== 'basic'}
             onClick={() => handleBuy('basic')}
             style={{
               flex: 1,
-              padding: '14px 12px',
+              padding: '12px 8px',
               borderRadius: 10,
               background: 'rgba(255,255,255,.06)',
               border: '1px solid rgba(255,255,255,.12)',
               color: '#F1F5F9',
-              fontSize: '0.85rem',
+              fontSize: '0.78rem',
               fontWeight: 800,
               cursor: 'pointer',
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Basic — Try Free 3 Days'}
+            {purchasing === 'basic' ? 'Loading…' : 'Basic $4.90'}
           </button>
           <button
             type="button"
@@ -815,11 +861,11 @@ export default function PricingPage() {
             onClick={() => handleBuy('pro')}
             style={{
               flex: 1,
-              padding: '14px 12px',
+              padding: '12px 8px',
               borderRadius: 10,
               background: '#FBBF24',
               color: '#0A0A0F',
-              fontSize: '0.85rem',
+              fontSize: '0.78rem',
               fontWeight: 800,
               cursor: 'pointer',
               minHeight: 48,
@@ -827,7 +873,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(251,191,36,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Pro — Try Free 3 Days 🔥'}
+            {purchasing === 'pro' ? 'Loading…' : 'Pro $9.90 🔥'}
           </button>
         </div>
       )}
