@@ -1548,23 +1548,10 @@ function ShowcaseVideoCard({
           }}
         />
 
-        <div className="absolute left-3 top-3 z-20">
-          <span
-            className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-md"
-            style={{
-              background: `${card.accent}22`,
-              color: card.accent,
-              border: `1px solid ${card.accent}55`,
-            }}
-          >
-            {card.category}
-          </span>
-        </div>
-
         {/* "Generated in Xs" badge — top-right */}
-        <div className="absolute top-3 right-3 z-20">
+        <div className="absolute top-3 left-3 z-20">
           <span
-            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[.1em] backdrop-blur-md"
+            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] backdrop-blur-md"
             style={{
               background: 'rgba(16,185,129,.18)',
               border: '1px solid rgba(16,185,129,.45)',
