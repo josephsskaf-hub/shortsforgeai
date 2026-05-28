@@ -4614,12 +4614,12 @@ function ModeSelector({
           }}
         >
           <div className="flex items-center gap-2 mb-2.5">
-            <span className="text-base">🤖</span>
+            <span className="text-base">✨</span>
             <span
               className="text-sm font-black"
               style={{ color: mode === 'cinematic_ai' ? '#fcd34d' : 'var(--text)' }}
             >
-              AI Video
+              AI Generated
             </span>
             <div className="ml-auto flex items-center gap-1.5">
               <span
