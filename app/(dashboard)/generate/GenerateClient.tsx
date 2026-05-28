@@ -2251,7 +2251,7 @@ export default function GenerateClient() {
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
               {mode === 'creator'
-                ? 'Review and direct every scene's visuals before rendering.'
+                ? "Review and direct every scene's visuals before rendering."
                 : 'Fast generation — AI chooses all visuals automatically.'}
             </p>
           </div>
