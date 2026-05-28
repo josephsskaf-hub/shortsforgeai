@@ -23,7 +23,7 @@ html {
   --pink: #22D3EE;
   --cyan: #22D3EE;
   --green: #10b981;
-  --amber: #3B82F6;
+  --amber: #f59e0b;
   --text: #F5F7FF;
   --text2: #E2E8F0;
   --muted: #64748b;
@@ -327,5 +327,43 @@ body::after {
   .mobile-sticky-cta {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
+}
+
+/* ── UI Polish v1.3 ─────────────────────────────────────────────────── */
+
+/* Keyboard focus — visible only when navigating with keyboard */
+:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.7);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Remove default focus ring when using mouse */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Crisp image rendering for thumbnails & avatars */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Subtle selection color */
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: #F5F7FF;
+}
+
+/* Smooth button press on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
