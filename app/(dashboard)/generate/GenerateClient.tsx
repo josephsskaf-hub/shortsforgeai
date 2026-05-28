@@ -7,6 +7,8 @@ import PricingCards from '@/components/PricingCards'
 import OnboardingPanel from '@/components/OnboardingPanel'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import type { BrollPlan } from '@/lib/broll/types'
+import VisualDirector from '@/components/video/VisualDirector'
 
 interface TaskHandle {
   id: string
@@ -68,6 +70,8 @@ type Phase =
   | 'generating'    // Runway producing clips (or fal.ai submission)
   | 'fal_polling'   // Push #315 — polling fal.ai clip status until all done
   | 'clips_ready'   // brief transition state — kicks off /api/compose
+  | 'broll_planning'  // Phase 3 — waiting for /api/generate-broll-plan
+  | 'visual_director' // Phase 3 — Creator Mode: user reviews/edits BrollPlan
   | 'composing'     // Creatomate rendering the final video
   | 'done'
   | 'failed'
@@ -83,7 +87,7 @@ type Duration = 45 | 60 | 90
 // Push #315 — added 'cinematic_ai' for fal.ai Wan 2.1 mode.
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
 // Push #315 — added 'cinematic_ai' for fal.ai Wan 2.1 mode (3 credits, no Pro required).
-type GenerationMode = 'fast' | 'cinematic_ai' | 'cinematic'
+type GenerationMode = 'fast' | 'cinematic_ai' | 'cinematic' | 'creator'
 
 const DURATION_OPTIONS: { value: Duration; label: string }[] = [
   { value: 45, label: '45s — Recommended ⭐' },
@@ -180,6 +184,9 @@ export default function GenerateClient() {
   const [falRequestIds, setFalRequestIds] = useState<(string | null)[]>([])
   const [falClipsDone, setFalClipsDone] = useState<{ done: number; total: number }>({ done: 0, total: 0 })
   const [renderId, setRenderId] = useState<string | null>(null)
+  // Phase 3 — B-roll Intelligence / Creator Mode
+  const [brollPlan, setBrollPlan] = useState<BrollPlan | null>(null)
+  const [brollPlanLoading, setBrollPlanLoading] = useState(false)
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
@@ -464,7 +471,7 @@ export default function GenerateClient() {
   // Push #087 — Fast/CinematicAI 4-step staged progress. Auto-advances every
   // ~8s while mid-generation so the long single roundtrip feels like progress.
   useEffect(() => {
-    if (mode !== 'fast' && mode !== 'cinematic_ai') return
+    if (mode !== 'fast' && mode !== 'cinematic_ai' && mode !== 'creator') return
     const inLoading =
       phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!inLoading) {
@@ -1019,7 +1026,7 @@ export default function GenerateClient() {
         }
       }
 
-      setAnalysis({
+      const analysisResult: Analysis = {
         title: data.title ?? '',
         summary: data.summary ?? '',
         niche: data.niche ?? '',
@@ -1031,8 +1038,62 @@ export default function GenerateClient() {
         youtubeDescription,
         cta,
         viralIntelligence,
-      })
-      setPhase('options')
+      }
+      setAnalysis(analysisResult)
+
+      // Phase 3 — kick off B-roll plan generation for both modes.
+      // Creator Mode will surface the VisualDirector; Autopilot uses the
+      // pexelsQuery values silently as better search terms for /api/scenes.
+      const niche = data.niche ?? ''
+      setBrollPlanLoading(true)
+      setBrollPlan(null)
+
+      if (mode === 'creator') {
+        // Creator Mode: show the planning phase, then the VisualDirector.
+        setPhase('broll_planning')
+        try {
+          const bpRes = await fetch('/api/generate-broll-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ script: source, niche, tone: 'energetic', duration: 52, language }),
+          })
+          if (bpRes.ok) {
+            const bpData = await bpRes.json()
+            if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
+              setBrollPlan(bpData as BrollPlan)
+              setPhase('visual_director')
+              setBrollPlanLoading(false)
+              return // Wait for user to approve via VisualDirector
+            }
+          }
+        } catch {
+          // Fall through — show options phase without VisualDirector
+        }
+        setBrollPlanLoading(false)
+        setPhase('options')
+      } else {
+        // Autopilot: fetch broll plan in the background to improve Pexels queries.
+        setPhase('options')
+        ;(async () => {
+          try {
+            const bpRes = await fetch('/api/generate-broll-plan', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ script: source, niche, tone: 'energetic', duration: 52, language }),
+            })
+            if (bpRes.ok) {
+              const bpData = await bpRes.json()
+              if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
+                setBrollPlan(bpData as BrollPlan)
+              }
+            }
+          } catch {
+            // Non-blocking — Autopilot continues without the plan
+          } finally {
+            setBrollPlanLoading(false)
+          }
+        })()
+      }
     } catch (err) {
       console.error('[generate] analyze threw:', err)
       setError(opts?.fromTopic ? 'Could not analyze topic. Please try again.' : 'Could not analyze that idea. Please try again.')
@@ -1046,6 +1107,74 @@ export default function GenerateClient() {
   // Called by the "Looks good, generate →" button in the preview card.
   async function handleConfirmScript() {
     await handleAnalyze(undefined, { skipPreview: true })
+  }
+
+  // Phase 3 — Creator Mode: user approved the VisualDirector plan.
+  // Store the approved plan and move to the options step for final generation.
+  function handleApproveVisualDirector(approvedPlan: BrollPlan) {
+    setBrollPlan(approvedPlan)
+    setPhase('options')
+  }
+
+  // Phase 3 — Creator Mode: regenerate a single scene in the VisualDirector.
+  async function handleSceneUpdateInDirector(sceneNumber: number, instruction?: string) {
+    if (!brollPlan) return
+    try {
+      const res = await fetch('/api/regenerate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sceneNumber,
+          instruction,
+          currentPlan: brollPlan,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.scene) {
+          setBrollPlan((prev) => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              scenes: prev.scenes.map((s) =>
+                s.sceneNumber === sceneNumber ? data.scene : s,
+              ),
+            }
+          })
+        }
+      }
+    } catch {
+      // Non-blocking — scene stays as-is if regeneration fails
+    }
+  }
+
+  // Phase 3 — Creator Mode: regenerate the entire broll plan.
+  async function handleRegenerateAllScenes() {
+    if (!analysis || !prompt) return
+    setBrollPlanLoading(true)
+    try {
+      const res = await fetch('/api/generate-broll-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: prompt,
+          niche: analysis.niche,
+          tone: 'energetic',
+          duration: 52,
+          language,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.globalStyle && Array.isArray(data.scenes)) {
+          setBrollPlan(data as BrollPlan)
+        }
+      }
+    } catch {
+      // Non-blocking
+    } finally {
+      setBrollPlanLoading(false)
+    }
   }
 
   // Auto-trigger analyze when URL has ?autoanalyze=1&prompt=… (topic quick-start)
@@ -1137,12 +1266,17 @@ export default function GenerateClient() {
       return
     }
 
-    if (mode === 'fast') {
+    if (mode === 'fast' || mode === 'creator') {
       try {
+        // Phase 3 — if a BrollPlan is available, pass the pexelsQuery values
+        // per scene so generate-video-fast can use more specific Pexels searches.
+        const brollQueries = brollPlan
+          ? brollPlan.scenes.map((s) => ({ sceneNumber: s.sceneNumber, pexelsQuery: s.pexelsQuery }))
+          : undefined
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries }),
         })
         const data = await res.json()
         if (res.status === 401) {
@@ -1320,6 +1454,8 @@ export default function GenerateClient() {
     setGenerateProgress(0)
     setRenderProgress(0)
     setError(null)
+    setBrollPlan(null)
+    setBrollPlanLoading(false)
     // Push #047 — "Start over" clears the prompt + the homepage breadcrumb
     // so the next run feels like a fresh start. We do NOT clear credits
     // state — that's owned by the /api/credits effect.
@@ -1640,7 +1776,7 @@ export default function GenerateClient() {
 
   // Push #084 — Fast Mode is a flat 1 credit; Cinematic Mode uses the
   // per-quality cost from QUALITY_OPTIONS.
-  const selectedCost = mode === 'fast'
+  const selectedCost = (mode === 'fast' || mode === 'creator')
     ? 1
     : mode === 'cinematic_ai'
     ? 3
@@ -1652,6 +1788,9 @@ export default function GenerateClient() {
 
   const showStep1 = phase === 'idle' || phase === 'analyzing' || phase === 'scripting'
   const showScriptPreview = phase === 'script_preview'
+  // Phase 3 — new intermediate phases
+  const showBrollPlanning = phase === 'broll_planning'
+  const showVisualDirector = phase === 'visual_director'
   const showStep2 = phase === 'options'
   const showRender =
     phase === 'generating' ||
@@ -1768,15 +1907,17 @@ export default function GenerateClient() {
                   color: '#3B82F6',
                 }}
               >
-                {showStep1 ? 'Step 1 — Your Idea' : showScriptPreview ? 'Step 2 — Review Script' : showStep2 ? 'Step 3 — Creative Brief' : 'Step 4 — Generate'}
+                {showStep1 ? 'Step 1 — Your Idea' : showScriptPreview ? 'Step 2 — Review Script' : (showBrollPlanning || showVisualDirector) ? 'Step 3 — Visual Director' : showStep2 ? 'Step 3 — Creative Brief' : 'Step 4 — Generate'}
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-              {showStep1 ? 'Create Your Short ⚡' : showScriptPreview ? '✍️ Your Script is Ready' : '🎬 Generate a Real AI Short'}
+              {showStep1 ? 'Create Your Short ⚡' : showScriptPreview ? '✍️ Your Script is Ready' : showBrollPlanning ? '🎬 Planning Visuals…' : showVisualDirector ? '🎬 Visual Director' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
               {showStep1 && 'Type any topic → AI writes, voices & edits your Short in ~60 seconds'}
               {showScriptPreview && 'Review your script before we generate the video. Edit anything you want.'}
+              {showBrollPlanning && 'AI Visual Director is planning your scenes…'}
+              {showVisualDirector && 'Review and direct every scene before rendering.'}
               {showStep2 && 'Pick duration and quality, then generate.'}
               {showRender && 'Rendering your vertical 9:16 Short.'}
             </p>
@@ -2047,17 +2188,87 @@ export default function GenerateClient() {
             }}
           />
 
+          {/* Phase 3 — Autopilot vs Creator Mode toggle (pill selector).
+              Appears above the existing generation mode selector so the user
+              picks the workflow first, then the quality/speed tier. */}
+          <div className="mt-5 mb-3">
+            <div
+              className="text-xs font-black uppercase tracking-widest mb-2"
+              style={{ color: 'var(--muted)' }}
+            >
+              Video Workflow
+            </div>
+            <div
+              style={{
+                display: 'inline-flex',
+                gap: 4,
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 12,
+                padding: 4,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setMode(mode === 'creator' ? 'fast' : mode)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 9,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  background: mode !== 'creator'
+                    ? 'linear-gradient(135deg, rgba(245,158,11,0.85), rgba(217,119,6,0.85))'
+                    : 'transparent',
+                  color: mode !== 'creator' ? '#000' : 'rgba(255,255,255,0.45)',
+                  boxShadow: mode !== 'creator' ? '0 2px 12px rgba(245,158,11,0.4)' : 'none',
+                }}
+              >
+                ⚡ Autopilot
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('creator')}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 9,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                  background: mode === 'creator'
+                    ? 'linear-gradient(135deg, rgba(139,92,246,0.85), rgba(109,40,217,0.85))'
+                    : 'transparent',
+                  color: mode === 'creator' ? '#fff' : 'rgba(255,255,255,0.45)',
+                  boxShadow: mode === 'creator' ? '0 2px 12px rgba(139,92,246,0.4)' : 'none',
+                }}
+              >
+                🎬 Creator Mode
+              </button>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+              {mode === 'creator'
+                ? 'Review and direct every scene's visuals before rendering.'
+                : 'Fast generation — AI chooses all visuals automatically.'}
+            </p>
+          </div>
+
           {/* Push #084 — Generation mode selector.
               Push #087 — Cinematic Mode is gated to Pro users; Free + Basic
               see a non-interactive locked card with an upgrade CTA. The
               server enforces the same gate (/api/generate-video returns 403
               for non-Pro callers). */}
+          {mode !== 'creator' && (
           <ModeSelector
             mode={mode}
             setMode={setMode}
             isPro={planTier === 'pro'}
             cinematicTokens={cinematicTokens}
           />
+          )}
 
           {/* Push #034: duration + quality selectors moved here from the
               post-analyze step so users can pick everything in one screen
@@ -2136,7 +2347,9 @@ export default function GenerateClient() {
           <div className="flex items-center justify-between mt-5 gap-3 flex-wrap">
             <div>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                {mode === 'fast'
+                {mode === 'creator'
+                  ? `🎬 Creator Mode • review scenes first, then 1 credit • ~60 seconds.`
+                  : mode === 'fast'
                   ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
                   : mode === 'cinematic_ai'
                   ? `🤖 ${selectedCost} credits • AI Video (fal.ai) • ~3-5 min render.`
@@ -2292,6 +2505,47 @@ export default function GenerateClient() {
               Start over
             </button>
           </div>
+        </section>
+      )}
+
+      {/* ── Phase 3: B-roll Planning (Creator Mode) ── */}
+      {showBrollPlanning && (
+        <section
+          className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              border: '3px solid rgba(139,92,246,0.2)',
+              borderTopColor: 'rgb(139,92,246)',
+              animation: 'spin 0.8s linear infinite',
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <div className="font-black text-base" style={{ color: 'var(--text)' }}>
+              AI Visual Director is planning your scenes…
+            </div>
+            <div className="text-sm" style={{ color: 'var(--muted2)' }}>
+              Analyzing your script to assign mood, shot type, and Pexels search query per scene.
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Phase 3: Visual Director (Creator Mode) ── */}
+      {showVisualDirector && brollPlan && (
+        <section className="mb-6">
+          <VisualDirector
+            plan={brollPlan}
+            onSceneUpdate={handleSceneUpdateInDirector}
+            onRegenerateAll={handleRegenerateAllScenes}
+            onApprove={handleApproveVisualDirector}
+            isLoading={brollPlanLoading}
+          />
         </section>
       )}
 
@@ -2459,7 +2713,7 @@ export default function GenerateClient() {
               {/* Push #087 — Fast Mode gets its own 4-step indicator that
                   matches the actual Pexels + TTS + assemble pipeline.
                   Cinematic Mode keeps the 5-stage Runway indicator. */}
-              {mode === 'fast' ? (
+              {(mode === 'fast' || mode === 'creator') ? (
                 <FastPipelineStages step={fastStep} phase={phase} />
               ) : (
                 <PipelineStages
@@ -5082,6 +5336,4 @@ function GenerationProgressSteps({ step }: { step: number }) {
           </li>
         )
       })}
-    </ol>
-  )
-}
+    

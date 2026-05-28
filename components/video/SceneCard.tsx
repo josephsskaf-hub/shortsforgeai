@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { BrollScene, ScenePurpose, VisualMood, ShotType, VisualSource } from '@/lib/broll/types'
+import ScenePreview from './ScenePreview'
 
 interface SceneCardProps {
   scene: BrollScene
@@ -9,6 +10,10 @@ interface SceneCardProps {
   onRegenerate: (sceneNumber: number, instruction?: string) => void
   onPromptEdit: (sceneNumber: number, newPrompt: string) => void
   isRegenerating?: boolean
+  // Phase 3 — version history support
+  historyCount?: number        // how many prior versions exist for this scene
+  onUndo?: (sceneNumber: number) => void
+  pexelsClip?: string          // pre-fetched Pexels clip URL for ScenePreview
 }
 
 const PURPOSE_BADGE: Record<ScenePurpose, { label: string; className: string }> = {
@@ -87,6 +92,9 @@ export default function SceneCard({
   onRegenerate,
   onPromptEdit,
   isRegenerating = false,
+  historyCount = 0,
+  onUndo,
+  pexelsClip,
 }: SceneCardProps) {
   const [editedPrompt, setEditedPrompt] = useState(scene.brollPrompt)
   const [customInstruction, setCustomInstruction] = useState('')
@@ -173,47 +181,56 @@ export default function SceneCard({
         )}
       </div>
 
-      {/* Caption */}
-      <p
-        style={{
-          fontSize: 15,
-          fontWeight: 600,
-          color: 'rgba(255,255,255,0.9)',
-          margin: 0,
-          lineHeight: 1.4,
-        }}
-      >
-        {scene.caption}
-      </p>
+      {/* ScenePreview + content layout */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        {/* Preview thumbnail */}
+        <ScenePreview scene={scene} pexelsClip={pexelsClip} />
 
-      {/* Narration */}
-      <p
-        style={{
-          fontSize: 12,
-          color: 'rgba(255,255,255,0.45)',
-          margin: 0,
-          lineHeight: 1.6,
-          borderLeft: '2px solid rgba(255,255,255,0.1)',
-          paddingLeft: 10,
-          fontStyle: 'italic',
-        }}
-      >
-        {scene.narration.length > 140 ? scene.narration.slice(0, 140) + '…' : scene.narration}
-      </p>
+        {/* Text content */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Caption */}
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'rgba(255,255,255,0.9)',
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            {scene.caption}
+          </p>
 
-      {/* Visual intent */}
-      {scene.visualIntent && (
-        <p
-          style={{
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.55)',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          {scene.visualIntent}
-        </p>
-      )}
+          {/* Narration */}
+          <p
+            style={{
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.45)',
+              margin: 0,
+              lineHeight: 1.6,
+              borderLeft: '2px solid rgba(255,255,255,0.1)',
+              paddingLeft: 8,
+              fontStyle: 'italic',
+            }}
+          >
+            {scene.narration.length > 120 ? scene.narration.slice(0, 120) + '…' : scene.narration}
+          </p>
+
+          {/* Visual intent */}
+          {scene.visualIntent && (
+            <p
+              style={{
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.55)',
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              {scene.visualIntent}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Mood / Shot / Source chips */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -349,6 +366,41 @@ export default function SceneCard({
           {isRegenerating ? 'Regenerating...' : 'Regenerate'}
         </button>
 
+        {/* Phase 3 — Undo button (shown when history exists) */}
+        {historyCount > 0 && onUndo && (
+          <button
+            onClick={() => onUndo(scene.sceneNumber)}
+            disabled={isRegenerating}
+            title={`Restore previous version (${historyCount} available)`}
+            style={{
+              padding: '6px 14px',
+              fontSize: 12,
+              fontWeight: 600,
+              borderRadius: 8,
+              border: '1px solid rgba(251,191,36,0.4)',
+              background: 'rgba(251,191,36,0.10)',
+              color: 'rgba(253,224,71,0.9)',
+              cursor: isRegenerating ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+            onMouseEnter={(e) => {
+              if (!isRegenerating) {
+                e.currentTarget.style.background = 'rgba(251,191,36,0.20)'
+                e.currentTarget.style.borderColor = 'rgba(251,191,36,0.7)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(251,191,36,0.10)'
+              e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'
+            }}
+          >
+            <span style={{ fontSize: 14 }}>&#x27F2;</span> Undo
+          </button>
+        )}
+
         <button
           onClick={() => handleRegenerate('Make this more cinematic — darker lighting, dramatic camera movement, high contrast, film-noir feel')}
           disabled={isRegenerating}
@@ -403,6 +455,34 @@ export default function SceneCard({
           }}
         >
           More Realistic
+        </button>
+
+        <button
+          onClick={() => handleRegenerate('replace')}
+          disabled={isRegenerating}
+          style={{
+            padding: '6px 14px',
+            fontSize: 12,
+            fontWeight: 600,
+            borderRadius: 8,
+            border: '1px solid rgba(251,191,36,0.4)',
+            background: 'rgba(251,191,36,0.10)',
+            color: 'rgba(253,224,71,0.9)',
+            cursor: isRegenerating ? 'not-allowed' : 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (!isRegenerating) {
+              e.currentTarget.style.background = 'rgba(251,191,36,0.20)'
+              e.currentTarget.style.borderColor = 'rgba(251,191,36,0.7)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(251,191,36,0.10)'
+            e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'
+          }}
+        >
+          Replace Visual
         </button>
       </div>
 

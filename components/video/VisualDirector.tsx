@@ -1,12 +1,15 @@
 'use client'
 
-import type { BrollPlan, GlobalVisualStyle } from '@/lib/broll/types'
+import { useState, useCallback } from 'react'
+import type { BrollPlan, BrollScene, GlobalVisualStyle, VisualSource } from '@/lib/broll/types'
+import { addToHistory, undoScene, initHistory, type SceneHistory } from '@/lib/broll/scene-history'
 import SceneCard from './SceneCard'
 
 interface VisualDirectorProps {
   plan: BrollPlan
   onSceneUpdate: (sceneNumber: number, instruction?: string) => void
   onRegenerateAll: () => void
+  onApprove: (plan: BrollPlan) => void
   isLoading?: boolean
 }
 
@@ -62,16 +65,85 @@ function GlobalStyleChip({ label, value }: { label: string; value: string }) {
   )
 }
 
+function StatChip({ label, value, color }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 2,
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 10,
+        padding: '6px 14px',
+        minWidth: 72,
+      }}
+    >
+      <span style={{ fontSize: 16, fontWeight: 800, color: color ?? 'rgba(255,255,255,0.9)' }}>
+        {value}
+      </span>
+      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
 export default function VisualDirector({
   plan,
   onSceneUpdate,
   onRegenerateAll,
+  onApprove,
   isLoading = false,
 }: VisualDirectorProps) {
   const { globalStyle, scenes, niche, tone, totalDuration } = plan
 
+  // Phase 3 — local scene state so undo/edits reflect immediately without a
+  // round-trip to the parent. Parent's onSceneUpdate is still called for
+  // actual regeneration requests.
+  const [localScenes, setLocalScenes] = useState<BrollScene[]>(scenes)
+  const [history, setHistory] = useState<SceneHistory>(() => initHistory(scenes))
+
   const moodBg = MOOD_COLORS[globalStyle.mood] ?? 'rgba(59,130,246,0.15)'
   const moodText = MOOD_TEXT_COLORS[globalStyle.mood] ?? 'rgb(147,197,253)'
+
+  // Derived stats
+  const avgRelevance = localScenes.some((s) => s.relevanceScore !== undefined)
+    ? Math.round(
+        localScenes
+          .filter((s) => s.relevanceScore !== undefined)
+          .reduce((sum, s) => sum + (s.relevanceScore ?? 0), 0) /
+          localScenes.filter((s) => s.relevanceScore !== undefined).length,
+      )
+    : null
+
+  const sourceCounts = localScenes.reduce<Record<VisualSource, number>>(
+    (acc, s) => { acc[s.source] = (acc[s.source] ?? 0) + 1; return acc },
+    { pexels: 0, stock: 0, ai: 0 },
+  )
+
+  const handleUndo = useCallback((sceneNumber: number) => {
+    const { scene: prev, newHistory } = undoScene(history, sceneNumber)
+    if (!prev) return
+    setLocalScenes((current) =>
+      current.map((s) => (s.sceneNumber === sceneNumber ? prev : s)),
+    )
+    setHistory(newHistory)
+  }, [history])
+
+  const handleSceneRegenerate = useCallback((sceneNumber: number, instruction?: string) => {
+    // Save current version to history before requesting a regeneration
+    const current = localScenes.find((s) => s.sceneNumber === sceneNumber)
+    if (current) {
+      setHistory((h) => addToHistory(h, current))
+    }
+    onSceneUpdate(sceneNumber, instruction)
+  }, [localScenes, onSceneUpdate])
+
+  const handleApprove = useCallback(() => {
+    onApprove({ ...plan, scenes: localScenes })
+  }, [plan, localScenes, onApprove])
 
   if (isLoading) {
     return (
@@ -106,6 +178,39 @@ export default function VisualDirector({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Stats bar — scene count, duration, avg relevance, source breakdown */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 10,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          padding: '14px 18px',
+          background: 'rgba(0,0,0,0.25)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 14,
+        }}
+      >
+        <StatChip label="Scenes" value={localScenes.length} color="rgba(147,197,253,0.9)" />
+        <StatChip label="Duration" value={`${totalDuration}s`} color="rgba(167,243,208,0.9)" />
+        {avgRelevance !== null && (
+          <StatChip
+            label="Avg Relevance"
+            value={`${avgRelevance}%`}
+            color={avgRelevance >= 75 ? '#22c55e' : avgRelevance >= 55 ? '#eab308' : '#ef4444'}
+          />
+        )}
+        {sourceCounts.pexels > 0 && (
+          <StatChip label="Pexels" value={sourceCounts.pexels} color="rgba(251,191,36,0.9)" />
+        )}
+        {sourceCounts.ai > 0 && (
+          <StatChip label="AI Gen" value={sourceCounts.ai} color="rgba(196,181,253,0.9)" />
+        )}
+        {sourceCounts.stock > 0 && (
+          <StatChip label="Stock" value={sourceCounts.stock} color="rgba(148,163,184,0.9)" />
+        )}
+      </div>
+
       {/* Header */}
       <div
         style={{
@@ -127,7 +232,7 @@ export default function VisualDirector({
               Visual Director
             </h2>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '4px 0 0' }}>
-              {scenes.length} scenes &middot; {totalDuration}s &middot; {niche} &middot; {tone}
+              {localScenes.length} scenes &middot; {totalDuration}s &middot; {niche} &middot; {tone}
             </p>
           </div>
 
@@ -200,19 +305,61 @@ export default function VisualDirector({
           gap: 16,
         }}
       >
-        {scenes.map((scene, i) => (
+        {localScenes.map((scene, i) => (
           <SceneCard
             key={scene.sceneNumber}
             scene={scene}
             index={i}
-            onRegenerate={onSceneUpdate}
+            onRegenerate={handleSceneRegenerate}
             onPromptEdit={(sceneNumber, newPrompt) => {
-              // Prompt edits are handled locally in SceneCard — parent can
-              // listen here if it needs to persist the edit upstream
-              console.log(`[VisualDirector] scene ${sceneNumber} prompt edited:`, newPrompt.slice(0, 60))
+              // Update local scene state with the edited prompt
+              setLocalScenes((current) =>
+                current.map((s) =>
+                  s.sceneNumber === sceneNumber ? { ...s, brollPrompt: newPrompt } : s,
+                ),
+              )
             }}
+            historyCount={(history.get(scene.sceneNumber) ?? []).length}
+            onUndo={handleUndo}
           />
         ))}
+      </div>
+
+      {/* Approve & Generate button — prominently at bottom */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          paddingTop: 8,
+          paddingBottom: 16,
+        }}
+      >
+        <button
+          onClick={handleApprove}
+          style={{
+            padding: '16px 48px',
+            fontSize: 16,
+            fontWeight: 800,
+            borderRadius: 14,
+            border: 'none',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            color: '#fff',
+            cursor: 'pointer',
+            boxShadow: '0 8px 32px rgba(34,197,94,0.35)',
+            transition: 'all 0.2s ease',
+            letterSpacing: '0.02em',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 12px 40px rgba(34,197,94,0.45)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 8px 32px rgba(34,197,94,0.35)'
+          }}
+        >
+          ✅ Approve & Generate Video
+        </button>
       </div>
     </div>
   )
