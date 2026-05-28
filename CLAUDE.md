@@ -1,6 +1,7 @@
 # CLAUDE.md — Regras Permanentes para todas as sessões
-# App versão atual: v3.0-dev 🚧 (Phase 1 B-roll Intelligence in progress)
-# v3.0 IN PROGRESS — Phase 1: B-roll Intelligence System (Visual Director)
+# App versão atual: v3.0 ✅ (Phase 1 B-roll Intelligence COMPLETE)
+# v3.0 DONE — Phase 1: B-roll Intelligence System fully connected
+# #346: generate-video-fast now reads brollQueries from BrollPlan → exact Pexels queries per scene
 # New files: lib/broll/*, app/api/generate-broll-plan, app/api/regenerate-scene, components/video/VisualDirector, components/video/SceneCard
 
 ## ✅ Status da v2.5 (confirmado em 27/05/2026)

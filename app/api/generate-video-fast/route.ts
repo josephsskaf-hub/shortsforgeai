@@ -64,7 +64,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let body: { prompt?: string; duration?: number }
+    // Push #346 — accept brollQueries from the BrollPlan (v3.0 Phase 1).
+    // When the client ran generate-broll-plan first (Creator Mode or Autopilot
+    // background fetch), the BrollPlan's AI-directed pexelsQuery values are
+    // passed here so every scene gets a specific, topic-matched stock search
+    // instead of the generic GPT scene description.
+    let body: {
+      prompt?: string
+      duration?: number
+      language?: string
+      brollQueries?: Array<{ sceneNumber: number; pexelsQuery: string }>
+    }
     try {
       body = await req.json()
     } catch {
@@ -85,6 +95,21 @@ export async function POST(req: NextRequest) {
       : 45
 
     const clipCount = clipCountForDuration(duration)
+
+    // v3.0 Phase 1: BrollPlan query map — keyed by 1-based sceneNumber.
+    // When provided, these AI-directed queries replace the generic GPT scene
+    // queries for Pexels searches, giving each scene highly specific footage.
+    const brollQueryMap = new Map<number, string>()
+    if (Array.isArray(body.brollQueries)) {
+      for (const entry of body.brollQueries) {
+        if (typeof entry.sceneNumber === 'number' && typeof entry.pexelsQuery === 'string' && entry.pexelsQuery.trim()) {
+          brollQueryMap.set(entry.sceneNumber, entry.pexelsQuery.trim())
+        }
+      }
+      if (brollQueryMap.size > 0) {
+        console.log(`[generate-fast] BrollPlan active: ${brollQueryMap.size} AI-directed scene queries`)
+      }
+    }
 
     // Upfront credit balance check. Deduction happens in /api/compose/status
     // when the final mp4 succeeds.
@@ -181,9 +206,17 @@ export async function POST(req: NextRequest) {
       const scene = scenes[idx]
       const cat = scene.visualCategory ?? ''
 
+      // v3.0 Phase 1: if a BrollPlan provided a specific AI-directed pexelsQuery
+      // for this scene, use it as the primary search — it's far more specific
+      // (e.g. "Wall Street trading floor 1987 crash") than GPT's generic scene
+      // description. Scene numbers are 1-based; idx is 0-based.
+      const brollOverride = brollQueryMap.get(idx + 1)
+
       // Bug 1 fix: prefer GPT's specific stockSearchQuery over the generic
       // visual category name. Falls back to searchKeywords, then description.
-      const libQuery = scene.stockSearchQuery ||
+      // v3.0: BrollPlan override takes priority over all other sources.
+      const libQuery = brollOverride ||
+        scene.stockSearchQuery ||
         scene.searchKeywords ||
         (cat && cat !== 'general_documentary' ? cat.replace(/_/g, ' ') : scene.description)
 
@@ -203,8 +236,11 @@ export async function POST(req: NextRequest) {
       // bypassing the category allowedQueries override that would otherwise
       // swap "SpaceX Starship launch closeup" for a generic "rocket fire night"
       // (which surfaced a candle clip). Non-verbatim keeps the GPT/category path.
-      const rawPexelsUrl = verbatim
-        ? await getPexelsVideoForExactQuery(scene.stockSearchQuery)
+      // v3.0 Phase 1: BrollPlan override → use exact query directly (same path
+      // as verbatim mode) so the AI Visual Director's specific query is honored
+      // without any GPT/category filtering that would dilute the specificity.
+      const rawPexelsUrl = verbatim || brollOverride
+        ? await getPexelsVideoForExactQuery(brollOverride ?? scene.stockSearchQuery)
         : await getPexelsVideoForScene(
             scene.searchKeywords,
             scene.description,
@@ -218,7 +254,8 @@ export async function POST(req: NextRequest) {
       if (pexelsUrl) {
         usedPexelsUrls.add(pexelsUrl)
         const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
-        console.log(`[clip] scene=${idx + 1} category=${cat} query="${libQuery.slice(0, 40)}" CACHED url=${cachedUrl.slice(0, 80)}`)
+        const querySource = brollOverride ? 'BROLLPLAN' : (verbatim ? 'VERBATIM' : 'GPT')
+        console.log(`[clip] scene=${idx + 1} source=${querySource} query="${libQuery.slice(0, 40)}" CACHED url=${cachedUrl.slice(0, 80)}`)
         clipUrls.push(cachedUrl)
       } else {
         if (rawPexelsUrl && usedPexelsUrls.has(rawPexelsUrl)) {
