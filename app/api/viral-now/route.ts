@@ -72,7 +72,7 @@ ESCALATION: [Pexels: handcuffs arrest law enforcement serious] Three countries. 
 PAYOFF: [Pexels: world globe travel adventure passport] The world does not run on the same rules everywhere. Know before you go. Follow for more.`,
     duration: 45,
     vertical: 'country',
-  },,
+  },
   {
     slot: 4,
     emoji: '📈',
@@ -92,89 +92,4 @@ MICRO REWARD 4: [Pexels: hospital bill emergency medical expense] Trap four — 
 
 ESCALATION: [Pexels: person stressed finances laptop bills] Most people are in 3 or more of these traps right now and do not even know it.
 
-PAYOFF: [Pexels: notebook pen financial plan budgeting] Financial freedom is not about making more. It is about stopping the leaks. Save this. Check yourself tonight.`,
-    duration: 45,
-    vertical: 'money',
-  },
-  {
-    slot: 5,
-    emoji: '🧠',
-    label: '🧠 Learning',
-    title: '3 mental models that change how you think',
-    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
-
-HOOK (0-2s): [Pexels: brain neural network glowing thinking concept] 3 thinking tools used by Elon Musk, Warren Buffett, and Charlie Munger — that 99 percent of people have never heard of.
-
-MICRO REWARD 1: [Pexels: rocket launch spacex engineering blueprint] First Principles Thinking. The rocket industry said launches cost 65 million dollars. Musk asked what the raw materials cost. 2 million. He built SpaceX.
-
-MICRO REWARD 2: [Pexels: chess board strategy planning moves] Inversion. Charlie Munger says do not just ask how to succeed — ask what would definitely make you fail. Then avoid those things.
-
-MICRO REWARD 3: [Pexels: calendar clock decision planning future] The 10-10-10 Rule. Before any big decision: how will I feel in 10 minutes? 10 months? 10 years? Most regrets come from decisions that felt good in 10 minutes and terrible in 10 years.
-
-ESCALATION: [Pexels: billionaire executive office strategy whiteboard] Three tools. All free. All used by the wealthiest decision-makers alive. None taught in school.
-
-PAYOFF: [Pexels: person reading book knowledge learning desk] You do not need a higher IQ. You need better thinking frameworks. Save this.`,
-    duration: 45,
-    vertical: 'learning',
-  },
-  {
-    slot: 6,
-    emoji: '🌍',
-    label: '🌍 Countries',
-    title: 'K2 kills 1 in 4 climbers — here is why',
-    prompt: `YouTube Short script, 45 seconds, 9:16 vertical.
-
-HOOK (0-2s): [Pexels: mountain peak summit dangerous altitude extreme] Everest has a 1 percent death rate. K2 has 25 percent. Here is why the second-highest mountain is the most lethal.
-
-MICRO REWARD 1: [Pexels: ice glacier hanging serac mountain danger] The Bottleneck — a 45-degree ice gully directly beneath a hanging glacier the size of a 10-story building. In 2008, it collapsed. Eleven climbers died in one day. There is no alternative route.
-
-MICRO REWARD 2: [Pexels: helicopter mountain rescue emergency altitude] No rescue above base camp. On Everest, helicopters reach climbers at 7,000 meters. On K2, the shape makes it physically impossible. If something goes wrong high on the mountain, you walk out or you die.
-
-MICRO REWARD 3: [Pexels: mountaineers summit celebration nepal team] K2 was never summited in winter until January 2021. A Nepali team did it in minus 65 degrees with 200 kilometer per hour winds. They sang their national anthem at the top.
-
-ESCALATION: [Pexels: mountain statistics climbing records deadly] 377 summits. 91 deaths. One in four who reach the top did not survive. That ratio has held for 70 years.
-
-PAYOFF: [Pexels: k2 mountain dramatic landscape wide shot] Everest gets the fame. K2 gets the respect. The deadliest mountain is not the tallest one. Follow for more.`,
-    duration: 45,
-    vertical: 'country',
-  },
-
-]
-
-// Push #314 — reject Supabase rows that still contain pre-#306 Portuguese
-// markers (MICRO RECOMPENSA, ESCALADA, GANCHO). If the cron wrote stale rows
-// before a deploy finished, those rows would silently serve Portuguese prompts.
-// This guard makes the API fall back to English FALLBACK_TOPICS instead.
-function hasPortugueseMarkers(prompt: string): boolean {
-  return /\b(MICRO RECOMPENSA|ESCALADA|GANCHO|RECOMPENSA FINAL|PAGAMENTO)\b/i.test(prompt)
-}
-
-export async function GET() {
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    )
-
-    const today = new Date().toISOString().split('T')[0]
-
-    const { data, error } = await supabase
-      .from('viral_now_topics')
-      .select('slot, emoji, label, title, prompt, duration, vertical')
-      .eq('date', today)
-      .order('slot')
-
-    if (error) throw error
-
-    // Only use Supabase rows if we have all 3 AND none contain Portuguese markers
-    const dbRowsAreClean = data && data.length >= 6 &&
-      !data.some((t: { prompt: string }) => hasPortugueseMarkers(t.prompt))
-    const topics = dbRowsAreClean ? data : FALLBACK_TOPICS
-
-    return NextResponse.json({ topics, date: today })
-  } catch (err) {
-    console.error('[viral-now] error:', err)
-    const today = new Date().toISOString().split('T')[0]
-    return NextResponse.json({ topics: FALLBACK_TOPICS, date: today })
-  }
-}
+PAYOFF: [Pexels: notebook pen financial plan budgeting] Financial fr
