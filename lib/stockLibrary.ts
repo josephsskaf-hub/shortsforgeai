@@ -16,6 +16,7 @@
 //   - Cloudinary demo account public videos (res.cloudinary.com/demo)
 //   - Pexels CDN — only specific IDs whose ACL permits hotlinking
 //   - test-videos.co.uk / Blender peach project / archive.org sample MP4s
+//   - mdn.github.io/shared-assets (CC0 sample videos, GitHub Pages hotlink-friendly)
 //
 // Diversity guarantee: even with low topic match, scene-index rotation across
 // the pool ensures different scenes within one render get different clips.
@@ -39,7 +40,9 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/elephants.mp4',           width: 1280, height: 720,  duration: 19, tags: ['nature', 'animal', 'wildlife'] },
   { url: 'https://res.cloudinary.com/demo/video/upload/dog.mp4',                         width: 1280, height: 720,  duration:  8, tags: ['animal', 'nature'] },
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/cld-sample-video.mp4',    width: 1280, height: 720,  duration: 14, tags: ['city', 'luxury', 'lifestyle', 'business', 'money', 'technology'] },
-  { url: 'https://res.cloudinary.com/demo/video/upload/samples/dance-2.mp4',             width: 1280, height: 720,  duration: 12, tags: ['psychology', 'people', 'lifestyle', 'celebrity'] },
+  // dance-2.mp4 removed (Push: stock-fallback fix) — a generic dancing-person clip
+  // tagged 'lifestyle' (a NEUTRAL_FALLBACK_TAG), so it leaked into the fallback pool
+  // and kept landing on the final PAYOFF scene. No relevance to any of the 5 verticals.
 
   // — Pexels CDN REMOVED in Push #215 —
   // videos.pexels.com/video-files/... returns HTTP 403 when Creatomate fetches
@@ -51,6 +54,14 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://archive.org/download/SampleVideo1280x7205mb/SampleVideo_1280x720_5mb.mp4', width: 1280, height: 720, duration: 13, tags: ['nature', 'wildlife', 'animal'] },
   { url: 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4', width: 1280, height: 720, duration: 596, tags: ['default'] },
   { url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4', width: 1280, height: 720, duration: 10, tags: ['default'] },
+  // Clean underwater jellyfish — professional B-roll for deep-ocean / mystery topics.
+  { url: 'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_5MB.mp4', width: 1280, height: 720, duration: 10, tags: ['ocean', 'water', 'sea', 'underwater', 'nature', 'mystery'] },
+
+  // — MDN shared-assets (CC0, verified 206 on direct GET) —
+  // Abstract blooming-flower time-lapse on a black background. Non-jarring, premium
+  // look; carries 'lifestyle' so it joins NEUTRAL_FALLBACK_TAGS and gives the neutral
+  // fallback pool a second clip to rotate against cld-sample-video.
+  { url: 'https://mdn.github.io/shared-assets/videos/flower.mp4', width: 960, height: 540, duration: 17, tags: ['abstract', 'nature', 'lifestyle'] },
 
   // — NASA / SpaceX rocket footage (archive.org, Public Domain) — Push #217, revised #219 —
   // Fix: CLIPS had zero clips tagged rocket/space, so rocket topics fell back to sea turtle.
