@@ -368,8 +368,11 @@ export async function transcribeTTSWithTimestamps(buffer: Buffer): Promise<Whisp
     // `File` is a Web API not available in Node.js 18 (Vercel's default
     // runtime). `toFile` works in both Node.js 18 and 20 and sets the correct
     // filename + MIME type the Whisper API requires.
+    // Cast to ArrayBuffer to satisfy TypeScript strict BlobPart typing —
+    // buffer.buffer is ArrayBufferLike (ArrayBuffer | SharedArrayBuffer) but
+    // Blob only accepts ArrayBuffer. In practice this is always ArrayBuffer here.
     const audioBlob = new Blob(
-      [new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)],
+      [new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength)],
       { type: 'audio/mpeg' },
     )
     const file = await toFile(audioBlob, 'voiceover.mp3', { type: 'audio/mpeg' })
