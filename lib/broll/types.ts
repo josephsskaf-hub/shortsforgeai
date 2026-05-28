@@ -54,6 +54,12 @@ export interface BrollScene {
   pexelsQuery: string
   /** 3-5 Pexels search queries, most specific first. pexelsQuery === pexelsQueries[0]. */
   pexelsQueries?: string[]
+  /**
+   * When true the AI found no suitable Pexels query for this scene.
+   * The pipeline should skip Pexels entirely and extend the previous
+   * relevant clip (FALLBACK-A) instead of firing a doomed search.
+   */
+  requiresExtension?: boolean
 }
 
 export interface BrollPlan {

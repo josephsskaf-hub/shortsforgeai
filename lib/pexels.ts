@@ -429,6 +429,32 @@ export async function getPexelsVideoForExactQuery(query: string): Promise<string
   return null
 }
 
+// ── Hard negative blacklist — queries that always return people/lifestyle footage ──
+// These patterns match Pexels queries that are permanently banned from the B-roll
+// pipeline. Even when the AI generates them, the query is silently skipped so a
+// random lifestyle portrait never appears in a mystery/history/finance video.
+const QUERY_BLACKLIST: RegExp[] = [
+  /\bpeople walking\b/i,
+  /\blifestyle portrait\b/i,
+  /\bportrait (woman|man|girl|boy|person)\b/i,
+  /\b(woman|man|girl|boy) portrait\b/i,
+  /\bteenager\b/i,
+  /\bteen lifestyle\b/i,
+  /\bfashion model\b/i,
+  /\bstreet fashion\b/i,
+  /\binfluencer\b/i,
+  /\bgeneric (smiling|happy) people\b/i,
+  /\burban lifestyle\b/i,
+  /\bcity lifestyle\b/i,
+  /\bstreet portrait\b/i,
+  /\bcandid portrait\b/i,
+  /\bcontent creator\b/i,
+]
+
+function isBlacklistedQuery(query: string): boolean {
+  return QUERY_BLACKLIST.some((pattern) => pattern.test(query))
+}
+
 /**
  * Push #349 — Multi-query relevance search for the B-roll Intelligence pipeline.
  *
@@ -463,6 +489,14 @@ export async function getPexelsVideoForQueries(
 
   for (let i = 0; i < cleaned.length; i++) {
     const q = cleaned[i]
+
+    // Hard negative blacklist — skip queries that would return lifestyle/portrait footage
+    if (isBlacklistedQuery(q)) {
+      console.warn(`[Pexels] BLACKLISTED query skipped: "${q}"`)
+      failed.push(q)
+      continue
+    }
+
     const url = await getPexelsVideoForExactQuery(q)
     if (url) {
       console.log(

@@ -39,7 +39,7 @@ const CLIPS: LibraryClip[] = [
   { url: 'https://res.cloudinary.com/demo/video/upload/elephants.mp4',                   width: 1280, height: 720,  duration: 19, tags: ['nature', 'animal', 'wildlife', 'history', 'ancient'] },
   { url: 'https://res.cloudinary.com/demo/video/upload/samples/elephants.mp4',           width: 1280, height: 720,  duration: 19, tags: ['nature', 'animal', 'wildlife'] },
   { url: 'https://res.cloudinary.com/demo/video/upload/dog.mp4',                         width: 1280, height: 720,  duration:  8, tags: ['animal', 'nature'] },
-  { url: 'https://res.cloudinary.com/demo/video/upload/samples/cld-sample-video.mp4',    width: 1280, height: 720,  duration: 14, tags: ['city', 'luxury', 'lifestyle', 'business', 'money', 'technology'] },
+  { url: 'https://res.cloudinary.com/demo/video/upload/samples/cld-sample-video.mp4',    width: 1280, height: 720,  duration: 14, tags: ['city', 'luxury', 'business', 'money', 'technology'] },
   // dance-2.mp4 removed (Push: stock-fallback fix) — a generic dancing-person clip
   // tagged 'lifestyle' (a NEUTRAL_FALLBACK_TAG), so it leaked into the fallback pool
   // and kept landing on the final PAYOFF scene. No relevance to any of the 5 verticals.
@@ -59,9 +59,8 @@ const CLIPS: LibraryClip[] = [
 
   // — MDN shared-assets (CC0, verified 206 on direct GET) —
   // Abstract blooming-flower time-lapse on a black background. Non-jarring, premium
-  // look; carries 'lifestyle' so it joins NEUTRAL_FALLBACK_TAGS and gives the neutral
-  // fallback pool a second clip to rotate against cld-sample-video.
-  { url: 'https://mdn.github.io/shared-assets/videos/flower.mp4', width: 960, height: 540, duration: 17, tags: ['abstract', 'nature', 'lifestyle'] },
+  // look. 'lifestyle' tag removed — Push #350 hard-negative blacklist system.
+  { url: 'https://mdn.github.io/shared-assets/videos/flower.mp4', width: 960, height: 540, duration: 17, tags: ['abstract', 'nature'] },
 
   // — NASA / SpaceX rocket footage (archive.org, Public Domain) — Push #217, revised #219 —
   // Fix: CLIPS had zero clips tagged rocket/space, so rocket topics fell back to sea turtle.
@@ -161,7 +160,7 @@ const KEYWORD_TO_TAGS: Record<string, string[]> = {
   plane: ['city', 'business'], airplane: ['city', 'business'], aircraft: ['city', 'business'],
   aviation: ['luxury', 'business'], tarmac: ['luxury', 'business'], cockpit: ['luxury', 'business'],
   flight: ['city', 'business'], airport: ['city', 'business'], runway: ['luxury', 'business'],
-  travel: ['city', 'luxury', 'lifestyle'],
+  travel: ['city', 'luxury'],
 }
 
 // Push #243 — neutral, professional pool for queries that match no specific
@@ -169,7 +168,9 @@ const KEYWORD_TO_TAGS: Record<string, string[]> = {
 // luxury clip reads as on-brand; the animal demo clips (elephants, sea turtle,
 // dog) and Big Buck Bunny never should. Before this, an unmatched query like
 // "private jets on tarmac sunset" rotated into elephants.mp4.
-const NEUTRAL_FALLBACK_TAGS = ['city', 'business', 'money', 'luxury', 'lifestyle', 'technology']
+// Push #350 — removed 'lifestyle' from neutral fallback tags so lifestyle-tagged
+// queries never route unrelated content topics to people/lifestyle clips.
+const NEUTRAL_FALLBACK_TAGS = ['city', 'business', 'money', 'luxury', 'technology']
 
 const STOP_WORDS = new Set([
   'a','an','the','of','in','on','to','at','for','with','by','from','as','about',

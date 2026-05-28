@@ -42,6 +42,36 @@ VISUAL THEME CONSISTENCY — each video should have a coherent visual language:
 - Mystery: dark rooms, archives, documents, shadows, cinematic close-ups
 - Geography/countries: drone landscapes, local streets, landmarks, culture
 
+## HARD NEGATIVE BLACKLIST — NEVER generate these Pexels queries
+
+The following categories are PERMANENTLY BLACKLISTED as B-roll:
+- people walking / people walking street
+- lifestyle portrait / portrait woman / portrait man
+- teenager portrait / young person / teen lifestyle
+- fashion / fashion model / street fashion
+- generic smiling people / happy people
+- urban lifestyle / city lifestyle
+- influencer footage / content creator
+- street portrait / candid portrait
+
+You MAY use people-related queries ONLY if the voiceover line explicitly mentions one of these keywords: "person", "influencer", "teenager", "fashion", "lifestyle", "human subject", "model", "woman", "man", "people".
+
+For mystery, history, crime, finance, technology, geography content, ALWAYS prefer:
+- documents, old documents, historical documents
+- maps, world map, aerial map
+- archives, library archives, old photographs
+- city aerials, aerial cityscape, drone city
+- ships, cruise ship, ocean vessel
+- ocean, open ocean, dark sea
+- investigation, crime scene, police tape
+- office, corporate office, business meeting
+- trading floor, stock market, financial charts
+- servers, data center, technology infrastructure
+- cinematic details (hands, objects, close-ups)
+- landscapes, mountains, forests, rivers
+
+If you cannot find a relevant clip: set pexelsQueries to [] and set requiresExtension: true — the pipeline will extend the previous clip instead.
+
 Return JSON only. No explanation.`
 
 const VALID_MOODS: VisualMood[] = [
@@ -161,8 +191,9 @@ Generate the visual layer for these ${scenesWithMeta.length} scenes. For each sc
 - caption (max 6 words, punchy fragment)
 - keywords (array of 3-5 concrete visual nouns, no adjectives)
 - brollPrompt (150-350 chars: specific, concrete visual description — NO generic visuals)
-- pexelsQueries (array of 3-5 search queries for stock footage; each query is 2-4 concrete nouns, lowercase; ORDER from most specific to least specific so a fallback can broaden the search if the first query has no footage)
+- pexelsQueries (array of 3-5 search queries for stock footage; each query is 2-4 concrete nouns, lowercase; ORDER from most specific to least specific so a fallback can broaden the search if the first query has no footage; set to [] and set requiresExtension: true if no safe query exists per the HARD NEGATIVE BLACKLIST)
 - relevanceScore (int 0-100: how well this visual reinforces the exact narration meaning)
+- requiresExtension (boolean, default false: set to true ONLY when pexelsQueries is empty because the blacklist prevents any safe query)
 
 SCENES:
 ${sceneDescriptions}
@@ -231,6 +262,13 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
       ? asStrArr(gpt.keywords)
       : pexelsQuery.split(/\s+/).filter(Boolean)
 
+    // requiresExtension: true when the AI found no safe query (e.g. lifestyle
+    // blacklist prevents any reasonable search term). Pipeline will extend the
+    // previous relevant clip instead of firing a doomed Pexels search.
+    const requiresExtension =
+      gpt.requiresExtension === true ||
+      (pexelsQueries.length === 0 && asStr(gpt.brollPrompt, '').length === 0)
+
     return {
       sceneNumber: s.sceneNumber,
       scenePurpose,
@@ -247,6 +285,7 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
       relevanceScore: asNum(gpt.relevanceScore, 70),
       pexelsQuery,
       pexelsQueries,
+      requiresExtension,
     }
   })
 

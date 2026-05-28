@@ -3,9 +3,11 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
-import { getPexelsVideoForScene, getPexelsVideoForExactQuery, getPexelsVideoForQueries } from '@/lib/pexels'
-import { pickLibraryClips } from '@/lib/stockLibrary'
-import { ensureAccessibleUrl } from '@/lib/videoCache'
+// Push #351 — Pexels import removed. All Pexels API calls disabled.
+// import { getPexelsVideoForScene, getPexelsVideoForExactQuery, getPexelsVideoForQueries } from '@/lib/pexels'
+import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
+// Push #351 — ensureAccessibleUrl removed (was only used for Pexels CDN proxying; Pexels now OFF).
+// import { ensureAccessibleUrl } from '@/lib/videoCache'
 import { parseUserScript } from '@/lib/scriptParser'
 
 export const maxDuration = 60
@@ -33,13 +35,28 @@ function clipCountForDuration(d: Duration): number {
   return Math.max(2, Math.min(9, Math.ceil(d / 10)))
 }
 
-// Push #349 — B-roll relevance fallback. When a scene's Pexels search comes up
-// empty (or only returns a clip already used), a REPEATED RELEVANT clip beats a
-// FRESH IRRELEVANT one. This walks backwards through the clips already placed
-// and returns the most recent real Pexels-sourced clip (cached to Supabase, or
-// a raw pexels.com URL when caching was skipped). Curated stockLibrary fallbacks
-// (Cloudinary/archive.org) are intentionally skipped — they're generic filler,
-// not topic-matched footage, so we never "extend" into them.
+// Push #350 — People/lifestyle keyword detector for FALLBACK-B stock filter.
+// When a scene has no people/lifestyle vocabulary in its narration or description,
+// we strip any stock clips that carry those tags before using them as fallback.
+// This prevents a "beanie-guy in front of a mural" from appearing in an Amy
+// Bradley mystery video just because it was the top rotation clip.
+const PEOPLE_LIFESTYLE_RE = /\b(people|person|lifestyle|portrait|fashion|influencer|teenager|teen|walking|smiling|model|woman|man|girl|boy|human)\b/i
+
+function sceneHasPeopleVocabulary(voiceover: string, description: string, keywords: string): boolean {
+  return (
+    PEOPLE_LIFESTYLE_RE.test(voiceover) ||
+    PEOPLE_LIFESTYLE_RE.test(description) ||
+    PEOPLE_LIFESTYLE_RE.test(keywords)
+  )
+}
+
+// Push #349 — B-roll relevance fallback. Repeat a relevant clip rather than
+// show a fresh irrelevant one.
+// Push #351 — updated to accept ANY previous valid URL. Since Pexels is now
+// disabled, previous clips are stockLibrary (Cloudinary) and FALLBACK-A must
+// be able to extend them for timeline coherence. The old filter
+// (supabase/pexels only) was removed — every non-empty URL is a valid source
+// to extend from.
 function findPreviousRelevantClip(
   clipUrls: string[],
   usedPexelsUrls: Set<string>,
@@ -47,7 +64,7 @@ function findPreviousRelevantClip(
 ): string | null {
   for (let i = clipUrls.length - 1; i >= 0; i--) {
     const url = clipUrls[i]
-    if (url && (url.includes('supabase') || url.includes('pexels'))) {
+    if (url && url.length > 0) {
       return url
     }
   }
@@ -106,6 +123,7 @@ export async function POST(req: NextRequest) {
         relevanceScore?: number
         durationSeconds?: number
         scenePurpose?: string
+        requiresExtension?: boolean
       }>
     }
     try {
@@ -143,6 +161,8 @@ export async function POST(req: NextRequest) {
       relevanceScore?: number
       durationSeconds?: number
       scenePurpose?: string
+      /** When true, skip Pexels entirely and extend the previous relevant clip. */
+      requiresExtension?: boolean
     }
     const brollSceneMap = new Map<number, BrollSceneMeta>()
 
@@ -164,6 +184,7 @@ export async function POST(req: NextRequest) {
           relevanceScore: typeof entry.relevanceScore === 'number' ? entry.relevanceScore : undefined,
           durationSeconds: typeof entry.durationSeconds === 'number' ? entry.durationSeconds : undefined,
           scenePurpose: typeof entry.scenePurpose === 'string' ? entry.scenePurpose : undefined,
+          requiresExtension: entry.requiresExtension === true,
         })
         if (single) brollQueryMap.set(entry.sceneNumber, single)
       }
@@ -299,6 +320,22 @@ export async function POST(req: NextRequest) {
       const scoreLabel = typeof relevanceScore === 'number' ? String(relevanceScore) : 'n/a'
       const durLabel = typeof durationSeconds === 'number' ? `${durationSeconds}` : '?'
 
+      // Push #350 — requiresExtension: true means the AI Visual Director found no
+      // safe Pexels query for this scene (blacklisted topic). Skip the Pexels search
+      // entirely and go straight to FALLBACK-A (extend the previous relevant clip).
+      if (brollMeta?.requiresExtension && clipUrls.length > 0) {
+        const extUrl = findPreviousRelevantClip(clipUrls, usedPexelsUrls, idx)
+        if (extUrl) {
+          clipUrls.push(extUrl)
+          console.log(
+            `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s source=FALLBACK-A(requiresExtension) score=${scoreLabel} url=${extUrl.slice(0, 60)}`,
+          )
+          continue
+        }
+        // No prior relevant clip — fall through to normal search (will likely
+        console.log(`[clip] scene=${sceneNo} requiresExtension=true but no prior relevant clip — continuing to normal search`)
+      }
+
       // Push #349 — Timeline balancing. A tiny trailing gap (<3s) isn't worth a
       // fresh Pexels search (and a brand-new clip flashing for under 3 seconds
       // looks jarring) — just extend whatever clip preceded it so the timeline
@@ -324,104 +361,58 @@ export async function POST(req: NextRequest) {
       // Final fallback: stockLibrary (Cloudinary demo — always server-accessible)
       // In verbatim mode the user's own query routes the fallback too, so even
       // the safety net stays on-topic.
-      const lib = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 1, idx)
-      const fallbackUrl = lib[0]?.url ?? ''
+      // Push #350 — if this scene has no people/lifestyle vocabulary, filter out
+      // any stock clips that carry people/lifestyle tags so a random portrait
+      // clip never lands as the fallback for mystery/history/finance content.
+      const PEOPLE_STOCK_TAGS = new Set(['lifestyle', 'people', 'person', 'portrait', 'fashion', 'celebrity'])
+      const hasPeopleVocab = sceneHasPeopleVocabulary(
+        scene.voiceover ?? '',
+        scene.description ?? '',
+        scene.searchKeywords ?? '',
+      )
+      let libCandidates: LibraryClip[] = pickLibraryClips(verbatim ? scene.stockSearchQuery : libQuery, 4, idx)
+      if (!hasPeopleVocab) {
+        const safe = libCandidates.filter((c) => !c.tags.some((t) => PEOPLE_STOCK_TAGS.has(t)))
+        if (safe.length > 0) libCandidates = safe
+      }
+      const fallbackUrl = libCandidates[0]?.url ?? ''
 
-      // Push #349 — multi-query support. When the BrollPlan supplies an ordered
-      // list of queries (most specific first), try them all via the multi-query
-      // helper so the scene keeps its most-relevant footage and only broadens
-      // when the specific term has no inventory.
-      const brollQueries = brollMeta?.pexelsQueries ?? (brollOverride ? [brollOverride] : null)
-
-      // Try Pexels API first (requires PEXELS_API_KEY env var).
-      // Push #216 — Pexels CDN URLs are proxied through Supabase Storage so
-      // Creatomate can download them. ensureAccessibleUrl() downloads the clip
-      // from Pexels server-side (our Vercel is authorized) and caches it in
-      // the "stock-videos" Supabase bucket, then returns the public Supabase URL.
+      // Push #351 — PEXELS DISABLED. Visual Relevance > Visual Variety.
       //
-      // Push #235 — verbatim mode searches the user's EXACT query directly,
-      // bypassing the category allowedQueries override. Non-verbatim keeps the
-      // GPT/category path. v3.0: BrollPlan override → exact query, same path.
-      let rawPexelsUrl: string | null
-      let primarySource: string
-      let queryUsed: string
-      if (brollQueries && brollQueries.length > 0) {
-        rawPexelsUrl = await getPexelsVideoForQueries(brollQueries, scene.voiceover)
-        primarySource = 'BROLLPLAN'
-        queryUsed = brollQueries[0]
-      } else if (verbatim) {
-        rawPexelsUrl = await getPexelsVideoForExactQuery(scene.stockSearchQuery)
-        primarySource = 'VERBATIM'
-        queryUsed = scene.stockSearchQuery
-      } else {
-        rawPexelsUrl = await getPexelsVideoForScene(
-          scene.searchKeywords,
-          scene.description,
-          scene.stockSearchQuery,
-          scene.voiceover,
-        )
-        primarySource = 'PEXELS'
-        queryUsed = libQuery
-      }
+      // All Pexels API calls removed. No lifestyle/portrait clips can appear
+      // in non-people content regardless of query or topic. The fallback
+      // hierarchy guarantees every frame is visually coherent:
+      //
+      //   FALLBACK-A  →  extend the most recent valid clip already in the timeline
+      //   FALLBACK-B  →  stockLibrary (Cloudinary, pre-curated, pre-approved)
+      //
+      // A repeated coherent clip is always preferred over a fresh irrelevant one.
+      const queryUsed = brollOverride ?? scene.stockSearchQuery ?? libQuery
 
-      // Bug 2 fix (#295): skip a Pexels URL already used by a prior scene.
-      const isDuplicate = !!rawPexelsUrl && usedPexelsUrls.has(rawPexelsUrl)
-      const pexelsUrl = rawPexelsUrl && !isDuplicate ? rawPexelsUrl : null
-
-      if (pexelsUrl) {
-        usedPexelsUrls.add(pexelsUrl)
-        const cachedUrl = await ensureAccessibleUrl(pexelsUrl, fallbackUrl)
-        clipUrls.push(cachedUrl)
-
-        // Push #349 — relevance threshold. Pexels is the only REAL footage
-        // source, so we never reject a Pexels clip on score alone — but a
-        // sub-75 score means the AI flagged a weak match, so log it loudly for
-        // debugging from server logs.
-        if (typeof relevanceScore === 'number' && relevanceScore < 75) {
-          console.warn(
-            `[clip] scene=${sceneNo} LOW-RELEVANCE score=${relevanceScore} — keeping Pexels clip (only real footage source)`,
-          )
-        }
-        console.log(
-          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=${primarySource} score=${scoreLabel} url=${cachedUrl.slice(0, 60)}`,
-        )
-        continue
-      }
-
-      // Pexels returned nothing usable (no result, or a duplicate of an earlier
-      // scene). Enter the smart fallback hierarchy.
-      if (isDuplicate) {
-        console.log(`[clip] scene=${sceneNo} DEDUP — pexels url already used, entering fallback`)
-      }
-
-      // Fallback A: extend the most recent real (Pexels-sourced) clip. A repeated
-      // RELEVANT clip beats a fresh IRRELEVANT stockLibrary clip — this is also
-      // what we want when relevanceScore < 60 (the curated clip is very unlikely
-      // to match an already-weak scene).
+      // FALLBACK-A: most recent valid clip already placed in the timeline.
       const previousRelevantUrl = findPreviousRelevantClip(clipUrls, usedPexelsUrls, idx)
 
-      // Fallback B: stockLibrary (Cloudinary demo). Only when there is no prior
-      // relevant clip to extend.
+      // FALLBACK-B: stockLibrary (Cloudinary demo — always server-accessible).
+      // idx seed ensures different clips for different scenes where possible.
       const libUrl = previousRelevantUrl ?? fallbackUrl
 
       if (libUrl) {
         const fbSource = previousRelevantUrl ? 'FALLBACK-A' : 'FALLBACK-B'
         if (previousRelevantUrl) {
-          console.log(`[clip] scene=${sceneNo} FALLBACK-A: extending previous relevant clip`)
+          console.log(`[clip] scene=${sceneNo} FALLBACK-A: extending previous clip (Pexels OFF #351)`)
         } else {
           console.log(`[clip] scene=${sceneNo} FALLBACK-B: stockLibrary url=${fallbackUrl.slice(0, 60)}`)
         }
         console.log(
-          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=${fbSource} score=${scoreLabel} url=${libUrl.slice(0, 60)}`,
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(queryUsed ?? '').slice(0, 60)}" source=${fbSource} score=${scoreLabel} url=${libUrl.slice(0, 60)}`,
         )
         clipUrls.push(libUrl)
       } else {
-        // Absolute last resort — no prior clip AND no stockLibrary match. Push
-        // the (empty) fallback; it is filtered out below.
+        // Absolute last resort — no prior clip AND no stockLibrary match.
         console.log(
-          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${queryUsed.slice(0, 60)}" source=STOCKLIB score=${scoreLabel} url=(none)`,
+          `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s source=NONE url=(none)`,
         )
-        clipUrls.push(fallbackUrl)
+        clipUrls.push('')
       }
     }
 
@@ -438,7 +429,7 @@ export async function POST(req: NextRequest) {
     // Push #132 — assemble the caption/voiceover pipeline. Each scene now
     // carries the SAME source string for both: the per-scene `voiceover` is
     // the narration TTS will read, and the per-scene `caption` is its
-    // ≤8-word readable on-screen paraphrase. We log both so any future
+    // <=8-word readable on-screen paraphrase. We log both so any future
     // drift between captions and narration is debuggable from server logs.
     const sceneCaptions = scenes.map((s) => s.caption)
     // Push #235 — in verbatim mode the spoken text is the user's own narration
