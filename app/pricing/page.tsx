@@ -18,7 +18,7 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to start your free trial. You will not be charged for 3 days — cancel before Day 4 and you owe nothing. After the trial, Spark is $2.90/month, Basic is $4.90/month, and Pro is $9.90/month.',
+    a: 'Yes, a card is required to subscribe. You are charged immediately upon signup. Spark is $2.90/month, Basic is $4.90/month, and Pro is $9.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -54,7 +54,6 @@ function buildPricing() {
       name: 'Pro',
       price: '$9.90',
       priceSub: '/ month',
-      trialLine: '3 days free · then $9.90/mo',
       tagline: 'Full production pipeline. 100 renders + Cinematic AI Engine.',
       features: [
         '100 Fast Mode renders/month',
@@ -64,7 +63,7 @@ function buildPricing() {
         'Download watermark-free MP4',
         'My Videos history',
       ],
-      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
+      cta: { label: 'Get Started', href: '#checkout' },
       highlight: true,
       popular: true,
     },
@@ -73,7 +72,6 @@ function buildPricing() {
       name: 'Basic',
       price: '$4.90',
       priceSub: '/ month',
-      trialLine: '3 days free · then $4.90/mo',
       tagline: '50 Fast Mode renders/month. Under $0.10 per video.',
       features: [
         '50 Fast Mode renders/month',
@@ -82,14 +80,13 @@ function buildPricing() {
         'Download watermark-free MP4',
         'My Videos history',
       ],
-      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
+      cta: { label: 'Get Started', href: '#checkout' },
     },
     {
       tier: 'starter',
       name: 'Spark ✨',
       price: '$2.90',
       priceSub: '/ month',
-      trialLine: '3 days free · then $2.90/mo',
       tagline: '15 AI Short videos/month. Just $0.19 per video.',
       features: [
         '15 Fast Mode renders/month',
@@ -98,7 +95,7 @@ function buildPricing() {
         'Download watermark-free MP4',
         'My Videos history',
       ],
-      cta: { label: 'Start Free 3-Day Trial', href: '#checkout' },
+      cta: { label: 'Get Started', href: '#checkout' },
     },
   ]
 }
@@ -262,11 +259,10 @@ export default function PricingPage() {
             >×</button>
             <div className="text-4xl mb-3">⚡</div>
             <h2 className="text-2xl font-black text-[#F1F5F9] mb-2">
-              Wait — 3 days on us.
+              Don&apos;t leave yet!
             </h2>
             <p className="text-[14px] text-[#94A3B8] mb-5 leading-relaxed">
-              Start your free 3-day trial right now. No charge today.<br />
-              Cancel anytime before Day 4 and you owe nothing.
+              Start generating viral Shorts today. Cancel anytime, no contracts.
             </p>
             <button
               type="button"
@@ -274,7 +270,7 @@ export default function PricingPage() {
               className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
               style={{ background: 'linear-gradient(135deg,#3B82F6,#22D3EE)', boxShadow: '0 8px 24px rgba(59,130,246,.4)' }}
             >
-              Try Basic Free — $4.90/mo after →
+              Get Basic — $4.90/mo →
             </button>
             <button
               type="button"
@@ -282,9 +278,9 @@ export default function PricingPage() {
               className="w-full rounded-xl py-3 text-[14px] font-extrabold text-[#F1F5F9] mb-3"
               style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}
             >
-              Try Pro Free — $9.90/mo after →
+              Get Pro — $9.90/mo →
             </button>
-            <p className="text-[11px] text-[#475569]">No charge for 3 days · Cancel before Day 4 = $0</p>
+            <p className="text-[11px] text-[#475569]">Cancel anytime · 7-day money-back guarantee</p>
           </div>
         </div>
       )}
@@ -308,7 +304,6 @@ export default function PricingPage() {
               { icon: '🎬', label: '1,200+ Shorts created' },
               { icon: '⭐', label: '4.8 / 5 average rating' },
               { icon: '🔒', label: '7-day money-back guarantee' },
-              { icon: '⚡', label: '3-day free trial — no charge today' },
             ].map(({ icon, label }) => (
               <div key={label} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#94A3B8]">
                 <span>{icon}</span>
@@ -486,7 +481,7 @@ export default function PricingPage() {
                         : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
                     }`}
                   >
-                    {purchasing === p.tier ? 'Starting trial…' : `${ctaLabel} →`}
+                    {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
                   </button>
                 ) : (
                   <a
@@ -507,7 +502,7 @@ export default function PricingPage() {
                 )}
                 {isPaid && (
                   <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
-                    {'trialLine' in p ? (p as { trialLine: string }).trialLine : 'Cancel anytime'}
+                    Cancel anytime
                   </p>
                 )}
               </div>
