@@ -183,7 +183,6 @@ async function buildAndRedirect(
       plan_credits: String(plan.credits),
     },
     subscription_data: {
-      trial_period_days: 3,
       metadata: {
         supabase_user_id: user.id,
         tier,
