@@ -640,17 +640,17 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <section className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl text-[#F1F5F9]">
-          Turn Any Idea Into a{' '}
+          The Smart AI Tool That Turns Any Idea Into a{' '}
           <span
             className="text-[#22D3EE]"
             style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
           >
-            Viral YouTube Short
+            Viral Short
           </span>{' '}
           — in 60 Seconds
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          AI writes the script, finds the footage, adds captions and music. You just download and upload.
+          AI writes the script, finds the footage, adds captions and music — ready for YouTube, TikTok &amp; Reels. You just download and post.
         </p>
 
         {/* Push #116 — live cumulative counter directly under the

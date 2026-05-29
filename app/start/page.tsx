@@ -99,7 +99,7 @@ export default function StartPage() {
               maxWidth: 620,
             }}
           >
-            Turn Any Idea Into a{' '}
+            The Smart AI Tool That Turns Any Idea Into a{' '}
             <span
               style={{
                 background: 'linear-gradient(135deg, #34D399, #22D3EE)',
@@ -107,7 +107,7 @@ export default function StartPage() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              Viral YouTube Short
+              Viral Short
             </span>
           </h1>
           <p
