@@ -51,18 +51,33 @@ function coerceStatus(v: unknown): VideoListItem['status'] {
   return 'processing'
 }
 
+// Strip inline stock-footage markers like "[Pexels: ...]" / "[Pixabay: ...]"
+// and structure markers so a raw script line reads as a clean human title.
+function cleanScriptToTitle(raw: string): string {
+  const firstGood = raw
+    .split('\n')
+    .map((l) => l.replace(/\[(?:Pexels|Pixabay)[^\]]*\]/gi, '').trim())
+    .find(
+      (l) =>
+        l.length > 12 &&
+        !/^(YouTube Short|HOOK|MICRO|ESCALATION|PAYOFF|TITLE)\b/i.test(l),
+    )
+  return firstGood ?? raw.replace(/\[(?:Pexels|Pixabay)[^\]]*\]/gi, '').trim()
+}
+
 function deriveTitle(row: RawRow): string {
   // Push #052 — staging schema uses `title`. Prefer that. Fall back
-  // through `topic` / `prompt` / `script` for legacy rows that may
-  // still be in the table from older pipelines.
+  // through `topic` / `prompt` / `script` for legacy rows. Every fallback
+  // is stripped of [Pexels:]/[Pixabay:] markers so a card never shows raw
+  // script markup as its title.
   const title = strOrNull(row.title)
-  if (title) return title.slice(0, 90)
+  if (title) return cleanScriptToTitle(title).slice(0, 90)
   const topic = strOrNull(row.topic)
-  if (topic) return topic.slice(0, 90)
+  if (topic) return cleanScriptToTitle(topic).slice(0, 90)
   const prompt = strOrNull(row.prompt)
-  if (prompt) return prompt.slice(0, 90)
+  if (prompt) return cleanScriptToTitle(prompt).slice(0, 90)
   const script = strOrNull(row.script)
-  if (script) return script.slice(0, 80) + '…'
+  if (script) return cleanScriptToTitle(script).slice(0, 80) + '…'
   return 'Untitled Short'
 }
 
@@ -107,6 +122,13 @@ export async function GET() {
     // silently returned an empty list. Narrow now uses only columns
     // guaranteed by migration 004 baseline so the read path is
     // universally safe.
+    // Production schema (video_url / quality_mode / title / thumbnail_url)
+    // lacks the staging-only columns above, so the wide select 42703s. Retry
+    // with the REAL prod columns — which DO include `title` — before falling
+    // to the ultra-minimal baseline. Without this, title was dropped and the
+    // card rendered the raw `topic` (with [Pexels:] markers).
+    const midColumns =
+      'id,status,video_url,title,topic,script,duration,quality_mode,platform,thumbnail_url,render_id,created_at'
     const narrowColumns = 'id,status,video_url,topic,created_at'
 
     // Helper: run the videos SELECT with whichever column list works.
@@ -125,10 +147,10 @@ export async function GET() {
     }
 
     let query = await runSelect(wideColumns)
-
-    if (query.error && /column .* does not exist|42703/.test(query.error.message ?? '')) {
-      query = await runSelect(narrowColumns)
-    }
+    const colMissing = (q: typeof query) =>
+      !!q.error && /column .* does not exist|42703/.test(q.error.message ?? '')
+    if (colMissing(query)) query = await runSelect(midColumns)
+    if (colMissing(query)) query = await runSelect(narrowColumns)
 
     if (query.error) {
       // Table may not exist yet in this staging DB — treat as empty rather

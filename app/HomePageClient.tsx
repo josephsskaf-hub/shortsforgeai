@@ -1563,8 +1563,10 @@ function ShowcaseVideoCard({
           </span>
         </div>
 
-        {/* Animated caption overlay — bottom of video, mimics real Short captions */}
-        <div className="absolute bottom-10 left-0 right-0 z-20 flex justify-center px-3">
+        {/* Animated caption overlay — bottom of video, mimics real Short captions.
+            Hidden on mobile (sm:) — overlapped the play button and looked
+            cluttered on phones; the title below the card carries the message. */}
+        <div className="absolute bottom-10 left-0 right-0 z-20 hidden sm:flex justify-center px-3">
           <div
             style={{
               background: 'rgba(0,0,0,0.72)',
