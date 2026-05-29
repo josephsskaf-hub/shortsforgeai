@@ -285,9 +285,13 @@ export default function LoginPage() {
 
             <GoogleSignInButton onError={(msg) => setError(msg)} />
 
-            <div className="mt-3">
-              <AppleSignInButton onError={(msg) => setError(msg)} />
-            </div>
+            {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
+                Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
+            {process.env.NEXT_PUBLIC_ENABLE_APPLE === 'true' && (
+              <div className="mt-3">
+                <AppleSignInButton onError={(msg) => setError(msg)} />
+              </div>
+            )}
 
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px" style={{ background: 'var(--border2)' }} />
