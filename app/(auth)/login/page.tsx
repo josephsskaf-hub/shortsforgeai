@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
+import AppleSignInButton from '@/components/AppleSignInButton'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
 // can't bounce a logged-in user out to an external phishing page.
@@ -283,6 +284,14 @@ export default function LoginPage() {
             </p>
 
             <GoogleSignInButton onError={(msg) => setError(msg)} />
+
+            {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
+                Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
+            {process.env.NEXT_PUBLIC_ENABLE_APPLE === 'true' && (
+              <div className="mt-3">
+                <AppleSignInButton onError={(msg) => setError(msg)} />
+              </div>
+            )}
 
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px" style={{ background: 'var(--border2)' }} />
