@@ -38,17 +38,14 @@ function creditCostFor(quality: Quality): number {
 // Visual History on the Generate page and on /history. Writes through
 // the service-role admin client so RLS doesn't block us.
 //
-// Push #052 (QA fix A) — the staging `public.videos` table uses the
-// columns `title` and `final_video_url`, not `topic` and `video_url`
-// like my push #050 migration assumed. Every insert was failing the
-// "column does not exist" branch silently. We now try the staging
-// schema FIRST and only fall back to the legacy names if the staging
-// columns themselves don't exist on a given environment.
+// Push #357 — rewritten as a SINGLE canonical INSERT against the real
+// production schema (was a staging/legacy/minimal fallback chain that masked
+// the `video_url`/`quality_mode` vs `final_video_url`/`quality` mismatch and
+// silently dropped render_id, leaving the anti-duplicate index inactive).
 //
-// Best-effort: every failure path logs but never throws — Visual
-// History is a nice-to-have, not part of the user's video delivery,
-// so a missing column / missing table must NEVER block returning the
-// final_video_url to the client.
+// Still best-effort: a failure logs (console.error) but never throws — Visual
+// History must never block returning the video URL to the client. The one
+// hard guarantee now is that a SUCCESS row always carries render_id.
 async function persistCompletedVideo(args: {
   userId: string
   renderId: string
@@ -58,7 +55,7 @@ async function persistCompletedVideo(args: {
   duration: number
   topic: string
   creditsUsed: number
-}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy' | 'minimal'; error?: string; duplicate?: boolean }> {
+}): Promise<{ ok: boolean; id?: string; error?: string; duplicate?: boolean }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
@@ -69,132 +66,79 @@ async function persistCompletedVideo(args: {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // Bug fix — the previous version bailed out on any non-column error
-  // from the staging insert, which masked schema/constraint mismatches
-  // and left the user with no row. We now try three progressively
-  // smaller row shapes; the first one that succeeds wins.
+  // Push #357 — SINGLE canonical INSERT against the real production `videos`
+  // schema. The old staging/legacy/minimal fallback chain masked the schema
+  // mismatch (prod has `video_url`/`quality_mode`, not `final_video_url`/
+  // `quality`) and silently fell through to a minimal row that DROPPED
+  // render_id — which left videos_render_id_unique inactive (NULL render_id is
+  // excluded by the partial index) and let duplicates back in. We now write
+  // render_id ALWAYS, plus every other relevant column, in one shot.
+  //
+  // Real prod columns: user_id, title, video_url, thumbnail_url, platform,
+  // duration, quality_mode, credits_used, niche, topic, script, hashtags,
+  // youtube_description, status, render_id.
 
-  // Schema #1 — staging (title + final_video_url + extended columns).
-  const stagingRow = {
+  // Derive a short, human-readable title from the topic/script: first
+  // non-empty line, with any [Pexels: ...] / bracketed directives stripped.
+  const derivedTitle =
+    (args.topic.split('\n').map((l) => l.trim()).find((l) => l.length > 0) ?? args.topic)
+      .replace(/\[[^\]]*\]/g, '')
+      .trim()
+      .slice(0, 120) || null
+
+  const row = {
     user_id: args.userId,
-    // PASSO 3 (Bug 3, 20260530) — no 'Untitled Short' default; store the
-    // original prompt (args.topic) so history reflects what the user asked for.
-    title: args.topic.slice(0, 200),
-    final_video_url: args.videoUrl,
-    thumbnail_url: args.snapshotUrl ?? null,
     status: 'completed',
-    duration: args.duration,
-    quality: args.quality,
+    video_url: args.videoUrl,
+    thumbnail_url: args.snapshotUrl ?? null,
+    render_id: args.renderId, // never null for a success row → keeps unique index ACTIVE
+    topic: args.topic,
+    title: derivedTitle,
     platform: 'YouTube Shorts',
-    render_id: args.renderId,
+    duration: args.duration,
+    quality_mode: args.quality,
+    credits_used: args.creditsUsed,
   }
 
-  console.log('[history] insert attempt (staging schema):', JSON.stringify({
-    table: 'videos',
+  console.log('[history] insert (canonical schema #357):', JSON.stringify({
     user_id_prefix: args.userId.slice(0, 8),
     render_id: args.renderId,
-    final_video_url_host: safeUrlHost(args.videoUrl),
+    video_url_host: safeUrlHost(args.videoUrl),
     duration: args.duration,
-    quality: args.quality,
-  }))
-
-  const stagingInsert = await admin
-    .from('videos')
-    .insert(stagingRow)
-    .select('id')
-    .maybeSingle()
-
-  if (!stagingInsert.error) {
-    const id = stagingInsert.data?.id ?? '?'
-    console.log(`[history] insert OK (staging schema) id=${id}`)
-    return { ok: true, id: String(id), schema: 'staging' }
-  }
-
-  // PASSO 3 (20260530) — idempotency. The new partial unique index
-  // videos_render_id_unique makes a re-persist of the same render_id raise
-  // 23505 (unique_violation). That's not a failure: this render was already
-  // saved. Log it explicitly for future tracing and exit early instead of
-  // cascading into the legacy/minimal fallbacks (which would also 23505).
-  if ((stagingInsert.error as { code?: string }).code === '23505') {
-    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit on videos_render_id_unique, staging path); skipping re-insert`)
-    return { ok: true, schema: 'staging', duplicate: true }
-  }
-
-  console.warn('[history] insert (staging schema) failed:', JSON.stringify({
-    message: stagingInsert.error.message,
-    code: (stagingInsert.error as { code?: string }).code,
-    details: (stagingInsert.error as { details?: string }).details,
-    hint: (stagingInsert.error as { hint?: string }).hint,
-  }))
-
-  // Schema #2 — legacy (video_url + topic + credits_used + extras from
-  // migration 004). Try unconditionally now: even non-column errors
-  // (NOT NULL, CHECK constraints unique to the staging shape) should
-  // not stop us from attempting the legacy row.
-  const legacyRow = {
-    user_id: args.userId,
-    status: 'completed',
-    video_url: args.videoUrl,
-    thumbnail_url: args.snapshotUrl ?? null,
+    quality_mode: args.quality,
     credits_used: args.creditsUsed,
-    topic: args.topic,
-    duration: args.duration,
-    quality: args.quality,
-    render_id: args.renderId,
-  }
-  console.log('[history] retrying with legacy schema (topic/video_url)…')
-  const legacyInsert = await admin
-    .from('videos')
-    .insert(legacyRow)
-    .select('id')
-    .maybeSingle()
-  if (!legacyInsert.error) {
-    const id = legacyInsert.data?.id ?? '?'
-    console.log(`[history] insert OK (legacy schema) id=${id}`)
-    return { ok: true, id: String(id), schema: 'legacy' }
-  }
-  // PASSO 3 (20260530) — idempotency duplicate on the legacy path.
-  if ((legacyInsert.error as { code?: string }).code === '23505') {
-    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit, legacy path); skipping re-insert`)
-    return { ok: true, schema: 'legacy', duplicate: true }
-  }
-  console.warn('[history] insert (legacy schema) failed:', JSON.stringify({
-    message: legacyInsert.error.message,
-    code: (legacyInsert.error as { code?: string }).code,
-    details: (legacyInsert.error as { details?: string }).details,
+    has_thumbnail: !!args.snapshotUrl,
   }))
 
-  // Schema #3 — minimal. Only columns guaranteed by migration 004
-  // baseline. Last-resort attempt so the row always lands in My Videos.
-  const minimalRow = {
-    user_id: args.userId,
-    status: 'completed',
-    video_url: args.videoUrl,
-    // PASSO 3 (Bug 3, 20260530) — no 'Untitled Short' default; keep the prompt.
-    topic: args.topic.slice(0, 500),
-  }
-  console.log('[history] retrying with minimal schema (user_id/status/video_url/topic)…')
-  const minimalInsert = await admin
+  const { data, error } = await admin
     .from('videos')
-    .insert(minimalRow)
+    .insert(row)
     .select('id')
     .maybeSingle()
-  if (!minimalInsert.error) {
-    const id = minimalInsert.data?.id ?? '?'
-    console.log(`[history] insert OK (minimal schema) id=${id}`)
-    return { ok: true, id: String(id), schema: 'minimal' }
+
+  if (!error) {
+    const id = data?.id ?? '?'
+    console.log(`[history] insert OK id=${id} render_id=${args.renderId}`)
+    return { ok: true, id: String(id) }
   }
-  // PASSO 3 (20260530) — idempotency duplicate on the minimal path.
-  if ((minimalInsert.error as { code?: string }).code === '23505') {
-    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit, minimal path); skipping re-insert`)
-    return { ok: true, schema: 'minimal', duplicate: true }
+
+  // Idempotency: 23505 on videos_render_id_unique means this render was already
+  // persisted (refresh / multi-tab / multi-session re-poll). Not a failure —
+  // log explicitly for tracing and skip the re-insert.
+  if ((error as { code?: string }).code === '23505') {
+    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (videos_render_id_unique); skipping re-insert`)
+    return { ok: true, duplicate: true }
   }
-  console.warn('[history] insert (minimal schema) also failed:', JSON.stringify({
-    message: minimalInsert.error.message,
-    code: (minimalInsert.error as { code?: string }).code,
-    details: (minimalInsert.error as { details?: string }).details,
+
+  // Real failure — never swallow silently. Surface the full PostgREST error.
+  console.error('[history] insert FAILED:', JSON.stringify({
+    code: (error as { code?: string }).code,
+    message: error.message,
+    details: (error as { details?: string }).details,
+    hint: (error as { hint?: string }).hint,
+    render_id: args.renderId,
   }))
-  return { ok: false, error: minimalInsert.error.message }
+  return { ok: false, error: error.message }
 }
 
 function safeUrlHost(u: string): string {
