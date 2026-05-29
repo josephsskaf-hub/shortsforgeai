@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import PricingCards from '@/components/PricingCards'
-import OnboardingPanel from '@/components/OnboardingPanel'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import type { BrollPlan } from '@/lib/broll/types'
@@ -2204,19 +2203,9 @@ export default function GenerateClient() {
         </div>
       )}
 
-      {/* Push #060 — first-user onboarding panel. Only renders when the
-          user has zero rows in public.videos (recentVideos === []) and
-          the dismissed flag is unset in localStorage. We don't show it
-          while loading (recentVideos === null) so it doesn't flash. */}
-      {showStep1 && recentVideos !== null && recentVideos.length === 0 && (
-        <OnboardingPanel
-          hasNoVideos
-          onFillPrompt={(p) => {
-            setPrompt(p)
-            if (fromHome) setFromHome(false)
-          }}
-        />
-      )}
+      {/* feat/ui-polish — removed the first-user OnboardingPanel (it was a second,
+          duplicate niche selector above). All niches now live in the single
+          "1 · Pick a niche" row inside Step 1 below. */}
 
       {/* ── STEP 1: Idea ── */}
       {showStep1 && (
