@@ -54,21 +54,21 @@ function sceneHasPeopleVocabulary(voiceover: string, description: string, keywor
 // show a fresh irrelevant one.
 // Push #351 — updated to accept ANY previous valid URL. Since Pexels is now
 // disabled, previous clips are stockLibrary (Cloudinary) and FALLBACK-A must
-// be able to extend them for timeline coherence. The old filter
-// (supabase/pexels only) was removed — every non-empty URL is a valid source
-// to extend from.
+// be able to extend them for timeline coherence.
+// Push #352 — Intelligent cycling. Instead of always returning the most-recent
+// clip (causing scenes 3–5 to repeat the same clip linearly), collect all valid
+// clips already in the timeline and cycle through them using currentIdx as the
+// cycle position. Pattern for a 5-scene video with 2 valid clips:
+//   scene2→clip0, scene3→clip1, scene4→clip0, scene5→clip1
+// Guarantees visual variety in long videos without any external API call.
 function findPreviousRelevantClip(
   clipUrls: string[],
   usedPexelsUrls: Set<string>,
   currentIdx: number,
 ): string | null {
-  for (let i = clipUrls.length - 1; i >= 0; i--) {
-    const url = clipUrls[i]
-    if (url && url.length > 0) {
-      return url
-    }
-  }
-  return null
+  const validClips = clipUrls.filter(url => url && url.length > 0)
+  if (validClips.length === 0) return null
+  return validClips[currentIdx % validClips.length]
 }
 
 export async function POST(req: NextRequest) {
