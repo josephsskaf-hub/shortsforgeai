@@ -5,6 +5,8 @@ import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import type { Scene } from '@/lib/runway'
 // Push #351 — Pexels import removed. All Pexels API calls disabled.
 // import { getPexelsVideoForScene, getPexelsVideoForExactQuery, getPexelsVideoForQueries } from '@/lib/pexels'
+// Push #353 — Pixabay replaces Pexels as primary B-roll source.
+import { getPixabayVideoForQueries } from '@/lib/pixabay'
 import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
 // Push #351 — ensureAccessibleUrl removed (was only used for Pexels CDN proxying; Pexels now OFF).
 // import { ensureAccessibleUrl } from '@/lib/videoCache'
@@ -377,29 +379,58 @@ export async function POST(req: NextRequest) {
       }
       const fallbackUrl = libCandidates[0]?.url ?? ''
 
-      // Push #351 — PEXELS DISABLED. Visual Relevance > Visual Variety.
-      //
-      // All Pexels API calls removed. No lifestyle/portrait clips can appear
-      // in non-people content regardless of query or topic. The fallback
-      // hierarchy guarantees every frame is visually coherent:
-      //
-      //   FALLBACK-A  →  extend the most recent valid clip already in the timeline
-      //   FALLBACK-B  →  stockLibrary (Cloudinary, pre-curated, pre-approved)
-      //
-      // A repeated coherent clip is always preferred over a fresh irrelevant one.
+      // Push #353 — PIXABAY PRIMARY SOURCE.
+      // New hierarchy: PIXABAY → FALLBACK-A (cycling #352) → FALLBACK-B (stockLibrary)
+      // Toggle: ENABLE_PIXABAY=false falls straight through to FALLBACK-A/B.
       const queryUsed = brollOverride ?? scene.stockSearchQuery ?? libQuery
+      const pixabayEnabled = process.env.ENABLE_PIXABAY !== 'false'
 
-      // FALLBACK-A: most recent valid clip already placed in the timeline.
+      if (pixabayEnabled) {
+        // Build ordered query list for Pixabay: BrollPlan multi-query preferred,
+        // then single brollOverride, then stockSearchQuery, then libQuery.
+        const pixQueries: string[] =
+          brollMeta?.pexelsQueries && brollMeta.pexelsQueries.length > 0
+            ? brollMeta.pexelsQueries
+            : brollOverride
+              ? [brollOverride]
+              : scene.stockSearchQuery
+                ? [scene.stockSearchQuery]
+                : libQuery
+                  ? [libQuery]
+                  : []
+
+        if (pixQueries.length > 0) {
+          const sceneNeedsPeople = sceneHasPeopleVocabulary(
+            scene.voiceover ?? '',
+            scene.description ?? '',
+            scene.searchKeywords ?? '',
+          )
+          const pixUrl = await getPixabayVideoForQueries(
+            pixQueries,
+            sceneNeedsPeople,
+            (scene.voiceover ?? '').slice(0, 80),
+          )
+          if (pixUrl) {
+            console.log(
+              `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 60)}" source=PIXABAY score=${scoreLabel} url=${pixUrl.slice(0, 60)}`,
+            )
+            clipUrls.push(pixUrl)
+            continue
+          }
+          console.log(`[clip] scene=${sceneNo} Pixabay miss — falling through to FALLBACK-A/B`)
+        }
+      }
+
+      // FALLBACK-A: cycle through previous valid clips (#352 — intelligent cycling).
       const previousRelevantUrl = findPreviousRelevantClip(clipUrls, usedPexelsUrls, idx)
 
-      // FALLBACK-B: stockLibrary (Cloudinary demo — always server-accessible).
-      // idx seed ensures different clips for different scenes where possible.
+      // FALLBACK-B: stockLibrary (Cloudinary — pre-curated, pre-approved).
       const libUrl = previousRelevantUrl ?? fallbackUrl
 
       if (libUrl) {
         const fbSource = previousRelevantUrl ? 'FALLBACK-A' : 'FALLBACK-B'
         if (previousRelevantUrl) {
-          console.log(`[clip] scene=${sceneNo} FALLBACK-A: extending previous clip (Pexels OFF #351)`)
+          console.log(`[clip] scene=${sceneNo} FALLBACK-A: cycling to prior clip (#352)`)
         } else {
           console.log(`[clip] scene=${sceneNo} FALLBACK-B: stockLibrary url=${fallbackUrl.slice(0, 60)}`)
         }
