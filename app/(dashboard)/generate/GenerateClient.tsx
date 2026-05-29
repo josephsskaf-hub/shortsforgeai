@@ -2324,73 +2324,8 @@ export default function GenerateClient() {
             </div>
           </div>
 
-          {/* Phase 3 — Autopilot vs Creator Mode toggle (pill selector).
-              Appears above the existing generation mode selector so the user
-              picks the workflow first, then the quality/speed tier. */}
-          <div className="mt-5 mb-3">
-            <div
-              className="text-xs font-black uppercase tracking-widest mb-2"
-              style={{ color: 'var(--muted)' }}
-            >
-              3 · Workflow
-            </div>
-            <div
-              style={{
-                display: 'inline-flex',
-                gap: 4,
-                background: 'rgba(0,0,0,0.3)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 12,
-                padding: 4,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setMode(mode === 'creator' ? 'fast' : mode)}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: 9,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease',
-                  background: mode !== 'creator'
-                    ? 'linear-gradient(135deg, rgba(245,158,11,0.85), rgba(217,119,6,0.85))'
-                    : 'transparent',
-                  color: mode !== 'creator' ? '#000' : 'rgba(255,255,255,0.45)',
-                  boxShadow: mode !== 'creator' ? '0 2px 12px rgba(245,158,11,0.4)' : 'none',
-                }}
-              >
-                ⚡ Autopilot
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('creator')}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: 9,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease',
-                  background: mode === 'creator'
-                    ? 'linear-gradient(135deg, rgba(139,92,246,0.85), rgba(109,40,217,0.85))'
-                    : 'transparent',
-                  color: mode === 'creator' ? '#fff' : 'rgba(255,255,255,0.45)',
-                  boxShadow: mode === 'creator' ? '0 2px 12px rgba(139,92,246,0.4)' : 'none',
-                }}
-              >
-                🎬 Creator Mode
-              </button>
-            </div>
-            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-              {mode === 'creator'
-                ? "Review and direct every scene's visuals before rendering."
-                : 'Fast generation — AI chooses all visuals automatically.'}
-            </p>
-          </div>
+          {/* feat/ui-polish — Autopilot/Creator Mode workflow toggle removed:
+              only one mode is used. `mode` stays 'fast' (Autopilot) by default. */}
 
           {/* Push #084 — Generation mode selector.
               Push #087 — Cinematic Mode is gated to Pro users; Free + Basic
