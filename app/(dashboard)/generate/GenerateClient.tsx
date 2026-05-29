@@ -106,7 +106,6 @@ type GenerationMode = 'fast' | 'cinematic_ai' | 'cinematic' | 'creator'
 const DURATION_OPTIONS: { value: Duration; label: string }[] = [
   { value: 45, label: '45s — Recommended ⭐' },
   { value: 60, label: '60s — Deep Story' },
-  { value: 90, label: '90s — Extended 🎬' },
 ]
 
 const POLL_GENERATING_MS = 4000
@@ -199,6 +198,21 @@ export default function GenerateClient() {
       'The Pareto Principle — how 20% of effort gives 80% of results',
       'The Feynman Technique to learn anything twice as fast',
       'Why spaced repetition beats cramming every time',
+    ],
+    history: [
+      'The 1518 dancing plague that made 400 people dance to death',
+      'Why Roman concrete still stands stronger after 2,000 years',
+      'The Library of Alexandria — how humanity lost a million books',
+    ],
+    science: [
+      'Why time runs faster on a mountain than at sea level',
+      'The tiny animal that can survive the vacuum of space',
+      'What happens to the human body in the first minute on Mars',
+    ],
+    space: [
+      'There is a planet made entirely of diamond, 40 light-years away',
+      'Why a day on Venus is longer than its entire year',
+      'The sound a black hole makes, recorded by NASA',
     ],
   }
   const [phase, setPhase] = useState<Phase>('idle')
@@ -2236,20 +2250,23 @@ export default function GenerateClient() {
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
               1 · Pick a niche
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { key: 'billionaire', emoji: '💰', label: 'Billionaire' },
                 { key: 'mystery', emoji: '🔮', label: 'Mystery' },
                 { key: 'country', emoji: '🌍', label: 'Country' },
                 { key: 'money', emoji: '📈', label: 'Money' },
                 { key: 'learning', emoji: '🧠', label: 'Learning' },
+                { key: 'history', emoji: '🏛️', label: 'History' },
+                { key: 'science', emoji: '🔬', label: 'Science' },
+                { key: 'space', emoji: '🚀', label: 'Space' },
               ].map((t) => (
                 <button
                   key={t.key}
                   type="button"
                   disabled={phase === 'analyzing'}
                   onClick={() => setPickedNiche(t.key)}
-                  className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                  className="w-full text-center px-3 py-1.5 rounded-full text-xs font-bold transition-all"
                   style={{
                     background: pickedNiche === t.key ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
                     border: `1px solid ${pickedNiche === t.key ? 'var(--accent)' : 'var(--border)'}`,
@@ -2375,42 +2392,8 @@ export default function GenerateClient() {
             </p>
           </div>
 
-          {/* Push #316 — Language selector (EN / PT / ES) */}
-          <div className="mt-5">
-            <div
-              className="text-xs font-black uppercase tracking-widest mb-2"
-              style={{ color: 'var(--muted)' }}
-            >
-              Language
-            </div>
-            <div className="flex gap-2">
-              {([
-                { code: 'en' as const, label: '🇺🇸 English' },
-                { code: 'pt' as const, label: '🇧🇷 Portuguese' },
-                { code: 'es' as const, label: '🇪🇸 Spanish' },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.code}
-                  type="button"
-                  onClick={() => setLanguage(opt.code)}
-                  className="rounded-full px-4 py-1.5 text-sm font-bold"
-                  style={{
-                    background: language === opt.code ? '#3B82F6' : 'rgba(255,255,255,.04)',
-                    border: language === opt.code ? '1px solid rgba(59, 130, 246,.65)' : '1px solid var(--border)',
-                    color: language === opt.code ? '#FFFFFF' : 'var(--muted)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
-              Script, voiceover, and captions will be generated in the selected language.
-            </p>
-          </div>
+          {/* feat/ui-polish — Language selector removed: English-only channel.
+              `language` state stays 'en' (default) and is still sent to the API. */}
 
           {/* Push #266 — Media & Quality selector removed from Cinematic mode.
               Quality is fixed at 'basic_ai' (the default) — no user choice needed. */}
