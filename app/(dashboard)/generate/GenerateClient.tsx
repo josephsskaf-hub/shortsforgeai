@@ -177,6 +177,9 @@ export default function GenerateClient() {
   // sub-render race the disabled button can't: two clicks before React
   // re-renders both see phase==='options'. The ref flips synchronously.
   const generationInFlightRef = useRef(false)
+  // #359 Camera B — holds the in-flight broll-plan fetch so handleGenerate can
+  // AWAIT it (no more fire-and-forget) before calling generate-video-fast.
+  const brollPlanPromiseRef = useRef<Promise<BrollPlan | null> | null>(null)
   // Clear the guard once we settle into any non-processing phase so the next
   // legitimate generation is allowed.
   useEffect(() => {
@@ -1102,13 +1105,12 @@ export default function GenerateClient() {
         setBrollPlanLoading(false)
         setPhase('options')
       } else {
-        // Autopilot: fetch broll plan in the background to improve Pexels queries.
+        // Autopilot: kick off the broll plan AND store its promise so
+        // handleGenerate can AWAIT it before generate-video-fast (#359 Camera B).
         setPhase('options')
-        // #358 — instrumentation: fire-and-forget path. Log CALL + RESOLVED so we
-        // can see whether the plan resolves BEFORE generate-video-fast fires.
         const bpCallTs = Date.now()
-        console.log('[gen-client] broll-plan CALL', { mode: 'autopilot', ts: bpCallTs, niche, awaited: false })
-        ;(async () => {
+        console.log('[gen-client] broll-plan CALL', { mode: 'autopilot', ts: bpCallTs, niche, awaited: true })
+        brollPlanPromiseRef.current = (async (): Promise<BrollPlan | null> => {
           try {
             const bpRes = await fetch('/api/generate-broll-plan', {
               method: 'POST',
@@ -1120,6 +1122,7 @@ export default function GenerateClient() {
               console.log('[gen-client] broll-plan RESOLVED', { mode: 'autopilot', ts: Date.now(), elapsed_ms: Date.now() - bpCallTs, degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
               if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
                 setBrollPlan(bpData as BrollPlan)
+                return bpData as BrollPlan
               }
             }
           } catch {
@@ -1127,6 +1130,7 @@ export default function GenerateClient() {
           } finally {
             setBrollPlanLoading(false)
           }
+          return null
         })()
       }
     } catch (err) {
@@ -1321,11 +1325,20 @@ export default function GenerateClient() {
         // #349 — also send brollScenes with the full multi-query list, relevance
         // score and planned duration so the route can run multi-query search +
         // the relevance-aware fallback hierarchy. brollQueries stays for compat.
-        const brollQueries = brollPlan
-          ? brollPlan.scenes.map((s) => ({ sceneNumber: s.sceneNumber, pexelsQuery: s.pexelsQuery }))
+        // #359 Camera B+C — AWAIT the broll plan (it starts during analyze but
+        // takes ~15-26s) and use its queries ONLY when it ran successfully
+        // (degraded=false). A degraded plan = generic built-template queries, so
+        // we fall back to the script's [Pexels:] markers in that case.
+        let plan: BrollPlan | null = brollPlan
+        if (!plan && brollPlanPromiseRef.current) {
+          try { plan = await brollPlanPromiseRef.current } catch { plan = null }
+        }
+        const planUsable = !!plan && plan.degraded !== true && Array.isArray(plan.scenes) && plan.scenes.length > 0
+        const brollQueries = planUsable
+          ? plan!.scenes.map((s) => ({ sceneNumber: s.sceneNumber, pexelsQuery: s.pexelsQuery }))
           : undefined
-        const brollScenes = brollPlan
-          ? brollPlan.scenes.map((s) => ({
+        const brollScenes = planUsable
+          ? plan!.scenes.map((s) => ({
               sceneNumber: s.sceneNumber,
               pexelsQuery: s.pexelsQuery,
               pexelsQueries: s.pexelsQueries,
@@ -1334,19 +1347,17 @@ export default function GenerateClient() {
               scenePurpose: s.scenePurpose,
             }))
           : undefined
-        // #358 — instrumentation: log whether the BrollPlan is present when
-        // generate-video-fast fires (fire-and-forget may not have resolved) and
-        // forward its degraded flag for server-side logging.
         console.log('[gen-client] generate-video-fast CALL', {
           ts: Date.now(),
-          broll_plan_ready: !!brollPlan,
-          broll_degraded: brollPlan?.degraded ?? null,
-          broll_scenes: brollPlan?.scenes?.length ?? 0,
+          broll_plan_ready: !!plan,
+          plan_usable: planUsable,
+          broll_degraded: plan?.degraded ?? null,
+          broll_scenes: plan?.scenes?.length ?? 0,
         })
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries, brollScenes, brollDegraded: brollPlan?.degraded }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries, brollScenes, brollDegraded: plan?.degraded }),
         })
         const data = await res.json()
         if (res.status === 401) {
