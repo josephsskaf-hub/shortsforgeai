@@ -172,6 +172,36 @@ export default function GenerateClient() {
   const initialPrompt = searchParams.get('prompt') ?? ''
 
   const [prompt, setPrompt] = useState(initialPrompt)
+  // feat/ui-polish — picked niche drives the clickable example chips under the
+  // textarea so new users never face a blank page (activation booster).
+  const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
+  const NICHE_EXAMPLES: Record<string, string[]> = {
+    billionaire: [
+      '5 morning habits Jeff Bezos used before Amazon hit $1 trillion',
+      'The one rule Warren Buffett follows that 99% of investors ignore',
+      'What Elon Musk eats in a day to run 6 companies',
+    ],
+    mystery: [
+      'The radio signal from deep space that repeats every 16 days',
+      'The Mary Celeste — a ghost ship found in 1872 with no crew',
+      'The Dyatlov Pass incident: 9 hikers dead, still unexplained',
+    ],
+    country: [
+      'Why Norway pays you $2,000 a month just to live there',
+      'Why Iceland has no mosquitoes',
+      'The hidden country between Russia and China almost no one visits',
+    ],
+    money: [
+      'The credit card float trick that buys you 45 free days',
+      'The 10-second decision rule billionaires use to save millions',
+      'Why your savings account is quietly losing you money',
+    ],
+    learning: [
+      'The Pareto Principle — how 20% of effort gives 80% of results',
+      'The Feynman Technique to learn anything twice as fast',
+      'Why spaced repetition beats cramming every time',
+    ],
+  }
   const [phase, setPhase] = useState<Phase>('idle')
   // UX-1 instrumentation — log EVERY phase transition (catches regressions like
   // generating -> analyzing). String log so it is fully readable in console capture.
@@ -2215,29 +2245,26 @@ export default function GenerateClient() {
               prompt for the selected vertical and auto-triggers analysis. */}
           <div className="mb-3">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
-              Quick start — pick a niche
+              1 · Pick a niche
             </div>
             <div className="flex flex-wrap gap-2">
               {[
-                { emoji: '💰', label: 'Billionaire', prompt: "The one morning habit Warren Buffett has kept for 50 years that most people dismiss as too simple" },
-                { emoji: '🔮', label: 'Mystery', prompt: "The Dyatlov Pass incident — 9 experienced hikers found dead in the snow, no explanation after 60 years of investigation" },
-                { emoji: '🌍', label: 'Country', prompt: "Why Bhutan is the only country in the world that measures Gross National Happiness instead of GDP — and what they found" },
-                { emoji: '📈', label: 'Money', prompt: "The credit card float trick that lets you spend money 45 days before you actually need to have it in your account" },
-                { emoji: '🧠', label: 'Learning', prompt: "The Pareto Principle — why 20% of your actions produce 80% of your results, and how to find your 20%" },
+                { key: 'billionaire', emoji: '💰', label: 'Billionaire' },
+                { key: 'mystery', emoji: '🔮', label: 'Mystery' },
+                { key: 'country', emoji: '🌍', label: 'Country' },
+                { key: 'money', emoji: '📈', label: 'Money' },
+                { key: 'learning', emoji: '🧠', label: 'Learning' },
               ].map((t) => (
                 <button
-                  key={t.label}
+                  key={t.key}
                   type="button"
                   disabled={phase === 'analyzing'}
-                  onClick={() => {
-                    setPrompt(t.prompt)
-                    if (fromHome) setFromHome(false)
-                  }}
+                  onClick={() => setPickedNiche(t.key)}
                   className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
                   style={{
-                    background: prompt === t.prompt ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                    border: `1px solid ${prompt === t.prompt ? 'var(--accent)' : 'var(--border)'}`,
-                    color: prompt === t.prompt ? '#fff' : 'var(--muted)',
+                    background: pickedNiche === t.key ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${pickedNiche === t.key ? 'var(--accent)' : 'var(--border)'}`,
+                    color: pickedNiche === t.key ? '#fff' : 'var(--muted)',
                     cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -2251,7 +2278,7 @@ export default function GenerateClient() {
             className="block text-xs font-black uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted)' }}
           >
-            Your idea or script
+            2 · Your idea
           </label>
           <textarea
             value={prompt}
@@ -2280,6 +2307,34 @@ export default function GenerateClient() {
             }}
           />
 
+          {/* feat/ui-polish — clickable example prompts (per niche) to kill the
+              blank-page freeze. Tapping one fills the textarea above. */}
+          <div className="mt-3">
+            <div className="text-xs font-semibold mb-2" style={{ color: 'var(--muted2)' }}>
+              ✨ Need an idea? Tap one:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(NICHE_EXAMPLES[pickedNiche] ?? NICHE_EXAMPLES.billionaire).map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  disabled={phase === 'analyzing'}
+                  onClick={() => { setPrompt(ex); if (fromHome) setFromHome(false) }}
+                  className="text-left px-3 py-2 rounded-lg text-xs transition-all"
+                  style={{
+                    background: 'rgba(59,130,246,0.06)',
+                    border: '1px solid rgba(59,130,246,0.20)',
+                    color: 'var(--text2)',
+                    cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
+                    maxWidth: 360,
+                  }}
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Phase 3 — Autopilot vs Creator Mode toggle (pill selector).
               Appears above the existing generation mode selector so the user
               picks the workflow first, then the quality/speed tier. */}
@@ -2288,7 +2343,7 @@ export default function GenerateClient() {
               className="text-xs font-black uppercase tracking-widest mb-2"
               style={{ color: 'var(--muted)' }}
             >
-              Video Workflow
+              3 · Workflow
             </div>
             <div
               style={{
@@ -2447,6 +2502,11 @@ export default function GenerateClient() {
                   ? `🤖 ${selectedCost} credits • AI Video (fal.ai) • ~3-5 min render.`
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
+              {credits !== null && (
+                <p className="text-xs mt-1" style={{ color: 'var(--muted2)', fontWeight: 700 }}>
+                  You have {credits} credit{credits === 1 ? '' : 's'} · ~60s
+                </p>
+              )}
               {/* Push #087 — credit-balance awareness right under the CTA.
                   Three states: low (<5), empty (=0), and silent (healthy). */}
               {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
@@ -2471,14 +2531,14 @@ export default function GenerateClient() {
                 background:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
-                    : '#3B82F6',
+                    : 'linear-gradient(135deg, #3B82F6, #22D3EE)',
                 border: 'none',
                 cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
                 color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'none'
-                    : '0 8px 28px rgba(59, 130, 246,.35)',
+                    : '0 10px 34px rgba(34, 211, 238,.45)',
                 minHeight: 52,
               }}
             >
