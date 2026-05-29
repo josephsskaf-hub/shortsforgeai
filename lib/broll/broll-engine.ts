@@ -221,7 +221,7 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
         max_tokens: 3000,
         response_format: { type: 'json_object' },
       },
-      { timeout: 30000, maxRetries: 0 },
+      { timeout: 45000, maxRetries: 1 }, // #359 Camera A — calls take 15-26s; 30s timed out intermittently
     )
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? ''

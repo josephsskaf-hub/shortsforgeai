@@ -6,7 +6,7 @@ import { scoreAllScenes } from '@/lib/broll/relevance-score'
 import { assignSources } from '@/lib/broll/hybrid-source'
 import type { BrollEngineInput, BrollScene, GlobalVisualStyle } from '@/lib/broll/types'
 
-export const maxDuration = 60
+export const maxDuration = 90 // #359 Camera A — headroom for the slower GPT call + scoring + regen
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
