@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
+import AppleSignInButton from '@/components/AppleSignInButton'
 
 type Strength = { level: 0 | 1 | 2 | 3 | 4; label: string; color: string }
 
@@ -363,6 +364,10 @@ export default function SignupPage() {
                 </p>
 
                 <GoogleSignInButton onError={(msg) => setError(msg)} />
+
+                <div className="mt-3">
+                  <AppleSignInButton onError={(msg) => setError(msg)} />
+                </div>
 
                 <div className="flex items-center gap-3 my-5">
                   <div
