@@ -1054,6 +1054,8 @@ export default function GenerateClient() {
       if (mode === 'creator') {
         // Creator Mode: show the planning phase, then the VisualDirector.
         setPhase('broll_planning')
+        // #358 — instrumentation: timestamp the broll-plan call (Creator path).
+        console.log('[gen-client] broll-plan CALL', { mode: 'creator', ts: Date.now(), niche })
         try {
           const bpRes = await fetch('/api/generate-broll-plan', {
             method: 'POST',
@@ -1062,6 +1064,7 @@ export default function GenerateClient() {
           })
           if (bpRes.ok) {
             const bpData = await bpRes.json()
+            console.log('[gen-client] broll-plan RESOLVED', { mode: 'creator', ts: Date.now(), degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
             if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
               setBrollPlan(bpData as BrollPlan)
               setPhase('visual_director')
@@ -1077,6 +1080,10 @@ export default function GenerateClient() {
       } else {
         // Autopilot: fetch broll plan in the background to improve Pexels queries.
         setPhase('options')
+        // #358 — instrumentation: fire-and-forget path. Log CALL + RESOLVED so we
+        // can see whether the plan resolves BEFORE generate-video-fast fires.
+        const bpCallTs = Date.now()
+        console.log('[gen-client] broll-plan CALL', { mode: 'autopilot', ts: bpCallTs, niche, awaited: false })
         ;(async () => {
           try {
             const bpRes = await fetch('/api/generate-broll-plan', {
@@ -1086,6 +1093,7 @@ export default function GenerateClient() {
             })
             if (bpRes.ok) {
               const bpData = await bpRes.json()
+              console.log('[gen-client] broll-plan RESOLVED', { mode: 'autopilot', ts: Date.now(), elapsed_ms: Date.now() - bpCallTs, degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
               if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
                 setBrollPlan(bpData as BrollPlan)
               }
@@ -1289,10 +1297,19 @@ export default function GenerateClient() {
               scenePurpose: s.scenePurpose,
             }))
           : undefined
+        // #358 — instrumentation: log whether the BrollPlan is present when
+        // generate-video-fast fires (fire-and-forget may not have resolved) and
+        // forward its degraded flag for server-side logging.
+        console.log('[gen-client] generate-video-fast CALL', {
+          ts: Date.now(),
+          broll_plan_ready: !!brollPlan,
+          broll_degraded: brollPlan?.degraded ?? null,
+          broll_scenes: brollPlan?.scenes?.length ?? 0,
+        })
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries, brollScenes }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, brollQueries, brollScenes, brollDegraded: brollPlan?.degraded }),
         })
         const data = await res.json()
         if (res.status === 401) {

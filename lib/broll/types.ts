@@ -68,6 +68,12 @@ export interface BrollPlan {
   niche: string
   tone: string
   totalDuration: number
+  /**
+   * #358 — true when the GPT visual-director call failed and the plan fell back
+   * to built (template) prompts. Lets the frontend and generate-video-fast see
+   * that the plan is degraded instead of silently treating it as a real plan.
+   */
+  degraded?: boolean
 }
 
 export interface BrollEngineInput {

@@ -127,6 +127,9 @@ export async function POST(req: NextRequest) {
         scenePurpose?: string
         requiresExtension?: boolean
       }>
+      // #358 — instrumentation: client forwards whether the BrollPlan came back
+      // degraded (GPT failed) so we can log/record the reason for VERBATIM.
+      brollDegraded?: boolean
     }
     try {
       body = await req.json()
@@ -240,6 +243,25 @@ export async function POST(req: NextRequest) {
     // the user already chose the perfect clip and wrote the exact narration.
     const parsedScript = parseUserScript(prompt)
     const verbatim = parsedScript.hasMarkers && parsedScript.segments.length > 0
+
+    // #358 — instrumentation: record WHY this generation uses VERBATIM (and
+    // whether the upstream BrollPlan was degraded). degradedReason is persisted
+    // to broll_metrics below.
+    const brollDegraded = body.brollDegraded === true
+    const degradedReason: string | null = brollDegraded
+      ? 'plan_degraded'
+      : verbatim
+        ? (parsedScript.hasMarkers ? 'markers_detected' : 'verbatim_unknown')
+        : null
+    console.log('[gen-fast] broll plan received', {
+      degraded: body.brollDegraded ?? null,
+      scenes_count: body.brollScenes?.length ?? body.brollQueries?.length ?? 0,
+      has_markers_in_script: parsedScript.hasMarkers,
+      will_use_verbatim: verbatim,
+      reason_for_verbatim: verbatim
+        ? (brollDegraded ? 'plan_degraded' : parsedScript.hasMarkers ? 'markers_detected' : 'unknown')
+        : null,
+    })
 
     // Step 1 — Build scenes.
     //   - Verbatim: one scene per [Pexels: ...] marker, query + narration as-is.
@@ -496,6 +518,7 @@ export async function POST(req: NextRequest) {
           broll_source_distribution: brollSourceDistribution,
           unique_clips_count:       uniqueClipsCount,
           relevance_score_avg:      relevanceScoreAvg,
+          degraded_reason:          degradedReason, // #358 instrumentation
         })
 
       if (metricsErr) {

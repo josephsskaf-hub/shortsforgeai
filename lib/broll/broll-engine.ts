@@ -201,9 +201,16 @@ ${sceneDescriptions}
 Return a JSON object with a "scenes" array. No markdown, no code fences.`
 
   let gptScenes: Record<string, unknown>[] = []
+  // #358 — instrumentation only. Track degradation + timing/finish_reason/usage
+  // so the next runs reveal WHY the GPT call fails (timeout vs parse vs rate
+  // limit vs token-truncation) instead of us guessing. Behavior is unchanged:
+  // on any failure we still fall through to the built (template) prompts.
+  let gptDegraded = false
+  const gptStartTime = Date.now()
+  let completion: OpenAI.Chat.Completions.ChatCompletion | undefined
 
   try {
-    const completion = await openai.chat.completions.create(
+    completion = await openai.chat.completions.create(
       {
         model: 'gpt-4o-mini',
         messages: [
@@ -222,11 +229,36 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
       const parsed = JSON.parse(raw) as Record<string, unknown>
       if (Array.isArray(parsed.scenes)) {
         gptScenes = parsed.scenes as Record<string, unknown>[]
+      } else {
+        gptDegraded = true
+        console.error('[broll-engine] GPT returned no scenes[] array', {
+          finish_reason: completion.choices[0]?.finish_reason,
+          tokens_used: completion.usage,
+          elapsed_ms: Date.now() - gptStartTime,
+        })
       }
+    } else {
+      gptDegraded = true
+      console.error('[broll-engine] GPT returned empty content', {
+        finish_reason: completion.choices[0]?.finish_reason,
+        elapsed_ms: Date.now() - gptStartTime,
+      })
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[broll-engine] GPT call failed:', msg)
+    gptDegraded = true
+    const e = (err ?? {}) as { name?: string; message?: string; code?: string; status?: number }
+    // #358 — structured error log: name/code/status/finish_reason/usage/timing.
+    console.error('[broll-engine] GPT failed', {
+      error_name: e.name,
+      error_message: e.message,
+      error_code: e.code,
+      error_status: e.status,
+      finish_reason: completion?.choices?.[0]?.finish_reason,
+      tokens_used: completion?.usage,
+      elapsed_ms: Date.now() - gptStartTime,
+      scene_count_expected: scenesWithMeta.length,
+      prompt_tokens_estimate: Math.round((VISUAL_DIRECTOR_SYSTEM_PROMPT.length + userMsg.length) / 4),
+    })
     // Fall through — we'll use built prompts as fallback below
   }
 
@@ -295,5 +327,6 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
     niche,
     tone,
     totalDuration: duration,
+    degraded: gptDegraded, // #358 — surface GPT failure to callers
   }
 }
