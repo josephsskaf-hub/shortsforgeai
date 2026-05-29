@@ -173,6 +173,15 @@ export default function GenerateClient() {
 
   const [prompt, setPrompt] = useState(initialPrompt)
   const [phase, setPhase] = useState<Phase>('idle')
+  // UX-1 instrumentation — log EVERY phase transition (catches regressions like
+  // generating -> analyzing). String log so it is fully readable in console capture.
+  const prevPhaseRef = useRef<Phase>('idle')
+  useEffect(() => {
+    if (prevPhaseRef.current !== phase) {
+      console.log(`[ux1] PHASE ${prevPhaseRef.current} -> ${phase} @${Date.now()}`)
+      prevPhaseRef.current = phase
+    }
+  }, [phase])
   // #360 — synchronous re-entry guard against double-submit. Catches the
   // sub-render race the disabled button can't: two clicks before React
   // re-renders both see phase==='options'. The ref flips synchronously.
@@ -1225,6 +1234,7 @@ export default function GenerateClient() {
     const key = sp.trim()
     if (autoAnalyzeKeyRef.current === key) return
     autoAnalyzeKeyRef.current = key
+    console.log(`[ux1] autoanalyze-effect -> handleAnalyze() key="${key.slice(0,40)}" phase=${phase} @${Date.now()}`)
     handleAnalyze(sp, { fromTopic: true, skipPreview: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -1238,6 +1248,7 @@ export default function GenerateClient() {
     if (phase !== 'options') return
     if (autoGenerateFiredRef.current) return
     autoGenerateFiredRef.current = true
+    console.log(`[ux1] autogenerate-effect -> handleGenerate() phase=${phase} @${Date.now()}`)
     handleGenerate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, searchParams])
