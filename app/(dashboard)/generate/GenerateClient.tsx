@@ -76,6 +76,21 @@ type Phase =
   | 'done'
   | 'failed'
 
+// #360 — phases where a generation is already in flight. Used to block
+// double-submit: disables the Generate button AND short-circuits handleGenerate.
+const PROCESSING_PHASES: Phase[] = [
+  'scripting',
+  'analyzing',
+  'broll_planning',
+  'generating',
+  'fal_polling',
+  'clips_ready',
+  'composing',
+]
+function isProcessingPhase(p: Phase): boolean {
+  return PROCESSING_PHASES.includes(p)
+}
+
 // Push #064 — durations bumped to 30 / 45 / 60 so the AI has enough room to
 // build a real story arc (hook → setup → tension → payoff). 45s is the new
 // default; 60s is the "deep story" option.
@@ -158,6 +173,15 @@ export default function GenerateClient() {
 
   const [prompt, setPrompt] = useState(initialPrompt)
   const [phase, setPhase] = useState<Phase>('idle')
+  // #360 — synchronous re-entry guard against double-submit. Catches the
+  // sub-render race the disabled button can't: two clicks before React
+  // re-renders both see phase==='options'. The ref flips synchronously.
+  const generationInFlightRef = useRef(false)
+  // Clear the guard once we settle into any non-processing phase so the next
+  // legitimate generation is allowed.
+  useEffect(() => {
+    if (!isProcessingPhase(phase)) generationInFlightRef.current = false
+  }, [phase])
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [scenes, setScenes] = useState<string[]>([])
   const [tasks, setTasks] = useState<TaskHandle[]>([])
@@ -1215,9 +1239,22 @@ export default function GenerateClient() {
   }, [phase, searchParams])
 
   async function handleGenerate() {
+    // #360 — double-submit guard. Block re-entry if a generation is already in
+    // flight (synchronous ref) or the UI is in a processing phase. Prevents the
+    // duplicate generate-video-fast calls / orphan broll_metrics rows we saw.
+    if (generationInFlightRef.current || isProcessingPhase(phase)) {
+      console.log('[gen] #360 handleGenerate ignored — already in flight', {
+        inFlight: generationInFlightRef.current,
+        phase,
+      })
+      return
+    }
+    generationInFlightRef.current = true
+
     const trimmed = prompt.trim()
     if (!trimmed) {
       setError('Please describe your video idea first.')
+      generationInFlightRef.current = false
       return
     }
     setError(null)
@@ -2709,16 +2746,20 @@ export default function GenerateClient() {
               </div>
               <button
                 onClick={handleGenerateGuarded}
+                disabled={isProcessingPhase(phase)}
                 className="rounded-xl px-6 py-3 text-sm font-black flex items-center gap-2"
                 style={{
-                  background: '#3B82F6',
+                  background: isProcessingPhase(phase) ? '#1E3A8A' : '#3B82F6',
                   color: '#FFFFFF',
                   border: 'none',
-                  cursor: 'pointer',
+                  cursor: isProcessingPhase(phase) ? 'not-allowed' : 'pointer',
+                  opacity: isProcessingPhase(phase) ? 0.7 : 1,
                   boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
                 }}
               >
-                {`Generate · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
+                {isProcessingPhase(phase)
+                  ? '⏳ Generating…'
+                  : `Generate · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
               </button>
             </div>
           </section>
