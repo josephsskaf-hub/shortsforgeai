@@ -303,6 +303,9 @@ export async function POST(req: NextRequest) {
     // (which uses idx as a seed, so each scene gets a different library clip).
     const usedPexelsUrls = new Set<string>()
     const clipUrls: string[] = []
+    // Push #355 — track B-roll source per scene for quality metrics.
+    type ClipSource = 'pixabay' | 'fallbackA' | 'stockLibrary' | 'none'
+    const clipSources: ClipSource[] = []
 
     for (let idx = 0; idx < scenes.length; idx++) {
       const scene = scenes[idx]
@@ -329,6 +332,7 @@ export async function POST(req: NextRequest) {
         const extUrl = findPreviousRelevantClip(clipUrls, usedPexelsUrls, idx)
         if (extUrl) {
           clipUrls.push(extUrl)
+          clipSources.push('fallbackA') // #355
           console.log(
             `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s source=FALLBACK-A(requiresExtension) score=${scoreLabel} url=${extUrl.slice(0, 60)}`,
           )
@@ -346,6 +350,7 @@ export async function POST(req: NextRequest) {
       if (typeof durationSeconds === 'number' && durationSeconds < 3 && clipUrls.length > 0) {
         const prevUrl = clipUrls[clipUrls.length - 1]
         clipUrls.push(prevUrl)
+        clipSources.push('fallbackA') // #355
         console.log(
           `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="(gap)" source=FALLBACK-A score=${scoreLabel} GAP<3s url=${prevUrl.slice(0, 60)}`,
         )
@@ -415,6 +420,7 @@ export async function POST(req: NextRequest) {
               `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 60)}" source=PIXABAY score=${scoreLabel} url=${pixUrl.slice(0, 60)}`,
             )
             clipUrls.push(pixUrl)
+            clipSources.push('pixabay') // #355
             continue
           }
           console.log(`[clip] scene=${sceneNo} Pixabay miss — falling through to FALLBACK-A/B`)
@@ -431,8 +437,10 @@ export async function POST(req: NextRequest) {
         const fbSource = previousRelevantUrl ? 'FALLBACK-A' : 'FALLBACK-B'
         if (previousRelevantUrl) {
           console.log(`[clip] scene=${sceneNo} FALLBACK-A: cycling to prior clip (#352)`)
+          clipSources.push('fallbackA') // #355
         } else {
           console.log(`[clip] scene=${sceneNo} FALLBACK-B: stockLibrary url=${fallbackUrl.slice(0, 60)}`)
+          clipSources.push('stockLibrary') // #355
         }
         console.log(
           `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(queryUsed ?? '').slice(0, 60)}" source=${fbSource} score=${scoreLabel} url=${libUrl.slice(0, 60)}`,
@@ -444,6 +452,7 @@ export async function POST(req: NextRequest) {
           `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s source=NONE url=(none)`,
         )
         clipUrls.push('')
+        clipSources.push('none') // #355
       }
     }
 
@@ -456,6 +465,50 @@ export async function POST(req: NextRequest) {
     }
 
     const generationId = randomUUID()
+
+    // Push #355 — Compute B-roll quality metrics and write to broll_metrics.
+    // Best-effort: failures never block the video response.
+    try {
+      const totalSources = clipSources.filter((s) => s !== 'none').length || 1
+      const countOf = (src: ClipSource) => clipSources.filter((s) => s === src).length
+      const brollSourceDistribution = {
+        pixabay:      parseFloat((countOf('pixabay')      / totalSources).toFixed(3)),
+        fallbackA:    parseFloat((countOf('fallbackA')    / totalSources).toFixed(3)),
+        stockLibrary: parseFloat((countOf('stockLibrary') / totalSources).toFixed(3)),
+      }
+
+      const uniqueClipsCount = new Set(filtered).size
+
+      // Average relevance score across scenes that have one (from BrollPlan).
+      const relevanceScores = Array.from(brollSceneMap.values())
+        .map((m) => m.relevanceScore)
+        .filter((s): s is number => typeof s === 'number')
+      const relevanceScoreAvg =
+        relevanceScores.length > 0
+          ? relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length
+          : null
+
+      const { error: metricsErr } = await supabase
+        .from('broll_metrics')
+        .insert({
+          generation_id:            generationId,
+          user_id:                  user.id,
+          broll_source_distribution: brollSourceDistribution,
+          unique_clips_count:       uniqueClipsCount,
+          relevance_score_avg:      relevanceScoreAvg,
+        })
+
+      if (metricsErr) {
+        console.warn('[broll_metrics] insert failed:', metricsErr.message)
+      } else {
+        console.log(
+          `[broll_metrics] inserted generation_id=${generationId}`,
+          JSON.stringify({ brollSourceDistribution, uniqueClipsCount, relevanceScoreAvg }),
+        )
+      }
+    } catch (metricsEx) {
+      console.warn('[broll_metrics] compute/insert threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
+    }
 
     // Push #132 — assemble the caption/voiceover pipeline. Each scene now
     // carries the SAME source string for both: the per-scene `voiceover` is

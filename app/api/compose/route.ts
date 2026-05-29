@@ -403,6 +403,29 @@ export async function POST(req: NextRequest) {
       console.warn('[compose] post-submit poll warning:', msg)
     }
 
+    // Push #355 — Link the broll_metrics row (created in generate-video-fast)
+    // to this Creatomate render so compose/status can write render_time_ms.
+    // Best-effort: never blocks the render response.
+    if (body.generationId) {
+      try {
+        const { error: metricsErr } = await supabase
+          .from('broll_metrics')
+          .update({
+            render_id:    renderId,
+            vertical:     vertical ?? null,
+            submitted_at: new Date().toISOString(),
+          })
+          .eq('generation_id', body.generationId)
+        if (metricsErr) {
+          console.warn('[broll_metrics] compose update failed:', metricsErr.message)
+        } else {
+          console.log(`[broll_metrics] linked generation_id=${body.generationId} → render_id=${renderId}`)
+        }
+      } catch (metricsEx) {
+        console.warn('[broll_metrics] compose update threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
+      }
+    }
+
     return NextResponse.json({
       render_id: renderId,
       quality,

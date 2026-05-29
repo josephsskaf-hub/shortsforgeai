@@ -348,6 +348,26 @@ export async function GET(
             e instanceof Error ? e.message : String(e))
         }
 
+        // Push #355 — record render_time_ms in broll_metrics.
+        // Best-effort: never blocks the video response.
+        try {
+          const { data: metricsRow } = await supabase
+            .from('broll_metrics')
+            .select('submitted_at')
+            .eq('render_id', renderId)
+            .maybeSingle()
+          if (metricsRow?.submitted_at) {
+            const renderTimeMs = Date.now() - new Date(metricsRow.submitted_at).getTime()
+            await supabase
+              .from('broll_metrics')
+              .update({ render_time_ms: renderTimeMs })
+              .eq('render_id', renderId)
+            console.log(`[broll_metrics] render_time_ms=${renderTimeMs} for render_id=${renderId}`)
+          }
+        } catch (metricsEx) {
+          console.warn('[broll_metrics] render_time_ms update failed:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
+        }
+
         console.log('[history] attempting persist…', JSON.stringify({
           render_id: renderId,
           user_id_prefix: user.id.slice(0, 8),
