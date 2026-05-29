@@ -499,7 +499,18 @@ export async function POST(req: NextRequest) {
         })
 
       if (metricsErr) {
-        console.warn('[broll_metrics] insert failed:', metricsErr.message)
+        // PASSO 3 (20260530) — never fail silently. Capture the full PostgREST
+        // error (code/message/details/hint) explicitly so broll_metrics insert
+        // failures are traceable in logs. Still non-blocking by design: a metrics
+        // write must never stop the user's video from being delivered.
+        console.error('[broll_metrics] insert failed:', JSON.stringify({
+          code: (metricsErr as { code?: string }).code,
+          message: metricsErr.message,
+          details: (metricsErr as { details?: string }).details,
+          hint: (metricsErr as { hint?: string }).hint,
+          generation_id: generationId,
+          user_id_prefix: user.id.slice(0, 8),
+        }))
       } else {
         console.log(
           `[broll_metrics] inserted generation_id=${generationId}`,
@@ -507,7 +518,9 @@ export async function POST(req: NextRequest) {
         )
       }
     } catch (metricsEx) {
-      console.warn('[broll_metrics] compute/insert threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
+      // PASSO 3 (20260530) — escalate the thrown case to console.error too so
+      // an unexpected exception in the metrics path is never swallowed silently.
+      console.error('[broll_metrics] compute/insert threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
     }
 
     // Push #132 — assemble the caption/voiceover pipeline. Each scene now

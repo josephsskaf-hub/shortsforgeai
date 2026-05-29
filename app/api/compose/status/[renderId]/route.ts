@@ -58,7 +58,7 @@ async function persistCompletedVideo(args: {
   duration: number
   topic: string
   creditsUsed: number
-}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy' | 'minimal'; error?: string }> {
+}): Promise<{ ok: boolean; id?: string; schema?: 'staging' | 'legacy' | 'minimal'; error?: string; duplicate?: boolean }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
@@ -77,7 +77,9 @@ async function persistCompletedVideo(args: {
   // Schema #1 — staging (title + final_video_url + extended columns).
   const stagingRow = {
     user_id: args.userId,
-    title: args.topic.slice(0, 200) || 'Untitled Short',
+    // PASSO 3 (Bug 3, 20260530) — no 'Untitled Short' default; store the
+    // original prompt (args.topic) so history reflects what the user asked for.
+    title: args.topic.slice(0, 200),
     final_video_url: args.videoUrl,
     thumbnail_url: args.snapshotUrl ?? null,
     status: 'completed',
@@ -106,6 +108,16 @@ async function persistCompletedVideo(args: {
     const id = stagingInsert.data?.id ?? '?'
     console.log(`[history] insert OK (staging schema) id=${id}`)
     return { ok: true, id: String(id), schema: 'staging' }
+  }
+
+  // PASSO 3 (20260530) — idempotency. The new partial unique index
+  // videos_render_id_unique makes a re-persist of the same render_id raise
+  // 23505 (unique_violation). That's not a failure: this render was already
+  // saved. Log it explicitly for future tracing and exit early instead of
+  // cascading into the legacy/minimal fallbacks (which would also 23505).
+  if ((stagingInsert.error as { code?: string }).code === '23505') {
+    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit on videos_render_id_unique, staging path); skipping re-insert`)
+    return { ok: true, schema: 'staging', duplicate: true }
   }
 
   console.warn('[history] insert (staging schema) failed:', JSON.stringify({
@@ -141,6 +153,11 @@ async function persistCompletedVideo(args: {
     console.log(`[history] insert OK (legacy schema) id=${id}`)
     return { ok: true, id: String(id), schema: 'legacy' }
   }
+  // PASSO 3 (20260530) — idempotency duplicate on the legacy path.
+  if ((legacyInsert.error as { code?: string }).code === '23505') {
+    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit, legacy path); skipping re-insert`)
+    return { ok: true, schema: 'legacy', duplicate: true }
+  }
   console.warn('[history] insert (legacy schema) failed:', JSON.stringify({
     message: legacyInsert.error.message,
     code: (legacyInsert.error as { code?: string }).code,
@@ -153,7 +170,8 @@ async function persistCompletedVideo(args: {
     user_id: args.userId,
     status: 'completed',
     video_url: args.videoUrl,
-    topic: args.topic.slice(0, 500) || 'Untitled Short',
+    // PASSO 3 (Bug 3, 20260530) — no 'Untitled Short' default; keep the prompt.
+    topic: args.topic.slice(0, 500),
   }
   console.log('[history] retrying with minimal schema (user_id/status/video_url/topic)…')
   const minimalInsert = await admin
@@ -165,6 +183,11 @@ async function persistCompletedVideo(args: {
     const id = minimalInsert.data?.id ?? '?'
     console.log(`[history] insert OK (minimal schema) id=${id}`)
     return { ok: true, id: String(id), schema: 'minimal' }
+  }
+  // PASSO 3 (20260530) — idempotency duplicate on the minimal path.
+  if ((minimalInsert.error as { code?: string }).code === '23505') {
+    console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (idempotency hit, minimal path); skipping re-insert`)
+    return { ok: true, schema: 'minimal', duplicate: true }
   }
   console.warn('[history] insert (minimal schema) also failed:', JSON.stringify({
     message: minimalInsert.error.message,
