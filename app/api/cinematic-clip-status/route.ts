@@ -7,12 +7,16 @@ export const dynamic = 'force-dynamic'
 
 const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
 const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL}`
+// fal.ai queue status/result live under the APP base (first two id segments,
+// e.g. fal-ai/wan), NOT the full versioned model path. Submitting to the full
+// path works, but polling the full path 405s — fal returns these as status_url/
+// response_url. Derive the app base so status + result hit the right endpoint.
+const FAL_APP_BASE = `https://queue.fal.run/${FAL_MODEL.split('/').slice(0, 2).join('/')}`
 
 type ClipStatus = {
   id: string | null
   status: 'pending' | 'processing' | 'done' | 'failed'
   url: string | null
-  dbg?: string
 }
 
 async function checkFalClip(requestId: string): Promise<ClipStatus> {
@@ -21,13 +25,14 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
   try {
     // Check status first
-    const statusUrl = `${FAL_QUEUE_BASE}/requests/${requestId}/status`
-    const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${falKey}` } })
+    const statusRes = await fetch(
+      `${FAL_APP_BASE}/requests/${requestId}/status`,
+      { headers: { 'Authorization': `Key ${falKey}` } }
+    )
 
     if (!statusRes.ok) {
-      const body = await statusRes.text().catch(() => '')
-      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status} url=${statusUrl} body=${body.slice(0, 300)}`)
-      return { id: requestId, status: 'failed', url: null, dbg: `HTTP ${statusRes.status} @ ${statusUrl} :: ${body.slice(0, 180)}` }
+      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status}`)
+      return { id: requestId, status: 'failed', url: null }
     }
 
     const statusData = await statusRes.json()
@@ -39,13 +44,13 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
     if (falStatus === 'FAILED') {
       console.error(`[cinematic-status] clip ${requestId} failed:`, statusData.error)
-      return { id: requestId, status: 'failed', url: null, dbg: `FAILED :: ${JSON.stringify(statusData.error ?? statusData).slice(0, 180)}` }
+      return { id: requestId, status: 'failed', url: null }
     }
 
     if (falStatus === 'COMPLETED') {
       // Fetch the actual result
       const resultRes = await fetch(
-        `${FAL_QUEUE_BASE}/requests/${requestId}`,
+        `${FAL_APP_BASE}/requests/${requestId}`,
         { headers: { 'Authorization': `Key ${falKey}` } }
       )
 
@@ -71,7 +76,7 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     return { id: requestId, status: 'pending', url: null }
   } catch (err) {
     console.error(`[cinematic-status] error checking ${requestId}:`, err)
-    return { id: requestId, status: 'failed', url: null, dbg: `EXC :: ${err instanceof Error ? err.message : String(err)}` }
+    return { id: requestId, status: 'failed', url: null }
   }
 }
 
