@@ -50,22 +50,25 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     }
 
     if (falStatus === 'COMPLETED') {
-      // Fetch the actual result. The result lives at fal's response_url (which
-      // uses the FULL model path), NOT the app-base used for status. Prefer the
-      // response_url fal returns in the status payload; fall back to the full
-      // model path (FAL_QUEUE_BASE) if absent.
-      const resultUrl = (typeof statusData.response_url === 'string' && statusData.response_url)
-        ? statusData.response_url
-        : `${FAL_QUEUE_BASE}/requests/${requestId}`
-      const resultRes = await fetch(resultUrl, { headers: { 'Authorization': `Key ${falKey}` } })
-
-      if (!resultRes.ok) {
-        const rbody = await resultRes.text().catch(() => '')
-        console.error(`[cinematic-status] result fetch failed for ${requestId}: ${resultRes.status}`)
-        return { id: requestId, status: 'failed', url: null, dbg: `RESULT HTTP ${resultRes.status} :: ${rbody.slice(0,150)}` }
+      // PROBE: try candidate result URLs and report which works.
+      const candidates: { label: string; url: string }[] = [
+        { label: 'response_url', url: typeof statusData.response_url === 'string' ? statusData.response_url : '' },
+        { label: 'full_path', url: `${FAL_QUEUE_BASE}/requests/${requestId}` },
+        { label: 'full_path_response', url: `${FAL_QUEUE_BASE}/requests/${requestId}/response` },
+        { label: 'app_response', url: `${FAL_APP_BASE}/requests/${requestId}/response` },
+      ].filter((c) => c.url)
+      const probe: string[] = []
+      let result: any = null
+      for (const c of candidates) {
+        try {
+          const rr = await fetch(c.url, { headers: { 'Authorization': `Key ${falKey}` } })
+          probe.push(`${c.label}=${rr.status}`)
+          if (rr.ok) { result = await rr.json(); break }
+        } catch (e) { probe.push(`${c.label}=ERR`) }
       }
-
-      const result = await resultRes.json()
+      if (!result) {
+        return { id: requestId, status: 'failed', url: null, dbg: `PROBE ${probe.join(' ')}` }
+      }
       // fal.ai Wan 2.1 output: { video: { url, content_type } }
       const videoUrl = result.video?.url ?? result.output?.video?.url ?? null
 
