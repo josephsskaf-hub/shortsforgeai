@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Push #281 — new users go to /pricing; returning users go to /generate.
-// Any explicit `next` query param is honoured for returning users only.
+// Activation-first: new users go straight to /generate to make their first
+// free Short (3 free credits) — product value BEFORE the paywall. The Google
+// Ads registration conversion still fires via ?signup=1 (handled in
+// GenerateClient). Returning users go to /generate (or an explicit `next`).
 function resolveDestination(rawNext: string | null, isNewUser: boolean): string {
-  if (isNewUser) return '/pricing'
+  if (isNewUser) return '/generate'
   if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//')) return '/generate'
   return rawNext
 }
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
         /* ignore */
       }
       const dest = isNewUser
-        ? `${origin}/pricing?signup=1`
+        ? `${origin}/generate?signup=1`
         : `${origin}${resolveDestination(rawNext, false)}`
       return NextResponse.redirect(dest)
     }

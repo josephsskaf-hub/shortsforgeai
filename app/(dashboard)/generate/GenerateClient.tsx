@@ -636,6 +636,24 @@ export default function GenerateClient() {
     }
   }, [])
 
+  // Activation nudge — first-time users (no videos yet) hit a blank page, which
+  // kills activation (only ~25% of signups ever generate). Pre-fill a proven
+  // example so they can hit Generate immediately, and log a first-run event so
+  // we can measure the signup -> first-generate drop-off.
+  const firstRunPrefilledRef = useRef(false)
+  useEffect(() => {
+    if (firstRunPrefilledRef.current) return
+    if (recentVideos === null) return          // still loading
+    if (recentVideos.length > 0) return         // returning user
+    if (fromHome) return                        // arrived with a topic already
+    if (prompt.trim().length > 0) return        // user already typing
+    firstRunPrefilledRef.current = true
+    const ex = (NICHE_EXAMPLES[pickedNiche] ?? NICHE_EXAMPLES.billionaire)[0]
+    if (ex) setPrompt(ex)
+    trackEvent('activation_generate_firstrun', {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentVideos, fromHome])
+
   // Push #047 — rotate the staged-pipeline message every ~2.4s while we're
   // in a long-running phase. This is purely cosmetic — the actual progress
   // bar still tracks real API state. We reset the tick to 0 whenever we

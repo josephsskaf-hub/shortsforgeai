@@ -45,7 +45,7 @@ const BASIC_FEATURES = [
 
 const PRO_FEATURES = [
   `${PLANS.pro.credits} Fast Mode renders/month`,
-  '✨ AI Generated scenes (fal.ai)',
+  'AI writes script + voiceover',
   'Advanced generation controls',
   'Auto-captions pipeline',
   'Download watermark-free MP4',
@@ -186,7 +186,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline="100 Fast Mode renders + ✨ AI Generated scenes/month."
+          tagline="100 Fast Mode renders/month — built for daily posting."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight

@@ -54,10 +54,10 @@ function buildPricing() {
       name: 'Pro',
       price: '$9.90',
       priceSub: '/ month',
-      tagline: 'Full production pipeline. 100 renders + Cinematic AI Engine.',
+      tagline: 'Built for daily posting — 100 renders every month.',
       features: [
         '100 Fast Mode renders/month',
-        'Cinematic AI Engine — AI-generated scenes',
+        'AI writes script + voiceover',
         'Advanced generation controls',
         'Auto-captions pipeline',
         'Download watermark-free MP4',
