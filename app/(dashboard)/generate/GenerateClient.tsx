@@ -4606,7 +4606,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Fast Mode — always available */}
         <button
           type="button"
@@ -4663,7 +4663,10 @@ function ModeSelector({
           </ul>
         </button>
 
-        {/* Push #315 — Cinematic AI (fal.ai Wan 2.1). Available to all users, 3 credits. */}
+        {/* AI Generated (fal.ai Wan 2.1) temporarily HIDDEN — /api/cinematic-clip-status
+            returns 502 in production so the mode never delivers a video. Flip `false`
+            back to true to re-enable once the polling route is fixed. */}
+        {false && (
         <button
           type="button"
           onClick={() => setMode('cinematic_ai')}
@@ -4716,6 +4719,7 @@ function ModeSelector({
             ))}
           </ul>
         </button>
+        )}
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
             Basic, AND Pro-with-0-tokens (resets monthly). */}
