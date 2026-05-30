@@ -12,6 +12,7 @@ type ClipStatus = {
   id: string | null
   status: 'pending' | 'processing' | 'done' | 'failed'
   url: string | null
+  dbg?: string
 }
 
 async function checkFalClip(requestId: string): Promise<ClipStatus> {
@@ -20,14 +21,13 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
   try {
     // Check status first
-    const statusRes = await fetch(
-      `${FAL_QUEUE_BASE}/requests/${requestId}/status`,
-      { headers: { 'Authorization': `Key ${falKey}` } }
-    )
+    const statusUrl = `${FAL_QUEUE_BASE}/requests/${requestId}/status`
+    const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${falKey}` } })
 
     if (!statusRes.ok) {
-      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status}`)
-      return { id: requestId, status: 'failed', url: null }
+      const body = await statusRes.text().catch(() => '')
+      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status} url=${statusUrl} body=${body.slice(0, 300)}`)
+      return { id: requestId, status: 'failed', url: null, dbg: `HTTP ${statusRes.status} @ ${statusUrl} :: ${body.slice(0, 180)}` }
     }
 
     const statusData = await statusRes.json()
@@ -39,7 +39,7 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
     if (falStatus === 'FAILED') {
       console.error(`[cinematic-status] clip ${requestId} failed:`, statusData.error)
-      return { id: requestId, status: 'failed', url: null }
+      return { id: requestId, status: 'failed', url: null, dbg: `FAILED :: ${JSON.stringify(statusData.error ?? statusData).slice(0, 180)}` }
     }
 
     if (falStatus === 'COMPLETED') {
@@ -71,7 +71,7 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     return { id: requestId, status: 'pending', url: null }
   } catch (err) {
     console.error(`[cinematic-status] error checking ${requestId}:`, err)
-    return { id: requestId, status: 'failed', url: null }
+    return { id: requestId, status: 'failed', url: null, dbg: `EXC :: ${err instanceof Error ? err.message : String(err)}` }
   }
 }
 
