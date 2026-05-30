@@ -50,11 +50,14 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     }
 
     if (falStatus === 'COMPLETED') {
-      // Fetch the actual result
-      const resultRes = await fetch(
-        `${FAL_APP_BASE}/requests/${requestId}`,
-        { headers: { 'Authorization': `Key ${falKey}` } }
-      )
+      // Fetch the actual result. The result lives at fal's response_url (which
+      // uses the FULL model path), NOT the app-base used for status. Prefer the
+      // response_url fal returns in the status payload; fall back to the full
+      // model path (FAL_QUEUE_BASE) if absent.
+      const resultUrl = (typeof statusData.response_url === 'string' && statusData.response_url)
+        ? statusData.response_url
+        : `${FAL_QUEUE_BASE}/requests/${requestId}`
+      const resultRes = await fetch(resultUrl, { headers: { 'Authorization': `Key ${falKey}` } })
 
       if (!resultRes.ok) {
         const rbody = await resultRes.text().catch(() => '')
