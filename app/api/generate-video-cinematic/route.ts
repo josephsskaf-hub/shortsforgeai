@@ -24,7 +24,7 @@ function clipCountForDuration(d: number): number {
   return Math.max(2, Math.min(8, Math.ceil(d / 8)))
 }
 
-async function submitToFal(prompt: string): Promise<string | null> {
+async function submitToFal(prompt: string): Promise<any | null> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return null
 
@@ -49,7 +49,7 @@ async function submitToFal(prompt: string): Promise<string | null> {
     }
 
     const data = await res.json()
-    return data.request_id ?? null
+    return data ?? null
   } catch (err) {
     console.error('[cinematic] fal.ai submit error:', err)
     return null
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Submit all scenes to fal.ai in parallel
-    const falRequestIds = await Promise.all(
+    const falResults = await Promise.all(
       scenes.map((scene) => {
         // Build a cinematic prompt for fal.ai from the scene description + voiceover
         const visualPrompt = scene.stockSearchQuery || scene.description
@@ -137,6 +137,8 @@ export async function POST(req: NextRequest) {
         return submitToFal(cinematic)
       })
     )
+    const falRequestIds = falResults.map((d) => (d && d.request_id) ? d.request_id : null)
+    const _dbgSubmit = falResults.find((d) => d) ?? null
 
     // Check if at least one submission succeeded
     const validIds = falRequestIds.filter((id): id is string => id !== null)
@@ -166,6 +168,7 @@ export async function POST(req: NextRequest) {
       scene_captions: scenes.map((s) => s.caption),
       voiceover_script: voiceoverScript,
       fal_request_ids: falRequestIds, // null for failed submissions
+      _dbg_submit: _dbgSubmit,
       verbatim,
       speed: parsedScript.speed,
     })
