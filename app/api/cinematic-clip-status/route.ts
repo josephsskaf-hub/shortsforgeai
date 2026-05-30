@@ -17,7 +17,6 @@ type ClipStatus = {
   id: string | null
   status: 'pending' | 'processing' | 'done' | 'failed'
   url: string | null
-  dbg?: string
 }
 
 async function checkFalClip(requestId: string): Promise<ClipStatus> {
@@ -32,9 +31,8 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     )
 
     if (!statusRes.ok) {
-      const body = await statusRes.text().catch(() => '')
-      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status} body=${body.slice(0,300)}`)
-      return { id: requestId, status: 'failed', url: null, dbg: `HTTP ${statusRes.status} :: ${body.slice(0,160)}` }
+      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status}`)
+      return { id: requestId, status: 'failed', url: null }
     }
 
     const statusData = await statusRes.json()
@@ -46,29 +44,22 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
     if (falStatus === 'FAILED') {
       console.error(`[cinematic-status] clip ${requestId} failed:`, statusData.error)
-      return { id: requestId, status: 'failed', url: null, dbg: `FAILED :: ${JSON.stringify(statusData.error ?? statusData).slice(0,200)}` }
+      return { id: requestId, status: 'failed', url: null }
     }
 
     if (falStatus === 'COMPLETED') {
-      // PROBE: try candidate result URLs and report which works.
-      const candidates: { label: string; url: string }[] = [
-        { label: 'response_url', url: typeof statusData.response_url === 'string' ? statusData.response_url : '' },
-        { label: 'full_path', url: `${FAL_QUEUE_BASE}/requests/${requestId}` },
-        { label: 'full_path_response', url: `${FAL_QUEUE_BASE}/requests/${requestId}/response` },
-        { label: 'app_response', url: `${FAL_APP_BASE}/requests/${requestId}/response` },
-      ].filter((c) => c.url)
-      const probe: string[] = []
-      let result: any = null
-      for (const c of candidates) {
-        try {
-          const rr = await fetch(c.url, { headers: { 'Authorization': `Key ${falKey}` } })
-          probe.push(`${c.label}=${rr.status}`)
-          if (rr.ok) { result = await rr.json(); break }
-        } catch (e) { probe.push(`${c.label}=ERR`) }
+      // Fetch the actual result
+      const resultRes = await fetch(
+        `${FAL_APP_BASE}/requests/${requestId}`,
+        { headers: { 'Authorization': `Key ${falKey}` } }
+      )
+
+      if (!resultRes.ok) {
+        console.error(`[cinematic-status] result fetch failed for ${requestId}: ${resultRes.status}`)
+        return { id: requestId, status: 'failed', url: null }
       }
-      if (!result) {
-        return { id: requestId, status: 'failed', url: null, dbg: `PROBE ${probe.join(' ')}` }
-      }
+
+      const result = await resultRes.json()
       // fal.ai Wan 2.1 output: { video: { url, content_type } }
       const videoUrl = result.video?.url ?? result.output?.video?.url ?? null
 
@@ -78,14 +69,14 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
       }
 
       console.error(`[cinematic-status] clip ${requestId} completed but no video URL in result:`, JSON.stringify(result).slice(0, 200))
-      return { id: requestId, status: 'failed', url: null, dbg: `NO_URL :: ${JSON.stringify(result).slice(0,180)}` }
+      return { id: requestId, status: 'failed', url: null }
     }
 
     // Unknown status
     return { id: requestId, status: 'pending', url: null }
   } catch (err) {
     console.error(`[cinematic-status] error checking ${requestId}:`, err)
-    return { id: requestId, status: 'failed', url: null, dbg: `EXC :: ${err instanceof Error ? err.message : String(err)}` }
+    return { id: requestId, status: 'failed', url: null }
   }
 }
 
