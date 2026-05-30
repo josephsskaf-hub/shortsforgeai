@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b'
+const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
 const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL}`
 
 type ClipStatus = {

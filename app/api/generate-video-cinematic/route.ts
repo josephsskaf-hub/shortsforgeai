@@ -13,7 +13,7 @@ export const maxDuration = 60
 const CINEMATIC_CREDIT_COST = 3
 
 // fal.ai model to use. 1.3B is faster (~60s/clip), 14B is higher quality.
-const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b'
+const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
 const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL}`
 
 // Clip duration in frames. At the model's default 16fps:
@@ -38,8 +38,6 @@ async function submitToFal(prompt: string): Promise<string | null> {
       body: JSON.stringify({
         prompt,
         negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
-        num_frames: FRAMES_PER_CLIP,
-        resolution: '480p',
         aspect_ratio: '9:16',
         num_inference_steps: 30,
       }),
