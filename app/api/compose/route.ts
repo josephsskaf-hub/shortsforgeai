@@ -17,7 +17,7 @@ import { fetchUserPlan } from '@/lib/plan'
 import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
 import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // Push #064 — durations bumped to 30 / 45 / 60 in lockstep with
 // /api/generate-video. Legacy 10 / 50 kept here for backward
