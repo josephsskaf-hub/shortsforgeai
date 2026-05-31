@@ -12,6 +12,7 @@ type ClipStatus = {
   id: string | null
   status: 'pending' | 'processing' | 'done' | 'failed'
   url: string | null
+  dbg?: string
 }
 
 async function checkFalClip(requestId: string): Promise<ClipStatus> {
@@ -42,10 +43,10 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
     }
 
     // FAILED or unknown
-    return { id: requestId, status: 'failed', url: null }
+    return { id: requestId, status: 'failed', url: null, dbg: `STATUS=${String(s)}` }
   } catch (err) {
     console.error(`[cinematic-status] error checking ${requestId}:`, err)
-    return { id: requestId, status: 'failed', url: null }
+    return { id: requestId, status: 'failed', url: null, dbg: `EXC=${err instanceof Error ? (err.name + ': ' + err.message) : String(err)}` }
   }
 }
 
