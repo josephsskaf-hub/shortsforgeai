@@ -2,16 +2,11 @@
 // Called by the client every 5s after /api/generate-video-cinematic.
 // Returns status of each clip and their video URLs when complete.
 import { NextRequest, NextResponse } from 'next/server'
+import { fal } from '@fal-ai/client'
 
 export const dynamic = 'force-dynamic'
 
 const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
-const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL}`
-// fal.ai queue status/result live under the APP base (first two id segments,
-// e.g. fal-ai/wan), NOT the full versioned model path. Submitting to the full
-// path works, but polling the full path 405s — fal returns these as status_url/
-// response_url. Derive the app base so status + result hit the right endpoint.
-const FAL_APP_BASE = `https://queue.fal.run/${FAL_MODEL.split('/').slice(0, 2).join('/')}`
 
 type ClipStatus = {
   id: string | null
@@ -24,56 +19,30 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
   if (!falKey) return { id: requestId, status: 'failed', url: null }
 
   try {
-    // Check status first
-    const statusRes = await fetch(
-      `${FAL_APP_BASE}/requests/${requestId}/status`,
-      { headers: { 'Authorization': `Key ${falKey}` } }
-    )
+    fal.config({ credentials: falKey })
+    const st = await fal.queue.status(FAL_MODEL, { requestId })
+    const s = (st as { status?: string }).status
 
-    if (!statusRes.ok) {
-      console.error(`[cinematic-status] status check failed for ${requestId}: ${statusRes.status}`)
-      return { id: requestId, status: 'failed', url: null }
-    }
+    if (s === 'IN_QUEUE') return { id: requestId, status: 'pending', url: null }
+    if (s === 'IN_PROGRESS') return { id: requestId, status: 'processing', url: null }
 
-    const statusData = await statusRes.json()
-    const falStatus = statusData.status as string
-
-    if (falStatus === 'IN_QUEUE' || falStatus === 'IN_PROGRESS') {
-      return { id: requestId, status: falStatus === 'IN_QUEUE' ? 'pending' : 'processing', url: null }
-    }
-
-    if (falStatus === 'FAILED') {
-      console.error(`[cinematic-status] clip ${requestId} failed:`, statusData.error)
-      return { id: requestId, status: 'failed', url: null }
-    }
-
-    if (falStatus === 'COMPLETED') {
-      // Fetch the actual result
-      const resultRes = await fetch(
-        `${FAL_APP_BASE}/requests/${requestId}`,
-        { headers: { 'Authorization': `Key ${falKey}` } }
-      )
-
-      if (!resultRes.ok) {
-        console.error(`[cinematic-status] result fetch failed for ${requestId}: ${resultRes.status}`)
-        return { id: requestId, status: 'failed', url: null }
+    if (s === 'COMPLETED') {
+      const res = await fal.queue.result(FAL_MODEL, { requestId })
+      const data = ((res as { data?: unknown }).data ?? res) as {
+        video?: { url?: string }
+        output?: { video?: { url?: string } }
       }
-
-      const result = await resultRes.json()
-      // fal.ai Wan 2.1 output: { video: { url, content_type } }
-      const videoUrl = result.video?.url ?? result.output?.video?.url ?? null
-
+      const videoUrl = data?.video?.url ?? data?.output?.video?.url ?? null
       if (videoUrl) {
         console.log(`[cinematic-status] clip ${requestId} done: ${videoUrl.slice(0, 60)}`)
         return { id: requestId, status: 'done', url: videoUrl }
       }
-
-      console.error(`[cinematic-status] clip ${requestId} completed but no video URL in result:`, JSON.stringify(result).slice(0, 200))
+      console.error(`[cinematic-status] clip ${requestId} completed but no video URL`)
       return { id: requestId, status: 'failed', url: null }
     }
 
-    // Unknown status
-    return { id: requestId, status: 'pending', url: null }
+    // FAILED or unknown
+    return { id: requestId, status: 'failed', url: null }
   } catch (err) {
     console.error(`[cinematic-status] error checking ${requestId}:`, err)
     return { id: requestId, status: 'failed', url: null }

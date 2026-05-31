@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import { parseUserScript } from '@/lib/scriptParser'
+import { fal } from '@fal-ai/client'
 
 export const maxDuration = 60
 
@@ -14,7 +15,6 @@ const CINEMATIC_CREDIT_COST = 3
 
 // fal.ai model to use. 1.3B is faster (~60s/clip), 14B is higher quality.
 const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
-const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL}`
 
 // Clip duration in frames. At the model's default 16fps:
 // 49 frames ≈ 3s, 81 frames ≈ 5s
@@ -29,27 +29,16 @@ async function submitToFal(prompt: string): Promise<string | null> {
   if (!falKey) return null
 
   try {
-    const res = await fetch(FAL_QUEUE_BASE, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Key ${falKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    fal.config({ credentials: falKey })
+    const { request_id } = await fal.queue.submit(FAL_MODEL, {
+      input: {
         prompt,
         negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
         aspect_ratio: '9:16',
         num_inference_steps: 30,
-      }),
+      },
     })
-
-    if (!res.ok) {
-      console.error(`[cinematic] fal.ai submit failed ${res.status}:`, await res.text())
-      return null
-    }
-
-    const data = await res.json()
-    return data.request_id ?? null
+    return request_id ?? null
   } catch (err) {
     console.error('[cinematic] fal.ai submit error:', err)
     return null
