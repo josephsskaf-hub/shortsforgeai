@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     let scenes: { description: string; voiceover: string; caption: string; stockSearchQuery?: string }[]
 
     if (verbatim) {
-      scenes = parsedScript.segments.slice(0, 8).map((seg) => ({
+      scenes = parsedScript.segments.slice(0, 4).map((seg) => ({
         description: seg.pexelsQuery,
         voiceover: seg.voiceover,
         caption: shortCaptionFromVoiceover(seg.voiceover || seg.pexelsQuery),

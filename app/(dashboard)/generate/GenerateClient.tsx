@@ -354,6 +354,10 @@ export default function GenerateClient() {
   // server not to deduct credits again on subsequent polls.
   const deductedRef = useRef<boolean>(false)
   const composeStartedRef = useRef<boolean>(false)
+  // True when the current generation used the fal.ai cinematic pipeline, so the
+  // compose call records quality 'cinematic_ai' (and deducts 30 credits) reliably,
+  // avoiding stale `quality` state in the compose effect closure.
+  const falUsedRef = useRef<boolean>(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
@@ -834,7 +838,7 @@ export default function GenerateClient() {
             scene_captions: sceneCaptions,
             duration,
             topic: prompt,
-            quality,
+            quality: falUsedRef.current ? 'cinematic_ai' : quality,
             language,
             // Narration Engine (Phase 1) — pass the detected niche as vertical
             // so compose auto-selects the best AI voice persona for the content.
@@ -1373,6 +1377,7 @@ export default function GenerateClient() {
           setPhase('failed'); return
         }
         setQuality('cinematic_ai')
+        falUsedRef.current = true
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -1391,6 +1396,7 @@ export default function GenerateClient() {
     }
 
     if (mode === 'fast' || mode === 'creator') {
+      falUsedRef.current = false
       try {
         // Phase 3 — if a BrollPlan is available, pass the pexelsQuery values
         // per scene so generate-video-fast can use more specific Pexels searches.
