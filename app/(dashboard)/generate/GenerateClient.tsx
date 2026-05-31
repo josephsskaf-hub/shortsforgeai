@@ -889,7 +889,7 @@ export default function GenerateClient() {
 
     async function poll() {
       try {
-        const params = new URLSearchParams({ quality })
+        const params = new URLSearchParams({ quality: falUsedRef.current ? 'cinematic_ai' : quality })
         if (deductedRef.current) params.set('deducted', '1')
         // Push #050 — pass duration + topic so the server can record them
         // in the videos history row when the render finishes.
@@ -3307,42 +3307,7 @@ export default function GenerateClient() {
                 </div>
               )}
 
-              {/* Push #102 — Referral share nudge. Sits in the done state for
-                  every user (free + paid) so the viral loop runs on the same
-                  audience the upgrade upsell already qualified. */}
-              <div
-                className="rounded-2xl p-5 mt-4 text-center"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,.08), rgba(5,150,105,.05))',
-                  border: '1px solid rgba(16,185,129,.25)',
-                }}
-              >
-                <p className="text-sm font-bold mb-1" style={{ color: '#34d399' }}>
-                  🎁 Know a creator? Send them this
-                </p>
-                <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
-                  Share ShortsForgeAI — they get 1 free video, you help grow the community
-                </p>
-                <div className="flex gap-2 justify-center flex-wrap">
-                  <a
-                    href="https://twitter.com/intent/tweet?text=I just made a YouTube Short with AI in 60 seconds! 🤯 No editing, no script — just type a topic. Try it free 👇 https://shortsforgeai.com %23YouTubeShorts %23AITools"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg px-4 py-2 text-xs font-bold"
-                    style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.12)', color: 'var(--text)', textDecoration: 'none' }}
-                  >
-                    𝕏 Tweet it
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => { navigator.clipboard.writeText('https://shortsforgeai.com').catch(() => {}) }}
-                    className="rounded-lg px-4 py-2 text-xs font-bold"
-                    style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.12)', color: 'var(--text)', cursor: 'pointer' }}
-                  >
-                    📋 Copy link
-                  </button>
-                </div>
-              </div>
+              {/* Referral share box removed — duplicated the top share buttons. */}
 
               {/* Push #087 — secondary actions: re-generate the same idea
                   (one click) or jump back to edit the script. Keeps the
