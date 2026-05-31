@@ -11,17 +11,14 @@ import { fal } from '@fal-ai/client'
 
 export const maxDuration = 60
 
-const CINEMATIC_CREDIT_COST = 3
+const CINEMATIC_CREDIT_COST = 30
 
-// fal.ai model to use. 1.3B is faster (~60s/clip), 14B is higher quality.
-const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
+// fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
+const FAL_MODEL = 'fal-ai/wan-25-preview/text-to-video'
 
-// Clip duration in frames. At the model's default 16fps:
-// 49 frames ≈ 3s, 81 frames ≈ 5s
-const FRAMES_PER_CLIP = 49
-
+// Cap clips at 4 to bound fal cost (~$0.25/clip @ 5s 720p) -> ~$1.00/video.
 function clipCountForDuration(d: number): number {
-  return Math.max(2, Math.min(8, Math.ceil(d / 8)))
+  return Math.max(2, Math.min(4, Math.ceil(d / 12)))
 }
 
 async function submitToFal(prompt: string): Promise<string | null> {
@@ -33,9 +30,11 @@ async function submitToFal(prompt: string): Promise<string | null> {
     const { request_id } = await fal.queue.submit(FAL_MODEL, {
       input: {
         prompt,
-        negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
         aspect_ratio: '9:16',
-        num_inference_steps: 30,
+        resolution: '720p',
+        duration: '5',
+        negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
+        enable_prompt_expansion: true,
       },
     })
     return request_id ?? null

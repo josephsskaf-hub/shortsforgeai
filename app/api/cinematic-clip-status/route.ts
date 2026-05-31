@@ -6,7 +6,7 @@ import { fal } from '@fal-ai/client'
 
 export const dynamic = 'force-dynamic'
 
-const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
+const FAL_MODEL = 'fal-ai/wan-25-preview/text-to-video'
 
 type ClipStatus = {
   id: string | null

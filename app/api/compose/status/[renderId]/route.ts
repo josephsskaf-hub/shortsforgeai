@@ -24,7 +24,7 @@ function creditCostFor(quality: Quality): number {
     case 'fast':
       return 1
     case 'cinematic_ai':
-      return 3
+      return 30
     case 'pro':
       return 20
     case 'basic':
