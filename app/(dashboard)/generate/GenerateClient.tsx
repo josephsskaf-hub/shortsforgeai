@@ -1365,7 +1365,7 @@ export default function GenerateClient() {
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
         if (res.status === 402) {
-          setError(`Cinematic AI needs 3 credits. You have ${data?.balance ?? 0}.`)
+          setError(`Cinematic AI needs 30 credits. You have ${data?.balance ?? 0}.`)
           setPhase('failed'); return
         }
         if (!res.ok) {
@@ -1932,7 +1932,7 @@ export default function GenerateClient() {
   const selectedCost = (mode === 'fast' || mode === 'creator')
     ? 1
     : mode === 'cinematic_ai'
-    ? 3
+    ? 30
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
@@ -4613,7 +4613,7 @@ function ModeSelector({
   const proHasToken = isPro && cinematicTokens > 0
 
   const fastFeatures = ['Premium visual library', 'AI voice synthesis', 'Ready in ~60 seconds']
-  const aiFeatures = ['fal.ai Wan 2.1 AI video', 'Real AI-generated scenes', 'Full AI-generated visuals']
+  const aiFeatures = ['fal.ai Wan 2.5 AI video', 'Real AI-generated scenes', 'Full AI-generated visuals']
   const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', 'Premium AI render']
 
   return (
@@ -4624,7 +4624,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Fast Mode — always available */}
         <button
           type="button"
@@ -4681,10 +4681,7 @@ function ModeSelector({
           </ul>
         </button>
 
-        {/* AI Generated (fal.ai Wan 2.1) temporarily HIDDEN — /api/cinematic-clip-status
-            returns 502 in production so the mode never delivers a video. Flip `false`
-            back to true to re-enable once the polling route is fixed. */}
-        {false && (
+        {/* AI Generated — Wan 2.5 (fal-ai/wan-25-preview/text-to-video), 9:16, 30 credits. */}
         <button
           type="button"
           onClick={() => setMode('cinematic_ai')}
@@ -4724,7 +4721,7 @@ function ModeSelector({
                   border: '1px solid rgba(245,158,11,.3)',
                 }}
               >
-                3 credits
+                30 credits
               </span>
             </div>
           </div>
@@ -4737,7 +4734,6 @@ function ModeSelector({
             ))}
           </ul>
         </button>
-        )}
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
             Basic, AND Pro-with-0-tokens (resets monthly). */}
