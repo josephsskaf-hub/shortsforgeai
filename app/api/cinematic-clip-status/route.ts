@@ -7,6 +7,10 @@ import { fal } from '@fal-ai/client'
 export const dynamic = 'force-dynamic'
 
 const FAL_MODEL = 'fal-ai/wan/v2.1/1.3b/text-to-video'
+// fal's queue status/result are keyed by the APP base (first 2 id segments,
+// e.g. fal-ai/wan), not the full versioned endpoint. Submit uses FAL_MODEL;
+// status/result use FAL_APP so the client builds the correct queue URLs.
+const FAL_APP = FAL_MODEL.split('/').slice(0, 2).join('/')
 
 type ClipStatus = {
   id: string | null
@@ -21,14 +25,14 @@ async function checkFalClip(requestId: string): Promise<ClipStatus> {
 
   try {
     fal.config({ credentials: falKey })
-    const st = await fal.queue.status(FAL_MODEL, { requestId })
+    const st = await fal.queue.status(FAL_APP, { requestId })
     const s = (st as { status?: string }).status
 
     if (s === 'IN_QUEUE') return { id: requestId, status: 'pending', url: null }
     if (s === 'IN_PROGRESS') return { id: requestId, status: 'processing', url: null }
 
     if (s === 'COMPLETED') {
-      const res = await fal.queue.result(FAL_MODEL, { requestId })
+      const res = await fal.queue.result(FAL_APP, { requestId })
       const data = ((res as { data?: unknown }).data ?? res) as {
         video?: { url?: string }
         output?: { video?: { url?: string } }
