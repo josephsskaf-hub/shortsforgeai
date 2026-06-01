@@ -358,6 +358,10 @@ export default function GenerateClient() {
   // compose call records quality 'cinematic_ai' (and deducts 30 credits) reliably,
   // avoiding stale `quality` state in the compose effect closure.
   const falUsedRef = useRef<boolean>(false)
+  // #362 — holds the full structured script (with [Pexels:]/HOOK markers) so the
+  // editable textarea can show a CLEAN, marker-free preview while submission still
+  // uses the marked-up version the verbatim pipeline needs. Cleared on manual edit.
+  const structuredScriptRef = useRef<string | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
@@ -996,7 +1000,7 @@ export default function GenerateClient() {
 
   async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean; skipPreview?: boolean }) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
-    const rawSource = (override ?? prompt).trim()
+    const rawSource = (override ?? structuredScriptRef.current ?? prompt).trim()
     if (!rawSource) {
       setError('Please describe your video idea first.')
       return
@@ -1038,7 +1042,9 @@ export default function GenerateClient() {
           const sgData = await sgRes.json()
           if (typeof sgData.script === 'string' && sgData.script.trim()) {
             source = sgData.script.trim()
-            setPrompt(source)
+            // #362 — keep the marked script for submission; show clean text.
+            structuredScriptRef.current = source
+            setPrompt(cleanScriptPreview(source))
           }
         }
         // If generate-script fails for any reason, we fall through with the
@@ -1054,7 +1060,11 @@ export default function GenerateClient() {
         return // GenerateClient will wait for user to click "Looks good, generate"
       }
     } else {
-      if (override !== undefined) setPrompt(override)
+      // #362 — script already structured (Viral Now override, paste, or a prior
+      // auto-structure pass). Keep the marked copy for the verbatim pipeline and
+      // show the user a clean, marker-free version in the textarea.
+      structuredScriptRef.current = rawSource
+      setPrompt(cleanScriptPreview(rawSource))
     }
 
     setPhase('analyzing')
@@ -1331,7 +1341,7 @@ export default function GenerateClient() {
     }
     generationInFlightRef.current = true
 
-    const trimmed = prompt.trim()
+    const trimmed = (structuredScriptRef.current ?? prompt).trim()
     if (!trimmed) {
       setError('Please describe your video idea first.')
       generationInFlightRef.current = false
@@ -1619,6 +1629,7 @@ export default function GenerateClient() {
     // so the next run feels like a fresh start. We do NOT clear credits
     // state — that's owned by the /api/credits effect.
     setPrompt('')
+    structuredScriptRef.current = null
     setFromHome(false)
   }
 
@@ -2314,6 +2325,9 @@ export default function GenerateClient() {
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value)
+              // #362 — a manual edit becomes the new source of truth; drop the
+              // stored structured script so we submit exactly what the user sees.
+              structuredScriptRef.current = null
               // Once the user edits the field themselves, the "already loaded"
               // helper line no longer makes sense — clear the breadcrumb.
               if (fromHome) setFromHome(false)
@@ -2576,7 +2590,7 @@ export default function GenerateClient() {
             </button>
             <button
               type="button"
-              onClick={() => { setPhase('idle'); setPrompt('') }}
+              onClick={() => { setPhase('idle'); setPrompt(''); structuredScriptRef.current = null }}
               className="rounded-xl px-4 py-3 font-bold text-sm"
               style={{
                 background: 'rgba(255,255,255,.05)',
