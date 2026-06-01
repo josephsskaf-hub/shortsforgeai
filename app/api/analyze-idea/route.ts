@@ -449,7 +449,7 @@ function coerceScenes(raw: unknown, fallbacks: SceneBrief[], maxScenes = 9): Sce
 // Push #307 — Parse structured viral script sections from a Viral Now prompt.
 // Returns null when the prompt is not a pre-written viral script.
 interface ViralSection {
-  type: 'hook' | 'micro_reward' | 'escalation' | 'payoff'
+  type: 'hook' | 'micro_reward' | 'escalation' | 'rhythm' | 'payoff'
   text: string
 }
 
@@ -471,7 +471,7 @@ function parseViralScriptSections(text: string): ViralSection[] | null {
 
   const sections: ViralSection[] = []
   // Split on lines that begin a new section header (English or Portuguese)
-  const parts = text.split(/\n(?=(?:HOOK|GANCHO|MICRO REWARD\s+\d|MICRO RECOMPENSA\s+\d|ESCALATION|ESCALADA|PAYOFF|PAGAMENTO)[\s:(])/i)
+  const parts = text.split(/\n(?=(?:HOOK|GANCHO|MICRO REWARD\s+\d|MICRO RECOMPENSA\s+\d|ESCALATION|ESCALADA|RHYTHM|RITMO|PAYOFF|PAGAMENTO)[\s:(])/i)
 
   for (const part of parts) {
     const trimmed = part.trim()
@@ -493,6 +493,10 @@ function parseViralScriptSections(text: string): ViralSection[] | null {
       const raw = trimmed.replace(/^(ESCALATION|ESCALADA)[:\s]*/i, '').trim()
       const body = stripPexelsMarker(raw)
       if (body) sections.push({ type: 'escalation', text: body })
+    } else if (/^(RHYTHM|RITMO)/i.test(trimmed)) {
+      const raw = trimmed.replace(/^(RHYTHM|RITMO)[:\s]*/i, '').trim()
+      const body = stripPexelsMarker(raw)
+      if (body) sections.push({ type: 'rhythm', text: body })
     } else if (/^(PAYOFF|PAGAMENTO|RECOMPENSA FINAL)/i.test(trimmed)) {
       const raw = trimmed.replace(/^(PAYOFF|PAGAMENTO|RECOMPENSA FINAL)[:\s]*/i, '').trim()
       const body = stripPexelsMarker(raw)
@@ -551,7 +555,7 @@ export async function POST(req: NextRequest) {
     const viralSections = parseViralScriptSections(prompt)
     if (viralSections) {
       const fallbackV = fallbackBrief(prompt)
-      const DURATIONS: Record<string, number> = { hook: 4, micro_reward: 8, escalation: 6, payoff: 5 }
+      const DURATIONS: Record<string, number> = { hook: 4, micro_reward: 8, escalation: 6, rhythm: 4, payoff: 5 }
       const sceneList = viralSections.map((s, i) => ({
         scene_number: i + 1,
         typeLabel: s.type.replace('_', ' ').toUpperCase(),

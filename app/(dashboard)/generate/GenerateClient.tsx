@@ -980,6 +980,7 @@ export default function GenerateClient() {
         if (/^(HOOK|GANCHO)[\s:(]/i.test(t)) return false
         if (/^(MICRO REWARD|MICRO RECOMPENSA)\s+\d/i.test(t)) return false
         if (/^(ESCALATION|ESCALADA)[\s:]/i.test(t)) return false
+        if (/^(RHYTHM|RITMO)[\s:]/i.test(t)) return false
         if (/^(PAYOFF|PAGAMENTO)[\s:]/i.test(t)) return false
         // Drop YouTube Short format header lines
         if (/\b9\s*:\s*16\b|youtube\s+shorts?\s+format/i.test(t)) return false

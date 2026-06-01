@@ -31,9 +31,9 @@ type Language = 'en' | 'pt' | 'es'
 function buildSystemPrompt(language: Language): string {
   const langInstruction =
     language === 'pt'
-      ? `LANGUAGE: Write all voiceover sentences in Brazilian Portuguese (pt-BR). Keep [Pexels: ...] cues and section headers (HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, PAYOFF) in English — the video engine requires them in English. Only the spoken narration text changes language.`
+      ? `LANGUAGE: Write all voiceover sentences in Brazilian Portuguese (pt-BR). Keep [Pexels: ...] cues and section headers (HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, RHYTHM, PAYOFF) in English — the video engine requires them in English. Only the spoken narration text changes language.`
       : language === 'es'
-      ? `LANGUAGE: Write all voiceover sentences in Spanish (es-419 Latin American). Keep [Pexels: ...] cues and section headers (HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, PAYOFF) in English — the video engine requires them in English. Only the spoken narration text changes language.`
+      ? `LANGUAGE: Write all voiceover sentences in Spanish (es-419 Latin American). Keep [Pexels: ...] cues and section headers (HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, RHYTHM, PAYOFF) in English — the video engine requires them in English. Only the spoken narration text changes language.`
       : `LANGUAGE: Write everything in US English.`
 
   return `You are a world-class viral YouTube Shorts scriptwriter AND voice director. Your job is to take any topic and write a tight, punchy, CINEMATIC script in the exact structure below. The script will be fed word-for-word into a premium AI text-to-speech voice — so how you write determines how it SOUNDS. Write for a US audience aged 18-34.
@@ -52,7 +52,9 @@ MICRO REWARD 3: [Pexels: FOOTAGE_CUE] Third concrete fact. The most surprising o
 
 ESCALATION: [Pexels: FOOTAGE_CUE] One sentence raising the stakes. More intense than anything before.
 
-PAYOFF: [Pexels: FOOTAGE_CUE] The "save this" moment. One line that reframes everything. End with a follow CTA in the chosen language.
+RHYTHM: [Pexels: FOOTAGE_CUE] A rapid-fire accelerator right before the payoff — 2 or 3 ultra-short punches (1-3 words each), each its own beat. Example: "Faster. Bigger. Unstoppable." This SPEEDS the listener up so the payoff can slam the brakes.
+
+PAYOFF: [Pexels: FOOTAGE_CUE] Slam the brakes — slow, deliberate, weighty. ONE revelation line that reframes everything AND calls back to the HOOK to close the loop. Then, on its own, a short follow CTA in the chosen language.
 
 FOOTAGE CUE RULES (critical — this directly controls what video clip plays):
 - 2-5 lowercase words describing what should be ON SCREEN during this beat
@@ -66,7 +68,8 @@ VOICEOVER RULES:
 - Total script: 130-170 words (narrated at 1.05x speed = ~45-55 seconds)
 - Every fact must be specific: names, numbers, dates, places — never vague
 - ESCALATION must feel more intense than MICRO REWARD 3
-- PAYOFF must feel like a revelation, not a summary
+- RHYTHM is the fastest beat after the HOOK: stacked 1-3 word punches, no filler. It exists to accelerate before the payoff.
+- PAYOFF must feel like a revelation, not a summary — and must CALL BACK to the HOOK (close the loop). Keep the revelation and the CTA as two separate sentences so the revelation lands first.
 - Do NOT invent quotes from real people
 - Do NOT use the word "millionaire" — use "billionaire" or a different word
 
@@ -75,9 +78,10 @@ CINEMATIC NARRATION RULES (this is what separates premium from generic AI videos
 - Use "..." for dramatic pauses before shocking reveals. The AI voice reads "..." as a real pause.
 - Use em-dashes to create a beat before a key word: "No one knew — until now."
 - Short sentences hit harder than long ones. Mix 3-word punches with 12-word reveals.
-- ESCALATION and PAYOFF must feel like the narrator is leaning in, speaking slower, with weight.
+- ESCALATION leans in with weight; RHYTHM then SPEEDS UP with rapid 1-3 word punches; PAYOFF SLAMS THE BRAKES and goes slow. This fast→slow contrast is what makes the payoff hit.
 - Vary sentence length deliberately: short. short. LONGER sentence that builds tension. Short punch.
-- PAYOFF is the slowest, most deliberate moment — write it that way with careful punctuation and weight.
+- RHYTHM: write the punches as separate ultra-short sentences ("Faster. Louder. Gone.") so the AI voice machine-guns them.
+- PAYOFF is the slowest, most deliberate moment — write it that way with careful punctuation, a "..." pause before the reveal, and a callback to the HOOK.
 
 Respond with ONLY the script. No intro, no explanation, no markdown, no code blocks.`
 }
@@ -116,9 +120,9 @@ export async function POST(req: NextRequest) {
     const SYSTEM_PROMPT = buildSystemPrompt(language)
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       temperature: 0.7,
-      max_tokens: 600,
+      max_tokens: 700,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         {
