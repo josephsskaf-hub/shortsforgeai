@@ -14,9 +14,12 @@ export const maxDuration = 60
 const CINEMATIC_CREDIT_COST = 30
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
-// NOTE #366: Seedance 1.5 Pro submit threw 'fal.ai submit error' in prod -> reverted
-// to Wan (working). Re-investigate Seedance access/params before re-attempting.
-const FAL_MODEL = 'fal-ai/wan-25-preview/text-to-video'
+// #368 — Seedance 1.5 Pro. The earlier 'submit error' (#366) was fal EXHAUSTED
+// BALANCE (403 'User is locked'), NOT a param/access bug — confirmed via the
+// detailed error log. With balance topped up, re-enabling Seedance: better
+// visual quality, ~48% cheaper than Wan ($0.13 vs $0.25/clip @720p no audio),
+// faster (~30-45s/clip). Same { video: { url } } output. Fallback = Wan.
+const FAL_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
 
 // Cap clips at 4 to bound fal cost (~$0.25/clip @ 5s 720p) -> ~$1.00/video.
 function clipCountForDuration(d: number): number {
@@ -35,10 +38,9 @@ async function submitToFal(prompt: string): Promise<string | null> {
         aspect_ratio: '9:16',
         resolution: '720p',
         duration: '5',
-        negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
-        // #365 — disabled: we already send well-crafted prompts, so fal's extra
-        // prompt-expansion LLM step only adds latency with no quality gain.
-        enable_prompt_expansion: false,
+        // #368 — Seedance generates its own dialogue/foley by default; we add our
+        // own TTS narration in compose, so keep AI clips SILENT (also halves cost).
+        generate_audio: false,
       },
     })
     return request_id ?? null
