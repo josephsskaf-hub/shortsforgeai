@@ -296,7 +296,7 @@ export default function GenerateClient() {
   //   copiedSection: which output-card copy button just flashed "Copied!"
   //     ('package' is the top-level one).
   const [fromHome, setFromHome] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(false) // #379 — new-user onboarding nudge
+  const [showFirstShortNudge, setShowFirstShortNudge] = useState(false) // #379 — new-user onboarding nudge
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [loaderTick, setLoaderTick] = useState(0)
@@ -479,7 +479,7 @@ export default function GenerateClient() {
   useEffect(() => {
     const isNewUser = searchParams?.get('signup') === '1' || searchParams?.get('welcome') === '1'
     if (!isNewUser) return
-    setShowWelcome(true)
+    setShowFirstShortNudge(true)
     try {
       const pending = sessionStorage.getItem('pendingVideoPrompt')
       if (pending && pending.trim()) return // a forwarded idea wins
@@ -2372,7 +2372,7 @@ export default function GenerateClient() {
           </div>
 
           {/* #379 — first-Short onboarding nudge for brand-new signups */}
-          {showWelcome && (
+          {showFirstShortNudge && (
             <div
               className="mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
               style={{
