@@ -21,9 +21,11 @@ const CINEMATIC_CREDIT_COST = 30
 // faster (~30-45s/clip). Same { video: { url } } output. Fallback = Wan.
 const FAL_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
 
-// Cap clips at 4 to bound fal cost (~$0.25/clip @ 5s 720p) -> ~$1.00/video.
+// #369 — clip count = ceil(duration/9), capped 2..6. One ~9-10s clip per
+// timeline slot so a 45s video gets 5 distinct clips and a 60s video gets 6
+// (no looping/repetition in compose).
 function clipCountForDuration(d: number): number {
-  return Math.max(2, Math.min(5, Math.ceil(d / 9)))
+  return Math.max(2, Math.min(6, Math.ceil(d / 9)))
 }
 
 async function submitToFal(prompt: string): Promise<string | null> {
@@ -37,9 +39,12 @@ async function submitToFal(prompt: string): Promise<string | null> {
         prompt,
         aspect_ratio: '9:16',
         resolution: '720p',
-        duration: '5',
+        // #369 — 10s clips (was 5s). compose lays each clip in a slot of
+        // ~duration/clipCount (≈9-10s); a 5s clip looped ~2x INSIDE its slot, so
+        // every clip visibly repeated. 10s fills the slot with distinct footage.
+        duration: '10',
         // #368 — Seedance generates its own dialogue/foley by default; we add our
-        // own TTS narration in compose, so keep AI clips SILENT (also halves cost).
+        // own TTS narration in compose, so keep AI clips SILENT.
         generate_audio: false,
       },
     })
@@ -112,7 +117,18 @@ export async function POST(req: NextRequest) {
     let scenes: { description: string; voiceover: string; caption: string; stockSearchQuery?: string }[]
 
     if (verbatim) {
-      scenes = parsedScript.segments.slice(0, 5).map((seg) => ({
+      // #369 — pick `clipCount` beats EVENLY across all segments, ALWAYS
+      // including the first (hook) and last (payoff) so the opening and the
+      // payoff each get their OWN distinct clip. The old slice(0, 5) dropped the
+      // RHYTHM + PAYOFF beats, so the payoff narrated over an escalation clip.
+      const segs = parsedScript.segments
+      const picked =
+        segs.length <= clipCount
+          ? segs
+          : Array.from({ length: clipCount }, (_, i) =>
+              segs[Math.round((i * (segs.length - 1)) / (clipCount - 1))],
+            )
+      scenes = picked.map((seg) => ({
         description: seg.pexelsQuery,
         voiceover: seg.voiceover,
         caption: shortCaptionFromVoiceover(seg.voiceover || seg.pexelsQuery),
