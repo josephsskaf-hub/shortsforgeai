@@ -114,8 +114,10 @@ export default function SignupPage() {
       /* non-blocking */
     }
 
-    // Push #281 — send new users to pricing, not generate (0 credits until paid)
-    router.push('/pricing')
+    // #379 — Activation-first onboarding: new email users go straight to
+    // /generate (3 free credits) to make their first Short, matching the OAuth
+    // flow. ?welcome=1 triggers the pre-filled example + welcome nudge there.
+    router.push('/generate?welcome=1')
     router.refresh()
   }
 

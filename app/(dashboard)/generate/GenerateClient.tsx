@@ -296,6 +296,7 @@ export default function GenerateClient() {
   //   copiedSection: which output-card copy button just flashed "Copied!"
   //     ('package' is the top-level one).
   const [fromHome, setFromHome] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false) // #379 — new-user onboarding nudge
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [loaderTick, setLoaderTick] = useState(0)
@@ -467,6 +468,25 @@ export default function GenerateClient() {
       // sessionStorage can throw in some sandboxes — safe to ignore.
     }
     // Mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // #379 — Activation-first onboarding. Brand-new users arrive here right after
+  // signup (email → ?welcome=1, Google OAuth → ?signup=1). Show a welcome nudge
+  // and pre-fill an example idea so the box is never empty — maximizing who
+  // generates their first Short immediately. Never overwrites a forwarded/typed
+  // prompt (functional setState keeps an existing value).
+  useEffect(() => {
+    const isNewUser = searchParams?.get('signup') === '1' || searchParams?.get('welcome') === '1'
+    if (!isNewUser) return
+    setShowWelcome(true)
+    try {
+      const pending = sessionStorage.getItem('pendingVideoPrompt')
+      if (pending && pending.trim()) return // a forwarded idea wins
+    } catch {
+      /* ignore */
+    }
+    setPrompt((p) => (p && p.trim() ? p : randomTopic()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -2350,6 +2370,24 @@ export default function GenerateClient() {
               ))}
             </div>
           </div>
+
+          {/* #379 — first-Short onboarding nudge for brand-new signups */}
+          {showWelcome && (
+            <div
+              className="mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
+              style={{
+                background: 'rgba(16,185,129,0.10)',
+                border: '1px solid rgba(16,185,129,0.40)',
+                color: '#A7F3D0',
+              }}
+            >
+              <span className="text-base">🎉</span>
+              <span>
+                You&apos;re in! You have <strong>3 free credits</strong> — generate your first Short
+                below 👇 We pre-filled an idea to get you started.
+              </span>
+            </div>
+          )}
 
           <label
             className="block text-xs font-black uppercase tracking-widest mb-2"
