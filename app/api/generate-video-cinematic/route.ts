@@ -18,7 +18,7 @@ const FAL_MODEL = 'fal-ai/wan-25-preview/text-to-video'
 
 // Cap clips at 4 to bound fal cost (~$0.25/clip @ 5s 720p) -> ~$1.00/video.
 function clipCountForDuration(d: number): number {
-  return Math.max(2, Math.min(6, Math.ceil(d / 8)))
+  return Math.max(2, Math.min(5, Math.ceil(d / 9)))
 }
 
 async function submitToFal(prompt: string): Promise<string | null> {
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     let scenes: { description: string; voiceover: string; caption: string; stockSearchQuery?: string }[]
 
     if (verbatim) {
-      scenes = parsedScript.segments.slice(0, 6).map((seg) => ({
+      scenes = parsedScript.segments.slice(0, 5).map((seg) => ({
         description: seg.pexelsQuery,
         voiceover: seg.voiceover,
         caption: shortCaptionFromVoiceover(seg.voiceover || seg.pexelsQuery),
