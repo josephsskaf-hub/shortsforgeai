@@ -405,21 +405,46 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // Push #188 — fire Google Ads conversion when arriving from OAuth signup
-  // (/auth/callback sets ?signup=1 for brand-new accounts).
+  // Push #188 / #378 — Google Ads "Signup - Free Trial" conversion on OAuth
+  // signup (/auth/callback sets ?signup=1 for brand-new accounts). Label fixed
+  // to SXGYCK (was SXGYCk). transaction_id = user id dedups; strip ?signup=1 so
+  // a reload can't refire.
   useEffect(() => {
     if (searchParams.get('signup') !== '1') return
-    try {
-      if (typeof window !== 'undefined' && typeof (window as unknown as { gtag?: Function }).gtag === 'function') {
-        ;(window as unknown as { gtag: Function }).gtag('event', 'conversion', {
-          send_to: 'AW-18156258081/SXGYCk_VlrEcEKGGytFD',
-          value: 1.0,
-          currency: 'BRL',
-        })
+    ;(async () => {
+      try {
+        let uid = ''
+        try {
+          const supabase = createClient()
+          const { data } = await supabase.auth.getUser()
+          uid = data.user?.id ?? ''
+        } catch {
+          /* ignore */
+        }
+        if (typeof window !== 'undefined' && typeof (window as unknown as { gtag?: Function }).gtag === 'function') {
+          ;(window as unknown as { gtag: Function }).gtag('event', 'conversion', {
+            send_to: 'AW-18156258081/SXGYCK_VlrEcEKGGytFD',
+            value: 1.0,
+            currency: 'BRL',
+            transaction_id: 'signup_' + (uid || `oauth_${Date.now()}`),
+          })
+        }
+        const ttq = (window as unknown as { ttq?: { track: Function } }).ttq
+        if (ttq && typeof ttq.track === 'function') {
+          ttq.track('CompleteRegistration', { content_name: 'signup_oauth' })
+        }
+      } catch {
+        /* non-blocking */
+      } finally {
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('signup')
+          router.replace(url.pathname + url.search)
+        } catch {
+          /* ignore */
+        }
       }
-    } catch {
-      /* non-blocking */
-    }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

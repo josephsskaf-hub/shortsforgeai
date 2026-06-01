@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 import { HOME_CHIPS, randomTopic } from '@/lib/curatedTopics'
+import { captureUtmsOnce } from '@/lib/analytics'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
@@ -199,6 +200,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   }, [])
 
   useEffect(() => {
+    captureUtmsOnce() // #377 — first-touch UTM/gclid capture on landing
     trackHomepageEvent('homepage_view')
   }, [])
 
@@ -891,7 +893,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             How it works
           </div>
           <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
-            Three steps to a viral Short
+            Three steps to a faceless Short
           </h2>
         </div>
         {/* Push #231 — connector line behind the steps (desktop only). It
@@ -907,20 +909,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {[
               {
                 icon: '🎯',
-                title: 'Type your topic',
-                body: '"Top 5 richest people ever" — one sentence is enough.',
+                title: 'Enter your idea',
+                body: 'One sentence — a topic, a fact, a hook. That’s all it takes.',
                 accent: '#22D3EE',
               },
               {
                 icon: '🤖',
-                title: 'AI builds script + clips',
-                body: 'Script, voiceover, footage, captions and music — stitched into a vertical MP4.',
+                title: 'AI creates script, voice, captions & B-roll',
+                body: 'Hook, script, narration, captions and B-roll — stitched into a vertical short.',
                 accent: '#3B82F6',
               },
               {
                 icon: '📥',
-                title: 'Download your Short in 35s',
-                body: 'Ready for YouTube Shorts in seconds. Just download and upload.',
+                title: 'Download your Short',
+                body: 'Faceless Short ready for YouTube Shorts, TikTok & Reels. Just download and post.',
                 accent: '#34D399',
               },
             ].map((step, i) => (

@@ -88,13 +88,16 @@ export default function SignupPage() {
       /* non-blocking */
     })
 
-    // Push #188 — fire Google Ads conversion on successful signup
+    // Push #188 / #378 — Google Ads "Signup - Free Trial" conversion on success.
+    // Label fixed to SXGYCK (was SXGYCk — case mismatch = never registered →
+    // "Inativo"). transaction_id = Supabase user id dedups across reloads.
     try {
       if (typeof window !== 'undefined' && typeof (window as unknown as { gtag?: Function }).gtag === 'function') {
         ;(window as unknown as { gtag: Function }).gtag('event', 'conversion', {
-          send_to: 'AW-18156258081/SXGYCk_VlrEcEKGGytFD',
+          send_to: 'AW-18156258081/SXGYCK_VlrEcEKGGytFD',
           value: 1.0,
           currency: 'BRL',
+          transaction_id: 'signup_' + (data.user?.id ?? ''),
         })
       }
     } catch {
