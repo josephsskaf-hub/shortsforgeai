@@ -4600,7 +4600,7 @@ function ModeSelector({
   const proHasToken = isPro && cinematicTokens > 0
 
   const fastFeatures = ['Premium visual library', 'AI voice synthesis', 'Ready in ~60 seconds']
-  const aiFeatures = ['fal.ai Wan 2.5 AI video', 'Real AI-generated scenes', 'Full AI-generated visuals']
+  const aiFeatures = ['fal.ai Seedance 1.5 AI video', 'Real AI-generated scenes', 'Full AI-generated visuals']
   const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', 'Premium AI render']
 
   return (
@@ -4668,7 +4668,7 @@ function ModeSelector({
           </ul>
         </button>
 
-        {/* AI Generated — Wan 2.5 (fal-ai/wan-25-preview/text-to-video), 9:16, 30 credits. */}
+        {/* AI Generated — Seedance 1.5 Pro (fal-ai/bytedance/seedance/v1.5/pro/text-to-video), 9:16, 30 credits. */}
         <button
           type="button"
           onClick={() => setMode('cinematic_ai')}
