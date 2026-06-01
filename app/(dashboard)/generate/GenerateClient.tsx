@@ -4611,7 +4611,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Fast Mode — always available */}
         <button
           type="button"
@@ -4724,7 +4724,8 @@ function ModeSelector({
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
             Basic, AND Pro-with-0-tokens (resets monthly). */}
-        {proHasToken ? (
+        {/* #372 — Cinematic (Runway) mode hidden per request; kept for later. */}
+        {false && (proHasToken ? (
           <button
             type="button"
             onClick={() => setMode('cinematic')}
@@ -4861,7 +4862,7 @@ function ModeSelector({
               Unlock with Pro →
             </a>
           </div>
-        )}
+        ))}
       </div>
     </div>
   )
