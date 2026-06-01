@@ -966,36 +966,37 @@ export default function GenerateClient() {
     return /\bHOOK\b/i.test(text) && (/\bMICRO REWARD\b/i.test(text) || /\bPAYOFF\b/i.test(text))
   }
 
-  // Push #313 — strip structural markers from the script preview so users
-  // never see "HOOK (0-2s):", "MICRO REWARD 1:", "[Pexels: xxx]" etc.
-  // The full structured prompt is still stored in state for the API calls —
-  // this function is display-only.
+  // Push #313 / #364 — turn the structured script into a clean, readable preview.
+  // Each beat is one line: "HOOK (0-2s): [Pexels: cue] voiceover". We STRIP the
+  // section-header label AND the [Pexels: ...] footage cue, but KEEP the voiceover
+  // sentence. (The old version dropped the whole line — and since header + voiceover
+  // share one line, it erased the entire script, showing an empty preview box.)
+  // Display-only: the full marked script stays in structuredScriptRef for the API.
   function cleanScriptPreview(text: string): string {
+    const HEADER_LABEL =
+      /^\s*(HOOK|GANCHO|MICRO REWARD|MICRO RECOMPENSA|ESCALATION|ESCALADA|RHYTHM|RITMO|PAYOFF|PAGAMENTO|RECOMPENSA FINAL)\b\s*\d*\s*(\([^)]*\))?\s*[:\-–]?\s*/i
     return text
       .split('\n')
-      .filter(line => {
-        const t = line.trim()
+      .map(line => {
+        let t = line.trim()
+        if (!t) return ''
+        // Remove a leading section-header label, keeping the voiceover after it.
+        t = t.replace(HEADER_LABEL, '')
+        // Remove every bracketed footage cue / marker ([Pexels: ...], [Scene 2], ...).
+        t = t.replace(/\[[^\]]*\]/g, '').trim()
+        return t
+      })
+      .filter(t => {
         if (!t) return false
-        // Drop section headers: HOOK, MICRO REWARD, ESCALATION, PAYOFF (EN + PT)
-        if (/^(HOOK|GANCHO)[\s:(]/i.test(t)) return false
-        if (/^(MICRO REWARD|MICRO RECOMPENSA)\s+\d/i.test(t)) return false
-        if (/^(ESCALATION|ESCALADA)[\s:]/i.test(t)) return false
-        if (/^(RHYTHM|RITMO)[\s:]/i.test(t)) return false
-        if (/^(PAYOFF|PAGAMENTO)[\s:]/i.test(t)) return false
-        // Drop YouTube Short format header lines
+        // Drop YouTube Short format spec lines.
         if (/\b9\s*:\s*16\b|youtube\s+shorts?\s+format/i.test(t)) return false
-        // Drop bullet/editing notes lines starting with "- "
+        // Drop bullet / editing-note lines.
         if (/^\s*-\s+(Total|ZERO|Cut|Hold|One legend|Voice|Editing)/i.test(t)) return false
-        // Drop lines that are ALL CAPS with no lowercase (structural stage directions)
+        // Drop residual ALL-CAPS stage directions that have no real sentence.
         const noSpecial = t.replace(/[^a-zA-Z]/g, '')
         if (noSpecial.length > 0 && noSpecial === noSpecial.toUpperCase() && noSpecial.length < 40) return false
         return true
       })
-      .map(line =>
-        // Remove [Pexels: xxx] markers inline
-        line.replace(/\[\s*pexels\s*[:\-–]?\s*[^\]]+\]/gi, '').trim()
-      )
-      .filter(Boolean)
       .join('\n\n')
   }
 
