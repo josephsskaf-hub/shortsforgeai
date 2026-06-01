@@ -33,8 +33,8 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   pro: {
     name: 'ShortsForgeAI — Pro',
-    description: '100 Fast Mode videos / month + 1 Cinematic (Runway AI) video / month',
-    credits: 100,
+    description: '150 credits / month: up to 5 AI Generated videos (Seedance) or 150 Fast Mode videos',
+    credits: 150,
   },
 }
 

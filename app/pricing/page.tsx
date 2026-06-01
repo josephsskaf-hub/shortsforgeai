@@ -37,8 +37,8 @@ const FAQS: { q: string; a: string }[] = [
     a: 'Fast Mode uses our AI to write, voice, and edit with curated stock footage and is included in all plans. AI Generated Mode uses fal.ai to generate fully AI-rendered custom scenes — available on Pro only.',
   },
   {
-    q: 'What counts as 1 credit?',
-    a: 'Each video you generate uses 1 credit, whether it’s 15 seconds or 60 seconds.',
+    q: 'How do credits work with AI Generated videos?',
+    a: 'A Fast Mode video uses 1 credit. An AI Generated video (Seedance) uses 30 credits, because it renders 5–6 real AI video clips. Pro includes 150 credits/month — that’s up to 5 AI Generated videos, or 150 Fast Mode videos, or any mix.',
   },
 ]
 
@@ -54,9 +54,10 @@ function buildPricing() {
       name: 'Pro',
       price: '$9.90',
       priceSub: '/ month',
-      tagline: 'Built for daily posting — 100 renders every month.',
+      tagline: 'AI video unlocked — up to 5 AI Generated Shorts or 150 Fast/month.',
       features: [
-        '100 Fast Mode renders/month',
+        '✨ Up to 5 AI Generated videos/month (Seedance)',
+        'or 150 Fast Mode videos — mix freely',
         'AI writes script + voiceover',
         'Advanced generation controls',
         'Auto-captions pipeline',

@@ -1,6 +1,6 @@
 // Push #191 — updated pricing.
 // Basic = $4.90/month  (50 Fast Mode videos)
-// Pro   = $9.90/month (100 Fast Mode videos + 1 Cinematic/month)
+// Pro   = $9.90/month (150 credits = up to 5 AI Generated videos OR 150 Fast)
 //
 // All checkout buttons on every surface link to /api/stripe/checkout?tier=...
 // The server route handles currency detection (BRL for BR users) and creates
@@ -59,7 +59,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     price: 9.90,
     priceLabel: '$9.90',
     periodLabel: '/ month',
-    credits: 100,
+    credits: 150,
     cta: 'Deploy Full Pipeline',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,

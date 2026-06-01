@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
         // can experience the product before paying; full credits are granted
         // by the invoice.payment_succeeded handler on Day 4 first charge.
         const isTrial = session.payment_status === 'no_payment_required'
-        const planCredits = tier === 'pro' ? 100 : tier === 'starter' ? 15 : 50
+        const planCredits = tier === 'pro' ? 150 : tier === 'starter' ? 15 : 50
         const creditsToGrant = isTrial ? 5 : planCredits
 
         const { data: currentProfile } = await supabase
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
 
         const renewalUserId = subscription.metadata?.supabase_user_id
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : subscription.metadata?.tier === 'starter' ? 'starter' : 'basic'
-        const renewalCredits = renewalTier === 'pro' ? 100 : renewalTier === 'starter' ? 15 : 50
+        const renewalCredits = renewalTier === 'pro' ? 150 : renewalTier === 'starter' ? 15 : 50
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,
