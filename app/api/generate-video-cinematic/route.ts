@@ -144,15 +144,24 @@ export async function POST(req: NextRequest) {
       }))
     }
 
-    // Submit all scenes to fal.ai in parallel
-    const falRequestIds = await Promise.all(
-      scenes.map((scene) => {
-        // Build a cinematic prompt for fal.ai from the scene description + voiceover
-        const visualPrompt = scene.stockSearchQuery || scene.description
-        const cinematic = `${visualPrompt}, cinematic 9:16 vertical video, YouTube Shorts style, high quality`
-        return submitToFal(cinematic)
-      })
-    )
+    // #370 — Submit clips SEQUENTIALLY with a small stagger (was Promise.all,
+    // all at once). Firing 5-6 submits in the same instant tripped a fal burst/
+    // rate limit that 403'd exactly one clip every time ("submitted 4/5") even
+    // with healthy balance + concurrency 10 — which produced the repeated-clip
+    // videos. Staggering lets every clip enqueue. One retry per clip covers a
+    // transient reject.
+    const falRequestIds: (string | null)[] = []
+    for (const scene of scenes) {
+      const visualPrompt = scene.stockSearchQuery || scene.description
+      const cinematic = `${visualPrompt}, cinematic 9:16 vertical video, YouTube Shorts style, high quality`
+      let id = await submitToFal(cinematic)
+      if (!id) {
+        await new Promise((r) => setTimeout(r, 800))
+        id = await submitToFal(cinematic)
+      }
+      falRequestIds.push(id)
+      await new Promise((r) => setTimeout(r, 450))
+    }
 
     // Check if at least one submission succeeded
     const validIds = falRequestIds.filter((id): id is string => id !== null)
