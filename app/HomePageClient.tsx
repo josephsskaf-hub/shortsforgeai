@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
+import { HOME_CHIPS, randomTopic } from '@/lib/curatedTopics'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
@@ -701,7 +702,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <textarea
             value={prompt}
             onChange={(e) => setPromptText(e.target.value)}
-            placeholder={'Type your video topic… e.g. "10 facts about Elon Musk"'}
+            placeholder={'Type any topic — e.g. "The mystery of the Bermuda Triangle" or "How Jeff Bezos starts his day"'}
             maxLength={5000}
             rows={7}
             className="w-full flex-1 resize-none rounded-xl bg-transparent px-3 py-2 text-[16px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none"
@@ -715,6 +716,29 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate My Short →'}
           </button>
         </form>
+
+        {/* #374 — Task 2: kill blank-canvas paralysis. Clickable example chips +
+            a zero-cost "Surprise me" that fills the box from a curated viral-topic
+            bank. The textarea stays free for any custom topic. */}
+        <div className="mx-auto mt-3 flex w-full max-w-[760px] flex-wrap items-center justify-center gap-2">
+          {HOME_CHIPS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => { setPromptText(c.value); trackHomepageEvent('hero_chip_click') }}
+              className="rounded-full border border-white/[0.12] bg-[#0B1120] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:text-white"
+            >
+              {c.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setPromptText(randomTopic(prompt)); trackHomepageEvent('hero_surprise_me') }}
+            className="rounded-full border border-cyan-400/50 bg-cyan-400/10 px-3.5 py-2 text-[13px] font-bold text-cyan-300 transition hover:bg-cyan-400/20"
+          >
+            🎲 Surprise me
+          </button>
+        </div>
 
         {/* Push #116 — three mini-testimonials and a creator-community
             line right after the hero CTA. The card shapes mirror the

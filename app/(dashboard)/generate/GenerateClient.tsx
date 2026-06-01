@@ -7,6 +7,7 @@ import PricingCards from '@/components/PricingCards'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import type { BrollPlan } from '@/lib/broll/types'
+import { randomTopic } from '@/lib/curatedTopics'
 import VisualDirector from '@/components/video/VisualDirector'
 
 interface TaskHandle {
@@ -178,41 +179,49 @@ export default function GenerateClient() {
       '5 morning habits Jeff Bezos used before Amazon hit $1 trillion',
       'The one rule Warren Buffett follows that 99% of investors ignore',
       'What Elon Musk eats in a day to run 6 companies',
+      'Why billionaires wear the same outfit every day',
     ],
     mystery: [
       'The radio signal from deep space that repeats every 16 days',
       'The Mary Celeste — a ghost ship found in 1872 with no crew',
       'The Dyatlov Pass incident: 9 hikers dead, still unexplained',
+      'The Voynich manuscript no one has ever been able to read',
     ],
     country: [
       'Why Norway pays you $2,000 a month just to live there',
       'Why Iceland has no mosquitoes',
       'The hidden country between Russia and China almost no one visits',
+      'Why Switzerland has a nuclear bunker for every citizen',
     ],
     money: [
       'The credit card float trick that buys you 45 free days',
       'The 10-second decision rule billionaires use to save millions',
       'Why your savings account is quietly losing you money',
+      'The Rule of 72 — double your money without a calculator',
     ],
     learning: [
       'The Pareto Principle — how 20% of effort gives 80% of results',
       'The Feynman Technique to learn anything twice as fast',
       'Why spaced repetition beats cramming every time',
+      'The 2-minute rule that kills procrastination instantly',
     ],
     history: [
       'The 1518 dancing plague that made 400 people dance to death',
       'Why Roman concrete still stands stronger after 2,000 years',
       'The Library of Alexandria — how humanity lost a million books',
+      'The Antikythera mechanism: a 2,000-year-old computer',
     ],
     science: [
       'Why time runs faster on a mountain than at sea level',
       'The tiny animal that can survive the vacuum of space',
       'What happens to the human body in the first minute on Mars',
+      'Why you can’t fold a piece of paper more than 7 times',
     ],
     space: [
       'There is a planet made entirely of diamond, 40 light-years away',
       'Why a day on Venus is longer than its entire year',
       'The sound a black hole makes, recorded by NASA',
+      'What happens to the human body in the first minute on Mars',
     ],
   }
   const [phase, setPhase] = useState<Phase>('idle')
@@ -2334,7 +2343,7 @@ export default function GenerateClient() {
               // helper line no longer makes sense — clear the breadcrumb.
               if (fromHome) setFromHome(false)
             }}
-            placeholder="Drop your topic — we'll turn it into an addictive micro-knowledge Short with real facts, escalation, and a satisfying payoff."
+            placeholder={'Type any topic — e.g. "The mystery of the Bermuda Triangle" or "How Jeff Bezos starts his day"'}
             maxLength={5000}
             disabled={phase === 'analyzing'}
             // Push #052 — Tailwind responsive min-h so the textarea stays
@@ -2378,6 +2387,20 @@ export default function GenerateClient() {
                   {ex}
                 </button>
               ))}
+              <button
+                type="button"
+                disabled={phase === 'analyzing'}
+                onClick={() => { setPrompt(randomTopic(prompt)); structuredScriptRef.current = null; if (fromHome) setFromHome(false) }}
+                className="text-left px-3 py-2 rounded-lg text-xs font-bold transition-all"
+                style={{
+                  background: 'rgba(34,211,238,0.10)',
+                  border: '1px solid rgba(34,211,238,0.45)',
+                  color: '#67e8f9',
+                  cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                🎲 Surprise me
+              </button>
             </div>
           </div>
 
