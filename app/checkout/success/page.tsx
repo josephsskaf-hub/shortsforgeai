@@ -45,6 +45,24 @@ export default function CheckoutSuccessPage() {
     } catch {
       // silent — never break the page
     }
+
+    // #375 — TikTok Pixel: Purchase conversion (value + currency from Stripe URL params)
+    try {
+      const ttq = (window as Window & { ttq?: { track: Function } }).ttq
+      if (ttq && typeof ttq.track === 'function') {
+        const sp = new URLSearchParams(window.location.search)
+        const currency = (sp.get('currency') ?? 'usd').toUpperCase()
+        const value = Number(sp.get('amount') ?? 490) / 100
+        ttq.track('Purchase', {
+          value,
+          currency,
+          content_type: 'product',
+          content_name: 'ShortsForgeAI subscription',
+        })
+      }
+    } catch {
+      // silent — never break the page
+    }
   }, [])
 
   useEffect(() => {

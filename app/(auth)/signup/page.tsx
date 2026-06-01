@@ -101,6 +101,16 @@ export default function SignupPage() {
       /* non-blocking */
     }
 
+    // #375 — TikTok Pixel: CompleteRegistration on successful signup
+    try {
+      const ttq = (window as unknown as { ttq?: { track: Function } }).ttq
+      if (typeof window !== 'undefined' && ttq && typeof ttq.track === 'function') {
+        ttq.track('CompleteRegistration', { content_name: 'signup' })
+      }
+    } catch {
+      /* non-blocking */
+    }
+
     // Push #281 — send new users to pricing, not generate (0 credits until paid)
     router.push('/pricing')
     router.refresh()
