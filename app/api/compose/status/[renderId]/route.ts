@@ -428,4 +428,21 @@ export async function GET(
     if (state.status === 'failed' || state.status === 'cancelled') {
       return NextResponse.json({
         phase: 'failed',
-        error: st
+        error: state.error ?? 'Render failed.',
+        progress: 0,
+      })
+    }
+
+    return NextResponse.json({
+      phase: 'composing',
+      progress: state.progress,
+    })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[compose/status] unexpected error:', msg)
+    return NextResponse.json(
+      { error: 'Status lookup failed. Please retry.' },
+      { status: 500 }
+    )
+  }
+}
