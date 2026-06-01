@@ -34,7 +34,9 @@ async function submitToFal(prompt: string): Promise<string | null> {
         resolution: '720p',
         duration: '5',
         negative_prompt: 'text, watermark, logo, blurry, low quality, duplicate, bad anatomy',
-        enable_prompt_expansion: true,
+        // #365 — disabled: we already send well-crafted prompts, so fal's extra
+        // prompt-expansion LLM step only adds latency with no quality gain.
+        enable_prompt_expansion: false,
       },
     })
     return request_id ?? null
