@@ -28,37 +28,42 @@ export default function CheckoutSuccessPage() {
       // ignore
     }
 
+    // #376 — read Stripe checkout_session_id from the URL and use it as the
+    // transaction_id so Google Ads + TikTok DEDUPLICATE the purchase if the
+    // user refreshes the success page (same session_id = same conversion).
+    const sp = new URLSearchParams(window.location.search)
+    const sessionId = sp.get('session_id') || ''
+    const purchaseCurrency = (sp.get('currency') ?? 'usd').toUpperCase()
+    const purchaseValue = Number(sp.get('amount') ?? 490) / 100
+
     // Google Ads purchase conversion — fires once per checkout session.
     // currency and amount come from the Stripe checkout route via URL params
     // so the value is always correct (USD for international, BRL for Brazil).
+    // transaction_id (Stripe session id) makes Google dedup refreshes.
     try {
       if (typeof (window as Window & { gtag?: Function }).gtag === 'function') {
-        const sp = new URLSearchParams(window.location.search)
-        const gtagCurrency = (sp.get('currency') ?? 'usd').toUpperCase()
-        const gtagAmount   = Number(sp.get('amount') ?? 490) / 100
         ;(window as Window & { gtag: Function }).gtag('event', 'conversion', {
           send_to: 'AW-18156258081/NL4bCKXEwa4cEKGGytFD',
-          value: gtagAmount,
-          currency: gtagCurrency,
+          value: purchaseValue,
+          currency: purchaseCurrency,
+          transaction_id: sessionId,
         })
       }
     } catch {
       // silent — never break the page
     }
 
-    // #375 — TikTok Pixel: Purchase conversion (value + currency from Stripe URL params)
+    // #375/#376 — TikTok Pixel: Purchase conversion. event_id = Stripe session id
+    // so TikTok dedups refreshes (and matches server events if added later).
     try {
       const ttq = (window as Window & { ttq?: { track: Function } }).ttq
       if (ttq && typeof ttq.track === 'function') {
-        const sp = new URLSearchParams(window.location.search)
-        const currency = (sp.get('currency') ?? 'usd').toUpperCase()
-        const value = Number(sp.get('amount') ?? 490) / 100
         ttq.track('Purchase', {
-          value,
-          currency,
+          value: purchaseValue,
+          currency: purchaseCurrency,
           content_type: 'product',
           content_name: 'ShortsForgeAI subscription',
-        })
+        }, { event_id: sessionId })
       }
     } catch {
       // silent — never break the page

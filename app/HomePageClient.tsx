@@ -641,17 +641,17 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <section className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-balance text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl text-[#F1F5F9]">
-          The Smart AI Tool That Turns Any Idea Into a{' '}
+          Create{' '}
           <span
             className="text-[#22D3EE]"
             style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
           >
-            Viral Short
+            Faceless YouTube Shorts
           </span>{' '}
-          — in 60 Seconds
+          From One Idea
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          AI writes the script, finds the footage, adds captions and music — ready for YouTube, TikTok &amp; Reels. You just download and post.
+          ShortAI generates the hook, script, voice, captions and B-roll so you can create short-form videos for YouTube, TikTok &amp; Reels faster. You just download and post.
         </p>
 
         {/* Push #116 — live cumulative counter directly under the
@@ -678,7 +678,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             disabled={submitting}
             className="animate-btn-pulse w-full sm:w-auto rounded-xl bg-[#10B981] px-9 py-4 text-base sm:text-lg font-extrabold text-white shadow-[0_10px_32px_rgba(16,185,129,.45)] transition hover:bg-[#059669] hover:shadow-[0_12px_40px_rgba(16,185,129,.55)] disabled:opacity-60"
           >
-            {submitting ? 'Loading…' : 'Start Generating Shorts →'}
+            {submitting ? 'Loading…' : 'Generate My First Short →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
             From $4.90/month · 7-day money-back guarantee · Cancel anytime
