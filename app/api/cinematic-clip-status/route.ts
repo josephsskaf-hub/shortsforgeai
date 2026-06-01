@@ -6,8 +6,7 @@ import { fal } from '@fal-ai/client'
 
 export const dynamic = 'force-dynamic'
 
-// #366 — must match generate-video-cinematic FAL_MODEL (Seedance 1.5 Pro).
-const FAL_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+const FAL_MODEL = 'fal-ai/wan-25-preview/text-to-video'
 
 type ClipStatus = {
   id: string | null
