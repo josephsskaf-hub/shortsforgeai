@@ -168,8 +168,15 @@ export async function GET(
     }
 
     const qParam = (req.nextUrl.searchParams.get('quality') ?? 'basic_ai').toString()
+    // Push #361 — REVENUE-LEAK FIX: 'cinematic_ai' was missing from this
+    // whitelist, so every AI Generated render silently collapsed to 'basic_ai'
+    // → quality_mode=basic_ai, credits_used=15, and shouldDeductCredits=false
+    // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
+    // and the fast||cinematic_ai deduction path both fire correctly.
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' ? qParam : 'basic_ai'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai'
+        ? (qParam as Quality)
+        : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
 
     // Push #050 — topic + duration travel as query params so we can record
@@ -421,21 +428,4 @@ export async function GET(
     if (state.status === 'failed' || state.status === 'cancelled') {
       return NextResponse.json({
         phase: 'failed',
-        error: state.error ?? 'Render failed.',
-        progress: 0,
-      })
-    }
-
-    return NextResponse.json({
-      phase: 'composing',
-      progress: state.progress,
-    })
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[compose/status] unexpected error:', msg)
-    return NextResponse.json(
-      { error: 'Status lookup failed. Please retry.' },
-      { status: 500 }
-    )
-  }
-}
+        error: st
