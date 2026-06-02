@@ -2254,14 +2254,14 @@ export default function GenerateClient() {
                   color: '#3B82F6',
                 }}
               >
-                {showStep1 ? 'Step 1 — Your Idea' : showScriptPreview ? 'Step 2 — Review Script' : (showBrollPlanning || showVisualDirector) ? 'Step 3 — Visual Director' : showStep2 ? 'Step 3 — Creative Brief' : 'Step 4 — Generate'}
+                {showStep1 ? 'Step 1 · Your idea' : showScriptPreview ? 'Step 2 · Review' : (showBrollPlanning || showVisualDirector) ? 'Step 3 · Visuals' : showStep2 ? 'Step 3 · Brief' : 'Step 4 · Generate'}
               </span>
             </div>
             <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
-              {showStep1 ? 'Create Your Short ⚡' : showScriptPreview ? '✍️ Your Script is Ready' : showBrollPlanning ? '🎬 Planning Visuals…' : showVisualDirector ? '🎬 Visual Director' : '🎬 Generate a Real AI Short'}
+              {showStep1 ? 'Create your Short' : showScriptPreview ? '✍️ Your Script is Ready' : showBrollPlanning ? '🎬 Planning Visuals…' : showVisualDirector ? '🎬 Visual Director' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-              {showStep1 && 'Type any topic → AI writes, voices & edits your Short in ~60 seconds'}
+              {showStep1 && 'One idea in. A ready-to-post Short out — in about a minute.'}
               {showScriptPreview && 'Review your script before we generate the video. Edit anything you want.'}
               {showBrollPlanning && 'AI Visual Director is planning your scenes…'}
               {showVisualDirector && 'Review and direct every scene before rendering.'}
@@ -2464,7 +2464,7 @@ export default function GenerateClient() {
               prompt for the selected vertical and auto-triggers analysis. */}
           <div className="mb-3">
             <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
-              1 · Pick a niche
+              1 · Choose a category
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
@@ -2508,8 +2508,7 @@ export default function GenerateClient() {
             >
               <span className="text-base">🎉</span>
               <span>
-                You&apos;re in! You have <strong>3 free credits</strong> — generate your first Short
-                below 👇 We pre-filled an idea to get you started.
+                You&apos;re in. You&apos;ve got <strong>3 free Shorts</strong> plus <strong>1 premium AI video</strong> — we&apos;ve loaded an idea below to start.
               </span>
             </div>
           )}
@@ -2715,19 +2714,19 @@ export default function GenerateClient() {
               </p>
               {credits !== null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--muted2)', fontWeight: 700 }}>
-                  You have {credits} credit{credits === 1 ? '' : 's'} · ~60s
+                  {credits} credit{credits === 1 ? '' : 's'} left · ~60s
                 </p>
               )}
               {/* Push #087 — credit-balance awareness right under the CTA.
                   Three states: low (<5), empty (=0), and silent (healthy). */}
               {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
                 <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
-                  No credits left. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
+                  Out of credits. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
                 </p>
               )}
               {credits !== null && credits > 0 && credits < 5 && (
                 <p className="text-xs mt-1" style={{ color: '#fbbf24', fontWeight: 700 }}>
-                  ⚠ Low credits — {credits} remaining. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Top up →</a>
+                  Only {credits} left. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Top up →</a>
                 </p>
               )}
             </div>
@@ -2759,7 +2758,7 @@ export default function GenerateClient() {
                   Analyzing…
                 </>
               ) : (
-                'Generate Short'
+                'Create my Short'
               )}
             </button>
           </div>
@@ -2852,7 +2851,7 @@ export default function GenerateClient() {
                 boxShadow: '0 4px 16px rgba(59,130,246,.35)',
               }}
             >
-              Looks good — Generate Video ⚡
+              Looks good — create my Short
             </button>
             <button
               type="button"
@@ -4331,11 +4330,11 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
             display: 'inline-block',
           }}
         />
-        You have {credits} credit{credits === 1 ? '' : 's'} left
+        {credits} credit{credits === 1 ? '' : 's'} left
       </div>
       {low && (
         <p className="text-[11px] mt-1.5" style={{ color: '#22D3EE', fontWeight: 600 }}>
-          Low credits. <a href="/pricing" style={{ color: '#22D3EE', textDecoration: 'underline' }}>Upgrade to keep generating.</a>
+          Running low. <a href="/pricing" style={{ color: '#22D3EE', textDecoration: 'underline' }}>Upgrade to keep creating.</a>
         </p>
       )}
     </div>
@@ -5615,7 +5614,7 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
-        🎉 Welcome! You have 1 free video. Generate your first Short now!
+        🎉 Welcome — your first AI Short is free. Create it now.
       </span>
       <button
         type="button"
