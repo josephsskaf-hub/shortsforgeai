@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
+import { trackSignupSource } from '@/lib/analytics'
 
 type Strength = { level: 0 | 1 | 2 | 3 | 4; label: string; color: string }
 
@@ -113,6 +114,10 @@ export default function SignupPage() {
     } catch {
       /* non-blocking */
     }
+
+    // #383 — record signup attribution (gclid / utm_source / country). Fire-and-
+    // forget; never awaited, never throws — cannot block or break the signup.
+    trackSignupSource()
 
     // #379 — Activation-first onboarding: new email users go straight to
     // /generate (3 free credits) to make their first Short, matching the OAuth

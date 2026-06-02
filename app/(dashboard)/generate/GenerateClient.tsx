@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import PricingCards from '@/components/PricingCards'
 import PostVideoPaywall from '@/components/PostVideoPaywall'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import { trackSignupSource } from '@/lib/analytics'
 import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
@@ -435,6 +436,9 @@ export default function GenerateClient() {
         if (ttq && typeof ttq.track === 'function') {
           ttq.track('CompleteRegistration', { content_name: 'signup_oauth' })
         }
+        // #383 — record signup attribution (gclid / utm_source / country) for
+        // OAuth signups. Fire-and-forget; never throws, can't break the flow.
+        trackSignupSource()
       } catch {
         /* non-blocking */
       } finally {

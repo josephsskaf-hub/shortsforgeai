@@ -36,6 +36,31 @@ function storedUtms(): Record<string, string> {
   }
 }
 
+// #383 — persist first-touch signup attribution to the user's profile row so
+// we can measure how much of the US Ads spend becomes a real signup.
+// Sends the first-touch gclid + utm_source (from sessionStorage); the server
+// route adds signup_country from Vercel's IP header. Fire-and-forget: NEVER
+// awaited, NEVER throws — a failure here can never block or break signup.
+export function trackSignupSource(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const utms = storedUtms()
+    fetch('/api/track-signup-source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gclid: utms.gclid || null,
+        utm_source: utms.utm_source || null,
+      }),
+      keepalive: true,
+    }).catch(() => {
+      /* silent — attribution must never break signup */
+    })
+  } catch {
+    /* silent — attribution must never break signup */
+  }
+}
+
 export async function trackEvent(
   event_name: string,
   metadata?: Record<string, unknown>,
