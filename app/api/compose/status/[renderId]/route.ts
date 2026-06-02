@@ -208,6 +208,7 @@ export async function GET(
     if (state.status === 'succeeded' && state.url) {
       let creditsDeducted = false
       let creditsRemaining: number | null = null
+      let wasFreeAiTrial = false // #384 — true when this render used the free AI trial (0 credits charged)
       const cost = creditCostFor(quality)
 
       // Push #230 — URL returned to the client. Defaults to the Creatomate
@@ -291,6 +292,7 @@ export async function GET(
                 // We won the claim: free trial granted, credits untouched.
                 creditsDeducted = true
                 creditsRemaining = current
+                wasFreeAiTrial = true
                 console.log(`[compose/status] FREE AI trial consumed for user ${user.id.slice(0, 8)} — credits untouched (${current})`)
               } else {
                 // Lost the race (flag already true) → fall back to normal charge.
@@ -394,7 +396,8 @@ export async function GET(
             quality,
             duration,
             topic,
-            creditsUsed: cost,
+            // #384 — free AI trial charges 0 credits; reflect that in history.
+            creditsUsed: wasFreeAiTrial ? 0 : cost,
           })
           console.log('[history] persist result:', JSON.stringify(result))
         } catch (e) {

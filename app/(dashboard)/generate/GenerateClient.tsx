@@ -290,28 +290,8 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // #384 — load the free-AI-trial flag from the profile (RLS lets a user read
-  // their own row). Used only for labeling; the server is the source of truth.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data } = await supabase
-          .from('profiles')
-          .select('free_ai_generate_used')
-          .eq('id', user.id)
-          .single()
-        if (!cancelled && data) setFreeAiUsed(data.free_ai_generate_used === true)
-      } catch {
-        /* silent — label just won't show */
-      }
-    })()
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // #384 — freeAiUsed is loaded from /api/credits (server-side, cookie auth —
+  // reliable), set inside the credits effect below.
 
   const [phase, setPhase] = useState<Phase>('idle')
   // UX-1 instrumentation — log EVERY phase transition (catches regressions like
@@ -612,6 +592,8 @@ export default function GenerateClient() {
         const data = await res.json()
         if (!cancelled) {
           setCredits(typeof data.credits === 'number' ? data.credits : 0)
+          // #384 — refresh free-AI-trial availability from the same source.
+          if (typeof data.freeAiUsed === 'boolean') setFreeAiUsed(data.freeAiUsed)
         }
       } catch {
         if (!cancelled) setCredits(null)
