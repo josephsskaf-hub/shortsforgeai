@@ -2673,6 +2673,8 @@ export default function GenerateClient() {
             setMode={setMode}
             isPro={planTier === 'pro'}
             cinematicTokens={cinematicTokens}
+            credits={credits}
+            freeAiUsed={freeAiUsed}
           />
           )}
 
@@ -4874,11 +4876,15 @@ function ModeSelector({
   setMode,
   isPro,
   cinematicTokens,
+  credits,
+  freeAiUsed,
 }: {
   mode: GenerationMode
   setMode: (m: GenerationMode) => void
   isPro: boolean
   cinematicTokens: number
+  credits: number | null
+  freeAiUsed: boolean | null
 }) {
   const proHasToken = isPro && cinematicTokens > 0
 
