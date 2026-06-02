@@ -140,6 +140,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // hammer the credits route during the unauth flash.
   const [credits, setCredits] = useState<number | null>(null)
   const [checkoutTier, setCheckoutTier] = useState<'starter' | 'basic' | 'pro' | null>(null)
+  const [pricingBilling, setPricingBilling] = useState<'monthly' | 'annual'>('monthly') // #382 — home pricing monthly/annual toggle
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   // Push #171 — show a friendly "already subscribed" banner instead of a
   // red error when the API blocks a duplicate purchase attempt.
@@ -441,7 +442,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       return
     }
     setCheckoutTier(tier)
-    window.location.href = `/api/stripe/checkout?tier=${tier}`
+    const billingParam = pricingBilling === 'annual' ? '&billing=annual' : ''
+    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}`
   }
 
   return (
@@ -485,7 +487,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">🔥 Viral Now</Link>
-            <a href="#pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
+            <a href="/pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
           {/* Right side — desktop. Push #079: guest = Sign In (ghost) +
@@ -596,7 +598,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
               <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">🔥 Viral Now</Link>
-              <a onClick={() => setNavOpen(false)} href="#pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
+              <a onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />
 
@@ -1023,6 +1025,32 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Three plans, starting at $2.90/month. Under $0.20 per Short — less than a cup of coffee for a viral video.
           </p>
         </div>
+        {/* #382 — monthly / annual billing toggle (mirrors /pricing) */}
+        <div className="mb-7 flex items-center justify-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+            <button
+              type="button"
+              onClick={() => setPricingBilling('monthly')}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
+                pricingBilling === 'monthly' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setPricingBilling('annual')}
+              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
+                pricingBilling === 'annual' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Annual
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300">
+                2 MONTHS FREE
+              </span>
+            </button>
+          </div>
+        </div>
         {/* Push #339 — 3-col grid: Spark + Basic + Pro */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:max-w-4xl md:mx-auto">
           {PLAN_LIST.map((plan) => {
@@ -1076,11 +1104,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#F1F5F9]">
-                    {plan.priceLabel}
+                    {pricingBilling === 'annual' && plan.annualPerMonthLabel ? plan.annualPerMonthLabel : plan.priceLabel}
                   </span>
                 </div>
                 <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
-                  {plan.periodLabel}
+                  {pricingBilling === 'annual' && plan.annualPriceLabel
+                    ? `/ month · billed annually (${plan.annualPriceLabel}/yr)`
+                    : plan.periodLabel}
                 </div>
                 <ul className="mt-5 mb-6 flex flex-col gap-2.5">
                   {features.map((f) => (
@@ -1381,7 +1411,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href="/generate" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">AI Generator</Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Thumbnail</Link>
             <Link href="/history" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">My Videos</Link>
-            <Link href="/#pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
+            <Link href="/pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
           <p className="text-[11.5px] text-[#94A3B8] sm:min-w-[160px] sm:text-right">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5</span></p>
         </div>
