@@ -260,21 +260,57 @@ export async function GET(
         if (shouldDeductCredits) {
           const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .select('video_credits')
+            .select('video_credits, free_ai_generate_used')
             .eq('id', user.id)
             .single()
           if (!fetchError) {
             const current = profile?.video_credits ?? 0
-            const next = Math.max(0, current - cost)
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ video_credits: next })
-              .eq('id', user.id)
-            if (!updateError) {
-              creditsDeducted = true
-              creditsRemaining = next
+            // #384 — FREE AI-GENERATE TRIAL. This succeeded render is the free
+            // trial when: AI mode AND the user hasn't used their free AI yet AND
+            // they couldn't pay the 30-credit price. In that case we BURN THE
+            // FREE QUOTA (flip the flag) and do NOT touch video_credits — the 3
+            // Fast credits stay intact. Only happens on SUCCESS, so a failed
+            // render never costs the user their free trial.
+            const isFreeAiTrial =
+              quality === 'cinematic_ai' &&
+              profile?.free_ai_generate_used !== true &&
+              current < cost
+            if (isFreeAiTrial) {
+              // Conditional flip: only the FIRST render to reach here wins, so
+              // two near-simultaneous trials can't both go free.
+              const { data: claimed, error: claimErr } = await supabase
+                .from('profiles')
+                .update({ free_ai_generate_used: true })
+                .eq('id', user.id)
+                .eq('free_ai_generate_used', false)
+                .select('id')
+              if (claimErr) {
+                console.error('[compose/status] free-trial flag flip error:', claimErr.message)
+              }
+              if (claimed && claimed.length > 0) {
+                // We won the claim: free trial granted, credits untouched.
+                creditsDeducted = true
+                creditsRemaining = current
+                console.log(`[compose/status] FREE AI trial consumed for user ${user.id.slice(0, 8)} — credits untouched (${current})`)
+              } else {
+                // Lost the race (flag already true) → fall back to normal charge.
+                const next = Math.max(0, current - cost)
+                await supabase.from('profiles').update({ video_credits: next }).eq('id', user.id)
+                creditsDeducted = true
+                creditsRemaining = next
+              }
             } else {
-              console.error('[compose/status] credit deduct error:', updateError.message)
+              const next = Math.max(0, current - cost)
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ video_credits: next })
+                .eq('id', user.id)
+              if (!updateError) {
+                creditsDeducted = true
+                creditsRemaining = next
+              } else {
+                console.error('[compose/status] credit deduct error:', updateError.message)
+              }
             }
           } else {
             console.error('[compose/status] credit fetch error:', fetchError.message)

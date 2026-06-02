@@ -91,10 +91,11 @@ export async function POST(req: NextRequest) {
     const duration = Number(body.duration) || 45
     const clipCount = clipCountForDuration(duration)
 
-    // Upfront credit balance check (deduction happens in compose/status)
+    // Upfront balance + free-trial eligibility check (deduction/flag-flip happens
+    // in compose/status on SUCCESS).
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('video_credits')
+      .select('video_credits, free_ai_generate_used')
       .eq('id', user.id)
       .single()
 
@@ -102,9 +103,25 @@ export async function POST(req: NextRequest) {
       console.error('[cinematic] credit fetch failed:', profileErr.message)
     }
     const balance = profile?.video_credits ?? 0
-    if (balance < CINEMATIC_CREDIT_COST) {
+
+    // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, forever, only
+    // after email confirmation (prod auto-confirms). The free trial is what lets
+    // a user WITHOUT the 30 credits make exactly one AI video (watermarked). Once
+    // used, the flag is true → they fall back to the normal 30-credit rule.
+    const emailConfirmed = !!user.email_confirmed_at
+    const freeAlreadyUsed = profile?.free_ai_generate_used === true
+    const eligibleForFree = !freeAlreadyUsed && emailConfirmed
+    const isFreeTrial = balance < CINEMATIC_CREDIT_COST && eligibleForFree
+
+    if (balance < CINEMATIC_CREDIT_COST && !isFreeTrial) {
       return NextResponse.json(
-        { error: `Cinematic Mode needs ${CINEMATIC_CREDIT_COST} credits. You have ${balance}.`, needed: CINEMATIC_CREDIT_COST, balance },
+        {
+          error: freeAlreadyUsed
+            ? `You've used your 1 free AI video. AI Generate now needs ${CINEMATIC_CREDIT_COST} credits. You have ${balance}.`
+            : `Cinematic Mode needs ${CINEMATIC_CREDIT_COST} credits. You have ${balance}.`,
+          needed: CINEMATIC_CREDIT_COST,
+          balance,
+        },
         { status: 402 }
       )
     }
@@ -184,6 +201,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       mode: 'cinematic_ai',
+      freeTrial: isFreeTrial, // #384 — UI hint only; watermark/quota decided server-side
       generationId,
       prompt,
       duration,

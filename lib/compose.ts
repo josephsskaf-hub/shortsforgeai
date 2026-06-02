@@ -72,6 +72,12 @@ export interface ComposeInputs {
    * stays clear and dominant.
    */
   musicUrl?: string | null
+  /**
+   * #384 — when true, burn a "ShortsForgeAI" watermark into the final render.
+   * Used ONLY for the free AI-Generate trial; paid renders pass false/undefined.
+   * The decision is made server-side in /api/compose (never trusts the client).
+   */
+  watermark?: boolean
 }
 
 export interface CreatomateRenderState {
@@ -809,6 +815,7 @@ export function buildCreatomateSource({
   whisperTimings,
   whisperWords,
   musicUrl,
+  watermark = false,
 }: ComposeInputs): Record<string, unknown> {
   // Push #199 — use the REAL TTS audio duration as the master timeline length
   // instead of the user-requested duration. This eliminates both the "black
@@ -1084,6 +1091,31 @@ export function buildCreatomateSource({
       loop: true,
     })
     console.log(`[compose] background music added: ${musicUrl.slice(0, 80)}`)
+  }
+
+  // Track 9 — #384 free-trial watermark, burned into the final MP4 so it can't
+  // be stripped. Bottom-right, semi-transparent, full duration. ONLY added when
+  // the caller passes watermark:true (the server-side free-AI-trial decision).
+  // TO SWAP FOR A LOGO PNG LATER: replace this text element with an image one:
+  //   { type:'image', track:9, time:0, duration:totalDuration, source:<logoUrl>,
+  //     x:'88%', y:'95%', width:'18%', opacity:'55%' }
+  if (watermark) {
+    elements.push({
+      type: 'text',
+      track: 9,
+      time: 0,
+      duration: totalDuration,
+      text: 'ShortsForgeAI',
+      x: '72%',
+      y: '95%',
+      width: '52%',
+      font_family: 'Montserrat',
+      font_size: 30,
+      font_weight: '700',
+      fill_color: 'rgba(255,255,255,0.55)',
+      stroke_color: 'rgba(0,0,0,0.35)',
+      stroke_width: 1,
+    })
   }
 
   return {

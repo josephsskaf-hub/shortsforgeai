@@ -193,6 +193,9 @@ export default function GenerateClient() {
   //  'ai'       → send the text to /api/generate-script to structure it (DEFAULT)
   //  'verbatim' → use the pasted text exactly as the script (advanced)
   const [scriptMode, setScriptMode] = useState<'ai' | 'verbatim'>('ai')
+  // #384 — whether this account has already used its 1 free AI-Generate video.
+  // null = unknown (still loading). Drives the "1 free (watermarked)" label.
+  const [freeAiUsed, setFreeAiUsed] = useState<boolean | null>(null)
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -284,6 +287,29 @@ export default function GenerateClient() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // #384 — load the free-AI-trial flag from the profile (RLS lets a user read
+  // their own row). Used only for labeling; the server is the source of truth.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+          .from('profiles')
+          .select('free_ai_generate_used')
+          .eq('id', user.id)
+          .single()
+        if (!cancelled && data) setFreeAiUsed(data.free_ai_generate_used === true)
+      } catch {
+        /* silent — label just won't show */
+      }
+    })()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1510,7 +1536,9 @@ export default function GenerateClient() {
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
         if (res.status === 402) {
-          setError(`Cinematic AI needs 30 credits. You have ${data?.balance ?? 0}.`)
+          // #384 — server distinguishes "used your free AI" vs "needs 30 credits".
+          setError(typeof data?.error === 'string' ? data.error : `Cinematic AI needs 30 credits. You have ${data?.balance ?? 0}.`)
+          openOutOfCreditsModal()
           setPhase('failed'); return
         }
         if (!res.ok) {
@@ -2115,6 +2143,10 @@ export default function GenerateClient() {
     ? 30
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
+  // #384 — the free AI trial applies on the AI Generate mode when the account
+  // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
+  const aiTrialAvailable = mode === 'cinematic_ai' && freeAiUsed === false && (credits ?? 0) < 30
+
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
     analysis?.youtubeDescription?.trim() || analysis?.title?.trim() || ''
@@ -2692,7 +2724,9 @@ export default function GenerateClient() {
                   : mode === 'fast'
                   ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
                   : mode === 'cinematic_ai'
-                  ? `🤖 ${selectedCost} credits • AI Video (fal.ai) • ~3-5 min render.`
+                  ? (aiTrialAvailable
+                      ? `🎁 1 FREE AI video (with watermark) • AI Video (fal.ai) • ~3-5 min render.`
+                      : `🤖 ${selectedCost} credits • AI Video (fal.ai) • ~3-5 min render.`)
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
               {credits !== null && (
@@ -3034,6 +3068,8 @@ export default function GenerateClient() {
               >
                 {isProcessingPhase(phase)
                   ? '⏳ Generating…'
+                  : aiTrialAvailable
+                  ? 'Generate · 1 FREE (watermark)'
                   : `Generate · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
               </button>
             </div>
@@ -4947,16 +4983,31 @@ function ModeSelector({
               >
                 New ✨
               </span>
-              <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: 'rgba(245,158,11,.18)',
-                  color: '#fcd34d',
-                  border: '1px solid rgba(245,158,11,.3)',
-                }}
-              >
-                30 credits
-              </span>
+              {/* #384 — show "1 free" while the account still has its free AI
+                  trial AND can't pay the 30 (mirrors the server rule). */}
+              {freeAiUsed === false && (credits ?? 0) < 30 ? (
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: 'rgba(16,185,129,.18)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16,185,129,.35)',
+                  }}
+                >
+                  1 free · watermark
+                </span>
+              ) : (
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: 'rgba(245,158,11,.18)',
+                    color: '#fcd34d',
+                    border: '1px solid rgba(245,158,11,.3)',
+                  }}
+                >
+                  30 credits
+                </span>
+              )}
             </div>
           </div>
           <ul className="space-y-1">

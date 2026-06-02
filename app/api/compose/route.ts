@@ -186,6 +186,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // #384 — FREE AI-GENERATE TRIAL: watermark decision is computed SERVER-SIDE
+    // from the DB profile (never trusts the client). A render is the free trial
+    // ONLY when: AI mode AND the user has NOT used their free AI yet AND they
+    // do NOT have enough credits to pay the 30-credit price. So anyone PAYING
+    // (>= 30 credits) NEVER gets a watermark — guaranteed here, server-side.
+    // The quota flag itself is flipped on SUCCESS in /api/compose/status.
+    let isFreeAiTrial = false
+    if (quality === 'cinematic_ai') {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('free_ai_generate_used, video_credits')
+        .eq('id', user.id)
+        .single()
+      const used = prof?.free_ai_generate_used === true
+      const creds = prof?.video_credits ?? 0
+      isFreeAiTrial = !used && creds < 30
+    }
+
     // Step 1 — Scale the voiceover script to the right word count.
     // Push #235 — verbatim mode (explicit speed) skips scaling entirely: the
     // user wrote the exact narration, so rewriting it to a word-count target
@@ -372,6 +390,7 @@ export async function POST(req: NextRequest) {
         realAudioDuration,
         whisperWords,
         musicUrl,
+        watermark: isFreeAiTrial, // #384 — only the free AI trial gets the watermark
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
