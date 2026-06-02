@@ -142,6 +142,14 @@ export default function PricingPage() {
   // scrolling back up to the cards.
   const [showStickyCta, setShowStickyCta] = useState<boolean>(false)
 
+  // #381 — monthly vs annual billing toggle. Annual ≈ 2 months free.
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
+  const ANNUAL: Record<string, { total: string; perMonth: string }> = {
+    starter: { total: '$29', perMonth: '$2.42' },
+    basic: { total: '$49', perMonth: '$4.08' },
+    pro: { total: '$99', perMonth: '$8.25' },
+  }
+
   // Conversion — exit-intent modal. Fires once when the user's cursor
   // leaves the viewport through the top (typical "closing tab" motion).
   const [showExitModal, setShowExitModal] = useState<boolean>(false)
@@ -156,7 +164,8 @@ export default function PricingPage() {
     const eventName = tier === 'pro' ? 'pro_checkout_clicked' : tier === 'starter' ? 'starter_checkout_clicked' : 'basic_checkout_clicked'
     trackPricingEvent(eventName)
     trackCheckoutClick(tier as 'basic' | 'pro')
-    window.location.href = `/api/stripe/checkout?tier=${tier}`
+    const billingParam = billing === 'annual' ? '&billing=annual' : ''
+    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}`
   }
 
   // Push #173 — read checkout_error / already_subscribed from URL params
@@ -372,6 +381,33 @@ export default function PricingPage() {
 
         {/* Push #267 — Free banner removed with Free card */}
 
+        {/* #381 — monthly / annual billing toggle */}
+        <div className="mb-7 flex items-center justify-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+            <button
+              type="button"
+              onClick={() => setBilling('monthly')}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
+                billing === 'monthly' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setBilling('annual')}
+              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
+                billing === 'annual' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              Annual
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300">
+                2 MONTHS FREE
+              </span>
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
           {buildPricing().map((p) => {
             const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
@@ -444,11 +480,13 @@ export default function PricingPage() {
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#F1F5F9]">
-                    {p.price}
+                    {billing === 'annual' && ANNUAL[p.tier] ? ANNUAL[p.tier].perMonth : p.price}
                   </span>
                 </div>
                 <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
-                  {p.priceSub}
+                  {billing === 'annual' && ANNUAL[p.tier]
+                    ? `/ month · billed annually (${ANNUAL[p.tier].total}/yr)`
+                    : p.priceSub}
                 </div>
                 {'tagline' in p && p.tagline && (
                   <p className="mt-2 text-[12px] text-[#94A3B8] leading-snug">

@@ -46,6 +46,15 @@ const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
   pro:     { usd: 990,  brl: 4990, inr: 79900 },
 }
 
+// #381 — Annual prices = 10× the monthly price (≈2 months free). Smallest unit.
+const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
+  starter: { usd: 2900,  brl: 14900,  inr: 249000 },
+  basic:   { usd: 4900,  brl: 24900,  inr: 399000 },
+  pro:     { usd: 9900,  brl: 49900,  inr: 799000 },
+}
+
+type Billing = 'monthly' | 'annual'
+
 // Map Vercel IP-country header → billing currency.
 // Everyone not explicitly mapped gets USD.
 function resolveCurrency(country: string): Currency {
@@ -60,6 +69,7 @@ async function buildAndRedirect(
   req: NextRequest,
   tier: Tier,
   isGet: boolean,
+  billing: Billing = 'monthly',
 ): Promise<NextResponse> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
@@ -80,7 +90,10 @@ async function buildAndRedirect(
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
   const currency: Currency = resolveCurrency(country)
   const plan = TIERS[tier]
-  const unitAmount = TIER_PRICES[tier][currency]
+  // #381 — annual vs monthly price + billing interval.
+  const isAnnual = billing === 'annual'
+  const unitAmount = isAnnual ? ANNUAL_PRICES[tier][currency] : TIER_PRICES[tier][currency]
+  const interval: 'month' | 'year' = isAnnual ? 'year' : 'month'
 
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -165,11 +178,11 @@ async function buildAndRedirect(
         price_data: {
           currency,
           product_data: {
-            name: plan.name,
+            name: isAnnual ? `${plan.name} (Annual)` : plan.name,
             description: plan.description,
           },
           unit_amount: unitAmount,
-          recurring: { interval: 'month' },
+          recurring: { interval },
         },
         quantity: 1,
       },
@@ -180,6 +193,7 @@ async function buildAndRedirect(
     metadata: {
       supabase_user_id: user.id,
       tier,
+      billing,
       plan_credits: String(plan.credits),
     },
     subscription_data: {
@@ -241,7 +255,8 @@ export async function GET(req: NextRequest) {
   try {
     const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
     const tier: Tier = tierParam === 'pro' ? 'pro' : tierParam === 'starter' ? 'starter' : 'basic'
-    return await buildAndRedirect(req, tier, true)
+    const billing: Billing = req.nextUrl.searchParams.get('billing') === 'annual' ? 'annual' : 'monthly'
+    return await buildAndRedirect(req, tier, true, billing)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/checkout GET] Unexpected error:', msg)

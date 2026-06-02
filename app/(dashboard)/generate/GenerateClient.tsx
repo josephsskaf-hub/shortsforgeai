@@ -8,6 +8,7 @@ import PostVideoPaywall from '@/components/PostVideoPaywall'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
+import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
 
 interface TaskHandle {
@@ -1714,11 +1715,9 @@ export default function GenerateClient() {
   // 10-min countdown); everyone else keeps the standard out-of-credits
   // modal.
   function openOutOfCreditsModal() {
-    if (planTier === 'free') {
-      setShowUrgencyModal(true)
-    } else {
-      setShowUpgradeModal(true)
-    }
+    // #380 — unified: every out-of-credits moment now opens the 3-plan upgrade
+    // modal (Spark/Basic/Pro) so the user picks a plan at peak intent.
+    setShowUpgradeModal(true)
   }
 
   function handleAnalyzeGuarded() {
@@ -1743,7 +1742,7 @@ export default function GenerateClient() {
   // button on each upgrade surface and passes the currency in directly,
   // so the path is always user-driven.
   async function handleUpgradeNow(
-    tier: 'basic' | 'pro' = 'basic',
+    tier: 'starter' | 'basic' | 'pro' = 'basic',
     currency: 'usd' | 'brl' = 'usd',
   ) {
     trackCheckoutClick(tier)
@@ -1807,7 +1806,9 @@ export default function GenerateClient() {
     if (planTier !== 'free') return
     if (credits === null || credits > 0) return
     urgencyAutoShownRef.current = true
-    setShowUrgencyModal(true)
+    // #380 — at the exact moment a free user drains their last credit, open the
+    // 3-plan upgrade modal (Spark/Basic/Pro) — peak purchase intent.
+    setShowUpgradeModal(true)
   }, [phase, planTier, credits])
 
   // Push #109 — countdown tick while the urgency modal is open. The start
@@ -2177,8 +2178,12 @@ export default function GenerateClient() {
       {showUpgradeModal && (
         <UpgradeModal
           loading={upgradeLoading}
-          onUpgrade={() => handleUpgradeNow('basic', 'usd')}
-          onUpgradeBrl={() => handleUpgradeNow('basic', 'brl')}
+          onUpgrade={(tier) => {
+            // #380 — straight to Stripe via the working GET checkout route.
+            trackCheckoutClick(tier)
+            setUpgradeLoading(true)
+            window.location.href = `/api/stripe/checkout?tier=${tier}`
+          }}
           onClose={() => setShowUpgradeModal(false)}
         />
       )}
@@ -5052,17 +5057,24 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
 // Dark overlay + centered card. Green CTA hits POST /api/stripe/checkout
 // with the basic tier, then redirects to the returned Stripe URL. Secondary
 // "Maybe later" closes the modal without leaving the page.
+// #380 — 3-plan out-of-credits modal. Shown at the exact moment the user runs
+// out of credits. Presents Spark / Basic / Pro so the user picks at peak intent.
+// Each card routes to the matching Stripe checkout via onUpgrade(tier);
+// currency is auto-detected server-side. Pro is highlighted as recommended.
 function UpgradeModal({
   loading,
   onUpgrade,
-  onUpgradeBrl,
   onClose,
 }: {
   loading: boolean
-  onUpgrade: () => void
-  onUpgradeBrl: () => void
+  onUpgrade: (tier: 'starter' | 'basic' | 'pro') => void
   onClose: () => void
 }) {
+  const unlocks: Record<string, string> = {
+    starter: '15 Shorts / month',
+    basic: '50 Shorts / month',
+    pro: '150 credits · up to 5 AI-generated videos',
+  }
   return (
     <div
       role="dialog"
@@ -5080,99 +5092,114 @@ function UpgradeModal({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
+        overflowY: 'auto',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: 440,
+          maxWidth: 460,
           background: '#0B1120',
           border: '1px solid rgba(52,211,153,0.35)',
           borderRadius: 20,
-          padding: '32px 28px',
+          padding: '28px 24px',
           textAlign: 'center',
           boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(52,211,153,0.18)',
         }}
       >
         <h2
           id="upgrade-modal-title"
-          style={{
-            fontSize: '1.45rem',
-            fontWeight: 900,
-            color: '#fff',
-            lineHeight: 1.25,
-            margin: 0,
-            marginBottom: 12,
-          }}
+          style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1.25, margin: 0, marginBottom: 8 }}
         >
-          You&apos;ve used your free videos 🎉
+          You&apos;re out of credits 🎉
         </h2>
-        <p
-          style={{
-            fontSize: '0.95rem',
-            color: '#cbd5e1',
-            lineHeight: 1.5,
-            margin: 0,
-            marginBottom: 24,
-          }}
-        >
-          Upgrade to Basic for 50 videos/month — $4.90/mo
+        <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
+          Pick a plan to keep creating. Cancel anytime · 7-day money-back guarantee.
         </p>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onUpgrade}
-          style={{
-            width: '100%',
-            padding: '14px 20px',
-            borderRadius: 12,
-            border: 'none',
-            background: loading
-              ? 'rgba(52,211,153,0.5)'
-              : 'linear-gradient(135deg, #10b981, #059669)',
-            color: '#fff',
-            fontSize: '0.95rem',
-            fontWeight: 900,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: '0 10px 30px rgba(16,185,129,0.35)',
-            transition: 'transform 0.15s ease',
-          }}
-        >
-          {loading ? 'Opening checkout…' : 'Activate Basic — $4.90/mo →'}
-        </button>
-        {/* Push #113 — explicit BRL rail. Auto-detection (locale/IP) was
-            unreliable through VPNs and embedded browsers, so we surface
-            the BRL option as a clear, user-initiated button. */}
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onUpgradeBrl}
-          style={{
-            marginTop: 8,
-            width: '100%',
-            padding: '10px 16px',
-            borderRadius: 10,
-            background: 'rgba(255,255,255,.05)',
-            border: '1px solid rgba(255,255,255,.12)',
-            color: '#94A3B8',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-          }}
-        >
-          🇧🇷 Pagar em R$ 24,90/mês (Brasil)
-        </button>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {PLAN_LIST.map((plan) => {
+            const recommended = !!plan.recommended
+            return (
+              <button
+                key={plan.tier}
+                type="button"
+                disabled={loading}
+                onClick={() => onUpgrade(plan.tier as 'starter' | 'basic' | 'pro')}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '14px 16px',
+                  borderRadius: 14,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  background: recommended ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.04)',
+                  border: recommended ? '1.5px solid rgba(16,185,129,0.6)' : '1px solid rgba(255,255,255,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  opacity: loading ? 0.7 : 1,
+                  transition: 'border-color .15s ease',
+                }}
+              >
+                {recommended && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: -9,
+                      left: 14,
+                      background: '#10b981',
+                      color: '#04210f',
+                      fontSize: '0.6rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.08em',
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                    }}
+                  >
+                    MOST POPULAR
+                  </span>
+                )}
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontWeight: 900, color: '#F1F5F9', fontSize: '0.98rem' }}>
+                    {plan.name}{' '}
+                    <span style={{ color: recommended ? '#34d399' : '#94a3b8', fontWeight: 800 }}>
+                      {plan.priceLabel}
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>{plan.periodLabel}</span>
+                    </span>
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+                    {unlocks[plan.tier]}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    flexShrink: 0,
+                    padding: '8px 14px',
+                    borderRadius: 10,
+                    fontSize: '0.8rem',
+                    fontWeight: 900,
+                    color: '#fff',
+                    background: recommended
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : 'rgba(255,255,255,0.10)',
+                  }}
+                >
+                  {loading ? '…' : 'Choose'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
         <button
           type="button"
           onClick={onClose}
           style={{
             display: 'block',
-            margin: '14px auto 0',
+            margin: '16px auto 0',
             background: 'transparent',
             border: 'none',
             color: '#94a3b8',
@@ -5185,14 +5212,7 @@ function UpgradeModal({
         >
           Maybe later
         </button>
-        <p
-          style={{
-            marginTop: 18,
-            fontSize: '0.78rem',
-            color: '#fbbf24',
-            fontWeight: 700,
-          }}
-        >
+        <p style={{ marginTop: 12, fontSize: '0.78rem', color: '#fbbf24', fontWeight: 700 }}>
           🔥 Launch offer ends soon
         </p>
       </div>

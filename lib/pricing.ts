@@ -18,6 +18,10 @@ export interface PlanConfig {
   cta: string
   href: string
   recommended?: boolean
+  // #381 — annual billing (≈2 months free). Optional: only paid plans have it.
+  annualPriceLabel?: string
+  annualPerMonthLabel?: string
+  annualHref?: string
 }
 
 export const PLANS: Record<PlanTier, PlanConfig> = {
@@ -42,6 +46,9 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     credits: 15,
     cta: 'Ignite My Channel',
     href: '/api/stripe/checkout?tier=starter',
+    annualPriceLabel: '$29',
+    annualPerMonthLabel: '$2.42',
+    annualHref: '/api/stripe/checkout?tier=starter&billing=annual',
   },
   basic: {
     tier: 'basic',
@@ -52,6 +59,9 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     credits: 50,
     cta: 'Automate Now',
     href: '/api/stripe/checkout?tier=basic',
+    annualPriceLabel: '$49',
+    annualPerMonthLabel: '$4.08',
+    annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
   },
   pro: {
     tier: 'pro',
@@ -63,6 +73,9 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     cta: 'Deploy Full Pipeline',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,
+    annualPriceLabel: '$99',
+    annualPerMonthLabel: '$8.25',
+    annualHref: '/api/stripe/checkout?tier=pro&billing=annual',
   },
 }
 
