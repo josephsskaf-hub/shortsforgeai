@@ -92,11 +92,24 @@ CINEMATIC NARRATION RULES (this is what separates premium from generic AI videos
 Respond with ONLY the script. No intro, no explanation, no markdown, no code blocks.`
 }
 
+// #383b — the 5 structural elements the channel's formula requires. Returns the
+// list of elements MISSING from the script (English headers, plus PT/ES variants
+// for safety). Used to both gate the skip-GPT shortcut and to trigger a single
+// regeneration when the model omits a beat.
+function missingElements(text: string): string[] {
+  const checks: Array<[string, RegExp]> = [
+    ['HOOK', /\bHOOK\b|\bGANCHO\b/i],
+    ['MICRO REWARD', /\bMICRO REWARD\b|\bMICRO RECOMPENSA\b/i],
+    ['ESCALATION', /\bESCALATION\b|\bESCALADA\b/i],
+    ['RHYTHM', /\bRHYTHM\b|\bRITMO\b/i],
+    ['PAYOFF', /\bPAYOFF\b|\bPAGAMENTO\b|\bRECOMPENSA FINAL\b/i],
+  ]
+  return checks.filter(([, re]) => !re.test(text)).map(([name]) => name)
+}
+
+// Now requires ALL 5 elements (was: HOOK + (MICRO REWARD or PAYOFF)).
 function hasViralMarkers(text: string): boolean {
-  const hasHook = /\bHOOK\b/i.test(text)
-  const hasMR = /\bMICRO REWARD\b/i.test(text)
-  const hasPayoff = /\bPAYOFF\b/i.test(text)
-  return hasHook && (hasMR || hasPayoff)
+  return missingElements(text).length === 0
 }
 
 // #373 — detect a PAYOFF that TEASES instead of delivering. Looks at the PAYOFF
@@ -165,17 +178,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Script generation failed' }, { status: 500 })
     }
 
-    // Validate the output has the expected markers before returning
-    if (!hasViralMarkers(script)) {
-      console.error('[generate-script] GPT output missing viral markers:', script.slice(0, 200))
-      // Return the raw script anyway — analyze-idea will handle it via normal path
-      return NextResponse.json({ script, alreadyStructured: false })
-    }
-
-    // #373 — PAYOFF guardrail. If the PAYOFF teases instead of delivering, regenerate
-    // ONCE with a reinforced instruction so the last beat is always a concrete reward.
-    if (payoffIsEmpty(script)) {
-      console.warn('[generate-script] payoff looks empty/teasing — regenerating once')
+    // #383b — QUALITY GUARDRAIL. The script must contain ALL 5 structural
+    // elements (HOOK, MICRO REWARD, ESCALATION, RHYTHM, PAYOFF) AND a PAYOFF that
+    // delivers (not a tease). If any of the 5 is missing OR the payoff is empty,
+    // regenerate ONCE with a targeted reinforcement. If the retry still falls
+    // short, proceed with what we have (degraded — never blocks the flow).
+    let missing = missingElements(script)
+    if (missing.length > 0 || payoffIsEmpty(script)) {
+      const problems: string[] = []
+      if (missing.length > 0) problems.push(`missing required section(s): ${missing.join(', ')}`)
+      if (payoffIsEmpty(script)) problems.push('the PAYOFF teased instead of delivering a concrete answer')
+      console.warn('[generate-script] regenerating once —', problems.join('; '))
       try {
         const retry = await openai.chat.completions.create({
           model: 'gpt-4o',
@@ -185,18 +198,23 @@ export async function POST(req: NextRequest) {
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: 'Write a viral YouTube Short script about this topic:\n\n' + topic },
             { role: 'assistant', content: script },
-            { role: 'user', content: 'Your PAYOFF teased instead of delivering — it ended on a question, a promise, or a "no one knows / remains a mystery" line. Rewrite the FULL script, same structure and headers, but the PAYOFF MUST deliver the concrete answer/discovery the hook promised: a specific fact, number, name, mechanism, or the single most-accepted theory. NO questions, NO "no one knows", NO "remains a mystery", NO "what if I told you", NO "find out" teasing. The CTA stays separate, after the reveal. Respond with ONLY the script.' },
+            {
+              role: 'user',
+              content:
+                `Your script had problems: ${problems.join('; ')}. Rewrite the FULL script using EXACTLY the required headers, in order, each present and on its own line: HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, RHYTHM, PAYOFF. ESCALATION must raise the stakes above MICRO REWARD 3. RHYTHM must be 2-3 ultra-short 1-3 word punches. The PAYOFF MUST deliver the concrete answer the hook promised (a specific fact, number, name, mechanism, or the single most-accepted theory) — NO questions, NO "no one knows", NO "remains a mystery", NO teasing — with the follow CTA on a SEPARATE line after the reveal. Respond with ONLY the script.`,
+            },
           ],
         })
         const retryScript = retry.choices[0]?.message?.content?.trim() ?? ''
-        if (retryScript && hasViralMarkers(retryScript)) {
+        if (retryScript) {
           script = retryScript
-          if (payoffIsEmpty(retryScript)) {
-            console.warn('[generate-script] payoff still weak after retry — using retry anyway')
+          missing = missingElements(retryScript)
+          if (missing.length > 0 || payoffIsEmpty(retryScript)) {
+            console.warn('[generate-script] still imperfect after retry — using it anyway (degraded)')
           }
         }
       } catch (retryErr) {
-        console.warn('[generate-script] payoff retry failed:', retryErr instanceof Error ? retryErr.message : String(retryErr))
+        console.warn('[generate-script] regenerate failed:', retryErr instanceof Error ? retryErr.message : String(retryErr))
       }
     }
 

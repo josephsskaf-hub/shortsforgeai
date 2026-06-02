@@ -167,12 +167,32 @@ interface RecentVideo {
 }
 
 
+// #383d — turn a video title into a safe download filename slug.
+// "What Mars Does to Your Body" → "what-mars-does-to-your-body"
+// Strips accents and special chars; collapses spaces to single hyphens.
+// Returns '' when there's nothing usable, so callers can fall back.
+function slugifyTitle(title: string | null | undefined): string {
+  if (!title) return ''
+  return title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip accents (combining diacritical marks)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // non-alphanumerics -> hyphen
+    .replace(/^-+|-+$/g, '') // trim leading/trailing hyphens
+    .slice(0, 80)
+}
+
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialPrompt = searchParams.get('prompt') ?? ''
 
   const [prompt, setPrompt] = useState(initialPrompt)
+  // #383c — explicit script handling, visible to everyone (replaces the old
+  // silent "skip the AI if the text has HOOK/PAYOFF markers" auto-detection).
+  //  'ai'       → send the text to /api/generate-script to structure it (DEFAULT)
+  //  'verbatim' → use the pasted text exactly as the script (advanced)
+  const [scriptMode, setScriptMode] = useState<'ai' | 'verbatim'>('ai')
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -1030,11 +1050,9 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, renderId, quality])
 
-  // Push #310 — detect whether a prompt already has the viral structure markers
-  // that parseViralScriptSections() expects. If it does, skip /api/generate-script.
-  function promptHasViralMarkers(text: string): boolean {
-    return /\bHOOK\b/i.test(text) && (/\bMICRO REWARD\b/i.test(text) || /\bPAYOFF\b/i.test(text))
-  }
+  // #383c — the old silent marker auto-detection (promptHasViralMarkers) was
+  // removed. Whether the AI structures the text is now an EXPLICIT user choice
+  // (scriptMode), so the app never decides to skip the AI on its own.
 
   // Push #313 / #364 — turn the structured script into a clean, readable preview.
   // Each beat is one line: "HOOK (0-2s): [Pexels: cue] voiceover". We STRIP the
@@ -1093,13 +1111,13 @@ export default function GenerateClient() {
     setRenderId(null)
     setFinalVideoUrl(null)
 
-    // Push #310/311 — auto-structure step. If the raw prompt doesn't have viral
-    // markers (HOOK / MICRO REWARD / PAYOFF), call /api/generate-script first
-    // to produce a structured script with [Pexels: xxx] hints per beat.
-    // This ensures parseViralScriptSections() fires the fast-path AND
-    // generate-video-fast enters verbatim mode for precise footage every time.
+    // #383c — explicit choice drives whether we structure the text with the AI.
+    //  • scriptMode 'ai'       → call /api/generate-script (DEFAULT)
+    //  • scriptMode 'verbatim' → skip the AI, use the pasted text as the script
+    // Programmatic pre-written scripts (Viral Now cards, which pass skipPreview)
+    // are always used verbatim so curated scripts are never rewritten.
     let source = rawSource
-    const needsStructuring = !promptHasViralMarkers(rawSource)
+    const needsStructuring = opts?.skipPreview ? false : scriptMode === 'ai'
 
     if (needsStructuring) {
       // Push #311 — show scripting phase so the user knows something is happening
@@ -1629,8 +1647,40 @@ export default function GenerateClient() {
     }
   }
 
-  // Push #045A — result-page actions. Both reach for finalVideoUrl only; the
-  // download anchor is untouched, so existing download behavior is preserved.
+  // #383d — download with a title-based filename. The video lives on Supabase
+  // (cross-origin), so the <a download="..."> attribute is IGNORED by browsers
+  // and the file would save as a UUID. To force a readable name, fetch the file
+  // as a blob and download that with the slug. Falls back to opening the URL in
+  // a new tab if the blob fetch fails — download must never hard-break.
+  async function handleDownload(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (!finalVideoUrl) return
+    const slug = slugifyTitle(analysis?.title)
+    const filename = slug ? `${slug}.mp4` : `shortsforgeai-${duration}s.mp4`
+    e.preventDefault()
+    try {
+      const res = await fetch(finalVideoUrl)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 4000)
+      trackEvent('video_downloaded', { filename })
+    } catch {
+      // Fallback: open the original URL (old behavior) so the user still gets the file.
+      try {
+        window.open(finalVideoUrl, '_blank', 'noopener')
+      } catch {
+        /* last-resort no-op */
+      }
+    }
+  }
+
+  // Push #045A — result-page actions. Both reach for finalVideoUrl only.
   async function handleCopyUrl() {
     if (!finalVideoUrl) return
     try {
@@ -2445,6 +2495,53 @@ export default function GenerateClient() {
             }}
           />
 
+          {/* #383c — explicit script handling. Default = let the AI structure the
+              text; advanced = use the pasted script verbatim. Replaces the old
+              silent marker auto-detection. */}
+          <div className="mt-4">
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+              Script
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" style={{ maxWidth: 830 }}>
+              <button
+                type="button"
+                disabled={phase === 'analyzing'}
+                onClick={() => setScriptMode('ai')}
+                className="text-left px-4 py-3 rounded-xl transition-all"
+                style={{
+                  background: scriptMode === 'ai' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'ai' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
+                  cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'ai' ? '#93c5fd' : 'var(--text)' }}>
+                  ✨ Let AI structure my text {scriptMode === 'ai' && <span style={{ fontSize: '0.65rem' }}>· Recommended</span>}
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
+                  The AI turns your idea into a viral Short (hook, beats, payoff).
+                </div>
+              </button>
+              <button
+                type="button"
+                disabled={phase === 'analyzing'}
+                onClick={() => setScriptMode('verbatim')}
+                className="text-left px-4 py-3 rounded-xl transition-all"
+                style={{
+                  background: scriptMode === 'verbatim' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'verbatim' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
+                  cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'verbatim' ? '#93c5fd' : 'var(--text)' }}>
+                  📝 Use my script as is
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
+                  Advanced — your text is narrated word-for-word, no AI rewrite.
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* feat/ui-polish — clickable example prompts (per niche) to kill the
               blank-page freeze. Tapping one fills the textarea above. */}
           <div className="mt-3">
@@ -3143,7 +3240,8 @@ export default function GenerateClient() {
                 {/* Primary: big green Download */}
                 <a
                   href={finalVideoUrl}
-                  download={`shortsforgeai-${duration}s.mp4`}
+                  onClick={handleDownload}
+                  download={`${slugifyTitle(analysis?.title) || `shortsforgeai-${duration}s`}.mp4`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
