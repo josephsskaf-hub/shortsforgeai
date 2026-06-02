@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/refresh-niche-trends",
-      "schedule": "0 12,19,0 * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
