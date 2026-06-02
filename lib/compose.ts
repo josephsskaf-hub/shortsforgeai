@@ -1094,25 +1094,27 @@ export function buildCreatomateSource({
   }
 
   // Track 9 — #384 free-trial watermark, burned into the final MP4 so it can't
-  // be stripped. Bottom-right, semi-transparent, full duration. ONLY added when
-  // the caller passes watermark:true (the server-side free-AI-trial decision).
+  // be stripped. Text = "shortsforgeai.com" (one consistent brand across the
+  // app; the same domain shown in the end CTA). Placed at the TOP so it never
+  // collides with the bottom CTA (track 6, last ~2.5s, y:90%). Full duration,
+  // semi-transparent. ONLY added when watermark:true (server free-AI-trial decision).
   // TO SWAP FOR A LOGO PNG LATER: replace this text element with an image one:
   //   { type:'image', track:9, time:0, duration:totalDuration, source:<logoUrl>,
-  //     x:'88%', y:'95%', width:'18%', opacity:'55%' }
+  //     x:'50%', y:'6%', width:'30%', opacity:'60%' }
   if (watermark) {
     elements.push({
       type: 'text',
       track: 9,
       time: 0,
       duration: totalDuration,
-      text: 'ShortsForgeAI',
-      x: '72%',
-      y: '95%',
-      width: '52%',
+      text: 'shortsforgeai.com',
+      x: '50%',
+      y: '5%',
+      width: '80%',
       font_family: 'Montserrat',
-      font_size: 30,
+      font_size: 28,
       font_weight: '700',
-      fill_color: 'rgba(255,255,255,0.55)',
+      fill_color: 'rgba(255,255,255,0.6)',
       stroke_color: 'rgba(0,0,0,0.35)',
       stroke_width: 1,
     })
