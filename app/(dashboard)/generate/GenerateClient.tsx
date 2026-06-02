@@ -454,6 +454,17 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // #383 — robust attribution catch-all. Fires on EVERY authenticated arrival at
+  // /generate (email signup→/generate, OAuth new→?signup=1, OAuth returning, or
+  // email-confirm-later→login→/generate). trackSignupSource() de-dupes itself
+  // per session and only "closes" once the server confirms a real session, so
+  // a pending-confirmation signup gets recorded on the eventual first login.
+  // Fire-and-forget — can never block or break the page.
+  useEffect(() => {
+    trackSignupSource()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Push #033: pull a prompt forwarded by the homepage's Generate Video card.
   // app/page.tsx stashes the user's idea under `pendingVideoPrompt` in
   // sessionStorage right before redirecting here. We only honor it when the

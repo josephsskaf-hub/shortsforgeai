@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
+import { trackSignupSource } from '@/lib/analytics'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
 // can't bounce a logged-in user out to an external phishing page.
@@ -64,6 +65,11 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
+
+    // #383 — robust attribution: record signup source on first login too (covers
+    // users who confirm email later, then log in). Fire-and-forget, de-duped per
+    // session, only fills null columns — never blocks or breaks login.
+    trackSignupSource()
 
     // Hard navigate so the Next.js middleware sees the freshly-set Supabase
     // auth cookies on the next request.

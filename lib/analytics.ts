@@ -39,11 +39,23 @@ function storedUtms(): Record<string, string> {
 // #383 — persist first-touch signup attribution to the user's profile row so
 // we can measure how much of the US Ads spend becomes a real signup.
 // Sends the first-touch gclid + utm_source (from sessionStorage); the server
-// route adds signup_country from Vercel's IP header. Fire-and-forget: NEVER
-// awaited, NEVER throws — a failure here can never block or break signup.
+// route adds signup_country from Vercel's IP header and only fills columns that
+// are still null (first-touch wins — never overwritten).
+//
+// Robust across ANY signup flow: call this at every authenticated entry point
+// (signup-success, OAuth landing, first login after email confirmation, app
+// mount). It de-dupes itself per browser session, but ONLY marks itself done
+// once the server confirms a real session processed it (ok:true). If there was
+// no session yet (e.g. email-confirmation pending), it does NOT mark done, so a
+// later login will retry and finally record the attribution.
+//
+// Fire-and-forget: NEVER awaited by callers, NEVER throws — a failure here can
+// never block or break signup or login.
 export function trackSignupSource(): void {
   if (typeof window === 'undefined') return
   try {
+    // Already recorded with a real session this browser session — skip.
+    if (sessionStorage.getItem('sfa_src_sent') === '1') return
     const utms = storedUtms()
     fetch('/api/track-signup-source', {
       method: 'POST',
@@ -53,11 +65,24 @@ export function trackSignupSource(): void {
         utm_source: utms.utm_source || null,
       }),
       keepalive: true,
-    }).catch(() => {
-      /* silent — attribution must never break signup */
     })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        // Only stop retrying once a real session processed it. ok:false
+        // (no-session) leaves the flag unset so a later login retries.
+        if (res && res.ok) {
+          try {
+            sessionStorage.setItem('sfa_src_sent', '1')
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {
+        /* silent — attribution must never break the flow */
+      })
   } catch {
-    /* silent — attribution must never break signup */
+    /* silent — attribution must never break the flow */
   }
 }
 
