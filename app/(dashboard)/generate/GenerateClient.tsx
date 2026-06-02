@@ -246,6 +246,47 @@ export default function GenerateClient() {
       'What happens to the human body in the first minute on Mars',
     ],
   }
+  // #383e — fresh trending topics per vertical, refreshed 3×/day by the
+  // refresh-niche-trends cron and read straight from the DB (instant, no AI call
+  // on open). Falls back to the fixed NICHE_EXAMPLES when the table is empty, so
+  // a card is NEVER blank. Per-vertical latest run handles cron-failure fallback.
+  const [nicheTrends, setNicheTrends] = useState<Record<string, string[]>>({})
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('niche_trends')
+          .select('vertical, slot, topic, run_at')
+          .order('run_at', { ascending: false })
+          .limit(200)
+        if (cancelled || !data) return
+        // Keep only each vertical's most recent run (latest run_at), ordered by slot.
+        const latestRunAt: Record<string, string> = {}
+        for (const r of data) {
+          if (!latestRunAt[r.vertical]) latestRunAt[r.vertical] = r.run_at as string
+        }
+        const grouped: Record<string, Array<{ slot: number; topic: string }>> = {}
+        for (const r of data) {
+          if (r.run_at !== latestRunAt[r.vertical]) continue
+          ;(grouped[r.vertical] ??= []).push({ slot: r.slot as number, topic: r.topic as string })
+        }
+        const out: Record<string, string[]> = {}
+        for (const [v, arr] of Object.entries(grouped)) {
+          out[v] = arr.sort((a, b) => a.slot - b.slot).map((x) => x.topic)
+        }
+        setNicheTrends(out)
+      } catch {
+        // Silent — chips just fall back to NICHE_EXAMPLES.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [phase, setPhase] = useState<Phase>('idle')
   // UX-1 instrumentation — log EVERY phase transition (catches regressions like
   // generating -> analyzing). String log so it is fully readable in console capture.
@@ -2549,7 +2590,9 @@ export default function GenerateClient() {
               ✨ Need an idea? Tap one:
             </div>
             <div className="flex flex-wrap gap-2">
-              {(NICHE_EXAMPLES[pickedNiche] ?? NICHE_EXAMPLES.billionaire).map((ex) => (
+              {/* #383e — prefer fresh cron trends for this niche; fall back to the
+                  fixed examples so a card is never empty. */}
+              {((nicheTrends[pickedNiche]?.length ? nicheTrends[pickedNiche] : NICHE_EXAMPLES[pickedNiche]) ?? NICHE_EXAMPLES.billionaire).map((ex) => (
                 <button
                   key={ex}
                   type="button"
