@@ -2572,7 +2572,7 @@ export default function GenerateClient() {
                   ✨ Let AI structure my text {scriptMode === 'ai' && <span style={{ fontSize: '0.65rem' }}>· Recommended</span>}
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
-                  The AI turns your idea into a viral Short (hook, beats, payoff).
+                  We shape your idea into a scroll-stopping Short — hook, build, payoff.
                 </div>
               </button>
               <button
@@ -2590,7 +2590,7 @@ export default function GenerateClient() {
                   📝 Use my script as is
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
-                  Advanced — your text is narrated word-for-word, no AI rewrite.
+                  Your words, narrated exactly as written. No rewrites.
                 </div>
               </button>
             </div>
