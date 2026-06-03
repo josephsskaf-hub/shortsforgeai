@@ -11,7 +11,11 @@ import { fal } from '@fal-ai/client'
 
 export const maxDuration = 60
 
-const CINEMATIC_CREDIT_COST = 30
+// Push #402 — two user-selectable engines with different credit costs.
+// AI Generated (Seedance) = 30 cr, available to all paid plans. Cinematic AI
+// (Kling) = 45 cr, Studio-only (premium). Free trial only ever uses Seedance.
+const SEEDANCE_CREDIT_COST = 30
+const KLING_CREDIT_COST = 45
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
 // #368 — Seedance 1.5 Pro. The earlier 'submit error' (#366) was fal EXHAUSTED
@@ -93,7 +97,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string; duration?: number }
+    let body: { prompt?: string; duration?: number; engine?: string }
     try {
       body = await req.json()
     } catch {
@@ -107,6 +111,9 @@ export async function POST(req: NextRequest) {
 
     const duration = Number(body.duration) || 45
     const clipCount = clipCountForDuration(duration)
+    // Push #402 — explicit engine choice from the UI. 'kling' = Cinematic AI
+    // (Studio-only, 45 cr); anything else = AI Generated (Seedance, 30 cr).
+    const wantsKling = body.engine === 'kling'
 
     // Upfront balance + free-trial eligibility check (deduction/flag-flip happens
     // in compose/status on SUCCESS).
@@ -120,23 +127,38 @@ export async function POST(req: NextRequest) {
       console.error('[cinematic] credit fetch failed:', profileErr.message)
     }
     const balance = profile?.video_credits ?? 0
+    const isStudio = profile?.plan === 'pro' || profile?.plan === 'pro_trial'
 
-    // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, forever, only
-    // after email confirmation (prod auto-confirms). The free trial is what lets
-    // a user WITHOUT the 30 credits make exactly one AI video (watermarked). Once
-    // used, the flag is true → they fall back to the normal 30-credit rule.
+    // Push #402 — Cinematic AI (Kling) is a Studio-only feature. The UI also
+    // locks the button; this is the server-side guard against direct calls.
+    if (wantsKling && !isStudio) {
+      return NextResponse.json(
+        {
+          error: 'Cinematic AI (Kling) is a Studio feature. Upgrade to Studio to use it.',
+          upsell: 'studio',
+          balance,
+        },
+        { status: 402 },
+      )
+    }
+
+    // Push #402 — per-engine cost: Cinematic (Kling) 45, AI Generated (Seedance) 30.
+    const cost = wantsKling ? KLING_CREDIT_COST : SEEDANCE_CREDIT_COST
+
+    // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
+    // email confirmation. The free trial ALWAYS uses Seedance (never Kling).
     const emailConfirmed = !!user.email_confirmed_at
     const freeAlreadyUsed = profile?.free_ai_generate_used === true
     const eligibleForFree = !freeAlreadyUsed && emailConfirmed
-    const isFreeTrial = balance < CINEMATIC_CREDIT_COST && eligibleForFree
+    const isFreeTrial = !wantsKling && balance < SEEDANCE_CREDIT_COST && eligibleForFree
 
-    if (balance < CINEMATIC_CREDIT_COST && !isFreeTrial) {
+    if (balance < cost && !isFreeTrial) {
       return NextResponse.json(
         {
           error: freeAlreadyUsed
-            ? `You've used your 1 free AI video. AI Generate now needs ${CINEMATIC_CREDIT_COST} credits. You have ${balance}.`
-            : `Cinematic Mode needs ${CINEMATIC_CREDIT_COST} credits. You have ${balance}.`,
-          needed: CINEMATIC_CREDIT_COST,
+            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 45' : 'AI Generated needs 30'} credits. You have ${balance}.`
+            : `This needs ${cost} credits. You have ${balance}.`,
+          needed: cost,
           balance,
         },
         { status: 402 }
@@ -184,13 +206,11 @@ export async function POST(req: NextRequest) {
     // with healthy balance + concurrency 10 — which produced the repeated-clip
     // videos. Staggering lets every clip enqueue. One retry per clip covers a
     // transient reject.
-    // Push #401 — pick the engine by plan. Pro → Kling (premium/cinematic);
-    // everyone else (Basic, free trial) → Seedance. If Kling yields zero clips
-    // (no access / transient), fall back to Seedance for the WHOLE generation so
-    // a paying user never gets a failed render. Single model per generation keeps
-    // the status poll simple (it checks one endpoint).
-    const isProPlan = profile?.plan === 'pro' || profile?.plan === 'pro_trial'
-    let usedModel = isProPlan ? KLING_MODEL : SEEDANCE_MODEL
+    // Push #402 — engine is the user's explicit choice (Kling already gated to
+    // Studio above). If Kling fails entirely, fall back to Seedance AND drop the
+    // charge to the Seedance price so the user is never billed 45 cr for a
+    // Seedance video. Single model per generation keeps the status poll simple.
+    let usedModel = wantsKling ? KLING_MODEL : SEEDANCE_MODEL
 
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
@@ -246,6 +266,9 @@ export async function POST(req: NextRequest) {
       voiceover_script: voiceoverScript,
       fal_request_ids: falRequestIds, // null for failed submissions
       fal_model: usedModel, // #401 — which engine ran (client passes it to clip-status)
+      // #402 — quality drives the credit cost in compose/status. Reflects the
+      // engine that ACTUALLY ran (so a Kling→Seedance fallback charges 30, not 45).
+      quality: usedModel === KLING_MODEL ? 'cinematic_kling' : 'cinematic_ai',
       verbatim,
       speed: parsedScript.speed,
     })
