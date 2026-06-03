@@ -4968,7 +4968,9 @@ function ModeSelector({
   // Push #404 — strict per-plan engine gating. Each plan unlocks ONE engine; the
   // others render locked and route to the upgrade flow on click.
   const noPlan = !isStarter && !isCreator && !isStudio
-  const fastUnlocked = isStarter
+  // Push #405 — ladder model: any paid plan can use Fast (cheaper engine);
+  // Seedance needs Creator+; Kling needs Studio.
+  const fastUnlocked = isStarter || isCreator || isStudio
   const seedanceUnlocked = isCreator || isStudio || (noPlan && freeAiUsed === false) // free trial
   const klingUnlocked = isStudio
   const fastSelected = mode === 'fast'

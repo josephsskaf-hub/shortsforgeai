@@ -227,20 +227,9 @@ export async function POST(req: NextRequest) {
       if (profileErr && profileErr.code !== 'PGRST116') {
         console.error('[generate-fast] credit balance fetch failed:', profileErr.message)
       }
-      // Push #404 — Fast (stock) is the STARTER plan engine. Other plans use their
-      // own AI engine; allowing them to spend 1-credit Fast would lose money
-      // (their per-credit price is below Fast's real cost). Server-side gate.
-      const planVal = (profile?.plan ?? 'free') as string
-      const isStarter = planVal === 'starter' || planVal === 'starter_trial'
-      if (!isStarter) {
-        return NextResponse.json(
-          {
-            error: 'Fast videos are the Starter plan engine. Your plan uses our AI engine instead.',
-            upsell: 'starter',
-          },
-          { status: 402 },
-        )
-      }
+      // Push #405 — Fast (1 credit) is available to ALL paid plans (ladder model):
+      // a Creator/Studio user can choose the cheaper engine for a quick clip.
+      // Free users have 0 credits so the balance check below blocks them.
       const balance = profile?.video_credits ?? 0
       if (balance < FAST_MODE_CREDIT_COST) {
         return NextResponse.json(
