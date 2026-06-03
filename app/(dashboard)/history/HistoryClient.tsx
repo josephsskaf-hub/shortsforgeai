@@ -54,9 +54,52 @@ interface Props {
 
 export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [videos] = useState(initialVideos)
-  const [playing, setPlaying] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [errors, setErrors] = useState<Set<string>>(new Set())
+  // Push #098 — open a video in the big player overlay (the large view the
+  // user expects when clicking a card), and a proper blob download that works
+  // from My Videos any time — not just once on the result page.
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  // Push #098 — blob download with a real filename (the video's title). The
+  // native <a download> / the player's ⋮ "download" menu both ignore the
+  // attribute on cross-origin CDN URLs and save the raw UUID file, so we fetch
+  // the bytes and name them ourselves. controlsList="nodownload" hides the ⋮
+  // download path so users always get the correctly-named file.
+  async function handleDownload(video: Video) {
+    if (!video.video_url || downloadingId) return
+    setDownloadingId(video.id)
+    try {
+      const res = await fetch(video.video_url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      const safeTitle = extractTitle(video.topic)
+        .replace(/[\\/:*?"<>|]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .slice(0, 80)
+      a.download = safeTitle && safeTitle !== 'Untitled_Short'
+        ? `${safeTitle}.mp4`
+        : `shortsforge-${video.id.slice(0, 8)}.mp4`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+      fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'video_downloaded', metadata: { video_id: video.id } }),
+      }).catch(() => {/* tracking must never affect UX */})
+    } catch {
+      window.open(video.video_url, '_blank', 'noopener,noreferrer')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   /* ── Empty state ── */
   if (videos.length === 0) {
@@ -172,7 +215,6 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       >
         {videos.map((video) => {
           const title = extractTitle(video.topic)
-          const isPlaying = playing === video.id
           const isExpanded = expanded === video.id
 
           return (
@@ -225,19 +267,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                         ⬇ Download
                       </a>
                     </div>
-                  ) : isPlaying ? (
-                    <video
-                      src={video.video_url}
-                      autoPlay
-                      controls
-                      playsInline
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onEnded={() => setPlaying(null)}
-                      onError={() => setErrors(prev => new Set([...prev, video.id]))}
-                    />
                   ) : (
                     <div
-                      onClick={() => setPlaying(video.id)}
+                      onClick={() => setLightbox(video.id)}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -329,11 +361,10 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <a
-                    href={video.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
+                  <button
+                    onClick={() => handleDownload(video)}
+                    disabled={downloadingId === video.id}
+                    title="Download MP4"
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -347,11 +378,11 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       color: '#22D3EE',
                       fontSize: '0.6rem',
                       fontWeight: 700,
-                      textDecoration: 'none',
+                      cursor: downloadingId === video.id ? 'wait' : 'pointer',
                     }}
                   >
-                    ⬇
-                  </a>
+                    {downloadingId === video.id ? '…' : '⬇'}
+                  </button>
 
                   <a
                     href="https://studio.youtube.com"
@@ -420,6 +451,48 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           )
         })}
       </div>
+
+      {/* Push #098 — big-player overlay (the large view). Clicking a card opens
+          the Short here with a download button that always saves the correctly
+          named MP4. controlsList="nodownload" removes the ⋮ menu's raw download. */}
+      {lightbox && (() => {
+        const v = videos.find((x) => x.id === lightbox)
+        if (!v) return null
+        return (
+          <div
+            onClick={() => setLightbox(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.86)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          >
+            <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: 16, overflow: 'hidden', background: '#000', border: '1px solid rgba(34,211,238,0.4)', boxShadow: '0 18px 60px rgba(37,99,235,0.25)' }}>
+                <video
+                  src={v.video_url}
+                  controls
+                  autoPlay
+                  playsInline
+                  controlsList="nodownload"
+                  disablePictureInPicture
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={() => setErrors((prev) => new Set([...prev, v.id]))}
+                />
+              </div>
+              <button
+                onClick={() => handleDownload(v)}
+                disabled={downloadingId === v.id}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 28px rgba(34,197,94,0.35)' }}
+              >
+                {downloadingId === v.id ? 'Downloading…' : '⬇ Download (MP4)'}
+              </button>
+              <button
+                onClick={() => setLightbox(null)}
+                style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--muted)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
