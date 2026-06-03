@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     const clips: ClipStatus[] = await Promise.all(
       rawIds.map((id) => {
         if (!id) return Promise.resolve({ id: null, status: 'failed' as const, url: null })
-        return checkFalClip(id)
+        return checkFalClip(id, model)
       })
     )
 
