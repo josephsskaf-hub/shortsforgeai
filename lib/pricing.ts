@@ -50,35 +50,40 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     annualPerMonthLabel: '$2.42',
     annualHref: '/api/stripe/checkout?tier=starter&billing=annual',
   },
+  // Push #401 — Entry plan. Seedance 1.5 Pro engine, 120 credits = 4 AI videos/mo.
   basic: {
     tier: 'basic',
     name: 'Basic',
-    price: 4.90,
-    priceLabel: '$4.90',
+    price: 12.90,
+    priceLabel: '$12.90',
     periodLabel: '/ month',
-    credits: 50,
-    cta: 'Automate Now',
+    credits: 120,
+    cta: 'Start Creating',
     href: '/api/stripe/checkout?tier=basic',
-    annualPriceLabel: '$49',
-    annualPerMonthLabel: '$4.08',
+    annualPriceLabel: '$129',
+    annualPerMonthLabel: '$10.75',
     annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
   },
+  // Push #401 — Premium plan. Kling 2.5 Turbo Pro (cinematic) engine, 240 credits
+  // = 8 AI videos/mo. Kling + Seedance both available on this tier.
   pro: {
     tier: 'pro',
     name: 'Pro',
-    price: 9.90,
-    priceLabel: '$9.90',
+    price: 38.90,
+    priceLabel: '$38.90',
     periodLabel: '/ month',
-    credits: 150,
-    cta: 'Deploy Full Pipeline',
+    credits: 240,
+    cta: 'Go Cinematic',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,
-    annualPriceLabel: '$99',
-    annualPerMonthLabel: '$8.25',
+    annualPriceLabel: '$389',
+    annualPerMonthLabel: '$32.42',
     annualHref: '/api/stripe/checkout?tier=pro&billing=annual',
   },
 }
 
 // Push #276 — remove free card from all surfaces. Only paid plans shown.
-// Push #339 — Starter added as the entry-level paid plan.
-export const PLAN_LIST: PlanConfig[] = [PLANS.starter, PLANS.basic, PLANS.pro]
+// Push #401 — 2-plan structure: Basic (Seedance) + Pro (Kling). Spark/starter
+// is retired from all surfaces but kept in PLANS for back-compat so existing
+// Spark subscribers are grandfathered (their webhook/portal still resolve).
+export const PLAN_LIST: PlanConfig[] = [PLANS.basic, PLANS.pro]

@@ -6,8 +6,11 @@ import { fal } from '@fal-ai/client'
 
 export const dynamic = 'force-dynamic'
 
-// #368 — must match generate-video-cinematic (Seedance 1.5 Pro).
-const FAL_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+// #368/#401 — must match generate-video-cinematic. Default Seedance; the client
+// passes ?model= so a Pro (Kling) generation is polled on the Kling endpoint.
+const SEEDANCE_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL])
 
 type ClipStatus = {
   id: string | null
@@ -15,20 +18,20 @@ type ClipStatus = {
   url: string | null
 }
 
-async function checkFalClip(requestId: string): Promise<ClipStatus> {
+async function checkFalClip(requestId: string, model: string): Promise<ClipStatus> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return { id: requestId, status: 'failed', url: null }
 
   try {
     fal.config({ credentials: falKey })
-    const st = await fal.queue.status(FAL_MODEL, { requestId })
+    const st = await fal.queue.status(model, { requestId })
     const s = (st as { status?: string }).status
 
     if (s === 'IN_QUEUE') return { id: requestId, status: 'pending', url: null }
     if (s === 'IN_PROGRESS') return { id: requestId, status: 'processing', url: null }
 
     if (s === 'COMPLETED') {
-      const res = await fal.queue.result(FAL_MODEL, { requestId })
+      const res = await fal.queue.result(model, { requestId })
       const data = ((res as { data?: unknown }).data ?? res) as {
         video?: { url?: string }
         output?: { video?: { url?: string } }
@@ -54,6 +57,9 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const idsParam = searchParams.get('ids') ?? ''
+    // #401 — which fal endpoint to poll. Defaults to Seedance for back-compat.
+    const modelParam = searchParams.get('model') ?? ''
+    const model = ALLOWED_MODELS.has(modelParam) ? modelParam : SEEDANCE_MODEL
 
     if (!idsParam) {
       return NextResponse.json({ error: 'ids parameter is required' }, { status: 400 })

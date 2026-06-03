@@ -28,29 +28,32 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   basic: {
     name: 'ShortsForgeAI — Basic',
-    description: '50 Fast Mode videos / month',
-    credits: 50,
+    description: '120 credits / month — 4 AI-generated videos (Seedance)',
+    credits: 120,
   },
   pro: {
     name: 'ShortsForgeAI — Pro',
-    description: '150 credits / month: up to 5 AI Generated videos (Seedance) or 150 Fast Mode videos',
-    credits: 150,
+    description: '240 credits / month — 8 cinematic AI videos (Kling) or Seedance',
+    credits: 240,
   },
 }
 
 // Amounts in the smallest currency unit (cents / centavos / paise).
 // INR: ₹249 = 24900 paise (Starter), ₹399 = 39900 paise (Basic), ₹799 = 79900 paise (Pro).
+// Push #401 — new 2-plan pricing. Basic $12.90 (Seedance), Pro $38.90 (Kling).
+// BRL ≈ USD×5.0, INR ≈ USD×81 (same ratios as the old plans). starter kept only
+// for grandfathered Spark subscribers; not offered to new users.
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
   starter: { usd: 290,  brl: 1490, inr: 24900 },
-  basic:   { usd: 490,  brl: 2490, inr: 39900 },
-  pro:     { usd: 990,  brl: 4990, inr: 79900 },
+  basic:   { usd: 1290, brl: 6490, inr: 104900 },
+  pro:     { usd: 3890, brl: 19490, inr: 314900 },
 }
 
 // #381 — Annual prices = 10× the monthly price (≈2 months free). Smallest unit.
 const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 2900,  brl: 14900,  inr: 249000 },
-  basic:   { usd: 4900,  brl: 24900,  inr: 399000 },
-  pro:     { usd: 9900,  brl: 49900,  inr: 799000 },
+  starter: { usd: 2900,   brl: 14900,   inr: 249000 },
+  basic:   { usd: 12900,  brl: 64900,   inr: 1049000 },
+  pro:     { usd: 38900,  brl: 194900,  inr: 3149000 },
 }
 
 type Billing = 'monthly' | 'annual'

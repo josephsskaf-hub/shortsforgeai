@@ -325,7 +325,8 @@ export default function GenerateClient() {
   // Push #084 — Fast Mode (Pexels + TTS, 1 credit, ~30s) is the new default.
   // Cinematic Mode keeps the Runway path. Quality tiers above only apply to
   // Cinematic Mode; Fast Mode pins the effective quality to 'fast' on submit.
-  const [mode, setMode] = useState<GenerationMode>('fast')
+  // Push #401 — Fast Mode (stock engine) retired. AI Generate is the only path.
+  const [mode, setMode] = useState<GenerationMode>('cinematic_ai')
   // Push #316 — output language selector (en | pt | es).
   const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
   const [generationId, setGenerationId] = useState<string | null>(null)
@@ -437,6 +438,10 @@ export default function GenerateClient() {
   // compose call records quality 'cinematic_ai' (and deducts 30 credits) reliably,
   // avoiding stale `quality` state in the compose effect closure.
   const falUsedRef = useRef<boolean>(false)
+  // #401 — which fal engine ran this generation (Seedance or Kling). The clip
+  // status poll must hit the same endpoint, so we thread it from the
+  // generate-video-cinematic response into the ?model= query param.
+  const falModelRef = useRef<string>('')
   // #362 — holds the full structured script (with [Pexels:]/HOOK markers) so the
   // editable textarea can show a CLEAN, marker-free preview while submission still
   // uses the marked-up version the verbatim pipeline needs. Cleared on manual edit.
@@ -894,7 +899,8 @@ export default function GenerateClient() {
     async function pollFal() {
       try {
         const idsEncoded = encodeURIComponent(JSON.stringify(falRequestIds))
-        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}`, { cache: 'no-store' })
+        const modelQ = falModelRef.current ? `&model=${encodeURIComponent(falModelRef.current)}` : ''
+        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}${modelQ}`, { cache: 'no-store' })
         const data = await res.json()
         if (cancelled) return
 
@@ -1529,6 +1535,7 @@ export default function GenerateClient() {
         }
         setQuality('cinematic_ai')
         falUsedRef.current = true
+        falModelRef.current = typeof data.fal_model === 'string' ? data.fal_model : ''
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -4925,8 +4932,10 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Fast Mode — always available */}
+      <div className="grid grid-cols-1 gap-3">
+        {/* Push #401 — Fast Mode (Pexels stock engine) retired. Hidden; AI
+            Generate is now the only generation path. */}
+        {false && (
         <button
           type="button"
           onClick={() => setMode('fast')}
@@ -4981,8 +4990,9 @@ function ModeSelector({
             ))}
           </ul>
         </button>
+        )}
 
-        {/* AI Generated — Wan 2.5 (fal-ai/wan-25-preview/text-to-video), 9:16, 30 credits. */}
+        {/* AI Generated — Seedance (Basic) or Kling (Pro), 9:16, 30 credits. */}
         <button
           type="button"
           onClick={() => setMode('cinematic_ai')}

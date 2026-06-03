@@ -19,7 +19,35 @@ const CINEMATIC_CREDIT_COST = 30
 // detailed error log. With balance topped up, re-enabling Seedance: better
 // visual quality, ~48% cheaper than Wan ($0.13 vs $0.25/clip @720p no audio),
 // faster (~30-45s/clip). Same { video: { url } } output. Fallback = Wan.
-const FAL_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+const SEEDANCE_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+// Push #401 — premium engine for the Pro plan. Kling 2.5 Turbo Pro is more
+// cinematic (motion/physics/prompt adherence) than Seedance. Same { video: { url } }
+// output shape. Kling has no `resolution`/`generate_audio` params and is silent
+// by default, so our TTS narration (added in compose) stays the only audio.
+const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
+// Back-compat: other modules import FAL_MODEL.
+const FAL_MODEL = SEEDANCE_MODEL
+
+// Build the per-model fal input (params differ between Seedance and Kling).
+function buildFalInput(model: string, prompt: string): Record<string, unknown> {
+  if (model === KLING_MODEL) {
+    return {
+      prompt,
+      duration: '10',
+      aspect_ratio: '9:16',
+      negative_prompt: 'blur, distort, low quality, watermark, text',
+      cfg_scale: 0.5,
+    }
+  }
+  // Seedance (default)
+  return {
+    prompt,
+    aspect_ratio: '9:16',
+    resolution: '720p',
+    duration: '10',
+    generate_audio: false,
+  }
+}
 
 // #369 — clip count = ceil(duration/9), capped 2..6. One ~9-10s clip per
 // timeline slot so a 45s video gets 5 distinct clips and a 60s video gets 6
@@ -28,25 +56,14 @@ function clipCountForDuration(d: number): number {
   return Math.max(2, Math.min(6, Math.ceil(d / 9)))
 }
 
-async function submitToFal(prompt: string): Promise<string | null> {
+async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL): Promise<string | null> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return null
 
   try {
     fal.config({ credentials: falKey })
-    const { request_id } = await fal.queue.submit(FAL_MODEL, {
-      input: {
-        prompt,
-        aspect_ratio: '9:16',
-        resolution: '720p',
-        // #369 — 10s clips (was 5s). compose lays each clip in a slot of
-        // ~duration/clipCount (≈9-10s); a 5s clip looped ~2x INSIDE its slot, so
-        // every clip visibly repeated. 10s fills the slot with distinct footage.
-        duration: '10',
-        // #368 — Seedance generates its own dialogue/foley by default; we add our
-        // own TTS narration in compose, so keep AI clips SILENT.
-        generate_audio: false,
-      },
+    const { request_id } = await fal.queue.submit(model, {
+      input: buildFalInput(model, prompt),
     })
     return request_id ?? null
   } catch (err) {
@@ -95,7 +112,7 @@ export async function POST(req: NextRequest) {
     // in compose/status on SUCCESS).
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('video_credits, free_ai_generate_used')
+      .select('video_credits, free_ai_generate_used, plan')
       .eq('id', user.id)
       .single()
 
@@ -167,21 +184,40 @@ export async function POST(req: NextRequest) {
     // with healthy balance + concurrency 10 — which produced the repeated-clip
     // videos. Staggering lets every clip enqueue. One retry per clip covers a
     // transient reject.
-    const falRequestIds: (string | null)[] = []
-    for (const scene of scenes) {
-      const visualPrompt = scene.stockSearchQuery || scene.description
-      const cinematic = `${visualPrompt}, cinematic 9:16 vertical video, YouTube Shorts style, high quality`
-      let id = await submitToFal(cinematic)
-      if (!id) {
-        await new Promise((r) => setTimeout(r, 800))
-        id = await submitToFal(cinematic)
+    // Push #401 — pick the engine by plan. Pro → Kling (premium/cinematic);
+    // everyone else (Basic, free trial) → Seedance. If Kling yields zero clips
+    // (no access / transient), fall back to Seedance for the WHOLE generation so
+    // a paying user never gets a failed render. Single model per generation keeps
+    // the status poll simple (it checks one endpoint).
+    const isProPlan = profile?.plan === 'pro' || profile?.plan === 'pro_trial'
+    let usedModel = isProPlan ? KLING_MODEL : SEEDANCE_MODEL
+
+    async function submitAllScenes(model: string): Promise<(string | null)[]> {
+      const ids: (string | null)[] = []
+      for (const scene of scenes) {
+        const visualPrompt = scene.stockSearchQuery || scene.description
+        const cinematic = `${visualPrompt}, cinematic 9:16 vertical video, YouTube Shorts style, high quality`
+        let id = await submitToFal(cinematic, model)
+        if (!id) {
+          await new Promise((r) => setTimeout(r, 800))
+          id = await submitToFal(cinematic, model)
+        }
+        ids.push(id)
+        await new Promise((r) => setTimeout(r, 450))
       }
-      falRequestIds.push(id)
-      await new Promise((r) => setTimeout(r, 450))
+      return ids
     }
 
-    // Check if at least one submission succeeded
-    const validIds = falRequestIds.filter((id): id is string => id !== null)
+    let falRequestIds = await submitAllScenes(usedModel)
+    let validIds = falRequestIds.filter((id): id is string => id !== null)
+
+    if (validIds.length === 0 && usedModel === KLING_MODEL) {
+      console.warn('[cinematic] Kling submit yielded 0 clips — falling back to Seedance')
+      usedModel = SEEDANCE_MODEL
+      falRequestIds = await submitAllScenes(SEEDANCE_MODEL)
+      validIds = falRequestIds.filter((id): id is string => id !== null)
+    }
+
     if (validIds.length === 0) {
       return NextResponse.json(
         { error: 'Could not submit clips to AI generator. Please try again.' },
@@ -209,6 +245,7 @@ export async function POST(req: NextRequest) {
       scene_captions: scenes.map((s) => s.caption),
       voiceover_script: voiceoverScript,
       fal_request_ids: falRequestIds, // null for failed submissions
+      fal_model: usedModel, // #401 — which engine ran (client passes it to clip-status)
       verbatim,
       speed: parsedScript.speed,
     })

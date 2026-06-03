@@ -36,7 +36,8 @@ const STARTER_FEATURES = [
 ]
 
 const BASIC_FEATURES = [
-  `${PLANS.basic.credits} Fast Mode renders/month`,
+  '4 AI-generated videos/month',
+  'Seedance AI engine (great quality)',
   'AI writes script + voiceover',
   'Auto-captions pipeline',
   'Download watermark-free MP4',
@@ -44,9 +45,9 @@ const BASIC_FEATURES = [
 ]
 
 const PRO_FEATURES = [
-  `${PLANS.pro.credits} Fast Mode renders/month`,
+  '8 cinematic AI videos/month',
+  'Kling 2.5 engine (top-tier cinematic)',
   'AI writes script + voiceover',
-  'Advanced generation controls',
   'Auto-captions pipeline',
   'Download watermark-free MP4',
   'My Videos history',
