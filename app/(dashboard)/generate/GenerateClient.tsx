@@ -4934,6 +4934,154 @@ function RenderHeader({ progress, message }: { progress: number; message: string
 // inert. The server enforces the same gate as a defense-in-depth check.
 // Push #088 — Pro users with 0 cinematic_tokens get a "resets monthly"
 // inert card too, so spending the token doesn't silently fail at submit.
+// #406 — tech redesign of the engine cards. VISUAL ONLY: selection/gating logic
+// stays in ModeSelector; this component just renders one card. Accent is an
+// "r,g,b" string so all glows/borders derive from one color per engine.
+function EngineCard({
+  selected,
+  unlocked,
+  accent,
+  accentText,
+  icon,
+  name,
+  engineTag,
+  badge,
+  features,
+  quality,
+  tierLabel,
+  onClick,
+}: {
+  selected: boolean
+  unlocked: boolean
+  accent: string
+  accentText: string
+  icon: string
+  name: string
+  engineTag: string
+  badge: JSX.Element
+  features: string[]
+  quality: number
+  tierLabel: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative rounded-2xl p-4 text-left overflow-hidden transition-all hover:-translate-y-0.5"
+      style={{
+        background: selected
+          ? `linear-gradient(160deg, rgba(${accent},.16) 0%, rgba(${accent},.06) 55%, rgba(255,255,255,.02) 100%)`
+          : 'rgba(255,255,255,.03)',
+        border: selected ? `1.5px solid rgba(${accent},.65)` : '1.5px solid var(--border)',
+        boxShadow: selected
+          ? `0 0 34px rgba(${accent},.20), inset 0 0 26px rgba(${accent},.06)`
+          : 'none',
+        cursor: 'pointer',
+        opacity: unlocked ? 1 : 0.8,
+      }}
+    >
+      {/* top accent hairline */}
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background: `linear-gradient(90deg, transparent 5%, rgba(${accent},${selected ? '.95' : '.35'}) 50%, transparent 95%)`,
+        }}
+      />
+      {/* corner glow when selected */}
+      {selected && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: -34,
+            right: -34,
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(${accent},.30), transparent 70%)`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* header: icon chip + name + engine tag + badge */}
+      <div className="relative flex items-center gap-2.5 mb-3">
+        <span
+          className="flex items-center justify-center rounded-lg text-base"
+          style={{
+            width: 34,
+            height: 34,
+            flexShrink: 0,
+            background: `linear-gradient(135deg, rgba(${accent},.32), rgba(${accent},.10))`,
+            border: `1px solid rgba(${accent},.40)`,
+            boxShadow: selected ? `0 0 14px rgba(${accent},.35)` : 'none',
+            filter: unlocked ? 'none' : 'grayscale(0.4)',
+          }}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <div className="text-sm font-black leading-tight" style={{ color: selected ? accentText : 'var(--text)' }}>
+            {name}
+          </div>
+          <div
+            className="text-[9px] font-bold uppercase"
+            style={{ letterSpacing: '0.16em', color: `rgba(${accent},.9)` }}
+          >
+            {engineTag}
+          </div>
+        </div>
+        <div className="ml-auto flex-shrink-0">{badge}</div>
+      </div>
+
+      {/* feature list */}
+      <ul className="relative space-y-1.5">
+        {features.map((f) => (
+          <li key={f} className="flex items-center gap-1.5">
+            <span style={{ color: accentText, fontSize: '0.55rem' }}>◆</span>
+            <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
+          </li>
+        ))}
+      </ul>
+
+      {/* footer: quality meter + tier label */}
+      <div
+        className="relative mt-3 pt-2.5 flex items-center justify-between"
+        style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}
+      >
+        <div className="flex items-center gap-1">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              style={{
+                width: 14,
+                height: 3,
+                borderRadius: 2,
+                background: i < quality ? `rgba(${accent},.9)` : 'rgba(255,255,255,.12)',
+              }}
+            />
+          ))}
+          <span className="ml-1.5 text-[9px] font-bold uppercase" style={{ letterSpacing: '.12em', color: 'var(--muted)' }}>
+            quality
+          </span>
+        </div>
+        <span
+          className="text-[9px] font-black uppercase"
+          style={{ letterSpacing: '.14em', color: selected ? accentText : 'var(--muted)' }}
+        >
+          {tierLabel}
+        </span>
+      </div>
+    </button>
+  )
+}
+
 function ModeSelector({
   mode,
   setMode,
@@ -4988,138 +5136,69 @@ function ModeSelector({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Push #404 — Fast = Starter engine (stock, relevance-gated). Locked → upgrade. */}
-        {true && (
-        <button
-          type="button"
+        {/* #406 — tech card redesign (EngineCard). Logic identical. */}
+        <EngineCard
+          selected={fastSelected}
+          unlocked={fastUnlocked}
+          accent="37,99,235"
+          accentText="#93c5fd"
+          icon="⚡"
+          name="Fast Mode"
+          engineTag="Starter engine"
+          tierLabel="fastest"
+          quality={1}
+          features={fastFeatures}
+          badge={fastUnlocked ? (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(37,99,235,.18)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>1 credit</span>
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(37,99,235,.15)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>🔒 Starter</span>
+          )}
           onClick={() => { if (fastUnlocked) { setMode('fast') } else { onUpgrade() } }}
-          className="rounded-xl p-4 text-left"
-          style={{
-            background: mode === 'fast' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
-            border: mode === 'fast' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-            boxShadow: mode === 'fast' ? '0 0 28px rgba(37,99,235,.15)' : 'none',
-          }}
-        >
-          {/* Header row */}
-          <div className="flex items-center gap-2 mb-2.5">
-            <span className="text-base">⚡</span>
-            <span
-              className="text-sm font-black"
-              style={{ color: mode === 'fast' ? '#93c5fd' : 'var(--text)' }}
-            >
-              Fast Mode
-            </span>
-            <div className="ml-auto">
-              {fastUnlocked ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(37,99,235,.18)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>1 credit</span>
-              ) : (
-                <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(37,99,235,.15)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>🔒 Starter</span>
-              )}
-            </div>
-          </div>
-          {/* Feature list */}
-          <ul className="space-y-1">
-            {fastFeatures.map((f) => (
-              <li key={f} className="flex items-center gap-1.5">
-                <span style={{ color: '#34d399', fontSize: '0.6rem' }}>●</span>
-                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
-              </li>
-            ))}
-          </ul>
-        </button>
-        )}
+        />
 
         {/* #402 — AI Generated (Seedance, 30 cr). Available to all paid plans. */}
-        <button
-          type="button"
+        {/* #406 — tech card redesign (EngineCard). Logic identical. */}
+        <EngineCard
+          selected={seedanceSelected}
+          unlocked={seedanceUnlocked}
+          accent="245,158,11"
+          accentText="#fcd34d"
+          icon="✨"
+          name="AI Generated"
+          engineTag="Creator engine"
+          tierLabel="premium"
+          quality={2}
+          features={aiFeatures}
+          badge={freeTrialBadge ? (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.35)' }}>1 free · watermark</span>
+          ) : seedanceUnlocked ? (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>30 credits</span>
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,.15)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>🔒 Creator</span>
+          )}
           onClick={() => { if (seedanceUnlocked) { setMode('cinematic_ai'); setAiEngine('seedance') } else { onUpgrade() } }}
-          className="rounded-xl p-4 text-left"
-          style={{
-            background: mode === 'cinematic_ai' && aiEngine === 'seedance' ? 'rgba(245,158,11,.10)' : 'rgba(255,255,255,.03)',
-            border: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '1.5px solid rgba(245,158,11,.55)' : '1.5px solid var(--border)',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-            boxShadow: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '0 0 28px rgba(245,158,11,.15)' : 'none',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2.5">
-            <span className="text-base">✨</span>
-            <span
-              className="text-sm font-black"
-              style={{ color: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '#fcd34d' : 'var(--text)' }}
-            >
-              AI Generated
-            </span>
-            <div className="ml-auto">
-              {freeTrialBadge ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.35)' }}>1 free · watermark</span>
-              ) : seedanceUnlocked ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>30 credits</span>
-              ) : (
-                <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,.15)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>🔒 Creator</span>
-              )}
-            </div>
-          </div>
-          <ul className="space-y-1">
-            {aiFeatures.map((f) => (
-              <li key={f} className="flex items-center gap-1.5">
-                <span style={{ color: '#fcd34d', fontSize: '0.6rem' }}>●</span>
-                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
-              </li>
-            ))}
-          </ul>
-        </button>
+        />
 
         {/* #402 — Cinematic AI (Kling, 45 cr). Studio-only — locked → upgrade. */}
-        <button
-          type="button"
+        {/* #406 — tech card redesign (EngineCard). Logic identical. */}
+        <EngineCard
+          selected={klingSelected}
+          unlocked={klingUnlocked}
+          accent="168,85,247"
+          accentText="#d8b4fe"
+          icon="🎬"
+          name="Cinematic AI"
+          engineTag="Studio engine"
+          tierLabel="flagship"
+          quality={3}
+          features={cinematicFeatures_kling}
+          badge={isStudio ? (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.35)' }}>45 credits</span>
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(168,85,247,.15)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.3)' }}>🔒 Studio</span>
+          )}
           onClick={() => { if (isStudio) { setMode('cinematic_ai'); setAiEngine('kling') } else { onUpgrade() } }}
-          className="rounded-xl p-4 text-left"
-          style={{
-            background: mode === 'cinematic_ai' && aiEngine === 'kling' ? 'rgba(168,85,247,.12)' : 'rgba(255,255,255,.03)',
-            border: mode === 'cinematic_ai' && aiEngine === 'kling' ? '1.5px solid rgba(168,85,247,.6)' : '1.5px solid var(--border)',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-            boxShadow: mode === 'cinematic_ai' && aiEngine === 'kling' ? '0 0 28px rgba(168,85,247,.18)' : 'none',
-            opacity: isStudio ? 1 : 0.9,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2.5">
-            <span className="text-base">🎬</span>
-            <span
-              className="text-sm font-black"
-              style={{ color: mode === 'cinematic_ai' && aiEngine === 'kling' ? '#d8b4fe' : 'var(--text)' }}
-            >
-              Cinematic AI
-            </span>
-            <div className="ml-auto flex items-center gap-1.5">
-              {isStudio ? (
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.35)' }}
-                >
-                  45 credits
-                </span>
-              ) : (
-                <span
-                  className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                  style={{ background: 'rgba(168,85,247,.15)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.3)' }}
-                >
-                  🔒 Studio
-                </span>
-              )}
-            </div>
-          </div>
-          <ul className="space-y-1">
-            {cinematicFeatures_kling.map((f) => (
-              <li key={f} className="flex items-center gap-1.5">
-                <span style={{ color: '#d8b4fe', fontSize: '0.6rem' }}>●</span>
-                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
-              </li>
-            ))}
-          </ul>
-        </button>
+        />
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
             Basic, AND Pro-with-0-tokens (resets monthly). */}
