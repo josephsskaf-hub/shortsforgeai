@@ -644,18 +644,20 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <div style={{ minHeight: '88vh' }}>
       <section className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-16" style={{ zIndex: 2 }}>
         <div className="mx-auto max-w-3xl text-center">
+        {/* #408 — ads differentiator claim: speed/zero friction ("2 clicks").
+            Message-matches the Google Ads campaign so ad promise = first fold. */}
         <h1 className="text-balance text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl text-[#F1F5F9]">
-          Create{' '}
+          From Idea to{' '}
           <span
             className="text-[#22D3EE]"
             style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
           >
-            Faceless YouTube Shorts
+            Viral Short
           </span>{' '}
-          From One Idea
+          in 2 Clicks
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          ShortAI generates the hook, script, voice, captions and B-roll so you can create short-form videos for YouTube, TikTok &amp; Reels faster. You just download and post.
+          No prompts. No editing. ShortAI writes the hook, script, voice, captions and footage for YouTube, TikTok &amp; Reels — you just download and post.
         </p>
 
         {/* Push #116 — live cumulative counter directly under the
@@ -685,7 +687,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate My First Short →'}
           </button>
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            From $12.90/month · 7-day money-back guarantee · Cancel anytime
+            From $11.90/month · 7-day money-back guarantee · Cancel anytime
           </p>
         </div>
         </div>{/* end hero content */}
@@ -1022,7 +1024,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Choose a plan
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Two plans, from $12.90/month. Real AI-generated Shorts — script, voice, and edit done for you.
+            Three plans, from $11.90/month. Real AI-generated Shorts — script, voice, and edit done for you.
           </p>
         </div>
         {/* #382 — monthly / annual billing toggle (mirrors /pricing) */}
