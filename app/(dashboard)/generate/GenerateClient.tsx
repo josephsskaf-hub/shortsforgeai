@@ -2116,6 +2116,42 @@ export default function GenerateClient() {
     }
   }, [phase, finalVideoUrl, playerFailed])
 
+  // Push #097 — self-healing recovery. Once the initial retry budget is spent
+  // and playerFailed flips true, DON'T strand the user behind a manual reload
+  // button (the state they'd land on after leaving the tab during the render).
+  // Instead keep silently re-loading the (cache-busted) MP4 every 6s. The
+  // first time the CDN serves it, canplay/loadeddata/playing fires, we clear
+  // playerFailed, and the overlay disappears on its own — zero clicks.
+  useEffect(() => {
+    if (phase !== 'done' || !finalVideoUrl || !playerFailed) return
+    const el = videoRef.current
+    if (!el) return
+    const join = finalVideoUrl.includes('?') ? '&' : '?'
+    const onLoaded = () => {
+      playerRetryAttemptRef.current = 0
+      setPlayerFailed(false)
+    }
+    el.addEventListener('canplay', onLoaded)
+    el.addEventListener('loadeddata', onLoaded)
+    el.addEventListener('playing', onLoaded)
+    const attempt = () => {
+      const v = videoRef.current
+      if (!v) return
+      // Cache-bust each probe so we re-fetch instead of replaying a cached 503.
+      v.src = `${finalVideoUrl}${join}_auto=${Date.now()}`
+      try { v.load() } catch { /* noop */ }
+      v.play().catch(() => {})
+    }
+    attempt() // immediate try the moment we land on the fallback
+    const id = setInterval(attempt, 6000)
+    return () => {
+      clearInterval(id)
+      el.removeEventListener('canplay', onLoaded)
+      el.removeEventListener('loadeddata', onLoaded)
+      el.removeEventListener('playing', onLoaded)
+    }
+  }, [phase, finalVideoUrl, playerFailed])
+
 
   // Push #084 — Fast Mode is a flat 1 credit; Cinematic Mode uses the
   // per-quality cost from QUALITY_OPTIONS.
@@ -3228,57 +3264,14 @@ export default function GenerateClient() {
                     spent, playerFailed flips and we swap the <video> for
                     a Portuguese fallback with a reload button so the user
                     never stares at an empty spinner. */}
-                {playerFailed ? (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '24px',
-                      textAlign: 'center',
-                      background: '#0b0b1a',
-                      color: 'var(--text)',
-                      gap: '14px',
-                    }}
-                  >
-                    <div style={{ fontSize: '38px', lineHeight: 1 }} aria-hidden>⏳</div>
-                    <p
-                      style={{
-                        color: '#fff',
-                        fontSize: '0.95rem',
-                        fontWeight: 600,
-                        lineHeight: 1.45,
-                        maxWidth: '320px',
-                        margin: 0,
-                      }}
-                    >
-                      Vídeo ainda processando. Aguarde alguns instantes e atualize a página.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => { if (typeof window !== 'undefined') window.location.reload() }}
-                      style={{
-                        marginTop: '4px',
-                        background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
-                        border: 'none',
-                        color: '#fff',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        padding: '10px 22px',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        boxShadow: '0 6px 22px rgba(37,99,235,.32)',
-                      }}
-                    >
-                      Atualizar
-                    </button>
-                  </div>
-                ) : (
+                {/* Push #097 — self-healing player. The <video> stays mounted
+                    at all times; while the CDN is still propagating the fresh
+                    MP4 we lay a "finishing up" overlay ON TOP of it instead of
+                    swapping it out. A background effect keeps re-attempting the
+                    load every few seconds and drops the overlay automatically
+                    the moment the file plays — so a user who navigated away
+                    during the render never has to click anything. */}
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                   <video
                     ref={videoRef}
                     key={finalVideoUrl}
@@ -3289,7 +3282,58 @@ export default function GenerateClient() {
                     preload="metadata"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
-                )}
+                  {playerFailed && (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '24px',
+                        textAlign: 'center',
+                        background: '#0b0b1a',
+                        color: 'var(--text)',
+                        gap: '14px',
+                      }}
+                    >
+                      <div style={{ fontSize: '38px', lineHeight: 1 }} aria-hidden>⏳</div>
+                      <p
+                        style={{
+                          color: '#fff',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          lineHeight: 1.45,
+                          maxWidth: '320px',
+                          margin: 0,
+                        }}
+                      >
+                        Finishing up your video — it&apos;ll appear here automatically in a few seconds.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setPlayerFailed(false); playerRetryAttemptRef.current = 0 }}
+                        style={{
+                          marginTop: '4px',
+                          background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                          border: 'none',
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          padding: '10px 22px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+                        }}
+                      >
+                        Refresh now
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Push #296 — redesigned action section. Download is the primary
