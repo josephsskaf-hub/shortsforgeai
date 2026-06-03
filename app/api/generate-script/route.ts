@@ -44,11 +44,11 @@ OUTPUT FORMAT — use EXACTLY these headers, in this exact order. Each section M
 
 HOOK (0-2s): [Pexels: FOOTAGE_CUE] Voiceover sentence here (12 words max, pattern interrupt or number).
 
-MICRO REWARD 1: [Pexels: FOOTAGE_CUE] First concrete fact — specific name, number, date, or place.
+MICRO REWARD 1: [Pexels: FOOTAGE_CUE] First concrete LESSER-KNOWN fact — specific name, number, date, or place most viewers have never heard.
 
-MICRO REWARD 2: [Pexels: FOOTAGE_CUE] Second concrete fact. More specific and surprising than #1.
+MICRO REWARD 2: [Pexels: FOOTAGE_CUE] Second lesser-known fact. More specific and surprising than #1.
 
-MICRO REWARD 3: [Pexels: FOOTAGE_CUE] Third concrete fact. The most surprising or counterintuitive one yet.
+MICRO REWARD 3: [Pexels: FOOTAGE_CUE] Third lesser-known fact. The most counterintuitive one yet — something that contradicts what people assume.
 
 ESCALATION: [Pexels: FOOTAGE_CUE] One sentence raising the stakes. More intense than anything before.
 
@@ -64,6 +64,13 @@ FOOTAGE CUE RULES (critical — this directly controls what video clip plays):
 - Good: "forensic dna lab test tubes", "old archive crime documents", "stock market trading monitors", "ancient stone pyramid aerial"
 - Bad: "success", "billionaire", "mystery", "the answer", "time"
 
+FACT SELECTION RULES (#407 — this is what separates "huh, cool" from "WAIT, WHAT?"):
+- BANNED: the single most famous fact about the topic — the one everyone already knows. Examples of BANNED picks: World Cup -> Zidane's headbutt; Titanic -> "it sank"; Everest -> "it's the tallest mountain"; Einstein -> E=mc². If a casual viewer could name it, DO NOT use it.
+- Every MICRO REWARD must pass this test: "would a curious person scrolling YouTube already know this?" If yes, dig deeper and pick a different fact.
+- Prefer: counterintuitive numbers, hidden mechanisms, obscure-but-verified details, things experts know but the public doesn't.
+- The PAYOFF must be the LEAST-known, MOST surprising verified fact of the whole script — the one that makes the viewer want to tell a friend.
+- Never sacrifice accuracy for surprise: every fact must still be real and verifiable. Do not invent or exaggerate.
+
 VOICEOVER RULES:
 - Total script: 130-170 words (narrated at 1.05x speed = ~45-55 seconds)
 - Every fact must be specific: names, numbers, dates, places — never vague
@@ -75,6 +82,7 @@ VOICEOVER RULES:
 
 PAYOFF RULES (NON-NEGOTIABLE — a Short without a real payoff feels like clickbait and gets the channel cancelled):
 - The PAYOFF MUST deliver the concrete answer/discovery the HOOK promised. The viewer has to LEARN the actual thing — a fact, number, name, mechanism, or outcome.
+- The PAYOFF must also be a fact the viewer did NOT already know (see FACT SELECTION RULES). Revealing something famous (e.g. "it was Zidane's headbutt") is a FAILED payoff even if it's concrete.
 - NEVER end on a question, a tease, or a promise. These endings are BANNED — do NOT write them: "what if I told you...", "no one knows / no one knew", "the truth remains a mystery", "we may never know", "stay to find out", "you won't believe what happened" (without then telling it), "or something worse?", "the answer will shock you" (without giving the answer).
 - UNSOLVED mysteries are NOT an excuse to skip the payoff: deliver the single most-accepted theory or the most concrete known fact as the reward (e.g. Mary Celeste -> "The leading theory: alcohol fumes from the cargo sparked a panicked evacuation."). The viewer must always leave with something concrete.
 - The follow/save CTA is SEPARATE and comes AFTER the payoff reveal — it never replaces it.
@@ -201,7 +209,7 @@ export async function POST(req: NextRequest) {
             {
               role: 'user',
               content:
-                `Your script had problems: ${problems.join('; ')}. Rewrite the FULL script using EXACTLY the required headers, in order, each present and on its own line: HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, RHYTHM, PAYOFF. ESCALATION must raise the stakes above MICRO REWARD 3. RHYTHM must be 2-3 ultra-short 1-3 word punches. The PAYOFF MUST deliver the concrete answer the hook promised (a specific fact, number, name, mechanism, or the single most-accepted theory) — NO questions, NO "no one knows", NO "remains a mystery", NO teasing — with the follow CTA on a SEPARATE line after the reveal. Respond with ONLY the script.`,
+                `Your script had problems: ${problems.join('; ')}. Rewrite the FULL script using EXACTLY the required headers, in order, each present and on its own line: HOOK, MICRO REWARD 1, MICRO REWARD 2, MICRO REWARD 3, ESCALATION, RHYTHM, PAYOFF. ESCALATION must raise the stakes above MICRO REWARD 3. RHYTHM must be 2-3 ultra-short 1-3 word punches. The PAYOFF MUST deliver the concrete answer the hook promised (a specific fact, number, name, mechanism, or the single most-accepted theory) — NO questions, NO "no one knows", NO "remains a mystery", NO teasing — with the follow CTA on a SEPARATE line after the reveal. Every fact (especially the PAYOFF) must be LESSER-KNOWN: never the single most famous fact about the topic. Respond with ONLY the script.`,
             },
           ],
         })
