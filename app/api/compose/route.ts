@@ -31,7 +31,7 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 // duration before we re-synthesize the TTS at an adjusted speed to pull it
 // back in line. ±3s matches the product tolerance.
 const DURATION_TOLERANCE_SECONDS = 3
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling'
 
 interface ComposeBody {
   generationId?: string
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
       // Push #315 — added cinematic_ai for fal.ai Wan 2.1 mode (3 credits).
-      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' ? q : 'basic_ai'
+      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' ? q : 'basic_ai'
     })()
 
     // Push #316 — output language. OpenAI TTS auto-detects from the script text.
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       : undefined
     // Map render quality → narration tier so premium/cinematic users get better personas.
     const narrationTier: 'free' | 'premium' | 'cinematic' =
-      quality === 'cinematic_ai' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
+      quality === 'cinematic_ai' || quality === 'cinematic_kling' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
 
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
     // narration is the user's exact text spoken at this rate; we don't rewrite
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     // upstream gate held (plan === pro) as defense in depth.
     // Push #315 — cinematic_ai (fal.ai mode) uses credits, not Pro plan.
     // Only the old Runway-based modes (basic, basic_ai, pro) require Pro.
-    if (quality !== 'fast' && quality !== 'cinematic_ai') {
+    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(

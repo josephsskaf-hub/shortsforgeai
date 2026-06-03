@@ -20,7 +20,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('video_credits, free_ai_generate_used')
+      .select('video_credits, free_ai_generate_used, plan')
       .eq('id', user.id)
       .single()
 
@@ -45,7 +45,20 @@ export async function GET() {
     const credits = data?.video_credits ?? DEFAULT_CREDITS
     // #384 — also surface whether the 1 free AI-Generate trial is still available,
     // so the generator can label the AI card "1 free · watermark".
-    return NextResponse.json({ credits, freeAiUsed: data?.free_ai_generate_used === true })
+    // #404 — surface the plan + per-engine flags so the generator can show the
+    // right engine card unlocked: Starter→Fast, Creator→Seedance, Studio→Kling.
+    const planVal = (data?.plan ?? 'free') as string
+    const isStarter = planVal === 'starter' || planVal === 'starter_trial'
+    const isCreator = planVal === 'basic' || planVal === 'basic_trial'
+    const isStudio = planVal === 'pro' || planVal === 'pro_trial'
+    return NextResponse.json({
+      credits,
+      freeAiUsed: data?.free_ai_generate_used === true,
+      plan: planVal,
+      isStarter,
+      isCreator,
+      isStudio,
+    })
   } catch (err) {
     console.error('[credits GET] unexpected:', err)
     return NextResponse.json({ credits: 0, error: 'Failed to load credits' }, { status: 500 })

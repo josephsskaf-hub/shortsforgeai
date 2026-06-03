@@ -152,6 +152,22 @@ export async function POST(req: NextRequest) {
     const eligibleForFree = !freeAlreadyUsed && emailConfirmed
     const isFreeTrial = !wantsKling && balance < SEEDANCE_CREDIT_COST && eligibleForFree
 
+    // Push #404 — AI Generated (Seedance) requires a Creator or Studio plan (or
+    // the one-time free trial). Starter (Fast) users and trial-exhausted free
+    // users are upsold to Creator.
+    const planVal = (profile?.plan ?? 'free') as string
+    const isCreatorPlus = planVal === 'basic' || planVal === 'basic_trial' || isStudio
+    if (!wantsKling && !isCreatorPlus && !isFreeTrial) {
+      return NextResponse.json(
+        {
+          error: 'AI Generated videos are on the Creator & Studio plans. Upgrade to use the AI engine.',
+          upsell: 'creator',
+          balance,
+        },
+        { status: 402 },
+      )
+    }
+
     if (balance < cost && !isFreeTrial) {
       return NextResponse.json(
         {

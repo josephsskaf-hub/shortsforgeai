@@ -22,19 +22,19 @@ type Currency = 'usd' | 'brl' | 'inr'
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   starter: {
-    name: 'ShortsForgeAI — Spark',
-    description: '15 Fast Mode videos / month',
-    credits: 15,
+    name: 'ShortsForgeAI — Starter',
+    description: '50 Fast videos / month (smart stock footage + AI voiceover)',
+    credits: 50,
   },
   basic: {
-    name: 'ShortsForgeAI — Basic',
-    description: '120 credits / month — 4 AI-generated videos (Seedance)',
-    credits: 120,
+    name: 'ShortsForgeAI — Creator',
+    description: '8 AI-generated videos / month (Seedance engine)',
+    credits: 240,
   },
   pro: {
-    name: 'ShortsForgeAI — Pro',
-    description: '240 credits / month — 8 cinematic AI videos (Kling) or Seedance',
-    credits: 240,
+    name: 'ShortsForgeAI — Studio',
+    description: '8 cinematic AI videos / month (Kling engine, top quality)',
+    credits: 360,
   },
 }
 
@@ -43,17 +43,19 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 // Push #401 — new 2-plan pricing. Basic $12.90 (Seedance), Pro $38.90 (Kling).
 // BRL ≈ USD×5.0, INR ≈ USD×81 (same ratios as the old plans). starter kept only
 // for grandfathered Spark subscribers; not offered to new users.
+// Push #404 — 3-tier pricing. Starter $11.90 (Fast), Creator $24.90 (Seedance),
+// Studio $37.90 (Kling). BRL ≈ USD×5.0, INR ≈ USD×81.
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 290,  brl: 1490, inr: 24900 },
-  basic:   { usd: 1290, brl: 6490, inr: 104900 },
-  pro:     { usd: 3890, brl: 19490, inr: 314900 },
+  starter: { usd: 1190, brl: 5990,  inr: 95900 },
+  basic:   { usd: 2490, brl: 12490, inr: 199900 },
+  pro:     { usd: 3790, brl: 18990, inr: 299900 },
 }
 
 // #381 — Annual prices = 10× the monthly price (≈2 months free). Smallest unit.
 const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 2900,   brl: 14900,   inr: 249000 },
-  basic:   { usd: 12900,  brl: 64900,   inr: 1049000 },
-  pro:     { usd: 38900,  brl: 194900,  inr: 3149000 },
+  starter: { usd: 11900, brl: 59900,  inr: 959000 },
+  basic:   { usd: 24900, brl: 124900, inr: 1999000 },
+  pro:     { usd: 37900, brl: 189900, inr: 2999000 },
 }
 
 type Billing = 'monthly' | 'annual'

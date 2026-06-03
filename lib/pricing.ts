@@ -35,49 +35,48 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     cta: 'Run Free',
     href: '/signup',
   },
-  // Push #339 — Starter plan at $2.90/mo (15 credits). Entry-level for creators
-  // who want to test the product before committing to Basic or Pro.
+  // Push #404 — STARTER: Fast engine (stock, relevance-gated). High volume,
+  // cheap entry to compete with InVideo/AutoShorts. 1 credit/video → 50 videos.
   starter: {
     tier: 'starter',
-    name: 'Spark',
-    price: 2.90,
-    priceLabel: '$2.90',
+    name: 'Starter',
+    price: 11.90,
+    priceLabel: '$11.90',
     periodLabel: '/ month',
-    credits: 15,
-    cta: 'Ignite My Channel',
+    credits: 50,
+    cta: 'Start for $11.90',
     href: '/api/stripe/checkout?tier=starter',
-    annualPriceLabel: '$29',
-    annualPerMonthLabel: '$2.42',
+    annualPriceLabel: '$119',
+    annualPerMonthLabel: '$9.92',
     annualHref: '/api/stripe/checkout?tier=starter&billing=annual',
   },
-  // Push #401 — Entry plan. Seedance 1.5 Pro engine, 120 credits = 4 AI videos/mo.
+  // Push #404 — CREATOR: Seedance AI engine. 30 credits/video → 8 videos.
   basic: {
     tier: 'basic',
-    name: 'Basic',
-    price: 12.90,
-    priceLabel: '$12.90',
-    periodLabel: '/ month',
-    credits: 120,
-    cta: 'Start Creating',
-    href: '/api/stripe/checkout?tier=basic',
-    annualPriceLabel: '$129',
-    annualPerMonthLabel: '$10.75',
-    annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
-  },
-  // Push #401 — Premium plan. Kling 2.5 Turbo Pro (cinematic) engine, 240 credits
-  // = 8 AI videos/mo. Kling + Seedance both available on this tier.
-  pro: {
-    tier: 'pro',
-    name: 'Pro',
-    price: 38.90,
-    priceLabel: '$38.90',
+    name: 'Creator',
+    price: 24.90,
+    priceLabel: '$24.90',
     periodLabel: '/ month',
     credits: 240,
-    cta: 'Go Cinematic',
+    cta: 'Go Creator',
+    href: '/api/stripe/checkout?tier=basic',
+    annualPriceLabel: '$249',
+    annualPerMonthLabel: '$20.75',
+    annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
+  },
+  // Push #404 — STUDIO: Kling premium engine (fallback Seedance). 45 cr/video → 8 videos.
+  pro: {
+    tier: 'pro',
+    name: 'Studio',
+    price: 37.90,
+    priceLabel: '$37.90',
+    periodLabel: '/ month',
+    credits: 360,
+    cta: 'Go Studio',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,
-    annualPriceLabel: '$389',
-    annualPerMonthLabel: '$32.42',
+    annualPriceLabel: '$379',
+    annualPerMonthLabel: '$31.58',
     annualHref: '/api/stripe/checkout?tier=pro&billing=annual',
   },
 }
@@ -86,4 +85,5 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
 // Push #401 — 2-plan structure: Basic (Seedance) + Pro (Kling). Spark/starter
 // is retired from all surfaces but kept in PLANS for back-compat so existing
 // Spark subscribers are grandfathered (their webhook/portal still resolve).
-export const PLAN_LIST: PlanConfig[] = [PLANS.basic, PLANS.pro]
+// Push #404 — 3-tier structure: Starter (Fast) · Creator (Seedance) · Studio (Kling).
+export const PLAN_LIST: PlanConfig[] = [PLANS.starter, PLANS.basic, PLANS.pro]

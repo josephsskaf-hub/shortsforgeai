@@ -12,7 +12,7 @@ export const maxDuration = 60
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
 
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
@@ -25,6 +25,9 @@ function creditCostFor(quality: Quality): number {
       return 1
     case 'cinematic_ai':
       return 30
+    case 'cinematic_kling':
+      // #402 — Cinematic AI (Kling) premium engine, Studio-only.
+      return 45
     case 'pro':
       return 20
     case 'basic':
@@ -174,7 +177,7 @@ export async function GET(
     // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
     // and the fast||cinematic_ai deduction path both fire correctly.
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling'
         ? (qParam as Quality)
         : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -221,7 +224,7 @@ export async function GET(
       // cinematic_token consumed upstream in /api/generate-video. Only
       // Fast Mode still draws from the regular credit pool.
       // Push #315 — cinematic_ai also deducts from video_credits (3 credits).
-      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai'
+      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.

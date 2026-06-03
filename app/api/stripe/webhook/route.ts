@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
         // can experience the product before paying; full credits are granted
         // by the invoice.payment_succeeded handler on Day 4 first charge.
         const isTrial = session.payment_status === 'no_payment_required'
-        // Push #401 — new 2-plan credits: Pro 240 (8 Kling), Basic 120 (4 Seedance).
-        // starter (Spark) kept at 15 only for grandfathered subscribers.
-        const planCredits = tier === 'pro' ? 240 : tier === 'starter' ? 15 : 120
+        // Push #404 — 3-tier credits: Studio(pro) 360 (8 Kling@45), Creator(basic)
+        // 240 (8 Seedance@30), Starter 50 (50 Fast@1).
+        const planCredits = tier === 'pro' ? 360 : tier === 'starter' ? 50 : 240
         const creditsToGrant = isTrial ? 5 : planCredits
 
         const { data: currentProfile } = await supabase
@@ -233,8 +233,8 @@ export async function POST(req: NextRequest) {
 
         const renewalUserId = subscription.metadata?.supabase_user_id
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : subscription.metadata?.tier === 'starter' ? 'starter' : 'basic'
-        // Push #401 — renewal credits match new plans: Pro 240, Basic 120, Spark 15 (grandfathered).
-        const renewalCredits = renewalTier === 'pro' ? 240 : renewalTier === 'starter' ? 15 : 120
+        // Push #404 — renewal credits: Studio 360, Creator 240, Starter 50.
+        const renewalCredits = renewalTier === 'pro' ? 360 : renewalTier === 'starter' ? 50 : 240
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,
