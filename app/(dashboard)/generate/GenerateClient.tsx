@@ -196,6 +196,11 @@ export default function GenerateClient() {
   // #384 — whether this account has already used its 1 free AI-Generate video.
   // null = unknown (still loading). Drives the "1 free (watermarked)" label.
   const [freeAiUsed, setFreeAiUsed] = useState<boolean | null>(null)
+  // #402 — is the user on the Studio plan? Gates the Cinematic AI (Kling) engine.
+  const [isStudio, setIsStudio] = useState<boolean>(false)
+  // #402 — which AI engine the user picked: 'seedance' (AI Generated, 30 cr, all
+  // plans) or 'kling' (Cinematic AI, 45 cr, Studio only).
+  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling'>('seedance')
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -442,6 +447,9 @@ export default function GenerateClient() {
   // status poll must hit the same endpoint, so we thread it from the
   // generate-video-cinematic response into the ?model= query param.
   const falModelRef = useRef<string>('')
+  // #402 — quality returned by the cinematic route ('cinematic_ai' = Seedance/30
+  // or 'cinematic_kling' = Kling/45). Drives the credit cost in compose/status.
+  const falQualityRef = useRef<string>('cinematic_ai')
   // #362 — holds the full structured script (with [Pexels:]/HOOK markers) so the
   // editable textarea can show a CLEAN, marker-free preview while submission still
   // uses the marked-up version the verbatim pipeline needs. Cleared on manual edit.
@@ -599,6 +607,8 @@ export default function GenerateClient() {
           setCredits(typeof data.credits === 'number' ? data.credits : 0)
           // #384 — refresh free-AI-trial availability from the same source.
           if (typeof data.freeAiUsed === 'boolean') setFreeAiUsed(data.freeAiUsed)
+          // #402 — Studio gate for the Cinematic AI (Kling) engine.
+          if (typeof data.isStudio === 'boolean') setIsStudio(data.isStudio)
         }
       } catch {
         if (!cancelled) setCredits(null)
@@ -987,7 +997,7 @@ export default function GenerateClient() {
             scene_captions: sceneCaptions,
             duration,
             topic: prompt,
-            quality: falUsedRef.current ? 'cinematic_ai' : quality,
+            quality: falUsedRef.current ? falQualityRef.current : quality,
             language,
             // Narration Engine (Phase 1) — pass the detected niche as vertical
             // so compose auto-selects the best AI voice persona for the content.
@@ -1038,7 +1048,7 @@ export default function GenerateClient() {
 
     async function poll() {
       try {
-        const params = new URLSearchParams({ quality: falUsedRef.current ? 'cinematic_ai' : quality })
+        const params = new URLSearchParams({ quality: falUsedRef.current ? falQualityRef.current : quality })
         if (deductedRef.current) params.set('deducted', '1')
         // Push #050 — pass duration + topic so the server can record them
         // in the videos history row when the render finishes.
@@ -1519,7 +1529,7 @@ export default function GenerateClient() {
         const res = await fetch('/api/generate-video-cinematic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
@@ -1536,6 +1546,7 @@ export default function GenerateClient() {
         setQuality('cinematic_ai')
         falUsedRef.current = true
         falModelRef.current = typeof data.fal_model === 'string' ? data.fal_model : ''
+        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : 'cinematic_ai'
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -2165,12 +2176,13 @@ export default function GenerateClient() {
   const selectedCost = (mode === 'fast' || mode === 'creator')
     ? 1
     : mode === 'cinematic_ai'
-    ? 30
+    // #402 — Cinematic AI (Kling) costs 45, AI Generated (Seedance) 30.
+    ? (aiEngine === 'kling' ? 45 : 30)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
   // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && freeAiUsed === false && (credits ?? 0) < 30
+  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && freeAiUsed === false && (credits ?? 0) < 30
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -2699,6 +2711,10 @@ export default function GenerateClient() {
             cinematicTokens={cinematicTokens}
             credits={credits}
             freeAiUsed={freeAiUsed}
+            aiEngine={aiEngine}
+            setAiEngine={setAiEngine}
+            isStudio={isStudio}
+            onUpgrade={openOutOfCreditsModal}
           />
           )}
 
@@ -4910,6 +4926,10 @@ function ModeSelector({
   cinematicTokens,
   credits,
   freeAiUsed,
+  aiEngine,
+  setAiEngine,
+  isStudio,
+  onUpgrade,
 }: {
   mode: GenerationMode
   setMode: (m: GenerationMode) => void
@@ -4917,11 +4937,16 @@ function ModeSelector({
   cinematicTokens: number
   credits: number | null
   freeAiUsed: boolean | null
+  aiEngine: 'seedance' | 'kling'
+  setAiEngine: (e: 'seedance' | 'kling') => void
+  isStudio: boolean
+  onUpgrade: () => void
 }) {
   const proHasToken = isPro && cinematicTokens > 0
 
   const fastFeatures = ['Premium stock visuals', 'Natural AI voice', 'Ready in ~60 seconds']
-  const aiFeatures = ['Every scene generated by AI', 'Cinematic, one-of-a-kind visuals', 'Our highest quality']
+  const aiFeatures = ['Every scene generated by AI', 'Great-quality AI visuals', 'Fast render']
+  const cinematicFeatures_kling = ['Top-tier cinematic motion', 'Premium one-of-a-kind scenes', 'Our highest quality (Kling)']
   const cinematicFeatures = ['Runway AI-generated scenes', 'Cinematic quality visuals', 'Premium AI render']
 
   return (
@@ -4932,10 +4957,10 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 gap-3">
-        {/* Push #401 — Fast Mode (Pexels stock engine) retired. Hidden; AI
-            Generate is now the only generation path. */}
-        {false && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Push #403 — Fast Mode re-enabled as the Starter-tier engine (stock,
+            now with per-scene relevance-gated Pixabay matching). */}
+        {true && (
         <button
           type="button"
           onClick={() => setMode('fast')}
@@ -4992,59 +5017,40 @@ function ModeSelector({
         </button>
         )}
 
-        {/* AI Generated — Seedance (Basic) or Kling (Pro), 9:16, 30 credits. */}
+        {/* #402 — AI Generated (Seedance, 30 cr). Available to all paid plans. */}
         <button
           type="button"
-          onClick={() => setMode('cinematic_ai')}
+          onClick={() => { setMode('cinematic_ai'); setAiEngine('seedance') }}
           className="rounded-xl p-4 text-left"
           style={{
-            background: mode === 'cinematic_ai' ? 'rgba(245,158,11,.10)' : 'rgba(255,255,255,.03)',
-            border: mode === 'cinematic_ai' ? '1.5px solid rgba(245,158,11,.55)' : '1.5px solid var(--border)',
+            background: mode === 'cinematic_ai' && aiEngine === 'seedance' ? 'rgba(245,158,11,.10)' : 'rgba(255,255,255,.03)',
+            border: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '1.5px solid rgba(245,158,11,.55)' : '1.5px solid var(--border)',
             cursor: 'pointer',
             transition: 'all 0.15s',
-            boxShadow: mode === 'cinematic_ai' ? '0 0 28px rgba(245,158,11,.15)' : 'none',
+            boxShadow: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '0 0 28px rgba(245,158,11,.15)' : 'none',
           }}
         >
           <div className="flex items-center gap-2 mb-2.5">
             <span className="text-base">✨</span>
             <span
               className="text-sm font-black"
-              style={{ color: mode === 'cinematic_ai' ? '#fcd34d' : 'var(--text)' }}
+              style={{ color: mode === 'cinematic_ai' && aiEngine === 'seedance' ? '#fcd34d' : 'var(--text)' }}
             >
               AI Generated
             </span>
             <div className="ml-auto flex items-center gap-1.5">
-              <span
-                className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{
-                  background: 'rgba(245,158,11,.15)',
-                  color: '#fcd34d',
-                  border: '1px solid rgba(245,158,11,.25)',
-                }}
-              >
-                New ✨
-              </span>
-              {/* #384 — show "1 free" while the account still has its free AI
-                  trial AND can't pay the 30 (mirrors the server rule). */}
+              {/* #384 — "1 free" while the account still has its free AI trial. */}
               {freeAiUsed === false && (credits ?? 0) < 30 ? (
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: 'rgba(16,185,129,.18)',
-                    color: '#34d399',
-                    border: '1px solid rgba(16,185,129,.35)',
-                  }}
+                  style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.35)' }}
                 >
                   1 free · watermark
                 </span>
               ) : (
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: 'rgba(245,158,11,.18)',
-                    color: '#fcd34d',
-                    border: '1px solid rgba(245,158,11,.3)',
-                  }}
+                  style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}
                 >
                   30 credits
                 </span>
@@ -5055,6 +5061,56 @@ function ModeSelector({
             {aiFeatures.map((f) => (
               <li key={f} className="flex items-center gap-1.5">
                 <span style={{ color: '#fcd34d', fontSize: '0.6rem' }}>●</span>
+                <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </button>
+
+        {/* #402 — Cinematic AI (Kling, 45 cr). Studio-only — locked → upgrade. */}
+        <button
+          type="button"
+          onClick={() => { if (isStudio) { setMode('cinematic_ai'); setAiEngine('kling') } else { onUpgrade() } }}
+          className="rounded-xl p-4 text-left"
+          style={{
+            background: mode === 'cinematic_ai' && aiEngine === 'kling' ? 'rgba(168,85,247,.12)' : 'rgba(255,255,255,.03)',
+            border: mode === 'cinematic_ai' && aiEngine === 'kling' ? '1.5px solid rgba(168,85,247,.6)' : '1.5px solid var(--border)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            boxShadow: mode === 'cinematic_ai' && aiEngine === 'kling' ? '0 0 28px rgba(168,85,247,.18)' : 'none',
+            opacity: isStudio ? 1 : 0.9,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-base">🎬</span>
+            <span
+              className="text-sm font-black"
+              style={{ color: mode === 'cinematic_ai' && aiEngine === 'kling' ? '#d8b4fe' : 'var(--text)' }}
+            >
+              Cinematic AI
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              {isStudio ? (
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.35)' }}
+                >
+                  45 credits
+                </span>
+              ) : (
+                <span
+                  className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(168,85,247,.15)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.3)' }}
+                >
+                  🔒 Studio
+                </span>
+              )}
+            </div>
+          </div>
+          <ul className="space-y-1">
+            {cinematicFeatures_kling.map((f) => (
+              <li key={f} className="flex items-center gap-1.5">
+                <span style={{ color: '#d8b4fe', fontSize: '0.6rem' }}>●</span>
                 <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
               </li>
             ))}

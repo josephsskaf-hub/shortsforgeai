@@ -81,6 +81,38 @@ function hasLifestylePollution(video: PixabayVideo, sceneNeedsPeople: boolean): 
   return tags.some((t) => LIFESTYLE_TAG_SET.has(t))
 }
 
+// ── Positive relevance gate (Push #403 — kill the "cat video") ──────────────
+// Pixabay's search can return loosely-related clips, especially after we
+// broaden the query (first-3-tokens / no-category). Without a positive check we
+// accepted the first non-lifestyle clip even if its tags had NOTHING to do with
+// the narration (e.g. a cat clip for an "ocean search" beat). This gate requires
+// at least one meaningful query word to appear in the clip's tags; otherwise the
+// clip is rejected and the pipeline tries the next query / repeats a relevant
+// prior clip instead of showing something off-topic.
+const RELEVANCE_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'over', 'under',
+  'video', 'footage', 'clip', 'shot', 'scene', 'cinematic', 'closeup', 'close',
+  'aerial', 'drone', 'background', 'vertical', 'style',
+])
+
+function meaningfulTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2 && !RELEVANCE_STOPWORDS.has(t))
+}
+
+function tagsRelevantToQuery(video: PixabayVideo, query: string): boolean {
+  const qTokens = meaningfulTokens(query)
+  // If the query has no judge-able tokens, don't block (can't assess relevance).
+  if (qTokens.length === 0) return true
+  const tagBlob = video.tags.toLowerCase()
+  // Accept if any meaningful query token appears in the clip's tags. Substring
+  // match (not exact token) so "ocean" matches "ocean wave", "plane" matches
+  // "airplane", etc.
+  return qTokens.some((t) => tagBlob.includes(t))
+}
+
 // ── URL picker ─────────────────────────────────────────────────────────────
 // Prefer large (1080p+); fall back down. Returns null if no URL exists.
 
@@ -155,6 +187,14 @@ async function searchAndFilter(
     if (hasLifestylePollution(video, sceneNeedsPeople)) {
       console.log(
         `[pixabay] ${label} rejected id=${video.id} tags="${video.tags.slice(0, 60)}" reason=lifestyle`,
+      )
+      continue
+    }
+    // Push #403 — positive relevance gate: the clip's tags must share a word
+    // with the query, else it's off-topic ("cat video") → reject.
+    if (!tagsRelevantToQuery(video, query)) {
+      console.log(
+        `[pixabay] ${label} rejected id=${video.id} tags="${video.tags.slice(0, 60)}" reason=irrelevant query="${query.slice(0, 50)}"`,
       )
       continue
     }
