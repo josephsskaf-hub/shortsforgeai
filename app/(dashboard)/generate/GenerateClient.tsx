@@ -1245,7 +1245,10 @@ export default function GenerateClient() {
         headers: { 'Content-Type': 'application/json' },
         // Push #064 — pass duration so analyze-idea can size word count
         // and scene count to match the user's selection.
-        body: JSON.stringify({ prompt: source, duration, language }),
+        // Push #411 — pass scriptMode so 'Use my script as is' keeps the
+        // user's words VERBATIM in the AI engines too (server splits scenes
+        // in code; GPT only generates the visual layer).
+        body: JSON.stringify({ prompt: source, duration, language, scriptMode }),
         signal: controller.signal,
       })
       if (res.status === 401) {

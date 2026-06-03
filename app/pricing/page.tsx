@@ -34,7 +34,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What’s the difference between AI Generated and Cinematic AI?',
-    a: 'AI Generated uses the Seedance engine (great quality, 30 credits/video) and is available on both plans. Cinematic AI uses the premium Kling engine for top-tier cinematic motion (45 credits/video) and is exclusive to the Studio plan.',
+    a: 'AI Generated uses the Seedance engine (great quality, 30 credits/video) and is available on Creator and Studio. Cinematic AI uses the premium Kling engine for top-tier cinematic motion (45 credits/video) and is exclusive to the Studio plan. Starter uses the Fast engine: smart stock footage, 1 credit/video.',
   },
   {
     q: 'How do credits work?',
@@ -376,7 +376,7 @@ export default function PricingPage() {
             views/month
           </p>
           <p className="mt-2 text-[12px] font-semibold text-[#94A3B8]">
-            Pro plan pays for itself with just 1 viral Short.
+            Any plan pays for itself with just 1 viral Short.
           </p>
         </div>
 
@@ -660,6 +660,9 @@ export default function PricingPage() {
                     Free
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                    Starter
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
                     Creator
                   </th>
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-cyan-400">
@@ -669,39 +672,53 @@ export default function PricingPage() {
               </thead>
               <tbody>
                 {[
+                  // #409 — table rebuilt for the 3-tier ladder (was still 2-plan).
+                  {
+                    label: 'Fast videos (smart stock, 1 cr)',
+                    free: '—',
+                    starter: '✅ 50/mo',
+                    basic: '✅',
+                    pro: '✅',
+                  },
                   {
                     label: 'AI Generated videos (Seedance, 30 cr)',
                     free: '✅ 1 free',
+                    starter: '—',
                     basic: '✅',
                     pro: '✅',
                   },
                   {
                     label: 'Cinematic AI videos (Kling, 45 cr)',
                     free: '—',
+                    starter: '—',
                     basic: '—',
                     pro: '✅ Included',
                   },
                   {
                     label: 'Monthly credits',
                     free: '1 free video',
-                    basic: '120',
-                    pro: '240',
+                    starter: '50',
+                    basic: '240',
+                    pro: '360',
                   },
                   {
                     label: 'Render time',
                     free: '~3-5 min',
+                    starter: '~60 sec',
                     basic: '~3-5 min',
                     pro: '~3-5 min',
                   },
                   {
                     label: 'Watermark-free MP4',
                     free: '—',
+                    starter: '✅',
                     basic: '✅',
                     pro: '✅',
                   },
                   {
                     label: 'Priority support',
                     free: '—',
+                    starter: 'Email',
                     basic: 'Email',
                     pro: 'Priority',
                   },
@@ -709,6 +726,7 @@ export default function PricingPage() {
                   <tr key={row.label} className="border-b border-white/[0.04] last:border-0">
                     <td className="px-5 py-3.5 font-semibold text-[#F1F5F9]">{row.label}</td>
                     <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.free}</td>
+                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.starter}</td>
                     <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.basic}</td>
                     <td className="px-5 py-3.5 text-center font-bold text-cyan-300">{row.pro}</td>
                   </tr>
@@ -718,7 +736,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
-            ✨ AI Generated (Seedance) is included on both plans. 🎬 Cinematic AI (Kling) — our highest quality — is exclusive to Studio.
+            ⚡ Fast (smart stock) is included on every paid plan. ✨ AI Generated (Seedance) starts at Creator. 🎬 Cinematic AI (Kling) — our highest quality — is exclusive to Studio.
           </p>
         </div>
 
@@ -811,10 +829,10 @@ export default function PricingPage() {
             </div>
             <div>
               <div className="text-[14px] font-black text-[#F1F5F9] mb-1">
-                7-day money-back guarantee — both plans
+                7-day money-back guarantee — all plans
               </div>
               <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
-                If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked. Works for both plans.
+                If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked. Works for all plans.
               </p>
             </div>
           </div>
@@ -848,18 +866,38 @@ export default function PricingPage() {
             zIndex: 50,
           }}
         >
+          {/* #409 — Starter added to the sticky bar (was missing after the 3-tier launch) */}
+          <button
+            type="button"
+            disabled={purchasing !== null && purchasing !== 'starter'}
+            onClick={() => handleBuy('starter')}
+            style={{
+              flex: 1,
+              padding: '12px 6px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,.06)',
+              border: '1px solid rgba(255,255,255,.12)',
+              color: '#F1F5F9',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              minHeight: 48,
+            }}
+          >
+            {purchasing === 'starter' ? 'Loading…' : 'Starter $11.90'}
+          </button>
           <button
             type="button"
             disabled={purchasing !== null && purchasing !== 'basic'}
             onClick={() => handleBuy('basic')}
             style={{
               flex: 1,
-              padding: '12px 8px',
+              padding: '12px 6px',
               borderRadius: 10,
               background: 'rgba(255,255,255,.06)',
               border: '1px solid rgba(255,255,255,.12)',
               color: '#F1F5F9',
-              fontSize: '0.8rem',
+              fontSize: '0.75rem',
               fontWeight: 800,
               cursor: 'pointer',
               minHeight: 48,

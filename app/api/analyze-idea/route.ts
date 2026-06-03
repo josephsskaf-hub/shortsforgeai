@@ -507,6 +507,35 @@ function parseViralScriptSections(text: string): ViralSection[] | null {
   return sections.length >= 3 ? sections : null
 }
 
+// Push #411 — split a free-form user script into scene-sized voiceover
+// chunks WITHOUT rewriting a single word. Sentences are grouped into
+// `targetScenes` chunks with roughly balanced word counts. Used by the
+// verbatim fast-path so "Use my script as is" survives the AI engines.
+function splitVerbatimScript(text: string, targetScenes: number): string[] {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (!clean) return []
+  const sentences =
+    clean.match(/[^.!?…]+[.!?…]+["'”]?|[^.!?…]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [clean]
+  if (sentences.length <= targetScenes) return sentences
+  const totalWords = clean.split(' ').length
+  const perScene = Math.ceil(totalWords / targetScenes)
+  const chunks: string[] = []
+  let cur: string[] = []
+  let curWords = 0
+  for (const s of sentences) {
+    const w = s.split(' ').length
+    if (curWords > 0 && curWords + w > perScene && chunks.length < targetScenes - 1) {
+      chunks.push(cur.join(' '))
+      cur = []
+      curWords = 0
+    }
+    cur.push(s)
+    curWords += w
+  }
+  if (cur.length) chunks.push(cur.join(' '))
+  return chunks
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -520,7 +549,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string; duration?: number; language?: string }
+    let body: { prompt?: string; duration?: number; language?: string; scriptMode?: string }
     try {
       body = await req.json()
     } catch {
@@ -655,6 +684,121 @@ Return valid JSON only: { "viral_title": "...", "youtube_title": "...", "youtube
         const msg = err instanceof Error ? err.message : String(err)
         console.error('[analyze-idea] viral fast-path failed, falling through to normal path:', msg)
         // Fall through to normal GPT path below
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Push #411 — VERBATIM FAST PATH (free-form scripts) ─────────────────────
+    // When the user chose "Use my script as is" (scriptMode='verbatim') and
+    // the text has NO viral markers, keep their words EXACTLY: split scenes
+    // in code and ask GPT only for the visual layer — same contract as the
+    // viral fast-path above. On any failure, fall through to the normal path.
+    if (!viralSections && body.scriptMode === 'verbatim') {
+      const targetScenes = duration >= 90 ? 8 : duration >= 60 ? 6 : 5
+      const chunks = splitVerbatimScript(prompt, targetScenes)
+      if (chunks.length >= 2) {
+        const fallbackV = fallbackBrief(prompt)
+        const perSceneSec = Math.max(3, Math.round(duration / chunks.length))
+        const sceneList = chunks.map((text, i) => ({
+          scene_number: i + 1,
+          typeLabel: 'SCENE',
+          duration_seconds: perSceneSec,
+          voiceover: text,
+        }))
+
+        const visualUserMsg = `You are a cinematic video director. The voiceover for each scene below is FIXED — do NOT change, summarize, or rewrite it. Generate ONLY the visual layer.
+
+For each scene return a JSON object with exactly:
+- scene_number (int)
+- caption (max 6 words, punchy fragment, no period — summarize the voiceover in 6 words)
+- highlight (the single most striking word in the caption)
+- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content)
+- duration_seconds (int)
+
+Also return at the top level:
+- viral_title (catchy ≤80 char title)
+- youtube_title (≤100 chars with #shorts)
+- youtube_description (2-4 sentences)
+- hashtags (array of 8 strings with # prefix)
+- music_mood (one phrase)
+- niche (one word)
+- tone (one phrase)
+
+SCENES TO VISUALIZE:
+${sceneList.map(s => `Scene ${s.scene_number} (${s.duration_seconds}s):\n${s.voiceover}`).join('\n\n')}
+
+Return valid JSON only: { "viral_title": "...", "youtube_title": "...", "youtube_description": "...", "hashtags": [...], "music_mood": "...", "niche": "...", "tone": "...", "scenes": [{...}] }`
+
+        try {
+          const completion = await openai.chat.completions.create(
+            {
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are a cinematic video director. Return valid JSON only — no markdown, no code blocks.' },
+                { role: 'user', content: visualUserMsg },
+              ],
+              temperature: 0.5,
+              max_tokens: 2000,
+              response_format: { type: 'json_object' },
+            },
+            { timeout: 28000, maxRetries: 0 }
+          )
+          const raw = completion.choices[0]?.message?.content?.trim() ?? ''
+          const data = JSON.parse(raw) as Record<string, unknown>
+          const rawScenes = Array.isArray(data.scenes) ? (data.scenes as Record<string, unknown>[]) : []
+
+          const scenes: SceneBrief[] = sceneList.map((s, i) => {
+            const gpt = rawScenes[i] ?? {}
+            return {
+              scene_number: s.scene_number,
+              duration_seconds: asNumber(gpt.duration_seconds, s.duration_seconds),
+              caption: clampCaption(asString(gpt.caption, s.voiceover.split(' ').slice(0, 6).join(' '))),
+              highlight: asString(gpt.highlight, '') || null,
+              visual_prompt: clampToProviderLimit(asString(gpt.visual_prompt, fallbackV.scenes[i]?.visual_prompt ?? '')),
+              voiceover: s.voiceover, // ← user's exact words, NEVER replaced
+            }
+          })
+
+          const hookText = scenes[0]?.voiceover ?? ''
+          const viral_title = asString(data.viral_title, hookText.slice(0, 80))
+          const niche = asString(data.niche, fallbackV.niche)
+          const tone = asString(data.tone, fallbackV.tone)
+          const voiceover_script = scenes.map(s => s.voiceover).join(' ')
+          const youtube_title = asString(data.youtube_title, viral_title).slice(0, 120)
+          const youtube_description = asString(data.youtube_description, fallbackV.youtube_description).slice(0, 600)
+          let hashtags = asStringArray(data.hashtags).slice(0, 8)
+          hashtags = hashtags.map(h => h.replace(/\s+/g, '')).map(h => h.startsWith('#') ? h : `#${h}`).filter(h => h.length > 1)
+          if (hashtags.length === 0) hashtags = fallbackV.hashtags
+          const music_mood = asString(data.music_mood, fallbackV.music_mood)
+          const provider_prompt = clampToProviderLimit(scenes.map(s => s.visual_prompt).join(' '))
+          const vi = fallbackViralIntelligence(hookText, niche)
+
+          const verbatimBrief: CreativeBrief = {
+            viral_title,
+            hook: hookText,
+            summary: voiceover_script.slice(0, 300),
+            niche,
+            tone,
+            voiceover_script,
+            scenes,
+            music_mood,
+            pacing_notes: 'follow the user script rhythm; hold on the final line',
+            youtube_title,
+            youtube_description,
+            hashtags,
+            provider_prompt,
+            detected_duration_seconds: duration,
+            viral_intelligence: vi,
+            title: viral_title,
+            scenePlan: scenes.map(s => s.caption),
+          }
+          console.log(`[analyze-idea] verbatim fast-path: ${scenes.length} scenes, ${voiceover_script.split(' ').length} words kept verbatim`)
+          return NextResponse.json(verbatimBrief)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[analyze-idea] verbatim fast-path failed, falling through to normal path:', msg)
+          // Fall through to normal GPT path below
+        }
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
