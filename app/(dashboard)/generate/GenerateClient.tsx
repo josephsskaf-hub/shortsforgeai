@@ -5173,7 +5173,10 @@ function ModeSelector({
           quality={2}
           features={aiFeatures}
           badge={freeTrialBadge ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.35)' }}>1 free · watermark</span>
+            /* #413 — was a long "1 free · watermark" pill that overflowed the
+               card header (Joseph). The free-trial info already lives in the
+               summary line under the cards, so the badge slot stays empty. */
+            <></>
           ) : seedanceUnlocked ? (
             <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>30 credits</span>
           ) : (
