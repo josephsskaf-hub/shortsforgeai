@@ -171,13 +171,15 @@ async function buildAndRedirect(
     }
   }
 
-  // Push #273 — multi-currency (USD/BRL/INR). Payment methods via explicit list
-  // so the Stripe SDK version stays compatible with subscription mode.
-  // Stripe dashboard controls which methods are active per currency/country.
+  // Push #273 — multi-currency (USD/BRL/INR).
+  // Push #414 — CONVERSION FIX: removed the hard `payment_method_types: ['card']`
+  // restriction. 48 abandoned checkouts vs 3 payers, mostly BRL/INR — card-only
+  // blocks UPI (India), local wallets and Link. Omitting the field lets Stripe
+  // show every dashboard-enabled method that supports subscriptions for the
+  // buyer's currency/country (worst case: identical card-only behavior).
   // Credits are granted immediately at checkout completion (no trial).
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
-    payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
