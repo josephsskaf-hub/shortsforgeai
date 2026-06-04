@@ -2283,8 +2283,8 @@ export default function GenerateClient() {
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
               {credits === 0
-                ? 'Upgrade now and keep your momentum. Basic plan from $4.90/mo.'
-                : 'Use it wisely — or upgrade for unlimited videos from $4.90/mo.'}
+                ? 'Upgrade now and keep your momentum. Plans from $11.90/mo.'
+                : 'Use it wisely — or upgrade for more videos from $11.90/mo.'}
             </span>
           </div>
           <button
@@ -2304,7 +2304,7 @@ export default function GenerateClient() {
               opacity: upgradeLoading ? 0.7 : 1,
             }}
           >
-            {upgradeLoading ? 'Loading…' : 'Upgrade — $4.90/mo →'}
+            {upgradeLoading ? 'Loading…' : 'Upgrade — from $11.90/mo →'}
           </button>
         </div>
       )}
@@ -3669,7 +3669,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(34,197,94,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Basic — $4.90/mo →'}
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $11.90/mo →'}
                   </button>
                 </div>
               )}
@@ -5732,7 +5732,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$4.90/mo</strong>. Cancel anytime.
+          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$11.90/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -5754,7 +5754,7 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Get Basic — $4.90/mo →'}
+          {loading ? 'Opening checkout…' : 'Get Starter — $11.90/mo →'}
         </button>
         {/* Push #113 — BRL option for BR users. */}
         <button
@@ -5778,7 +5778,7 @@ function UrgencyModal({
             gap: 6,
           }}
         >
-          🇧🇷 Pagar em R$ 24,90/mês (Brasil)
+          🇧🇷 Pagar em R$ 59,90/mês (Brasil)
         </button>
         <p
           style={{
