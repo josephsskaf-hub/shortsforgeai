@@ -11,6 +11,35 @@ function getAdminClient() {
   )
 }
 
+// Push #416 — owner/admin accounts are managed manually (e.g. Joseph's
+// account is set to Studio by hand for testing all engines). Webhook events
+// from his legacy real subscription kept overwriting that back to
+// starter/free. Any plan-changing event for these emails is skipped.
+const PROTECTED_EMAILS = new Set([
+  'josephsskaf@gmail.com',
+  'josephskaf@gmail.com',
+  'josephskaf@hotmail.com',
+  'joseph-test@shortsforgeai.com',
+])
+
+type AdminClient = ReturnType<typeof getAdminClient>
+
+async function isProtectedProfile(
+  supabase: AdminClient,
+  filter: { userId?: string; customerId?: string }
+): Promise<boolean> {
+  try {
+    let query = supabase.from('profiles').select('email').limit(1)
+    if (filter.userId) query = query.eq('id', filter.userId)
+    else if (filter.customerId) query = query.eq('stripe_customer_id', filter.customerId)
+    else return false
+    const { data } = await query.single()
+    return PROTECTED_EMAILS.has((data?.email ?? '').toLowerCase())
+  } catch {
+    return false
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -243,6 +272,12 @@ export async function POST(req: NextRequest) {
         // Basic = 0. Resetting (not adding) keeps the monthly cap honest
         // even if the user never spent the prior month's token.
         const renewalCinematicTokens = renewalTier === 'pro' ? 1 : 0
+        // Push #416 — never let a legacy subscription renewal overwrite a
+        // manually-managed admin account.
+        if (await isProtectedProfile(supabase, { userId: renewalUserId })) {
+          console.log('[stripe webhook] renewal skipped for protected admin account:', renewalUserId)
+          break
+        }
         const { error: renewErr } = await supabase
           .from('profiles')
           .update({
@@ -267,6 +302,12 @@ export async function POST(req: NextRequest) {
         const isActive =
           subscription.status === 'active' || subscription.status === 'trialing'
 
+        // Push #416 — protected admin accounts are managed manually.
+        if (await isProtectedProfile(supabase, { customerId })) {
+          console.log('[stripe webhook] subscription.updated skipped for protected admin:', customerId)
+          break
+        }
+
         await supabase
           .from('profiles')
           .update({
@@ -281,6 +322,12 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
+
+        // Push #416 — protected admin accounts are managed manually.
+        if (await isProtectedProfile(supabase, { customerId })) {
+          console.log('[stripe webhook] subscription.deleted skipped for protected admin:', customerId)
+          break
+        }
 
         // Push #088 — wipe cinematic_tokens on cancellation so a former
         // Pro user can't keep a stranded Runway token after their plan
@@ -304,6 +351,12 @@ export async function POST(req: NextRequest) {
 
         if (!customerId) {
           console.warn('[stripe webhook] payment_failed without customer id')
+          break
+        }
+
+        // Push #416 — protected admin accounts are managed manually.
+        if (await isProtectedProfile(supabase, { customerId })) {
+          console.log('[stripe webhook] payment_failed skipped for protected admin:', customerId)
           break
         }
 

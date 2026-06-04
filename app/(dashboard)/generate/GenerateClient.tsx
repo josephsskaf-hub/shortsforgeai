@@ -2256,11 +2256,42 @@ export default function GenerateClient() {
         .gv-card { animation: fadeUp 0.35s ease both; }
       `}</style>
 
+      {/* Push #415 — ACTIVATION FIX: a brand-new account (no plan, free AI
+          video still available) must see a GIFT, not a red out-of-credits
+          warning. Only 1/244 signups ever used the free trial — the scary
+          banner below was the first thing 0-credit users saw. */}
+      {planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed === false && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg, rgba(16,185,129,.16), rgba(16,185,129,.06))',
+            border: '1px solid rgba(16,185,129,.4)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ color: '#34d399', fontWeight: 800, fontSize: 13 }}>
+              🎁 Your first AI video is FREE — no credits needed
+            </span>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+              Pick a topic below, choose AI Generated and hit Create. We&apos;ll generate your first Short on us.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Push #103 — sticky low-credits upgrade banner. Sits above every
           other piece of the page so a free user who's about to be locked
           out sees the upgrade offer. Hits the existing
-          /api/stripe/checkout flow via handleUpgradeNow. */}
-      {planTier === 'free' && credits !== null && credits <= 1 && (
+          /api/stripe/checkout flow via handleUpgradeNow.
+          Push #415 — hidden while the free AI trial is still available
+          (the green gift banner above takes its place). */}
+      {planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed !== false && (
         <div
           style={{
             background: credits === 0
