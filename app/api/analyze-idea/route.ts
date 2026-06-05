@@ -536,6 +536,53 @@ function splitVerbatimScript(text: string, targetScenes: number): string[] {
   return chunks
 }
 
+// Push #428 — VERBATIM + AI PACING POLISH ("junção verbatim+IA").
+// The user's words are sacred, but flat punctuation makes the TTS voice read
+// their script like a news anchor. This asks GPT to adjust ONLY punctuation
+// (dramatic "..." pauses, em-dashes, sentence splits) and then ENFORCES the
+// contract in code: if the polished text differs from the original by even
+// one word, we throw it away and keep the user's original. Risk-free upgrade.
+function normalizeWords(text: string): string {
+  return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).join(' ')
+}
+
+async function polishVerbatimPacing(text: string): Promise<string> {
+  try {
+    const completion = await openai.chat.completions.create(
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a voice director preparing a script for a premium AI text-to-speech narrator. Improve ONLY the punctuation and sentence rhythm of the user's script so it SOUNDS cinematic.
+
+YOU MAY: insert or change punctuation marks (periods, commas, "..." pauses before reveals, em-dashes for beats), split long sentences into shorter ones, join fragments, adjust line breaks.
+YOU MAY NOT: add, remove, replace, reorder or translate ANY word. Not one. Numbers, names and spelling stay byte-identical.
+
+Return ONLY the adjusted script text. No commentary, no markdown.`,
+          },
+          { role: 'user', content: text },
+        ],
+        temperature: 0.3,
+        max_tokens: 1200,
+      },
+      { timeout: 12000, maxRetries: 0 }
+    )
+    const polished = completion.choices[0]?.message?.content?.trim() ?? ''
+    if (polished && normalizeWords(polished) === normalizeWords(text)) {
+      console.log('[analyze-idea] verbatim pacing polish applied (words verified identical)')
+      return polished
+    }
+    if (polished) {
+      console.warn('[analyze-idea] pacing polish REJECTED — word sequence changed, keeping original')
+    }
+    return text
+  } catch (e) {
+    console.warn('[analyze-idea] pacing polish skipped:', e instanceof Error ? e.message : String(e))
+    return text
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -695,7 +742,10 @@ Return valid JSON only: { "viral_title": "...", "youtube_title": "...", "youtube
     // viral fast-path above. On any failure, fall through to the normal path.
     if (!viralSections && body.scriptMode === 'verbatim') {
       const targetScenes = duration >= 90 ? 8 : duration >= 60 ? 6 : 5
-      const chunks = splitVerbatimScript(prompt, targetScenes)
+      // Push #428 — junção verbatim+IA: punctuation-only cinematic pacing
+      // polish, word-sequence verified in code (falls back to the original).
+      const polishedPrompt = await polishVerbatimPacing(prompt)
+      const chunks = splitVerbatimScript(polishedPrompt, targetScenes)
       if (chunks.length >= 2) {
         const fallbackV = fallbackBrief(prompt)
         const perSceneSec = Math.max(3, Math.round(duration / chunks.length))
