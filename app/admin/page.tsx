@@ -23,7 +23,18 @@ type Overview = {
     activatedTotal?: number
     activationRate?: number
   }
-  logins: Array<{ email: string; last_sign_in_at: string | null; plan: string; signed_up_at: string | null }>
+  logins: Array<{
+    email: string
+    last_sign_in_at: string | null
+    plan: string
+    signed_up_at: string | null
+    // Push #433 — credit X-ray per user
+    credits?: number
+    videosCount?: number
+    creditsSpent?: number
+    engines?: { fast: number; ai: number; kling: number; other: number }
+    videos?: Array<{ title: string; engine: string; credits: number; at: string | null }>
+  }>
   intent: Array<{ email: string; kind: string; tier: string | null; amount: string | null; at: string | null }>
   subscribers: Array<{ email: string; plan: string; credits: number; signed_up_at: string | null; last_sign_in_at: string | null }>
   funnel?: Array<{ date: string; signups: number; activated: number; paying: number }>
@@ -272,25 +283,69 @@ export default function AdminOverviewPage() {
           style={{ background: 'rgba(255,255,255,.02)', border: '1.5px solid rgba(255,255,255,.08)' }}
         >
           <h2 className="mb-3 text-sm font-black text-[#F1F5F9]">
-            🔑 Recent logins
+            🔑 Recent logins · credit X-ray
           </h2>
           <div className="space-y-1.5">
             {(data?.logins ?? []).map((l) => (
-              <div
+              /* Push #433 — each login row is now expandable: balance, spend
+                 by engine, and the user's 5 most recent videos. */
+              <details
                 key={l.email + (l.last_sign_in_at ?? '')}
-                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2"
+                className="rounded-lg"
                 style={{ background: 'rgba(255,255,255,.03)' }}
               >
-                <span className="truncate text-[12.5px] font-semibold text-[#F1F5F9]">
-                  {l.email}
-                </span>
-                <span className="flex flex-shrink-0 items-center gap-2">
-                  <PlanChip plan={l.plan} />
-                  <span className="w-14 text-right text-[11px] font-bold text-[#64748B]">
-                    {timeAgo(l.last_sign_in_at)}
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12.5px] font-semibold text-[#F1F5F9]">
+                      {l.email}
+                    </span>
+                    <span className="block text-[10.5px] font-bold text-[#64748B]">
+                      💳 {l.credits ?? 0} cr left
+                      {(l.videosCount ?? 0) > 0 ? (
+                        <>
+                          {' '}· spent <span className="text-[#FBBF24]">{l.creditsSpent ?? 0} cr</span> on {l.videosCount} video{(l.videosCount ?? 0) > 1 ? 's' : ''}
+                          {' '}({[
+                            (l.engines?.fast ?? 0) > 0 ? `${l.engines?.fast} Fast` : null,
+                            (l.engines?.ai ?? 0) > 0 ? `${l.engines?.ai} AI` : null,
+                            (l.engines?.kling ?? 0) > 0 ? `${l.engines?.kling} Kling` : null,
+                            (l.engines?.other ?? 0) > 0 ? `${l.engines?.other} legacy` : null,
+                          ].filter(Boolean).join(' · ')})
+                        </>
+                      ) : (
+                        <span className="text-[#64748B]"> · no videos yet</span>
+                      )}
+                    </span>
                   </span>
-                </span>
-              </div>
+                  <span className="flex flex-shrink-0 items-center gap-2">
+                    <PlanChip plan={l.plan} />
+                    <span className="w-14 text-right text-[11px] font-bold text-[#64748B]">
+                      {timeAgo(l.last_sign_in_at)}
+                    </span>
+                  </span>
+                </summary>
+                {(l.videos ?? []).length > 0 ? (
+                  <div className="space-y-1 px-2.5 pb-2">
+                    {(l.videos ?? []).map((v, vi) => (
+                      <div
+                        key={vi}
+                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
+                        style={{ background: 'rgba(255,255,255,.03)' }}
+                      >
+                        <span className="truncate text-[11px] text-[#94A3B8]">
+                          {v.engine === 'fast' ? '⚡' : v.engine === 'ai' ? '✨' : v.engine === 'kling' ? '🎬' : '📼'} {v.title}
+                        </span>
+                        <span className="flex-shrink-0 text-[10.5px] font-bold text-[#FBBF24]">
+                          {v.credits} cr · <span className="text-[#64748B]">{timeAgo(v.at)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="px-2.5 pb-2 text-[11px] text-[#64748B]">
+                    No videos generated yet — credits untouched.
+                  </p>
+                )}
+              </details>
             ))}
             {data && data.logins.length === 0 ? (
               <p className="text-[12px] text-[#64748B]">No logins yet.</p>
