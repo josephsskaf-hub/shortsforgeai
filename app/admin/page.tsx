@@ -20,10 +20,13 @@ type Overview = {
     videosTotal: number
     videos7d: number
     purchaseIntent: number
+    activatedTotal?: number
+    activationRate?: number
   }
   logins: Array<{ email: string; last_sign_in_at: string | null; plan: string; signed_up_at: string | null }>
   intent: Array<{ email: string; kind: string; tier: string | null; amount: string | null; at: string | null }>
   subscribers: Array<{ email: string; plan: string; credits: number; signed_up_at: string | null; last_sign_in_at: string | null }>
+  funnel?: Array<{ date: string; signups: number; activated: number; paying: number }>
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -186,8 +189,47 @@ export default function AdminOverviewPage() {
         <Kpi label="Videos · total" value={k ? String(k.videosTotal) : '…'} accent="34,211,238" sub={k ? `+${k.videos7d} last 7d` : undefined} />
         <Kpi label="Purchase intent" value={k ? String(k.purchaseIntent) : '…'} accent="239,68,68" sub="checkout started / warm" />
         <Kpi label="New users · 7d" value={k ? String(k.newUsers7d) : '…'} accent="16,185,129" />
-        <Kpi label="Videos · 7d" value={k ? String(k.videos7d) : '…'} accent="245,158,11" />
+        <Kpi
+          label="Activation"
+          value={k?.activationRate != null ? `${k.activationRate}%` : '…'}
+          accent="34,211,238"
+          sub={k?.activatedTotal != null ? `${k.activatedTotal} users made ≥1 video` : undefined}
+        />
       </div>
+
+      {/* Push #426 — 14-day activation funnel: per signup-day cohort, how many
+          signed up vs how many of those ever generated a video vs now paying.
+          The fastest answer to "is the green gift banner working?" */}
+      <section
+        className="mt-6 rounded-2xl p-4"
+        style={{ background: 'rgba(34,211,238,.04)', border: '1.5px solid rgba(34,211,238,.25)' }}
+      >
+        <h2 className="mb-1 text-sm font-black text-[#F1F5F9]">🎯 Activation funnel · last 14 days</h2>
+        <p className="mb-3 text-[11px] font-semibold text-[#64748B]">
+          per signup day: <span className="text-[#64748B]">▮ signups</span>{' '}
+          <span className="text-cyan-400">▮ made a video</span>{' '}
+          <span className="text-amber-400">▮ paying</span>
+        </p>
+        <div className="flex items-end gap-1.5" style={{ height: 120 }}>
+          {(data?.funnel ?? []).map((d) => {
+            const max = Math.max(1, ...(data?.funnel ?? []).map((x) => x.signups))
+            const h = (n: number) => Math.max(n > 0 ? 4 : 0, Math.round((n / max) * 100))
+            return (
+              <div key={d.date} className="flex flex-1 flex-col items-center gap-1" title={`${d.date}: ${d.signups} signups · ${d.activated} activated · ${d.paying} paying`}>
+                <div className="flex w-full items-end justify-center gap-[2px]" style={{ height: 100 }}>
+                  <div style={{ width: '30%', height: `${h(d.signups)}%`, background: 'rgba(148,163,184,.45)', borderRadius: 2 }} />
+                  <div style={{ width: '30%', height: `${h(d.activated)}%`, background: 'rgba(34,211,238,.85)', borderRadius: 2 }} />
+                  <div style={{ width: '30%', height: `${h(d.paying)}%`, background: 'rgba(245,158,11,.9)', borderRadius: 2 }} />
+                </div>
+                <span className="text-[8px] font-bold text-[#64748B]">{d.date.slice(5)}</span>
+              </div>
+            )
+          })}
+          {data && (data.funnel?.length ?? 0) === 0 ? (
+            <p className="text-[12px] text-[#64748B]">No data yet.</p>
+          ) : null}
+        </div>
+      </section>
 
       {/* Push #418 — Subscribers: who's paying and on which plan */}
       <section

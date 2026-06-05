@@ -101,9 +101,10 @@ export async function GET() {
       console.warn('[admin/overview] profiles query failed:', e)
     }
 
-    // ── videos (totals) ──────────────────────────────────────────────────
+    // ── videos (totals + first video per user for the activation funnel) ──
     let videosTotal = 0
     let videos7d = 0
+    const firstVideoByUser = new Map<string, string>() // Push #426
     try {
       // #417 — count client-side so test/founder videos are excluded.
       const { data: vids } = await admin.from('videos').select('user_id, created_at')
@@ -111,10 +112,37 @@ export async function GET() {
         if (v.user_id && excludedIds.has(v.user_id)) continue
         videosTotal += 1
         if ((v.created_at ?? '') >= since7d) videos7d += 1
+        if (v.user_id && v.created_at) {
+          const prev = firstVideoByUser.get(v.user_id)
+          if (!prev || v.created_at < prev) firstVideoByUser.set(v.user_id, v.created_at)
+        }
       }
     } catch (e) {
       console.warn('[admin/overview] videos count failed:', e)
     }
+
+    // ── Activation funnel (Push #426) ─────────────────────────────────────
+    // Cohort view per signup day (last 14 days): how many signed up, how many
+    // of THOSE ever generated a video, how many of those are now paying.
+    // Answers "is the green gift banner working?" at a glance.
+    const funnel: Array<{ date: string; signups: number; activated: number; paying: number }> = []
+    {
+      const byDay = new Map<string, { signups: number; activated: number; paying: number }>()
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now - i * dayMs).toISOString().slice(0, 10)
+        byDay.set(d, { signups: 0, activated: 0, paying: 0 })
+      }
+      for (const u of authUsers) {
+        const day = (u.created_at ?? '').slice(0, 10)
+        const bucket = byDay.get(day)
+        if (!bucket) continue
+        bucket.signups += 1
+        if (firstVideoByUser.has(u.id)) bucket.activated += 1
+        if (PAID_PLANS.has(planById.get(u.id) ?? 'free')) bucket.paying += 1
+      }
+      for (const [date, b] of byDay) funnel.push({ date, ...b })
+    }
+    const activatedTotal = authUsers.filter((u) => firstVideoByUser.has(u.id)).length
 
     // ── KPIs ─────────────────────────────────────────────────────────────
     const totalUsers = authUsers.length
@@ -230,10 +258,14 @@ export async function GET() {
         videosTotal,
         videos7d,
         purchaseIntent: intent.length,
+        // Push #426 — overall activation: users who ever generated ≥1 video
+        activatedTotal,
+        activationRate: totalUsers > 0 ? Math.round((activatedTotal / totalUsers) * 100) : 0,
       },
       logins,
       intent: intent.slice(0, 30),
       subscribers,
+      funnel, // Push #426 — 14-day signup cohort funnel
     })
   } catch (err) {
     console.error('[admin/overview] unexpected:', err)
