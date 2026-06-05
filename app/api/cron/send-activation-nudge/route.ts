@@ -15,7 +15,9 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-const FROM_EMAIL = 'Joseph from ShortsForgeAI <support@shortsforgeai.com>'
+// Push #431 — Joseph's rule: no personal name on outbound. Activation nudge is
+// lead-nurture → goes out as the TEAM from hello@ (support@ = support only).
+const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 
@@ -42,18 +44,17 @@ function buildEmail() {
   const url = `${APP_URL}/generate`
   const text = `Hey,
 
-Joseph here, founder of ShortsForgeAI.
+This is the ShortsForgeAI team — welcome!
 
-You created your account a little while ago — welcome! Quick heads-up in case you missed it: your account comes loaded with 30 free credits. That's enough for up to 30 Fast videos — or 1 full AI-generated video. No card needed.
+You created your account a little while ago. Quick heads-up in case you missed it: your account comes loaded with 30 free credits. That's enough for up to 30 Fast videos — or 1 full AI-generated video. No card needed.
 
 Type literally any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. About a minute later you have a ready-to-post Short.
 
 Make your free video here: ${url}
 
-If anything is confusing or not working, just reply to this email - I read every message.
+If anything is confusing or not working, just reply to this email - a real person reads every message.
 
-Joseph
-Founder, ShortsForgeAI
+ShortsForgeAI Team
 shortsforgeai.com`
 
   const html = text
@@ -150,7 +151,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [email],
-          reply_to: 'support@shortsforgeai.com',
+          reply_to: 'hello@shortsforgeai.com',
           subject: 'Your first AI video is free — 1 click away',
           text,
           html,

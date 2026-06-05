@@ -21,7 +21,9 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-const FROM_EMAIL = 'Joseph from ShortsForgeAI <support@shortsforgeai.com>'
+// Push #431 — Joseph's rule: lead-recovery/outreach goes out as the TEAM from
+// hello@ (friendlier, commercial); support@ stays for support-only matters.
+const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 
 const TIER_LABEL: Record<string, string> = {
@@ -54,20 +56,19 @@ function isAuthorized(req: NextRequest): boolean {
 function buildEmail(plan: string) {
   const text = `Hey,
 
-Joseph here, founder of ShortsForgeAI.
+This is the ShortsForgeAI team.
 
-I noticed you got all the way to the ${plan} checkout but didn't finish signing up. No pressure at all - I just wanted to ask: did something get in the way? A payment issue, a question about the plans, a feature you were looking for?
+We noticed you got all the way to the ${plan} checkout but didn't finish signing up. No pressure at all - we just wanted to ask: did something get in the way? A payment issue, a question about the plans, a feature you were looking for?
 
-Whatever it was, I'd like to fix it. A few things that might help:
+Whatever it was, we'd like to fix it. A few things that might help:
 
 - We accept card, Link, Google Pay and Apple Pay
-- Your first AI video is free, no credits needed - so you can test the engine before paying anything
-- If the price was the issue, reply and tell me. I'd rather make you a deal than lose you
+- Your account comes with 30 free credits - so you can test the engine before paying anything
+- If the price was the issue, reply and tell us. We'd rather make you a deal than lose you
 
-Just hit reply and tell me what would make ShortsForgeAI a yes for you. I read and answer every message myself.
+Just hit reply and tell us what would make ShortsForgeAI a yes for you. A real person reads and answers every message.
 
-Joseph
-Founder, ShortsForgeAI
+ShortsForgeAI Team
 shortsforgeai.com`
 
   // Deliberately plain HTML — it must read like a person, not a campaign.
@@ -166,7 +167,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [email],
-          reply_to: 'support@shortsforgeai.com',
+          reply_to: 'hello@shortsforgeai.com',
           subject: 'Quick question about your ShortsForgeAI checkout',
           text,
           html,
