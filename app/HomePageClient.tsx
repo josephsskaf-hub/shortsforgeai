@@ -686,8 +686,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           >
             {submitting ? 'Loading…' : 'Generate My First Short →'}
           </button>
+          {/* Push #432 — lead with the welcome gift (30 credits), not the price.
+              Matches the new signup offer so ad promise = first fold = product. */}
           <p className="text-[13px] font-semibold text-[#94A3B8]">
-            From $11.90/month · 7-day money-back guarantee · Cancel anytime
+            🎁 <span className="text-[#34D399] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
           </p>
         </div>
         </div>{/* end hero content */}

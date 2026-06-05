@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
           from: FROM_EMAIL,
           to: [email],
           reply_to: 'hello@shortsforgeai.com',
-          subject: 'Your first AI video is free — 1 click away',
+          subject: 'You have 30 free credits waiting — 1 click away',
           text,
           html,
         }),

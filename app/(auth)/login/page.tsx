@@ -193,7 +193,7 @@ export default function LoginPage() {
                 {[
                   'AI writes the script in 60 seconds',
                   'Stock footage + voiceover included',
-                  '2 free videos, no credit card',
+                  '30 free credits on signup, no credit card',
                 ].map((line) => (
                   <li
                     key={line}
