@@ -456,6 +456,26 @@ export async function GET(
         } catch (emailErr) {
           console.warn('[notify-video-ready] send failed:', emailErr instanceof Error ? emailErr.message : String(emailErr))
         }
+
+        // Push #427 — Web Push "your video is ready" to every device the
+        // user opted in on. Payload-less (text lives in public/sw.js).
+        // Best-effort: failures never affect the polling response.
+        try {
+          const { data: subs } = await supabase
+            .from('push_subscriptions')
+            .select('endpoint')
+            .eq('user_id', user.id)
+          if (subs && subs.length > 0) {
+            const { sendPushToSubscriptions } = await import('@/lib/push')
+            const { sent, gone } = await sendPushToSubscriptions(subs)
+            if (gone.length > 0) {
+              await supabase.from('push_subscriptions').delete().in('endpoint', gone)
+            }
+            if (sent > 0) console.log(`[push] video-ready sent to ${sent} device(s)`)
+          }
+        } catch (pushErr) {
+          console.warn('[push] video-ready failed:', pushErr instanceof Error ? pushErr.message : String(pushErr))
+        }
       }
 
       return NextResponse.json({

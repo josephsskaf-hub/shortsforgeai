@@ -4,6 +4,8 @@ import DashboardShell from './DashboardShell'
 // or the Add-to-Home-Screen hint (iOS). Dashboard only, so the public
 // landing/ads funnel stays distraction-free.
 import InstallAppBanner from '@/components/InstallAppBanner'
+// Push #427 — push-notification opt-in ("know when your video is ready")
+import EnablePushBanner from '@/components/EnablePushBanner'
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +38,7 @@ export default async function DashboardLayout({
     >
       {children}
       <InstallAppBanner />
+      <EnablePushBanner />
     </DashboardShell>
   )
 }
