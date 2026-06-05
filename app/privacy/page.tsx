@@ -84,10 +84,10 @@ export default function PrivacyPage() {
             wrong, or ask us to delete your account and everything we
             store about you. Email{' '}
             <a
-              href="mailto:hello@shortsforgeai.com"
+              href="mailto:support@shortsforgeai.com"
               style={{ color: '#22D3EE', textDecoration: 'none' }}
             >
-              hello@shortsforgeai.com
+              support@shortsforgeai.com
             </a>{' '}
             and we&apos;ll action the request within 30 days.
           </Section>
@@ -103,10 +103,10 @@ export default function PrivacyPage() {
           <Section title="Contact">
             Privacy questions?{' '}
             <a
-              href="mailto:hello@shortsforgeai.com"
+              href="mailto:support@shortsforgeai.com"
               style={{ color: '#22D3EE', textDecoration: 'none' }}
             >
-              hello@shortsforgeai.com
+              support@shortsforgeai.com
             </a>
             .
           </Section>

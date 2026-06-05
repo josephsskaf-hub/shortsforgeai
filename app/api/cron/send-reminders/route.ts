@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-const FROM_EMAIL = process.env.FROM_EMAIL ?? 'hello@shortsforgeai.com'
+const FROM_EMAIL = process.env.FROM_EMAIL ?? 'support@shortsforgeai.com'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
 // Guard: only Vercel Cron or the internal secret can call this route.

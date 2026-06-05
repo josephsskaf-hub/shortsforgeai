@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.shortsforgeai.com'
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <hello@shortsforgeai.com>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <support@shortsforgeai.com>'
 
 export async function POST(request: NextRequest) {
   try {

@@ -85,10 +85,10 @@ export default function TermsPage() {
             cancel anytime from your account settings. We honor a 7-day
             money-back guarantee on the first paid month — email{' '}
             <a
-              href="mailto:hello@shortsforgeai.com"
+              href="mailto:support@shortsforgeai.com"
               style={{ color: '#22D3EE', textDecoration: 'none' }}
             >
-              hello@shortsforgeai.com
+              support@shortsforgeai.com
             </a>{' '}
             within 7 days of the first charge and we&apos;ll refund 100%.
             Failed generations never consume credits.
@@ -121,10 +121,10 @@ export default function TermsPage() {
           <Section title="8. Contact">
             Questions about these Terms?{' '}
             <a
-              href="mailto:hello@shortsforgeai.com"
+              href="mailto:support@shortsforgeai.com"
               style={{ color: '#22D3EE', textDecoration: 'none' }}
             >
-              hello@shortsforgeai.com
+              support@shortsforgeai.com
             </a>
             .
           </Section>

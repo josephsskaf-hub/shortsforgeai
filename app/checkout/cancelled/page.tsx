@@ -57,7 +57,7 @@ export default function CheckoutCancelledPage() {
         </div>
         <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: '0.85rem' }}>
           <Link href="/pricing" style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700 }}>← Go back to pricing</Link>
-          <a href="mailto:hello@shortsforgeai.com" style={{ color: 'var(--muted2)', textDecoration: 'none', fontWeight: 600 }}>Contact support</a>
+          <a href="mailto:support@shortsforgeai.com" style={{ color: 'var(--muted2)', textDecoration: 'none', fontWeight: 600 }}>Contact support</a>
         </div>
       </div>
     </main>

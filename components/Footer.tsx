@@ -50,7 +50,7 @@ export default function Footer() {
           ·
         </span>
         <a
-          href="mailto:hello@shortsforgeai.com"
+          href="mailto:support@shortsforgeai.com"
           style={{ color: '#94A3B8', textDecoration: 'none' }}
         >
           Contact
