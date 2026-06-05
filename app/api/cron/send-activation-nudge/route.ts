@@ -44,7 +44,7 @@ function buildEmail() {
 
 Joseph here, founder of ShortsForgeAI.
 
-You created your account a little while ago — welcome! Quick heads-up in case you missed it: your first AI video is completely free. No credits needed, no card needed.
+You created your account a little while ago — welcome! Quick heads-up in case you missed it: your account comes loaded with 30 free credits. That's enough for up to 30 Fast videos — or 1 full AI-generated video. No card needed.
 
 Type literally any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. About a minute later you have a ready-to-post Short.
 

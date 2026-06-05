@@ -675,7 +675,7 @@ export default function PricingPage() {
                   // #409 — table rebuilt for the 3-tier ladder (was still 2-plan).
                   {
                     label: 'Fast videos (smart stock, 1 cr)',
-                    free: '—',
+                    free: '✅ with credits',
                     starter: '✅ 50/mo',
                     basic: '✅',
                     pro: '✅',
@@ -696,7 +696,7 @@ export default function PricingPage() {
                   },
                   {
                     label: 'Monthly credits',
-                    free: '1 free video',
+                    free: '30 welcome credits',
                     starter: '50',
                     basic: '240',
                     pro: '360',

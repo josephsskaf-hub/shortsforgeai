@@ -157,7 +157,11 @@ export async function POST(req: NextRequest) {
     // users are upsold to Creator.
     const planVal = (profile?.plan ?? 'free') as string
     const isCreatorPlus = planVal === 'basic' || planVal === 'basic_trial' || isStudio
-    if (!wantsKling && !isCreatorPlus && !isFreeTrial) {
+    // Push #430 — welcome credits: a free-plan user holding enough credits
+    // (30 on signup) may pay for AI Generated with them. Their render is
+    // watermarked server-side in /api/compose (free plan = watermark).
+    const paysWithCredits = !wantsKling && balance >= SEEDANCE_CREDIT_COST
+    if (!wantsKling && !isCreatorPlus && !isFreeTrial && !paysWithCredits) {
       return NextResponse.json(
         {
           error: 'AI Generated videos are on the Creator & Studio plans. Upgrade to use the AI engine.',

@@ -2260,7 +2260,10 @@ export default function GenerateClient() {
           video still available) must see a GIFT, not a red out-of-credits
           warning. Only 1/244 signups ever used the free trial — the scary
           banner below was the first thing 0-credit users saw. */}
-      {planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed === false && (
+      {/* Push #430 — welcome credits: every new signup now starts with 30
+          credits (30 Fast videos or 1 premium AI video). Banner shows the
+          gift while the user is on free plan and still has credits. */}
+      {planTier === 'free' && credits !== null && (credits > 1 || freeAiUsed === false) && (
         <div
           style={{
             background: 'linear-gradient(90deg, rgba(16,185,129,.16), rgba(16,185,129,.06))',
@@ -2276,10 +2279,16 @@ export default function GenerateClient() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ color: '#34d399', fontWeight: 800, fontSize: 13 }}>
-              🎁 Your first AI video is FREE — no credits needed
+              {credits !== null && credits > 1
+                ? `🎁 Welcome gift: ${credits} free credits`
+                : '🎁 Your first AI video is FREE — no credits needed'}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              Pick a topic below, choose AI Generated and hit Create. We&apos;ll generate your first Short on us.
+              {credits !== null && credits > 1
+                ? credits >= 30
+                  ? `Enough for up to ${credits} Fast videos — or go premium with 1 full AI-generated video. On us.`
+                  : `Enough for up to ${credits} more Fast videos. On us.`
+                : 'Pick a topic below, choose AI Generated and hit Create. We’ll generate your first Short on us.'}
             </span>
           </div>
         </div>
@@ -2624,7 +2633,7 @@ export default function GenerateClient() {
             >
               <span className="text-base">🎉</span>
               <span>
-                You&apos;re in. You&apos;ve got <strong>3 free Shorts</strong> plus <strong>1 premium AI video</strong> — we&apos;ve loaded an idea below to start.
+                You&apos;re in. You&apos;ve got <strong>30 free credits</strong> — up to 30 Fast videos or 1 premium AI video — we&apos;ve loaded an idea below to start.
               </span>
             </div>
           )}
@@ -5166,8 +5175,13 @@ function ModeSelector({
   const noPlan = !isStarter && !isCreator && !isStudio
   // Push #405 — ladder model: any paid plan can use Fast (cheaper engine);
   // Seedance needs Creator+; Kling needs Studio.
-  const fastUnlocked = isStarter || isCreator || isStudio
-  const seedanceUnlocked = isCreator || isStudio || (noPlan && freeAiUsed === false) // free trial
+  // Push #430 — welcome credits: free accounts now start with 30 credits, so
+  // Fast (1 cr) and AI Generated (30 cr) unlock for free users while they
+  // still have balance. AI on free plan = watermarked (server-side).
+  const freeCredits = noPlan ? credits ?? 0 : 0
+  const fastUnlocked = isStarter || isCreator || isStudio || freeCredits >= 1
+  const seedanceUnlocked =
+    isCreator || isStudio || (noPlan && freeAiUsed === false) || freeCredits >= 30
   const klingUnlocked = isStudio
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'

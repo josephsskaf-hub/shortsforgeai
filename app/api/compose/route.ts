@@ -192,16 +192,26 @@ export async function POST(req: NextRequest) {
     // do NOT have enough credits to pay the 30-credit price. So anyone PAYING
     // (>= 30 credits) NEVER gets a watermark — guaranteed here, server-side.
     // The quota flag itself is flipped on SUCCESS in /api/compose/status.
+    // Push #430 — welcome credits (30 on signup) let FREE-plan users reach the
+    // paid AI path with a full balance, which used to skip the watermark. Rule
+    // now: ANY AI video from a free-plan account is watermarked. Clean video =
+    // paid plan. Fast videos stay watermark-free on every plan.
     let isFreeAiTrial = false
+    let isFreePlanAi = false
     if (quality === 'cinematic_ai') {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('free_ai_generate_used, video_credits')
+        .select('free_ai_generate_used, video_credits, plan')
         .eq('id', user.id)
         .single()
       const used = prof?.free_ai_generate_used === true
       const creds = prof?.video_credits ?? 0
       isFreeAiTrial = !used && creds < 30
+      const PAID_PLANS = new Set([
+        'starter', 'starter_trial', 'basic', 'basic_trial',
+        'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
+      ])
+      isFreePlanAi = !PAID_PLANS.has((prof?.plan ?? 'free').toLowerCase())
     }
 
     // Step 1 — Scale the voiceover script to the right word count.
@@ -390,7 +400,7 @@ export async function POST(req: NextRequest) {
         realAudioDuration,
         whisperWords,
         musicUrl,
-        watermark: isFreeAiTrial, // #384 — only the free AI trial gets the watermark
+        watermark: isFreeAiTrial || isFreePlanAi, // #430 — every free-plan AI video is watermarked (clean video = paid plan)
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

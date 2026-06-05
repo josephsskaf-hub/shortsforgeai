@@ -306,9 +306,19 @@ export async function GET(
               }
             } else {
               const next = Math.max(0, current - cost)
+              // Push #430 — welcome credits: a paid AI render also burns the
+              // legacy free-AI-trial flag. Without this, a new signup (30
+              // welcome credits, flag unused) could chain a SECOND AI video
+              // through the old trial path after spending the credits.
+              const burnTrialFlag =
+                quality === 'cinematic_ai' && profile?.free_ai_generate_used !== true
               const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ video_credits: next })
+                .update(
+                  burnTrialFlag
+                    ? { video_credits: next, free_ai_generate_used: true }
+                    : { video_credits: next }
+                )
                 .eq('id', user.id)
               if (!updateError) {
                 creditsDeducted = true
