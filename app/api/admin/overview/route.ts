@@ -86,14 +86,16 @@ export async function GET() {
     // ── profiles (plan, credits, stripe customer) ────────────────────────
     const planById = new Map<string, string>()
     const hasStripeById = new Map<string, boolean>()
+    const creditsById = new Map<string, number>()
     try {
       const { data: profs } = await admin
         .from('profiles')
-        .select('id, plan, stripe_customer_id')
-      for (const p of (profs ?? []) as Array<{ id: string; plan: string | null; stripe_customer_id: string | null }>) {
+        .select('id, plan, stripe_customer_id, video_credits')
+      for (const p of (profs ?? []) as Array<{ id: string; plan: string | null; stripe_customer_id: string | null; video_credits: number | null }>) {
         if (excludedIds.has(p.id)) continue // #417 — skip test/founder accounts
         planById.set(p.id, (p.plan ?? 'free').toLowerCase())
         hasStripeById.set(p.id, !!p.stripe_customer_id)
+        creditsById.set(p.id, p.video_credits ?? 0)
       }
     } catch (e) {
       console.warn('[admin/overview] profiles query failed:', e)
@@ -131,6 +133,18 @@ export async function GET() {
       }
     }
     const payingTotal = Object.values(payingByPlan).reduce((a, b) => a + b, 0)
+
+    // ── Subscribers (Push #418 — paying customers and their plan) ────────
+    const subscribers = authUsers
+      .filter((u) => PAID_PLANS.has(planById.get(u.id) ?? 'free'))
+      .map((u) => ({
+        email: u.email ?? '',
+        plan: planById.get(u.id) ?? 'free',
+        credits: creditsById.get(u.id) ?? 0,
+        signed_up_at: u.created_at ?? null,
+        last_sign_in_at: (u as { last_sign_in_at?: string | null }).last_sign_in_at ?? null,
+      }))
+      .sort((a, b) => ((a.signed_up_at ?? '') < (b.signed_up_at ?? '') ? 1 : -1))
 
     // ── Recent logins (top 20 by last_sign_in_at) ────────────────────────
     const logins = authUsers
@@ -219,6 +233,7 @@ export async function GET() {
       },
       logins,
       intent: intent.slice(0, 30),
+      subscribers,
     })
   } catch (err) {
     console.error('[admin/overview] unexpected:', err)

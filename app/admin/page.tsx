@@ -23,6 +23,7 @@ type Overview = {
   }
   logins: Array<{ email: string; last_sign_in_at: string | null; plan: string; signed_up_at: string | null }>
   intent: Array<{ email: string; kind: string; tier: string | null; amount: string | null; at: string | null }>
+  subscribers: Array<{ email: string; plan: string; credits: number; signed_up_at: string | null; last_sign_in_at: string | null }>
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -187,6 +188,39 @@ export default function AdminOverviewPage() {
         <Kpi label="New users · 7d" value={k ? String(k.newUsers7d) : '…'} accent="16,185,129" />
         <Kpi label="Videos · 7d" value={k ? String(k.videos7d) : '…'} accent="245,158,11" />
       </div>
+
+      {/* Push #418 — Subscribers: who's paying and on which plan */}
+      <section
+        className="mt-6 rounded-2xl p-4"
+        style={{ background: 'rgba(168,85,247,.04)', border: '1.5px solid rgba(168,85,247,.25)' }}
+      >
+        <h2 className="mb-3 text-sm font-black text-[#F1F5F9]">
+          💎 Subscribers ({data?.subscribers?.length ?? 0})
+        </h2>
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {(data?.subscribers ?? []).map((s) => (
+            <div
+              key={s.email}
+              className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2"
+              style={{ background: 'rgba(255,255,255,.03)' }}
+            >
+              <span className="truncate text-[12.5px] font-semibold text-[#F1F5F9]">
+                {s.email}
+              </span>
+              <span className="flex flex-shrink-0 items-center gap-2">
+                <span className="text-[11px] font-bold text-[#64748B]">{s.credits} cr</span>
+                <PlanChip plan={s.plan} />
+                <span className="w-14 text-right text-[11px] font-bold text-[#64748B]">
+                  {timeAgo(s.last_sign_in_at)}
+                </span>
+              </span>
+            </div>
+          ))}
+          {data && (data.subscribers?.length ?? 0) === 0 ? (
+            <p className="text-[12px] text-[#64748B]">No paying subscribers yet.</p>
+          ) : null}
+        </div>
+      </section>
 
       {/* Two columns: logins + intent */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
