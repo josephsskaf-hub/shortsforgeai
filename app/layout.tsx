@@ -10,6 +10,9 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  // Push #422 — PWA: paints the iOS/Android browser chrome in the brand
+  // dark so the installed app feels native edge-to-edge.
+  themeColor: '#0d0d14',
 }
 
 // Push #297 — meta title + description rewritten for Google Ads Quality
@@ -55,7 +58,16 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    // Push #422 — real PNG for iOS home screen (Safari ignores SVG here
+    // and would fall back to a screenshot-gray tile).
+    apple: '/apple-touch-icon.png',
+  },
+  // Push #422 — PWA: lets the installed web app run full-screen on iOS
+  // ("Add to Home Screen") with a black-translucent status bar.
+  appleWebApp: {
+    capable: true,
+    title: 'ShortsForgeAI',
+    statusBarStyle: 'black-translucent',
   },
 }
 
