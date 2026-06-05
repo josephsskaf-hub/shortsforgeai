@@ -2579,16 +2579,30 @@ export default function GenerateClient() {
                 { key: 'science', emoji: '🔬', label: 'Science' },
                 { key: 'space', emoji: '🚀', label: 'Space' },
               ].map((t) => (
+                // Push #424 — selected pill used a flat dark accent that read
+                // as "sunken/broken". Now: blue→cyan gradient + cyan glow +
+                // subtle lift when selected; glass pills otherwise (#406 language).
                 <button
                   key={t.key}
                   type="button"
                   disabled={phase === 'analyzing'}
                   onClick={() => setPickedNiche(t.key)}
-                  className="w-full text-center px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                  className="w-full text-center px-3 py-2 rounded-full text-xs font-bold transition-all"
                   style={{
-                    background: pickedNiche === t.key ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                    border: `1px solid ${pickedNiche === t.key ? 'var(--accent)' : 'var(--border)'}`,
+                    background:
+                      pickedNiche === t.key
+                        ? 'linear-gradient(135deg, #2563EB, #22D3EE)'
+                        : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${
+                      pickedNiche === t.key ? 'rgba(34,211,238,0.75)' : 'var(--border)'
+                    }`,
                     color: pickedNiche === t.key ? '#fff' : 'var(--muted)',
+                    boxShadow:
+                      pickedNiche === t.key
+                        ? '0 4px 18px rgba(34,211,238,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+                        : 'none',
+                    transform: pickedNiche === t.key ? 'translateY(-1px)' : 'none',
+                    textShadow: pickedNiche === t.key ? '0 1px 2px rgba(0,0,0,0.25)' : 'none',
                     cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                   }}
                 >
