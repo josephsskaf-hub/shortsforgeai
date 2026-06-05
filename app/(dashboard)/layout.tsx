@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import DashboardShell from './DashboardShell'
+// Push #423 — mobile users see a one-tap "Install app" banner (Android)
+// or the Add-to-Home-Screen hint (iOS). Dashboard only, so the public
+// landing/ads funnel stays distraction-free.
+import InstallAppBanner from '@/components/InstallAppBanner'
 
 export default async function DashboardLayout({
   children,
@@ -31,6 +35,7 @@ export default async function DashboardLayout({
       isLoggedIn={!!user}
     >
       {children}
+      <InstallAppBanner />
     </DashboardShell>
   )
 }
