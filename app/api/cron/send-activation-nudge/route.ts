@@ -90,8 +90,11 @@ export async function GET(req: NextRequest) {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Users created 1–6h ago, never nudged, still on free plan.
-  const from = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  // Users created 1–30h ago, never nudged, still on free plan.
+  // Window widened from 6h → 30h because Vercel Hobby only allows DAILY
+  // crons (more frequent schedules block ALL deployments!). A daily run
+  // with a 30h window still reaches every signup exactly once.
+  const from = new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString()
   const to = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
 
   const { data: candidates, error } = await admin
