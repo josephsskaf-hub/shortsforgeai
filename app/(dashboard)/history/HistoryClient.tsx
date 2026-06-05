@@ -52,10 +52,23 @@ interface Props {
   videos: Video[]
 }
 
+// Push #421 — per-video YouTube summary (title + description + hashtags),
+// generated on demand by /api/video-summary and cached in the videos row.
+interface VideoSummary {
+  title: string | null
+  description: string
+  hashtags: string[]
+}
+
 export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [videos] = useState(initialVideos)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [errors, setErrors] = useState<Set<string>>(new Set())
+  // Push #421 — summary panel state
+  const [summaries, setSummaries] = useState<Record<string, VideoSummary>>({})
+  const [summaryLoading, setSummaryLoading] = useState<string | null>(null)
+  const [summaryErrors, setSummaryErrors] = useState<Record<string, string>>({})
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
   // Push #098 — open a video in the big player overlay (the large view the
   // user expects when clicking a card), and a proper blob download that works
   // from My Videos any time — not just once on the result page.
@@ -99,6 +112,76 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
     } finally {
       setDownloadingId(null)
     }
+  }
+
+  // Push #421 — open (or fetch, then open) the YouTube summary panel.
+  // 1st click on an old video calls /api/video-summary (GPT generates and the
+  // row caches it); every later click — this session or any future one — is
+  // served from state or straight from the videos row. Zero pipeline changes.
+  async function handleSummary(video: Video) {
+    if (expanded === video.id) {
+      setExpanded(null)
+      return
+    }
+    if (summaries[video.id]) {
+      setExpanded(video.id)
+      return
+    }
+    // Row already has cached metadata (generated on a previous visit) —
+    // no network call needed.
+    if (video.youtube_description && video.hashtags && video.hashtags.length > 0) {
+      setSummaries((prev) => ({
+        ...prev,
+        [video.id]: {
+          title: extractTitle(video.topic),
+          description: video.youtube_description as string,
+          hashtags: video.hashtags as string[],
+        },
+      }))
+      setExpanded(video.id)
+      return
+    }
+    setSummaryLoading(video.id)
+    setSummaryErrors((prev) => {
+      const next = { ...prev }
+      delete next[video.id]
+      return next
+    })
+    try {
+      const res = await fetch('/api/video-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: video.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to generate summary')
+      setSummaries((prev) => ({
+        ...prev,
+        [video.id]: {
+          title: typeof data.title === 'string' ? data.title : extractTitle(video.topic),
+          description: String(data.description ?? ''),
+          hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
+        },
+      }))
+      setExpanded(video.id)
+    } catch (err) {
+      setSummaryErrors((prev) => ({
+        ...prev,
+        [video.id]: err instanceof Error ? err.message : 'Failed to generate summary',
+      }))
+    } finally {
+      setSummaryLoading(null)
+    }
+  }
+
+  function copyToClipboard(key: string, text: string) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopiedKey(key)
+        setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1600)
+      })
+      .catch(() => {/* clipboard denied — nothing useful to do */})
   }
 
   /* ── Empty state ── */
@@ -407,45 +490,118 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     ▶ YT
                   </a>
 
-                  {video.youtube_description && (
-                    <button
-                      onClick={() => setExpanded(isExpanded ? null : video.id)}
-                      style={{
-                        padding: '5px 6px',
-                        borderRadius: 6,
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        color: 'var(--muted)',
-                        fontSize: '0.6rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {isExpanded ? '▲' : '▼'}
-                    </button>
-                  )}
-                </div>
-
-                {/* Expanded description */}
-                {isExpanded && video.youtube_description && (
-                  <div
+                  {/* Push #421 — YouTube summary (title + description + hashtags) */}
+                  <button
+                    onClick={() => handleSummary(video)}
+                    disabled={summaryLoading === video.id}
+                    title="YouTube title, description & hashtags"
                     style={{
-                      marginTop: 8,
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      fontSize: '0.7rem',
-                      color: 'var(--muted)',
-                      lineHeight: 1.5,
-                      maxHeight: 160,
-                      overflowY: 'auto',
-                      whiteSpace: 'pre-wrap',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 3,
+                      padding: '5px 4px',
+                      borderRadius: 6,
+                      background: isExpanded ? 'rgba(139,92,246,0.18)' : 'rgba(139,92,246,0.08)',
+                      border: '1px solid rgba(139,92,246,0.25)',
+                      color: '#A78BFA',
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      cursor: summaryLoading === video.id ? 'wait' : 'pointer',
                     }}
                   >
-                    {video.youtube_description}
-                  </div>
+                    {summaryLoading === video.id ? '…' : '📋'}
+                  </button>
+                </div>
+
+                {/* Push #421 — summary fetch error */}
+                {summaryErrors[video.id] && !isExpanded && (
+                  <p style={{ marginTop: 6, fontSize: '0.6rem', color: '#f87171', lineHeight: 1.4 }}>
+                    {summaryErrors[video.id]}
+                  </p>
                 )}
+
+                {/* Push #421 — expanded YouTube summary panel */}
+                {isExpanded && summaries[video.id] && (() => {
+                  const s = summaries[video.id]
+                  const hashtagLine = s.hashtags.join(' ')
+                  const copyAll = [s.title, '', s.description, '', hashtagLine]
+                    .filter((part) => part !== null)
+                    .join('\n')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim()
+                  const section = (key: string, label: string, text: string) => (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#A78BFA' }}>
+                          {label}
+                        </span>
+                        <button
+                          onClick={() => copyToClipboard(key, text)}
+                          style={{
+                            padding: '2px 7px',
+                            borderRadius: 5,
+                            background: copiedKey === key ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${copiedKey === key ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            color: copiedKey === key ? '#4ADE80' : 'var(--muted)',
+                            fontSize: '0.55rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {copiedKey === key ? '✓ Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <p
+                        style={{
+                          fontSize: '0.66rem',
+                          color: 'var(--text)',
+                          lineHeight: 1.45,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: 110,
+                          overflowY: 'auto',
+                          margin: 0,
+                        }}
+                      >
+                        {text}
+                      </p>
+                    </div>
+                  )
+                  return (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: '9px 10px',
+                        borderRadius: 8,
+                        background: 'rgba(139,92,246,0.05)',
+                        border: '1px solid rgba(139,92,246,0.18)',
+                      }}
+                    >
+                      {s.title && section(`${video.id}-title`, 'Title', s.title)}
+                      {section(`${video.id}-desc`, 'Description', s.description)}
+                      {s.hashtags.length > 0 && section(`${video.id}-tags`, 'Hashtags', hashtagLine)}
+                      <button
+                        onClick={() => copyToClipboard(`${video.id}-all`, copyAll)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          borderRadius: 7,
+                          border: 'none',
+                          background: copiedKey === `${video.id}-all`
+                            ? 'linear-gradient(135deg,#16a34a,#22c55e)'
+                            : 'linear-gradient(135deg,#7C3AED,#A78BFA)',
+                          color: '#fff',
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {copiedKey === `${video.id}-all` ? '✓ Copied!' : '📋 Copy All'}
+                      </button>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )
