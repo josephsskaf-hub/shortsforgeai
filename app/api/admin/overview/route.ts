@@ -27,6 +27,20 @@ const PLAN_PRICE_USD: Record<string, number> = {
 
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial'])
 
+// Push #417 — keep founder/test/throwaway accounts out of every dashboard
+// number so Joseph sees only REAL customers.
+function isTestEmail(email: string): boolean {
+  const e = email.toLowerCase()
+  return (
+    e.startsWith('josephsskaf') || // founder accounts incl. typo'd gmai.com + plus-aliases
+    e.startsWith('josephskaf') || // hotmail variant
+    e.endsWith('@shortsforgeai.com') || // internal accounts (joseph-test, faststest…)
+    e.startsWith('test') ||
+    e.includes('mailinator') ||
+    e.startsWith('smoketest')
+  )
+}
+
 export async function GET() {
   try {
     const cookieClient = createClient()
@@ -60,7 +74,12 @@ export async function GET() {
       console.error('[admin/overview] listUsers error:', authErr.message)
       return NextResponse.json({ error: 'Failed to list users' }, { status: 500 })
     }
-    const authUsers = authData?.users ?? []
+    // Push #417 — drop test/founder accounts from EVERYTHING below.
+    const allAuthUsers = authData?.users ?? []
+    const excludedIds = new Set(
+      allAuthUsers.filter((u) => isTestEmail(u.email ?? '')).map((u) => u.id)
+    )
+    const authUsers = allAuthUsers.filter((u) => !excludedIds.has(u.id))
     const emailById = new Map<string, string>()
     for (const u of authUsers) emailById.set(u.id, u.email ?? '')
 
@@ -72,6 +91,7 @@ export async function GET() {
         .from('profiles')
         .select('id, plan, stripe_customer_id')
       for (const p of (profs ?? []) as Array<{ id: string; plan: string | null; stripe_customer_id: string | null }>) {
+        if (excludedIds.has(p.id)) continue // #417 — skip test/founder accounts
         planById.set(p.id, (p.plan ?? 'free').toLowerCase())
         hasStripeById.set(p.id, !!p.stripe_customer_id)
       }
@@ -83,13 +103,13 @@ export async function GET() {
     let videosTotal = 0
     let videos7d = 0
     try {
-      const { count: vt } = await admin.from('videos').select('id', { count: 'exact', head: true })
-      videosTotal = vt ?? 0
-      const { count: v7 } = await admin
-        .from('videos')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since7d)
-      videos7d = v7 ?? 0
+      // #417 — count client-side so test/founder videos are excluded.
+      const { data: vids } = await admin.from('videos').select('user_id, created_at')
+      for (const v of (vids ?? []) as Array<{ user_id: string | null; created_at: string | null }>) {
+        if (v.user_id && excludedIds.has(v.user_id)) continue
+        videosTotal += 1
+        if ((v.created_at ?? '') >= since7d) videos7d += 1
+      }
     } catch (e) {
       console.warn('[admin/overview] videos count failed:', e)
     }
