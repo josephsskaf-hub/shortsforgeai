@@ -22,7 +22,7 @@ function creditCostFor(quality: Quality): number {
   // Pro = 20. Push #315 added 'cinematic_ai' = 3 for fal.ai Wan 2.1.
   switch (quality) {
     case 'fast':
-      return 1
+      return 0 // Push #434 — Fast Mode is free (growth engine); free-plan Fast is watermarked instead
     case 'cinematic_ai':
       return 30
     case 'cinematic_kling':

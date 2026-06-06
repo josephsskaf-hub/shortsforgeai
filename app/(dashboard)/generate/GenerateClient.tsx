@@ -2278,17 +2278,15 @@ export default function GenerateClient() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Push #434 — Fast is free + unlimited now; credits are for AI Generated. */}
             <span style={{ color: '#34d399', fontWeight: 800, fontSize: 13 }}>
-              {credits !== null && credits > 1
-                ? `🎁 Welcome gift: ${credits} free credits`
-                : '🎁 Your first AI video is FREE — no credits needed'}
+              ⚡ Fast videos are FREE &amp; unlimited
+              {credits !== null && credits >= 30 ? ' · plus 30 credits for AI Generated' : ''}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              {credits !== null && credits > 1
-                ? credits >= 30
-                  ? `Enough for up to ${credits} Fast videos — or go premium with 1 full AI-generated video. On us.`
-                  : `Enough for up to ${credits} more Fast videos. On us.`
-                : 'Pick a topic below, choose AI Generated and hit Create. We’ll generate your first Short on us.'}
+              {credits !== null && credits >= 30
+                ? 'Make all the Fast Shorts you want on us. Want cinematic AI scenes? Your 30 credits cover one full AI-generated video.'
+                : 'Pick a topic, choose Fast Mode and hit Create — unlimited, on us. (Free Fast videos include our watermark.)'}
             </span>
           </div>
         </div>
@@ -5179,7 +5177,10 @@ function ModeSelector({
   // Fast (1 cr) and AI Generated (30 cr) unlock for free users while they
   // still have balance. AI on free plan = watermarked (server-side).
   const freeCredits = noPlan ? credits ?? 0 : 0
-  const fastUnlocked = isStarter || isCreator || isStudio || freeCredits >= 1
+  // Push #434 — Fast Mode is FREE + unlimited for everyone (growth engine).
+  // Free-plan Fast is watermarked server-side; removing the mark + AI engines
+  // are the paid upgrades. So Fast is always unlocked.
+  const fastUnlocked = true
   const seedanceUnlocked =
     isCreator || isStudio || (noPlan && freeAiUsed === false) || freeCredits >= 30
   const klingUnlocked = isStudio
@@ -5210,12 +5211,11 @@ function ModeSelector({
           tierLabel="fastest"
           quality={1}
           features={fastFeatures}
-          badge={fastUnlocked ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(37,99,235,.18)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>1 credit</span>
-          ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(37,99,235,.15)', color: '#93c5fd', border: '1px solid rgba(37,99,235,.3)' }}>🔒 Starter</span>
-          )}
-          onClick={() => { if (fastUnlocked) { setMode('fast') } else { onUpgrade() } }}
+          badge={
+            /* Push #434 — Fast Mode is free for everyone now. */
+            <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>FREE</span>
+          }
+          onClick={() => { setMode('fast') }}
         />
 
         {/* #402 — AI Generated (Seedance, 30 cr). Available to all paid plans. */}

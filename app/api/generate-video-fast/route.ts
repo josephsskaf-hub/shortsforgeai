@@ -27,9 +27,10 @@ export const maxDuration = 60
 const SUPPORTED_DURATIONS = [45, 60, 90] as const
 type Duration = (typeof SUPPORTED_DURATIONS)[number]
 
-// Fast Mode credit cost. Kept low on purpose — Pexels search is free
-// and TTS + Creatomate are the only paid pieces.
-const FAST_MODE_CREDIT_COST = 1
+// Push #434 — Fast Mode is FREE (0 credits) as a top-of-funnel growth engine.
+// Pexels is free; only TTS + Creatomate cost cents per video. Free-plan Fast
+// videos are watermarked (server-side in /api/compose) so each one markets us.
+const FAST_MODE_CREDIT_COST = 0
 
 function clipCountForDuration(d: Duration): number {
   // Stock clips are usually >10s, but we still ask for N distinct clips so
@@ -216,28 +217,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Upfront credit balance check. Deduction happens in /api/compose/status
-    // when the final mp4 succeeds.
-    {
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('video_credits, plan')
-        .eq('id', user.id)
-        .single()
-      if (profileErr && profileErr.code !== 'PGRST116') {
-        console.error('[generate-fast] credit balance fetch failed:', profileErr.message)
-      }
-      // Push #405 — Fast (1 credit) is available to ALL paid plans (ladder model):
-      // a Creator/Studio user can choose the cheaper engine for a quick clip.
-      // Free users have 0 credits so the balance check below blocks them.
-      const balance = profile?.video_credits ?? 0
-      if (balance < FAST_MODE_CREDIT_COST) {
-        return NextResponse.json(
-          { error: 'Not enough credits.', needed: FAST_MODE_CREDIT_COST, balance },
-          { status: 402 }
-        )
-      }
-    }
+    // Push #434 — Fast Mode is now FREE + unlimited (growth engine). No credit
+    // gate: any logged-in user can generate Fast. Free-plan Fast videos are
+    // watermarked server-side in /api/compose so each one markets the product;
+    // removing the watermark + the AI engine are the paid upgrades.
+    // (Credit balance is no longer required for Fast; AI Generated still costs 30.)
 
     // Push #235 — Verbatim mode. If the user authored the script with explicit
     // `[Pexels: QUERY]` markers, honor them literally: each marker becomes a
