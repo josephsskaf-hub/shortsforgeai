@@ -53,26 +53,32 @@ function NavItem({
     onClick?.()
   }
 
+  // Push #435 — badge palette: HOT = amber, NEW = green, others = cyan.
+  const isHot = !!badge && /hot/i.test(badge)
+  const isNew = !!badge && /new/i.test(badge)
+  const badgeColor = isHot ? '251,191,36' : isNew ? '16,185,129' : '34,211,238'
+
   return (
     <Link
       href={href}
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 font-semibold relative"
+      className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 font-semibold relative"
       style={{
         background: active
-          ? 'rgba(34,211,238,0.10)'
+          ? 'linear-gradient(90deg, rgba(34,211,238,0.14), rgba(59,130,246,0.05))'
           : hovered
-          ? 'rgba(255,255,255,0.04)'
+          ? 'rgba(255,255,255,0.05)'
           : 'transparent',
         color: active ? '#22D3EE' : hovered ? 'var(--text)' : 'var(--muted2)',
         border: active
-          ? '1px solid rgba(34,211,238,0.22)'
+          ? '1px solid rgba(34,211,238,0.25)'
           : '1px solid transparent',
         textDecoration: 'none',
         fontSize: '0.88rem',
-        boxShadow: active ? '0 0 24px rgba(34,211,238,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        boxShadow: active ? '0 0 24px rgba(34,211,238,0.14), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        transform: hovered && !active ? 'translateX(3px)' : 'translateX(0)',
         transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
@@ -81,8 +87,8 @@ function NavItem({
           className="absolute"
           style={{
             left: -1,
-            top: '18%',
-            height: '64%',
+            top: '16%',
+            height: '68%',
             width: 3,
             background: 'linear-gradient(180deg, #3B82F6, #22D3EE)',
             borderRadius: '0 3px 3px 0',
@@ -90,12 +96,28 @@ function NavItem({
           }}
         />
       )}
+      {/* Icon tile — gives each item a crisp, premium square that lights up. */}
       <span
         style={{
-          fontSize: '1.2rem',
+          width: 32,
+          height: 32,
+          borderRadius: 9,
           flexShrink: 0,
-          filter: active ? 'drop-shadow(0 0 5px rgba(34,211,238,0.5))' : 'none',
-          transition: 'filter 0.18s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.05rem',
+          background: active
+            ? 'rgba(34,211,238,0.16)'
+            : hovered
+            ? 'rgba(255,255,255,0.06)'
+            : 'rgba(255,255,255,0.03)',
+          border: active
+            ? '1px solid rgba(34,211,238,0.35)'
+            : '1px solid rgba(255,255,255,0.06)',
+          boxShadow: active ? '0 0 12px rgba(34,211,238,0.30)' : 'none',
+          filter: active ? 'drop-shadow(0 0 4px rgba(34,211,238,0.4))' : 'none',
+          transition: 'all 0.18s ease',
         }}
       >
         {icon}
@@ -104,9 +126,11 @@ function NavItem({
       {badge && (
         <span
           style={{
-            fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.06em',
-            background: 'rgba(34,211,238,0.15)', color: '#22D3EE',
-            padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(34,211,238,0.30)',
+            fontSize: '0.56rem', fontWeight: 900, letterSpacing: '0.07em',
+            background: `rgba(${badgeColor},0.16)`, color: `rgb(${badgeColor})`,
+            padding: '3px 7px', borderRadius: 6, border: `1px solid rgba(${badgeColor},0.4)`,
+            boxShadow: `0 0 10px rgba(${badgeColor},0.18)`,
+            textTransform: 'uppercase', flexShrink: 0,
           }}
         >
           {badge}

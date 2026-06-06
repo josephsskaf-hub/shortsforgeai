@@ -1628,7 +1628,9 @@ export default function GenerateClient() {
           return
         }
         if (res.status === 402) {
-          setError('Not enough credits. Fast Mode needs 1 credit.')
+          // Push #434 — Fast is free now, so the server no longer returns 402
+          // for Fast. Kept as a defensive fallback.
+          setError('Something went wrong starting your Fast video. Please try again.')
           setPhase('failed')
           return
         }

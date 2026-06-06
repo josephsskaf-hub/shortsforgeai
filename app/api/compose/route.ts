@@ -19,6 +19,15 @@ import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 
 export const maxDuration = 300
 
+// Push #434 — FORCE-WATERMARK list. Accounts here ALWAYS get the watermark,
+// regardless of plan or engine, so Joseph can post self-promo videos from his
+// own paid account that advertise the site. Kept fully separate from the
+// customer watermark rules below — adding/removing an email here changes
+// nothing for real users. To stop watermarking his videos, delete the email.
+const FORCE_WATERMARK_EMAILS = new Set<string>([
+  'josephsskaf@gmail.com',
+])
+
 // Push #064 — durations bumped to 30 / 45 / 60 in lockstep with
 // /api/generate-video. Legacy 10 / 50 kept here for backward
 // compatibility with any in-flight requests from the old client.
@@ -410,7 +419,11 @@ export async function POST(req: NextRequest) {
         realAudioDuration,
         whisperWords,
         musicUrl,
-        watermark: isFreeAiTrial || isFreePlanAi || isFreePlanFast, // #430/#434 — free-plan AI and Fast videos are watermarked (clean = paid plan)
+        watermark:
+          isFreeAiTrial ||
+          isFreePlanAi ||
+          isFreePlanFast ||
+          FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase()), // #434 — Joseph's self-promo accounts always watermarked
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
