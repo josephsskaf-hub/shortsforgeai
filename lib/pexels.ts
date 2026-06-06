@@ -87,10 +87,16 @@ function pickBestFile(video: PexelsVideo): string | null {
   const files = (video.video_files ?? [])
     .filter((f) => f.file_type === 'video/mp4' && f.quality !== 'hls')
     .slice()
-    .sort((a, b) => b.width - a.width)
+    .sort((a, b) => b.width - a.width) // widest (highest-res) first
   if (files.length === 0) return null
-  const hd = files.find((f) => f.quality === 'hd') ?? files[0]
-  return hd?.link ?? null
+  // Push #436 — quality upgrade: pick the SHARPEST file that isn't oversized.
+  // The old code picked the first 'hd'-labelled file, but Pexels labels even
+  // 1280x720 as 'hd', so a crisp 1080p file could be skipped. 9:16 Shorts look
+  // best at ~1080px wide; 4K just bloats the download + render with no visible
+  // gain on a phone. So: take the largest file <= 1920px wide; if every file is
+  // 4K, fall back to the smallest of those (still sharp, smaller download).
+  const ideal = files.find((f) => f.width <= 1920) ?? files[files.length - 1]
+  return ideal?.link ?? null
 }
 
 /**
@@ -108,18 +114,22 @@ async function searchAndFilter(
   // results (e.g. "a-mother-and-son-playing" returned for "rocket launch").
   requiredSlugTerms: string[] = [],
 ): Promise<string | null> {
-  // Push #245 — search more results so the positive guard has more candidates.
-  const perPage = requiredSlugTerms.length > 0 ? 15 : 5
+  // Push #436 — pull MORE candidates so the quality scorer has real choice.
+  // (was 5 / 15). The first acceptable clip is often not the best one; with a
+  // deeper pool we can rank by resolution and keep the sharpest on-topic clip.
+  const perPage = requiredSlugTerms.length > 0 ? 20 : 12
   const videos = await searchPexelsVideoObjects(query, perPage)
   if (videos.length === 0) return null
+
+  // Push #436 — collect ALL clips that pass the filters, then pick the BEST by
+  // a quality score instead of returning the first acceptable one. Score favors
+  // higher resolution and a healthy clip length (3–20s), so a sharp, well-shot
+  // clip at search position 4 beats a soft, 2-second clip at position 1.
+  const candidates: { link: string; slug: string; score: number }[] = []
 
   for (const video of videos) {
     const pageUrl = video.url ?? ''
     // Push #244 — always reject fireworks/celebration footage globally.
-    // Previously FIREWORKS_NEGATIVE_TERMS were only applied to space queries,
-    // letting fireworks clips slip through on "New York skyline", "golden hour",
-    // "celebration" etc. Apply them as a universal baseline so no query ever
-    // returns fireworks regardless of topic.
     const negTerms = [...FIREWORKS_NEGATIVE_TERMS, ...(category?.negativeTerms ?? []), ...extraNegTerms]
 
     const rejected = pageUrl
@@ -146,14 +156,22 @@ async function searchAndFilter(
     }
 
     const link = pickBestFile(video)
-    if (link) {
-      const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? ''
-      console.log(`[visual] ${sceneLabel} ACCEPTED slug="${slug}" url="${link.slice(0, 80)}"`)
-      return link
-    }
+    if (!link) continue
+    const slug = pageUrl.match(/\/video\/([^/]+?)(?:-\d+)?\/?$/)?.[1] ?? ''
+    // Resolution score (capped so 8K doesn't dominate) + duration sweet spot.
+    const resScore = Math.min((video.width || 0) * (video.height || 0), 1920 * 1080)
+    const dur = video.duration || 0
+    const durBonus = dur >= 3 && dur <= 20 ? 1_000_000 : dur > 20 ? 300_000 : 0
+    candidates.push({ link, slug, score: resScore + durBonus })
   }
 
-  return null
+  if (candidates.length === 0) return null
+  candidates.sort((a, b) => b.score - a.score)
+  const best = candidates[0]
+  console.log(
+    `[visual] ${sceneLabel} ACCEPTED (best of ${candidates.length}) slug="${best.slug}" url="${best.link.slice(0, 80)}"`,
+  )
+  return best.link
 }
 
 // Push #210 — Space/rocket override. Kept for non-category queries as a

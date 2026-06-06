@@ -18,6 +18,8 @@ CRITICAL RULES:
 2. ALWAYS use concrete, specific visuals: "underground NYC train platform 1903", "Dubai gold ATM machine", "ancient parchment manuscript", "Wall Street trading floor 1987 crash"
 3. Be more specific and concrete, avoid generic visuals
 4. Every visual MUST directly reinforce the exact meaning of the narration
+5. CINEMATIC QUALITY (Push #436): prefer high-production framing — aerial/drone, slow motion, macro close-ups, shallow depth of field, golden-hour or low-key lighting. Stock libraries tag the best clips this way, so a production cue raises the visual quality bar toward an AI-generated look.
+6. pexelsQuery = 2-3 concrete nouns, lowercase. When it fits naturally, include ONE production cue that stock libraries index heavily ("aerial", "macro", "slow motion", or "cinematic") — e.g. "aerial city night", "macro gold coins", "slow motion ocean". Never stuff more than one cue; the nouns must stay searchable.
 
 Return JSON only. No explanation.`
 

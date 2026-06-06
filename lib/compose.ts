@@ -979,6 +979,63 @@ export function buildCreatomateSource({
     fill_color: 'rgba(0,0,0,0.65)',
   })
 
+  // Push #436 — CINEMATIC COLOR GRADE + VIGNETTE. Stock clips from Pexels each
+  // arrive with their own color temperature and look, so a multi-clip Fast video
+  // feels like a patchwork. These low-opacity overlays unify every clip into one
+  // graded, premium look (the single biggest "make stock look produced" trick),
+  // closing the gap toward AI Generated — for free, applied to every Fast video.
+  //
+  // (a) Cool teal wash over the whole frame → cohesion + moody cinematic tone.
+  //     Kept subtle (alpha ~0.13) so the footage stays vivid, not muddy.
+  elements.push({
+    type: 'shape',
+    track: 3,
+    time: 0,
+    duration: totalDuration,
+    x: '50%',
+    y: '50%',
+    width: '100%',
+    height: '100%',
+    fill_color: 'rgba(12,34,51,0.13)',
+  })
+  // (b) Warm highlight lift in the center → the teal/orange contrast that reads
+  //     as "color graded" instead of just tinted. Very subtle, center-weighted.
+  elements.push({
+    type: 'shape',
+    track: 3,
+    time: 0,
+    duration: totalDuration,
+    x: '50%',
+    y: '48%',
+    width: '70%',
+    height: '55%',
+    fill_color: 'rgba(255,150,60,0.05)',
+  })
+  // (c) Side vignette bars (left + right) → completes the frame darkening with
+  //     the existing top/bottom letterbox, focusing the eye on the subject.
+  elements.push({
+    type: 'shape',
+    track: 3,
+    time: 0,
+    duration: totalDuration,
+    x: '4%',
+    y: '50%',
+    width: '8%',
+    height: '100%',
+    fill_color: 'rgba(0,0,0,0.40)',
+  })
+  elements.push({
+    type: 'shape',
+    track: 3,
+    time: 0,
+    duration: totalDuration,
+    x: '96%',
+    y: '50%',
+    width: '8%',
+    height: '100%',
+    fill_color: 'rgba(0,0,0,0.40)',
+  })
+
   // Track 4 — voiceover. Duration = actual audio length so Creatomate
   // doesn't pad or truncate the audio file. totalDuration already equals
   // realAudioDuration (see master-duration logic above), so this is a

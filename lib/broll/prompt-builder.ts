@@ -88,9 +88,17 @@ function extractPexelsQuery(narration: string): string {
     .split(/\s+/)
     .filter((w) => w.length >= 4 && !stopWords.has(w))
 
-  // Return up to 3 concrete words joined as a query
+  // Return up to 3 concrete words joined as a query.
+  // Push #436 — append a single production cue ("cinematic") to bias the
+  // fallback Pexels search toward higher-production clips. Pexels has deep
+  // "cinematic"-tagged inventory, and the multi-candidate scorer + semantic
+  // fallback chain recover gracefully if a specific query returns fewer hits.
   const queryWords = words.slice(0, 3)
-  return queryWords.length > 0 ? queryWords.join(' ') : narration.split(/\s+/).slice(0, 3).join(' ').toLowerCase()
+  const base =
+    queryWords.length > 0
+      ? queryWords.join(' ')
+      : narration.split(/\s+/).slice(0, 3).join(' ').toLowerCase()
+  return base ? `${base} cinematic` : base
 }
 
 function getMoodSuffix(mood: VisualMood, lighting: GlobalVisualStyle['lighting']): string {
