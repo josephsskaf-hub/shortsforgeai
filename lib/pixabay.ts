@@ -153,11 +153,17 @@ async function searchPixabay(
     return []
   }
 
+  // Push #438 — DROP the hard orientation=vertical filter. It was starving the
+  // results: most premium stock (stock-market charts, bank vaults, Wall Street,
+  // gold) is shot HORIZONTAL, so a vertical-only search MISSED ~90% of the good
+  // footage → the pipeline fell back to the same clip over and over (the "same
+  // guy held for 35 seconds" bug) and to generic/off-topic clips. Compose renders
+  // every clip with fit:'cover' (center-crop to 9:16), so landscape footage looks
+  // great vertical. Searching ALL orientations multiplies the on-topic hit rate.
   let url =
     `${PIXABAY_API}?key=${apiKey}` +
     `&q=${encodeURIComponent(query)}` +
     `&video_type=film` +
-    `&orientation=vertical` +
     `&safesearch=true` +
     `&per_page=${perPage}`
 

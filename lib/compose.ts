@@ -875,7 +875,11 @@ export function buildCreatomateSource({
   //      visible dark dip at every clip boundary — the "gaps pretos" the user
   //      reported. A clean hard cut has no such dip. We also trim the first
   //      0.25s of each clip so any source fade-in-from-black is skipped.
-  const CLIP_LEN = 10
+  // Push #438 — was 10s. Lowered to 6s so the timeline cuts more often and a
+  // single clip is never held on screen for ~35s when few unique clips resolve.
+  // More cuts = more dynamic pacing (closer to viral edit rhythm) and hides the
+  // repetition when the fallback has to reuse a clip.
+  const CLIP_LEN = 6
   // Push #256 — reduced from 0.25→0.1. Pexels/Supabase-cached clips rarely have
   // a source fade-in; 0.1s (3 frames) is enough to skip any brief dark frame
   // at the clip head without eating into useful footage.
