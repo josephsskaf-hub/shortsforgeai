@@ -27,6 +27,24 @@ import {
 
 const PEXELS_API = 'https://api.pexels.com/videos'
 
+// Push #437 — GLOBAL lifestyle-footage rejection. This channel (billionaire /
+// money / mystery / facts) NEVER wants generic stock people as the subject, yet
+// abstract finance narration ("buy assets", "keep your money") kept pulling kids
+// doing homework, someone slumped in a chair, and anonymous legs walking down a
+// street. These terms are matched against the Pexels video SLUG (word-boundary)
+// and applied to EVERY search as a baseline, so a clip is rejected even when the
+// query itself was fine. Singular + plural listed because \bterm\b won't match
+// the other form. Deliberately surgical: compound walking phrases (not bare
+// "walking") and clear lifestyle nouns, so on-brand clips (businessman, suit,
+// city) are never caught.
+const LIFESTYLE_NEGATIVE_TERMS = [
+  'homework', 'studying', 'student', 'students', 'classroom', 'pupil',
+  'kid', 'kids', 'child', 'children', 'toddler', 'baby', 'teenager', 'teen',
+  'couch', 'sofa', 'people-walking', 'woman-walking', 'man-walking',
+  'couple-walking', 'person-walking', 'pedestrians', 'commuters',
+  'selfie', 'influencer', 'vlog', 'vlogger', 'lifestyle',
+]
+
 interface PexelsVideoFile {
   link: string
   quality: 'sd' | 'hd' | 'hls' | string
@@ -130,7 +148,8 @@ async function searchAndFilter(
   for (const video of videos) {
     const pageUrl = video.url ?? ''
     // Push #244 — always reject fireworks/celebration footage globally.
-    const negTerms = [...FIREWORKS_NEGATIVE_TERMS, ...(category?.negativeTerms ?? []), ...extraNegTerms]
+    // Push #437 — also reject generic lifestyle/people footage globally.
+    const negTerms = [...FIREWORKS_NEGATIVE_TERMS, ...LIFESTYLE_NEGATIVE_TERMS, ...(category?.negativeTerms ?? []), ...extraNegTerms]
 
     const rejected = pageUrl
       ? isSlugRejected(pageUrl, negTerms, category?.id)
@@ -467,6 +486,16 @@ const QUERY_BLACKLIST: RegExp[] = [
   /\bstreet portrait\b/i,
   /\bcandid portrait\b/i,
   /\bcontent creator\b/i,
+  // Push #437 — the exact offenders that leaked into a finance video:
+  // a kid doing homework, someone slumped in a chair, anonymous walking legs.
+  /\b(kid|child|student|teenager)s? (studying|doing homework|in class)\b/i,
+  /\bhomework\b/i,
+  /\bclassroom\b/i,
+  /\bperson (sitting|lying|relaxing|walking)\b/i,
+  /\b(people|pedestrians|commuters) walking\b/i,
+  /\bsofa\b/i,
+  /\bcouch\b/i,
+  /\bvlog(ger)?\b/i,
 ]
 
 function isBlacklistedQuery(query: string): boolean {
@@ -492,13 +521,75 @@ function isBlacklistedQuery(query: string): boolean {
  * @param minRelevanceHint Narration text, used only for logging context.
  * @returns The first accepted clip URL, or null if all queries fail.
  */
+// Push #437 — CONCEPT → CONCRETE VISUAL MAP. Abstract finance/wealth narration
+// ("buy assets before luxuries", "automate investing", "borrow against stocks")
+// has no literal stock footage, so the search fell back to random lifestyle
+// clips. This maps each abstract concept to concrete, FILMABLE, cinematic
+// queries that Pexels actually has gorgeous inventory for. Matched concepts are
+// tried FIRST (prepended), so a scene about "assets" shows a rising market chart
+// instead of a kid doing homework. Channel verticals: money/billionaire/finance.
+const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
+  { test: /\b(asset|assets|invest|investing|investment|portfolio|stocks?|shares|equit)/i,
+    queries: ['stock market chart screen', 'trading floor', 'financial graph rising'] },
+  { test: /\b(luxur|mansion|penthouse|yacht|supercar|opulent)/i,
+    queries: ['luxury mansion', 'supercar driving', 'luxury penthouse view'] },
+  { test: /\b(wealth|wealthy|rich|fortune|billionaire|millionaire|affluent)/i,
+    queries: ['luxury mansion', 'private jet', 'supercar'] },
+  { test: /\b(debt|loan|loans|borrow|borrowing|mortgage|credit|lending|leverage)/i,
+    queries: ['bank building exterior', 'bank vault gold', 'money counting hands'] },
+  { test: /\b(save|saving|savings|budget|frugal|spend less)/i,
+    queries: ['coins stacking macro', 'jar of coins savings', 'piggy bank coins'] },
+  { test: /\b(bank|banking|vault)/i,
+    queries: ['bank vault gold bars', 'gold bars stack', 'bank building'] },
+  { test: /\b(tax|taxes|irs)/i,
+    queries: ['financial documents desk', 'calculator and money', 'paperwork close up'] },
+  { test: /\b(automat|payday|paycheck|salary|income|deposit|paid)/i,
+    queries: ['mobile banking app', 'online payment phone', 'money transfer screen'] },
+  { test: /\b(cash|money|dollars?|currency|cents|coins)/i,
+    queries: ['cash money counting macro', 'hundred dollar bills', 'stack of money'] },
+  { test: /\b(car|cars|vehicle|automobile)/i,
+    queries: ['luxury car dealership', 'new cars showroom', 'sports car closeup'] },
+  { test: /\b(student|broke|poor|cheap|ramen|simple living)/i,
+    queries: ['instant noodles meal', 'small studio apartment', 'simple desk lamp night'] },
+  { test: /\b(success|discipline|habit|mindset|grind|focus|productiv)/i,
+    queries: ['city skyline sunrise aerial', 'working late office night', 'person writing notebook'] },
+  { test: /\b(wall street|stock exchange|nasdaq|nyse|market crash)/i,
+    queries: ['wall street trading floor', 'stock exchange screens', 'financial district skyscrapers'] },
+]
+
+function concretizeQueries(originalQueries: string[], hint?: string): string[] {
+  const haystack = `${originalQueries.join(' ')} ${hint ?? ''}`.toLowerCase()
+  const boosted: string[] = []
+  for (const entry of CONCEPT_VISUAL_MAP) {
+    if (entry.test.test(haystack)) {
+      for (const q of entry.queries) boosted.push(q)
+    }
+  }
+  // Concrete cinematic queries first, then the originals as backup. Dedup.
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const q of [...boosted, ...originalQueries]) {
+    const k = q.toLowerCase().trim()
+    if (k && !seen.has(k)) {
+      seen.add(k)
+      out.push(q)
+    }
+  }
+  return out
+}
+
 export async function getPexelsVideoForQueries(
   queries: string[],
   minRelevanceHint?: string,
 ): Promise<string | null> {
-  const cleaned = (queries ?? [])
+  const rawCleaned = (queries ?? [])
     .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
     .map((q) => q.trim())
+
+  // Push #437 — prepend concrete cinematic queries for any abstract concept
+  // detected in the scene, so the search reaches a premium on-topic clip before
+  // it ever broadens into generic territory.
+  const cleaned = concretizeQueries(rawCleaned, minRelevanceHint)
 
   if (cleaned.length === 0) return null
 
