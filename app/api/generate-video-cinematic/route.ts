@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import { parseUserScript } from '@/lib/scriptParser'
+import { openai } from '@/lib/openai'
 import { fal } from '@fal-ai/client'
 
 export const maxDuration = 60
@@ -80,6 +81,58 @@ function buildFacelessCinematicPrompt(raw: string): string {
     `photorealistic, ultra-detailed, dramatic cinematic lighting, smooth camera motion, ` +
     `9:16 vertical, no text, no watermark, no logo`
   )
+}
+
+// #441 — AI Gen quality. The verbatim path (default flow: auto-structured
+// script with [Pexels:] markers) had NO cinematic description — both the
+// description and the query were the raw stock-search keywords, which produce
+// flat, incoherent AI video (and invite the random-person bug). This turns each
+// scene's NARRATION into one real cinematic SHOT description for Seedance, so
+// the model gets a shot to direct instead of keyword soup. One gpt-4o-mini call
+// for all scenes; on any failure the caller falls back to the query (no
+// regression). Faceless by instruction AND re-enforced by buildFacelessCinematicPrompt.
+async function generateCinematicDescriptions(
+  scenes: { voiceover: string; stockSearchQuery?: string; description: string }[],
+  topic: string,
+): Promise<string[]> {
+  const list = scenes
+    .map((s, i) => {
+      const vo = (s.voiceover || '').trim()
+      const hint = (s.stockSearchQuery || s.description || '').trim()
+      return `Scene ${i + 1}:\n  narration: ${vo || '(none)'}\n  visual hint: ${hint || '(none)'}`
+    })
+    .join('\n\n')
+
+  const system = `You are a cinematographer for a FACELESS documentary-style YouTube Shorts channel. For each scene's narration line, write ONE vivid cinematic SHOT description (12-24 words) to feed a text-to-video AI.
+
+RULES:
+- Anchor the shot on the LITERAL subject of that scene's narration (the exact place, object, event, number, or concept being said).
+- FACELESS only: show environment, landscapes, architecture, money, screens, objects, hands, or silhouettes/crowds seen from behind or far away. NEVER an identifiable person or face in the foreground. Never invent a random human to fill the scene.
+- Include a camera move (aerial, slow push-in, tracking, pan, or macro), plus lighting and mood.
+- Vertical 9:16, cinematic, photorealistic. No on-screen text, captions, or logos.
+- Output ONLY valid JSON: { "descriptions": ["...", "..."] } with EXACTLY ${scenes.length} items, in scene order.`
+
+  const userMsg = `Topic: ${topic.slice(0, 200)}\n\nScenes:\n${list}`
+
+  const completion = await openai.chat.completions.create(
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userMsg },
+      ],
+      temperature: 0.6,
+      max_tokens: 1000,
+      response_format: { type: 'json_object' },
+    },
+    { timeout: 15000, maxRetries: 0 },
+  )
+
+  const raw = completion.choices[0]?.message?.content?.trim() ?? ''
+  if (!raw) return []
+  const data = JSON.parse(raw) as { descriptions?: unknown }
+  const arr = Array.isArray(data.descriptions) ? data.descriptions : []
+  return arr.map((d) => (typeof d === 'string' ? d.trim() : ''))
 }
 
 // #369 — clip count = ceil(duration/9), capped 2..6. One ~9-10s clip per
@@ -219,7 +272,10 @@ export async function POST(req: NextRequest) {
     const verbatim = parsedScript.hasMarkers && parsedScript.segments.length > 0
 
     // Build scenes
-    let scenes: { description: string; voiceover: string; caption: string; stockSearchQuery?: string }[]
+    // #441 — aiPrompt = the cinematic SHOT description fed to Seedance (prefer
+    // it over the raw stock query). Set from generateScenes prose (non-verbatim)
+    // or generated from the narration below (verbatim).
+    let scenes: { description: string; voiceover: string; caption: string; stockSearchQuery?: string; aiPrompt?: string }[]
 
     if (verbatim) {
       // #369 — pick `clipCount` beats EVENLY across all segments, ALWAYS
@@ -246,7 +302,28 @@ export async function POST(req: NextRequest) {
         voiceover: s.voiceover ?? '',
         caption: s.caption ?? shortCaptionFromVoiceover(s.description),
         stockSearchQuery: s.stockSearchQuery,
+        // generateScenes already returns cinematic prose — feed THAT to the AI
+        // engine instead of the keyword query.
+        aiPrompt: s.description,
       }))
+    }
+
+    // #441 — verbatim path has no cinematic description (description === stock
+    // query). Generate a real faceless shot description per scene from the
+    // narration so Seedance gets a shot to direct, not keyword soup. Best-effort:
+    // on failure each scene falls back to its stock query in submitAllScenes.
+    if (verbatim) {
+      try {
+        const aiPrompts = await generateCinematicDescriptions(scenes, prompt)
+        scenes = scenes.map((s, i) => ({
+          ...s,
+          aiPrompt: aiPrompts[i] && aiPrompts[i].length > 3 ? aiPrompts[i] : s.aiPrompt,
+        }))
+        const got = scenes.filter((s) => s.aiPrompt).length
+        console.log(`[cinematic] #441 cinematic descriptions: ${got}/${scenes.length} scenes`)
+      } catch (e) {
+        console.warn('[cinematic] #441 description generation skipped:', e instanceof Error ? e.message : String(e))
+      }
     }
 
     // #370 — Submit clips SEQUENTIALLY with a small stagger (was Promise.all,
@@ -264,11 +341,11 @@ export async function POST(req: NextRequest) {
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
       for (const scene of scenes) {
-        // #440 — feed Seedance a FACELESS cinematic prompt built from the scene
-        // query, not the raw stock-search keywords (which made it invent a random
-        // person). buildFacelessCinematicPrompt strips person nouns + forces
-        // environment-first b-roll on-brand for this faceless channel.
-        const visualPrompt = scene.stockSearchQuery || scene.description
+        // #440/#441 — feed Seedance the cinematic SHOT description (aiPrompt),
+        // falling back to the stock query only if description generation failed.
+        // buildFacelessCinematicPrompt then strips any person nouns + forces
+        // environment-first b-roll, on-brand for this faceless channel.
+        const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
         const cinematic = buildFacelessCinematicPrompt(visualPrompt)
         let id = await submitToFal(cinematic, model)
         if (!id) {
