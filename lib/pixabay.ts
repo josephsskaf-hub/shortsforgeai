@@ -70,14 +70,28 @@ const LIFESTYLE_TAG_SET = new Set([
   'dancing', 'dance', 'party', 'celebration', 'fitness', 'yoga', 'gym',
   'workout', 'teenager', 'teen', 'couple', 'romance', 'wedding',
   'street fashion', 'urban lifestyle', 'content creator',
+  // Push #437 — generic lifestyle clips that leaked into a finance video.
+  'couch', 'sofa', 'walking', 'pedestrian', 'casual', 'relaxing', 'vlog', 'vlogger',
+])
+
+// Push #437 — HARD lifestyle tags: rejected for EVERY scene, even ones that do
+// reference a person. "Mark Cuban lived like a broke student" should never pull
+// a kid doing homework in a classroom. These are never the right subject for a
+// billionaire / money / mystery / facts channel.
+const HARD_LIFESTYLE_TAGS = new Set([
+  'homework', 'classroom', 'school', 'student', 'students', 'pupil',
+  'child', 'children', 'kid', 'kids', 'baby', 'toddler', 'kindergarten',
 ])
 
 function hasLifestylePollution(video: PixabayVideo, sceneNeedsPeople: boolean): boolean {
-  if (sceneNeedsPeople) return false
   const tags = video.tags
     .toLowerCase()
     .split(',')
     .map((t) => t.trim())
+  // Hard offenders are always rejected.
+  if (tags.some((t) => HARD_LIFESTYLE_TAGS.has(t))) return true
+  // Soft lifestyle tags only matter when the scene isn't about people.
+  if (sceneNeedsPeople) return false
   return tags.some((t) => LIFESTYLE_TAG_SET.has(t))
 }
 
@@ -254,14 +268,68 @@ export async function getPixabayVideoForExactQuery(
  * @param sceneNeedsPeople True when the scene's narration/description references people.
  * @param hint            Short narration snippet for log context only.
  */
+// Push #437 — CONCEPT → CONCRETE VISUAL MAP (ported to the REAL B-roll source).
+// Abstract finance/wealth narration has no literal stock footage, so the search
+// fell to random lifestyle clips (kid doing homework) or the library (fish!).
+// This maps each abstract concept to concrete, FILMABLE, cinematic queries that
+// Pixabay has real inventory for, tried FIRST so a scene about "assets" shows a
+// rising market chart, not a kid studying.
+const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
+  { test: /\b(asset|assets|invest|investing|investment|portfolio|stocks?|shares|equit)/i,
+    queries: ['stock market chart', 'trading floor', 'financial graph'] },
+  { test: /\b(luxur|mansion|penthouse|yacht|supercar|opulent)/i,
+    queries: ['luxury mansion', 'supercar', 'penthouse city view'] },
+  { test: /\b(wealth|wealthy|rich|fortune|billionaire|millionaire|affluent)/i,
+    queries: ['luxury mansion', 'private jet', 'supercar'] },
+  { test: /\b(debt|loan|loans|borrow|borrowing|mortgage|credit|lending|leverage)/i,
+    queries: ['bank building', 'bank vault', 'counting money'] },
+  { test: /\b(save|saving|savings|budget|frugal)/i,
+    queries: ['coins stacking', 'savings jar coins', 'piggy bank'] },
+  { test: /\b(bank|banking|vault)/i,
+    queries: ['bank vault', 'gold bars', 'bank building'] },
+  { test: /\b(tax|taxes|irs)/i,
+    queries: ['financial documents', 'calculator money', 'paperwork desk'] },
+  { test: /\b(automat|payday|paycheck|salary|income|deposit)/i,
+    queries: ['mobile banking app', 'online payment phone', 'money transfer'] },
+  { test: /\b(cash|money|dollars?|currency|coins)/i,
+    queries: ['counting money cash', 'dollar bills', 'money stack'] },
+  { test: /\b(car|cars|vehicle|automobile)/i,
+    queries: ['luxury car', 'car showroom', 'sports car'] },
+  { test: /\b(student|broke|poor|cheap|ramen)/i,
+    queries: ['instant noodles', 'small apartment', 'desk lamp night'] },
+  { test: /\b(success|discipline|habit|mindset|grind|focus|productiv)/i,
+    queries: ['city skyline sunrise', 'office night', 'writing notebook'] },
+  { test: /\b(wall street|stock exchange|nasdaq|nyse|market crash)/i,
+    queries: ['wall street', 'stock exchange', 'financial district'] },
+]
+
+function concretizeQueries(originalQueries: string[], hint?: string): string[] {
+  const haystack = `${originalQueries.join(' ')} ${hint ?? ''}`.toLowerCase()
+  const boosted: string[] = []
+  for (const entry of CONCEPT_VISUAL_MAP) {
+    if (entry.test.test(haystack)) for (const q of entry.queries) boosted.push(q)
+  }
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const q of [...boosted, ...originalQueries]) {
+    const k = q.toLowerCase().trim()
+    if (k && !seen.has(k)) { seen.add(k); out.push(q) }
+  }
+  return out
+}
+
 export async function getPixabayVideoForQueries(
   queries: string[],
   sceneNeedsPeople = false,
   hint?: string,
 ): Promise<string | null> {
-  const cleaned = (queries ?? [])
+  const rawCleaned = (queries ?? [])
     .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
     .map((q) => q.trim())
+
+  // Push #437 — prepend concrete cinematic queries for any abstract concept
+  // detected in the scene, so the search reaches a premium on-topic clip first.
+  const cleaned = concretizeQueries(rawCleaned, hint)
 
   if (cleaned.length === 0) return null
 

@@ -391,6 +391,16 @@ export async function POST(req: NextRequest) {
         const safe = libCandidates.filter((c) => !c.tags.some((t) => PEOPLE_STOCK_TAGS.has(t)))
         if (safe.length > 0) libCandidates = safe
       }
+      // Push #437 — never let a finance/money/billionaire scene fall back to an
+      // ocean/animal/nature clip (the "school of fish for 'the asset'" bug). Only
+      // keep nature clips when the scene actually talks about nature/animals.
+      const ANIMAL_NATURE_STOCK_TAGS = new Set(['ocean', 'water', 'sea', 'underwater', 'animal', 'wildlife', 'nature', 'forest'])
+      const natureText = `${scene.voiceover ?? ''} ${scene.description ?? ''} ${scene.searchKeywords ?? ''} ${libQuery}`.toLowerCase()
+      const sceneIsNature = /\b(ocean|sea|water|wave|fish|animal|wildlife|nature|forest|mountain|river|jungle|reef|whale|shark|bird)\b/.test(natureText)
+      if (!sceneIsNature) {
+        const safe = libCandidates.filter((c) => !c.tags.some((t) => ANIMAL_NATURE_STOCK_TAGS.has(t)))
+        if (safe.length > 0) libCandidates = safe
+      }
       const fallbackUrl = libCandidates[0]?.url ?? ''
 
       // Push #353 — PIXABAY PRIMARY SOURCE.
