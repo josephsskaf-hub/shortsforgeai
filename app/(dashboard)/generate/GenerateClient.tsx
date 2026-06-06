@@ -326,6 +326,10 @@ export default function GenerateClient() {
     if (!isProcessingPhase(phase)) generationInFlightRef.current = false
   }, [phase])
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  // Push #439 — Viral Score "Apply" button. Holds the index of the suggestion
+  // currently being applied (null = none) so the panel can show a per-row
+  // "Applying…" state and block double-clicks.
+  const [applyingSuggestion, setApplyingSuggestion] = useState<number | null>(null)
   const [scenes, setScenes] = useState<string[]>([])
   const [tasks, setTasks] = useState<TaskHandle[]>([])
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({})
@@ -1401,6 +1405,43 @@ export default function GenerateClient() {
   // Called by the "Looks good, generate →" button in the preview card.
   async function handleConfirmScript() {
     await handleAnalyze(undefined, { skipPreview: true })
+  }
+
+  // Push #439 — Viral Score "Apply" handler. The button used to be inert.
+  // Now: send the current (structured) script + the chosen suggestion to
+  // /api/apply-suggestion, get an improved script back, then re-run
+  // handleAnalyze on it (skipPreview) so the whole brief — scenes, captions,
+  // AND the viral score — rebuilds coherently. Free: analysis costs no credit.
+  async function handleApplySuggestion(suggestion: string, index: number) {
+    if (applyingSuggestion !== null) return
+    const baseScript = (structuredScriptRef.current ?? analysis?.voiceoverScript ?? prompt).trim()
+    if (!baseScript || !suggestion.trim()) return
+    setApplyingSuggestion(index)
+    setError(null)
+    trackEvent('viral_suggestion_apply', { suggestion: suggestion.slice(0, 80) })
+    try {
+      const res = await fetch('/api/apply-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: baseScript, suggestion, language, duration }),
+      })
+      if (res.status === 401) {
+        router.push('/login?redirect=/generate')
+        return
+      }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || typeof data.script !== 'string' || !data.script.trim()) {
+        setError('Could not apply that suggestion. Please try again.')
+        return
+      }
+      // Re-analyze the improved script — rebuilds scenes + viral score.
+      // skipPreview keeps the user in flow (no script-review gate).
+      await handleAnalyze(data.script.trim(), { skipPreview: true })
+    } catch {
+      setError('Could not apply that suggestion. Please try again.')
+    } finally {
+      setApplyingSuggestion(null)
+    }
   }
 
   // Phase 3 — Creator Mode: user approved the VisualDirector plan.
@@ -3150,7 +3191,11 @@ export default function GenerateClient() {
               caption. Renders only when the brief actually carries the
               block so old API responses still flow through cleanly. */}
           {analysis.viralIntelligence && (
-            <ViralIntelligencePanel vi={analysis.viralIntelligence} />
+            <ViralIntelligencePanel
+              vi={analysis.viralIntelligence}
+              onApply={handleApplySuggestion}
+              applyingIndex={applyingSuggestion}
+            />
           )}
 
           {/* Push #034: duration / quality controls were moved to Step 1
@@ -4319,7 +4364,15 @@ function PipelineStages({
 // spec: green for high score (≥75), amber for medium (50-74), red for weak
 // (<50). Layout is compact — two-column score / rating header on desktop,
 // stacks on mobile.
-function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
+function ViralIntelligencePanel({
+  vi,
+  onApply,
+  applyingIndex,
+}: {
+  vi: ViralIntelligence
+  onApply?: (suggestion: string, index: number) => void
+  applyingIndex?: number | null
+}) {
   const { viralScore, improvementSuggestions } = vi
   const accent =
     viralScore >= 75
@@ -4394,28 +4447,42 @@ function ViralIntelligencePanel({ vi }: { vi: ViralIntelligence }) {
 
       {topSuggestions.length > 0 && (
         <div className="flex flex-col gap-2 mt-5">
-          {topSuggestions.map((n, i) => (
-            <div
-              key={i}
-              className="rounded-xl px-4 py-3 flex items-center gap-3"
-              style={{
-                background: 'rgba(34, 211, 238,.06)',
-                border: '1px solid rgba(34, 211, 238,.30)',
-                cursor: 'pointer',
-              }}
-            >
-              <span style={{ color: '#22D3EE', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>→</span>
-              <span className="text-xs font-bold" style={{ color: 'var(--text2)', lineHeight: 1.45, flex: 1 }}>
-                {n}
-              </span>
-              <span
-                className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
-                style={{ color: '#22D3EE' }}
+          {/* Push #439 — each suggestion is now a real button. Clicking "Apply"
+              rewrites the script with that improvement and re-scores. The row
+              being applied shows "Applying…"; the others dim + disable. */}
+          {topSuggestions.map((n, i) => {
+            const busy = applyingIndex === i
+            const otherBusy = applyingIndex != null && applyingIndex !== i
+            const interactive = !!onApply
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={!interactive || applyingIndex != null}
+                onClick={interactive ? () => onApply!(n, i) : undefined}
+                className="rounded-xl px-4 py-3 flex items-center gap-3 text-left w-full transition-all"
+                style={{
+                  background: busy ? 'rgba(34, 211, 238,.14)' : 'rgba(34, 211, 238,.06)',
+                  border: '1px solid rgba(34, 211, 238,.30)',
+                  cursor: !interactive ? 'default' : applyingIndex != null ? 'wait' : 'pointer',
+                  opacity: otherBusy ? 0.45 : 1,
+                }}
               >
-                Apply
-              </span>
-            </div>
-          ))}
+                <span style={{ color: '#22D3EE', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>
+                  {busy ? '⏳' : '→'}
+                </span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text2)', lineHeight: 1.45, flex: 1 }}>
+                  {n}
+                </span>
+                <span
+                  className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: '#22D3EE' }}
+                >
+                  {busy ? 'Applying…' : 'Apply'}
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
     </section>
