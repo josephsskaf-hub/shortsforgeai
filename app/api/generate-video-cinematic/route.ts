@@ -53,6 +53,35 @@ function buildFalInput(model: string, prompt: string): Record<string, unknown> {
   }
 }
 
+// #440 — AI Gen "random person" fix. The fal prompt used to be the raw stock
+// SEARCH query (e.g. "luxury penthouse interior", "businessman office"), which
+// is keyword soup for a text-to-video model. Seedance fills the empty scene by
+// inventing an unrelated human — the random "japanese man" that showed up in an
+// Elon Musk video. Seedance v1.5 pro has NO negative_prompt param (verified
+// against the fal schema), so the positive prompt is the only lever. We (1)
+// strip identity-bearing person nouns that make the model spawn a stranger and
+// (2) force faceless, environment-first b-roll — which is exactly this channel's
+// faceless brand. Hands/silhouettes/crowds-from-behind still render fine via the
+// environment framing; what we kill is the random foreground face.
+const PERSON_NOUN_RE =
+  /\b(?:(?:a|an|the)\s+)?(?:(?:random|generic|young|old|asian|white|black|european|american|middle[-\s]?aged)\s+)*(?:businessman|businesswoman|man|woman|men|women|person|persons|people|guy|guys|boy|boys|girl|girls|lady|ladies|gentleman|ceo|entrepreneur|trader|crowd|family|child|children|kid|kids|student|students)s?\b/gi
+
+function buildFacelessCinematicPrompt(raw: string): string {
+  let s = (raw || '').replace(/\s+/g, ' ').trim()
+  s = s
+    .replace(PERSON_NOUN_RE, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s,.;:–-]+/, '')
+    .trim()
+  if (s.length < 3) s = 'cinematic establishing environment shot'
+  return (
+    `${s}, faceless cinematic b-roll, empty scene focused on the environment, ` +
+    `objects and scenery, no people, no human faces, documentary establishing shot, ` +
+    `photorealistic, ultra-detailed, dramatic cinematic lighting, smooth camera motion, ` +
+    `9:16 vertical, no text, no watermark, no logo`
+  )
+}
+
 // #369 — clip count = ceil(duration/9), capped 2..6. One ~9-10s clip per
 // timeline slot so a 45s video gets 5 distinct clips and a 60s video gets 6
 // (no looping/repetition in compose).
@@ -235,8 +264,12 @@ export async function POST(req: NextRequest) {
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
       for (const scene of scenes) {
+        // #440 — feed Seedance a FACELESS cinematic prompt built from the scene
+        // query, not the raw stock-search keywords (which made it invent a random
+        // person). buildFacelessCinematicPrompt strips person nouns + forces
+        // environment-first b-roll on-brand for this faceless channel.
         const visualPrompt = scene.stockSearchQuery || scene.description
-        const cinematic = `${visualPrompt}, cinematic 9:16 vertical video, YouTube Shorts style, high quality`
+        const cinematic = buildFacelessCinematicPrompt(visualPrompt)
         let id = await submitToFal(cinematic, model)
         if (!id) {
           await new Promise((r) => setTimeout(r, 800))
