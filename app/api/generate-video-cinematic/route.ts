@@ -192,7 +192,10 @@ export async function POST(req: NextRequest) {
     }
 
     const duration = Number(body.duration) || 45
-    const clipCount = clipCountForDuration(duration)
+    // #442 — base clip count on the selected duration for now; in verbatim mode
+    // we re-size it to the actual SCRIPT length below (the video follows the
+    // script, not the button), so footage always covers the narration.
+    let clipCount = clipCountForDuration(duration)
     // Push #402 — explicit engine choice from the UI. 'kling' = Cinematic AI
     // (Studio-only, 45 cr); anything else = AI Generated (Seedance, 30 cr).
     const wantsKling = body.engine === 'kling'
@@ -270,6 +273,28 @@ export async function POST(req: NextRequest) {
     // Parse script for verbatim mode
     const parsedScript = parseUserScript(prompt)
     const verbatim = parsedScript.hasMarkers && parsedScript.segments.length > 0
+
+    // #442 — in verbatim mode the final video follows the SCRIPT length, not the
+    // selected duration button (the script is narrated in full). The clip count
+    // was still derived from the button, so a long script + a short button
+    // (e.g. 45) under-provisioned clips and compose REPEATED one to fill the gap
+    // (the ~2s repeated shot). Re-size the clip count to the actual narration:
+    // each Seedance clip is 10s, so we need ceil(narration_seconds / 10) clips
+    // for footage to cover the whole video. Estimate is biased to slightly MORE
+    // clips (lower words/sec) since extra footage is just trimmed — never repeated.
+    // Stays within the tested 2..6 range; never drops below the button's count.
+    if (verbatim) {
+      const SECONDS_PER_CLIP = 10 // Seedance clip duration
+      const WORDS_PER_SECOND = 2.5 // ~ElevenLabs at speed 1.05 (conservative)
+      const words = parsedScript.narration.split(/\s+/).filter(Boolean).length
+      const estSeconds = words / WORDS_PER_SECOND
+      const needed = Math.ceil(estSeconds / SECONDS_PER_CLIP)
+      const sized = Math.max(clipCount, Math.min(6, needed))
+      if (sized !== clipCount) {
+        console.log(`[cinematic] #442 verbatim clip count ${clipCount} -> ${sized} (script ~${Math.round(estSeconds)}s, ${words} words)`)
+        clipCount = sized
+      }
+    }
 
     // Build scenes
     // #441 — aiPrompt = the cinematic SHOT description fed to Seedance (prefer
