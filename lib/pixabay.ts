@@ -283,10 +283,15 @@ export async function getPixabayVideoForExactQuery(
 const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
   { test: /\b(asset|assets|invest|investing|investment|portfolio|stocks?|shares|equit)/i,
     queries: ['stock market chart', 'trading floor', 'financial graph'] },
-  { test: /\b(luxur|mansion|penthouse|yacht|supercar|opulent)/i,
-    queries: ['luxury mansion', 'supercar', 'penthouse city view'] },
+  { test: /\b(luxur|mansion|penthouse|yacht|supercar|opulent|dubai|skyline|city)/i,
+    // #450b — Joseph: add aspirational luxury cities (Dubai etc.) — Pixabay has
+    // deep inventory of Dubai/skyline/skyscraper aerials, great for wealth-mindset vibe.
+    queries: ['Dubai skyline aerial', 'luxury city skyline night', 'penthouse city view night', 'luxury mansion', 'supercar'] },
   { test: /\b(wealth|wealthy|rich|fortune|billionaire|millionaire|affluent)/i,
-    queries: ['luxury mansion', 'private jet', 'supercar'] },
+    // #450 — money-FIRST for a money channel: dollar bills / cash / gold reliably
+    // exist on Pixabay (luxury mansion/jet often miss → generic fallback like the
+    // candle/lucky-cat). Keep one luxury query as a tail option.
+    queries: ['dollar bills cash', 'counting money', 'gold bars stack', 'Dubai skyline aerial', 'luxury city skyline night', 'luxury mansion'] },
   { test: /\b(debt|loan|loans|borrow|borrowing|mortgage|credit|lending|leverage)/i,
     queries: ['bank building', 'bank vault', 'counting money'] },
   { test: /\b(save|saving|savings|budget|frugal)/i,
@@ -303,8 +308,11 @@ const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
     queries: ['luxury car', 'car showroom', 'sports car'] },
   { test: /\b(student|broke|poor|cheap|ramen)/i,
     queries: ['instant noodles', 'small apartment', 'desk lamp night'] },
-  { test: /\b(success|discipline|habit|mindset|grind|focus|productiv)/i,
-    queries: ['city skyline sunrise', 'office night', 'writing notebook'] },
+  { test: /\b(success|discipline|habit|mindset|grind|focus|productiv|control|limit|spend|overspend)/i,
+    // #450 — on a money channel these abstract beats ("discipline", "control your
+    // spending") should still show MONEY, not a random skyline/notebook. Money
+    // first, abstract as backup.
+    queries: ['stacking coins money', 'cash dollar bills', 'wallet money', 'city skyline sunrise'] },
   { test: /\b(wall street|stock exchange|nasdaq|nyse|market crash)/i,
     queries: ['wall street', 'stock exchange', 'financial district'] },
 ]
