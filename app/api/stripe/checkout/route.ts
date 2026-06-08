@@ -75,6 +75,7 @@ async function buildAndRedirect(
   tier: Tier,
   isGet: boolean,
   billing: Billing = 'monthly',
+  promo?: string,
 ): Promise<NextResponse> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
@@ -212,6 +213,26 @@ async function buildAndRedirect(
     },
   }
 
+  // Push #453 — auto-apply a promotion code (e.g. FOUNDING50) when ?promo= is
+  // present, so win-back / founding links give the discount with ZERO typing.
+  // Looked up by its human-facing code; if it doesn't exist or is inactive we
+  // silently skip it (checkout still proceeds at full price — never blocks a
+  // sale). NOTE: Stripe forbids combining `discounts` with allow_promotion_codes,
+  // and we set neither elsewhere, so this is safe.
+  if (promo) {
+    try {
+      const codes = await stripe.promotionCodes.list({ code: promo, active: true, limit: 1 })
+      const pc = codes.data[0]
+      if (pc) {
+        sessionParams.discounts = [{ promotion_code: pc.id }]
+      } else {
+        console.warn('[stripe/checkout] promo not found/inactive, skipping:', promo)
+      }
+    } catch (promoErr) {
+      console.warn('[stripe/checkout] promo lookup failed, skipping:', promo, promoErr)
+    }
+  }
+
   let session: Stripe.Checkout.Session
   try {
     session = await stripe.checkout.sessions.create(sessionParams)
@@ -263,7 +284,8 @@ export async function GET(req: NextRequest) {
     const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
     const tier: Tier = tierParam === 'pro' ? 'pro' : tierParam === 'starter' ? 'starter' : 'basic'
     const billing: Billing = req.nextUrl.searchParams.get('billing') === 'annual' ? 'annual' : 'monthly'
-    return await buildAndRedirect(req, tier, true, billing)
+    const promo = req.nextUrl.searchParams.get('promo') ?? undefined
+    return await buildAndRedirect(req, tier, true, billing, promo)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/checkout GET] Unexpected error:', msg)

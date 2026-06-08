@@ -166,7 +166,11 @@ export default function PricingPage() {
     trackPricingEvent(eventName)
     trackCheckoutClick(tier as 'basic' | 'pro')
     const billingParam = billing === 'annual' ? '&billing=annual' : ''
-    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}`
+    // #453 — forward a ?promo= code (e.g. /pricing?promo=FOUNDING50 from the
+    // win-back emails) into checkout so the discount auto-applies on plan click.
+    const promo = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('promo') : null
+    const promoParam = promo ? `&promo=${encodeURIComponent(promo)}` : ''
+    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}${promoParam}`
   }
 
   // Push #173 — read checkout_error / already_subscribed from URL params

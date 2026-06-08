@@ -2453,9 +2453,11 @@ export default function GenerateClient() {
           loading={upgradeLoading}
           onUpgrade={(tier) => {
             // #380 — straight to Stripe via the working GET checkout route.
+            // #453 — carry the founding promo so the 50%-off-first-month applies
+            // automatically at this peak-intent moment (no code typing).
             trackCheckoutClick(tier)
             setUpgradeLoading(true)
-            window.location.href = `/api/stripe/checkout?tier=${tier}`
+            window.location.href = `/api/stripe/checkout?tier=${tier}&promo=FOUNDING50`
           }}
           onClose={() => setShowUpgradeModal(false)}
         />
@@ -5755,8 +5757,8 @@ function UpgradeModal({
         >
           Maybe later
         </button>
-        <p style={{ marginTop: 12, fontSize: '0.78rem', color: '#fbbf24', fontWeight: 700 }}>
-          🔥 Launch offer ends soon
+        <p style={{ marginTop: 12, fontSize: '0.8rem', color: '#fbbf24', fontWeight: 800 }}>
+          🔥 Founding Creator — 50% off your first month · only 50 spots
         </p>
       </div>
     </div>
