@@ -5637,7 +5637,7 @@ function UpgradeModal({
           You&apos;re out of credits 🎉
         </h2>
         <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
-          Pick a plan to keep creating. Cancel anytime · 7-day money-back guarantee.
+          Keep the momentum going — unlock daily posting and never get stuck mid-idea again. Cancel anytime · 7-day money-back guarantee.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -5714,6 +5714,27 @@ function UpgradeModal({
               </button>
             )
           })}
+        </div>
+
+        {/* Push #452 — referral escape hatch. Turns a "won't pay right now"
+            bounce into top-of-funnel growth by surfacing the live #443 loop
+            at peak intent, with no extra dashboard banner. */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <a
+            href="/referral"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: '0.84rem',
+              fontWeight: 800,
+              color: '#22D3EE',
+              textDecoration: 'none',
+              lineHeight: 1.4,
+            }}
+          >
+            🎁 Not ready to pay? Invite a friend — you both get 30 free credits →
+          </a>
         </div>
 
         <button
@@ -5942,7 +5963,7 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
-        🎉 Welcome — your first AI Short is free. Create it now.
+        🎉 Your first AI video is free — type any topic below and watch it come to life in ~3 minutes. No card needed.
       </span>
       <button
         type="button"
