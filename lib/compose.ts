@@ -896,7 +896,15 @@ export function buildCreatomateSource({
   // Fast stock keeps the tight 6s cut rhythm.
   const isAiGen =
     quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'basic_ai'
-  const CLIP_LEN = isAiGen ? 10 : 6
+  // Push #446 — Fast 60s repetition fix. Fast (stock) makes ~1 clip per script
+  // beat (~6-7 clips). At CLIP_LEN=6 those 6-7 clips only cover 36-42s, so a ~55s
+  // 60s video recycled/repeated clips to fill the rest (Joseph's feedback). Keep
+  // the tight 6s cuts on short videos (≤50s, e.g. the 45s that scored well), but
+  // for 60s/90s let each Fast clip run up to ~9s so 6-7 clips spread across the
+  // full timeline without recycling (slotLen = min(9, total/clips) lands them
+  // naturally; the old 6s cap was artificially low for the 6-7 clip case and
+  // forced the repeat). AI Gen (unique 10s gens) stays at 10s (see #445).
+  const CLIP_LEN = isAiGen ? 10 : totalDuration > 50 ? 9 : 6
   // Push #256 — reduced from 0.25→0.1. Pexels/Supabase-cached clips rarely have
   // a source fade-in; 0.1s (3 frames) is enough to skip any brief dark frame
   // at the clip head without eating into useful footage.
