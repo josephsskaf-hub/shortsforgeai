@@ -622,7 +622,12 @@ export default function GenerateClient() {
           if (typeof data.isStudio === 'boolean') setIsStudio(data.isStudio)
           if (!planDefaultedRef.current) {
             planDefaultedRef.current = true
-            if (data.isStarter) { setMode('fast') }
+            // #448 — Viral Now quick-entry (?autoanalyze=1) defaults to Fast (free)
+            // so a niche click never pre-selects the 30-credit AI Gen. The user
+            // upgrades to AI Gen deliberately (no accidental credit burn).
+            const fromViralNow = searchParams?.get('autoanalyze') === '1'
+            if (fromViralNow) { setMode('fast') }
+            else if (data.isStarter) { setMode('fast') }
             else if (data.isStudio) { setMode('cinematic_ai'); setAiEngine('kling') }
             else { setMode('cinematic_ai'); setAiEngine('seedance') } // Creator + free trial
           }
@@ -1526,19 +1531,13 @@ export default function GenerateClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  // Push #301 — Auto-trigger generate when URL has ?autogenerate=1 and analysis is done
-  // Used by Viral Now cards: user clicks → analyze runs → generate fires automatically.
-  const autoGenerateFiredRef = useRef(false)
-  useEffect(() => {
-    const autoGen = searchParams?.get('autogenerate') === '1'
-    if (!autoGen) return
-    if (phase !== 'options') return
-    if (autoGenerateFiredRef.current) return
-    autoGenerateFiredRef.current = true
-    console.log(`[ux1] autogenerate-effect -> handleGenerate() phase=${phase} @${Date.now()}`)
-    handleGenerate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, searchParams])
+  // Push #301 — Viral Now cards used to AUTO-GENERATE: the moment analysis
+  // finished they fired handleGenerate() on the default engine.
+  // Push #447 — REMOVED the auto-generate. It silently burned the user's credits
+  // (often AI Gen = 30 cr) WITHOUT letting them choose Fast (free) vs AI Gen or
+  // the duration. A Viral Now click now auto-analyzes (instant brief) but STOPS
+  // at the options screen so the user picks the engine + duration and presses
+  // Generate themselves. The ?autogenerate=1 URL param is intentionally ignored.
 
   async function handleGenerate() {
     // #360 — double-submit guard. Block re-entry if a generation is already in
