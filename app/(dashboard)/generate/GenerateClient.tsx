@@ -2229,10 +2229,12 @@ export default function GenerateClient() {
   }, [phase, finalVideoUrl, playerFailed])
 
 
-  // Push #084 — Fast Mode is a flat 1 credit; Cinematic Mode uses the
-  // per-quality cost from QUALITY_OPTIONS.
+  // Push #084 — Fast/Creator Mode cost. Push #449 — Fast is FREE (0 credits)
+  // since #434 made it free+unlimited; the label was stale at 1 ("Generate · 1
+  // credit" on the button, though the server already charged 0). Cinematic Mode
+  // uses the per-quality cost from QUALITY_OPTIONS.
   const selectedCost = (mode === 'fast' || mode === 'creator')
-    ? 1
+    ? 0
     : mode === 'cinematic_ai'
     // #402 — Cinematic AI (Kling) costs 45, AI Generated (Seedance) 30.
     ? (aiEngine === 'kling' ? 45 : 30)
@@ -2876,7 +2878,7 @@ export default function GenerateClient() {
                 {mode === 'creator'
                   ? `🎬 Creator Mode • review scenes first, then 1 credit • ~60 seconds.`
                   : mode === 'fast'
-                  ? `⚡ ${selectedCost} credit • Fast Mode • ready in ~60 seconds.`
+                  ? `⚡ ${selectedCost === 0 ? 'Free' : `${selectedCost} credit`} • Fast Mode • ready in ~60 seconds.`
                   : mode === 'cinematic_ai'
                   ? (aiTrialAvailable
                       ? `🎁 1 FREE AI video (with watermark) • AI Generated • ~3-5 min render.`
@@ -3228,7 +3230,7 @@ export default function GenerateClient() {
                   ? '⏳ Generating…'
                   : aiTrialAvailable
                   ? 'Generate · 1 FREE (watermark)'
-                  : `Generate · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}
+                  : `Generate${selectedCost === 0 ? ' · Free' : ` · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}`}
               </button>
             </div>
           </section>
@@ -3824,7 +3826,7 @@ export default function GenerateClient() {
                 <span>
                   {mode === 'cinematic'
                     ? '1 Cinematic token used'
-                    : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}
+                    : `${selectedCost === 0 ? 'Free' : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}`}
                 </span>
                 <span>·</span>
                 <span style={{ color: mode === 'fast' ? '#34d399' : mode === 'cinematic_ai' ? '#fcd34d' : '#fbbf24', fontWeight: 700 }}>
