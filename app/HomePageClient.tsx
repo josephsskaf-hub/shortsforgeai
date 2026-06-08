@@ -155,14 +155,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [exitSubmitting, setExitSubmitting] = useState(false)
   // Push #104 — live "X Shorts created today" counter for the social
   // proof bar. Falls back to the API's baseline if the fetch fails.
-  const [shortsToday, setShortsToday] = useState<number>(47)
+  const [shortsToday, setShortsToday] = useState<number>(26)
   // Push #116 — cumulative hero counter ("9,847 Shorts created — and
   // counting"). Bumps +1 every 30s in a setInterval so the page reads
   // as alive while the visitor sits on it.
-  const [shortsTotal, setShortsTotal] = useState<number>(9847)
+  const [shortsTotal, setShortsTotal] = useState<number>(303)
   // Push #231 — rolling 7-day count for the hero "X videos created this
   // week" line. Seeded from the API's WEEK_BASELINE so it never reads 0.
-  const [shortsWeek, setShortsWeek] = useState<number>(847)
+  const [shortsWeek, setShortsWeek] = useState<number>(103)
   // Push #227 — count-up animation. `animatedTotal` is the value actually
   // rendered; it eases toward `shortsTotal` (0 → baseline on first paint,
   // then to the real number once /api/stats resolves). The ref lets the
@@ -875,7 +875,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <section className="relative z-10 mx-auto max-w-4xl px-4 pt-0 pb-10 sm:px-6">
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-xl border border-white/[0.08] bg-[#0B1120] px-5 py-3">
           <span className="text-[13.5px] font-bold text-[#F1F5F9]">
-            ⚡ Join 500+ creators generating Shorts with AI
+            ⚡ Join 300+ creators generating Shorts with AI
           </span>
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
           {/* Push #104 — live counter pulled from /api/stats. */}
@@ -1278,7 +1278,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Ready to Scale Your Channel?
           </h2>
           <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-[#94A3B8]">
-            Join 500+ creators generating viral Shorts on autopilot.
+            Join 300+ creators generating viral Shorts on autopilot.
           </p>
           <div className="relative mx-auto mt-7 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:flex-row">
             <button

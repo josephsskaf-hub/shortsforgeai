@@ -232,7 +232,7 @@ export default function SignupPage() {
                 className="text-2xl font-black tracking-tight mb-1"
                 style={{ color: 'var(--text)' }}
               >
-                Join 9,847+ creators
+                Join 300+ creators
               </h2>
               <p className="text-sm mb-8" style={{ color: 'var(--muted2)' }}>
                 Already building Shorts with AI — every single day.

@@ -126,7 +126,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: 'var(--indigo-light)',
               }}
             >
-              👥 1,200+ creators use this
+              👥 300+ creators use this
             </div>
           </div>
         </div>

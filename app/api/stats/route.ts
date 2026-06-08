@@ -10,9 +10,13 @@ import { NextResponse } from 'next/server'
 // the number meaningful even on a fresh staging DB.
 // Push #231 — also returns a rolling 7-day `week` count for the homepage
 // "X videos created this week" line, with its own baseline.
-const TODAY_BASELINE = 47
-const WEEK_BASELINE = 847
-const TOTAL_BASELINE = 9847
+// #454 — honest baselines. Real DB counts (completed videos) carry the number;
+// these are small cushions so off-peak hours never publish a 0. Previously the
+// total baseline was 9847 (a ~40x inflation over the real ~253) and inconsistent
+// with every other "creators" claim on the site — corrected to a truthful ~300+.
+const TODAY_BASELINE = 10
+const WEEK_BASELINE = 20
+const TOTAL_BASELINE = 50
 
 export async function GET() {
   try {

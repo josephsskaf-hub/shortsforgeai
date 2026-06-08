@@ -53,9 +53,9 @@ const BENEFITS: { icon: string; title: string; desc: string; accent: string }[] 
 ]
 
 const SOCIAL_PROOF: { icon: string; text: string; accent: string }[] = [
-  { icon: '⚡', text: '3,200+ videos generated', accent: '#22D3EE' },
+  { icon: '⚡', text: '300+ videos generated', accent: '#22D3EE' },
   { icon: '★★★★★', text: '4.8★ average rating', accent: '#FBBF24' },
-  { icon: '🎬', text: '500+ active creators', accent: '#34D399' },
+  { icon: '🎬', text: '300+ active creators', accent: '#34D399' },
 ]
 
 export default function StartPage() {

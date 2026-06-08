@@ -316,7 +316,7 @@ export default function PricingPage() {
           {/* Social proof stats row */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
-              { icon: '🎬', label: '1,200+ Shorts created' },
+              { icon: '🎬', label: '300+ Shorts created' },
               { icon: '⭐', label: '4.8 / 5 average rating' },
               { icon: '🔒', label: '7-day money-back guarantee' },
             ].map(({ icon, label }) => (
