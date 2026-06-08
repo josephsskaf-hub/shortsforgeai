@@ -182,12 +182,47 @@ function slugifyTitle(title: string | null | undefined): string {
     .slice(0, 80)
 }
 
+// #455 — proven viral starter topics (extreme places + mystery — our top
+// performers, e.g. Snake Island 11.4K views). Pre-filled for brand-new users so
+// the first screen is one tap from their "wow" video instead of a blank box.
+const VIRAL_STARTER_TOPICS = [
+  'the mystery of Snake Island, the most dangerous island on Earth',
+  'the Bermuda Triangle mystery',
+  'the abandoned city of Chernobyl, frozen in time',
+  'the deepest hole humans ever dug — the Kola Superdeep Borehole',
+  'how tiny Monaco became the richest place on Earth',
+  'the Roman city of Pompeii, buried by a volcano in a single day',
+]
+
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialPrompt = searchParams.get('prompt') ?? ''
 
   const [prompt, setPrompt] = useState(initialPrompt)
+
+  // #455 — first-run pre-fill (Measure 2: onboarding "first video in 60s").
+  // Brand-new users land on a ready-to-generate viral topic instead of a blank
+  // box, so step one is a single tap toward their "wow" first video — the
+  // activation cliff (only ~21% of signups ever made a video) is the biggest
+  // conversion leak. Only when no ?prompt= is passed AND the user hasn't been
+  // welcomed yet; never clobbers typed text, never touches returning users.
+  const starterSeededRef = useRef(false)
+  useEffect(() => {
+    if (starterSeededRef.current) return
+    starterSeededRef.current = true
+    if (initialPrompt) return
+    try {
+      if (localStorage.getItem('sf_welcomed')) return
+    } catch {
+      return
+    }
+    setPrompt((cur) =>
+      cur && cur.trim()
+        ? cur
+        : VIRAL_STARTER_TOPICS[Math.floor(Math.random() * VIRAL_STARTER_TOPICS.length)],
+    )
+  }, [initialPrompt])
   // #383c — explicit script handling, visible to everyone (replaces the old
   // silent "skip the AI if the text has HOOK/PAYOFF markers" auto-detection).
   //  'ai'       → send the text to /api/generate-script to structure it (DEFAULT)
@@ -5965,7 +6000,7 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
-        🎉 Your first AI video is free — type any topic below and watch it come to life in ~3 minutes. No card needed.
+        🎉 Your first AI video is free — we dropped a viral idea in the box below. Hit Generate, or type your own. No card needed.
       </span>
       <button
         type="button"
