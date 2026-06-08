@@ -83,11 +83,28 @@ const HARD_LIFESTYLE_TAGS = new Set([
   'child', 'children', 'kid', 'kids', 'baby', 'toddler', 'kindergarten',
 ])
 
+// Push #451 — HARD off-topic / kitsch blacklist. Pixabay surfaces these for
+// money/wealth/fortune queries (the recurring "lucky cat" / maneki-neko that
+// ruined money videos), plus generic non-photoreal junk. NONE of these fit a
+// finance / geography / mystery / learning channel, so they're rejected for
+// EVERY scene — even when the clip ALSO carries a 'money' tag.
+const HARD_OFFTOPIC_TAGS = new Set([
+  'cat', 'kitten', 'kitty', 'figurine', 'ornament', 'talisman', 'amulet',
+  'trinket', 'doll', 'toy', 'plastic', 'clipart', 'cartoon', 'illustration',
+  'animation', 'animated', 'vector', 'graphic', 'render', 'drawing', 'emoji',
+])
+// Multi-word kitsch that appears as a single Pixabay tag (Set exact-match misses these).
+const HARD_OFFTOPIC_SUBSTRINGS = ['maneki', 'feng shui', 'lucky cat', 'fortune cat', '3d render']
+
 function hasLifestylePollution(video: PixabayVideo, sceneNeedsPeople: boolean): boolean {
   const tags = video.tags
     .toLowerCase()
     .split(',')
     .map((t) => t.trim())
+  // Push #451 — kitsch / off-topic offenders are ALWAYS rejected (lucky cat etc.).
+  if (tags.some((t) => HARD_OFFTOPIC_TAGS.has(t))) return true
+  const blob = video.tags.toLowerCase()
+  if (HARD_OFFTOPIC_SUBSTRINGS.some((s) => blob.includes(s))) return true
   // Hard offenders are always rejected.
   if (tags.some((t) => HARD_LIFESTYLE_TAGS.has(t))) return true
   // Soft lifestyle tags only matter when the scene isn't about people.
@@ -302,6 +319,9 @@ const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
     queries: ['financial documents', 'calculator money', 'paperwork desk'] },
   { test: /\b(automat|payday|paycheck|salary|income|deposit)/i,
     queries: ['mobile banking app', 'online payment phone', 'money transfer'] },
+  { test: /\b(retire|retirement|401k|401\(k\)|pension|nest egg|ira|fund|funds)/i,
+    // #451 — "401k / the retirement" was hitting a lucky cat; anchor it on real money.
+    queries: ['retirement savings money', 'coins jar savings', 'financial chart growth', 'dollar bills cash'] },
   { test: /\b(cash|money|dollars?|currency|coins)/i,
     queries: ['counting money cash', 'dollar bills', 'money stack'] },
   { test: /\b(car|cars|vehicle|automobile)/i,
