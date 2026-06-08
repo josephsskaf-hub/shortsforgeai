@@ -42,6 +42,14 @@ export interface ComposeInputs {
   sceneCaptions: string[]
   duration: number
   /**
+   * Push #445 — render quality/engine ('fast' | 'cinematic_ai' | 'cinematic_kling' | ...).
+   * Controls clip pacing: AI-generated clips are unique ~10s generations, so each
+   * one is allowed to fill up to ~10s (so 6–9 clips cover a 60–90s video with NO
+   * repetition). Fast stock keeps the tighter 6s slots for frequent cuts. Optional;
+   * falls back to Fast pacing when absent.
+   */
+  quality?: string
+  /**
    * Push #158 — real measured duration (seconds) of the generated TTS mp3.
    * The caption window is sized to this instead of the requested duration,
    * which assumed a fixed 2.5 words/sec pace the real audio never matched.
@@ -811,6 +819,7 @@ export function buildCreatomateSource({
   voiceoverScript,
   sceneCaptions,
   duration,
+  quality,
   realAudioDuration,
   whisperTimings,
   whisperWords,
@@ -879,7 +888,15 @@ export function buildCreatomateSource({
   // single clip is never held on screen for ~35s when few unique clips resolve.
   // More cuts = more dynamic pacing (closer to viral edit rhythm) and hides the
   // repetition when the fallback has to reuse a clip.
-  const CLIP_LEN = 6
+  // Push #445 — but for AI-GENERATED clips (Seedance/Kling) each clip is a UNIQUE
+  // ~10s generation, NOT recycled stock. With CLIP_LEN=6 a 60s video only covered
+  // 6×6=36s with its 6 clips, so compose re-cycled clips to fill the rest →
+  // visible repetition (Joseph's 60s feedback). For AI Gen we let each clip fill
+  // up to 10s (its real length), so 6–9 clips cover a 60–90s video with no repeat.
+  // Fast stock keeps the tight 6s cut rhythm.
+  const isAiGen =
+    quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'basic_ai'
+  const CLIP_LEN = isAiGen ? 10 : 6
   // Push #256 — reduced from 0.25→0.1. Pexels/Supabase-cached clips rarely have
   // a source fade-in; 0.1s (3 frames) is enough to skip any brief dark frame
   // at the clip head without eating into useful footage.

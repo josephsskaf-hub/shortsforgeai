@@ -416,6 +416,7 @@ export async function POST(req: NextRequest) {
         voiceoverScript: scaledScript,
         sceneCaptions,
         duration,
+        quality,
         realAudioDuration,
         whisperWords,
         musicUrl,

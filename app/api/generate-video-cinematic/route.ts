@@ -138,8 +138,12 @@ RULES:
 // #369 — clip count = ceil(duration/9), capped 2..6. One ~9-10s clip per
 // timeline slot so a 45s video gets 5 distinct clips and a 60s video gets 6
 // (no looping/repetition in compose).
+// Push #445 — cap raised 6→9. AI Gen clips are unique ~10s gens; a 60s video
+// needs ~6-7 and a 90s needs ~9 distinct clips so compose (CLIP_LEN=10 for AI
+// Gen) can cover the whole timeline without recycling/repeating. 45s→5, 60s→7,
+// 90s→9 (was all capped at 6, which forced repetition on longer videos).
 function clipCountForDuration(d: number): number {
-  return Math.max(2, Math.min(6, Math.ceil(d / 9)))
+  return Math.max(2, Math.min(9, Math.ceil(d / 9)))
 }
 
 async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL): Promise<string | null> {
@@ -289,7 +293,7 @@ export async function POST(req: NextRequest) {
       const words = parsedScript.narration.split(/\s+/).filter(Boolean).length
       const estSeconds = words / WORDS_PER_SECOND
       const needed = Math.ceil(estSeconds / SECONDS_PER_CLIP)
-      const sized = Math.max(clipCount, Math.min(6, needed))
+      const sized = Math.max(clipCount, Math.min(9, needed))
       if (sized !== clipCount) {
         console.log(`[cinematic] #442 verbatim clip count ${clipCount} -> ${sized} (script ~${Math.round(estSeconds)}s, ${words} words)`)
         clipCount = sized
