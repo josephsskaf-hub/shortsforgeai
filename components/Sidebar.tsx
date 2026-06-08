@@ -377,6 +377,11 @@ export default function Sidebar({
           <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
           <NavItem href="/viral-now" icon="🔥" label="Viral Now" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
           <NavItem href="/history" icon="🎞️" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Push #444 — Invite & Earn: referral loop UI on a reachable page.
+              Gated to logged-in users (the reward only applies to accounts). */}
+          {isLoggedIn && (
+            <NavItem href="/referral" icon="🎁" label="Invite & Earn" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+          )}
           {/* Push #080 — examples removed (demodé). Was:
               routes to /generate?prompt=…  No auth-gated logic; safe for
               guests too. */}

@@ -6,6 +6,8 @@ import DashboardShell from './DashboardShell'
 import InstallAppBanner from '@/components/InstallAppBanner'
 // Push #427 — push-notification opt-in ("know when your video is ready")
 import EnablePushBanner from '@/components/EnablePushBanner'
+// Push #443 — referral loop: fires attribute+qualify on any authenticated page
+import ReferralAutoTrigger from '@/components/ReferralAutoTrigger'
 
 export default async function DashboardLayout({
   children,
@@ -39,6 +41,7 @@ export default async function DashboardLayout({
       {children}
       <InstallAppBanner />
       <EnablePushBanner />
+      {user && <ReferralAutoTrigger />}
     </DashboardShell>
   )
 }

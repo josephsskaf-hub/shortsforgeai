@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 import { HOME_CHIPS, randomTopic } from '@/lib/curatedTopics'
 import { captureUtmsOnce } from '@/lib/analytics'
+import { captureRefOnce } from '@/lib/referral'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 const THUMBNAIL_ROUTE = '/thumbnail-generator'
@@ -202,6 +203,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
   useEffect(() => {
     captureUtmsOnce() // #377 — first-touch UTM/gclid capture on landing
+    captureRefOnce()  // referral loop — first-touch ?ref= capture on landing
     trackHomepageEvent('homepage_view')
   }, [])
 

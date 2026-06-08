@@ -164,6 +164,12 @@ export default function DashboardClient({
     }
   }, [isLoggedIn])
 
+  // ── Referral loop ──────────────────────────────────────────────────────
+  // Push #444 — the referral attribute/qualify trigger and the Invite & Earn
+  // card both moved out of this (dead, redirected) page. Attribution now lives
+  // in <ReferralAutoTrigger/> (dashboard layout, fires on every authenticated
+  // page) and the card is its own component on the reachable /referral page.
+
   const creditsZero = credits !== null && credits <= 0
 
   return (
@@ -602,6 +608,11 @@ export default function DashboardClient({
           </Link>
         </div>
       )}
+
+      {/* ── 🎁 Invite friends & earn ──
+          Push #444 — moved to the dedicated, reachable /referral page
+          (<ReferralCard/>). This dashboard page is dead code (redirects to
+          /generate), so the card was never rendered here. */}
 
       {/* ── Activity strip ── */}
       {isLoggedIn && totalGenerations > 0 && (

@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { href: '/generate',            icon: '⚡', label: 'Generator', exact: false },
   { href: '/viral-now',           icon: '🔥', label: 'Viral Now', exact: false },
   { href: '/history',             icon: '🎞️', label: 'My Videos', exact: false },
+  // Push #444 — Invite & Earn (referral loop). Mirrors the Sidebar link.
+  { href: '/referral',            icon: '🎁', label: 'Invite',    exact: false },
   { href: '/pricing',             icon: '💎', label: 'Pricing',   exact: false },
 ]
 
