@@ -40,6 +40,59 @@ async function isProtectedProfile(
   }
 }
 
+// #480 — Affiliate commission. If the paying user was attributed to an affiliate
+// (profiles.affiliate_id), record a PENDING commission (rate × amount paid).
+// Idempotent via unique(provider, external_id). Stays 'pending' until the admin
+// approves it (so refunds inside the window simply never get approved/paid).
+async function recordAffiliateCommission(
+  supabase: AdminClient,
+  args: { userId: string; externalId: string; amountGross: number; currency: string; type: 'initial' | 'recurring' }
+): Promise<void> {
+  try {
+    if (!args.userId || !args.externalId || !args.amountGross || args.amountGross <= 0) return
+    const { data: prof } = await supabase.from('profiles').select('affiliate_id').eq('id', args.userId).single()
+    const affiliateId = (prof?.affiliate_id as string | null | undefined) ?? null
+    if (!affiliateId) return
+    const { data: aff } = await supabase.from('affiliates').select('id, commission_rate, status').eq('id', affiliateId).single()
+    if (!aff || aff.status !== 'active') return
+    const rate = Number(aff.commission_rate ?? 0)
+    if (!(rate > 0)) return
+    const commission = Math.round(args.amountGross * rate)
+    if (commission <= 0) return
+
+    // Link to the referral row + mark it paid (best-effort).
+    const { data: ref } = await supabase
+      .from('affiliate_referrals')
+      .select('id, status')
+      .eq('affiliate_id', affiliateId)
+      .eq('referred_user_id', args.userId)
+      .maybeSingle()
+    if (ref && ref.status !== 'paid') {
+      await supabase.from('affiliate_referrals').update({ status: 'paid', converted_at: new Date().toISOString() }).eq('id', ref.id)
+    }
+
+    const { error } = await supabase.from('affiliate_commissions').insert({
+      affiliate_id: affiliateId,
+      referral_id: ref?.id ?? null,
+      provider: 'stripe',
+      external_id: args.externalId,
+      type: args.type,
+      amount_gross: args.amountGross,
+      currency: args.currency || 'usd',
+      commission_amount: commission,
+      status: 'pending',
+      period: new Date().toISOString().slice(0, 10),
+    })
+    if (error && error.code !== '23505') {
+      console.error('[affiliate commission] insert error:', error.code, error.message)
+    } else if (!error) {
+      console.log(`[affiliate commission] +${commission} (${args.type}) affiliate ${affiliateId} ← user ${args.userId}`)
+    }
+  } catch (err) {
+    console.error('[affiliate commission] unexpected:', err)
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -151,6 +204,7 @@ export async function POST(req: NextRequest) {
           } else {
             console.log(`[stripe webhook] +${creditsToAdd} credits → user ${userId} (now ${next})`)
           }
+          await recordAffiliateCommission(supabase, { userId, externalId: session.id, amountGross: session.amount_total ?? 0, currency: session.currency ?? 'usd', type: 'initial' })
           break
         }
 
@@ -201,6 +255,8 @@ export async function POST(req: NextRequest) {
         } else {
           console.log(`[stripe webhook] ${isTrial ? 'TRIAL' : 'subscription'} start: ${tier} (+${creditsToGrant} credits) → user ${userId} (now ${next})`)
         }
+
+        await recordAffiliateCommission(supabase, { userId, externalId: session.id, amountGross: session.amount_total ?? 0, currency: session.currency ?? 'usd', type: 'initial' })
 
         break
       }
@@ -301,6 +357,9 @@ export async function POST(req: NextRequest) {
         } else {
           console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
         }
+
+        await recordAffiliateCommission(supabase, { userId: renewalUserId, externalId: invoice.id ?? subscriptionId, amountGross: invoice.amount_paid ?? 0, currency: invoice.currency ?? 'usd', type: 'recurring' })
+
         break
       }
 
