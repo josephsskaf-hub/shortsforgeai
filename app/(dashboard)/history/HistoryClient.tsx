@@ -74,6 +74,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // from My Videos any time — not just once on the result page.
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  // #459 — share the public /v/[id] page (native share on mobile, copy on desktop)
+  const [sharedId, setSharedId] = useState<string | null>(null)
 
   // Push #098 — blob download with a real filename (the video's title). The
   // native <a download> / the player's ⋮ "download" menu both ignore the
@@ -111,6 +113,32 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       window.open(video.video_url, '_blank', 'noopener,noreferrer')
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  // #459 — share the public video page. Native share sheet on mobile, copy link
+  // on desktop. Each share is a landing that brings a new (pre-warmed) visitor.
+  async function handleShare(video: Video) {
+    const url = `${window.location.origin}/v/${video.id}`
+    try {
+      const nav = navigator as Navigator & { share?: (d: { title?: string; url: string }) => Promise<void> }
+      if (typeof nav.share === 'function') {
+        await nav.share({ title: 'Made with ShortsForgeAI', url })
+      } else {
+        await navigator.clipboard.writeText(url)
+      }
+      setSharedId(video.id)
+      setTimeout(() => setSharedId((cur) => (cur === video.id ? null : cur)), 1800)
+      try {
+        void fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'video_shared', metadata: { video_id: video.id } }),
+          keepalive: true,
+        })
+      } catch {}
+    } catch {
+      // user cancelled the share sheet or clipboard was blocked — ignore
     }
   }
 
@@ -465,6 +493,29 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     }}
                   >
                     {downloadingId === video.id ? '…' : '⬇'}
+                  </button>
+
+                  {/* #459 — share the public /v/[id] page */}
+                  <button
+                    onClick={() => handleShare(video)}
+                    title="Share public link"
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 3,
+                      padding: '5px 4px',
+                      borderRadius: 6,
+                      background: 'rgba(52,211,153,0.1)',
+                      border: '1px solid rgba(52,211,153,0.25)',
+                      color: '#34D399',
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {sharedId === video.id ? '✓ Copied' : '↗ Share'}
                   </button>
 
                   <a
