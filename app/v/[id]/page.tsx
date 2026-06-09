@@ -49,20 +49,26 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const v = await getVideo(params.id)
   const title = titleFor(v)
   const desc = 'Made in 60 seconds with ShortsForgeAI — type any topic and AI writes the script, voiceover, captions and footage. Make your own viral Short for free.'
+  // #460 — ALWAYS provide an og:image (real video thumbnail when we have one,
+  // else the branded default) so WhatsApp / Twitter / etc. render a rich preview
+  // card instead of a bare link. metadataBase set for safe URL resolution.
+  const ogImage = v?.thumbnail_url || 'https://www.shortsforgeai.com/og-image.png'
   return {
+    metadataBase: new URL('https://www.shortsforgeai.com'),
     title: `${title} · ShortsForgeAI`,
     description: desc,
     openGraph: {
       title,
       description: desc,
-      images: v?.thumbnail_url ? [v.thumbnail_url] : undefined,
+      images: [{ url: ogImage }],
+      videos: v?.video_url ? [{ url: v.video_url }] : undefined,
       type: 'video.other',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description: desc,
-      images: v?.thumbnail_url ? [v.thumbnail_url] : undefined,
+      images: [ogImage],
     },
   }
 }
