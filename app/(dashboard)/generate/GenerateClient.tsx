@@ -5684,6 +5684,29 @@ function UpgradeModal({
   onUpgrade: (tier: 'starter' | 'basic' | 'pro') => void
   onClose: () => void
 }) {
+  // #466 — live urgency countdown for the founding 50%-off offer. 15 min from
+  // first open, persisted in localStorage so it survives dismiss/reopen/reload.
+  const [remaining, setRemaining] = useState<number>(15 * 60)
+  useEffect(() => {
+    const KEY = 'sf_founding_deadline'
+    let dl: number
+    try {
+      const stored = parseInt(localStorage.getItem(KEY) ?? '', 10)
+      if (Number.isFinite(stored)) dl = stored
+      else {
+        dl = Date.now() + 15 * 60 * 1000
+        localStorage.setItem(KEY, String(dl))
+      }
+    } catch {
+      dl = Date.now() + 15 * 60 * 1000
+    }
+    const tick = () => setRemaining(Math.max(0, Math.floor((dl - Date.now()) / 1000)))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
+  const ss = String(remaining % 60).padStart(2, '0')
   const unlocks: Record<string, string> = {
     starter: '15 Shorts / month',
     basic: '50 Shorts / month',
@@ -5728,9 +5751,30 @@ function UpgradeModal({
         >
           You&apos;re out of credits 🎉
         </h2>
-        <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, marginBottom: 20 }}>
+        <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, marginBottom: 14 }}>
           Keep the momentum going — unlock daily posting and never get stuck mid-idea again. Cancel anytime · 7-day money-back guarantee.
         </p>
+
+        {/* #466 — social proof + live urgency right at the decision point */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700 }}>
+            ✨ Join 300+ creators making Shorts with AI
+          </span>
+          <span
+            style={{
+              fontSize: '0.78rem',
+              color: '#fbbf24',
+              fontWeight: 800,
+              background: 'rgba(251,191,36,0.10)',
+              border: '1px solid rgba(251,191,36,0.35)',
+              borderRadius: 999,
+              padding: '3px 10px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🔥 50% off 1st month · {mm}:{ss}
+          </span>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {PLAN_LIST.map((plan) => {
