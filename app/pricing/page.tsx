@@ -559,6 +559,29 @@ export default function PricingPage() {
           })}
         </div>
 
+        {/* #474 — Starter Pack: one-time, low-commitment alternative to the
+            monthly plans. Now discoverable here on /pricing (was only inside the
+            0-credit modal). Secondary styling so it doesn't cannibalize the subs. */}
+        <div className="mx-auto mt-6 max-w-2xl">
+          <button
+            type="button"
+            onClick={() => {
+              trackPricingEvent('starter_pack_checkout_clicked')
+              window.location.href = '/api/stripe/checkout?pack=starter'
+            }}
+            className="block w-full rounded-2xl px-5 py-4 text-center transition hover:bg-[rgba(34,211,238,0.10)]"
+            style={{ background: 'rgba(34,211,238,0.06)', border: '1px dashed rgba(34,211,238,0.45)', cursor: 'pointer' }}
+          >
+            <span className="block text-[14px] font-extrabold text-[#F1F5F9]">
+              Not ready for a monthly plan?{' '}
+              <span style={{ color: '#22D3EE' }}>Start with 10 Shorts for $4.90 →</span>
+            </span>
+            <span className="mt-1 block text-[12px] font-semibold text-[#94A3B8]">
+              One-time payment · no subscription · credits never expire
+            </span>
+          </button>
+        </div>
+
         {/* Push #114 — surface any checkout error inline so users aren't
             stranded silently when the API rejects the request. */}
         {checkoutError && (
