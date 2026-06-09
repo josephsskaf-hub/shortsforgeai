@@ -1,11 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
-// #456 — Measure 1 (leads). Saves an email captured by the landing exit-intent
-// lead magnet into the `leads` table. Uses the service-role client (RLS on, no
-// public policy). Duplicate emails are treated as success — a returning lead is
-// not an error, and we never block the user's reward on a save failure.
+// #456 — saves an exit-intent lead to `leads`.
+// #461 — Measure 2 (lead nurture): on a NEW lead, instantly emails the lead
+// magnet (the 10 viral ideas) + a "make your first video free" CTA via Resend.
+// Turns a captured email into an activated signup. Best-effort: a send failure
+// never breaks the capture.
 export const dynamic = 'force-dynamic'
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
+const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+
+const VIRAL_IDEAS = [
+  'The island so dangerous it is illegal to visit (Snake Island)',
+  'The deepest hole humans ever dug — and why they sealed it',
+  'The colony that vanished overnight, leaving one word (Roanoke)',
+  'How tiny Monaco became the richest place on Earth',
+  'The Roman city frozen in time by a volcano (Pompeii)',
+  'The radio signal from deep space that repeats every 16 days',
+  'The city built in the desert with no rivers (Dubai)',
+  'The 5 richest people and their strangest daily habits',
+  'The abandoned Soviet city you can still walk through (Chernobyl)',
+  'The mountain so tall planes fly around it, not over it',
+]
+
+async function sendLeadMagnet(email: string): Promise<void> {
+  if (!RESEND_API_KEY) {
+    console.warn('[lead-capture] RESEND_API_KEY not set — skipping magnet email')
+    return
+  }
+  const url = `${APP_URL}/signup`
+  const list = VIRAL_IDEAS.map((idea, i) => `${i + 1}. ${idea}`).join('\n')
+  const text = `Hey,
+
+Here are your 10 viral Short ideas — pick any one and you have a video in 60 seconds:
+
+${list}
+
+Want to turn one into a real Short right now? Type it into ShortsForgeAI and the AI writes the script, voiceover, captions and finds the footage. Your first video is free — no card needed.
+
+Make your first one free: ${url}
+
+— ShortsForgeAI Team
+shortsforgeai.com`
+
+  const ideasHtml = VIRAL_IDEAS.map(
+    (idea, i) =>
+      `<p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:14px;color:#111;line-height:1.5;"><b>${i + 1}.</b> ${idea}</p>`,
+  ).join('')
+  const html = `
+<div style="font-family:Arial,sans-serif;color:#111;">
+  <p style="font-size:15px;">Hey,</p>
+  <p style="font-size:15px;">Here are your <b>10 viral Short ideas</b> — pick any one and you have a video in 60 seconds:</p>
+  ${ideasHtml}
+  <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into ShortsForgeAI — the AI writes the script, voiceover, captions and finds the footage. <b>Your first video is free, no card needed.</b></p>
+  <p style="margin:20px 0;">
+    <a href="${url}" style="background:#22D3EE;color:#05070D;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Arial,sans-serif;font-size:15px;display:inline-block;">Make my first one free →</a>
+  </p>
+  <p style="font-size:13px;color:#555;">— ShortsForgeAI Team<br/>shortsforgeai.com</p>
+</div>`
+
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [email],
+        reply_to: 'hello@shortsforgeai.com',
+        subject: 'Your 10 viral Short ideas 🎬',
+        text,
+        html,
+      }),
+    })
+  } catch (err) {
+    console.error('[lead-capture] magnet email failed:', err)
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +92,6 @@ export async function POST(req: NextRequest) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceKey) {
       console.error('[lead-capture] Supabase service env missing')
-      // Don't fail the UX — the magnet still shows client-side.
       return NextResponse.json({ ok: true, saved: false })
     }
 
@@ -36,9 +107,14 @@ export async function POST(req: NextRequest) {
       .from('leads')
       .insert({ email, source, magnet, signup_country: country })
 
-    // A unique-violation (already a lead) is fine — treat as success.
+    const isNewLead = !error
     if (error && !/duplicate|unique/i.test(error.message)) {
       console.error('[lead-capture] insert error:', error.message)
+    }
+
+    // #461 — only email on a brand-new lead (never re-spam a returning one).
+    if (isNewLead) {
+      await sendLeadMagnet(email)
     }
 
     return NextResponse.json({ ok: true })
