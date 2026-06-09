@@ -11,6 +11,7 @@ import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
+import NicheOnboarding from '@/components/NicheOnboarding'
 
 interface TaskHandle {
   id: string
@@ -223,6 +224,31 @@ export default function GenerateClient() {
         : VIRAL_STARTER_TOPICS[Math.floor(Math.random() * VIRAL_STARTER_TOPICS.length)],
     )
   }, [initialPrompt])
+
+  // #467 — onboarding niche picker (Measure 2). Shows once for brand-new signups
+  // (?welcome=1 / ?signup=1), gated by the sf_onboarded flag so it never nags
+  // returning users. Picking a niche/Surprise Me pre-fills the prompt and forces
+  // the Fast engine (zero-friction first video), then hands off to the normal
+  // generate flow. Lifts first-video activation (the biggest funnel leak).
+  const [showNicheOnboarding, setShowNicheOnboarding] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('sf_onboarded')) return
+    } catch {
+      return
+    }
+    const isNew = searchParams?.get('welcome') === '1' || searchParams?.get('signup') === '1'
+    if (isNew) setShowNicheOnboarding(true)
+  }, [searchParams])
+  function finishOnboarding() {
+    try { localStorage.setItem('sf_onboarded', '1') } catch {}
+    setShowNicheOnboarding(false)
+  }
+  function onboardingPick(topic: string) {
+    setPrompt(topic)
+    setMode('fast') // first video = Fast = zero friction (see value fast)
+    finishOnboarding()
+  }
   // #383c — explicit script handling, visible to everyone (replaces the old
   // silent "skip the AI if the text has HOOK/PAYOFF markers" auto-detection).
   //  'ai'       → send the text to /api/generate-script to structure it (DEFAULT)
@@ -2506,6 +2532,15 @@ export default function GenerateClient() {
       {/* Push #098 — first-visit welcome banner. Only shown on Step 1 and
           only when credits >= 2 AND the sf_welcomed localStorage flag is
           unset. Dismissing writes the flag so it never shows again. */}
+      {/* #467 — onboarding niche picker overlay for brand-new signups */}
+      {showNicheOnboarding && (
+        <NicheOnboarding
+          onPick={(topic) => onboardingPick(topic)}
+          onSurprise={(topic) => onboardingPick(topic)}
+          onClose={finishOnboarding}
+        />
+      )}
+
       {showStep1 && showWelcome && (
         <WelcomeBanner onDismiss={dismissWelcome} />
       )}
