@@ -5,7 +5,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 // og-image.png fallback didn't exist, so WhatsApp/Twitter showed no card at all.
 // This route ALWAYS produces a valid 1200x630 PNG (branded card + the video's
 // hook as the headline), so every shared video link renders a rich preview.
-export const runtime = 'nodejs'
+export const runtime = 'edge'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const alt = 'A viral Short made with ShortsForgeAI'
