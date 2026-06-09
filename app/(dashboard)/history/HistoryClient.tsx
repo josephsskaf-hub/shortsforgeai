@@ -116,30 +116,28 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
     }
   }
 
-  // #459 — share the public video page. Native share sheet on mobile, copy link
-  // on desktop. Each share is a landing that brings a new (pre-warmed) visitor.
+  // #459/#464 — share the public video page by COPYING the link. WhatsApp only
+  // renders the rich preview reliably when a link is PASTED (the native share
+  // sheet doesn't trigger it), so we copy + the user pastes. Each shared link is
+  // a landing that brings a new (pre-warmed) visitor.
   async function handleShare(video: Video) {
     const url = `${window.location.origin}/v/${video.id}`
     try {
-      const nav = navigator as Navigator & { share?: (d: { title?: string; url: string }) => Promise<void> }
-      if (typeof nav.share === 'function') {
-        await nav.share({ title: 'Made with ShortsForgeAI', url })
-      } else {
-        await navigator.clipboard.writeText(url)
-      }
-      setSharedId(video.id)
-      setTimeout(() => setSharedId((cur) => (cur === video.id ? null : cur)), 1800)
-      try {
-        void fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'video_shared', metadata: { video_id: video.id } }),
-          keepalive: true,
-        })
-      } catch {}
+      await navigator.clipboard.writeText(url)
     } catch {
-      // user cancelled the share sheet or clipboard was blocked — ignore
+      // clipboard blocked (rare) — show the link so it can be copied manually
+      try { window.prompt('Copy this link:', url) } catch {}
     }
+    setSharedId(video.id)
+    setTimeout(() => setSharedId((cur) => (cur === video.id ? null : cur)), 1800)
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'video_shared', metadata: { video_id: video.id } }),
+        keepalive: true,
+      })
+    } catch {}
   }
 
   // Push #421 — open (or fetch, then open) the YouTube summary panel.
@@ -515,7 +513,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       cursor: 'pointer',
                     }}
                   >
-                    {sharedId === video.id ? '✓ Copied' : '↗ Share'}
+                    {sharedId === video.id ? '✓ Copied' : '🔗 Copy'}
                   </button>
 
                   <a
