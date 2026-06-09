@@ -25,6 +25,21 @@ const THUMBNAIL_ROUTE = '/thumbnail-generator'
 // persist across sessions. EXIT_SHOWN_KEY gates the show (30-day cooldown);
 // EXIT_RESPONDED_KEY is set when the user actually submits — that flag
 // suppresses the survey permanently for users who already answered.
+// #456 — Measure 1 (leads): lead-magnet ideas revealed after email capture.
+// Our proven verticals: extreme places + mystery + money.
+const VIRAL_IDEAS = [
+  'The island so dangerous it is illegal to visit (Snake Island)',
+  'The deepest hole humans ever dug — and why they sealed it',
+  'The colony that vanished overnight, leaving one word (Roanoke)',
+  'How tiny Monaco became the richest place on Earth',
+  'The Roman city frozen in time by a volcano (Pompeii)',
+  'The radio signal from deep space that repeats every 16 days',
+  'The city built in the desert with no rivers (Dubai)',
+  'The 5 richest people and their strangest daily habits',
+  'The abandoned Soviet city you can still walk through (Chernobyl)',
+  'The mountain so tall planes fly around it, not over it',
+]
+
 const EXIT_SHOWN_KEY = 'exitShown_v2_ts'  // stores timestamp of last show
 const EXIT_RESPONDED_KEY = 'exitResponded'  // set permanently on submit
 const EXIT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -153,6 +168,29 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   const [exitReason, setExitReason] = useState<string | null>(null)
   const [exitComment, setExitComment] = useState('')
   const [exitSubmitting, setExitSubmitting] = useState(false)
+  // #456 — Measure 1 (leads): exit-intent now captures an email for a lead
+  // magnet (10 viral ideas) instead of just a survey. Turns the ~90% who bounce
+  // without signing up into nurtured leads saved in the `leads` table.
+  const [leadEmail, setLeadEmail] = useState('')
+  const [leadDone, setLeadDone] = useState(false)
+  async function submitLead() {
+    const email = leadEmail.trim()
+    if (!email || !email.includes('@') || exitSubmitting) return
+    setExitSubmitting(true)
+    try {
+      trackHomepageEvent('lead_captured')
+      await fetch('/api/lead-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'exit_intent_landing', magnet: '10_viral_ideas' }),
+      })
+      try { localStorage.setItem(EXIT_RESPONDED_KEY, '1') } catch {}
+    } catch {
+      // never block the reward on a failed save
+    }
+    setExitSubmitting(false)
+    setLeadDone(true)
+  }
   // Push #104 — live "X Shorts created today" counter for the social
   // proof bar. Falls back to the API's baseline if the fetch fails.
   const [shortsToday, setShortsToday] = useState<number>(26)
@@ -1331,57 +1369,48 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             >
               Wait — before you go 👋
             </h2>
-            <p className="mt-2 text-[14px] text-[#94A3B8]">
-              Help us improve. Why are you leaving?
-            </p>
-
-            <div className="mt-5 flex flex-col gap-2.5" role="radiogroup" aria-label="Why are you leaving?">
-              {EXIT_REASONS.map((reason) => {
-                const selected = exitReason === reason
-                return (
-                  <button
-                    key={reason}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setExitReason(reason)}
-                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-[14px] font-semibold transition ${
-                      selected
-                        ? 'border-cyan-400 bg-cyan-400/[0.08] text-[#F1F5F9] shadow-[0_0_18px_rgba(34,211,238,.2)]'
-                        : 'border-white/[0.1] bg-white/[0.02] text-[#CBD5E1] hover:border-cyan-400/40 hover:bg-white/[0.04]'
-                    }`}
-                  >
-                    <span
-                      aria-hidden
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                        selected ? 'border-cyan-400' : 'border-white/30'
-                      }`}
-                    >
-                      {selected && <span className="h-2 w-2 rounded-full bg-cyan-400" />}
-                    </span>
-                    {reason}
-                  </button>
-                )
-              })}
-            </div>
-
-            <textarea
-              value={exitComment}
-              onChange={(e) => setExitComment(e.target.value)}
-              placeholder="Anything else? (optional)"
-              maxLength={2000}
-              rows={3}
-              className="mt-4 w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.02] px-3 py-2.5 text-[14px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none transition focus:border-cyan-400/60"
-            />
-
-            <button
-              type="button"
-              onClick={submitExitFeedback}
-              disabled={exitSubmitting}
-              className="mt-5 w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
-            >
-              {exitSubmitting ? 'Sending…' : 'Send feedback & leave'}
-            </button>
+            {!leadDone ? (
+              <>
+                <p className="mt-2 text-[14px] text-[#94A3B8]">
+                  Grab <span className="font-bold text-[#22D3EE]">10 viral Short ideas</span> for your niche — free. Drop your email and they&apos;re yours.
+                </p>
+                <input
+                  type="email"
+                  value={leadEmail}
+                  onChange={(e) => setLeadEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') submitLead() }}
+                  placeholder="you@email.com"
+                  className="mt-5 w-full rounded-xl border border-white/[0.1] bg-white/[0.02] px-4 py-3 text-[15px] text-[#F1F5F9] placeholder:text-[#64748B] outline-none transition focus:border-cyan-400/60"
+                />
+                <button
+                  type="button"
+                  onClick={submitLead}
+                  disabled={exitSubmitting}
+                  className="mt-4 w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
+                >
+                  {exitSubmitting ? 'Sending…' : 'Get my 10 viral ideas →'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-[14px] text-[#94A3B8]">
+                  Here you go — 10 ideas that tend to blow up 🎬 Make any of them free in the app.
+                </p>
+                <ul className="mt-4 flex flex-col gap-2 text-left">
+                  {VIRAL_IDEAS.map((idea, i) => (
+                    <li key={i} className="flex gap-2 text-[13.5px] text-[#CBD5E1]">
+                      <span className="shrink-0 font-bold text-[#22D3EE]">{i + 1}.</span> {idea}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="/signup"
+                  className="mt-5 block w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-center text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300"
+                >
+                  Make one free now →
+                </a>
+              </>
+            )}
             <button
               type="button"
               onClick={() => setShowExitIntent(false)}
