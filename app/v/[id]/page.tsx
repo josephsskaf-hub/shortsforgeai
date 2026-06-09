@@ -41,7 +41,8 @@ async function getVideo(id: string): Promise<VideoRow | null> {
 function titleFor(v: VideoRow | null): string {
   if (!v) return 'AI YouTube Short'
   const raw = (v.title || v.topic || '').toString()
-  const firstLine = raw.split('\n').map((s) => s.trim()).filter(Boolean)[0] ?? ''
+  // strip leading markdown "#" so a pasted markdown package doesn't surface as the title
+  const firstLine = raw.split('\n').map((s) => s.replace(/^#+\s*/, '').trim()).filter(Boolean)[0] ?? ''
   return firstLine.slice(0, 90) || 'AI YouTube Short'
 }
 
@@ -49,10 +50,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const v = await getVideo(params.id)
   const title = titleFor(v)
   const desc = 'Made in 60 seconds with ShortsForgeAI — type any topic and AI writes the script, voiceover, captions and footage. Make your own viral Short for free.'
-  // #460 — ALWAYS provide an og:image (real video thumbnail when we have one,
-  // else the branded default) so WhatsApp / Twitter / etc. render a rich preview
-  // card instead of a bare link. metadataBase set for safe URL resolution.
-  const ogImage = v?.thumbnail_url || 'https://www.shortsforgeai.com/og-image.png'
+  // #462 — og:image is now produced by the sibling opengraph-image.tsx (a
+  // generated, always-valid 1200x630 card). We don't set images here anymore —
+  // the static fallback didn't exist, which broke every link preview.
   return {
     metadataBase: new URL('https://www.shortsforgeai.com'),
     title: `${title} · ShortsForgeAI`,
@@ -60,7 +60,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     openGraph: {
       title,
       description: desc,
-      images: [{ url: ogImage }],
       videos: v?.video_url ? [{ url: v.video_url }] : undefined,
       type: 'video.other',
     },
@@ -68,7 +67,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       card: 'summary_large_image',
       title,
       description: desc,
-      images: [ogImage],
     },
   }
 }
