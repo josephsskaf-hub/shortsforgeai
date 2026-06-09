@@ -55,7 +55,9 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   function handleBuy(tier: 'basic' | 'pro') {
     setPurchasing(tier)
     trackCheckoutClick(tier)
-    window.location.href = `/api/stripe/checkout?tier=${tier}`
+    // #471 — carry the founding 50%-off promo (same as the wall modal) so the
+    // inline post-video paywall converts at the same discount.
+    window.location.href = `/api/stripe/checkout?tier=${tier}&promo=FOUNDING50`
   }
 
   if (dismissed) return null
@@ -83,10 +85,12 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           className="font-black tracking-tight mb-1"
           style={{ fontSize: '1.25rem', color: 'var(--text)' }}
         >
-          Your AI Short is ready. Want to create more?
+          Your Short is ready. Unlock your Creator Pack.
         </h3>
         <p className="text-xs" style={{ color: 'var(--muted)' }}>
-          {credits} credit{credits === 1 ? '' : 's'} left — pick a plan to keep generating.
+          {credits} credit{credits === 1 ? '' : 's'} left.{' '}
+          <span style={{ color: '#fbbf24', fontWeight: 800 }}>Founding offer: 50% off your first month</span>
+          {' '}· cancel anytime · 7-day money-back.
         </p>
       </div>
 
@@ -122,7 +126,8 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           renew={PLANS.pro.periodLabel}
           features={[
             `${PLANS.pro.credits} Fast Mode videos / month`,
-            '1 Cinematic (Runway AI) video / month',
+            '1 Cinematic AI video / month',
+            'Download without watermark',
           ]}
           ctaLabel={
             purchasing === 'pro'
