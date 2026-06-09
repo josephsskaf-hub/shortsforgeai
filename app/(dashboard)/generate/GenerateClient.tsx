@@ -2491,6 +2491,11 @@ export default function GenerateClient() {
             // #453 — carry the founding promo so the 50%-off-first-month applies
             // automatically at this peak-intent moment (no code typing).
             trackCheckoutClick(tier)
+            // #457 — TikTok Pixel: InitiateCheckout = purchase intent (retargeting)
+            try {
+              const ttq = (window as unknown as { ttq?: { track: Function } }).ttq
+              if (ttq && typeof ttq.track === 'function') ttq.track('InitiateCheckout', { content_name: tier })
+            } catch { /* non-blocking */ }
             setUpgradeLoading(true)
             window.location.href = `/api/stripe/checkout?tier=${tier}&promo=FOUNDING50`
           }}

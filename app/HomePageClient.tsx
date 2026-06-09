@@ -179,6 +179,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
     setExitSubmitting(true)
     try {
       trackHomepageEvent('lead_captured')
+      // #457 — TikTok Pixel: Lead event for retargeting captured leads
+      try {
+        const ttq = (window as unknown as { ttq?: { track: Function } }).ttq
+        if (ttq && typeof ttq.track === 'function') ttq.track('Lead', { content_name: '10_viral_ideas' })
+      } catch { /* non-blocking */ }
       await fetch('/api/lead-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

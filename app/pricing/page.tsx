@@ -165,6 +165,11 @@ export default function PricingPage() {
     const eventName = tier === 'pro' ? 'pro_checkout_clicked' : tier === 'starter' ? 'starter_checkout_clicked' : 'basic_checkout_clicked'
     trackPricingEvent(eventName)
     trackCheckoutClick(tier as 'basic' | 'pro')
+    // #457 — TikTok Pixel: InitiateCheckout = purchase intent (warmest retargeting audience)
+    try {
+      const ttq = (window as unknown as { ttq?: { track: Function } }).ttq
+      if (ttq && typeof ttq.track === 'function') ttq.track('InitiateCheckout', { content_name: tier })
+    } catch { /* non-blocking */ }
     const billingParam = billing === 'annual' ? '&billing=annual' : ''
     // #453 — forward a ?promo= code (e.g. /pricing?promo=FOUNDING50 from the
     // win-back emails) into checkout so the discount auto-applies on plan click.
