@@ -5887,6 +5887,45 @@ function UpgradeModal({
           })}
         </div>
 
+        {/* #473 — Starter Pack: low-commitment, one-time entry for users who
+            won't commit to a monthly subscription. Making the (hardest) first
+            payment turns a bounce into a paying customer we can upsell later. */}
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => {
+            try {
+              void fetch('/api/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'upgrade_modal' } }),
+                keepalive: true,
+              })
+            } catch { /* non-blocking */ }
+            window.location.href = '/api/stripe/checkout?pack=starter'
+          }}
+          style={{
+            width: '100%',
+            marginTop: 12,
+            padding: '13px 16px',
+            borderRadius: 14,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            background: 'rgba(34,211,238,0.08)',
+            border: '1px dashed rgba(34,211,238,0.45)',
+            color: '#E2E8F0',
+            fontSize: '0.9rem',
+            fontWeight: 800,
+            lineHeight: 1.35,
+            textAlign: 'center',
+          }}
+        >
+          Not ready for a subscription?{' '}
+          <span style={{ color: '#22D3EE' }}>Start with 10 Shorts for $4.90 →</span>
+          <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', marginTop: 2 }}>
+            One-time · no subscription · credits never expire
+          </span>
+        </button>
+
         {/* Push #452 — referral escape hatch. Turns a "won't pay right now"
             bounce into top-of-funnel growth by surfacing the live #443 loop
             at peak intent, with no extra dashboard banner. */}

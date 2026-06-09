@@ -68,6 +68,19 @@ function resolveCurrency(country: string): Currency {
   return 'usd'
 }
 
+// #473 — Starter Pack: a one-time, low-commitment entry point (10 Fast Shorts).
+// Breaks first-purchase hesitation for users who won't commit to a monthly
+// subscription — they make the (hardest) first payment, then upsell to a plan
+// later. Credited by the webhook via metadata.pack_credits (currency-proof,
+// see webhook Path A). No Stripe product needed — inline price_data.
+const STARTER_PACK = {
+  credits: 10,
+  name: 'ShortsForgeAI — Starter Pack',
+  description: 'One-time: 10 Fast Shorts (no subscription).',
+}
+//   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
+const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }
+
 // ─── Shared checkout-session builder ────────────────────────────────────────
 
 async function buildAndRedirect(
@@ -276,11 +289,105 @@ async function buildAndRedirect(
     : NextResponse.json({ url: session.url })
 }
 
+// ─── One-time Starter Pack checkout (mode: 'payment') ────────────────────────
+// #473 — $4.90 (USD) one-time → 10 Fast Shorts. No recurring, no Stripe product:
+// inline price_data + metadata.pack_credits that the webhook reads to grant
+// credits (currency-proof). client_reference_id kept for the legacy webhook path.
+async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<NextResponse> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  function redirectError(msg: string) {
+    return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
+  }
+  function jsonError(msg: string, status: number) {
+    return NextResponse.json({ error: msg }, { status })
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout] STRIPE_SECRET_KEY is not set')
+    return isGet
+      ? redirectError('Payment service is not configured. Please contact support.')
+      : jsonError('Payment service is not configured. Please contact support.', 500)
+  }
+
+  const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+  const currency: Currency = resolveCurrency(country)
+  const unitAmount = PACK_PRICES[currency]
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return isGet
+      ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/generate')}`)
+      : jsonError('You must be signed in to buy the Starter Pack.', 401)
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, stripe_customer_id')
+    .eq('id', user.id)
+    .single()
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency,
+          product_data: { name: STARTER_PACK.name, description: STARTER_PACK.description },
+          unit_amount: unitAmount,
+        },
+        quantity: 1,
+      },
+    ],
+    client_reference_id: user.id,
+    success_url: `${appUrl}/checkout/success?success=true&pack=starter&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/generate`,
+    metadata: {
+      supabase_user_id: user.id,
+      pack: 'starter10',
+      pack_credits: String(STARTER_PACK.credits),
+    },
+  }
+  // Attach the saved customer when present (cleaner receipts); else use email.
+  if (profile?.stripe_customer_id) sessionParams.customer = profile.stripe_customer_id
+  else sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    // A prior subscription in another currency can trigger "cannot combine
+    // currencies" when attaching the customer — retry with email only so the
+    // sale never blocks.
+    if (msg.toLowerCase().includes('cannot combine currencies')) {
+      delete sessionParams.customer
+      sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+      try {
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } catch (retryErr) {
+        const rmsg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.error('[stripe/checkout] pack retry failed:', rmsg)
+        return isGet ? redirectError(`Payment session failed: ${rmsg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+      }
+    } else {
+      console.error('[stripe/checkout] pack session error:', msg)
+      return isGet ? redirectError(`Payment session failed: ${msg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+    }
+  }
+
+  return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
+}
+
 // ─── GET handler (iOS Safari safe — server-side redirect) ────────────────────
 // Buttons set window.location.href = '/api/stripe/checkout?tier=basic' so
 // the browser navigates synchronously (no await / no gesture-chain break).
 export async function GET(req: NextRequest) {
   try {
+    // #473 — Starter Pack one-time checkout: /api/stripe/checkout?pack=starter
+    if (req.nextUrl.searchParams.get('pack')) {
+      return await buildPackAndRedirect(req, true)
+    }
     const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'
     const tier: Tier = tierParam === 'pro' ? 'pro' : tierParam === 'starter' ? 'starter' : 'basic'
     const billing: Billing = req.nextUrl.searchParams.get('billing') === 'annual' ? 'annual' : 'monthly'

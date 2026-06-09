@@ -103,16 +103,24 @@ export async function POST(req: NextRequest) {
         // but old links may still exist in the wild. Keep the legacy mapping
         // so refunds / late webhooks don't lose users their pack.
         if (session.mode === 'payment') {
-          const userId = session.client_reference_id
+          // #473 — Starter Pack ($4.90 → 10 Shorts) + legacy credit packs.
+          // Prefer metadata.pack_credits (currency-proof) over the amount map,
+          // and accept metadata.supabase_user_id as well as client_reference_id.
+          const userId = session.metadata?.supabase_user_id ?? session.client_reference_id
           if (!userId) {
-            console.warn('[stripe webhook] payment session has no client_reference_id', session.id)
+            console.warn('[stripe webhook] payment session has no user id', session.id)
             break
           }
 
+          const metaCredits = Number(session.metadata?.pack_credits ?? 0)
           const amount = session.amount_total ?? 0
-          let creditsToAdd = 0
-          if (amount === 900) creditsToAdd = 10
-          else if (amount === 1900) creditsToAdd = 25
+          let creditsToAdd = metaCredits > 0 ? metaCredits : 0
+          if (creditsToAdd === 0) {
+            // Legacy Payment-Link amounts (USD): $9 → 10, $19 → 25, $4.90 → 10.
+            if (amount === 900) creditsToAdd = 10
+            else if (amount === 1900) creditsToAdd = 25
+            else if (amount === 490) creditsToAdd = 10
+          }
 
           if (creditsToAdd === 0) {
             console.warn('[stripe webhook] unexpected amount_total for credit pack:', amount, session.id)
