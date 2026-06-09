@@ -488,9 +488,22 @@ export async function GET(
         }
       }
 
+      // #465 — look up the saved video's DB id (by render_id) so the client can
+      // build the public /v/[id] share link on the done screen. Best-effort.
+      let videoId: string | null = null
+      try {
+        const { data: vid } = await supabase
+          .from('videos')
+          .select('id')
+          .eq('render_id', renderId)
+          .maybeSingle()
+        videoId = (vid?.id as string) ?? null
+      } catch {}
+
       return NextResponse.json({
         phase: 'done',
         final_video_url: responseVideoUrl,
+        video_id: videoId,
         progress: 100,
         creditsDeducted,
         creditsRemaining,

@@ -397,6 +397,10 @@ export default function GenerateClient() {
   const [renderProgress, setRenderProgress] = useState<number>(0)
   const [generateProgress, setGenerateProgress] = useState<number>(0)
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null)
+  // #465 — the saved video's DB id, for the public /v/[id] share link on the
+  // done screen (share at peak delight → growth loop).
+  const [publicVideoId, setPublicVideoId] = useState<string | null>(null)
+  const [sharedPublic, setSharedPublic] = useState(false)
 
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
   // result section. Cleared automatically after ~2s.
@@ -1132,6 +1136,7 @@ export default function GenerateClient() {
           }
           setRenderProgress(100)
           setFinalVideoUrl(url)
+          if (typeof data.video_id === 'string' && data.video_id) setPublicVideoId(data.video_id)
           setPhase('done')
           // Push #060 / #061 — fire-and-forget event tracking.
           trackEvent('generate_completed')
@@ -1853,6 +1858,30 @@ export default function GenerateClient() {
       // Clipboard can be denied in some browsers — silent no-op is fine
       // because the Download button still works as the primary action.
     }
+  }
+
+  // #465 — copy the PUBLIC share page link (/v/[id]) at peak delight. This page
+  // shows the video + a "make your own free" CTA, so each share is a landing
+  // that brings a new pre-warmed visitor. Copies (not native share) because
+  // WhatsApp only renders the rich preview when a link is pasted.
+  async function handleSharePublic() {
+    if (!publicVideoId) return
+    const url = `${window.location.origin}/v/${publicVideoId}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      try { window.prompt('Copy this link:', url) } catch {}
+    }
+    setSharedPublic(true)
+    setTimeout(() => setSharedPublic(false), 2000)
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'video_shared', metadata: { video_id: publicVideoId, where: 'done_screen' } }),
+        keepalive: true,
+      })
+    } catch {}
   }
 
   // Push #047 — copy any section of the output package to the clipboard,
@@ -3578,6 +3607,27 @@ export default function GenerateClient() {
                   >
                     {copied ? '✓ Copied!' : '🔗 Copy link'}
                   </button>
+                  {/* #465 — share the PUBLIC page (/v/[id]) with preview + CTA.
+                      This is the growth loop: each share is a landing that brings
+                      a new pre-warmed visitor. Copies the link so the WhatsApp
+                      preview renders (it only does when a link is pasted). */}
+                  {publicVideoId && (
+                    <button
+                      type="button"
+                      onClick={handleSharePublic}
+                      className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
+                      style={{
+                        background: sharedPublic ? 'rgba(52,211,153,.12)' : 'rgba(34,211,238,.12)',
+                        border: sharedPublic ? '1px solid rgba(52,211,153,.45)' : '1px solid rgba(34,211,238,.45)',
+                        color: sharedPublic ? '#34d399' : '#22D3EE',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {sharedPublic ? '✓ Copied — paste it!' : '🌐 Share my page'}
+                    </button>
+                  )}
                   {/* WhatsApp — great for mobile / creator sharing */}
                   <a
                     href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A shortsforgeai.com`}
