@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { NICHE_SLUGS } from './free-ai-shorts/[niche]/page'
 
 // #458 — SEO: sitemap so Google can discover and index every public page.
 // The site had none, so search engines were barely crawling it — free organic
@@ -17,10 +18,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/terms', priority: 0.2, freq: 'monthly' },
     { path: '/privacy', priority: 0.2, freq: 'monthly' },
   ]
-  return routes.map((r) => ({
+  const staticEntries = routes.map((r) => ({
     url: `${BASE}${r.path}`,
     lastModified: now,
     changeFrequency: r.freq,
     priority: r.priority,
   }))
+  // #478 — programmatic SEO niche landing pages (/free-ai-shorts/[niche]).
+  const nicheEntries = NICHE_SLUGS.map((slug) => ({
+    url: `${BASE}/free-ai-shorts/${slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+  return [...staticEntries, ...nicheEntries]
 }

@@ -151,7 +151,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             Type any topic — the AI writes the script, voiceover, captions and finds the footage. Your first one is free, no card needed.
           </p>
           <Link
-            href="/signup"
+            href="/signup?utm_source=public_video&utm_medium=share"
             style={{
               display: 'inline-block',
               background: '#22D3EE',
