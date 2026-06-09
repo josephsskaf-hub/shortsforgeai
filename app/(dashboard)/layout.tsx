@@ -8,6 +8,8 @@ import InstallAppBanner from '@/components/InstallAppBanner'
 import EnablePushBanner from '@/components/EnablePushBanner'
 // Push #443 — referral loop: fires attribute+qualify on any authenticated page
 import ReferralAutoTrigger from '@/components/ReferralAutoTrigger'
+// #479 — affiliate attribution: finalizes first-touch on any authenticated page
+import AffiliateAutoTrigger from '@/components/AffiliateAutoTrigger'
 
 export default async function DashboardLayout({
   children,
@@ -42,6 +44,7 @@ export default async function DashboardLayout({
       <InstallAppBanner />
       <EnablePushBanner />
       {user && <ReferralAutoTrigger />}
+      {user && <AffiliateAutoTrigger />}
     </DashboardShell>
   )
 }
