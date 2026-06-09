@@ -1,11 +1,11 @@
 'use client'
 
-// #467 — Onboarding niche picker (Measure 2 / P0). Shown to brand-new users on
-// /generate so they never face a blank box: pick a niche → pick a ready example
-// → "Create my first Short" (Fast engine, zero friction) — OR "Surprise Me".
-// Goal: lift first-video activation (21% → 40%+). Fires the onboarding funnel
-// events. Self-contained; the parent wires onPick/onSurprise/onClose.
-import { useEffect, useState } from 'react'
+// #467/#469 — Onboarding starter picker (Measure 2 / P0, activation). Shown to
+// brand-new users on /generate. Rich cards in the SAME visual language as Viral
+// Now (category pill + 🔥 score + Trending/Viral badge + title + hook + gradient
+// "Generate Short →"). One click = generate (Fast engine, zero friction) — or
+// "Surprise Me". Goal: lift first-video activation (21% → 40%+).
+import { useEffect } from 'react'
 
 type Props = {
   onPick: (topic: string, niche: string) => void
@@ -13,50 +13,43 @@ type Props = {
   onClose: () => void
 }
 
-const NICHES: { key: string; label: string; emoji: string; prompts: string[] }[] = [
-  { key: 'mystery', label: 'Mystery / Hidden Facts', emoji: '🕵️', prompts: [
-    'The island where snakes rule everything',
-    'The ocean mystery scientists still can’t explain',
-    'The strange signal NASA detected in deep space',
-  ] },
-  { key: 'money', label: 'Money / Business', emoji: '💰', prompts: [
-    'Why rich people think differently about money',
-    'The morning habit that built billion-dollar fortunes',
-    'How compound interest quietly makes millionaires',
-  ] },
-  { key: 'ai', label: 'AI / Future Tech', emoji: '🤖', prompts: [
-    'The AI breakthrough that shocked scientists',
-    '5 jobs AI will change forever',
-    'The robot that learned to do the impossible',
-  ] },
-  { key: 'history', label: 'History', emoji: '🏛️', prompts: [
-    'The Roman city frozen in time by a volcano',
-    'The colony that vanished overnight, leaving one word',
-    '5 history facts that sound fake but are real',
-  ] },
-  { key: 'health', label: 'Health / Psychology', emoji: '🧠', prompts: [
-    'One habit before sleep that doubles your focus',
-    'The psychology trick that rewires your brain',
-    'Why your brain craves dopamine — and how to reset it',
-  ] },
-  { key: 'sports', label: 'Sports', emoji: '⚽', prompts: [
-    'The most insane comeback in sports history',
-    'The athlete who defied science',
-    '5 records nobody thought would ever break',
-  ] },
-  { key: 'reddit', label: 'Reddit-style Story', emoji: '📖', prompts: [
-    'The neighbor who watched the house for years',
-    'A creepy text that turned out to be real',
-    'The roommate secret that changed everything',
-  ] },
-  { key: 'affiliate', label: 'Affiliate Product Video', emoji: '🛒', prompts: [
-    'This $20 gadget went viral for a reason',
-    '3 tools every faceless creator secretly uses',
-    'The app that saves you 5 hours every week',
-  ] },
-]
+// Match Viral Now's palette so the onboarding feels native.
+const VERTICAL_COLORS: Record<string, string> = {
+  money: '#10b981',
+  mystery: '#8b5cf6',
+  country: '#3b82f6',
+  ai: '#6366f1',
+  psychology: '#ec4899',
+  history: '#d97706',
+  science: '#14b8a6',
+  space: '#0ea5e9',
+}
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  Hot: { bg: 'rgba(239,68,68,0.18)', color: '#ef4444' },
+  Trending: { bg: 'rgba(249,115,22,0.18)', color: '#f97316' },
+  'High Retention': { bg: 'rgba(59,130,246,0.18)', color: '#3b82f6' },
+  Viral: { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
+}
 
-const SURPRISE_POOL = NICHES.flatMap((n) => n.prompts)
+type Starter = {
+  vertical: string
+  label: string
+  title: string
+  hook: string
+  score: number
+  badge: keyof typeof BADGE_STYLES
+}
+
+const STARTERS: Starter[] = [
+  { vertical: 'mystery', label: 'Mystery', title: 'The disappearance nobody solved in 70 years', hook: '3 people vanished without a trace — and the evidence left behind is more disturbing than the disappearance.', score: 95, badge: 'Viral' },
+  { vertical: 'money', label: 'Money', title: '$200 a month makes you a millionaire — here’s the math', hook: '$200 a month is all it takes. But start after 30 and you pay an $850,000 penalty.', score: 91, badge: 'High Retention' },
+  { vertical: 'country', label: 'Country', title: 'The island where snakes rule everything', hook: 'So many venomous snakes the government bans humans from setting foot on it.', score: 94, badge: 'Viral' },
+  { vertical: 'ai', label: 'AI / Tech', title: 'The AI tool replacing 10 jobs right now', hook: 'One AI tool is already replacing entire teams — and most people still haven’t heard of it.', score: 95, badge: 'Hot' },
+  { vertical: 'psychology', label: 'Health', title: 'Why cold showers change your brain in 60 seconds', hook: 'A 60-second cold shower triggers a neurochemical cascade your brain can’t get from coffee.', score: 91, badge: 'Hot' },
+  { vertical: 'history', label: 'History', title: 'Why ancient Rome collapsed in 5 steps', hook: 'The empire that ruled the world fell faster than anyone expected — and the pattern is repeating.', score: 90, badge: 'High Retention' },
+  { vertical: 'science', label: 'Science', title: 'The ocean mystery scientists still can’t explain', hook: 'We’ve mapped 95% of the ocean floor — and what’s down there contradicts everything expected.', score: 91, badge: 'High Retention' },
+  { vertical: 'space', label: 'Space', title: 'What NASA found on Mars they never announced', hook: 'A signal, a structure, and a long silence — what the rovers captured raised more questions than answers.', score: 96, badge: 'Viral' },
+]
 
 function track(name: string, metadata?: Record<string, unknown>) {
   try {
@@ -70,33 +63,21 @@ function track(name: string, metadata?: Record<string, unknown>) {
 }
 
 export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) {
-  const [openNiche, setOpenNiche] = useState<string | null>(null)
-  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null)
-
   useEffect(() => {
     track('onboarding_viewed')
   }, [])
 
-  const active = NICHES.find((n) => n.key === openNiche) || null
-
-  function selectNiche(key: string) {
-    setOpenNiche(key)
-    setSelectedPrompt(null)
-    track('onboarding_niche_selected', { niche: key })
-  }
-
-  function create() {
-    const topic = selectedPrompt || active?.prompts[0]
-    if (!topic || !active) return
-    track('first_video_started', { niche: active.key, source: 'onboarding' })
-    onPick(topic, active.key)
+  function generate(s: Starter) {
+    track('onboarding_niche_selected', { niche: s.vertical })
+    track('first_video_started', { niche: s.vertical, source: 'onboarding' })
+    onPick(s.title, s.vertical)
   }
 
   function surprise() {
-    const topic = SURPRISE_POOL[Math.floor(Math.random() * SURPRISE_POOL.length)]
-    track('surprise_me_clicked', { topic })
+    const s = STARTERS[Math.floor(Math.random() * STARTERS.length)]
+    track('surprise_me_clicked', { topic: s.title })
     track('first_video_started', { source: 'surprise_me' })
-    onSurprise(topic)
+    onSurprise(s.title)
   }
 
   return (
@@ -108,23 +89,23 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         position: 'fixed',
         inset: 0,
         zIndex: 1200,
-        background: 'rgba(5,7,13,0.92)',
+        background: 'rgba(5,7,13,0.94)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
         overflowY: 'auto',
-        padding: '32px 16px 48px',
+        padding: '32px 16px 56px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 720 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#F1F5F9', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#F1F5F9', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
           What kind of Short do you want to create?
         </h1>
-        <p style={{ fontSize: '0.9rem', color: '#94A3B8', textAlign: 'center', margin: '0 0 18px' }}>
-          Pick one — your first Short is free and takes ~60 seconds.
+        <p style={{ fontSize: '0.92rem', color: '#94A3B8', textAlign: 'center', margin: '0 0 18px' }}>
+          Pick a trending idea — your first Short is <b style={{ color: '#22D3EE' }}>free</b> and takes ~60 seconds.
         </p>
 
         {/* Surprise Me — fastest path */}
@@ -134,9 +115,9 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           style={{
             display: 'block',
             width: '100%',
-            maxWidth: 340,
+            maxWidth: 360,
             margin: '0 auto 22px',
-            padding: '12px 18px',
+            padding: '13px 18px',
             borderRadius: 12,
             background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
             color: '#05070D',
@@ -149,95 +130,84 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           🎲 Surprise Me — just make one
         </button>
 
-        {/* Niche grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-          {NICHES.map((n) => {
-            const isOpen = openNiche === n.key
+        {/* Rich starter cards (Viral Now style) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+          {STARTERS.map((s) => {
+            const vertColor = VERTICAL_COLORS[s.vertical] ?? '#6366f1'
+            const badge = BADGE_STYLES[s.badge]
             return (
-              <button
-                key={n.key}
-                type="button"
-                onClick={() => selectNiche(n.key)}
+              <div
+                key={s.title}
                 style={{
-                  textAlign: 'left',
-                  padding: '14px 14px',
+                  background: 'var(--card, #0B1120)',
+                  border: '1px solid var(--border, rgba(255,255,255,0.10))',
                   borderRadius: 14,
-                  cursor: 'pointer',
-                  background: isOpen ? 'rgba(34,211,238,0.10)' : 'rgba(255,255,255,0.04)',
-                  border: isOpen ? '1.5px solid rgba(34,211,238,0.6)' : '1px solid rgba(255,255,255,0.10)',
-                  color: '#F1F5F9',
-                  fontWeight: 800,
-                  fontSize: '0.9rem',
-                  transition: 'all .15s',
+                  padding: '16px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 9,
+                  transition: 'border-color 0.2s, transform 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLDivElement).style.borderColor = vertColor
+                  ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border, rgba(255,255,255,0.10))'
+                  ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'
                 }}
               >
-                <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: 4 }}>{n.emoji}</span>
-                {n.label}
-              </button>
+                {/* Top row: label · score · badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: vertColor + '22', color: vertColor, whiteSpace: 'nowrap' }}>
+                    {s.label}
+                  </span>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af' }}>🔥 {s.score}</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>
+                    {s.badge}
+                  </span>
+                </div>
+
+                <p style={{ margin: 0, fontSize: '1.02rem', fontWeight: 900, lineHeight: 1.25, color: '#F1F5F9', letterSpacing: '-0.01em' }}>
+                  {s.title}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#9ca3af', lineHeight: 1.45 }}>
+                  {s.hook}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => generate(s)}
+                  style={{
+                    marginTop: 'auto',
+                    padding: '11px 0',
+                    width: '100%',
+                    borderRadius: 9,
+                    border: 'none',
+                    background: `linear-gradient(90deg, ${vertColor}, #ef4444)`,
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+                >
+                  Generate Short →
+                </button>
+              </div>
             )
           })}
         </div>
-
-        {/* Example prompts for the selected niche */}
-        {active && (
-          <div style={{ marginTop: 20 }}>
-            <p style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Pick an idea ({active.label})
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {active.prompts.map((p) => {
-                const sel = selectedPrompt === p
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setSelectedPrompt(p)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      cursor: 'pointer',
-                      background: sel ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.03)',
-                      border: sel ? '1.5px solid rgba(52,211,153,0.6)' : '1px solid rgba(255,255,255,0.10)',
-                      color: sel ? '#fff' : '#CBD5E1',
-                      fontWeight: 600,
-                      fontSize: '0.92rem',
-                    }}
-                  >
-                    {sel ? '✓ ' : ''}{p}
-                  </button>
-                )
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={create}
-              style={{
-                display: 'block',
-                width: '100%',
-                marginTop: 16,
-                padding: '15px 18px',
-                borderRadius: 14,
-                background: '#22D3EE',
-                color: '#05070D',
-                fontWeight: 900,
-                fontSize: '1.05rem',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              Create my first Short →
-            </button>
-          </div>
-        )}
 
         <button
           type="button"
           onClick={onClose}
           style={{
             display: 'block',
-            margin: '20px auto 0',
+            margin: '22px auto 0',
             background: 'transparent',
             border: 'none',
             color: '#64748B',
