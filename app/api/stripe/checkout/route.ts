@@ -246,6 +246,13 @@ async function buildAndRedirect(
     }
   }
 
+  // #481 — Rewardful affiliate attribution. The rewardful_referral cookie is set
+  // client-side (root layout) when a visitor arrives via an affiliate link. Pass it
+  // as client_reference_id so Rewardful attributes the subscription to the affiliate.
+  // Only when present — Stripe Checkout errors on a blank client_reference_id.
+  const rwReferral = req.cookies.get('rewardful_referral')?.value
+  if (rwReferral) sessionParams.client_reference_id = rwReferral
+
   let session: Stripe.Checkout.Session
   try {
     session = await stripe.checkout.sessions.create(sessionParams)

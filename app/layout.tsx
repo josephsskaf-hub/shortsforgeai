@@ -104,6 +104,26 @@ export default function RootLayout({
             }(window, document, 'ttq');
           `}
         </Script>
+        {/* #481 — Rewardful affiliate tracking. The queue snippet defines
+            window.rewardful; rw.js (async) captures the ?via=CODE referral and
+            sets a 60-day first-party cookie. The 'ready' callback mirrors the
+            referral id into a server-readable cookie so /api/stripe/checkout can
+            pass it to Stripe as client_reference_id. API key 55bff9 is public. */}
+        <Script id="rewardful-queue" strategy="afterInteractive">
+          {`(function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');`}
+        </Script>
+        <Script async src="https://r.wdfl.co/rw.js" data-rewardful="55bff9" strategy="afterInteractive" />
+        <Script id="rewardful-cookie" strategy="afterInteractive">
+          {`
+            window.rewardful && window.rewardful('ready', function(){
+              try {
+                if (window.Rewardful && window.Rewardful.referral) {
+                  document.cookie = 'rewardful_referral=' + window.Rewardful.referral + ';path=/;max-age=5184000;samesite=lax;secure';
+                }
+              } catch (e) {}
+            });
+          `}
+        </Script>
       </head>
       <body>{children}</body>
     </html>
