@@ -40,7 +40,9 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 // duration before we re-synthesize the TTS at an adjusted speed to pull it
 // back in line. ±3s matches the product tolerance.
 const DURATION_TOLERANCE_SECONDS = 3
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling'
+// feature/ai-avatar — 'avatar' = premium talking-head render (VEED Fabric).
+// Checkpoint 1: no credit cost wired yet (billing lands in checkpoint 2).
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'avatar'
 
 interface ComposeBody {
   generationId?: string
@@ -64,6 +66,14 @@ interface ComposeBody {
   // 'geography'). Forwarded from analyze-idea via GenerateClient so the persona
   // selector can pick the right voice + speed profile for the niche.
   vertical?: string
+  // feature/ai-avatar — avatar mode (quality === 'avatar'). The narration mp3
+  // ALREADY exists (generated in /api/generate-avatar and lip-synced by VEED),
+  // so compose must NOT re-synthesize TTS — a new mp3 would have different
+  // timing and break lip sync. avatar_url is the VEED talking-head MP4 that
+  // becomes the main video track.
+  avatar_url?: string
+  voiceover_url?: string
+  real_audio_duration?: number
 }
 
 export async function POST(req: NextRequest) {
@@ -113,10 +123,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
+    // feature/ai-avatar — avatar requests are validated below (quality parse +
+    // URL allow-list); they may legitimately carry ZERO stock clips because
+    // the talking head fills the whole timeline.
+    const isAvatarReq =
+      (body.quality ?? '').toString() === 'avatar' &&
+      typeof body.avatar_url === 'string' &&
+      body.avatar_url.trim().length > 0
+
     const clipUrls = Array.isArray(body.clip_urls)
       ? body.clip_urls.filter((u) => typeof u === 'string' && u.trim().length > 0)
       : []
-    if (clipUrls.length === 0) {
+    if (clipUrls.length === 0 && !isAvatarReq) {
       return NextResponse.json({ error: 'clip_urls is required.' }, { status: 400 })
     }
 
@@ -146,6 +164,9 @@ export async function POST(req: NextRequest) {
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
       // Push #315 — added cinematic_ai for fal.ai Wan 2.1 mode (3 credits).
+      // feature/ai-avatar — 'avatar' accepted ONLY when the request actually
+      // carries an avatar payload (validated above).
+      if (q === 'avatar') return isAvatarReq ? 'avatar' : 'basic_ai'
       return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' ? q : 'basic_ai'
     })()
 
@@ -181,7 +202,9 @@ export async function POST(req: NextRequest) {
     // upstream gate held (plan === pro) as defense in depth.
     // Push #315 — cinematic_ai (fal.ai mode) uses credits, not Pro plan.
     // Only the old Runway-based modes (basic, basic_ai, pro) require Pro.
-    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling') {
+    // feature/ai-avatar — 'avatar' is exempt from the Pro gate: it is paid via
+    // the separate avatar-credits add-on (checkpoint 2), never the Pro plan.
+    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'avatar') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(
@@ -233,13 +256,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── feature/ai-avatar — validate the avatar payload URLs ──────────────
+    // voiceover_url must be OUR public storage object (it was uploaded by
+    // /api/generate-avatar); avatar_url must be the fal CDN output or our
+    // storage. Anything else is rejected — no arbitrary-URL render surface.
+    const avatarMode = quality === 'avatar'
+    const avatarUrlBody = (body.avatar_url ?? '').trim()
+    const voiceoverUrlBody = (body.voiceover_url ?? '').trim()
+    if (avatarMode) {
+      const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+      const falCdn = /^https:\/\/([a-z0-9-]+\.)*fal\.(media|run|ai)\//i
+      if (!voiceoverUrlBody.startsWith(storagePrefix)) {
+        return NextResponse.json({ error: 'Invalid voiceover for avatar render.' }, { status: 400 })
+      }
+      if (!falCdn.test(avatarUrlBody) && !avatarUrlBody.startsWith(storagePrefix)) {
+        return NextResponse.json({ error: 'Invalid avatar video URL.' }, { status: 400 })
+      }
+    }
+
     // Step 1 — Scale the voiceover script to the right word count.
     // Push #235 — verbatim mode (explicit speed) skips scaling entirely: the
     // user wrote the exact narration, so rewriting it to a word-count target
     // would defeat the purpose. The video length then tracks the user's script
     // spoken at their chosen speed.
+    // feature/ai-avatar — avatar mode also skips scaling: the script passed in
+    // is EXACTLY what the already-rendered mp3 narrates (captions derive from it).
     let scaledScript: string
-    if (explicitSpeed != null) {
+    if (avatarMode) {
+      scaledScript = voiceoverScript
+      console.log('[compose] avatar mode — narration already synthesized, skipping scaling')
+    } else if (explicitSpeed != null) {
       scaledScript = voiceoverScript
       console.log(
         `[compose] verbatim narration (speed=${explicitSpeed}) — skipping word-count scaling`,
@@ -257,38 +303,62 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2 — Generate TTS.
-    console.log(
-      `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s language=${language}`,
-    )
-    let audioBuffer: Buffer
-    try {
-      audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+    // feature/ai-avatar — SKIPPED in avatar mode: the narration mp3 already
+    // exists (made in /api/generate-avatar) and VEED lip-synced the talking
+    // head to that exact file. Re-synthesizing here would produce different
+    // timing and desync the lips. We re-download the mp3 only to measure its
+    // duration + run Whisper for drift-free captions (both best-effort).
+    let audioBuffer: Buffer | null = null
+    if (avatarMode) {
+      try {
+        const audioRes = await fetch(voiceoverUrlBody)
+        if (audioRes.ok) {
+          audioBuffer = Buffer.from(await audioRes.arrayBuffer())
+          console.log(`[compose] avatar voiceover fetched for analysis: ${audioBuffer.length} bytes`)
+        } else {
+          console.warn(`[compose] avatar voiceover fetch HTTP ${audioRes.status} — proportional captions fallback`)
+        }
+      } catch (err) {
+        console.warn('[compose] avatar voiceover fetch failed — proportional captions fallback:', err instanceof Error ? err.message : String(err))
+      }
+    } else {
       console.log(
-        `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
+        `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s language=${language}`,
       )
-    } catch (err) {
-      // Surface the FULL error object so OpenAI-side issues (rate limit,
-      // quota, auth) are diagnosable without redeploying.
-      console.error('[compose] TTS failed:', err instanceof Error
-        ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
-        : String(err))
-      return NextResponse.json(
-        { error: 'Voiceover generation failed. Please try again.' },
-        { status: 502 }
-      )
-    }
+      try {
+        audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+        console.log(
+          `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
+        )
+      } catch (err) {
+        // Surface the FULL error object so OpenAI-side issues (rate limit,
+        // quota, auth) are diagnosable without redeploying.
+        console.error('[compose] TTS failed:', err instanceof Error
+          ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
+          : String(err))
+        return NextResponse.json(
+          { error: 'Voiceover generation failed. Please try again.' },
+          { status: 502 }
+        )
+      }
 
-    if (!audioBuffer || audioBuffer.length === 0) {
-      console.error('[compose] TTS produced an empty buffer — refusing to upload.')
-      return NextResponse.json(
-        { error: 'Voiceover generation returned no audio. Please try again.' },
-        { status: 502 }
-      )
+      if (!audioBuffer || audioBuffer.length === 0) {
+        console.error('[compose] TTS produced an empty buffer — refusing to upload.')
+        return NextResponse.json(
+          { error: 'Voiceover generation returned no audio. Please try again.' },
+          { status: 502 }
+        )
+      }
     }
 
     // Push #158 — measure the REAL narration length so captions key to the
     // actual audio, not the requested duration (which assumed 2.5 wps).
-    let realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
+    let realAudioDuration = audioBuffer ? estimateMp3DurationSeconds(audioBuffer) : 0
+    if (avatarMode && !(realAudioDuration > 4)) {
+      // Avatar fallback chain: measured → value sent by generate-avatar → requested.
+      const sent = Number(body.real_audio_duration)
+      realAudioDuration = Number.isFinite(sent) && sent > 4 ? sent : duration
+    }
     console.log(
       `[compose] estimated TTS duration: ${realAudioDuration.toFixed(1)}s (requested ${duration}s)`,
     )
@@ -301,6 +371,7 @@ export async function POST(req: NextRequest) {
     // generateTTS). This is best-effort: any failure, or a result that isn't
     // actually closer, keeps the original audio so compose never regresses.
     if (
+      !avatarMode && // feature/ai-avatar — never re-synthesize the lip-synced mp3
       explicitSpeed == null &&
       realAudioDuration > 4 &&
       Math.abs(realAudioDuration - duration) > DURATION_TOLERANCE_SECONDS
@@ -340,16 +411,18 @@ export async function POST(req: NextRequest) {
     // eliminating drift from number expansion (e.g. "63%" → "sixty three
     // percent"). Non-fatal: if Whisper fails the proportional fallback runs.
     let whisperWords: WhisperWord[] | undefined
-    try {
-      const words = await transcribeTTSWithTimestamps(audioBuffer)
-      if (words.length > 0) {
-        whisperWords = words
-        console.log(`[compose] Whisper sync: ${words.length} words for direct caption build`)
-      } else {
-        console.warn('[compose] Whisper returned 0 words — proportional fallback')
+    if (audioBuffer) {
+      try {
+        const words = await transcribeTTSWithTimestamps(audioBuffer)
+        if (words.length > 0) {
+          whisperWords = words
+          console.log(`[compose] Whisper sync: ${words.length} words for direct caption build`)
+        } else {
+          console.warn('[compose] Whisper returned 0 words — proportional fallback')
+        }
+      } catch (whisperErr) {
+        console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
       }
-    } catch (whisperErr) {
-      console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
     }
 
     // Phase 5 — Detect persona for response metadata (observability + future UI).
@@ -358,9 +431,13 @@ export async function POST(req: NextRequest) {
       : undefined
 
     // Step 3 — Upload TTS to Supabase storage.
+    // feature/ai-avatar — avatar mode reuses the mp3 already in storage.
     let voiceoverUrl: string
+    if (avatarMode) {
+      voiceoverUrl = voiceoverUrlBody
+    } else {
     try {
-      voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer)
+      voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer as Buffer)
       console.log(`[compose] voiceover stored at: ${voiceoverUrl}`)
     } catch (err) {
       // Surface FULL error object — name, message, stack head — so the
@@ -374,6 +451,7 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       )
     }
+    } // end avatar/standard voiceover-url branch
 
     // Step 4 — Build the Creatomate source.
     //
@@ -420,6 +498,7 @@ export async function POST(req: NextRequest) {
         realAudioDuration,
         whisperWords,
         musicUrl,
+        avatarUrl: avatarMode ? avatarUrlBody : null,
         watermark:
           isFreeAiTrial ||
           isFreePlanAi ||
@@ -436,16 +515,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 5 — Submit to Creatomate.
+    // 10/06 — ONE automatic retry: a transient Creatomate reject killed an
+    // avatar render whose (expensive, slow) VEED clip was already done; the
+    // identical payload succeeded seconds later. The retry protects every
+    // mode but matters most for avatar, where a lost compose wastes a paid
+    // multi-minute talking-head generation.
     let renderId: string
     try {
       renderId = await submitCreatomateRender(source)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[compose] Creatomate submit failed:', msg)
-      return NextResponse.json(
-        { error: 'Render service rejected the job. Please try again.' },
-        { status: 502 }
-      )
+    } catch (firstErr) {
+      const firstMsg = firstErr instanceof Error ? firstErr.message : String(firstErr)
+      console.warn('[compose] Creatomate submit failed — retrying once in 1.5s:', firstMsg)
+      await new Promise((r) => setTimeout(r, 1500))
+      try {
+        renderId = await submitCreatomateRender(source)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[compose] Creatomate submit failed (after retry):', msg)
+        return NextResponse.json(
+          { error: 'Render service rejected the job. Please try again.' },
+          { status: 502 }
+        )
+      }
     }
 
     // Best-effort sanity check — confirm the render actually exists.

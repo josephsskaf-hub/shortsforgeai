@@ -81,6 +81,20 @@ const STARTER_PACK = {
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }
 
+// ─── feature/ai-avatar CP2 — Avatar Credit packs (one-time, USD) ─────────────
+// Premium add-on OUTSIDE the plan credits: $29/1 · $79/3 · $239/10 (spec).
+// Studio subscribers get 15% off (shown in the UI as a Studio benefit).
+// Same inline price_data approach as the Starter Pack — no Stripe product
+// needed. USD-only for v1 (premium add-on; BRL/INR variants can come later).
+// Webhook credits profiles.avatar_credits via metadata.avatar_credits.
+type AvatarPackId = 'avatar1' | 'avatar3' | 'avatar10'
+const AVATAR_PACKS: Record<AvatarPackId, { credits: number; usd: number; name: string }> = {
+  avatar1:  { credits: 1,  usd: 2900,  name: 'AI Avatar Video — 1 video' },
+  avatar3:  { credits: 3,  usd: 7900,  name: 'AI Avatar Videos — 3 pack' },
+  avatar10: { credits: 10, usd: 23900, name: 'AI Avatar Videos — 10 pack' },
+}
+const STUDIO_AVATAR_DISCOUNT = 0.15 // 15% off for Studio (plan 'pro')
+
 // ─── Shared checkout-session builder ────────────────────────────────────────
 
 async function buildAndRedirect(
@@ -386,13 +400,117 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
   return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
 }
 
+// ─── feature/ai-avatar CP2 — Avatar pack checkout (mode: 'payment') ──────────
+// Mirrors buildPackAndRedirect: inline price_data, metadata-driven crediting.
+// Studio (plan 'pro') pays 15% less — the discount is computed SERVER-SIDE from
+// the profile so the client can never forge it.
+async function buildAvatarPackAndRedirect(
+  req: NextRequest,
+  packId: AvatarPackId,
+  isGet: boolean,
+): Promise<NextResponse> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  function redirectError(msg: string) {
+    return NextResponse.redirect(`${appUrl}/generate?checkout_error=${encodeURIComponent(msg)}`)
+  }
+  function jsonError(msg: string, status: number) {
+    return NextResponse.json({ error: msg }, { status })
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout] STRIPE_SECRET_KEY is not set')
+    return isGet
+      ? redirectError('Payment service is not configured. Please contact support.')
+      : jsonError('Payment service is not configured. Please contact support.', 500)
+  }
+
+  const pack = AVATAR_PACKS[packId]
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return isGet
+      ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/generate?avatar=1')}`)
+      : jsonError('You must be signed in to buy Avatar Credits.', 401)
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, stripe_customer_id, plan')
+    .eq('id', user.id)
+    .single()
+
+  const planVal = (profile?.plan ?? 'free') as string
+  const isStudio = planVal === 'pro' || planVal === 'pro_trial'
+  const unitAmount = isStudio
+    ? Math.round(pack.usd * (1 - STUDIO_AVATAR_DISCOUNT))
+    : pack.usd
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: isStudio ? `${pack.name} (Studio −15%)` : pack.name,
+            description: `One-time: ${pack.credits} AI Avatar video${pack.credits > 1 ? 's' : ''} (720p talking head from your photo). No subscription.`,
+          },
+          unit_amount: unitAmount,
+        },
+        quantity: 1,
+      },
+    ],
+    client_reference_id: user.id,
+    success_url: `${appUrl}/generate?avatar=1&avatar_pack=${packId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/generate?avatar=1`,
+    metadata: {
+      supabase_user_id: user.id,
+      pack: packId,
+      avatar_credits: String(pack.credits),
+    },
+  }
+  if (profile?.stripe_customer_id) sessionParams.customer = profile.stripe_customer_id
+  else sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    // Same "cannot combine currencies" fallback as the Starter Pack.
+    if (msg.toLowerCase().includes('cannot combine currencies')) {
+      delete sessionParams.customer
+      sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+      try {
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } catch (retryErr) {
+        const rmsg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.error('[stripe/checkout] avatar pack retry failed:', rmsg)
+        return isGet ? redirectError(`Payment session failed: ${rmsg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+      }
+    } else {
+      console.error('[stripe/checkout] avatar pack session error:', msg)
+      return isGet ? redirectError(`Payment session failed: ${msg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+    }
+  }
+
+  console.log(`[stripe/checkout] avatar pack session: ${packId} user=${user.id.slice(0, 8)} studio=${isStudio} amount=${unitAmount}`)
+  return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
+}
+
 // ─── GET handler (iOS Safari safe — server-side redirect) ────────────────────
 // Buttons set window.location.href = '/api/stripe/checkout?tier=basic' so
 // the browser navigates synchronously (no await / no gesture-chain break).
 export async function GET(req: NextRequest) {
   try {
     // #473 — Starter Pack one-time checkout: /api/stripe/checkout?pack=starter
-    if (req.nextUrl.searchParams.get('pack')) {
+    // feature/ai-avatar CP2 — ?pack=avatar1|avatar3|avatar10 → Avatar Credits.
+    const packParam = req.nextUrl.searchParams.get('pack')
+    if (packParam) {
+      if (packParam === 'avatar1' || packParam === 'avatar3' || packParam === 'avatar10') {
+        return await buildAvatarPackAndRedirect(req, packParam, true)
+      }
       return await buildPackAndRedirect(req, true)
     }
     const tierParam = req.nextUrl.searchParams.get('tier') ?? 'basic'

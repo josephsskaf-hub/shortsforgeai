@@ -22,7 +22,7 @@ const HIGHLIGHT_COLOR = '#FFD700'
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
-export const VOICEOVER_BUCKET = 'voiceovers'
+export const VOICEOVER_BUCKET = 'voiceovers' // (feature/ai-avatar touches this module)
 
 export interface ComposeInputs {
   clipUrls: string[]
@@ -86,6 +86,15 @@ export interface ComposeInputs {
    * The decision is made server-side in /api/compose (never trusts the client).
    */
   watermark?: boolean
+  /**
+   * AI Avatar (feature/ai-avatar) — public URL of the VEED Fabric talking-head
+   * MP4. When present the avatar becomes the MAIN video track (muted — the
+   * voiceover track stays the single audio source; VEED lip-synced to that
+   * exact mp3, so starting both at t=0 keeps lips and audio in sync) and the
+   * stock clips become periodic full-frame CUTAWAYS instead of the base
+   * timeline. Captions / CTA / music / watermark behave exactly as usual.
+   */
+  avatarUrl?: string | null
 }
 
 export interface CreatomateRenderState {
@@ -825,6 +834,7 @@ export function buildCreatomateSource({
   whisperWords,
   musicUrl,
   watermark = false,
+  avatarUrl = null,
 }: ComposeInputs): Record<string, unknown> {
   // Push #199 — use the REAL TTS audio duration as the master timeline length
   // instead of the user-requested duration. This eliminates both the "black
@@ -841,7 +851,10 @@ export function buildCreatomateSource({
       : duration
   const totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
-  if (cleanClips.length === 0) {
+  const hasAvatar = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
+  // Avatar mode can render with ZERO stock clips (talking head carries the
+  // whole video); every other mode still requires clips.
+  if (cleanClips.length === 0 && !hasAvatar) {
     throw new Error('No video clips provided to compose.')
   }
 
@@ -924,6 +937,100 @@ export function buildCreatomateSource({
   // beats. The CLIP_LEN cap preserves the old behavior when there are too few
   // clips to fill the window (e.g. a 2-clip / 90s GPT-scene video): the loop
   // re-cycles them at 10s each for the remainder instead of stretching one clip.
+  // ── AI Avatar mode (feature/ai-avatar) ────────────────────────────────
+  // The talking head is the MAIN video, muted (the voiceover on track 4 is
+  // the one audio source — VEED lip-synced to that exact mp3, so timeline
+  // alignment keeps lips in sync). Stock clips appear as periodic full-frame
+  // CUTAWAYS. Rhythm: the HOOK (first 6s) and the PAYOFF (last 6s) always
+  // stay on the face; in between, a 4s cutaway every 12s.
+  //
+  // Checkpoint-1 feedback fix (telas pretas): v1 stacked the cutaways ON TOP
+  // of a single full-length avatar element on the SAME track. Creatomate does
+  // not reliably render fully-overlapping same-track elements (only the tiny
+  // #256 micro-overlap is proven), and the conflict resolution produced black
+  // gaps. v2 builds track 2 STRICTLY SEQUENTIALLY — avatar segment → cutaway →
+  // avatar segment — with no overlap beyond the #256 micro-overlap. Each
+  // avatar segment uses trim_start = its timeline position, so the (muted)
+  // talking head resumes exactly where the narration is and lip sync is
+  // preserved across every cut. This is the same battle-tested sequential
+  // pattern as the standard clip tiling below.
+  if (hasAvatar) {
+    // 1) Compute the cutaway windows first.
+    const CUTAWAY_LEN = 4
+    const CUTAWAY_EVERY = 12 // window start → next window start (8s face + 4s b-roll)
+    const FACE_HEAD = 6 // hook stays on the face
+    const FACE_TAIL = 6 // payoff + CTA stay on the face
+    const cutStarts: number[] = []
+    if (cleanClips.length > 0) {
+      let t = FACE_HEAD
+      while (t + CUTAWAY_LEN <= totalDuration - FACE_TAIL) {
+        cutStarts.push(t)
+        t += CUTAWAY_EVERY
+      }
+    }
+
+    // 2) Walk the timeline emitting non-overlapping segments in order.
+    const pushAvatarSegment = (from: number, to: number) => {
+      const len = to - from
+      if (len <= 0.05) return
+      elements.push({
+        type: 'video',
+        track: 2,
+        time: round3(from),
+        // #256 micro-overlap so the boundary with the NEXT element is a clean
+        // hard cut with no rendering gap (black flash).
+        duration: round3(len + CLIP_GAP_OVERLAP),
+        source: avatarUrl as string,
+        fit: 'cover',
+        loop: false,
+        // Resume the talking head at its own timeline position — keeps the
+        // lips locked to the narration after every cutaway.
+        trim_start: round3(from),
+        x: '50%',
+        y: '50%',
+        width: '100%',
+        height: '100%',
+        volume: '0%',
+      })
+    }
+
+    let cursor = 0
+    cutStarts.forEach((cutStart, ci) => {
+      pushAvatarSegment(cursor, cutStart)
+      const zoomIn = ci % 2 === 0
+      elements.push({
+        type: 'video',
+        track: 2,
+        time: round3(cutStart),
+        duration: round3(CUTAWAY_LEN + CLIP_GAP_OVERLAP),
+        source: cleanClips[ci % cleanClips.length],
+        fit: 'cover',
+        loop: true, // short stock clips fill the whole 4s window (no black tail)
+        trim_start: CLIP_TRIM_START,
+        x: '50%',
+        y: '50%',
+        width: '100%',
+        height: '100%',
+        volume: '0%',
+        animations: [
+          {
+            type: 'scale',
+            fade: false,
+            start_scale: zoomIn ? '100%' : '108%',
+            end_scale: zoomIn ? '108%' : '100%',
+            easing: 'linear',
+          },
+        ],
+      })
+      cursor = cutStart + CUTAWAY_LEN
+    })
+    // Final face segment through the very end of the timeline (payoff + CTA).
+    pushAvatarSegment(cursor, totalDuration)
+
+    console.log(
+      `[compose] avatar mode v2 (sequential): ${cutStarts.length} cutaway(s), ${cleanClips.length} clip(s), total ${totalDuration}s`,
+    )
+  } else {
   const slotLen = Math.min(CLIP_LEN, totalDuration / cleanClips.length)
   let cursor = 0
   let i = 0
@@ -965,6 +1072,7 @@ export function buildCreatomateSource({
     cursor = round3(cursor + segLen)
     i += 1
   }
+  } // end avatar/standard track-2 branch
 
   // Track 3 — soft dark overlay so caption text always reads on any clip.
   elements.push({
