@@ -12,7 +12,11 @@ export const maxDuration = 60
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
 
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling'
+// feature/ai-avatar — 'avatar' added. Checkpoint 1: cost 0 and NOT in the
+// shouldDeductCredits whitelist (no billing exists yet). Checkpoint 2 wires
+// the separate avatar-credits debit here (on SUCCESS only — protection rule:
+// a failed render never charges).
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'avatar'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
@@ -23,6 +27,11 @@ function creditCostFor(quality: Quality): number {
   switch (quality) {
     case 'fast':
       return 0 // Push #434 — Fast Mode is free (growth engine); free-plan Fast is watermarked instead
+    case 'avatar':
+      // feature/ai-avatar checkpoint 1 — paid via the SEPARATE avatar-credits
+      // add-on (not video_credits). 0 here so nothing touches video_credits;
+      // the avatar-credit debit arrives with checkpoint 2's billing.
+      return 0
     case 'cinematic_ai':
       return 30
     case 'cinematic_kling':
@@ -177,7 +186,7 @@ export async function GET(
     // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
     // and the fast||cinematic_ai deduction path both fire correctly.
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'avatar'
         ? (qParam as Quality)
         : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -225,6 +234,11 @@ export async function GET(
       // Fast Mode still draws from the regular credit pool.
       // Push #315 — cinematic_ai also deducts from video_credits (3 credits).
       const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling'
+      // feature/ai-avatar CP2 — avatar renders debit the SEPARATE avatar_credits
+      // balance (1 per finished video), NEVER video_credits. Success-only, so a
+      // failed VEED/render charges nothing (protection rule). Shares the same
+      // render_id idempotency guard below so refresh/multi-tab can't double-debit.
+      const isAvatarRender = quality === 'avatar'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
@@ -234,7 +248,7 @@ export async function GET(
       // By checking the DB here we prevent double-charging regardless of
       // how many sessions are polling this render concurrently.
       let serverAlreadyDeducted = false
-      if (shouldDeductCredits && !deductedParam) {
+      if ((shouldDeductCredits || isAvatarRender) && !deductedParam) {
         try {
           // The videos table is readable by the owner via RLS (SELECT policy).
           // We use render_id + user_id to confirm this exact render was already
@@ -329,6 +343,31 @@ export async function GET(
             }
           } else {
             console.error('[compose/status] credit fetch error:', fetchError.message)
+          }
+        } else if (isAvatarRender) {
+          // feature/ai-avatar CP2 — debit exactly 1 avatar credit on success.
+          // Floor at 0 (defensive); video_credits untouched.
+          const { data: avProfile, error: avFetchErr } = await supabase
+            .from('profiles')
+            .select('avatar_credits')
+            .eq('id', user.id)
+            .single()
+          if (!avFetchErr) {
+            const avCurrent = avProfile?.avatar_credits ?? 0
+            const avNext = Math.max(0, avCurrent - 1)
+            const { error: avUpdateErr } = await supabase
+              .from('profiles')
+              .update({ avatar_credits: avNext })
+              .eq('id', user.id)
+            if (!avUpdateErr) {
+              creditsDeducted = true
+              creditsRemaining = null // video_credits chip unaffected
+              console.log(`[compose/status] avatar credit debited: user ${user.id.slice(0, 8)} ${avCurrent}→${avNext}`)
+            } else {
+              console.error('[compose/status] avatar credit debit error:', avUpdateErr.message)
+            }
+          } else {
+            console.error('[compose/status] avatar credit fetch error:', avFetchErr.message)
           }
         } else {
           // Cinematic — token was consumed at job start. Surface this in

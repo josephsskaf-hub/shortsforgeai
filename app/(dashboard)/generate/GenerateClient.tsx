@@ -12,6 +12,8 @@ import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
+import AvatarUpload from '@/components/AvatarUpload'
+import AvatarPaywallModal from '@/components/AvatarPaywallModal'
 
 interface TaskHandle {
   id: string
@@ -72,6 +74,7 @@ type Phase =
   | 'options'
   | 'generating'    // Runway producing clips (or fal.ai submission)
   | 'fal_polling'   // Push #315 — polling fal.ai clip status until all done
+  | 'avatar_polling' // feature/ai-avatar — polling the VEED talking-head job
   | 'clips_ready'   // brief transition state — kicks off /api/compose
   | 'broll_planning'  // Phase 3 — waiting for /api/generate-broll-plan
   | 'visual_director' // Phase 3 — Creator Mode: user reviews/edits BrollPlan
@@ -87,6 +90,7 @@ const PROCESSING_PHASES: Phase[] = [
   'broll_planning',
   'generating',
   'fal_polling',
+  'avatar_polling',
   'clips_ready',
   'composing',
 ]
@@ -413,6 +417,24 @@ export default function GenerateClient() {
   const [fastVoiceover, setFastVoiceover] = useState<string | null>(null)
   const [fastCaptions, setFastCaptions] = useState<string[] | null>(null)
   const [ttsSpeed, setTtsSpeed] = useState<number | null>(null)
+  // feature/ai-avatar — premium talking-avatar state. avatarImageUrl = the
+  // uploaded face photo (public storage URL, set by <AvatarUpload/>);
+  // avatarRequestId = the in-flight VEED fal-queue job; avatarComposeRef =
+  // everything kickCompose needs to render in avatar mode (the pre-made
+  // voiceover + the finished talking-head MP4 — compose must NOT re-do TTS
+  // or lips desync).
+  const [avatarImageUrl, setAvatarImageUrl] = useState<string | null>(null)
+  const [avatarRequestId, setAvatarRequestId] = useState<string | null>(null)
+  // CP2 — separate avatar-credit balance + paywall modal + home deep-link
+  // (/generate?avatar=1 auto-opens the upload panel).
+  const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
+  const [showAvatarPaywall, setShowAvatarPaywall] = useState(false)
+  const avatarAutoOpen = searchParams.get('avatar') === '1'
+  const avatarComposeRef = useRef<{
+    voiceoverUrl: string
+    realAudioDuration: number | null
+    avatarVideoUrl: string | null
+  } | null>(null)
   // Push #315 — fal.ai polling state for Cinematic AI mode.
   const [falRequestIds, setFalRequestIds] = useState<(string | null)[]>([])
   const [falClipsDone, setFalClipsDone] = useState<{ done: number; total: number }>({ done: 0, total: 0 })
@@ -679,6 +701,8 @@ export default function GenerateClient() {
         const data = await res.json()
         if (!cancelled) {
           setCredits(typeof data.credits === 'number' ? data.credits : 0)
+          // CP2 — avatar add-on balance travels on the same endpoint.
+          if (typeof data.avatarCredits === 'number') setAvatarCredits(data.avatarCredits)
           // #384 — refresh free-AI-trial availability from the same source.
           if (typeof data.freeAiUsed === 'boolean') setFreeAiUsed(data.freeAiUsed)
           // #404 — plan flags + default the engine to the plan's engine once.
@@ -801,7 +825,7 @@ export default function GenerateClient() {
   useEffect(() => {
     if (mode !== 'fast' && mode !== 'cinematic_ai' && mode !== 'creator') return
     const inLoading =
-      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
+      phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!inLoading) {
       setFastStep(0)
       return
@@ -821,7 +845,7 @@ export default function GenerateClient() {
   //   40s+   : ⚡ Rendering your Short...
   useEffect(() => {
     const isGenerating =
-      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
+      phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!isGenerating) {
       setProgressStep(0)
       return
@@ -909,7 +933,7 @@ export default function GenerateClient() {
   // leave a loading phase so the next run starts at message 0.
   useEffect(() => {
     const inLoadingPhase =
-      phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing'
+      phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing'
     if (!inLoadingPhase) {
       setLoaderTick(0)
       return
@@ -1052,12 +1076,61 @@ export default function GenerateClient() {
   }, [phase, falRequestIds])
 
   // ────────────────────────────────────────────────────────────────────────
+  // PHASE: avatar_polling  →  poll /api/avatar-status until the VEED talking
+  // head is ready, then hand off to clips_ready (compose). feature/ai-avatar.
+  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'avatar_polling' || !avatarRequestId) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    async function poll() {
+      try {
+        const res = await fetch(
+          `/api/avatar-status?request_id=${encodeURIComponent(avatarRequestId as string)}`,
+          { cache: 'no-store' },
+        )
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Avatar status lookup failed')
+
+        if (data.status === 'done' && typeof data.video_url === 'string' && data.video_url) {
+          if (avatarComposeRef.current) avatarComposeRef.current.avatarVideoUrl = data.video_url
+          setPhase('clips_ready') // kicks /api/compose with avatar_url + voiceover_url
+          return
+        }
+        if (data.status === 'failed') {
+          // Protection rule surfaced to the user: a VEED failure charges nothing.
+          setError(typeof data.error === 'string' ? data.error : 'Avatar generation failed. You were not charged — please try again.')
+          setPhase('failed')
+          return
+        }
+        timer = setTimeout(poll, POLL_COMPOSING_MS)
+      } catch (err) {
+        if (cancelled) return
+        console.error('[generate] avatar poll error:', err)
+        setError(GENERIC_ERROR)
+        setPhase('failed')
+      }
+    }
+
+    timer = setTimeout(poll, 2000)
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, avatarRequestId])
+
+  // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'clips_ready') return
     if (composeStartedRef.current) return
-    if (clipUrls.length === 0) return
+    // feature/ai-avatar — an avatar render may carry zero stock clips (the
+    // talking head fills the timeline); every other path still requires clips.
+    if (clipUrls.length === 0 && !avatarComposeRef.current?.avatarVideoUrl) return
     composeStartedRef.current = true
 
     async function kickCompose() {
@@ -1090,6 +1163,17 @@ export default function GenerateClient() {
             // so compose auto-selects the best AI voice persona for the content.
             vertical: analysis?.niche ?? undefined,
             ...(ttsSpeed != null ? { speed: ttsSpeed } : {}),
+            // feature/ai-avatar — avatar render: pass the finished talking head
+            // + the EXACT mp3 VEED lip-synced (compose skips TTS in this mode).
+            ...(avatarComposeRef.current?.avatarVideoUrl
+              ? {
+                  avatar_url: avatarComposeRef.current.avatarVideoUrl,
+                  voiceover_url: avatarComposeRef.current.voiceoverUrl,
+                  ...(avatarComposeRef.current.realAudioDuration != null
+                    ? { real_audio_duration: avatarComposeRef.current.realAudioDuration }
+                    : {}),
+                }
+              : {}),
           }),
         })
         const data = await res.json()
@@ -1640,7 +1724,69 @@ export default function GenerateClient() {
     setRenderProgress(0)
     composeStartedRef.current = false
     deductedRef.current = false
+    setAvatarRequestId(null)
+    avatarComposeRef.current = null
     setPhase('generating')
+
+    // ── feature/ai-avatar — premium talking-avatar path ─────────────────────
+    // When a face photo is loaded, Generate routes through /api/generate-avatar
+    // (TTS → VEED submit → b-roll), then 'avatar_polling' waits for the talking
+    // head and 'clips_ready' kicks compose with avatar_url + voiceover_url.
+    // Checkpoint 1: no paywall/billing — this branch must not reach production
+    // until checkpoint 2 (Joseph's gate).
+    if (avatarImageUrl) {
+      try {
+        const res = await fetch('/api/generate-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // vertical → Narration Engine no avatar (persona + pacing por seção;
+          // payoff desacelerado — feedback 10/06 "voz acelerou no final").
+          body: JSON.stringify({ prompt: trimmed, duration, language, avatarImageUrl, vertical: analysis?.niche ?? undefined }),
+        })
+        const data = await res.json()
+        if (res.status === 401) { router.push('/login?redirect=/generate'); return }
+        if (res.status === 402) {
+          // CP2 — no avatar credits: clear paywall with the 3 one-time packs.
+          if (typeof data?.balance === 'number') setAvatarCredits(data.balance)
+          setShowAvatarPaywall(true)
+          setPhase('options') // back to the options screen, nothing was started
+          return
+        }
+        if (!res.ok) {
+          setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
+          setPhase('failed')
+          return
+        }
+        // compose/status reads quality from falQualityRef when falUsedRef=true;
+        // 'avatar' renders cost 0 video_credits (avatar credits land in checkpoint 2).
+        falUsedRef.current = true
+        falQualityRef.current = 'avatar'
+        setQuality('fast') // cosmetic only — falQualityRef wins while falUsedRef=true
+        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
+        setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
+        setFastCaptions(null)
+        setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
+        setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+        avatarComposeRef.current = {
+          voiceoverUrl: typeof data.voiceover_url === 'string' ? data.voiceover_url : '',
+          realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
+          avatarVideoUrl: null,
+        }
+        const reqId = typeof data.avatar_request_id === 'string' ? data.avatar_request_id : null
+        if (!reqId || !avatarComposeRef.current.voiceoverUrl) {
+          setError(GENERIC_ERROR)
+          setPhase('failed')
+          return
+        }
+        setAvatarRequestId(reqId)
+        setPhase('avatar_polling')
+      } catch (err) {
+        console.error('[generate] avatar threw:', err)
+        setError(GENERIC_ERROR)
+        setPhase('failed')
+      }
+      return
+    }
 
     // Push #084 — Fast Mode skips Runway and resolves Pexels clips
     // synchronously, then jumps straight to the compose phase. Cinematic
@@ -2347,6 +2493,7 @@ export default function GenerateClient() {
   const showRender =
     phase === 'generating' ||
     phase === 'fal_polling' ||
+    phase === 'avatar_polling' ||
     phase === 'clips_ready' ||
     phase === 'composing' ||
     phase === 'done' ||
@@ -2360,6 +2507,8 @@ export default function GenerateClient() {
         return falClipsDone.total > 0
           ? `🤖 Generating AI clips… ${falClipsDone.done}/${falClipsDone.total} done`
           : 'Generating AI clips…'
+      case 'avatar_polling':
+        return '🎭 Animating your avatar — lip-syncing the script… (this takes a few minutes)'
       case 'clips_ready':
         return 'Generating voiceover & captions…'
       case 'composing':
@@ -2376,6 +2525,7 @@ export default function GenerateClient() {
   const headlineProgress = (() => {
     if (phase === 'generating') return Math.min(70, Math.round(generateProgress * 0.7))
     if (phase === 'fal_polling') return 10 + Math.round(generateProgress * 0.6)
+    if (phase === 'avatar_polling') return 40 // VEED job in flight — no granular progress from fal
     if (phase === 'clips_ready') return 72
     if (phase === 'composing') return 75 + Math.round(renderProgress * 0.25)
     if (phase === 'done') return 100
@@ -2820,6 +2970,23 @@ export default function GenerateClient() {
               outline: 'none',
               resize: 'none',
             }}
+          />
+
+          {/* feature/ai-avatar — "Add a face — Premium": upload a photo and the
+              rendered video shows that person speaking the script (VEED Fabric
+              talking head as the main track, b-rolls as cutaways). */}
+          <AvatarUpload
+            value={avatarImageUrl}
+            onChange={setAvatarImageUrl}
+            disabled={isProcessingPhase(phase)}
+            credits={avatarCredits}
+            initialOpen={avatarAutoOpen}
+          />
+          {/* CP2 — avatar pack paywall (also reachable straight from a 402) */}
+          <AvatarPaywallModal
+            open={showAvatarPaywall}
+            onClose={() => setShowAvatarPaywall(false)}
+            isStudio={isStudio}
           />
 
           {/* #383c — explicit script handling. Default = let the AI structure the
@@ -3346,7 +3513,7 @@ export default function GenerateClient() {
       {/* ── Render / Done / Failed ── */}
       {showRender && (
         <>
-          {(phase === 'generating' || phase === 'fal_polling' || phase === 'clips_ready' || phase === 'composing') && (
+          {(phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing') && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}

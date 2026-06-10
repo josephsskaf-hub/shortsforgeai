@@ -165,6 +165,37 @@ export async function POST(req: NextRequest) {
             break
           }
 
+          // ── feature/ai-avatar CP2: Avatar Credit packs ($29/1 · $79/3 ·
+          // $239/10, Studio −15%). metadata.avatar_credits → the SEPARATE
+          // profiles.avatar_credits balance — NEVER video_credits. Handled
+          // before the pack_credits path so an avatar pack can't fall through
+          // to the legacy amount map.
+          const metaAvatarCredits = Number(session.metadata?.avatar_credits ?? 0)
+          if (metaAvatarCredits > 0) {
+            const { data: avProfile, error: avFetchErr } = await supabase
+              .from('profiles')
+              .select('avatar_credits')
+              .eq('id', userId)
+              .single()
+            if (avFetchErr) {
+              console.error('[stripe webhook] avatar credit fetch failed:', avFetchErr.message, userId)
+              break
+            }
+            const avCurrent = avProfile?.avatar_credits ?? 0
+            const avNext = avCurrent + metaAvatarCredits
+            const { error: avUpdateErr } = await supabase
+              .from('profiles')
+              .update({ avatar_credits: avNext })
+              .eq('id', userId)
+            if (avUpdateErr) {
+              console.error('[stripe webhook] failed to add avatar credits:', avUpdateErr.message, userId)
+            } else {
+              console.log(`[stripe webhook] +${metaAvatarCredits} AVATAR credits → user ${userId} (now ${avNext})`)
+            }
+            await recordAffiliateCommission(supabase, { userId, externalId: session.id, amountGross: session.amount_total ?? 0, currency: session.currency ?? 'usd', type: 'initial' })
+            break
+          }
+
           const metaCredits = Number(session.metadata?.pack_credits ?? 0)
           const amount = session.amount_total ?? 0
           let creditsToAdd = metaCredits > 0 ? metaCredits : 0

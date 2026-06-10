@@ -24,6 +24,21 @@ export async function GET() {
       .eq('id', user.id)
       .single()
 
+    // feature/ai-avatar CP2 — avatar_credits queried SEPARATELY and best-effort,
+    // so the main balance never breaks if this code reaches an environment
+    // where the avatar_credits migration hasn't run yet (deploy-order safety).
+    let avatarCredits = 0
+    try {
+      const { data: avData } = await supabase
+        .from('profiles')
+        .select('avatar_credits')
+        .eq('id', user.id)
+        .single()
+      avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
+    } catch {
+      avatarCredits = 0
+    }
+
     if (error) {
       // Column may not exist yet — return default safely
       if (error.code === '42703' || error.message?.includes('video_credits')) {
@@ -53,6 +68,8 @@ export async function GET() {
     const isStudio = planVal === 'pro' || planVal === 'pro_trial'
     return NextResponse.json({
       credits,
+      // feature/ai-avatar CP2 — separate premium add-on balance.
+      avatarCredits,
       freeAiUsed: data?.free_ai_generate_used === true,
       plan: planVal,
       isStarter,

@@ -70,6 +70,13 @@ export function splitIntoSections(
       .map((l) => l.trim())
       .filter((l) => l.length > 0)
       .join(' ')
+      // feature/ai-avatar — callers may pass the RAW marked script (that's how
+      // sections are detected at all). Header lines carry inline cues after the
+      // label ("HOOK (0-3s): [Pexels: x] narration"), so strip every bracketed
+      // cue + leading time tag here or the TTS reads them aloud.
+      .replace(/\[[^\]]*\]/g, ' ')
+      .replace(/^\s*\(\s*\d[^)]*\)\s*[:\-–]?\s*/, '')
+      .replace(/\s{2,}/g, ' ')
       .trim()
     if (text) {
       // Phase 5: Auto-pause for mystery/conspiracy PAYOFF — prepend "..."

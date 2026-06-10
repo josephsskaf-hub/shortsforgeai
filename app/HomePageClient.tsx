@@ -768,6 +768,24 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           >
             {submitting ? 'Loading…' : 'Generate My Short →'}
           </button>
+
+          {/* feature/ai-avatar CP2 — premium entry point on the home prompt box
+              (Joseph 10/06: botão na home onde já tem a página de texto). Sends
+              the visitor to /generate with the avatar panel auto-open; the typed
+              idea survives via the same goToGenerate stash. */}
+          <button
+            type="button"
+            onClick={() => {
+              trackHomepageEvent('hero_avatar_cta_click')
+              const trimmed = prompt.trim()
+              window.location.href = trimmed
+                ? `/generate?avatar=1&prompt=${encodeURIComponent(trimmed)}`
+                : '/generate?avatar=1'
+            }}
+            className="w-full shrink-0 rounded-xl border border-purple-400/50 bg-purple-400/10 px-6 py-3 text-[14px] font-bold text-purple-200 transition hover:bg-purple-400/20"
+          >
+            🎭 NEW · AI Avatar — upload a photo and YOU speak the script →
+          </button>
         </form>
 
         {/* #374 — Task 2: kill blank-canvas paralysis. Clickable example chips +
