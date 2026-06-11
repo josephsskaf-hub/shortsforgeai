@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MobileNav from '@/components/MobileNav'
+import AvatarLaunchBanner from '@/components/AvatarLaunchBanner'
 import { usePathname } from 'next/navigation'
 
 interface DashboardShellProps {
@@ -94,6 +95,8 @@ export default function DashboardShell({
           isPro={isPro}
           onMenuToggle={() => setSidebarOpen((v) => !v)}
         />
+        {/* AI Avatar launch banner — dismissible, links to /generate?avatar=1 */}
+        <AvatarLaunchBanner />
         <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
         <MobileNav />
       </div>

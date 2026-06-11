@@ -129,11 +129,35 @@ RULES:
       return NextResponse.json({ error: 'Could not generate a summary, try again' }, { status: 502 })
     }
 
+    // Medida 1 (sprint de conversão) — acquisition loop: every FREE-plan user's
+    // copy-paste YouTube description carries a branded creation link, so each
+    // posted video markets the product (mirrors the #434 watermark rule:
+    // clean description = paid plan). Appended AFTER validation so the AI text
+    // itself stays untouched; never blocks the response.
+    let finalDescription = description
+    try {
+      const { data: planRow } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', user.id)
+        .single()
+      const PAID_PLANS = new Set([
+        'starter', 'starter_trial', 'basic', 'basic_trial',
+        'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
+      ])
+      const isFreePlan = !PAID_PLANS.has(((planRow?.plan ?? 'free') as string).toLowerCase())
+      if (isFreePlan) {
+        finalDescription = `${description}\n\n⚡ Made with ShortsForgeAI — create Shorts like this in 1 minute: https://shortsforgeai.com?utm_source=video_desc`
+      }
+    } catch {
+      // best-effort: on any failure ship the clean description
+    }
+
     // Cache back into the row (best effort — the response is already built,
     // a failed cache write must not fail the request). Only fill title if the
     // row doesn't have one yet, so we never overwrite pipeline-set titles.
     const updatePayload: Record<string, unknown> = {
-      youtube_description: description,
+      youtube_description: finalDescription,
       hashtags,
     }
     if (!video.title && title) updatePayload.title = title
@@ -148,7 +172,7 @@ RULES:
 
     return NextResponse.json({
       title: video.title ?? title,
-      description,
+      description: finalDescription,
       hashtags,
       cached: false,
     })
