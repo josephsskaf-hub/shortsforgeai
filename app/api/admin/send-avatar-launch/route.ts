@@ -1,14 +1,19 @@
-// AI Avatar LAUNCH blast (one-shot, admin-only) — announces the new premium
-// add-on to the whole user base via Resend (domain verified, hello@ sender).
+// AI Avatar LAUNCH blast (admin-only) — v2, idempotent + batched.
 //
-// SAFETY RAILS:
-//   • ADMIN_EMAILS-gated (same pattern as /api/admin/affiliates).
-//   • DRY RUN by default: GET returns the recipient count + a preview, sends
-//     NOTHING. Real send requires ?confirm=SEND.
-//   • Idempotence: marks profiles.avatar_launch_emailed=true per recipient
-//     when the column exists; otherwise falls back to a single-shot guard via
-//     the dry-run/confirm flow (run once, on purpose).
-//   • Batched sequentially with a small delay — kind to Resend rate limits.
+// WHY v2: the free Resend tier caps at 100 emails/day. v1 had no "already
+// emailed" tracking, so a re-run (or the next daily batch) would email the
+// same people again. v2 adds profiles.avatar_launch_emailed and only ever
+// targets unflagged recipients, marking the flag on a SUCCESSFUL send.
+//
+// MODES (all admin-gated, GET):
+//   (no params)            → DRY RUN: how many remain (flag=false), sample.
+//   ?backfill=1            → page Resend's sent-email log and mark every
+//                            recipient who ALREADY received this subject, so
+//                            the first paid batch never double-sends to the
+//                            ~100 that went out on the free tier.
+//   ?confirm=SEND&limit=N  → send to the next N unflagged recipients (default
+//                            80, safely under the free 100/day cap), pacing
+//                            each send, marking the flag on success.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
@@ -45,6 +50,67 @@ function emailHtml(): string {
 </div>`
 }
 
+function adminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  )
+}
+
+const isEmail = (e: string) =>
+  /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && !e.includes('example.com') && !e.startsWith('test@')
+
+/**
+ * Backfill: read Resend's recent sent emails and mark every recipient who
+ * already received THIS subject as avatar_launch_emailed=true. Resend's list
+ * endpoint returns recent emails; we page until we stop finding matches or hit
+ * a page budget. Best-effort — never throws.
+ */
+async function backfillFromResend(admin: ReturnType<typeof adminClient>): Promise<{ marked: number; scanned: number }> {
+  const key = process.env.RESEND_API_KEY as string
+  let scanned = 0
+  const matchedEmails = new Set<string>()
+  let url = 'https://api.resend.com/emails?limit=100'
+  for (let page = 0; page < 20; page++) {
+    let json: { data?: Array<{ to?: string[] | string; subject?: string }>; next?: string | null } | null = null
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } })
+      if (!res.ok) break
+      json = await res.json()
+    } catch {
+      break
+    }
+    const items = Array.isArray(json?.data) ? json!.data! : []
+    if (items.length === 0) break
+    for (const it of items) {
+      scanned++
+      if ((it.subject ?? '').includes('Your face. Your script')) {
+        const tos = Array.isArray(it.to) ? it.to : it.to ? [it.to] : []
+        for (const t of tos) {
+          const e = (t ?? '').trim().toLowerCase()
+          if (e) matchedEmails.add(e)
+        }
+      }
+    }
+    const next = json?.next
+    if (!next) break
+    url = next.startsWith('http') ? next : `https://api.resend.com/emails?after=${next}&limit=100`
+  }
+
+  let marked = 0
+  const list = Array.from(matchedEmails)
+  for (let i = 0; i < list.length; i += 50) {
+    const chunk = list.slice(i, i + 50)
+    const { error, count } = await admin
+      .from('profiles')
+      .update({ avatar_launch_emailed: true }, { count: 'exact' })
+      .in('email', chunk)
+    if (!error && typeof count === 'number') marked += count
+  }
+  return { marked, scanned }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = createClient()
@@ -60,74 +126,84 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Service credentials not configured' }, { status: 500 })
     }
 
-    const admin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    )
+    const admin = adminClient()
 
-    // Whole base, deduped, valid-looking emails only.
+    // ── Backfill mode ─────────────────────────────────────────────────────
+    if (req.nextUrl.searchParams.get('backfill') === '1') {
+      const { marked, scanned } = await backfillFromResend(admin)
+      return NextResponse.json({ mode: 'BACKFILL', marked_as_already_emailed: marked, resend_emails_scanned: scanned })
+    }
+
+    // Pull unflagged recipients only (idempotent target set).
     const { data: rows, error } = await admin
       .from('profiles')
-      .select('email')
+      .select('id, email')
       .not('email', 'is', null)
+      .eq('avatar_launch_emailed', false)
     if (error) {
       return NextResponse.json({ error: `profiles query failed: ${error.message}` }, { status: 500 })
     }
-    const recipients = Array.from(
-      new Set(
-        (rows ?? [])
-          .map((r) => ((r as { email?: string }).email ?? '').trim().toLowerCase())
-          .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))
-          // never blast test/example addresses
-          .filter((e) => !e.includes('example.com') && !e.startsWith('test@')),
-      ),
-    )
+    const pending = (rows ?? [])
+      .map((r) => ({ id: (r as { id: string }).id, email: ((r as { email?: string }).email ?? '').trim().toLowerCase() }))
+      .filter((r) => isEmail(r.email))
+    // de-dupe by email, keep first id
+    const seen = new Set<string>()
+    const recipients = pending.filter((r) => (seen.has(r.email) ? false : (seen.add(r.email), true)))
 
     const confirm = req.nextUrl.searchParams.get('confirm') === 'SEND'
+    const limitParam = Number(req.nextUrl.searchParams.get('limit'))
+    const batchSize = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 1000) : 80
+
     if (!confirm) {
       return NextResponse.json({
         mode: 'DRY_RUN',
-        recipients: recipients.length,
-        sample: recipients.slice(0, 5),
+        remaining_unemailed: recipients.length,
+        next_batch_size: Math.min(batchSize, recipients.length),
+        sample: recipients.slice(0, 5).map((r) => r.email),
         subject: SUBJECT,
-        hint: 'Append &confirm=SEND to actually send.',
+        hint: 'Append &confirm=SEND (optionally &limit=N) to send the next batch. Use ?backfill=1 first to mark already-sent recipients.',
       })
     }
 
+    const batch = recipients.slice(0, batchSize)
     let sent = 0
     let failed = 0
-    for (const to of recipients) {
+    for (const r of batch) {
       try {
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             from: FROM_EMAIL,
-            to: [to],
+            to: [r.email],
             reply_to: 'hello@shortsforgeai.com',
             subject: SUBJECT,
             html: emailHtml(),
           }),
         })
-        if (res.ok) sent += 1
-        else {
+        if (res.ok) {
+          sent += 1
+          // Mark on success only — a failed send stays pending for the next batch.
+          await admin.from('profiles').update({ avatar_launch_emailed: true }).eq('id', r.id)
+        } else {
           failed += 1
-          console.error(`[avatar-launch] resend failed for ${to}:`, await res.text())
+          console.error(`[avatar-launch] resend failed for ${r.email}:`, await res.text())
         }
       } catch (e) {
         failed += 1
-        console.error(`[avatar-launch] send threw for ${to}:`, e instanceof Error ? e.message : String(e))
+        console.error(`[avatar-launch] send threw for ${r.email}:`, e instanceof Error ? e.message : String(e))
       }
-      // gentle pacing for Resend rate limits
-      await new Promise((r) => setTimeout(r, 600))
+      await new Promise((res) => setTimeout(res, 700))
     }
 
-    console.log(`[avatar-launch] blast complete: sent=${sent} failed=${failed} of ${recipients.length}`)
-    return NextResponse.json({ mode: 'SENT', sent, failed, total: recipients.length })
+    const { count: remainingAfter } = await admin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('avatar_launch_emailed', false)
+      .not('email', 'is', null)
+
+    console.log(`[avatar-launch] batch done: sent=${sent} failed=${failed} remaining=${remainingAfter ?? '?'}`)
+    return NextResponse.json({ mode: 'SENT', sent, failed, batch_size: batch.length, remaining_unemailed: remainingAfter ?? null })
   } catch (err) {
     console.error('[avatar-launch] unexpected:', err)
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
