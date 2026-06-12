@@ -217,6 +217,7 @@ async function searchAndFilter(
   sceneNeedsPeople: boolean,
   category: string | undefined,
   label: string,
+  exclude?: Set<string>,
 ): Promise<string | null> {
   const hits = await searchPixabay(query, 7, category)
 
@@ -236,6 +237,12 @@ async function searchAndFilter(
       continue
     }
     const url = pickBestUrl(video)
+    // Dedup (12/06): never hand back a clip another scene already used — this
+    // is what made the same Dubai aerial carry 4+ scenes of one video.
+    if (url && exclude?.has(url)) {
+      console.log(`[pixabay] ${label} rejected id=${video.id} reason=already_used_in_video`)
+      continue
+    }
     if (url) {
       console.log(
         `[pixabay] ${label} ACCEPTED id=${video.id} tags="${video.tags.slice(0, 60)}" url="${url.slice(0, 60)}"`,
@@ -256,6 +263,7 @@ async function searchAndFilter(
 export async function getPixabayVideoForExactQuery(
   query: string,
   sceneNeedsPeople = false,
+  exclude?: Set<string>,
 ): Promise<string | null> {
   const q = (query ?? '').trim()
   if (!q) return null
@@ -263,19 +271,27 @@ export async function getPixabayVideoForExactQuery(
   const category = inferCategory(q)
 
   // 1) Exact query with inferred category
-  const direct = await searchAndFilter(q, sceneNeedsPeople, category, 'exact')
+  const direct = await searchAndFilter(q, sceneNeedsPeople, category, 'exact', exclude)
   if (direct) return direct
 
   // 2) First 3 tokens (broadened) — same semantic topic
   const broad = q.split(/\s+/).slice(0, 3).join(' ')
   if (broad.length > 0 && broad !== q) {
-    const broadUrl = await searchAndFilter(broad, sceneNeedsPeople, category, 'broad')
+    const broadUrl = await searchAndFilter(broad, sceneNeedsPeople, category, 'broad', exclude)
     if (broadUrl) return broadUrl
+  }
+
+  // 2b) First 2 tokens — last semantic broadening before giving up (helps
+  // 4-word hand-picked queries like "man reading book penthouse" → "man reading").
+  const broad2 = q.split(/\s+/).slice(0, 2).join(' ')
+  if (broad2.length > 0 && broad2 !== broad && broad2 !== q) {
+    const broad2Url = await searchAndFilter(broad2, sceneNeedsPeople, category, 'broad2', exclude)
+    if (broad2Url) return broad2Url
   }
 
   // 3) Remove category constraint — may have been over-narrowing
   if (category) {
-    const noCat = await searchAndFilter(q, sceneNeedsPeople, undefined, 'no_cat')
+    const noCat = await searchAndFilter(q, sceneNeedsPeople, undefined, 'no_cat', exclude)
     if (noCat) return noCat
   }
 
@@ -305,10 +321,11 @@ const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
     // deep inventory of Dubai/skyline/skyscraper aerials, great for wealth-mindset vibe.
     queries: ['Dubai skyline aerial', 'luxury city skyline night', 'penthouse city view night', 'luxury mansion', 'supercar'] },
   { test: /\b(wealth|wealthy|rich|fortune|billionaire|millionaire|affluent)/i,
-    // #450 — money-FIRST for a money channel: dollar bills / cash / gold reliably
-    // exist on Pixabay (luxury mansion/jet often miss → generic fallback like the
-    // candle/lucky-cat). Keep one luxury query as a tail option.
-    queries: ['dollar bills cash', 'counting money', 'gold bars stack', 'Dubai skyline aerial', 'luxury city skyline night', 'luxury mansion'] },
+    // (12/06) LUXURY-first, aligned with the wealth aesthetic pack: Joseph's
+    // audience-tested verdict is that coins/cash closeups read as cheap clichés
+    // in billionaire content ("nao teve jatinho... moeda ficou ruim"). Cash is
+    // kept only as the last-resort tail.
+    queries: ['private jet', 'Dubai skyline aerial', 'luxury city skyline night', 'luxury mansion', 'penthouse city view night', 'dollar bills cash'] },
   { test: /\b(debt|loan|loans|borrow|borrowing|mortgage|credit|lending|leverage)/i,
     queries: ['bank building', 'bank vault', 'counting money'] },
   { test: /\b(save|saving|savings|budget|frugal)/i,
@@ -329,10 +346,10 @@ const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
   { test: /\b(student|broke|poor|cheap|ramen)/i,
     queries: ['instant noodles', 'small apartment', 'desk lamp night'] },
   { test: /\b(success|discipline|habit|mindset|grind|focus|productiv|control|limit|spend|overspend)/i,
-    // #450 — on a money channel these abstract beats ("discipline", "control your
-    // spending") should still show MONEY, not a random skyline/notebook. Money
-    // first, abstract as backup.
-    queries: ['stacking coins money', 'cash dollar bills', 'wallet money', 'city skyline sunrise'] },
+    // (12/06) Aligned with the aesthetic packs: aspirational visuals first
+    // (skyline, businessman, watch), coin-stacking demoted to last resort —
+    // it was landing as the cliché shot in billionaire-mindset videos.
+    queries: ['city skyline sunrise', 'businessman walking city', 'luxury watch', 'stacking coins money'] },
   { test: /\b(wall street|stock exchange|nasdaq|nyse|market crash)/i,
     queries: ['wall street', 'stock exchange', 'financial district'] },
 ]
@@ -356,6 +373,15 @@ export async function getPixabayVideoForQueries(
   queries: string[],
   sceneNeedsPeople = false,
   hint?: string,
+  opts?: {
+    /** true → user hand-picked these queries ([Pexels: ...] verbatim mode).
+     *  NEVER concretize: the concept map was prepending its own queries
+     *  ("Dubai skyline aerial", "dollar bills cash") BEFORE the user's, so
+     *  every hand-picked scene rendered the same map clip (12/06 gift video). */
+    exact?: boolean
+    /** URLs already used by other scenes of this video — skip them. */
+    exclude?: Set<string>
+  },
 ): Promise<string | null> {
   const rawCleaned = (queries ?? [])
     .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
@@ -363,7 +389,8 @@ export async function getPixabayVideoForQueries(
 
   // Push #437 — prepend concrete cinematic queries for any abstract concept
   // detected in the scene, so the search reaches a premium on-topic clip first.
-  const cleaned = concretizeQueries(rawCleaned, hint)
+  // (12/06) Skipped entirely in exact mode — the user's query is sovereign.
+  const cleaned = opts?.exact ? rawCleaned : concretizeQueries(rawCleaned, hint)
 
   if (cleaned.length === 0) return null
 
@@ -372,7 +399,7 @@ export async function getPixabayVideoForQueries(
 
   for (let i = 0; i < cleaned.length; i++) {
     const q = cleaned[i]
-    const url = await getPixabayVideoForExactQuery(q, sceneNeedsPeople)
+    const url = await getPixabayVideoForExactQuery(q, sceneNeedsPeople, opts?.exclude)
     if (url) {
       console.log(
         `[pixabay-multi] HIT query[${i + 1}/${cleaned.length}]="${q}"` +

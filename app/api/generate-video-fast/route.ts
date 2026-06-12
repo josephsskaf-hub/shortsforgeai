@@ -438,12 +438,17 @@ export async function POST(req: NextRequest) {
             pixQueries,
             sceneNeedsPeople,
             (scene.voiceover ?? '').slice(0, 80),
+            // (12/06) exact: user-authored [Pexels: ...] queries are sovereign —
+            // no concept-map prepending. exclude: never reuse a clip another
+            // scene already took (the same-Dubai-aerial-4x bug).
+            { exact: verbatim, exclude: usedPexelsUrls },
           )
           if (pixUrl) {
             console.log(
               `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 60)}" source=PIXABAY score=${scoreLabel} url=${pixUrl.slice(0, 60)}`,
             )
             clipUrls.push(pixUrl)
+            usedPexelsUrls.add(pixUrl) // (12/06) cross-scene dedup
             clipSources.push('pixabay') // #355
             continue
           }
