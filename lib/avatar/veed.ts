@@ -21,12 +21,20 @@ const VEED_FABRIC_MODEL = 'veed/fabric-1.0'
 // (1080p caps at 30s, so the 45-60s product lock forces 720p here).
 const OMNIHUMAN_MODEL = 'fal-ai/bytedance/omnihuman/v1.5'
 
-/** Which model animates the face photo. 'fabric' = talking head (default);
- *  'omnihuman' = full-figure body & gestures ("Pro" tier in the UI). */
-export type AvatarEngine = 'fabric' | 'omnihuman'
+// Avatar Studio (12/06) — third engine: video-source lip-sync. The user
+// uploads a short VIDEO of themselves (instead of a photo) and sync.so's
+// lipsync model re-animates the mouth to our narration mp3. Same fal queue.
+const LIPSYNC_MODEL = 'fal-ai/sync-lipsync'
+
+/** Which model animates the avatar. 'fabric' = talking head from a photo
+ *  (default); 'omnihuman' = full-figure body & gestures from a photo ("Pro");
+ *  'lipsync' = re-voice a real VIDEO of the person (Avatar Studio). */
+export type AvatarEngine = 'fabric' | 'omnihuman' | 'lipsync'
 
 function modelFor(engine: AvatarEngine | undefined): string {
-  return engine === 'omnihuman' ? OMNIHUMAN_MODEL : VEED_FABRIC_MODEL
+  if (engine === 'omnihuman') return OMNIHUMAN_MODEL
+  if (engine === 'lipsync') return LIPSYNC_MODEL
+  return VEED_FABRIC_MODEL
 }
 
 export interface AvatarVideoResult {
@@ -117,18 +125,26 @@ function configureFal(): boolean {
  * caller then surfaces the error WITHOUT charging anything.
  */
 export async function submitAvatarJob(args: {
-  imageUrl: string
+  /** Face photo URL — fabric/omnihuman engines. */
+  imageUrl?: string
+  /** Source VIDEO URL — lipsync engine (Avatar Studio video mode). */
+  videoUrl?: string
   audioUrl: string
   resolution?: '480p' | '720p'
   engine?: AvatarEngine
 }): Promise<string | null> {
   if (!configureFal()) return null
   const model = modelFor(args.engine)
-  const input: FabricInput = {
-    image_url: args.imageUrl,
-    audio_url: args.audioUrl,
-    resolution: args.resolution ?? '720p',
-  }
+  // lipsync re-voices a video (video_url + audio_url); the photo engines
+  // animate a still (image_url + audio_url + resolution).
+  const input: Record<string, unknown> =
+    args.engine === 'lipsync'
+      ? { video_url: args.videoUrl, audio_url: args.audioUrl }
+      : {
+          image_url: args.imageUrl,
+          audio_url: args.audioUrl,
+          resolution: args.resolution ?? '720p',
+        }
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const { request_id } = await fal.queue.submit(model, { input })

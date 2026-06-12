@@ -88,7 +88,7 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         {/* Face-app (12/06) — AI Avatar entry in every creation environment.
             Deep-links to /generate with the avatar panel auto-open. */}
         <Link
-          href="/generate?avatar=1"
+          href="/avatar"
           className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:scale-[1.03]"
           style={{
             background: 'rgba(16,185,129,0.1)',

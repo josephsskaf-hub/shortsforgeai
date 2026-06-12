@@ -133,6 +133,10 @@ export async function POST(req: NextRequest) {
       // Face-app wave 1 — 'hook' = face speaks only the first ~8s, b-roll
       // carries the rest (same 1 credit, ~85% lower VEED cost). 'full' = legacy.
       avatarMode?: string
+      // Avatar Studio (12/06) — source VIDEO mode: a short clip of the person
+      // (our storage URL) that the lipsync engine re-voices with the narration.
+      // When present it takes precedence over avatarImageUrl.
+      avatarSourceVideoUrl?: string
     }
     try {
       body = await req.json()
@@ -146,15 +150,24 @@ export async function POST(req: NextRequest) {
     }
 
     const dryRun = body.dryRun === true
-    const engine: AvatarEngine = body.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
     const hookMode = body.avatarMode === 'hook'
 
-    // The face photo must be OUR storage URL (uploaded via /api/avatar/upload)
-    // — never an arbitrary external URL (no SSRF / hot-linking surface).
-    // Dry runs don't need a photo (voice-only).
-    const avatarImageUrl = (body.avatarImageUrl ?? '').trim()
+    // Source must be OUR storage URL (uploaded via /api/avatar/upload) —
+    // never an arbitrary external URL (no SSRF / hot-linking surface).
+    // Dry runs don't need a source (voice-only).
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (!dryRun && !avatarImageUrl.startsWith(`${supabaseUrl}/storage/v1/object/public/avatars/`)) {
+    const storagePrefix = `${supabaseUrl}/storage/v1/object/public/avatars/`
+    const avatarImageUrl = (body.avatarImageUrl ?? '').trim()
+    // Avatar Studio — video source takes precedence and forces the lipsync engine.
+    const avatarSourceVideoUrl = (body.avatarSourceVideoUrl ?? '').trim()
+    const videoMode = avatarSourceVideoUrl.length > 0
+    const engine: AvatarEngine = videoMode
+      ? 'lipsync'
+      : body.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
+    if (!dryRun && videoMode && !avatarSourceVideoUrl.startsWith(storagePrefix)) {
+      return NextResponse.json({ error: 'Please upload your video first.' }, { status: 400 })
+    }
+    if (!dryRun && !videoMode && !avatarImageUrl.startsWith(storagePrefix)) {
       return NextResponse.json({ error: 'Please upload your photo first.' }, { status: 400 })
     }
 
@@ -288,7 +301,8 @@ export async function POST(req: NextRequest) {
       }
     }
     const requestId = await submitAvatarJob({
-      imageUrl: avatarImageUrl,
+      imageUrl: videoMode ? undefined : avatarImageUrl,
+      videoUrl: videoMode ? avatarSourceVideoUrl : undefined,
       audioUrl: avatarAudioUrl,
       resolution: '720p',
       engine,

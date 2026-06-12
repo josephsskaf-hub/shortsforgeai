@@ -19,19 +19,27 @@ function getAdminClient(): SupabaseClient {
   return cachedAdminClient
 }
 
-/** Idempotent bucket bootstrap — "already exists" responses are benign. */
+/** Idempotent bucket bootstrap — "already exists" responses are benign.
+ *  Avatar Studio (12/06): the bucket now also accepts short source VIDEOS
+ *  (mp4/quicktime, ≤60MB) for the lipsync engine, so existing buckets are
+ *  updated in place (updateBucket is idempotent too). */
+const AVATARS_BUCKET_CONFIG = {
+  public: true,
+  fileSizeLimit: 60 * 1024 * 1024, // 60 MB — face photos + short source videos
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'],
+}
+
 async function ensureAvatarsBucket(admin: SupabaseClient): Promise<void> {
-  const { error } = await admin.storage.createBucket(AVATARS_BUCKET, {
-    public: true,
-    fileSizeLimit: 8 * 1024 * 1024, // 8 MB — plenty for a face photo
-    allowedMimeTypes: ['image/jpeg', 'image/png'],
-  })
+  const { error } = await admin.storage.createBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
   if (!error) {
     console.log(`[avatar/storage] created storage bucket "${AVATARS_BUCKET}"`)
     return
   }
   const msg = (error.message ?? '').toLowerCase()
   if (msg.includes('already exists') || msg.includes('duplicate') || msg.includes('resource already')) {
+    // Bucket predates video support — bring its limits up to date.
+    const { error: updErr } = await admin.storage.updateBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
+    if (updErr) console.warn('[avatar/storage] updateBucket failed (non-blocking):', updErr.message)
     return
   }
   console.error('[avatar/storage] ensureAvatarsBucket error:', JSON.stringify(error))
@@ -45,13 +53,18 @@ async function ensureAvatarsBucket(admin: SupabaseClient): Promise<void> {
 export async function uploadAvatarPhoto(
   userId: string,
   buffer: Buffer,
-  contentType: 'image/jpeg' | 'image/png',
+  contentType: 'image/jpeg' | 'image/png' | 'video/mp4' | 'video/quicktime',
 ): Promise<string> {
   const admin = getAdminClient()
   await ensureAvatarsBucket(admin)
 
-  const ext = contentType === 'image/png' ? 'png' : 'jpg'
-  const filePath = `${userId}/face-${Date.now()}.${ext}`
+  const ext =
+    contentType === 'image/png' ? 'png'
+    : contentType === 'video/mp4' ? 'mp4'
+    : contentType === 'video/quicktime' ? 'mov'
+    : 'jpg'
+  const prefix = contentType.startsWith('video/') ? 'source-video' : 'face'
+  const filePath = `${userId}/${prefix}-${Date.now()}.${ext}`
   const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
 
   const { error: uploadError } = await admin.storage

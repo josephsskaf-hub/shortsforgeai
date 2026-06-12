@@ -607,7 +607,7 @@ export default function CreateClient() {
         </p>
         {/* Face-app (12/06) — AI Avatar entry in this creation environment too. */}
         <a
-          href="/generate?avatar=1"
+          href="/avatar"
           className="mt-3 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition-all hover:scale-[1.02]"
           style={{
             background: 'rgba(16,185,129,0.1)',

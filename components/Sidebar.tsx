@@ -62,6 +62,13 @@ const NAV_ICONS: Record<string, JSX.Element> = {
       <path d="M2.5 9h19M9 9l3 12M15 9l-3 12" />
     </svg>
   ),
+  avatar: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="10" cy="9" r="3.4" />
+      <path d="M3.5 19.5c1.2-2.9 3.7-4.5 6.5-4.5s5.3 1.6 6.5 4.5" />
+      <path d="M17.5 5.5c1 1 1.6 2.3 1.6 3.7M20 3.5c1.6 1.6 2.5 3.6 2.5 5.7" />
+    </svg>
+  ),
 }
 
 function NavItem({
@@ -420,6 +427,9 @@ export default function Sidebar({
               emoji tiles. Badge cleanup: every NEW removed per Joseph — the
               ONLY New badge in the product now lives on the AI Avatar entry. */}
           <NavItem href="/generate" icon={NAV_ICONS.generate} label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Avatar Studio (12/06) — the dedicated, focused /avatar page. The
+              one and only NEW badge in the product. */}
+          <NavItem href="/avatar" icon={NAV_ICONS.avatar} label="AI Avatar" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
           {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
               badge. The thumbnail click-through rate is the single biggest
               lever for Shorts performance, so we surface this tool right

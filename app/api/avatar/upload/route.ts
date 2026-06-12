@@ -18,6 +18,9 @@ export const dynamic = 'force-dynamic'
 
 const MAX_BYTES = 8 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png'])
+// Avatar Studio (12/06) — source VIDEO for the lipsync engine.
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024
+const ALLOWED_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime'])
 
 /** Best-effort face check. Returns null when the check itself failed (fail-open). */
 async function faceVisible(buffer: Buffer, mime: string): Promise<boolean | null> {
@@ -81,19 +84,31 @@ export async function POST(req: NextRequest) {
 
     const file = form.get('file')
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'A JPG or PNG photo is required.' }, { status: 400 })
+      return NextResponse.json({ error: 'A JPG/PNG photo or MP4 video is required.' }, { status: 400 })
     }
     const mime = (file.type || '').toLowerCase()
-    if (!ALLOWED_TYPES.has(mime)) {
-      return NextResponse.json({ error: 'Only JPG and PNG photos are supported.' }, { status: 400 })
+    const isVideo = ALLOWED_VIDEO_TYPES.has(mime)
+    if (!ALLOWED_TYPES.has(mime) && !isVideo) {
+      return NextResponse.json({ error: 'Only JPG/PNG photos and MP4/MOV videos are supported.' }, { status: 400 })
     }
-    if (file.size > MAX_BYTES) {
+    if (!isVideo && file.size > MAX_BYTES) {
       return NextResponse.json({ error: 'Photo is too large — max 8 MB.' }, { status: 400 })
+    }
+    if (isVideo && file.size > MAX_VIDEO_BYTES) {
+      return NextResponse.json({ error: 'Video is too large — max 40 MB (~30s at 1080p).' }, { status: 400 })
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
     if (buffer.length === 0) {
       return NextResponse.json({ error: 'The uploaded file is empty.' }, { status: 400 })
+    }
+
+    // Avatar Studio — source VIDEO path: no vision face-check (the lipsync
+    // engine validates the face downstream), no library row (the library is
+    // the face-photo picker). Store and return.
+    if (isVideo) {
+      const videoUrl = await uploadAvatarPhoto(user.id, buffer, mime as 'video/mp4' | 'video/quicktime')
+      return NextResponse.json({ url: videoUrl, kind: 'video' })
     }
 
     // Face validation — reject only on a confident "no face".

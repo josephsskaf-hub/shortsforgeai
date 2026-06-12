@@ -72,6 +72,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
   const [fullName, setFullName] = useState('')
   const [credits, setCredits] = useState<number | null>(null)
+  // Settings v3.1 — separate AI Avatar credit balance (the add-on packs).
+  const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
@@ -119,9 +121,12 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
     fetch('/api/credits', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        if (cancelled) return
+        setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        // Settings v3.1 — same endpoint already carries the avatar balance.
+        setAvatarCredits(typeof data.avatarCredits === 'number' ? data.avatarCredits : 0)
       })
-      .catch(() => { if (!cancelled) setCredits(0) })
+      .catch(() => { if (!cancelled) { setCredits(0); setAvatarCredits(null) } })
     return () => { cancelled = true }
   }, [])
 
@@ -374,7 +379,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </h2>
               <div className="flex flex-col gap-1 mb-5">
                 <ReadOnlyRow label="Current plan" value={planLabel.replace(/^[^ ]+ /, '')} />
-                <ReadOnlyRow label="Credits remaining" value={credits === null ? '—' : String(credits)} />
+                <ReadOnlyRow label="Video credits" value={credits === null ? '—' : String(credits)} />
+                <ReadOnlyRow label="Avatar credits" value={avatarCredits === null ? '—' : String(avatarCredits)} />
                 <ReadOnlyRow label="Member since" value={formatDate(createdAt)} />
               </div>
               {tier !== 'free' ? (
@@ -422,8 +428,21 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <h2 className="font-bold mb-4" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
                 Add-ons
               </h2>
+              {/* Settings v3.1 — avatar credit balance, visible at a glance. */}
+              <div
+                className="flex items-center justify-between rounded-xl px-4 py-3 mb-3"
+                style={{ background: 'rgba(0,0,0,.25)', border: '1px solid var(--border)' }}
+              >
+                <span className="text-sm font-semibold" style={{ color: 'var(--text2)' }}>🎭 Avatar credits</span>
+                <span
+                  className="text-lg font-black"
+                  style={{ color: (avatarCredits ?? 0) > 0 ? '#34D399' : 'var(--muted)' }}
+                >
+                  {avatarCredits === null ? '—' : avatarCredits}
+                </span>
+              </div>
               <Link
-                href="/generate?avatar=1"
+                href="/avatar"
                 className="acc-row-btn flex items-center justify-between w-full rounded-xl px-4 py-3 text-sm font-bold"
                 style={{
                   background: 'rgba(16,185,129,.07)',
@@ -432,7 +451,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                   textDecoration: 'none',
                 }}
               >
-                <span>🎭 AI Avatar credits — from $11.90/video</span>
+                <span>{(avatarCredits ?? 0) > 0 ? 'Buy more avatar credits — from $11.90/video' : 'Get AI Avatar credits — from $11.90/video'}</span>
                 <span aria-hidden>→</span>
               </Link>
             </div>
@@ -514,6 +533,15 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                     <div className="font-black text-lg" style={{ color: 'var(--text2)', lineHeight: 1 }}>{planLimit}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
                       {tier === 'free' ? 'free plan total' : 'monthly included'}
+                    </div>
+                  </div>
+                  {/* Settings v3.1 — avatar credits, the separate add-on balance. */}
+                  <div>
+                    <div className="font-black text-lg" style={{ color: (avatarCredits ?? 0) > 0 ? '#34D399' : 'var(--text2)', lineHeight: 1 }}>
+                      {avatarCredits === null ? '—' : avatarCredits}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
+                      🎭 avatar credits · never expire
                     </div>
                   </div>
                 </div>

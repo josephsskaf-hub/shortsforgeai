@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     // Face-app wave 1 — the fal queue is per-model, so the poll must use the
     // same engine the job was submitted with ('fabric' default | 'omnihuman').
     const engineParam = (req.nextUrl.searchParams.get('engine') ?? '').trim()
-    const engine: AvatarEngine = engineParam === 'omnihuman' ? 'omnihuman' : 'fabric'
+    const engine: AvatarEngine =
+      engineParam === 'omnihuman' ? 'omnihuman' : engineParam === 'lipsync' ? 'lipsync' : 'fabric'
 
     const state = await checkAvatarJob(requestId, engine)
 
