@@ -25,17 +25,37 @@ interface AvatarUploadProps {
   /** Bug 12/06 — increment to force the panel open (used by the Generate
    *  guard to bring the user back to the unfinished avatar step). */
   openSignal?: number
+  /** Face-app wave 1 — last approved face from the profile (avatar library).
+   *  Enables the one-click "Use my saved face" flow (consent was already
+   *  confirmed when this photo was first uploaded). */
+  savedFaceUrl?: string | null
+  /** Face-app wave 1 — avatar engine: 'fabric' (talking head, default) or
+   *  'omnihuman' (full-figure body & gestures, Pro tier). */
+  engine?: 'fabric' | 'omnihuman'
+  onEngineChange?: (engine: 'fabric' | 'omnihuman') => void
+  /** Face-app wave 1 — Hook Avatar: true = face speaks only the first ~8s,
+   *  b-roll carries the rest (recommended/default). false = full-video face. */
+  hookMode?: boolean
+  onHookModeChange?: (hook: boolean) => void
+  /** Face-app wave 1 — FREE voice preview (dryRun TTS) before spending a
+   *  credit. Parent owns the fetch; this component renders button + player. */
+  onPreviewVoice?: () => void
+  voicePreviewLoading?: boolean
+  voicePreviewUrl?: string | null
+  voicePreviewError?: string | null
 }
 
 const MAX_BYTES = 8 * 1024 * 1024
 
-export default function AvatarUpload({ value, onChange, disabled, credits = null, initialOpen = false, onPendingChange, openSignal = 0 }: AvatarUploadProps) {
+export default function AvatarUpload({ value, onChange, disabled, credits = null, initialOpen = false, onPendingChange, openSignal = 0, savedFaceUrl = null, engine = 'fabric', onEngineChange, hookMode = true, onHookModeChange, onPreviewVoice, voicePreviewLoading = false, voicePreviewUrl = null, voicePreviewError = null }: AvatarUploadProps) {
   const [open, setOpen] = useState(initialOpen)
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [rights, setRights] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Face-app wave 1 — non-blocking photo-quality warning (client pre-check).
+  const [warning, setWarning] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [howOpen, setHowOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -57,6 +77,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
 
   function pickFile(f: File | null) {
     setError(null)
+    setWarning(null)
     if (f) {
       if (!/^image\/(jpe?g|png)$/i.test(f.type)) {
         setError('Please use a JPG or PNG photo.')
@@ -69,7 +90,50 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
     }
     setFile(f)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(f ? URL.createObjectURL(f) : null)
+    const nextUrl = f ? URL.createObjectURL(f) : null
+    setPreviewUrl(nextUrl)
+    if (f && nextUrl) void precheckPhoto(nextUrl)
+  }
+
+  // Face-app wave 1 — client-side pre-check. Catches the obvious problems
+  // (tiny photo, no detectable front-facing face) BEFORE the upload + server
+  // vision check, with instant feedback. Non-blocking: warnings only — the
+  // server check stays the authority, and FaceDetector isn't in every browser.
+  async function precheckPhoto(objectUrl: string) {
+    try {
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('img load failed'))
+        img.src = objectUrl
+      })
+      if (img.naturalWidth < 400 || img.naturalHeight < 400) {
+        setWarning('This photo is quite small — a sharper photo (at least 400×400) gives a much better avatar.')
+        return
+      }
+      // FaceDetector is Chrome/Edge-only; skip silently elsewhere.
+      const FD = (window as unknown as { FaceDetector?: new (opts?: { maxDetectedFaces?: number }) => { detect: (i: HTMLImageElement) => Promise<unknown[]> } }).FaceDetector
+      if (FD) {
+        const faces = await new FD({ maxDetectedFaces: 2 }).detect(img)
+        if (faces.length === 0) {
+          setWarning('We couldn’t spot a clear face in this photo. A sharp, front-facing photo (looking at the camera) works best — this one may be rejected.')
+        } else if (faces.length > 1) {
+          setWarning('Looks like there’s more than one face here. Use a photo with exactly one person for the best result.')
+        }
+      }
+    } catch {
+      // Pre-check is best-effort only — never block on it.
+    }
+  }
+
+  // Face-app wave 1 — one-click reuse of the profile's approved face. Consent
+  // was confirmed when this photo was originally uploaded and face-checked.
+  function useSavedFace() {
+    if (!savedFaceUrl || disabled) return
+    setError(null)
+    setWarning(null)
+    onChange(savedFaceUrl)
+    setOpen(false)
   }
 
   // Paste-an-image support while the panel is open.
@@ -146,6 +210,103 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
     </span>
   )
 
+  // Face-app wave 1 — engine selector, shared by the attached chip and the
+  // expanded panel. 'fabric' = talking head; 'omnihuman' = body & gestures.
+  const enginePicker = onEngineChange ? (
+    <div className="flex flex-wrap gap-2 mt-2">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onEngineChange('fabric')}
+        className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{
+          background: engine === 'fabric' ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.05)',
+          border: engine === 'fabric' ? '1.5px solid rgba(168,85,247,0.7)' : '1px solid var(--border)',
+          color: engine === 'fabric' ? '#e9d5ff' : 'var(--muted)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        🎙️ Standard — talking head
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onEngineChange('omnihuman')}
+        className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{
+          background: engine === 'omnihuman' ? 'rgba(236,72,153,0.22)' : 'rgba(255,255,255,0.05)',
+          border: engine === 'omnihuman' ? '1.5px solid rgba(236,72,153,0.7)' : '1px solid var(--border)',
+          color: engine === 'omnihuman' ? '#fbcfe8' : 'var(--muted)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        🕺 Pro — body &amp; gestures <span className="font-black" style={{ fontSize: 9, opacity: 0.9 }}>BETA</span>
+      </button>
+    </div>
+  ) : null
+
+  // Face-app wave 1 — Hook vs Full coverage picker. Hook (default) = the face
+  // opens the video for ~8s, then b-roll carries the story.
+  const modePicker = onHookModeChange ? (
+    <div className="flex flex-wrap gap-2 mt-2">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onHookModeChange(true)}
+        className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{
+          background: hookMode ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.05)',
+          border: hookMode ? '1.5px solid rgba(34,197,94,0.6)' : '1px solid var(--border)',
+          color: hookMode ? '#bbf7d0' : 'var(--muted)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        ⚡ Hook intro — face opens, b-roll tells the story <span className="font-black" style={{ fontSize: 9, opacity: 0.9 }}>RECOMMENDED</span>
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onHookModeChange(false)}
+        className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{
+          background: !hookMode ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.05)',
+          border: !hookMode ? '1.5px solid rgba(168,85,247,0.7)' : '1px solid var(--border)',
+          color: !hookMode ? '#e9d5ff' : 'var(--muted)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        🎬 Full video — face on screen the whole time
+      </button>
+    </div>
+  ) : null
+
+  // Face-app wave 1 — free voice preview button + inline player. Lives in the
+  // attached chip so the user hears the narration BEFORE spending a credit.
+  const voicePreview = onPreviewVoice ? (
+    <div className="mt-2">
+      <button
+        type="button"
+        disabled={disabled || voicePreviewLoading}
+        onClick={onPreviewVoice}
+        className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{
+          background: 'rgba(99,102,241,0.18)',
+          border: '1px solid rgba(99,102,241,0.5)',
+          color: '#c7d2fe',
+          cursor: disabled || voicePreviewLoading ? 'not-allowed' : 'pointer',
+        }}
+      >
+        {voicePreviewLoading ? '🎙️ Generating voice…' : '🔊 Preview the voice — free'}
+      </button>
+      {voicePreviewUrl && (
+        <audio controls autoPlay src={voicePreviewUrl} className="mt-2 w-full" style={{ maxWidth: 420, height: 32 }} />
+      )}
+      {voicePreviewError && (
+        <div className="text-[11px] mt-1.5 font-semibold" style={{ color: '#fca5a5' }}>{voicePreviewError}</div>
+      )}
+    </div>
+  ) : null
+
   // ── Uploaded state: compact confirmation chip ────────────────────────────
   if (value) {
     return (
@@ -163,9 +324,16 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         <div className="flex-1">
           <div className="text-sm font-bold" style={{ color: '#d8b4fe' }}>🎭 AI Avatar ready</div>
           <div className="text-xs" style={{ color: 'var(--muted2)' }}>
-            Your video will show this person speaking the script.
+            {hookMode
+              ? 'This person opens the video speaking the hook (~8s); b-roll covers the rest.'
+              : engine === 'omnihuman'
+                ? 'Your video will show this person speaking — with body movement and gestures.'
+                : 'Your video will show this person speaking the script.'}
           </div>
           <div className="mt-1">{creditPill}</div>
+          {modePicker}
+          {enginePicker}
+          {voicePreview}
         </div>
         <button
           type="button"
@@ -256,6 +424,25 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
       {/* Mobile: opens the front camera directly */}
       <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
 
+      {/* Face-app wave 1 — avatar library: one-click reuse of the approved face */}
+      {savedFaceUrl && !file && (
+        <button
+          type="button"
+          onClick={useSavedFace}
+          disabled={disabled}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 mb-3 text-left transition-all"
+          style={{ background: 'rgba(168,85,247,0.1)', border: '1.5px solid rgba(168,85,247,0.5)', cursor: disabled ? 'not-allowed' : 'pointer' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={savedFaceUrl} alt="Your saved face" className="h-10 w-10 rounded-full object-cover" style={{ border: '2px solid rgba(168,85,247,0.6)' }} />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold" style={{ color: '#e9d5ff' }}>⚡ Use my saved face</div>
+            <div className="text-[11px]" style={{ color: 'var(--muted2)' }}>Your last approved photo — one click, no re-upload.</div>
+          </div>
+          <span className="text-sm font-bold" style={{ color: '#d8b4fe' }}>→</span>
+        </button>
+      )}
+
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
@@ -300,6 +487,23 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
           I confirm I have the right to use this person&apos;s image and consent to it being animated by AI for this video.
         </span>
       </label>
+
+      {/* Face-app wave 1 — engine choice lives with the upload step */}
+      {enginePicker && (
+        <div className="mt-4">
+          <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>Avatar engine</div>
+          {enginePicker}
+        </div>
+      )}
+
+      {warning && !error && (
+        <div
+          className="text-xs mt-3 font-semibold rounded-lg px-3 py-2"
+          style={{ color: '#fde68a', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.4)' }}
+        >
+          💡 {warning}
+        </div>
+      )}
 
       {error && (
         <div

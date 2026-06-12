@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
-import { uploadAvatarPhoto } from '@/lib/avatar/storage'
+import { uploadAvatarPhoto, saveAvatarToLibrary } from '@/lib/avatar/storage'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -106,6 +106,18 @@ export async function POST(req: NextRequest) {
     }
 
     const url = await uploadAvatarPhoto(user.id, buffer, mime as 'image/jpeg' | 'image/png')
+
+    // Face-app wave 1 — avatar library. Two best-effort writes, neither may
+    // fail the upload: (1) profiles.avatar_face_url = the "last approved face"
+    // consumed by /api/credits for the one-click reuse chip; (2) a row in
+    // public.user_avatars = the full library (multi-face picker, /api/avatar/list).
+    try {
+      await supabase.from('profiles').update({ avatar_face_url: url }).eq('id', user.id)
+    } catch (err) {
+      console.warn('[avatar/upload] could not save avatar_face_url (non-blocking):', err instanceof Error ? err.message : String(err))
+    }
+    await saveAvatarToLibrary(user.id, url)
+
     return NextResponse.json({ url })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

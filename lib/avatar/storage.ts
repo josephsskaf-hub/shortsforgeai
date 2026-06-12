@@ -71,3 +71,40 @@ export async function uploadAvatarPhoto(
   console.log(`[avatar/storage] photo stored: ${pub.publicUrl}`)
   return pub.publicUrl
 }
+
+// ── Face-app wave 1 (12/06) — avatar library ────────────────────────────────
+// Approved (face-checked) photos are saved per user so /generate can offer
+// one-click reuse instead of forcing a re-upload + re-check every video.
+
+/** Best-effort save into the library — a failure must never fail the upload. */
+export async function saveAvatarToLibrary(userId: string, url: string): Promise<void> {
+  try {
+    const admin = getAdminClient()
+    const { error } = await admin.from('user_avatars').insert({ user_id: userId, url })
+    if (error) console.warn('[avatar/storage] library insert failed (non-blocking):', error.message)
+  } catch (err) {
+    console.warn('[avatar/storage] library insert threw (non-blocking):', err instanceof Error ? err.message : String(err))
+  }
+}
+
+export interface SavedAvatar {
+  id: string
+  url: string
+  created_at: string
+}
+
+/** Latest saved faces for the user (service-role read, capped). */
+export async function listUserAvatars(userId: string, limit = 6): Promise<SavedAvatar[]> {
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('user_avatars')
+    .select('id, url, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) {
+    console.warn('[avatar/storage] library list failed:', error.message)
+    return []
+  }
+  return (data ?? []) as SavedAvatar[]
+}

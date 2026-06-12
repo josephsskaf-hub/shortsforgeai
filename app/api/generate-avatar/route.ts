@@ -35,7 +35,12 @@ import {
   uploadVoiceoverToSupabase,
 } from '@/lib/compose'
 import { parseUserScript, stripScriptMarkers } from '@/lib/scriptParser'
-import { submitAvatarJob, VEED_720P_USD_PER_SECOND } from '@/lib/avatar/veed'
+import {
+  submitAvatarJob,
+  VEED_720P_USD_PER_SECOND,
+  OMNIHUMAN_720P_USD_PER_SECOND,
+  type AvatarEngine,
+} from '@/lib/avatar/veed'
 import { getPixabayVideoForQueries } from '@/lib/pixabay'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 
@@ -65,25 +70,41 @@ function rateLimited(userId: string): boolean {
   return false
 }
 
-/** Best-effort b-roll cutaway clips (max 3). Never throws, may return []. */
-async function fetchCutawayClips(queries: string[], topic: string): Promise<string[]> {
+/** Best-effort b-roll cutaway clips. Never throws, may return [].
+ *  Hook mode passes a higher max — b-roll carries ~85% of the timeline there,
+ *  so 3 clips would visibly recycle. */
+async function fetchCutawayClips(queries: string[], topic: string, max = 3): Promise<string[]> {
   const urls: string[] = []
   try {
-    for (const q of queries.slice(0, 3)) {
+    for (const q of queries.slice(0, max)) {
       const url = await getPixabayVideoForQueries([q], false, topic.slice(0, 50))
       if (url && !urls.includes(url)) urls.push(url)
-      if (urls.length >= 3) break
+      if (urls.length >= max) break
     }
-    if (urls.length === 0) {
+    if (urls.length < max) {
       // FALLBACK-B — curated library, same hierarchy as Fast Mode.
-      for (const clip of pickLibraryClips(topic, 3)) {
+      for (const clip of pickLibraryClips(topic, max)) {
         if (!urls.includes(clip.url)) urls.push(clip.url)
+        if (urls.length >= max) break
       }
     }
   } catch (err) {
     console.warn('[generate-avatar] b-roll fetch failed (continuing avatar-only):', err instanceof Error ? err.message : String(err))
   }
-  return urls.slice(0, 3)
+  return urls.slice(0, max)
+}
+
+// Face-app wave 1 (12/06) — Hook Avatar mode: the face speaks only the first
+// ~8s. The mp3 sent to VEED is a byte-sliced copy of the FULL narration mp3
+// (CBR, so a proportional slice lands within a frame of the target second) —
+// the lip-synced hook therefore matches the final narration track EXACTLY,
+// with zero drift, and VEED only bills ~8s instead of ~52s (≈85% cost cut).
+const HOOK_SECONDS = 8
+
+function sliceMp3Head(buffer: Buffer, totalSeconds: number, headSeconds: number): Buffer {
+  if (!(totalSeconds > headSeconds + 2)) return buffer // too short — keep full
+  const bytes = Math.floor(buffer.length * (headSeconds / totalSeconds))
+  return buffer.subarray(0, Math.max(bytes, 1024))
 }
 
 export async function POST(req: NextRequest) {
@@ -118,6 +139,12 @@ export async function POST(req: NextRequest) {
       // ~$0.02 of TTS instead of a ~$6 talking-head render. Doesn't count
       // against the avatar rate limit.
       dryRun?: boolean
+      // Face-app wave 1 — avatar engine: 'fabric' (talking head, default) or
+      // 'omnihuman' (full-figure body & gestures, "Pro" tier).
+      engine?: string
+      // Face-app wave 1 — 'hook' = face speaks only the first ~8s, b-roll
+      // carries the rest (same 1 credit, ~85% lower VEED cost). 'full' = legacy.
+      avatarMode?: string
     }
     try {
       body = await req.json()
@@ -131,6 +158,8 @@ export async function POST(req: NextRequest) {
     }
 
     const dryRun = body.dryRun === true
+    const engine: AvatarEngine = body.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
+    const hookMode = body.avatarMode === 'hook'
 
     // The face photo must be OUR storage URL (uploaded via /api/avatar/upload)
     // — never an arbitrary external URL (no SSRF / hot-linking surface).
@@ -238,11 +267,32 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // ── 3. Submit to VEED Fabric (720p) on the fal queue ────────────────
+    // ── 3. Submit to the avatar engine (720p) on the fal queue ──────────
+    // 'fabric' = VEED talking head; 'omnihuman' = full-figure body & gestures.
+    // Hook mode lip-syncs ONLY the head slice of the narration mp3 — the slice
+    // is byte-identical to the start of the full track, so lips stay locked.
+    let avatarAudioUrl = voiceoverUrl
+    let avatarHookSeconds: number | null = null
+    if (hookMode && realAudioDuration > HOOK_SECONDS + 2) {
+      const hookBuffer = sliceMp3Head(audioBuffer, realAudioDuration, HOOK_SECONDS)
+      if (hookBuffer.length < audioBuffer.length) {
+        try {
+          avatarAudioUrl = await uploadVoiceoverToSupabase(user.id, Buffer.from(hookBuffer))
+          const measured = estimateMp3DurationSeconds(Buffer.from(hookBuffer))
+          avatarHookSeconds = measured > 2 && measured < realAudioDuration ? measured : HOOK_SECONDS
+        } catch (err) {
+          // Fall back to a full-length avatar rather than failing the render.
+          console.warn('[generate-avatar] hook slice upload failed — falling back to full avatar:', err instanceof Error ? err.message : String(err))
+          avatarAudioUrl = voiceoverUrl
+          avatarHookSeconds = null
+        }
+      }
+    }
     const requestId = await submitAvatarJob({
       imageUrl: avatarImageUrl,
-      audioUrl: voiceoverUrl,
+      audioUrl: avatarAudioUrl,
       resolution: '720p',
+      engine,
     })
     if (!requestId) {
       // Protection rule: nothing was (or ever will be at this point) charged.
@@ -253,19 +303,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 4. B-roll cutaways (best-effort) ─────────────────────────────────
+    // Hook mode: b-roll carries everything after the hook → fetch up to 6.
     const queries = verbatim
       ? parsed.segments.map((s) => s.pexelsQuery).filter(Boolean)
       : [prompt.slice(0, 80)]
-    const clipUrls = await fetchCutawayClips(queries, prompt)
+    const clipUrls = await fetchCutawayClips(queries, prompt, avatarHookSeconds != null ? 6 : 3)
 
-    const estSeconds = realAudioDuration > 4 ? realAudioDuration : duration
+    const estSeconds = avatarHookSeconds != null
+      ? avatarHookSeconds
+      : realAudioDuration > 4 ? realAudioDuration : duration
     const generationId = randomUUID()
+    const usdPerSecond = engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND : VEED_720P_USD_PER_SECOND
     console.log(
-      `[generate-avatar] submitted user=${user.id.slice(0, 8)} request=${requestId} audio=${estSeconds.toFixed(1)}s clips=${clipUrls.length} generationId=${generationId}`,
+      `[generate-avatar] submitted user=${user.id.slice(0, 8)} engine=${engine} request=${requestId} audio=${estSeconds.toFixed(1)}s clips=${clipUrls.length} generationId=${generationId}`,
     )
 
     return NextResponse.json({
       mode: 'avatar',
+      engine,
+      avatar_mode: avatarHookSeconds != null ? 'hook' : 'full',
+      avatar_hook_seconds: avatarHookSeconds,
       generationId,
       avatar_request_id: requestId,
       voiceover_url: voiceoverUrl,
@@ -279,7 +336,7 @@ export async function POST(req: NextRequest) {
       // video = 1 avatar credit; the USD figure is internal accounting.
       avatar_credits_needed: 1,
       estimated_seconds: Math.round(estSeconds),
-      estimated_cost_usd: Number((estSeconds * VEED_720P_USD_PER_SECOND).toFixed(2)),
+      estimated_cost_usd: Number((estSeconds * usdPerSecond).toFixed(2)),
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

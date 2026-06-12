@@ -429,6 +429,18 @@ export default function GenerateClient() {
   // pressed. Generate must NOT silently render a faceless video in that state.
   const [avatarPending, setAvatarPending] = useState(false)
   const [avatarOpenSignal, setAvatarOpenSignal] = useState(0)
+  // Face-app wave 1 — saved face (avatar library), engine choice and the free
+  // voice preview (dryRun TTS: hear the narration before spending a credit).
+  const [savedFaceUrl, setSavedFaceUrl] = useState<string | null>(null)
+  const [avatarEngine, setAvatarEngine] = useState<'fabric' | 'omnihuman'>('fabric')
+  const avatarEngineRef = useRef<'fabric' | 'omnihuman'>('fabric')
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null)
+  const [voicePreviewLoading, setVoicePreviewLoading] = useState(false)
+  const [voicePreviewError, setVoicePreviewError] = useState<string | null>(null)
+  // Face-app wave 1 — Hook Avatar: the face speaks only the first ~8s and
+  // b-roll carries the rest (same 1 credit, ~85% lower engine cost). Default
+  // ON — it's the recommended, margin-friendly mode. 'full' = legacy.
+  const [avatarHookMode, setAvatarHookMode] = useState(true)
   // CP2 — separate avatar-credit balance + paywall modal + home deep-link
   // (/generate?avatar=1 auto-opens the upload panel).
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
@@ -438,6 +450,9 @@ export default function GenerateClient() {
     voiceoverUrl: string
     realAudioDuration: number | null
     avatarVideoUrl: string | null
+    // Face-app wave 1 — Hook Avatar: seconds of avatar at the head of the
+    // timeline (null = legacy full-length avatar with cutaways).
+    hookSeconds: number | null
   } | null>(null)
   // Push #315 — fal.ai polling state for Cinematic AI mode.
   const [falRequestIds, setFalRequestIds] = useState<(string | null)[]>([])
@@ -707,6 +722,8 @@ export default function GenerateClient() {
           setCredits(typeof data.credits === 'number' ? data.credits : 0)
           // CP2 — avatar add-on balance travels on the same endpoint.
           if (typeof data.avatarCredits === 'number') setAvatarCredits(data.avatarCredits)
+          // Face-app wave 1 — saved face for the one-click avatar library.
+          if (typeof data.avatarFaceUrl === 'string' && data.avatarFaceUrl) setSavedFaceUrl(data.avatarFaceUrl)
           // #384 — refresh free-AI-trial availability from the same source.
           if (typeof data.freeAiUsed === 'boolean') setFreeAiUsed(data.freeAiUsed)
           // #404 — plan flags + default the engine to the plan's engine once.
@@ -1090,8 +1107,11 @@ export default function GenerateClient() {
 
     async function poll() {
       try {
+        // Face-app wave 1 — the fal queue is per-model: pass the engine the
+        // job was submitted with, or an OmniHuman job would poll Fabric's
+        // queue and never complete.
         const res = await fetch(
-          `/api/avatar-status?request_id=${encodeURIComponent(avatarRequestId as string)}`,
+          `/api/avatar-status?request_id=${encodeURIComponent(avatarRequestId as string)}&engine=${avatarEngineRef.current}`,
           { cache: 'no-store' },
         )
         const data = await res.json()
@@ -1175,6 +1195,10 @@ export default function GenerateClient() {
                   voiceover_url: avatarComposeRef.current.voiceoverUrl,
                   ...(avatarComposeRef.current.realAudioDuration != null
                     ? { real_audio_duration: avatarComposeRef.current.realAudioDuration }
+                    : {}),
+                  // Face-app wave 1 — Hook Avatar: face covers [0, N]s only.
+                  ...(avatarComposeRef.current.hookSeconds != null
+                    ? { avatar_hook_seconds: avatarComposeRef.current.hookSeconds }
                     : {}),
                 }
               : {}),
@@ -1693,6 +1717,48 @@ export default function GenerateClient() {
   // at the options screen so the user picks the engine + duration and presses
   // Generate themselves. The ?autogenerate=1 URL param is intentionally ignored.
 
+  // Face-app wave 1 — FREE voice preview (dryRun TTS, costs cents server-side,
+  // zero credits): hear the exact narration mp3 before spending an avatar
+  // credit on a render. Reuses /api/generate-avatar with dryRun=true.
+  async function handlePreviewVoice() {
+    if (voicePreviewLoading) return
+    const trimmed = (structuredScriptRef.current ?? prompt).trim()
+    if (!trimmed) {
+      setVoicePreviewError('Write your idea or script first, then preview the voice.')
+      return
+    }
+    setVoicePreviewLoading(true)
+    setVoicePreviewError(null)
+    try {
+      const res = await fetch('/api/generate-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: trimmed,
+          duration,
+          language,
+          dryRun: true,
+          vertical: analysis?.niche ?? undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setVoicePreviewError(typeof data?.error === 'string' ? data.error : 'Voice preview failed. Please try again.')
+        return
+      }
+      const url = typeof data.voiceover_url === 'string' && data.voiceover_url ? data.voiceover_url : null
+      if (!url) {
+        setVoicePreviewError('Voice preview failed. Please try again.')
+        return
+      }
+      setVoicePreviewUrl(url)
+    } catch {
+      setVoicePreviewError('Voice preview failed. Please try again.')
+    } finally {
+      setVoicePreviewLoading(false)
+    }
+  }
+
   async function handleGenerate() {
     // #360 — double-submit guard. Block re-entry if a generation is already in
     // flight (synchronous ref) or the UI is in a processing phase. Prevents the
@@ -1758,7 +1824,17 @@ export default function GenerateClient() {
           headers: { 'Content-Type': 'application/json' },
           // vertical → Narration Engine no avatar (persona + pacing por seção;
           // payoff desacelerado — feedback 10/06 "voz acelerou no final").
-          body: JSON.stringify({ prompt: trimmed, duration, language, avatarImageUrl, vertical: analysis?.niche ?? undefined }),
+          // Face-app wave 1 — engine ('fabric' | 'omnihuman') + avatarMode
+          // ('hook' = face only on the first ~8s, recommended/default).
+          body: JSON.stringify({
+            prompt: trimmed,
+            duration,
+            language,
+            avatarImageUrl,
+            vertical: analysis?.niche ?? undefined,
+            engine: avatarEngine,
+            avatarMode: avatarHookMode ? 'hook' : 'full',
+          }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
@@ -1788,7 +1864,11 @@ export default function GenerateClient() {
           voiceoverUrl: typeof data.voiceover_url === 'string' ? data.voiceover_url : '',
           realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
           avatarVideoUrl: null,
+          hookSeconds: typeof data.avatar_hook_seconds === 'number' ? data.avatar_hook_seconds : null,
         }
+        // The fal queue is per-model — the status poll must use the SAME
+        // engine the job was submitted with (server echoes it back).
+        avatarEngineRef.current = data.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
         const reqId = typeof data.avatar_request_id === 'string' ? data.avatar_request_id : null
         if (!reqId || !avatarComposeRef.current.voiceoverUrl) {
           setError(GENERIC_ERROR)
@@ -3009,6 +3089,15 @@ export default function GenerateClient() {
             initialOpen={avatarAutoOpen}
             onPendingChange={setAvatarPending}
             openSignal={avatarOpenSignal}
+            savedFaceUrl={savedFaceUrl}
+            engine={avatarEngine}
+            onEngineChange={setAvatarEngine}
+            hookMode={avatarHookMode}
+            onHookModeChange={setAvatarHookMode}
+            onPreviewVoice={handlePreviewVoice}
+            voicePreviewLoading={voicePreviewLoading}
+            voicePreviewUrl={voicePreviewUrl}
+            voicePreviewError={voicePreviewError}
           />
 
           {/* #383c — explicit script handling. Default = let the AI structure the

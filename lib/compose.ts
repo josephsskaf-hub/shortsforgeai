@@ -95,6 +95,14 @@ export interface ComposeInputs {
    * timeline. Captions / CTA / music / watermark behave exactly as usual.
    */
   avatarUrl?: string | null
+  /**
+   * Face-app wave 1 (12/06) — Hook Avatar mode. When set (> 2), the avatar MP4
+   * covers ONLY [0, avatarHookSeconds] (it was lip-synced to a byte-slice of
+   * the narration head, so lips stay locked) and the stock clips tile the rest
+   * of the timeline exactly like the standard mode. null/undefined = the
+   * legacy full-length avatar with periodic cutaways.
+   */
+  avatarHookSeconds?: number | null
 }
 
 export interface CreatomateRenderState {
@@ -835,6 +843,7 @@ export function buildCreatomateSource({
   musicUrl,
   watermark = false,
   avatarUrl = null,
+  avatarHookSeconds = null,
 }: ComposeInputs): Record<string, unknown> {
   // Push #199 — use the REAL TTS audio duration as the master timeline length
   // instead of the user-requested duration. This eliminates both the "black
@@ -954,7 +963,66 @@ export function buildCreatomateSource({
   // talking head resumes exactly where the narration is and lip sync is
   // preserved across every cut. This is the same battle-tested sequential
   // pattern as the standard clip tiling below.
-  if (hasAvatar) {
+  if (hasAvatar && avatarHookSeconds != null && avatarHookSeconds > 2 && cleanClips.length > 0) {
+    // ── Hook Avatar (Face-app wave 1, 12/06) ──────────────────────────────
+    // The avatar MP4 only contains the lip-synced HOOK (first ~8s of the
+    // narration, byte-sliced from the same mp3 → zero drift). Face on screen
+    // for [0, hook], then standard b-roll tiling carries the timeline to the
+    // end. Same sequential no-overlap pattern as everywhere else.
+    const hookEnd = round3(Math.min(avatarHookSeconds, totalDuration - 1))
+    elements.push({
+      type: 'video',
+      track: 2,
+      time: 0,
+      duration: round3(hookEnd + CLIP_GAP_OVERLAP),
+      source: avatarUrl as string,
+      fit: 'cover',
+      loop: false,
+      x: '50%',
+      y: '50%',
+      width: '100%',
+      height: '100%',
+      volume: '0%',
+    })
+    const remainingWindow = totalDuration - hookEnd
+    const hookSlotLen = Math.min(CLIP_LEN, remainingWindow / cleanClips.length)
+    let hookCursor = hookEnd
+    let hi = 0
+    while (hookCursor < totalDuration) {
+      const remaining = totalDuration - hookCursor
+      const segLen = round3(Math.min(hookSlotLen, remaining))
+      const zoomIn = hi % 2 === 0
+      elements.push({
+        type: 'video',
+        track: 2,
+        time: round3(hookCursor),
+        duration: round3(segLen + CLIP_GAP_OVERLAP),
+        source: cleanClips[hi % cleanClips.length],
+        fit: 'cover',
+        loop: true,
+        trim_start: CLIP_TRIM_START,
+        x: '50%',
+        y: '50%',
+        width: '100%',
+        height: '100%',
+        volume: '0%',
+        animations: [
+          {
+            type: 'scale',
+            fade: false,
+            start_scale: zoomIn ? '100%' : '108%',
+            end_scale: zoomIn ? '108%' : '100%',
+            easing: 'linear',
+          },
+        ],
+      })
+      hookCursor = round3(hookCursor + segLen)
+      hi += 1
+    }
+    console.log(
+      `[compose] hook-avatar mode: face 0–${hookEnd}s, ${cleanClips.length} clip(s) tiling ${round3(remainingWindow)}s, total ${totalDuration}s`,
+    )
+  } else if (hasAvatar) {
     // 1) Compute the cutaway windows first.
     const CUTAWAY_LEN = 4
     const CUTAWAY_EVERY = 12 // window start → next window start (8s face + 4s b-roll)

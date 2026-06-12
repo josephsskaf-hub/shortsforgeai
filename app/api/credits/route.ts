@@ -28,13 +28,17 @@ export async function GET() {
     // so the main balance never breaks if this code reaches an environment
     // where the avatar_credits migration hasn't run yet (deploy-order safety).
     let avatarCredits = 0
+    let avatarFaceUrl: string | null = null
     try {
       const { data: avData } = await supabase
         .from('profiles')
-        .select('avatar_credits')
+        .select('avatar_credits, avatar_face_url')
         .eq('id', user.id)
         .single()
       avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
+      // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
+      const face = (avData as { avatar_face_url?: string | null } | null)?.avatar_face_url
+      avatarFaceUrl = typeof face === 'string' && face ? face : null
     } catch {
       avatarCredits = 0
     }
@@ -70,6 +74,8 @@ export async function GET() {
       credits,
       // feature/ai-avatar CP2 — separate premium add-on balance.
       avatarCredits,
+      // Face-app wave 1 — last approved face photo (avatar library).
+      avatarFaceUrl,
       freeAiUsed: data?.free_ai_generate_used === true,
       plan: planVal,
       isStarter,

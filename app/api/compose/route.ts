@@ -74,6 +74,9 @@ interface ComposeBody {
   avatar_url?: string
   voiceover_url?: string
   real_audio_duration?: number
+  // Face-app wave 1 (12/06) — Hook Avatar: the avatar MP4 only covers the
+  // first ~N seconds; b-roll tiles the rest. Forwarded to buildCreatomateSource.
+  avatar_hook_seconds?: number
 }
 
 export async function POST(req: NextRequest) {
@@ -499,6 +502,15 @@ export async function POST(req: NextRequest) {
         whisperWords,
         musicUrl,
         avatarUrl: avatarMode ? avatarUrlBody : null,
+        // Hook Avatar (12/06) — validated: only meaningful in avatar mode and
+        // when plausibly inside the timeline.
+        avatarHookSeconds:
+          avatarMode &&
+          typeof body.avatar_hook_seconds === 'number' &&
+          body.avatar_hook_seconds > 2 &&
+          body.avatar_hook_seconds < 30
+            ? body.avatar_hook_seconds
+            : null,
         watermark:
           isFreeAiTrial ||
           isFreePlanAi ||

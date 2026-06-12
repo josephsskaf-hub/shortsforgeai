@@ -4,7 +4,7 @@
 // avatar video as the main track.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkAvatarJob } from '@/lib/avatar/veed'
+import { checkAvatarJob, type AvatarEngine } from '@/lib/avatar/veed'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'request_id is required.' }, { status: 400 })
     }
 
-    const state = await checkAvatarJob(requestId)
+    // Face-app wave 1 — the fal queue is per-model, so the poll must use the
+    // same engine the job was submitted with ('fabric' default | 'omnihuman').
+    const engineParam = (req.nextUrl.searchParams.get('engine') ?? '').trim()
+    const engine: AvatarEngine = engineParam === 'omnihuman' ? 'omnihuman' : 'fabric'
+
+    const state = await checkAvatarJob(requestId, engine)
 
     if (state.status === 'failed') {
       // Protection rule: a VEED failure never charges the user (checkpoint 1

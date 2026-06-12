@@ -13,6 +13,22 @@ import { fal } from '@fal-ai/client'
 // faster variant. Keep 720p for the premium quality bar the product promises.
 const VEED_FABRIC_MODEL = 'veed/fabric-1.0'
 
+// Face-app wave 1 (12/06) — second avatar engine: ByteDance OmniHuman v1.5
+// (https://fal.ai/models/fal-ai/bytedance/omnihuman/v1.5). Animates the WHOLE
+// figure in the photo — body, hands, gestures follow the audio's emotion —
+// where Fabric is a head/shoulders talking head. Same FAL_KEY, same queue
+// pattern. $0.16/s @720p (vs Fabric $0.15/s); 720p supports up to 60s audio
+// (1080p caps at 30s, so the 45-60s product lock forces 720p here).
+const OMNIHUMAN_MODEL = 'fal-ai/bytedance/omnihuman/v1.5'
+
+/** Which model animates the face photo. 'fabric' = talking head (default);
+ *  'omnihuman' = full-figure body & gestures ("Pro" tier in the UI). */
+export type AvatarEngine = 'fabric' | 'omnihuman'
+
+function modelFor(engine: AvatarEngine | undefined): string {
+  return engine === 'omnihuman' ? OMNIHUMAN_MODEL : VEED_FABRIC_MODEL
+}
+
 export interface AvatarVideoResult {
   videoUrl: string
   /** seconds of generated video, when fal returns it (for cost accounting). */
@@ -78,6 +94,8 @@ export async function generateAvatarVideo(args: {
 // the user BEFORE render, and for internal cost accounting.
 export const VEED_720P_USD_PER_SECOND = 0.15
 export const VEED_480P_USD_PER_SECOND = 0.08
+// OmniHuman v1.5 @720p — slightly above Fabric; surfaced in the cost estimate.
+export const OMNIHUMAN_720P_USD_PER_SECOND = 0.16
 
 // ── Queue mode (used by /api/generate-avatar + /api/avatar-status) ──────────
 // VEED takes minutes for a 45-60s talking head, far beyond a Vercel function
@@ -102,8 +120,10 @@ export async function submitAvatarJob(args: {
   imageUrl: string
   audioUrl: string
   resolution?: '480p' | '720p'
+  engine?: AvatarEngine
 }): Promise<string | null> {
   if (!configureFal()) return null
+  const model = modelFor(args.engine)
   const input: FabricInput = {
     image_url: args.imageUrl,
     audio_url: args.audioUrl,
@@ -111,11 +131,11 @@ export async function submitAvatarJob(args: {
   }
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const { request_id } = await fal.queue.submit(VEED_FABRIC_MODEL, { input })
+      const { request_id } = await fal.queue.submit(model, { input })
       if (request_id) return request_id
     } catch (err) {
       const e = err as { status?: number; body?: unknown; message?: string; name?: string }
-      console.error(`[avatar/veed] queue submit attempt ${attempt} failed:`, JSON.stringify({
+      console.error(`[avatar/veed] queue submit attempt ${attempt} (${model}) failed:`, JSON.stringify({
         name: e?.name, status: e?.status, message: e?.message, body: e?.body,
       }))
       if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
@@ -130,15 +150,16 @@ export type AvatarJobState = {
 }
 
 /** Poll the fal queue for the avatar job (mirrors cinematic-clip-status). */
-export async function checkAvatarJob(requestId: string): Promise<AvatarJobState> {
+export async function checkAvatarJob(requestId: string, engine?: AvatarEngine): Promise<AvatarJobState> {
   if (!configureFal()) return { status: 'failed', videoUrl: null }
+  const model = modelFor(engine)
   try {
-    const st = await fal.queue.status(VEED_FABRIC_MODEL, { requestId })
+    const st = await fal.queue.status(model, { requestId })
     const s = (st as { status?: string }).status
     if (s === 'IN_QUEUE') return { status: 'pending', videoUrl: null }
     if (s === 'IN_PROGRESS') return { status: 'processing', videoUrl: null }
     if (s === 'COMPLETED') {
-      const res = await fal.queue.result(VEED_FABRIC_MODEL, { requestId })
+      const res = await fal.queue.result(model, { requestId })
       const data = ((res as { data?: unknown }).data ?? res) as {
         video?: { url?: string }
         output?: { video?: { url?: string } }
