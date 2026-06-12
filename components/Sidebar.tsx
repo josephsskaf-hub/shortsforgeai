@@ -583,11 +583,39 @@ export default function Sidebar({
                   padding: 6,
                 }}
               >
+                {/* Settings v3 (12/06) — menu mirrors the real account tabs:
+                    Profile · Billing · Usage. "Members" (placeholder) is gone
+                    and "Manage Account" became Billing. Refined line icons. */}
                 {([
-                  { tab: 'members', label: 'Members', icon: '👥' },
-                  { tab: 'profile', label: 'Profile', icon: '👤' },
-                  { tab: 'manage', label: 'Manage Account', icon: '⚙' },
-                  { tab: 'usage', label: 'Usage', icon: '📊' },
+                  {
+                    tab: 'profile',
+                    label: 'Profile',
+                    icon: (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="8" r="3.6" />
+                        <path d="M4.5 20c1.4-3.2 4.2-5 7.5-5s6.1 1.8 7.5 5" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    tab: 'billing',
+                    label: 'Billing',
+                    icon: (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+                        <path d="M3 10h18M7 14.5h4" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    tab: 'usage',
+                    label: 'Usage',
+                    icon: (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M4 19.5V12M10 19.5V5.5M16 19.5V9M21 19.5H3.5" />
+                      </svg>
+                    ),
+                  },
                 ] as const).map((item) => (
                   <Link
                     key={item.tab}
@@ -603,7 +631,7 @@ export default function Sidebar({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.14)' }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                   >
-                    <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
+                    <span style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
                     <span>{item.label}</span>
                   </Link>
                 ))}

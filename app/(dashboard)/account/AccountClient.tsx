@@ -16,17 +16,21 @@ interface AccountClientProps {
   planTier?: 'free' | 'basic' | 'pro'
 }
 
-type TabKey = 'members' | 'profile' | 'manage' | 'usage'
+// Settings v3 (12/06) — practical, Vercel/Linear-shaped account page.
+// 3 tabs, every control DOES something: Profile (editable name + sign out),
+// Billing (Stripe portal, upgrade, credit packs), Usage (credit meter).
+// The old "Members" tab (a coming-soon placeholder) is gone; old deep links
+// ?tab=members / ?tab=manage resolve to Billing for back-compat.
+type TabKey = 'profile' | 'billing' | 'usage'
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'members', label: 'Members', icon: '👥' },
-  { key: 'profile', label: 'Profile', icon: '👤' },
-  { key: 'manage', label: 'Manage', icon: '⚙️' },
-  { key: 'usage', label: 'Usage', icon: '📊' },
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'profile', label: 'Profile' },
+  { key: 'billing', label: 'Billing' },
+  { key: 'usage', label: 'Usage' },
 ]
 
 function isTabKey(v: string | null | undefined): v is TabKey {
-  return v === 'members' || v === 'profile' || v === 'manage' || v === 'usage'
+  return v === 'profile' || v === 'billing' || v === 'usage'
 }
 
 // Push #430 — free tier now starts with 30 welcome credits (30 Fast videos or 1 AI video)
@@ -56,7 +60,9 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
   const supabase = createClient()
 
   const rawTab = searchParams.get('tab')
-  const activeTab: TabKey = isTabKey(rawTab) ? rawTab : 'profile'
+  // Legacy aliases — 'members' and 'manage' were folded into Billing.
+  const normalizedTab = rawTab === 'members' || rawTab === 'manage' ? 'billing' : rawTab
+  const activeTab: TabKey = isTabKey(normalizedTab) ? normalizedTab : 'profile'
 
   const tier: 'free' | 'basic' | 'pro' = planTier ?? (isPro ? 'pro' : 'free')
   const planLimit = PLAN_LIMITS[tier]
@@ -69,6 +75,30 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
   const [signingOut, setSigningOut] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
+  // Settings v3 — editable display name (saved to supabase user_metadata).
+  const [savingName, setSavingName] = useState(false)
+  const [nameSaved, setNameSaved] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
+
+  async function handleSaveName() {
+    if (savingName) return
+    setSavingName(true)
+    setNameSaved(false)
+    setNameError(null)
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { full_name: fullName.trim() } })
+      if (error) {
+        setNameError('Could not save. Please try again.')
+      } else {
+        setNameSaved(true)
+        setTimeout(() => setNameSaved(false), 2500)
+      }
+    } catch {
+      setNameError('Could not save. Please try again.')
+    } finally {
+      setSavingName(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -218,7 +248,6 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                 boxShadow: active ? '0 0 14px rgba(34,211,238,.12)' : 'none',
               }}
             >
-              <span>{t.icon}</span>
               <span>{t.label}</span>
             </Link>
           )
@@ -227,62 +256,9 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
       <div style={{ maxWidth: 640 }}>
 
-        {/* ── Members tab ── */}
-        {activeTab === 'members' && (
-          <div className="flex flex-col gap-4">
-            <div
-              className="acc-card rounded-2xl p-6"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
-            >
-              <h2 className="font-bold mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Owner
-              </h2>
-              <div className="flex items-center gap-4">
-                {/* Glowing avatar */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-white"
-                    style={{ background: 'linear-gradient(135deg, #22D3EE, #10B981)', zIndex: 1, position: 'relative' }}
-                  >
-                    {initial}
-                  </div>
-                  <div
-                    className="avatar-ring"
-                    style={{
-                      position: 'absolute', inset: -3, borderRadius: 18,
-                      border: '2px solid rgba(34,211,238,.5)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>
-                    {fullName || email.split('@')[0]}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{email}</div>
-                </div>
-                <span
-                  className="text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0"
-                  style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.25)', color: '#34d399' }}
-                >
-                  Owner
-                </span>
-              </div>
-            </div>
-
-            <div
-              className="rounded-2xl p-5"
-              style={{ background: 'rgba(16,185,129,.04)', border: '1px dashed rgba(16,185,129,.2)', backdropFilter: 'blur(12px)' }}
-            >
-              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text2)' }}>
-                👥 Team collaboration — coming soon
-              </p>
-              <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                Invite collaborators to share credits and manage projects together in a future update.
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Settings v3 — the old "Members" placeholder tab was removed: it
+            promised a team feature that doesn't exist. Billing (below)
+            absorbed everything actionable from the old Manage tab. */}
 
         {/* ── Profile tab ── */}
         {activeTab === 'profile' && (
@@ -323,45 +299,88 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </div>
             </div>
 
+            {/* Settings v3 — display name is actually EDITABLE now (saved to
+                Supabase user_metadata; appears on the sidebar + future
+                invoices). No more "coming soon" copy on a settings page. */}
+            <div className="mb-5">
+              <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--muted2)' }}>
+                Display name
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your name"
+                  maxLength={80}
+                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm"
+                  style={{
+                    background: 'rgba(0,0,0,.3)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="rounded-xl px-4 py-2.5 text-sm font-bold"
+                  style={{
+                    background: nameSaved ? 'rgba(16,185,129,.15)' : 'rgba(255,255,255,.06)',
+                    border: nameSaved ? '1px solid rgba(16,185,129,.45)' : '1px solid var(--border2)',
+                    color: nameSaved ? '#34D399' : 'var(--text2)',
+                    cursor: savingName ? 'wait' : 'pointer',
+                  }}
+                >
+                  {savingName ? 'Saving…' : nameSaved ? '✓ Saved' : 'Save'}
+                </button>
+              </div>
+              {nameError && <p className="text-xs mt-1.5" style={{ color: '#f87171' }} role="alert">{nameError}</p>}
+            </div>
+
             <div className="flex flex-col gap-1">
-              <ReadOnlyRow label="Full name" value={fullName || '—'} />
               <ReadOnlyRow label="Email" value={email} />
               <ReadOnlyRow label="Plan" value={planLabel.replace(/^[^ ]+ /, '')} />
               <ReadOnlyRow label="Member since" value={formatDate(createdAt)} />
             </div>
 
-            <p className="text-xs mt-5" style={{ color: 'var(--muted)' }}>
-              Profile editing coming soon. Email and plan are managed automatically.
-            </p>
+            {/* Sign out lives on Profile — the standard placement. */}
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="mt-6 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+              style={{
+                background: 'rgba(239,68,68,.07)',
+                border: '1px solid rgba(239,68,68,.18)',
+                color: '#f87171',
+                cursor: signingOut ? 'not-allowed' : 'pointer',
+                opacity: signingOut ? 0.7 : 1,
+              }}
+            >
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
           </div>
         )}
 
-        {/* ── Manage tab ── */}
-        {activeTab === 'manage' && (
+        {/* ── Billing tab (Settings v3 — absorbed the old Manage tab) ── */}
+        {activeTab === 'billing' && (
           <div className="flex flex-col gap-4">
             <div
               className="acc-card rounded-2xl p-6"
               style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
             >
               <h2 className="font-bold mb-4" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Account
+                Plan
               </h2>
-              <div className="flex flex-col gap-1">
-                <ReadOnlyRow label="Email" value={email} />
-                <ReadOnlyRow label="Plan" value={planLabel.replace(/^[^ ]+ /, '')} />
+              <div className="flex flex-col gap-1 mb-5">
+                <ReadOnlyRow label="Current plan" value={planLabel.replace(/^[^ ]+ /, '')} />
+                <ReadOnlyRow label="Credits remaining" value={credits === null ? '—' : String(credits)} />
                 <ReadOnlyRow label="Member since" value={formatDate(createdAt)} />
               </div>
-            </div>
-
-            <div
-              className="acc-card rounded-2xl p-6"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
-            >
-              <h2 className="font-bold mb-4" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Billing
-              </h2>
               {tier !== 'free' ? (
                 <>
+                  {/* Stripe customer portal — change card, see invoices,
+                      upgrade/downgrade or cancel. The real control center. */}
                   <button
                     onClick={handlePortal}
                     disabled={portalLoading}
@@ -374,7 +393,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                       opacity: portalLoading ? 0.7 : 1,
                     }}
                   >
-                    {portalLoading ? 'Opening…' : '⚙️ Manage Billing'}
+                    {portalLoading ? 'Opening…' : 'Manage subscription — payment method, invoices, cancel'}
                   </button>
                   {portalError && (
                     <p className="text-xs mt-2" style={{ color: '#f87171' }} role="alert">{portalError}</p>
@@ -383,15 +402,15 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               ) : (
                 <Link
                   href="/pricing"
-                  className="block w-full text-center rounded-xl py-3 text-sm font-black text-white"
+                  className="block w-full text-center rounded-xl py-3 text-sm font-black"
                   style={{
-                    background: 'linear-gradient(135deg, #059669, #22D3EE)',
-                    boxShadow: '0 6px 28px rgba(16,185,129,.4)',
+                    background: '#10B981',
+                    color: '#06241A',
                     textDecoration: 'none',
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  🎬 Upgrade to Pro
+                  Upgrade — plans from $11.90/mo →
                 </Link>
               )}
             </div>
@@ -401,24 +420,21 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
             >
               <h2 className="font-bold mb-4" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Session
+                Add-ons
               </h2>
-              <button
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold"
+              <Link
+                href="/generate?avatar=1"
+                className="acc-row-btn flex items-center justify-between w-full rounded-xl px-4 py-3 text-sm font-bold"
                 style={{
-                  background: 'rgba(239,68,68,.07)',
-                  border: '1px solid rgba(239,68,68,.18)',
-                  color: '#f87171',
-                  cursor: signingOut ? 'not-allowed' : 'pointer',
-                  opacity: signingOut ? 0.7 : 1,
-                  transition: 'all 0.15s ease',
+                  background: 'rgba(16,185,129,.07)',
+                  border: '1px solid rgba(52,211,153,.3)',
+                  color: '#34D399',
+                  textDecoration: 'none',
                 }}
               >
-                <span>🚪</span>
-                {signingOut ? 'Signing out…' : 'Sign Out'}
-              </button>
+                <span>🎭 AI Avatar credits — from $11.90/video</span>
+                <span aria-hidden>→</span>
+              </Link>
             </div>
 
             <div
@@ -426,12 +442,12 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               style={{ background: 'rgba(239,68,68,.04)', border: '1px dashed rgba(239,68,68,.2)' }}
             >
               <h2 className="font-bold mb-2" style={{ color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Danger Zone
+                Danger zone
               </h2>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                Account deletion is not available here yet. Email{' '}
-                <a href="mailto:josephsskaf@gmail.com" style={{ color: '#fca5a5' }}>josephsskaf@gmail.com</a>{' '}
-                to request deletion.
+                To delete your account and all data, email{' '}
+                <a href="mailto:support@shortsforgeai.com" style={{ color: '#fca5a5' }}>support@shortsforgeai.com</a>
+                {' '}— we process deletions within 48h.
               </p>
             </div>
           </div>
