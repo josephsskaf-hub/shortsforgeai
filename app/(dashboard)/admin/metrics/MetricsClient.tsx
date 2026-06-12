@@ -196,7 +196,7 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#93c5fd' }}
+          style={{ fontSize: '0.62rem', color: '#6ee7b7' }}
         >
           Admin · Staging
         </div>
@@ -353,8 +353,8 @@ function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' | 'ceo' }
             href={t.href}
             className="text-xs font-bold rounded-lg px-3 py-1.5"
             style={{
-              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
+              background: isActive ? 'rgba(5, 150, 105,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(5, 150, 105,.45)' : 'var(--border)'}`,
               color: isActive ? '#22D3EE' : 'var(--muted2)',
               textDecoration: 'none',
             }}

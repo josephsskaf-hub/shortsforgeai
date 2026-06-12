@@ -2748,9 +2748,9 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(59, 130, 246,.10)',
-                  border: '1px solid rgba(59, 130, 246,.35)',
-                  color: '#3B82F6',
+                  background: 'rgba(16, 185, 129,.10)',
+                  border: '1px solid rgba(16, 185, 129,.35)',
+                  color: '#10B981',
                 }}
               >
                 {showStep1 ? 'Step 1 · Your idea' : showScriptPreview ? 'Step 2 · Review' : (showBrollPlanning || showVisualDirector) ? 'Step 3 · Visuals' : showStep2 ? 'Step 3 · Brief' : 'Step 4 · Generate'}
@@ -2863,9 +2863,9 @@ export default function GenerateClient() {
               maxWidth: 440,
               width: '100%',
               borderRadius: 20,
-              background: 'linear-gradient(145deg, #0D1830 0%, #0B1120 100%)',
-              border: '1px solid rgba(59,130,246,0.4)',
-              boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(59,130,246,.15)',
+              background: 'linear-gradient(145deg, #0D1830 0%, #051D15 100%)',
+              border: '1px solid rgba(16,185,129,0.4)',
+              boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(16,185,129,.15)',
               padding: '32px 28px 28px',
               textAlign: 'center',
             }}
@@ -2923,12 +2923,12 @@ export default function GenerateClient() {
                 width: '100%',
                 padding: '14px 20px',
                 borderRadius: 12,
-                background: 'linear-gradient(90deg, #2563EB, #06B6D4)',
+                background: 'linear-gradient(90deg, #059669, #06B6D4)',
                 color: '#fff',
                 fontWeight: 900,
                 fontSize: '0.95rem',
                 textDecoration: 'none',
-                boxShadow: '0 8px 24px rgba(37,99,235,.4)',
+                boxShadow: '0 8px 24px rgba(5,150,105,.4)',
                 marginBottom: 10,
               }}
             >
@@ -3008,7 +3008,7 @@ export default function GenerateClient() {
                   style={{
                     background:
                       pickedNiche === t.key
-                        ? 'linear-gradient(135deg, #2563EB, #22D3EE)'
+                        ? 'linear-gradient(135deg, #059669, #22D3EE)'
                         : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${
                       pickedNiche === t.key ? 'rgba(34,211,238,0.75)' : 'var(--border)'
@@ -3118,12 +3118,12 @@ export default function GenerateClient() {
                 onClick={() => setScriptMode('ai')}
                 className="text-left px-4 py-3 rounded-xl transition-all"
                 style={{
-                  background: scriptMode === 'ai' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
-                  border: scriptMode === 'ai' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
+                  background: scriptMode === 'ai' ? 'rgba(5,150,105,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'ai' ? '1.5px solid rgba(5,150,105,.55)' : '1.5px solid var(--border)',
                   cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div className="text-sm font-bold" style={{ color: scriptMode === 'ai' ? '#93c5fd' : 'var(--text)' }}>
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'ai' ? '#6ee7b7' : 'var(--text)' }}>
                   ✨ Let AI structure my text {scriptMode === 'ai' && <span style={{ fontSize: '0.65rem' }}>· Recommended</span>}
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
@@ -3136,12 +3136,12 @@ export default function GenerateClient() {
                 onClick={() => setScriptMode('verbatim')}
                 className="text-left px-4 py-3 rounded-xl transition-all"
                 style={{
-                  background: scriptMode === 'verbatim' ? 'rgba(37,99,235,.10)' : 'rgba(255,255,255,.03)',
-                  border: scriptMode === 'verbatim' ? '1.5px solid rgba(37,99,235,.55)' : '1.5px solid var(--border)',
+                  background: scriptMode === 'verbatim' ? 'rgba(5,150,105,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'verbatim' ? '1.5px solid rgba(5,150,105,.55)' : '1.5px solid var(--border)',
                   cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div className="text-sm font-bold" style={{ color: scriptMode === 'verbatim' ? '#93c5fd' : 'var(--text)' }}>
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'verbatim' ? '#6ee7b7' : 'var(--text)' }}>
                   📝 Use my script as is
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
@@ -3168,8 +3168,8 @@ export default function GenerateClient() {
                   onClick={() => { setPrompt(ex); if (fromHome) setFromHome(false) }}
                   className="text-left px-3 py-2 rounded-lg text-xs transition-all"
                   style={{
-                    background: 'rgba(59,130,246,0.06)',
-                    border: '1px solid rgba(59,130,246,0.20)',
+                    background: 'rgba(16,185,129,0.06)',
+                    border: '1px solid rgba(16,185,129,0.20)',
                     color: 'var(--text2)',
                     cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                     maxWidth: 360,
@@ -3238,8 +3238,8 @@ export default function GenerateClient() {
                   onClick={() => setDuration(opt.value)}
                   className="rounded-full px-4 py-1.5 text-sm font-bold"
                   style={{
-                    background: duration === opt.value ? '#3B82F6' : 'rgba(255,255,255,.04)',
-                    border: duration === opt.value ? '1px solid rgba(59, 130, 246,.65)' : '1px solid var(--border)',
+                    background: duration === opt.value ? '#10B981' : 'rgba(255,255,255,.04)',
+                    border: duration === opt.value ? '1px solid rgba(16, 185, 129,.65)' : '1px solid var(--border)',
                     color: duration === opt.value ? '#FFFFFF' : 'var(--muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -3302,7 +3302,7 @@ export default function GenerateClient() {
                 background:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
-                    : 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+                    : 'linear-gradient(135deg, #10B981, #22D3EE)',
                 border: 'none',
                 cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
                 color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
@@ -3405,11 +3405,11 @@ export default function GenerateClient() {
               onClick={outOfCredits() ? openOutOfCreditsModal : handleConfirmScript}
               className="rounded-xl px-6 py-3 font-black text-sm"
               style={{
-                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                background: 'linear-gradient(135deg, #10B981, #059669)',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(59,130,246,.35)',
+                boxShadow: '0 4px 16px rgba(16,185,129,.35)',
               }}
             >
               Looks good — create my Short
@@ -3442,8 +3442,8 @@ export default function GenerateClient() {
               width: 32,
               height: 32,
               borderRadius: '50%',
-              border: '3px solid rgba(139,92,246,0.2)',
-              borderTopColor: 'rgb(139,92,246)',
+              border: '3px solid rgba(16,185,129,0.2)',
+              borderTopColor: 'rgb(16,185,129)',
               animation: 'spin 0.8s linear infinite',
               flexShrink: 0,
             }}
@@ -3483,9 +3483,9 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(37,99,235,.12)',
-                  border: '1px solid rgba(37,99,235,.3)',
-                  color: '#93c5fd',
+                  background: 'rgba(5,150,105,.12)',
+                  border: '1px solid rgba(5,150,105,.3)',
+                  color: '#6ee7b7',
                 }}
               >
                 Niche · {analysis.niche || 'General'}
@@ -3522,8 +3522,8 @@ export default function GenerateClient() {
                 <p
                   className="text-sm font-bold rounded-lg px-3 py-2"
                   style={{
-                    background: 'rgba(37,99,235,.08)',
-                    border: '1px solid rgba(37,99,235,.25)',
+                    background: 'rgba(5,150,105,.08)',
+                    border: '1px solid rgba(5,150,105,.25)',
                     color: 'var(--text)',
                     lineHeight: 1.5,
                   }}
@@ -3567,7 +3567,7 @@ export default function GenerateClient() {
                 <ol className="space-y-1.5 text-xs" style={{ color: 'var(--muted2)', paddingLeft: 20 }}>
                   {analysis.scenePlan.map((s, i) => (
                     <li key={i}>
-                      <span style={{ color: '#93c5fd', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
+                      <span style={{ color: '#6ee7b7', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
                     </li>
                   ))}
                 </ol>
@@ -3606,12 +3606,12 @@ export default function GenerateClient() {
                 disabled={isProcessingPhase(phase)}
                 className="rounded-xl px-6 py-3 text-sm font-black flex items-center gap-2"
                 style={{
-                  background: isProcessingPhase(phase) ? '#1E3A8A' : '#3B82F6',
+                  background: isProcessingPhase(phase) ? '#1E3A8A' : '#10B981',
                   color: '#FFFFFF',
                   border: 'none',
                   cursor: isProcessingPhase(phase) ? 'not-allowed' : 'pointer',
                   opacity: isProcessingPhase(phase) ? 0.7 : 1,
-                  boxShadow: '0 8px 28px rgba(59, 130, 246,.35)',
+                  boxShadow: '0 8px 28px rgba(16, 185, 129,.35)',
                 }}
               >
                 {isProcessingPhase(phase)
@@ -3659,15 +3659,15 @@ export default function GenerateClient() {
               <div
                 className="rounded-xl px-3 py-2 mt-4 text-xs"
                 style={{
-                  background: 'rgba(59, 130, 246,.06)',
-                  border: '1px solid rgba(59, 130, 246,.20)',
+                  background: 'rgba(16, 185, 129,.06)',
+                  border: '1px solid rgba(16, 185, 129,.20)',
                   color: 'var(--muted2)',
                   lineHeight: 1.55,
                 }}
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span aria-hidden="true">⚡</span>
-                  <span className="font-bold" style={{ color: '#93c5fd' }}>
+                  <span className="font-bold" style={{ color: '#6ee7b7' }}>
                     ShortsForgeAI rendering engine
                   </span>
                 </div>
@@ -3697,7 +3697,7 @@ export default function GenerateClient() {
                   >
                     {scenes.map((s, i) => (
                       <li key={i}>
-                        <span style={{ color: '#93c5fd', fontWeight: 700 }}>#{i + 1}</span> {s}
+                        <span style={{ color: '#6ee7b7', fontWeight: 700 }}>#{i + 1}</span> {s}
                       </li>
                     ))}
                   </ol>
@@ -3718,7 +3718,7 @@ export default function GenerateClient() {
                 onClick={handleGenerate}
                 className="rounded-xl px-5 py-2.5 text-sm font-bold text-white mt-2"
                 style={{
-                  background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                  background: 'linear-gradient(135deg, #059669, #047857)',
                   border: 'none',
                   cursor: 'pointer',
                 }}
@@ -3774,8 +3774,8 @@ export default function GenerateClient() {
                   aspectRatio: '9 / 16',
                   marginLeft: 'auto',
                   marginRight: 'auto',
-                  border: '1px solid rgba(37,99,235,.45)',
-                  boxShadow: '0 18px 60px rgba(37,99,235,.22)',
+                  border: '1px solid rgba(5,150,105,.45)',
+                  boxShadow: '0 18px 60px rgba(5,150,105,.22)',
                   background: '#000',
                 }}
               >
@@ -3847,7 +3847,7 @@ export default function GenerateClient() {
                         onClick={() => { setPlayerFailed(false); playerRetryAttemptRef.current = 0 }}
                         style={{
                           marginTop: '4px',
-                          background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                          background: 'linear-gradient(135deg, #059669, #047857)',
                           border: 'none',
                           color: '#fff',
                           fontWeight: 700,
@@ -3855,7 +3855,7 @@ export default function GenerateClient() {
                           padding: '10px 22px',
                           borderRadius: '12px',
                           cursor: 'pointer',
-                          boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+                          boxShadow: '0 6px 22px rgba(5,150,105,.32)',
                         }}
                       >
                         Refresh now
@@ -4195,9 +4195,9 @@ export default function GenerateClient() {
                   disabled={!prompt.trim()}
                   className="rounded-xl px-4 py-2 text-xs font-bold"
                   style={{
-                    background: 'rgba(37,99,235,.10)',
-                    border: '1px solid rgba(37,99,235,.35)',
-                    color: '#93c5fd',
+                    background: 'rgba(5,150,105,.10)',
+                    border: '1px solid rgba(5,150,105,.35)',
+                    color: '#6ee7b7',
                     cursor: !prompt.trim() ? 'not-allowed' : 'pointer',
                     opacity: !prompt.trim() ? 0.5 : 1,
                   }}
@@ -4243,7 +4243,7 @@ export default function GenerateClient() {
                 </span>
               </div>
 
-              <p className="text-xs mt-4 text-center" style={{ color: '#93c5fd', maxWidth: 480, lineHeight: 1.55 }}>
+              <p className="text-xs mt-4 text-center" style={{ color: '#6ee7b7', maxWidth: 480, lineHeight: 1.55 }}>
                 💡 Tip: Post within 2 hours for max algorithm boost.
               </p>
 
@@ -4416,7 +4416,7 @@ function RecentVideoThumb({ video }: { video: RecentVideo }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ color: 'rgba(147,197,253,.55)', fontSize: '1.8rem' }}
+      style={{ color: 'rgba(110,231,183,.55)', fontSize: '1.8rem' }}
     >
       🎬
     </div>
@@ -4502,7 +4502,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
           // legacy /history Shorts Packs page.
           href="/my-videos"
           className="text-xs font-bold"
-          style={{ color: '#93c5fd', textDecoration: 'none' }}
+          style={{ color: '#6ee7b7', textDecoration: 'none' }}
         >
           View all →
         </a>
@@ -4526,7 +4526,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
               <div
                 className="rv-thumb"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(37, 99, 235,.12))',
+                  background: 'linear-gradient(135deg, rgba(5,150,105,.18), rgba(5, 150, 105,.12))',
                   aspectRatio: '9 / 16',
                   position: 'relative',
                   overflow: 'hidden',
@@ -4593,7 +4593,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11px] font-bold mt-1"
-                    style={{ color: '#93c5fd', textDecoration: 'none' }}
+                    style={{ color: '#6ee7b7', textDecoration: 'none' }}
                   >
                     Open ↗
                   </a>
@@ -4702,16 +4702,16 @@ function PipelineStages({
       {stages.map((s, i) => {
         const isDone = s.status === 'done'
         const isActive = s.status === 'active'
-        const color = isDone ? '#34d399' : isActive ? '#93c5fd' : 'var(--muted)'
+        const color = isDone ? '#34d399' : isActive ? '#6ee7b7' : 'var(--muted)'
         const ring = isDone
           ? '1px solid rgba(52,211,153,.45)'
           : isActive
-          ? '1px solid rgba(147,197,253,.45)'
+          ? '1px solid rgba(110,231,183,.45)'
           : '1px solid var(--border)'
         const bg = isDone
           ? 'rgba(52,211,153,.08)'
           : isActive
-          ? 'rgba(37,99,235,.08)'
+          ? 'rgba(5,150,105,.08)'
           : 'rgba(255,255,255,.03)'
         return (
           <li
@@ -4733,9 +4733,9 @@ function PipelineStages({
                 border: isDone
                   ? '1px solid rgba(52,211,153,.55)'
                   : isActive
-                  ? '2px solid rgba(147,197,253,.55)'
+                  ? '2px solid rgba(110,231,183,.55)'
                   : '1px solid var(--border)',
-                borderTopColor: isActive ? '#93c5fd' : undefined,
+                borderTopColor: isActive ? '#6ee7b7' : undefined,
                 animation: isActive ? 'spin 0.9s linear infinite' : undefined,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -5024,10 +5024,10 @@ function ShortPackageSection({
             background:
               copiedSection === 'package'
                 ? 'linear-gradient(135deg, #10b981, #059669)'
-                : 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                : 'linear-gradient(135deg, #059669, #047857)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 6px 22px rgba(37,99,235,.32)',
+            boxShadow: '0 6px 22px rgba(5,150,105,.32)',
           }}
         >
           {copiedSection === 'package' ? '✓ Copied' : '📋 Copy Full Short Package'}
@@ -5053,7 +5053,7 @@ function ShortPackageSection({
               <div className="flex items-center justify-between gap-2">
                 <div
                   className="text-xs font-black uppercase tracking-widest"
-                  style={{ color: '#93c5fd' }}
+                  style={{ color: '#6ee7b7' }}
                 >
                   {c.label}
                 </div>
@@ -5124,7 +5124,7 @@ function UpsellSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
       style={{
-        background: 'linear-gradient(135deg, rgba(251,191,36,.04), rgba(59,130,246,.04))',
+        background: 'linear-gradient(135deg, rgba(251,191,36,.04), rgba(16,185,129,.04))',
         border: '1px solid rgba(255,255,255,.08)',
       }}
     >
@@ -5268,8 +5268,8 @@ function NextActionSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
       style={{
-        background: 'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(37, 99, 235,.06))',
-        border: '1px solid rgba(59, 130, 246,.28)',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
+        border: '1px solid rgba(16, 185, 129,.28)',
       }}
     >
       <h3 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
@@ -5284,10 +5284,10 @@ function NextActionSection({
           onClick={onAnother}
           className="rounded-xl px-5 py-3 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB 0%, #2563EB 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #22D3EE 100%)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 6px 22px rgba(59, 130, 246,.4)',
+            boxShadow: '0 6px 22px rgba(16, 185, 129,.4)',
           }}
         >
           ⚡ Generate Another Short
@@ -5377,8 +5377,8 @@ function Spinner() {
       style={{
         width: 22,
         height: 22,
-        border: '2px solid rgba(37,99,235,.25)',
-        borderTopColor: '#93c5fd',
+        border: '2px solid rgba(5,150,105,.25)',
+        borderTopColor: '#6ee7b7',
         animation: 'spin 0.9s linear infinite',
       }}
     />
@@ -5395,7 +5395,7 @@ function ProgressBar({ progress }: { progress: number }) {
         className="h-full"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(37,99,235,.85), rgba(59,130,246,1))',
+          background: 'linear-gradient(90deg, rgba(5,150,105,.85), rgba(16,185,129,1))',
           transition: 'width 600ms ease',
         }}
       />
@@ -5429,7 +5429,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
           <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="5" />
           <circle
             cx="36" cy="36" r={r} fill="none"
-            stroke="#3B82F6"
+            stroke="#10B981"
             strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={`${dash} ${gap}`}
@@ -5439,7 +5439,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
         <div style={{
           position: 'absolute', inset: 0, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 800, color: '#93c5fd',
+          fontSize: 13, fontWeight: 800, color: '#6ee7b7',
         }}>
           {pct}%
         </div>
@@ -5452,7 +5452,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
         <div style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{
             display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-            background: '#3B82F6', animation: 'pulse 1.5s ease-in-out infinite',
+            background: '#10B981', animation: 'pulse 1.5s ease-in-out infinite',
           }} />
           <span>Rendering · {timeStr}</span>
         </div>
@@ -5684,8 +5684,8 @@ function ModeSelector({
         <EngineCard
           selected={fastSelected}
           unlocked={fastUnlocked}
-          accent="37,99,235"
-          accentText="#93c5fd"
+          accent="5,150,105"
+          accentText="#6ee7b7"
           icon="⚡"
           name="Fast Mode"
           engineTag="Starter engine"
@@ -5730,8 +5730,8 @@ function ModeSelector({
         <EngineCard
           selected={klingSelected}
           unlocked={klingUnlocked}
-          accent="168,85,247"
-          accentText="#d8b4fe"
+          accent="16,185,129"
+          accentText="#6ee7b7"
           icon="🎬"
           name="Cinematic AI"
           engineTag="Studio engine"
@@ -5739,9 +5739,9 @@ function ModeSelector({
           quality={3}
           features={cinematicFeatures_kling}
           badge={isStudio ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.35)' }}>45 credits</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,.35)' }}>45 credits</span>
           ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(168,85,247,.15)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,.3)' }}>🔒 Studio</span>
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(16,185,129,.15)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,.3)' }}>🔒 Studio</span>
           )}
           onClick={() => { if (isStudio) { setMode('cinematic_ai'); setAiEngine('kling') } else { onUpgrade() } }}
         />
@@ -5755,11 +5755,11 @@ function ModeSelector({
             onClick={() => setMode('cinematic')}
             className="rounded-xl p-4 text-left"
             style={{
-              background: mode === 'cinematic' ? 'rgba(168,85,247,.10)' : 'rgba(255,255,255,.03)',
-              border: mode === 'cinematic' ? '1.5px solid rgba(168,85,247,.55)' : '1.5px solid var(--border)',
+              background: mode === 'cinematic' ? 'rgba(16,185,129,.10)' : 'rgba(255,255,255,.03)',
+              border: mode === 'cinematic' ? '1.5px solid rgba(16,185,129,.55)' : '1.5px solid var(--border)',
               cursor: 'pointer',
               transition: 'all 0.15s',
-              boxShadow: mode === 'cinematic' ? '0 0 28px rgba(168,85,247,.15)' : 'none',
+              boxShadow: mode === 'cinematic' ? '0 0 28px rgba(16,185,129,.15)' : 'none',
             }}
           >
             {/* Header row */}
@@ -5767,7 +5767,7 @@ function ModeSelector({
               <span className="text-base">🎬</span>
               <span
                 className="text-sm font-black"
-                style={{ color: mode === 'cinematic' ? '#d8b4fe' : 'var(--text)' }}
+                style={{ color: mode === 'cinematic' ? '#6ee7b7' : 'var(--text)' }}
               >
                 Cinematic
               </span>
@@ -5775,9 +5775,9 @@ function ModeSelector({
                 <span
                   className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
                   style={{
-                    background: 'rgba(168,85,247,.15)',
-                    color: '#d8b4fe',
-                    border: '1px solid rgba(168,85,247,.25)',
+                    background: 'rgba(16,185,129,.15)',
+                    color: '#6ee7b7',
+                    border: '1px solid rgba(16,185,129,.25)',
                   }}
                 >
                   Pro
@@ -5785,9 +5785,9 @@ function ModeSelector({
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{
-                    background: 'rgba(168,85,247,.18)',
-                    color: '#d8b4fe',
-                    border: '1px solid rgba(168,85,247,.3)',
+                    background: 'rgba(16,185,129,.18)',
+                    color: '#6ee7b7',
+                    border: '1px solid rgba(16,185,129,.3)',
                   }}
                 >
                   {cinematicTokens} token{cinematicTokens === 1 ? '' : 's'}
@@ -5798,7 +5798,7 @@ function ModeSelector({
             <ul className="space-y-1">
               {cinematicFeatures.map((f) => (
                 <li key={f} className="flex items-center gap-1.5">
-                  <span style={{ color: '#d8b4fe', fontSize: '0.6rem' }}>●</span>
+                  <span style={{ color: '#6ee7b7', fontSize: '0.6rem' }}>●</span>
                   <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
                 </li>
               ))}
@@ -5809,8 +5809,8 @@ function ModeSelector({
           <div
             className="rounded-xl p-4"
             style={{
-              background: 'rgba(168,85,247,.04)',
-              border: '1.5px solid rgba(168,85,247,.18)',
+              background: 'rgba(16,185,129,.04)',
+              border: '1.5px solid rgba(16,185,129,.18)',
               opacity: 0.7,
               cursor: 'not-allowed',
             }}
@@ -5842,8 +5842,8 @@ function ModeSelector({
           <div
             className="rounded-xl p-4"
             style={{
-              background: 'rgba(168,85,247,.04)',
-              border: '1.5px solid rgba(168,85,247,.18)',
+              background: 'rgba(16,185,129,.04)',
+              border: '1.5px solid rgba(16,185,129,.18)',
               cursor: 'not-allowed',
             }}
           >
@@ -5855,7 +5855,7 @@ function ModeSelector({
               <div className="ml-auto">
                 <span
                   style={{
-                    background: 'linear-gradient(135deg,#7c3aed,#9333ea)',
+                    background: 'linear-gradient(135deg,#059669,#059669)',
                     color: '#fff',
                     fontSize: '0.62rem',
                     fontWeight: 900,
@@ -5881,7 +5881,7 @@ function ModeSelector({
             <a
               href="/pricing"
               className="inline-flex items-center gap-1 text-xs font-bold"
-              style={{ color: '#d8b4fe', textDecoration: 'none' }}
+              style={{ color: '#6ee7b7', textDecoration: 'none' }}
             >
               Unlock with Pro →
             </a>
@@ -5919,16 +5919,16 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
       {STEPS.map((s, i) => {
         const isDone = phase === 'done' || step > i
         const isActive = !isDone && step === i
-        const color = isDone ? '#34d399' : isActive ? '#93c5fd' : 'var(--muted)'
+        const color = isDone ? '#34d399' : isActive ? '#6ee7b7' : 'var(--muted)'
         const ring = isDone
           ? '1px solid rgba(52,211,153,.45)'
           : isActive
-          ? '1px solid rgba(147,197,253,.45)'
+          ? '1px solid rgba(110,231,183,.45)'
           : '1px solid var(--border)'
         const bg = isDone
           ? 'rgba(52,211,153,.08)'
           : isActive
-          ? 'rgba(37,99,235,.08)'
+          ? 'rgba(5,150,105,.08)'
           : 'rgba(255,255,255,.03)'
         return (
           <li
@@ -5950,9 +5950,9 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
                 border: isDone
                   ? '1px solid rgba(52,211,153,.55)'
                   : isActive
-                  ? '2px solid rgba(147,197,253,.55)'
+                  ? '2px solid rgba(110,231,183,.55)'
                   : '1px solid var(--border)',
-                borderTopColor: isActive ? '#93c5fd' : undefined,
+                borderTopColor: isActive ? '#6ee7b7' : undefined,
                 animation: isActive ? 'spin 0.9s linear infinite' : undefined,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -6056,7 +6056,7 @@ function UpgradeModal({
         style={{
           width: '100%',
           maxWidth: 460,
-          background: '#0B1120',
+          background: '#051D15',
           border: '1px solid rgba(52,211,153,0.35)',
           borderRadius: 20,
           padding: '28px 24px',
@@ -6310,7 +6310,7 @@ function UrgencyModal({
           position: 'relative',
           width: '100%',
           maxWidth: 460,
-          background: '#0B1120',
+          background: '#051D15',
           border: '1px solid rgba(251,191,36,0.45)',
           borderRadius: 20,
           padding: '32px 28px',

@@ -228,7 +228,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
             style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
           >
             Your{' '}
-            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Videos
             </span>
           </h1>
@@ -245,7 +245,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           <Link
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white"
-            style={{ background: 'linear-gradient(135deg, #2563EB, #22D3EE)', textDecoration: 'none', boxShadow: '0 6px 28px rgba(59,130,246,.4)' }}
+            style={{ background: 'linear-gradient(135deg, #059669, #22D3EE)', textDecoration: 'none', boxShadow: '0 6px 28px rgba(16,185,129,.4)' }}
           >
             ⚡ Generate Video
           </Link>
@@ -275,7 +275,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
             style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
           >
             Your{' '}
-            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Videos
             </span>
           </h1>
@@ -283,7 +283,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
         <Link
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black text-white flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #2563EB, #22D3EE)', textDecoration: 'none', boxShadow: '0 4px 18px rgba(59,130,246,.35)' }}
+          style={{ background: 'linear-gradient(135deg, #059669, #22D3EE)', textDecoration: 'none', boxShadow: '0 4px 18px rgba(16,185,129,.35)' }}
         >
           ⚡ New Video
         </Link>
@@ -305,7 +305,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           >
             <span
               className="font-black text-lg leading-none"
-              style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+              style={{ background: 'linear-gradient(135deg,#22D3EE,#10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
             >
               {s.val}
             </span>
@@ -456,9 +456,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                         fontWeight: 700,
                         padding: '1px 4px',
                         borderRadius: 4,
-                        background: video.quality_mode === 'cinematic' ? 'rgba(139,92,246,0.15)' : 'rgba(34,211,238,0.1)',
-                        border: `1px solid ${video.quality_mode === 'cinematic' ? 'rgba(139,92,246,0.3)' : 'rgba(34,211,238,0.2)'}`,
-                        color: video.quality_mode === 'cinematic' ? '#A78BFA' : '#22D3EE',
+                        background: video.quality_mode === 'cinematic' ? 'rgba(16,185,129,0.15)' : 'rgba(34,211,238,0.1)',
+                        border: `1px solid ${video.quality_mode === 'cinematic' ? 'rgba(16,185,129,0.3)' : 'rgba(34,211,238,0.2)'}`,
+                        color: video.quality_mode === 'cinematic' ? '#34D399' : '#22D3EE',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
@@ -552,9 +552,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       gap: 3,
                       padding: '5px 4px',
                       borderRadius: 6,
-                      background: isExpanded ? 'rgba(139,92,246,0.18)' : 'rgba(139,92,246,0.08)',
-                      border: '1px solid rgba(139,92,246,0.25)',
-                      color: '#A78BFA',
+                      background: isExpanded ? 'rgba(16,185,129,0.18)' : 'rgba(16,185,129,0.08)',
+                      border: '1px solid rgba(16,185,129,0.25)',
+                      color: '#34D399',
                       fontSize: '0.6rem',
                       fontWeight: 700,
                       cursor: summaryLoading === video.id ? 'wait' : 'pointer',
@@ -583,7 +583,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   const section = (key: string, label: string, text: string) => (
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <span style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#A78BFA' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#34D399' }}>
                           {label}
                         </span>
                         <button
@@ -623,8 +623,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                         marginTop: 8,
                         padding: '9px 10px',
                         borderRadius: 8,
-                        background: 'rgba(139,92,246,0.05)',
-                        border: '1px solid rgba(139,92,246,0.18)',
+                        background: 'rgba(16,185,129,0.05)',
+                        border: '1px solid rgba(16,185,129,0.18)',
                       }}
                     >
                       {s.title && section(`${video.id}-title`, 'Title', s.title)}
@@ -639,7 +639,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                           border: 'none',
                           background: copiedKey === `${video.id}-all`
                             ? 'linear-gradient(135deg,#16a34a,#22c55e)'
-                            : 'linear-gradient(135deg,#7C3AED,#A78BFA)',
+                            : 'linear-gradient(135deg,#059669,#34D399)',
                           color: '#fff',
                           fontSize: '0.62rem',
                           fontWeight: 800,
@@ -669,7 +669,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
             style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.86)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           >
             <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(420px, 92vw)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: 16, overflow: 'hidden', background: '#000', border: '1px solid rgba(34,211,238,0.4)', boxShadow: '0 18px 60px rgba(37,99,235,0.25)' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: 16, overflow: 'hidden', background: '#000', border: '1px solid rgba(34,211,238,0.4)', boxShadow: '0 18px 60px rgba(5,150,105,0.25)' }}>
                 <video
                   src={v.video_url}
                   controls

@@ -25,7 +25,7 @@ export default function ComingSoonPage() {
       style={{
         position: 'relative',
         minHeight: '100vh',
-        background: 'var(--bg, #05070D)',
+        background: 'var(--bg, #020D0A)',
         color: 'var(--text, #f5f5fa)',
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',
@@ -42,7 +42,7 @@ export default function ComingSoonPage() {
           position: 'absolute',
           width: 900,
           height: 900,
-          background: 'radial-gradient(circle, rgba(37,99,235,0.18), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(5,150,105,0.18), transparent 65%)',
           top: -300,
           right: -200,
           filter: 'blur(120px)',
@@ -57,7 +57,7 @@ export default function ComingSoonPage() {
           position: 'absolute',
           width: 700,
           height: 700,
-          background: 'radial-gradient(circle, rgba(37, 99, 235,0.16), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(5, 150, 105,0.16), transparent 65%)',
           bottom: -240,
           left: -160,
           filter: 'blur(100px)',
@@ -92,12 +92,12 @@ export default function ComingSoonPage() {
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'linear-gradient(135deg, #2563EB, #2563EB)',
+              background: 'linear-gradient(135deg, #059669, #059669)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.3rem',
-              boxShadow: '0 0 28px rgba(59, 130, 246,.55)',
+              boxShadow: '0 0 28px rgba(16, 185, 129,.55)',
             }}
           >
             ⚡
@@ -106,7 +106,7 @@ export default function ComingSoonPage() {
             style={{
               fontWeight: 900,
               fontSize: '1.15rem',
-              background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+              background: 'linear-gradient(135deg, #10B981, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               letterSpacing: '-0.02em',
@@ -124,8 +124,8 @@ export default function ComingSoonPage() {
             gap: 8,
             padding: '6px 14px',
             borderRadius: 999,
-            background: 'rgba(37,99,235,0.12)',
-            border: '1px solid rgba(37,99,235,0.32)',
+            background: 'rgba(5,150,105,0.12)',
+            border: '1px solid rgba(5,150,105,0.32)',
             marginBottom: 22,
           }}
         >
@@ -134,12 +134,12 @@ export default function ComingSoonPage() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#60a5fa',
-              boxShadow: '0 0 10px rgba(96,165,250,0.7)',
+              background: '#34d399',
+              boxShadow: '0 0 10px rgba(52,211,153,0.7)',
               display: 'inline-block',
             }}
           />
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#93c5fd', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#6ee7b7', letterSpacing: '0.05em' }}>
             EM BREVE · COMING SOON
           </span>
         </div>
@@ -158,7 +158,7 @@ export default function ComingSoonPage() {
           Estamos preparando algo{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #3B82F6, #22D3EE, #22D3EE)',
+              background: 'linear-gradient(135deg, #10B981, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -223,10 +223,10 @@ export default function ComingSoonPage() {
                 fontSize: '0.9rem',
                 fontWeight: 800,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #2563EB, #2563EB)',
+                background: 'linear-gradient(135deg, #059669, #059669)',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 6px 24px rgba(59, 130, 246,.4)',
+                boxShadow: '0 6px 24px rgba(16, 185, 129,.4)',
                 whiteSpace: 'nowrap',
                 fontFamily: 'inherit',
               }}
@@ -261,7 +261,7 @@ export default function ComingSoonPage() {
           Já tem uma conta?{' '}
           <Link
             href="/login"
-            style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700 }}
+            style={{ color: '#6ee7b7', textDecoration: 'none', fontWeight: 700 }}
           >
             Entrar
           </Link>

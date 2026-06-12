@@ -23,12 +23,12 @@ const PACING_LABEL: Record<GlobalVisualStyle['pacing'], string> = {
 const MOOD_COLORS: Record<string, string> = {
   dark:       'rgba(239,68,68,0.2)',
   energetic:  'rgba(234,179,8,0.2)',
-  luxurious:  'rgba(168,85,247,0.2)',
-  mysterious: 'rgba(99,102,241,0.2)',
+  luxurious:  'rgba(16,185,129,0.2)',
+  mysterious: 'rgba(20,184,166,0.2)',
   futuristic: 'rgba(6,182,212,0.2)',
-  emotional:  'rgba(236,72,153,0.2)',
+  emotional:  'rgba(163,230,53,0.2)',
   tense:      'rgba(249,115,22,0.2)',
-  epic:       'rgba(59,130,246,0.2)',
+  epic:       'rgba(16,185,129,0.2)',
 }
 
 const MOOD_TEXT_COLORS: Record<string, string> = {
@@ -39,7 +39,7 @@ const MOOD_TEXT_COLORS: Record<string, string> = {
   futuristic: 'rgb(103,232,249)',
   emotional:  'rgb(249,168,212)',
   tense:      'rgb(253,186,116)',
-  epic:       'rgb(147,197,253)',
+  epic:       'rgb(110,231,183)',
 }
 
 function GlobalStyleChip({ label, value }: { label: string; value: string }) {
@@ -105,8 +105,8 @@ export default function VisualDirector({
   const [localScenes, setLocalScenes] = useState<BrollScene[]>(scenes)
   const [history, setHistory] = useState<SceneHistory>(() => initHistory(scenes))
 
-  const moodBg = MOOD_COLORS[globalStyle.mood] ?? 'rgba(59,130,246,0.15)'
-  const moodText = MOOD_TEXT_COLORS[globalStyle.mood] ?? 'rgb(147,197,253)'
+  const moodBg = MOOD_COLORS[globalStyle.mood] ?? 'rgba(16,185,129,0.15)'
+  const moodText = MOOD_TEXT_COLORS[globalStyle.mood] ?? 'rgb(110,231,183)'
 
   // Derived stats
   const avgRelevance = localScenes.some((s) => s.relevanceScore !== undefined)
@@ -163,8 +163,8 @@ export default function VisualDirector({
             width: 40,
             height: 40,
             borderRadius: '50%',
-            border: '3px solid rgba(59,130,246,0.2)',
-            borderTopColor: 'rgb(59,130,246)',
+            border: '3px solid rgba(16,185,129,0.2)',
+            borderTopColor: 'rgb(16,185,129)',
             animation: 'spin 0.8s linear infinite',
           }}
         />
@@ -191,7 +191,7 @@ export default function VisualDirector({
           borderRadius: 14,
         }}
       >
-        <StatChip label="Scenes" value={localScenes.length} color="rgba(147,197,253,0.9)" />
+        <StatChip label="Scenes" value={localScenes.length} color="rgba(110,231,183,0.9)" />
         <StatChip label="Duration" value={`${totalDuration}s`} color="rgba(167,243,208,0.9)" />
         {avgRelevance !== null && (
           <StatChip
@@ -204,7 +204,7 @@ export default function VisualDirector({
           <StatChip label="Pexels" value={sourceCounts.pexels} color="rgba(251,191,36,0.9)" />
         )}
         {sourceCounts.ai > 0 && (
-          <StatChip label="AI Gen" value={sourceCounts.ai} color="rgba(196,181,253,0.9)" />
+          <StatChip label="AI Gen" value={sourceCounts.ai} color="rgba(110,231,183,0.9)" />
         )}
         {sourceCounts.stock > 0 && (
           <StatChip label="Stock" value={sourceCounts.stock} color="rgba(148,163,184,0.9)" />
@@ -243,20 +243,20 @@ export default function VisualDirector({
               fontSize: 13,
               fontWeight: 700,
               borderRadius: 10,
-              border: '1px solid rgba(59,130,246,0.5)',
-              background: 'rgba(59,130,246,0.15)',
-              color: 'rgba(147,197,253,0.95)',
+              border: '1px solid rgba(16,185,129,0.5)',
+              background: 'rgba(16,185,129,0.15)',
+              color: 'rgba(110,231,183,0.95)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               whiteSpace: 'nowrap',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(59,130,246,0.28)'
-              e.currentTarget.style.borderColor = 'rgba(59,130,246,0.8)'
+              e.currentTarget.style.background = 'rgba(16,185,129,0.28)'
+              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.8)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(59,130,246,0.15)'
-              e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)'
+              e.currentTarget.style.background = 'rgba(16,185,129,0.15)'
+              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.5)'
             }}
           >
             Regenerate All

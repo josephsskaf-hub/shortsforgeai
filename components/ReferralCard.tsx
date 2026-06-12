@@ -77,7 +77,7 @@ export default function ReferralCard() {
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(59,130,246,.12))',
+              background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(16,185,129,.12))',
               border: '1px solid rgba(34,211,238,.4)',
             }}
           >
@@ -104,7 +104,7 @@ export default function ReferralCard() {
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(59,130,246,.12))',
+            background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(16,185,129,.12))',
             border: '1px solid rgba(34,211,238,.4)',
           }}
         >
@@ -148,7 +148,7 @@ export default function ReferralCard() {
           onClick={copyReferral}
           className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #22D3EE, #2563EB)',
+            background: 'linear-gradient(135deg, #22D3EE, #059669)',
             boxShadow: '0 4px 18px rgba(34,211,238,.35)',
             whiteSpace: 'nowrap',
             cursor: 'pointer',

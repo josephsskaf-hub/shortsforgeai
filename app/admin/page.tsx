@@ -65,7 +65,7 @@ function timeAgo(iso: string | null): string {
 function PlanChip({ plan }: { plan: string }) {
   const p = plan.replace('_trial', '')
   const color =
-    p === 'pro' ? '168,85,247' : p === 'basic' ? '245,158,11' : p === 'starter' ? '37,99,235' : '148,163,184'
+    p === 'pro' ? '16,185,129' : p === 'basic' ? '245,158,11' : p === 'starter' ? '5,150,105' : '148,163,184'
   return (
     <span
       className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded"
@@ -196,7 +196,7 @@ export default function AdminOverviewPage() {
               : undefined
           }
         />
-        <Kpi label="MRR (est.)" value={k ? `$${k.mrrUsd.toFixed(2)}` : '…'} accent="168,85,247" />
+        <Kpi label="MRR (est.)" value={k ? `$${k.mrrUsd.toFixed(2)}` : '…'} accent="16,185,129" />
         <Kpi label="Videos · total" value={k ? String(k.videosTotal) : '…'} accent="34,211,238" sub={k ? `+${k.videos7d} last 7d` : undefined} />
         <Kpi label="Purchase intent" value={k ? String(k.purchaseIntent) : '…'} accent="239,68,68" sub="checkout started / warm" />
         <Kpi label="New users · 7d" value={k ? String(k.newUsers7d) : '…'} accent="16,185,129" />
@@ -245,7 +245,7 @@ export default function AdminOverviewPage() {
       {/* Push #418 — Subscribers: who's paying and on which plan */}
       <section
         className="mt-6 rounded-2xl p-4"
-        style={{ background: 'rgba(168,85,247,.04)', border: '1.5px solid rgba(168,85,247,.25)' }}
+        style={{ background: 'rgba(16,185,129,.04)', border: '1.5px solid rgba(16,185,129,.25)' }}
       >
         <h2 className="mb-3 text-sm font-black text-[#F1F5F9]">
           💎 Subscribers ({data?.subscribers?.length ?? 0})

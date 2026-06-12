@@ -20,7 +20,7 @@ export default function MobileNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: '#0B1020',
+        background: '#041711',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
@@ -51,7 +51,7 @@ export default function MobileNav() {
                     left: '20%',
                     right: '20%',
                     height: 2,
-                    background: 'linear-gradient(90deg, #22D3EE, #3B82F6)',
+                    background: 'linear-gradient(90deg, #22D3EE, #10B981)',
                     borderRadius: '0 0 4px 4px',
                     boxShadow: '0 0 8px rgba(34,211,238,0.5)',
                   }}

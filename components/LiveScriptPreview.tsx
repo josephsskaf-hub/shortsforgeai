@@ -32,7 +32,7 @@ const EXAMPLES = [
     color: '#f472b6',
     glow: 'rgba(244,114,182,0.25)',
     badge: '#500724',
-    badgeText: '#fbcfe8',
+    badgeText: '#d9f99d',
     hook: 'Your brain is lying to you right now 🤯',
     script:
       "Every memory you have is a reconstruction, not a recording. Each time you remember something, your brain rewrites it slightly. This means your oldest memories are the most distorted. You've been living with edited versions of your own past...",
@@ -200,7 +200,7 @@ export default function LiveScriptPreview() {
           Watch it generate{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
+              background: 'linear-gradient(135deg, #34D399, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -367,7 +367,7 @@ export default function LiveScriptPreview() {
             <div
               style={{
                 fontSize: '0.82rem',
-                color: '#60a5fa',
+                color: '#34d399',
                 lineHeight: 1.5,
                 minHeight: '1.5em',
                 fontWeight: 600,
@@ -426,8 +426,8 @@ export default function LiveScriptPreview() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
-            boxShadow: '0 6px 30px rgba(59, 130, 246,0.45)',
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            boxShadow: '0 6px 30px rgba(16, 185, 129,0.45)',
           }}
         >
           ⚡ Generate yours →

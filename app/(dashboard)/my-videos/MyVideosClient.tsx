@@ -198,8 +198,8 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
           className="rounded-2xl p-8 sm:p-14 text-center"
           style={{
             background: 'linear-gradient(180deg, rgba(11,17,32,.85), rgba(11,16,32,.65))',
-            border: '1px solid rgba(59, 130, 246,.18)',
-            boxShadow: '0 0 80px rgba(59,130,246,.08)',
+            border: '1px solid rgba(16, 185, 129,.18)',
+            boxShadow: '0 0 80px rgba(16,185,129,.08)',
           }}
         >
           <div className="text-5xl mb-4">⚡</div>
@@ -373,9 +373,9 @@ function VideoCard({
       onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
-        background: 'linear-gradient(180deg, #0F1424 0%, #0B1020 100%)',
+        background: 'linear-gradient(180deg, #0F1424 0%, #041711 100%)',
         border: isActive
-          ? '1px solid rgba(59,130,246,0.55)'
+          ? '1px solid rgba(16,185,129,0.55)'
           : '1px solid rgba(255,255,255,0.06)',
         boxShadow: isActive
           ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
@@ -389,7 +389,7 @@ function VideoCard({
         style={{
           background: v.thumbnail_url
             ? `center / cover no-repeat url(${v.thumbnail_url})`
-            : 'linear-gradient(135deg, rgba(37,99,235,.22), rgba(34,211,238,.10))',
+            : 'linear-gradient(135deg, rgba(5,150,105,.22), rgba(34,211,238,.10))',
           aspectRatio: '9 / 16',
           overflow: 'hidden',
           cursor: playable && !previewFailed ? 'pointer' : 'default',
@@ -451,7 +451,7 @@ function VideoCard({
         {!v.thumbnail_url && !playable && (
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ color: 'rgba(147,197,253,.7)', fontSize: '2.6rem' }}
+            style={{ color: 'rgba(110,231,183,.7)', fontSize: '2.6rem' }}
           >
             🎬
           </div>
@@ -580,10 +580,10 @@ function VideoCard({
                 rel="noreferrer"
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center transition-all"
                 style={{
-                  background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                  background: 'linear-gradient(135deg, #059669, #22D3EE)',
                   color: '#fff',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 18px rgba(59,130,246,.35)',
+                  boxShadow: '0 4px 18px rgba(16,185,129,.35)',
                 }}
               >
                 ▶ Open
@@ -628,9 +628,9 @@ function VideoCard({
                 href={generateSimilarHref}
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
                 style={{
-                  background: 'rgba(59, 130, 246,.10)',
-                  border: '1px solid rgba(59, 130, 246,.32)',
-                  color: '#60A5FA',
+                  background: 'rgba(16, 185, 129,.10)',
+                  border: '1px solid rgba(16, 185, 129,.32)',
+                  color: '#34D399',
                   textDecoration: 'none',
                 }}
               >
@@ -678,9 +678,9 @@ function FilterTabs({
             className="rounded-full px-3.5 py-1.5 text-xs font-bold"
             style={{
               background: active
-                ? 'linear-gradient(135deg, rgba(37,99,235,.85), rgba(29,78,216,.85))'
+                ? 'linear-gradient(135deg, rgba(5,150,105,.85), rgba(4,120,87,.85))'
                 : 'rgba(255,255,255,.04)',
-              border: active ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+              border: active ? '1px solid rgba(5,150,105,.6)' : '1px solid var(--border)',
               color: active ? '#fff' : 'var(--muted)',
               cursor: 'pointer',
               transition: 'all 0.15s',
@@ -728,9 +728,9 @@ function Header({ count }: { count: number }) {
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+            background: 'linear-gradient(135deg, #059669, #22D3EE)',
             color: '#FFFFFF',
-            boxShadow: '0 4px 18px rgba(59, 130, 246,.35)',
+            boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
             textDecoration: 'none',
           }}
         >

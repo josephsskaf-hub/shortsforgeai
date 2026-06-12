@@ -150,7 +150,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
   const signupUrl = `/signup?utm_source=seo&utm_medium=niche&utm_campaign=${params.niche}`
 
   return (
-    <main style={{ minHeight: '100vh', background: '#05070D', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#020D0A', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '28px 18px 64px' }}>
         <Link href="/" style={{ color: '#22D3EE', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>
           ⚡ ShortsForgeAI
@@ -169,7 +169,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           </p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', color: '#05070D', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
+            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#020D0A', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Generate my free {n.label} Short →
           </Link>
@@ -214,7 +214,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           <p style={{ color: '#CBD5E1', margin: '8px 0 18px', fontSize: '0.95rem' }}>No script, no voiceover, no editing. No credit card required.</p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', background: '#22D3EE', color: '#05070D', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
+            style={{ display: 'inline-block', background: '#22D3EE', color: '#020D0A', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
           >
             Start free →
           </Link>

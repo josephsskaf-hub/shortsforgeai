@@ -24,7 +24,7 @@ function scorePassword(pw: string): Strength {
 
   if (score <= 1) return { level: 2, label: 'Weak', color: '#f59e0b' }
   if (score === 2 || score === 3)
-    return { level: 3, label: 'Good', color: '#3b82f6' }
+    return { level: 3, label: 'Good', color: '#10b981' }
   return { level: 4, label: 'Strong', color: '#10b981' }
 }
 
@@ -165,7 +165,7 @@ export default function SignupPage() {
           style={{
             background: 'var(--card)',
             border: '1px solid var(--border2)',
-            boxShadow: '0 0 80px rgba(59, 130, 246,.08)',
+            boxShadow: '0 0 80px rgba(16, 185, 129,.08)',
           }}
         >
           {/* LEFT — value prop panel (desktop only) */}
@@ -173,7 +173,7 @@ export default function SignupPage() {
             className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
             style={{
               background:
-                'radial-gradient(circle at top left, rgba(59,130,246,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0b1020 50%, #060c1a 100%)',
+                'radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #041711 50%, #060c1a 100%)',
             }}
           >
             <div
@@ -198,7 +198,7 @@ export default function SignupPage() {
                   style={{
                     background:
                       'linear-gradient(135deg, var(--indigo), var(--purple))',
-                    boxShadow: '0 0 24px rgba(59, 130, 246,.45)',
+                    boxShadow: '0 0 24px rgba(16, 185, 129,.45)',
                   }}
                 >
                   ⚡
@@ -207,7 +207,7 @@ export default function SignupPage() {
                   <div
                     className="font-black text-sm tracking-tight"
                     style={{
-                      background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
+                      background: 'linear-gradient(135deg, #34D399, #22D3EE)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}
@@ -217,8 +217,8 @@ export default function SignupPage() {
                   <div
                     className="text-xs font-bold tracking-widest px-1.5 py-0.5 rounded w-fit mt-1"
                     style={{
-                      background: 'rgba(59, 130, 246,.15)',
-                      border: '1px solid rgba(59, 130, 246,.3)',
+                      background: 'rgba(16, 185, 129,.15)',
+                      border: '1px solid rgba(16, 185, 129,.3)',
                       color: 'var(--indigo-light)',
                       fontSize: '0.52rem',
                     }}
@@ -332,7 +332,7 @@ export default function SignupPage() {
                 style={{
                   background:
                     'linear-gradient(135deg, var(--indigo), var(--purple))',
-                  boxShadow: '0 0 24px rgba(59, 130, 246,.45)',
+                  boxShadow: '0 0 24px rgba(16, 185, 129,.45)',
                 }}
               >
                 ⚡
@@ -340,7 +340,7 @@ export default function SignupPage() {
               <div
                 className="font-black text-sm tracking-tight"
                 style={{
-                  background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
+                  background: 'linear-gradient(135deg, #34D399, #22D3EE)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -432,8 +432,8 @@ export default function SignupPage() {
                         fontFamily: 'inherit',
                       }}
                       onFocus={(e) => {
-                        e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
-                        e.target.style.background = 'rgba(59, 130, 246,.04)'
+                        e.target.style.borderColor = 'rgba(16, 185, 129,.5)'
+                        e.target.style.background = 'rgba(16, 185, 129,.04)'
                       }}
                       onBlur={(e) => {
                         e.target.style.borderColor = 'var(--border2)'
@@ -465,8 +465,8 @@ export default function SignupPage() {
                           fontFamily: 'inherit',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(59, 130, 246,.5)'
-                          e.target.style.background = 'rgba(59, 130, 246,.04)'
+                          e.target.style.borderColor = 'rgba(16, 185, 129,.5)'
+                          e.target.style.background = 'rgba(16, 185, 129,.04)'
                         }}
                         onBlur={(e) => {
                           e.target.style.borderColor = 'var(--border2)'
@@ -565,9 +565,9 @@ export default function SignupPage() {
                     disabled={loading}
                     className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                     style={{
-                      background: '#3B82F6',
+                      background: '#10B981',
                       color: '#FFFFFF',
-                      boxShadow: '0 4px 22px rgba(59, 130, 246,.3)',
+                      boxShadow: '0 4px 22px rgba(16, 185, 129,.3)',
                       opacity: loading ? 0.7 : 1,
                       cursor: loading ? 'not-allowed' : 'pointer',
                     }}

@@ -59,7 +59,7 @@ function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
         padding: '28px 22px 26px',
         borderRadius: 18,
         background: 'linear-gradient(160deg, rgba(20,20,38,.85), rgba(13,13,28,.9))',
-        border: '1px solid rgba(59, 130, 246,.18)',
+        border: '1px solid rgba(16, 185, 129,.18)',
         textAlign: 'center',
         overflow: 'hidden',
         transition: 'transform .25s ease, border-color .25s ease, box-shadow .25s ease',
@@ -70,7 +70,7 @@ function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246,.16), transparent 70%)',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129,.16), transparent 70%)',
           pointerEvents: 'none',
         }}
       />
@@ -79,7 +79,7 @@ function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
           style={{
             fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
             fontWeight: 900,
-            background: 'linear-gradient(135deg, #60A5FA, #22D3EE, #22D3EE)',
+            background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.03em',
@@ -182,8 +182,8 @@ export default function SocialProof() {
         }
         .stat-card:hover {
           transform: translateY(-3px) scale(1.02);
-          border-color: rgba(59, 130, 246,.4) !important;
-          box-shadow: 0 14px 38px rgba(59, 130, 246,.18);
+          border-color: rgba(16, 185, 129,.4) !important;
+          box-shadow: 0 14px 38px rgba(16, 185, 129,.18);
         }
         @media (max-width: 900px) { .social-proof-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 480px) { .social-proof-grid { grid-template-columns: 1fr; } }

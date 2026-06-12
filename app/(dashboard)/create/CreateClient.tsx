@@ -590,7 +590,7 @@ export default function CreateClient() {
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', boxShadow: '0 0 24px rgba(59, 130, 246,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 0 24px rgba(16, 185, 129,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
             ⚡
           </div>
           <div>
@@ -613,8 +613,8 @@ export default function CreateClient() {
           className="rounded-[20px] p-6 md:p-7 mb-5"
           style={{
             background: 'rgba(11,17,32,0.85)',
-            border: '1px solid rgba(59, 130, 246,.22)',
-            boxShadow: '0 0 30px rgba(59, 130, 246,.08)',
+            border: '1px solid rgba(16, 185, 129,.22)',
+            boxShadow: '0 0 30px rgba(16, 185, 129,.08)',
           }}
         >
           {/* Quick Surprise Me CTA */}
@@ -635,7 +635,7 @@ export default function CreateClient() {
               style={{
                 background: suggestLoading
                   ? 'rgba(255,255,255,.04)'
-                  : 'linear-gradient(135deg, rgba(34, 211, 238,.25), rgba(59, 130, 246,.18))',
+                  : 'linear-gradient(135deg, rgba(34, 211, 238,.25), rgba(16, 185, 129,.18))',
                 border: '1px solid rgba(34, 211, 238,.45)',
                 color: suggestLoading ? 'var(--muted)' : '#22D3EE',
                 cursor: suggestLoading ? 'wait' : 'pointer',
@@ -686,7 +686,7 @@ export default function CreateClient() {
                 fontWeight: 500,
               }}
               onFocus={(e) => {
-                ;(e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(59, 130, 246,.5)'
+                ;(e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(16, 185, 129,.5)'
               }}
               onBlur={(e) => {
                 ;(e.currentTarget as HTMLInputElement).style.borderColor = 'var(--border2)'
@@ -790,17 +790,17 @@ export default function CreateClient() {
                     padding: '12px 14px',
                     borderRadius: 14,
                     background: media === m.id && !m.disabled
-                      ? 'linear-gradient(135deg, rgba(59, 130, 246,.28), rgba(37, 99, 235,.18))'
+                      ? 'linear-gradient(135deg, rgba(16, 185, 129,.28), rgba(5, 150, 105,.18))'
                       : m.disabled
                       ? 'rgba(255,255,255,.02)'
                       : 'rgba(255,255,255,.04)',
                     border: media === m.id && !m.disabled
-                      ? '1px solid rgba(59, 130, 246,.55)'
+                      ? '1px solid rgba(16, 185, 129,.55)'
                       : '1px solid var(--border2)',
                     cursor: m.disabled ? 'not-allowed' : 'pointer',
                     textAlign: 'left',
                     opacity: m.disabled ? 0.45 : 1,
-                    boxShadow: media === m.id && !m.disabled ? '0 0 20px rgba(59, 130, 246,.15)' : 'none',
+                    boxShadow: media === m.id && !m.disabled ? '0 0 20px rgba(16, 185, 129,.15)' : 'none',
                     transition: 'all .15s',
                   }}
                 >
@@ -850,8 +850,8 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
-              boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(59, 130, 246,.45)',
+                : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.45)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
@@ -887,8 +887,8 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
-              boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(59, 130, 246,.55)',
+                : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.55)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
               opacity: creditsLoading || suggestLoading ? 0.7 : 1,
@@ -955,12 +955,12 @@ function Pill({
       className="px-3.5 py-2 rounded-full text-xs font-bold transition-all"
       style={{
         background: active
-          ? 'linear-gradient(135deg, rgba(59, 130, 246,.25), rgba(37, 99, 235,.18))'
+          ? 'linear-gradient(135deg, rgba(16, 185, 129,.25), rgba(5, 150, 105,.18))'
           : 'rgba(255,255,255,.04)',
-        border: active ? '1px solid rgba(59, 130, 246,.5)' : '1px solid var(--border2)',
+        border: active ? '1px solid rgba(16, 185, 129,.5)' : '1px solid var(--border2)',
         color: active ? 'var(--text)' : 'var(--muted2)',
         cursor: 'pointer',
-        boxShadow: active ? '0 0 16px rgba(59, 130, 246,.2)' : 'none',
+        boxShadow: active ? '0 0 16px rgba(16, 185, 129,.2)' : 'none',
         flexShrink: noShrink ? 0 : undefined,
         whiteSpace: 'nowrap',
       }}
@@ -985,8 +985,8 @@ function ProgressView({
       className="rounded-[20px] p-7 md:p-9 mb-5 text-center"
       style={{
         background: 'rgba(11,17,32,0.85)',
-        border: '1px solid rgba(59, 130, 246,.32)',
-        boxShadow: '0 0 50px rgba(59, 130, 246,.18)',
+        border: '1px solid rgba(16, 185, 129,.32)',
+        boxShadow: '0 0 50px rgba(16, 185, 129,.18)',
       }}
     >
       <style jsx>{`
@@ -1003,7 +1003,7 @@ function ProgressView({
       <div
         className="w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-5"
         style={{
-          background: 'linear-gradient(135deg, rgba(34, 211, 238,.35), rgba(59, 130, 246,.2))',
+          background: 'linear-gradient(135deg, rgba(34, 211, 238,.35), rgba(16, 185, 129,.2))',
           border: '1px solid rgba(34, 211, 238,.5)',
           fontSize: '2rem',
           animation: 'pulseGlow 1.6s ease-in-out infinite',
@@ -1040,7 +1040,7 @@ function ProgressView({
           className="h-full transition-all"
           style={{
             width: `${Math.min(100, Math.max(2, progress))}%`,
-            background: 'linear-gradient(90deg, #3B82F6, #22D3EE, #22D3EE, #22D3EE, #3B82F6)',
+            background: 'linear-gradient(90deg, #10B981, #22D3EE, #22D3EE, #22D3EE, #10B981)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 2.4s linear infinite',
             transitionDuration: '600ms',
@@ -1098,14 +1098,14 @@ function FinalView({
         className="rounded-[24px] overflow-hidden"
         style={{
           background: 'rgba(10,10,22,0.95)',
-          border: '1px solid rgba(59, 130, 246,.25)',
-          boxShadow: '0 0 60px rgba(59, 130, 246,.12)',
+          border: '1px solid rgba(16, 185, 129,.25)',
+          boxShadow: '0 0 60px rgba(16, 185, 129,.12)',
         }}
       >
         {/* Top bar: version + format */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
@@ -1169,7 +1169,7 @@ function FinalView({
         {/* Creator row + reactions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(59, 130, 246,.4)' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(16, 185, 129,.4)' }}>
               {userInitial}
             </div>
             <div>
@@ -1182,7 +1182,7 @@ function FinalView({
               <button
                 key={icon}
                 style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(59, 130, 246,.15)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59, 130, 246,.3)' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(16, 185, 129,.15)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(16, 185, 129,.3)' }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)' }}
               >
                 {icon}
@@ -1199,7 +1199,7 @@ function FinalView({
           alignItems: 'center',
           gap: 10,
           background: 'rgba(12,12,24,0.9)',
-          border: '1px solid rgba(59, 130, 246,.2)',
+          border: '1px solid rgba(16, 185, 129,.2)',
           borderRadius: 16,
           padding: '12px 14px',
           flexWrap: 'wrap',
@@ -1240,8 +1240,8 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#3B82F6,#2563EB,#22D3EE)',
-              boxShadow: '0 4px 24px rgba(59, 130, 246,.45)',
+              background: 'linear-gradient(135deg,#10B981,#059669,#22D3EE)',
+              boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
             }}
@@ -1254,8 +1254,8 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#3B82F6,#2563EB,#22D3EE)',
-              boxShadow: '0 4px 24px rgba(59, 130, 246,.45)',
+              background: 'linear-gradient(135deg,#10B981,#059669,#22D3EE)',
+              boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
             }}
@@ -1317,8 +1317,8 @@ function FieldBlock({
           onClick={() => onCopy(value)}
           className="text-xs font-bold px-2.5 py-1 rounded-md"
           style={{
-            background: 'rgba(59, 130, 246,.07)',
-            border: '1px solid rgba(59, 130, 246,.18)',
+            background: 'rgba(16, 185, 129,.07)',
+            border: '1px solid rgba(16, 185, 129,.18)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
             fontSize: '0.62rem',
@@ -1353,11 +1353,11 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
         className="w-full max-w-md rounded-2xl relative overflow-hidden"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(59, 130, 246,.32)',
-          boxShadow: '0 0 80px rgba(59, 130, 246,.25), 0 30px 80px rgba(0,0,0,.5)',
+          border: '1px solid rgba(16, 185, 129,.32)',
+          boxShadow: '0 0 80px rgba(16, 185, 129,.25), 0 30px 80px rgba(0,0,0,.5)',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #3B82F6, #22D3EE, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #10B981, #22D3EE, transparent)' }} />
         <div className="p-7 relative z-10">
           <button
             onClick={onClose}
@@ -1382,8 +1382,8 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
             href="/pricing"
             className="block w-full text-center rounded-xl py-3.5 text-sm font-black text-white transition-all"
             style={{
-              background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
-              boxShadow: '0 4px 28px rgba(59, 130, 246,.45)',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              boxShadow: '0 4px 28px rgba(16, 185, 129,.45)',
               textDecoration: 'none',
             }}
           >

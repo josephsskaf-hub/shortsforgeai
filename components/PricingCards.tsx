@@ -78,7 +78,7 @@ export default function PricingCards() {
       <div className="text-center mb-5">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#93C5FD' }}
+          style={{ fontSize: '0.62rem', color: '#6EE7B7' }}
         >
           Pricing
         </div>
@@ -124,7 +124,7 @@ export default function PricingCards() {
               display: 'inline-block',
               marginTop: 10,
               background: '#34d399',
-              color: '#05070d',
+              color: '#020D0A',
               borderRadius: 8,
               padding: '6px 16px',
               fontWeight: 800,
@@ -241,18 +241,18 @@ function PlanCard({
 
   function background(): string {
     if (isSelected) return '#0D1830'
-    if (highlight) return 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+    if (highlight) return 'linear-gradient(135deg, rgba(5,150,105,.10), rgba(4,120,87,.06))'
     return 'rgba(11,17,32,0.85)'
   }
   function border(): string {
-    if (isSelected) return '2px solid #3B82F6'
-    if (highlight) return '2px solid rgba(37,99,235,.45)'
+    if (isSelected) return '2px solid #10B981'
+    if (highlight) return '2px solid rgba(5,150,105,.45)'
     return '1px solid var(--border)'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(59,130,246,0.3)'
-    if (highlight) return '0 0 40px rgba(37,99,235,.18)'
-    return '0 0 20px rgba(37,99,235,.04)'
+    if (isSelected) return '0 0 28px rgba(16,185,129,0.3)'
+    if (highlight) return '0 0 40px rgba(5,150,105,.18)'
+    return '0 0 20px rgba(5,150,105,.04)'
   }
 
   return (
@@ -283,7 +283,7 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (!isPaid || isSelected) return
-        e.currentTarget.style.borderColor = '#3B82F6'
+        e.currentTarget.style.borderColor = '#10B981'
         e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
         e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
       }}
@@ -297,7 +297,7 @@ function PlanCard({
       {badge && !isSelected && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', color: '#fff' }}
+          style={{ background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff' }}
         >
           {badge}
         </div>
@@ -322,7 +322,7 @@ function PlanCard({
       <div className="mb-4">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#93C5FD' : 'var(--muted)' }}
+          style={{ color: highlight ? '#6EE7B7' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -335,7 +335,7 @@ function PlanCard({
           </span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: '#93C5FD', fontWeight: 700 }}>
+          <p className="text-xs mb-1" style={{ color: '#6EE7B7', fontWeight: 700 }}>
             {renewNote}
           </p>
         )}
@@ -365,11 +365,11 @@ function PlanCard({
           className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black text-white"
           style={{
             background: isSelected
-              ? '#3B82F6'
-              : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+              ? '#10B981'
+              : 'linear-gradient(135deg, #059669, #047857)',
             boxShadow: isSelected
-              ? '0 4px 22px rgba(59, 130, 246,.35)'
-              : '0 4px 18px rgba(37,99,235,.28)',
+              ? '0 4px 22px rgba(16, 185, 129,.35)'
+              : '0 4px 18px rgba(5,150,105,.28)',
             border: 'none',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,

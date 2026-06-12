@@ -179,7 +179,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#93c5fd' }}
+          style={{ fontSize: '0.62rem', color: '#6ee7b7' }}
         >
           Admin · Staging
         </div>
@@ -222,7 +222,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
         >
           <MetricCard label="Pro subscribers"   value={stats?.pro   ?? null} hint="plan = pro"   accent="#34d399" />
-          <MetricCard label="Basic subscribers" value={stats?.basic ?? null} hint="plan = basic" accent="#60a5fa" />
+          <MetricCard label="Basic subscribers" value={stats?.basic ?? null} hint="plan = basic" accent="#34d399" />
           <MetricCard label="Free users"        value={stats?.free  ?? null} hint="no paid plan" accent="#94a3b8" />
           <MetricCard
             label="Paid · 0 credits ⚠️"
@@ -538,7 +538,7 @@ function PlanBadge({ plan, credits }: { plan: string | null; credits: number | n
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <span
           className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
-          style={{ background: 'rgba(96,165,250,.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,.3)' }}
+          style={{ background: 'rgba(52,211,153,.12)', color: '#34d399', border: '1px solid rgba(52,211,153,.3)' }}
         >
           Basic
         </span>
@@ -568,8 +568,8 @@ function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' | 'ceo' }
             href={t.href}
             className="text-xs font-bold rounded-lg px-3 py-1.5"
             style={{
-              background: isActive ? 'rgba(37, 99, 235,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(37, 99, 235,.45)' : 'var(--border)'}`,
+              background: isActive ? 'rgba(5, 150, 105,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(5, 150, 105,.45)' : 'var(--border)'}`,
               color: isActive ? '#22D3EE' : 'var(--muted2)',
               textDecoration: 'none',
             }}

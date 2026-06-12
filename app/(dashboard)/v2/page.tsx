@@ -215,15 +215,15 @@ export default function V2PrototypePage() {
         <div
           className="rounded-xl px-4 py-3 mt-6 flex items-center justify-between gap-3 flex-wrap"
           style={{
-            background: 'rgba(37,99,235,.08)',
-            border: '1px solid rgba(37,99,235,.25)',
+            background: 'rgba(5,150,105,.08)',
+            border: '1px solid rgba(5,150,105,.25)',
           }}
         >
           <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-            <strong style={{ color: '#93c5fd' }}>{duration}</strong> · {engineMeta?.label} engine ·{' '}
+            <strong style={{ color: '#6ee7b7' }}>{duration}</strong> · {engineMeta?.label} engine ·{' '}
             <span style={{ color: 'var(--muted)' }}>{engineMeta?.providerHint}</span>
           </div>
-          <div className="text-xs font-bold" style={{ color: '#93c5fd' }}>
+          <div className="text-xs font-bold" style={{ color: '#6ee7b7' }}>
             Estimated cost: {cost.basic} / {cost.pro} credits (basic / pro)
           </div>
         </div>
@@ -309,7 +309,7 @@ export default function V2PrototypePage() {
       </section>
 
       <p className="text-[11px] text-center" style={{ color: 'var(--muted)' }}>
-        V2 is a parallel surface. V1 lives at <Link href="/generate" style={{ color: '#93c5fd', textDecoration: 'none' }}>/generate</Link> and is unaffected by anything on this page.
+        V2 is a parallel surface. V1 lives at <Link href="/generate" style={{ color: '#6ee7b7', textDecoration: 'none' }}>/generate</Link> and is unaffected by anything on this page.
       </p>
     </main>
   )
@@ -324,9 +324,9 @@ function Chip({ children }: { children: React.ReactNode }) {
       style={{
         padding: '2px 8px',
         borderRadius: 999,
-        background: 'rgba(37,99,235,.10)',
-        border: '1px solid rgba(37,99,235,.25)',
-        color: '#93c5fd',
+        background: 'rgba(5,150,105,.10)',
+        border: '1px solid rgba(5,150,105,.25)',
+        color: '#6ee7b7',
         letterSpacing: '0.02em',
       }}
     >
@@ -361,8 +361,8 @@ function Selector({
               onClick={() => onChange(o.id)}
               className="rounded-full px-3 py-1.5 text-sm font-bold"
               style={{
-                background: selected ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                border: selected ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                background: selected ? 'rgba(5,150,105,.85)' : 'rgba(255,255,255,.04)',
+                border: selected ? '1px solid rgba(5,150,105,.6)' : '1px solid var(--border)',
                 color: selected ? '#fff' : 'var(--muted2)',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -408,8 +408,8 @@ function DurationSelector({
               onClick={() => onChange(d.id)}
               className="rounded-full px-3 py-1.5 text-sm font-bold inline-flex items-center gap-1.5"
               style={{
-                background: selected ? 'rgba(37,99,235,.85)' : 'rgba(255,255,255,.04)',
-                border: selected ? '1px solid rgba(37,99,235,.6)' : '1px solid var(--border)',
+                background: selected ? 'rgba(5,150,105,.85)' : 'rgba(255,255,255,.04)',
+                border: selected ? '1px solid rgba(5,150,105,.6)' : '1px solid var(--border)',
                 color: selected ? '#fff' : 'var(--muted2)',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -462,15 +462,15 @@ function EngineSelector({
               onClick={() => onChange(e.id)}
               className="rounded-xl p-3 text-left"
               style={{
-                background: selected ? 'rgba(37,99,235,.12)' : 'rgba(255,255,255,.03)',
-                border: selected ? '1px solid rgba(37,99,235,.55)' : '1px solid var(--border)',
+                background: selected ? 'rgba(5,150,105,.12)' : 'rgba(255,255,255,.03)',
+                border: selected ? '1px solid rgba(5,150,105,.55)' : '1px solid var(--border)',
                 color: 'var(--text)',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
               }}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-sm font-black" style={{ color: selected ? '#93c5fd' : 'var(--text)' }}>
+                <span className="text-sm font-black" style={{ color: selected ? '#6ee7b7' : 'var(--text)' }}>
                   {e.label}
                 </span>
                 {research && (

@@ -7,7 +7,7 @@ const STAGES = [
     icon: '🎯',
     name: 'HOOK',
     desc: 'Stop the scroll. Make them stay.',
-    accent: '#60A5FA',
+    accent: '#34D399',
   },
   {
     id: 'curiosity',
@@ -59,9 +59,9 @@ export default function RetentionMap() {
           position: 'relative',
           borderRadius: 24,
           padding: '44px 28px 48px',
-          background: 'linear-gradient(135deg, rgba(59, 130, 246,.08), rgba(34, 211, 238,.05) 60%, rgba(245,158,11,.06))',
-          border: '1px solid rgba(59, 130, 246,.18)',
-          boxShadow: '0 0 80px rgba(59, 130, 246,.10)',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129,.08), rgba(34, 211, 238,.05) 60%, rgba(245,158,11,.06))',
+          border: '1px solid rgba(16, 185, 129,.18)',
+          boxShadow: '0 0 80px rgba(16, 185, 129,.10)',
           overflow: 'hidden',
         }}
       >
@@ -104,7 +104,7 @@ export default function RetentionMap() {
             }}
           >
             Script Built For{' '}
-            <span style={{ background: 'linear-gradient(135deg, #34d399, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg, #34d399, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Retention
             </span>
             , Not Just Views

@@ -37,12 +37,12 @@ interface DashboardClientProps {
 const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string; text: string; hover: string }> = {
   billionaire: { bg: 'rgba(11,17,32,0.85)', border: 'rgba(251,191,36,.28)', pill: 'rgba(251,191,36,.15)', text: '#fbbf24', hover: 'rgba(251,191,36,.5)' },
   money:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(34,197,94,.28)',  pill: 'rgba(34,197,94,.15)',  text: '#4ade80', hover: 'rgba(34,197,94,.5)'  },
-  mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(168,85,247,.28)', pill: 'rgba(168,85,247,.15)', text: '#c084fc', hover: 'rgba(168,85,247,.5)' },
-  country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(59,130,246,.28)', pill: 'rgba(59,130,246,.15)', text: '#60a5fa', hover: 'rgba(59,130,246,.5)' },
-  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(236,72,153,.28)', pill: 'rgba(236,72,153,.15)', text: '#f472b6', hover: 'rgba(236,72,153,.5)' },
+  mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#c084fc', hover: 'rgba(16,185,129,.5)' },
+  country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#34d399', hover: 'rgba(16,185,129,.5)' },
+  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(163,230,53,.28)', pill: 'rgba(163,230,53,.15)', text: '#f472b6', hover: 'rgba(163,230,53,.5)' },
   space:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(14,165,233,.28)', pill: 'rgba(14,165,233,.15)', text: '#38bdf8', hover: 'rgba(14,165,233,.5)' },
   nature:      { bg: 'rgba(11,17,32,0.85)', border: 'rgba(74,222,128,.28)', pill: 'rgba(74,222,128,.15)', text: '#86efac', hover: 'rgba(74,222,128,.5)' },
-  technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(167,139,250,.28)', pill: 'rgba(167,139,250,.15)', text: '#c4b5fd', hover: 'rgba(167,139,250,.5)' },
+  technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(52,211,153,.28)', pill: 'rgba(52,211,153,.15)', text: '#6ee7b7', hover: 'rgba(52,211,153,.5)' },
   crime:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(248,113,113,.28)', pill: 'rgba(248,113,113,.15)', text: '#fca5a5', hover: 'rgba(248,113,113,.5)' },
 }
 const DEFAULT_VERTICAL = { bg: 'rgba(11,17,32,0.85)', border: 'rgba(239,68,68,.22)', pill: 'rgba(239,68,68,.14)', text: '#f87171', hover: 'rgba(239,68,68,.5)' }
@@ -179,16 +179,16 @@ export default function DashboardClient({
       <div
         className="relative rounded-[20px] overflow-hidden mb-7 px-6 md:px-8 py-8 text-center"
         style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246,.12) 0%, rgba(37, 99, 235,.08) 50%, rgba(34, 211, 238,.07) 100%)',
-          border: '1px solid rgba(59, 130, 246,.2)',
-          boxShadow: '0 0 80px rgba(59, 130, 246,.1)',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129,.12) 0%, rgba(5, 150, 105,.08) 50%, rgba(34, 211, 238,.07) 100%)',
+          border: '1px solid rgba(16, 185, 129,.2)',
+          boxShadow: '0 0 80px rgba(16, 185, 129,.1)',
         }}
       >
         <div
           className="absolute pointer-events-none"
           style={{
             width: 520, height: 360,
-            background: 'radial-gradient(ellipse, rgba(59, 130, 246,.22) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(16, 185, 129,.22) 0%, transparent 70%)',
             top: -100, left: '50%', transform: 'translateX(-50%)',
           }}
         />
@@ -213,7 +213,7 @@ export default function DashboardClient({
           Your next{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #3B82F6, #22D3EE, #22D3EE)',
+              background: 'linear-gradient(135deg, #10B981, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -234,8 +234,8 @@ export default function DashboardClient({
           href="/generate"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #2563EB 0%, #2563EB 55%, #22D3EE 100%)',
-            boxShadow: '0 4px 32px rgba(59, 130, 246,.5)',
+            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #22D3EE 100%)',
+            boxShadow: '0 4px 32px rgba(16, 185, 129,.5)',
             textDecoration: 'none',
           }}
         >
@@ -543,8 +543,8 @@ export default function DashboardClient({
           className="rounded-[20px] px-5 py-4 mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
           style={{
             background: creditsZero ? 'rgba(239,68,68,.06)' : 'rgba(11,17,32,0.85)',
-            border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(59, 130, 246,.22)',
-            boxShadow: '0 0 30px rgba(59, 130, 246,.08)',
+            border: creditsZero ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(16, 185, 129,.22)',
+            boxShadow: '0 0 30px rgba(16, 185, 129,.08)',
           }}
         >
           <div className="flex items-center gap-4">
@@ -600,7 +600,7 @@ export default function DashboardClient({
                 : 'linear-gradient(135deg, var(--indigo), var(--purple))',
               boxShadow: creditsZero
                 ? '0 4px 18px rgba(239,68,68,.35)'
-                : '0 4px 18px rgba(59, 130, 246,.32)',
+                : '0 4px 18px rgba(16, 185, 129,.32)',
               textDecoration: 'none',
             }}
           >
@@ -642,7 +642,7 @@ export default function DashboardClient({
       {!isLoggedIn && (
         <div
           className="rounded-[20px] px-6 py-7 text-center"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(59, 130, 246,.22)' }}
+          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(16, 185, 129,.22)' }}
         >
           <p className="font-bold text-base mb-2" style={{ color: 'var(--text)' }}>
             🔑 Create your account to start

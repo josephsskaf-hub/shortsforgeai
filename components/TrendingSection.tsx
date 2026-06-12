@@ -192,15 +192,15 @@ export default function TrendingSection() {
                   fontWeight: 800,
                   color: '#fff',
                   textDecoration: 'none',
-                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                  boxShadow: '0 4px 18px rgba(59, 130, 246,.35)',
+                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
                   transition: 'transform .2s ease, box-shadow .2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 26px rgba(59, 130, 246,.55)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 26px rgba(16, 185, 129,.55)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(59, 130, 246,.35)'
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(16, 185, 129,.35)'
                 }}
               >
                 Generate Similar →
@@ -218,8 +218,8 @@ export default function TrendingSection() {
         }
         .trending-card:hover {
           transform: translateY(-3px) scale(1.02);
-          border-color: rgba(59, 130, 246,.35) !important;
-          box-shadow: 0 14px 44px rgba(59, 130, 246,.18);
+          border-color: rgba(16, 185, 129,.35) !important;
+          box-shadow: 0 14px 44px rgba(16, 185, 129,.18);
         }
         @media (max-width: 900px) { .trending-grid { grid-template-columns: 1fr; } }
         @keyframes pulse-trend { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(0.85)} }

@@ -84,7 +84,7 @@ export default function ThumbnailGenerator() {
           }}
         >
           🖼️{' '}
-          <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Thumbnail Text Generator
           </span>
         </h2>

@@ -9,17 +9,17 @@ import { getNextRefreshMs } from '@/lib/viralTopics'
 const VERTICAL_COLORS: Record<string, string> = {
   billionaire: '#f59e0b',
   money:       '#10b981',
-  mystery:     '#8b5cf6',
-  country:     '#3b82f6',
+  mystery:     '#10b981',
+  country:     '#10b981',
   learning:    '#06b6d4',
-  ai:          '#6366f1',
+  ai:          '#14b8a6',
   psychology:  '#ec4899',
   history:     '#d97706',
   science:     '#14b8a6',
   health:      '#22c55e',
   space:       '#0ea5e9',
   nature:      '#4ade80',
-  technology:  '#a78bfa',
+  technology:  '#34d399',
   crime:       '#f87171',
 }
 
@@ -27,8 +27,8 @@ const VERTICAL_COLORS: Record<string, string> = {
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   'Hot':           { bg: 'rgba(239,68,68,0.18)',   color: '#ef4444' },
   'Trending':      { bg: 'rgba(249,115,22,0.18)',  color: '#f97316' },
-  'High Retention':{ bg: 'rgba(59,130,246,0.18)',  color: '#3b82f6' },
-  'Viral':         { bg: 'rgba(139,92,246,0.18)',  color: '#8b5cf6' },
+  'High Retention':{ bg: 'rgba(16,185,129,0.18)',  color: '#10b981' },
+  'Viral':         { bg: 'rgba(16,185,129,0.18)',  color: '#10b981' },
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function SkeletonCard() {
 
 // ── Topic card ────────────────────────────────────────────────────────────────
 function TopicCard({ topic, onGenerate }: { topic: ViralTopic; onGenerate: (t: ViralTopic) => void }) {
-  const vertColor = VERTICAL_COLORS[topic.vertical] ?? '#6366f1'
+  const vertColor = VERTICAL_COLORS[topic.vertical] ?? '#14b8a6'
   const badge = BADGE_STYLES[topic.badge] ?? BADGE_STYLES['Trending']
 
   return (

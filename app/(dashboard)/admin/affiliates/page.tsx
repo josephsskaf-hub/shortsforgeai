@@ -27,9 +27,9 @@ const CYAN = '#22D3EE'
 const TEXT = '#F1F5F9'
 const MUTED = '#94A3B8'
 const GREEN = '#34d399'
-const CARD = '#0B1120'
+const CARD = '#051D15'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
-const PAGE_BG = '#05070D'
+const PAGE_BG = '#020D0A'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
   pending: { bg: 'rgba(251,191,36,0.14)', color: '#fbbf24' },

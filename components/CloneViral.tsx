@@ -13,7 +13,7 @@ const RESULTS = [
     icon: '✅',
     label: 'Retention pattern',
     value: 'Fast-cut mystery reveal',
-    accent: '#60A5FA',
+    accent: '#34D399',
   },
   {
     icon: '✅',
@@ -245,8 +245,8 @@ export default function CloneViral() {
           flexWrap: 'wrap',
           padding: '14px 20px',
           borderRadius: 14,
-          background: 'rgba(59, 130, 246,.06)',
-          border: '1px solid rgba(59, 130, 246,.18)',
+          background: 'rgba(16, 185, 129,.06)',
+          border: '1px solid rgba(16, 185, 129,.18)',
         }}
       >
         <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: 0, fontWeight: 600 }}>
@@ -261,8 +261,8 @@ export default function CloneViral() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-            boxShadow: '0 4px 18px rgba(59, 130, 246,.35)',
+            background: 'linear-gradient(135deg, #10B981, #059669)',
+            boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
             flexShrink: 0,
           }}
         >

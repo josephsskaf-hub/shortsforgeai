@@ -70,18 +70,18 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
         background: 'rgba(11,17,32,0.85)',
         backdropFilter: 'blur(16px) saturate(140%)',
         WebkitBackdropFilter: 'blur(16px) saturate(140%)',
-        border: '1px solid rgba(59, 130, 246,0.16)',
+        border: '1px solid rgba(16, 185, 129,0.16)',
         boxShadow: '0 4px 24px rgba(0,0,0,.25)',
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(59, 130, 246,.38)'
-        el.style.boxShadow = '0 12px 48px rgba(59, 130, 246,.13)'
+        el.style.borderColor = 'rgba(16, 185, 129,.38)'
+        el.style.boxShadow = '0 12px 48px rgba(16, 185, 129,.13)'
         el.style.transform = 'translateY(-2px)'
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(59, 130, 246,0.16)'
+        el.style.borderColor = 'rgba(16, 185, 129,0.16)'
         el.style.boxShadow = '0 4px 24px rgba(0,0,0,.25)'
         el.style.transform = 'translateY(0)'
       }}
@@ -90,8 +90,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
       <div
         className="px-5 py-4 flex items-center justify-between flex-wrap gap-3"
         style={{
-          background: 'linear-gradient(90deg, rgba(59, 130, 246,.09), rgba(37, 99, 235,.05))',
-          borderBottom: '1px solid rgba(59, 130, 246,0.14)',
+          background: 'linear-gradient(90deg, rgba(16, 185, 129,.09), rgba(5, 150, 105,.05))',
+          borderBottom: '1px solid rgba(16, 185, 129,0.14)',
         }}
       >
         <div className="flex items-center gap-3">
@@ -99,8 +99,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246,.3), rgba(37, 99, 235,.2))',
-              border: '1px solid rgba(59, 130, 246,.35)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129,.3), rgba(5, 150, 105,.2))',
+              border: '1px solid rgba(16, 185, 129,.35)',
               color: 'var(--indigo-light)',
               fontSize: '1rem',
             }}
@@ -131,8 +131,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           onClick={handleCopy}
           className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all"
           style={{
-            background: copied ? 'rgba(16,185,129,.1)' : 'rgba(59, 130, 246,.1)',
-            border: copied ? '1px solid rgba(16,185,129,.28)' : '1px solid rgba(59, 130, 246,.25)',
+            background: copied ? 'rgba(16,185,129,.1)' : 'rgba(16, 185, 129,.1)',
+            border: copied ? '1px solid rgba(16,185,129,.28)' : '1px solid rgba(16, 185, 129,.25)',
             color: copied ? '#34d399' : 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -159,8 +159,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
             <div
               className="rounded-[12px] px-4 py-3.5"
               style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246,.09), rgba(37, 99, 235,.05))',
-                border: '1px solid rgba(59, 130, 246,.2)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129,.09), rgba(5, 150, 105,.05))',
+                border: '1px solid rgba(16, 185, 129,.2)',
                 borderLeft: '3px solid var(--indigo-light)',
               }}
             >
@@ -174,7 +174,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           </div>
         )}
 
-        <div style={{ height: 1, background: 'rgba(59, 130, 246,.08)', borderRadius: 1 }} />
+        <div style={{ height: 1, background: 'rgba(16, 185, 129,.08)', borderRadius: 1 }} />
 
         {/* 📌 Title */}
         <div>
@@ -195,7 +195,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
         {/* 📊 Viral Scores */}
         <ViralScore hook={hook ?? ''} title={video.title} script={video.script} />
 
-        <div style={{ height: 1, background: 'rgba(59, 130, 246,.08)', borderRadius: 1 }} />
+        <div style={{ height: 1, background: 'rgba(16, 185, 129,.08)', borderRadius: 1 }} />
 
         {/* 📝 Script — expandable */}
         <div>
@@ -209,8 +209,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
                 onClick={() => setScriptExpanded(!scriptExpanded)}
                 className="text-xs font-semibold px-2 py-1 rounded transition-all"
                 style={{
-                  background: 'rgba(59, 130, 246,.07)',
-                  border: '1px solid rgba(59, 130, 246,.14)',
+                  background: 'rgba(16, 185, 129,.07)',
+                  border: '1px solid rgba(16, 185, 129,.14)',
                   color: 'var(--indigo-light)',
                   cursor: 'pointer',
                 }}
@@ -243,7 +243,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           )}
         </div>
 
-        <div style={{ height: 1, background: 'rgba(59, 130, 246,.08)', borderRadius: 1 }} />
+        <div style={{ height: 1, background: 'rgba(16, 185, 129,.08)', borderRadius: 1 }} />
 
         {/* #️⃣ Hashtags — chips */}
         <div>
@@ -259,8 +259,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
                 key={tag}
                 className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-default"
                 style={{
-                  background: 'rgba(59, 130, 246,.08)',
-                  border: '1px solid rgba(59, 130, 246,.18)',
+                  background: 'rgba(16, 185, 129,.08)',
+                  border: '1px solid rgba(16, 185, 129,.18)',
                   color: 'var(--indigo-light)',
                 }}
               >
@@ -270,7 +270,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           </div>
         </div>
 
-        <div style={{ height: 1, background: 'rgba(59, 130, 246,.08)', borderRadius: 1 }} />
+        <div style={{ height: 1, background: 'rgba(16, 185, 129,.08)', borderRadius: 1 }} />
 
         {/* 🎥 Video Prompt */}
         <div>
@@ -300,8 +300,8 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
                 onClick={() => setDescExpanded(!descExpanded)}
                 className="text-xs font-semibold px-2 py-1 rounded transition-all"
                 style={{
-                  background: 'rgba(59, 130, 246,.07)',
-                  border: '1px solid rgba(59, 130, 246,.14)',
+                  background: 'rgba(16, 185, 129,.07)',
+                  border: '1px solid rgba(16, 185, 129,.14)',
                   color: 'var(--indigo-light)',
                   cursor: 'pointer',
                 }}
@@ -343,7 +343,7 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
             onClick={handleCreateVideo}
             className="flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-all sm:flex-1"
             style={{
-              background: 'linear-gradient(135deg, rgba(34, 211, 238,.18), rgba(37, 99, 235,.10))',
+              background: 'linear-gradient(135deg, rgba(34, 211, 238,.18), rgba(5, 150, 105,.10))',
               border: '1px solid rgba(34, 211, 238,.45)',
               color: '#22D3EE',
               minHeight: 44,
@@ -352,13 +352,13 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLElement
-              el.style.background = 'linear-gradient(135deg, rgba(34, 211, 238,.30), rgba(37, 99, 235,.18))'
+              el.style.background = 'linear-gradient(135deg, rgba(34, 211, 238,.30), rgba(5, 150, 105,.18))'
               el.style.borderColor = 'rgba(34, 211, 238,.7)'
               el.style.boxShadow = '0 0 16px rgba(34, 211, 238,.35)'
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLElement
-              el.style.background = 'linear-gradient(135deg, rgba(34, 211, 238,.18), rgba(37, 99, 235,.10))'
+              el.style.background = 'linear-gradient(135deg, rgba(34, 211, 238,.18), rgba(5, 150, 105,.10))'
               el.style.borderColor = 'rgba(34, 211, 238,.45)'
               el.style.boxShadow = '0 0 0 0 rgba(34, 211, 238,.35)'
             }}

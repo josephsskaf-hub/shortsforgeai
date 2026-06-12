@@ -18,9 +18,9 @@ import { useEffect, useRef, useState } from 'react'
 
 const VERTICAL_COLORS: Record<string, string> = {
   money: '#10b981',
-  mystery: '#8b5cf6',
-  country: '#3b82f6',
-  ai: '#6366f1',
+  mystery: '#10b981',
+  country: '#10b981',
+  ai: '#14b8a6',
   psychology: '#ec4899',
   history: '#d97706',
   science: '#14b8a6',
@@ -29,8 +29,8 @@ const VERTICAL_COLORS: Record<string, string> = {
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   Hot: { bg: 'rgba(239,68,68,0.18)', color: '#ef4444' },
   Trending: { bg: 'rgba(249,115,22,0.18)', color: '#f97316' },
-  'High Retention': { bg: 'rgba(59,130,246,0.18)', color: '#3b82f6' },
-  Viral: { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
+  'High Retention': { bg: 'rgba(16,185,129,0.18)', color: '#10b981' },
+  Viral: { bg: 'rgba(16,185,129,0.18)', color: '#10b981' },
 }
 
 type Starter = {
@@ -148,7 +148,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
   const gridCards = showBestPick ? STARTERS.slice(1) : STARTERS.filter((s) => s.label === activeFilter)
 
   function renderCard(s: Starter, isFeatured: boolean) {
-    const vertColor = VERTICAL_COLORS[s.vertical] ?? '#6366f1'
+    const vertColor = VERTICAL_COLORS[s.vertical] ?? '#14b8a6'
     const badge = BADGE_STYLES[s.badge]
     const hookOpen = openHook === s.title
     return (
@@ -157,8 +157,8 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         onClick={() => generate(s, isFeatured)}
         style={{
           background: isFeatured
-            ? 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(11,17,32,0.96))'
-            : 'var(--card, #0B1120)',
+            ? 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(11,17,32,0.96))'
+            : 'var(--card, #051D15)',
           border: `1px solid ${isFeatured ? vertColor : 'var(--border, rgba(255,255,255,0.10))'}`,
           borderRadius: 14,
           padding: isFeatured ? '18px 18px' : '16px 16px',
@@ -272,8 +272,8 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           style={{
             display: 'block', width: '100%', maxWidth: 380, margin: '0 auto 12px',
             padding: '14px 18px', borderRadius: 12,
-            background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
-            color: '#05070D', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(135deg, #22D3EE, #10B981)',
+            color: '#020D0A', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >
           🎲 Surprise Me — generate my free Short

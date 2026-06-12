@@ -42,7 +42,7 @@ const BENEFITS: { icon: string; title: string; desc: string; accent: string }[] 
     icon: '🧠',
     title: 'AI Writes the Script',
     desc: 'No writing skills needed. Our AI crafts a viral-optimized script for any niche automatically.',
-    accent: '#A78BFA',
+    accent: '#34D399',
   },
   {
     icon: '📥',
@@ -63,7 +63,7 @@ export default function StartPage() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#05070D',
+        background: '#020D0A',
         color: '#F5F7FF',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         padding: '32px 20px 48px',
@@ -78,7 +78,7 @@ export default function StartPage() {
               fontSize: '1.05rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
-              background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+              background: 'linear-gradient(135deg, #10B981, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -245,7 +245,7 @@ export default function StartPage() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                    background: 'linear-gradient(135deg, #059669, #22D3EE)',
                     color: '#FFFFFF',
                     fontWeight: 900,
                     fontSize: '1rem',
@@ -283,7 +283,7 @@ export default function StartPage() {
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.14em',
-                color: '#A78BFA',
+                color: '#34D399',
                 textTransform: 'uppercase',
                 marginBottom: 6,
               }}
@@ -475,7 +475,7 @@ export default function StartPage() {
                 left: '50%',
                 transform: 'translateX(-50%)',
                 background: '#22D3EE',
-                color: '#05070D',
+                color: '#020D0A',
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.12em',
@@ -540,7 +540,7 @@ export default function StartPage() {
               style={{
                 padding: '15px 32px',
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+                background: 'linear-gradient(135deg, #059669, #22D3EE)',
                 color: '#FFFFFF',
                 fontWeight: 900,
                 fontSize: '1rem',

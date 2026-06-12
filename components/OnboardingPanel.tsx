@@ -88,9 +88,9 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
       className="rounded-2xl p-5 sm:p-6 mb-6 relative"
       style={{
         background:
-          'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(37, 99, 235,.06))',
-        border: '1px solid rgba(59, 130, 246,.28)',
-        boxShadow: '0 0 28px rgba(59, 130, 246,.10)',
+          'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
+        border: '1px solid rgba(16, 185, 129,.28)',
+        boxShadow: '0 0 28px rgba(16, 185, 129,.10)',
       }}
     >
       <button
@@ -119,7 +119,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
       <div className="mb-4 pr-8">
         <div
           className="text-[10px] font-black uppercase tracking-widest mb-1"
-          style={{ color: '#60A5FA' }}
+          style={{ color: '#34D399' }}
         >
           Welcome
         </div>
@@ -146,18 +146,18 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
             className="rounded-xl px-4 py-3 text-sm font-bold text-left"
             style={{
               background: 'rgba(255,255,255,.04)',
-              border: '1px solid rgba(59, 130, 246,.28)',
+              border: '1px solid rgba(16, 185, 129,.28)',
               color: 'var(--text)',
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(59, 130, 246,.14)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(59, 130, 246,.5)'
+              ;(e.currentTarget as HTMLElement).style.background = 'rgba(16, 185, 129,.14)'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(16, 185, 129,.5)'
             }}
             onMouseLeave={(e) => {
               ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(59, 130, 246,.28)'
+              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(16, 185, 129,.28)'
             }}
           >
             {q.label}
@@ -185,8 +185,8 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
-                background: 'rgba(59, 130, 246,.18)',
-                color: '#60A5FA',
+                background: 'rgba(16, 185, 129,.18)',
+                color: '#34D399',
                 fontSize: '0.7rem',
                 flexShrink: 0,
               }}

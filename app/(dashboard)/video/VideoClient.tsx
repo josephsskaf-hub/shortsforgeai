@@ -52,7 +52,7 @@ function StepCircle({
         background: isDone
           ? 'linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.18))'
           : isActive
-          ? 'linear-gradient(135deg, rgba(59, 130, 246,.4), rgba(34, 211, 238,.25))'
+          ? 'linear-gradient(135deg, rgba(16, 185, 129,.4), rgba(34, 211, 238,.25))'
           : 'rgba(255,255,255,.04)',
         border: isDone
           ? '1px solid rgba(16,185,129,.5)'
@@ -451,7 +451,7 @@ export default function VideoClient() {
           <span
             className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
             style={{
-              background: 'linear-gradient(135deg, rgba(34, 211, 238,.2), rgba(37, 99, 235,.15))',
+              background: 'linear-gradient(135deg, rgba(34, 211, 238,.2), rgba(5, 150, 105,.15))',
               border: '1px solid rgba(34, 211, 238,.3)',
               color: '#22D3EE',
             }}
@@ -669,8 +669,8 @@ function Step1Review({
           <div
             className="rounded-xl px-4 py-3 text-sm font-bold italic leading-snug"
             style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246,.09), rgba(37, 99, 235,.05))',
-              border: '1px solid rgba(59, 130, 246,.2)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129,.09), rgba(5, 150, 105,.05))',
+              border: '1px solid rgba(16, 185, 129,.2)',
               borderLeft: '3px solid var(--indigo-light)',
               color: 'var(--text)',
             }}
@@ -758,8 +758,8 @@ function Step2Scenes({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(59, 130, 246,.12)',
-            border: '1px solid rgba(59, 130, 246,.3)',
+            background: 'rgba(16, 185, 129,.12)',
+            border: '1px solid rgba(16, 185, 129,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -782,8 +782,8 @@ function Step2Scenes({
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center font-black flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246,.3), rgba(37, 99, 235,.18))',
-                border: '1px solid rgba(59, 130, 246,.4)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129,.3), rgba(5, 150, 105,.18))',
+                border: '1px solid rgba(16, 185, 129,.4)',
                 color: 'var(--indigo-light)',
                 fontSize: '0.85rem',
               }}
@@ -871,8 +871,8 @@ function Step3Voiceover({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(59, 130, 246,.12)',
-            border: '1px solid rgba(59, 130, 246,.3)',
+            background: 'rgba(16, 185, 129,.12)',
+            border: '1px solid rgba(16, 185, 129,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -963,8 +963,8 @@ function Step4Stock({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(59, 130, 246,.12)',
-            border: '1px solid rgba(59, 130, 246,.3)',
+            background: 'rgba(16, 185, 129,.12)',
+            border: '1px solid rgba(16, 185, 129,.3)',
             color: 'var(--indigo-light)',
             cursor: 'pointer',
           }}
@@ -1100,7 +1100,7 @@ function ProgressBar({ progress }: { progress: number }) {
         className="h-full transition-all"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(59, 130, 246,.85), rgba(34, 211, 238,1))',
+          background: 'linear-gradient(90deg, rgba(16, 185, 129,.85), rgba(34, 211, 238,1))',
           boxShadow: '0 0 16px rgba(34, 211, 238,.55)',
           transitionDuration: '600ms',
         }}
@@ -1132,8 +1132,8 @@ function CopyChip({ label, value }: { label: string; value: string }) {
       style={{
         background: copied
           ? 'linear-gradient(135deg, rgba(16,185,129,.25), rgba(52,211,153,.15))'
-          : 'rgba(59, 130, 246,.12)',
-        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(59, 130, 246,.3)',
+          : 'rgba(16, 185, 129,.12)',
+        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(16, 185, 129,.3)',
         color: copied ? '#34d399' : 'var(--indigo-light)',
         cursor: 'pointer',
       }}
@@ -1188,7 +1188,7 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(59, 130, 246,.18))',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(16, 185, 129,.18))',
             border: '1px solid rgba(34, 211, 238,.45)',
             boxShadow: '0 0 32px rgba(34, 211, 238,.35)',
             fontSize: '2.4rem',
@@ -1246,7 +1246,7 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(59, 130, 246,.18))',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(16, 185, 129,.18))',
             border: '1px solid rgba(34, 211, 238,.45)',
             boxShadow: '0 0 32px rgba(34, 211, 238,.45)',
             fontSize: '2.4rem',
@@ -1384,7 +1384,7 @@ function Step5Export({
         <div
           className="rounded-2xl px-5 py-4 max-w-md w-full text-left"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.1), rgba(59, 130, 246,.06))',
+            background: 'linear-gradient(135deg, rgba(34, 211, 238,.1), rgba(16, 185, 129,.06))',
             border: '1px solid rgba(34, 211, 238,.3)',
           }}
         >

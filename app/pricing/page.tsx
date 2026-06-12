@@ -215,7 +215,7 @@ export default function PricingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#05070D] text-[#F1F5F9] font-sans">
+    <div className="min-h-screen bg-[#020D0A] text-[#F1F5F9] font-sans">
       {/* Subtle cyber-blue glow */}
       <div
         aria-hidden
@@ -225,16 +225,16 @@ export default function PricingPage() {
       <div
         aria-hidden
         className="pointer-events-none fixed -bottom-[400px] -left-[200px] h-[700px] w-[700px] rounded-full opacity-[0.05]"
-        style={{ background: '#3B82F6', filter: 'blur(160px)' }}
+        style={{ background: '#10B981', filter: 'blur(160px)' }}
       />
 
       {/* ───────── Top Nav (simple) ───────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0B1120]/90 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#051D15]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0B1120] border border-blue-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#051D15] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#3B82F6" strokeWidth="0.5" strokeLinejoin="round" />
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
@@ -266,7 +266,7 @@ export default function PricingPage() {
           <div
             className="relative w-full max-w-md rounded-2xl p-7 text-center"
             style={{
-              background: '#0B1120',
+              background: '#051D15',
               border: '1px solid rgba(34,211,238,.35)',
               boxShadow: '0 0 60px rgba(34,211,238,.15)',
             }}
@@ -288,7 +288,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => { setShowExitModal(false); handleBuy('basic') }}
               className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
-              style={{ background: 'linear-gradient(135deg,#3B82F6,#22D3EE)', boxShadow: '0 8px 24px rgba(59,130,246,.4)' }}
+              style={{ background: 'linear-gradient(135deg,#10B981,#22D3EE)', boxShadow: '0 8px 24px rgba(16,185,129,.4)' }}
             >
               Get Creator — $24.90/mo →
             </button>
@@ -398,7 +398,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('monthly')}
               className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'monthly' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'monthly' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Monthly
@@ -407,7 +407,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('annual')}
               className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'annual' ? 'bg-[#2563EB] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'annual' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Annual
@@ -451,10 +451,10 @@ export default function PricingPage() {
                   isPaid ? 'cursor-pointer' : ''
                 } ${
                   isSelected
-                    ? 'border-2 border-[#3B82F6] bg-[#0D1830] shadow-[0_0_28px_rgba(59,130,246,0.3)]'
+                    ? 'border-2 border-[#10B981] bg-[#0D1830] shadow-[0_0_28px_rgba(16,185,129,0.3)]'
                     : p.highlight
-                      ? 'border-blue-500 bg-[#0B1120] shadow-[0_0_30px_rgba(59,130,246,0.15)] hover:border-[#3B82F6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#0B1120] hover:border-[#3B82F6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-emerald-500 bg-[#051D15] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#051D15] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
                 {/* Push #116 — Pro now carries the amber "MOST POPULAR"
@@ -474,7 +474,7 @@ export default function PricingPage() {
                     🔥 Most Popular
                   </div>
                 ) : p.highlight && !isSelected ? (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2563EB] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(59,130,246,.45)]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#059669] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(16,185,129,.45)]">
                     Best Value
                   </div>
                 ) : null}
@@ -526,8 +526,8 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                       p.highlight || isSelected
-                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                        ? 'bg-[#059669] text-white shadow-[0_8px_24px_rgba(16,185,129,.4)] hover:bg-emerald-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-emerald-500/40'
                     }`}
                   >
                     {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
@@ -542,8 +542,8 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
                       isSelected
-                        ? 'bg-[#2563EB] text-white shadow-[0_8px_24px_rgba(59,130,246,.4)] hover:bg-blue-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-blue-500/40'
+                        ? 'bg-[#059669] text-white shadow-[0_8px_24px_rgba(16,185,129,.4)] hover:bg-emerald-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-emerald-500/40'
                     }`}
                   >
                     {ctaLabel} →
@@ -681,7 +681,7 @@ export default function PricingPage() {
             </h2>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0B1120]">
+          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#051D15]">
             <table className="w-full min-w-[700px] text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-white/[0.08]">
@@ -785,7 +785,7 @@ export default function PricingPage() {
             </h2>
           </div>
 
-          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B1120]">
+          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#051D15]">
             {FAQS.map((item, i) => {
               const isOpen = openFaq === i
               return (
@@ -964,7 +964,7 @@ export default function PricingPage() {
       <footer className="relative z-10 border-t border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0B1120] border border-blue-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#051D15] border border-emerald-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
               </svg>

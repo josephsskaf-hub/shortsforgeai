@@ -97,15 +97,15 @@ export default function CeoClient({ data: initialData, viewerEmail, denied }: Pr
           sub={`Pro ×${data.proUsers}  ·  Basic ×${data.basicUsers}`}
         />
         <Card label="Pro subscribers"   value={fmt(data.proUsers)}   accent="#34d399" hint="$9.90/mo each" />
-        <Card label="Basic subscribers" value={fmt(data.basicUsers)} accent="#60a5fa" hint="$4.90/mo each" />
-        <Card label="Total paid"        value={fmt(data.paidTotal)}  accent="#a78bfa" hint="active plans" />
+        <Card label="Basic subscribers" value={fmt(data.basicUsers)} accent="#34d399" hint="$4.90/mo each" />
+        <Card label="Total paid"        value={fmt(data.paidTotal)}  accent="#34d399" hint="active plans" />
       </Section>
 
       {/* ── Row 2: Growth ──────────────────────────────────────────────── */}
       <Section title="📈 Growth">
         <Card label="New today"       value={fmt(data.signupsToday)}     accent="#22d3ee" hint="last 24 h" />
         <Card label="New this week"   value={fmt(data.signupsThisWeek)}  accent="#22d3ee" hint="last 7 days" />
-        <Card label="New this month"  value={fmt(data.signupsThisMonth)} accent="#60a5fa" hint="last 30 days" />
+        <Card label="New this month"  value={fmt(data.signupsThisMonth)} accent="#34d399" hint="last 30 days" />
         <RateCard
           label="Signup → Paid"
           value={data.signupToPaidRate}
@@ -195,7 +195,7 @@ export default function CeoClient({ data: initialData, viewerEmail, denied }: Pr
                 {data.atRiskUsers.map((u, i) => (
                   <tr key={i} style={{ borderTop: '1px solid rgba(245,158,11,0.1)', background: i % 2 === 0 ? 'transparent' : 'rgba(11,17,32,0.4)' }}>
                     <td className="px-4 py-2 font-mono" style={{ color: 'var(--text)' }}>{u.email}</td>
-                    <td className="px-4 py-2 uppercase text-[10px] font-black" style={{ color: u.plan === 'pro' ? '#34d399' : '#60a5fa' }}>{u.plan}</td>
+                    <td className="px-4 py-2 uppercase text-[10px] font-black" style={{ color: u.plan === 'pro' ? '#34d399' : '#34d399' }}>{u.plan}</td>
                     <td className="px-4 py-2 font-black" style={{ color: u.credits === 0 ? '#f87171' : '#f59e0b' }}>
                       {u.credits === 0 ? '0 ⚠️' : u.credits}
                     </td>

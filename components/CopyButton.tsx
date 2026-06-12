@@ -43,10 +43,10 @@ export default function CopyButton({
         style={{
           background: copied
             ? 'linear-gradient(135deg, #10b981, #059669)'
-            : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
+            : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
           boxShadow: copied
             ? '0 4px 22px rgba(16,185,129,.35)'
-            : '0 4px 22px rgba(59, 130, 246,.35)',
+            : '0 4px 22px rgba(16, 185, 129,.35)',
           animation: copied ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
           letterSpacing: '-0.01em',
         }}
@@ -62,8 +62,8 @@ export default function CopyButton({
         onClick={handleCopy}
         className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${className}`}
         style={{
-          background: copied ? 'rgba(16,185,129,.09)' : 'rgba(59, 130, 246,.07)',
-          border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(59, 130, 246,.18)',
+          background: copied ? 'rgba(16,185,129,.09)' : 'rgba(16, 185, 129,.07)',
+          border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(16, 185, 129,.18)',
           color: copied ? '#34d399' : 'var(--indigo-light)',
         }}
       >
@@ -77,8 +77,8 @@ export default function CopyButton({
       onClick={handleCopy}
       className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${className}`}
       style={{
-        background: copied ? 'rgba(16,185,129,.09)' : 'rgba(59, 130, 246,.07)',
-        border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(59, 130, 246,.18)',
+        background: copied ? 'rgba(16,185,129,.09)' : 'rgba(16, 185, 129,.07)',
+        border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(16, 185, 129,.18)',
         color: copied ? '#34d399' : 'var(--indigo-light)',
       }}
     >

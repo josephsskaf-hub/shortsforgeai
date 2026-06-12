@@ -20,13 +20,13 @@ const MOOD_GRADIENTS: Record<VisualMood, { from: string; to: string }> = {
 
 const MOOD_TEXT_COLORS: Record<VisualMood, string> = {
   dark:       'rgba(148,163,184,0.85)', // slate-400
-  mysterious: 'rgba(196,181,253,0.85)', // violet-300
+  mysterious: 'rgba(110,231,183,0.85)', // violet-300
   luxurious:  'rgba(253,224,71,0.85)',  // yellow-300
   energetic:  'rgba(253,186,116,0.85)', // orange-300
   futuristic: 'rgba(103,232,249,0.85)', // cyan-300
   emotional:  'rgba(249,168,212,0.85)', // pink-300
   tense:      'rgba(252,165,165,0.85)', // red-300
-  epic:       'rgba(167,139,250,0.85)', // violet-400
+  epic:       'rgba(52,211,153,0.85)', // emerald-400
 }
 
 export default function ScenePreview({ scene, pexelsClip }: ScenePreviewProps) {

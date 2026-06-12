@@ -68,10 +68,10 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
       className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
       style={{
         background:
-          'linear-gradient(135deg, rgba(59, 130, 246,.10), rgba(37, 99, 235,.06))',
-        border: '1px solid rgba(37, 99, 235,.45)',
+          'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
+        border: '1px solid rgba(5, 150, 105,.45)',
         boxShadow:
-          '0 0 32px rgba(37, 99, 235,.18), inset 0 1px 0 rgba(255,255,255,.04)',
+          '0 0 32px rgba(5, 150, 105,.18), inset 0 1px 0 rgba(255,255,255,.04)',
       }}
     >
       <div className="text-center mb-5">
@@ -193,17 +193,17 @@ function PlanCard({
 
   function background(): string {
     if (isSelected) return '#0D1830'
-    if (highlight) return 'linear-gradient(135deg, rgba(37,99,235,.10), rgba(29,78,216,.06))'
+    if (highlight) return 'linear-gradient(135deg, rgba(5,150,105,.10), rgba(4,120,87,.06))'
     return 'rgba(11,17,32,0.85)'
   }
   function border(): string {
-    if (isSelected) return '2px solid #3B82F6'
-    if (highlight) return '2px solid rgba(37, 99, 235,.55)'
+    if (isSelected) return '2px solid #10B981'
+    if (highlight) return '2px solid rgba(5, 150, 105,.55)'
     return '1px solid var(--border)'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(59,130,246,0.3)'
-    if (highlight) return '0 0 24px rgba(37, 99, 235,.18)'
+    if (isSelected) return '0 0 28px rgba(16,185,129,0.3)'
+    if (highlight) return '0 0 24px rgba(5, 150, 105,.18)'
     return 'none'
   }
 
@@ -231,7 +231,7 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (isSelected) return
-        e.currentTarget.style.borderColor = '#3B82F6'
+        e.currentTarget.style.borderColor = '#10B981'
         e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
         e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
       }}
@@ -270,7 +270,7 @@ function PlanCard({
       >
         {price}
       </div>
-      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#93c5fd', fontWeight: 700 }}>
+      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#6ee7b7', fontWeight: 700 }}>
         {renew}
       </p>
       <ul className="flex flex-col gap-1.5 mb-4 flex-1">
@@ -295,10 +295,10 @@ function PlanCard({
         }}
         className="rounded-xl py-2.5 text-sm font-black text-center text-white"
         style={{
-          background: isSelected ? '#3B82F6' : 'linear-gradient(135deg, #2563EB, #2563EB)',
+          background: isSelected ? '#10B981' : 'linear-gradient(135deg, #059669, #059669)',
           boxShadow: isSelected
-            ? '0 4px 22px rgba(59, 130, 246,.35)'
-            : '0 6px 22px rgba(37, 99, 235,.32)',
+            ? '0 4px 22px rgba(16, 185, 129,.35)'
+            : '0 6px 22px rgba(5, 150, 105,.32)',
           border: 'none',
           cursor: loading ? 'wait' : 'pointer',
           opacity: loading ? 0.7 : 1,

@@ -152,7 +152,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
           transition: all 0.15s ease;
         }
         .acc-row-btn:hover {
-          background: rgba(59,130,246,.12) !important;
+          background: rgba(16,185,129,.12) !important;
           transform: translateY(-1px);
         }
         @keyframes ring-fill {
@@ -186,7 +186,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
           style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}
         >
           Account{' '}
-          <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <span style={{ background: 'linear-gradient(135deg,#22D3EE,#10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Settings
           </span>
         </h1>
@@ -210,7 +210,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               className="acc-tab flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold flex-shrink-0"
               style={{
                 background: active
-                  ? 'linear-gradient(135deg, rgba(34,211,238,.18), rgba(59,130,246,.12))'
+                  ? 'linear-gradient(135deg, rgba(34,211,238,.18), rgba(16,185,129,.12))'
                   : 'transparent',
                 border: active ? '1px solid rgba(34,211,238,.3)' : '1px solid transparent',
                 color: active ? '#22D3EE' : 'var(--muted2)',
@@ -242,7 +242,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div
                     className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-white"
-                    style={{ background: 'linear-gradient(135deg, #22D3EE, #3B82F6)', zIndex: 1, position: 'relative' }}
+                    style={{ background: 'linear-gradient(135deg, #22D3EE, #10B981)', zIndex: 1, position: 'relative' }}
                   >
                     {initial}
                   </div>
@@ -272,7 +272,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
             <div
               className="rounded-2xl p-5"
-              style={{ background: 'rgba(59,130,246,.04)', border: '1px dashed rgba(59,130,246,.2)', backdropFilter: 'blur(12px)' }}
+              style={{ background: 'rgba(16,185,129,.04)', border: '1px dashed rgba(16,185,129,.2)', backdropFilter: 'blur(12px)' }}
             >
               <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text2)' }}>
                 👥 Team collaboration — coming soon
@@ -298,7 +298,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white"
-                  style={{ background: 'linear-gradient(135deg, #22D3EE, #3B82F6)', position: 'relative', zIndex: 1 }}
+                  style={{ background: 'linear-gradient(135deg, #22D3EE, #10B981)', position: 'relative', zIndex: 1 }}
                 >
                   {initial}
                 </div>
@@ -385,8 +385,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                   href="/pricing"
                   className="block w-full text-center rounded-xl py-3 text-sm font-black text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
-                    boxShadow: '0 6px 28px rgba(59,130,246,.4)',
+                    background: 'linear-gradient(135deg, #059669, #22D3EE)',
+                    boxShadow: '0 6px 28px rgba(16,185,129,.4)',
                     textDecoration: 'none',
                     transition: 'all 0.18s ease',
                   }}
@@ -484,7 +484,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                         lineHeight: 1,
                         background: usagePct >= 90
                           ? 'linear-gradient(135deg,#EF4444,#f87171)'
-                          : 'linear-gradient(135deg,#22D3EE,#3B82F6)',
+                          : 'linear-gradient(135deg,#22D3EE,#10B981)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text',
@@ -520,7 +520,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                       width: `${100 - usagePct}%`,
                       background: usagePct >= 90
                         ? 'linear-gradient(90deg,#ef4444,#dc2626)'
-                        : 'linear-gradient(90deg,#22D3EE,#3B82F6)',
+                        : 'linear-gradient(90deg,#22D3EE,#10B981)',
                       transition: 'width 1s ease',
                       borderRadius: '0 4px 4px 0',
                     }}

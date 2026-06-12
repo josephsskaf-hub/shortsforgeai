@@ -9,7 +9,7 @@ export default function NotFound() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#05070D',
+        background: '#020D0A',
         color: '#F5F7FF',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         display: 'flex',
@@ -25,7 +25,7 @@ export default function NotFound() {
             fontWeight: 900,
             fontSize: '1rem',
             letterSpacing: '-0.01em',
-            background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+            background: 'linear-gradient(135deg, #10B981, #22D3EE)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             textDecoration: 'none',
@@ -54,7 +54,7 @@ export default function NotFound() {
             fontWeight: 900,
             letterSpacing: '-0.04em',
             lineHeight: 1,
-            background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+            background: 'linear-gradient(135deg, #10B981, #22D3EE)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             marginBottom: 16,
@@ -115,7 +115,7 @@ export default function NotFound() {
           <Link
             href="/"
             style={{
-              background: 'linear-gradient(135deg, #2563EB, #22D3EE)',
+              background: 'linear-gradient(135deg, #059669, #22D3EE)',
               color: '#FFFFFF',
               boxShadow: '0 8px 26px rgba(34,211,238,.35)',
             }}

@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <main
         style={{
           minHeight: '100vh',
-          background: '#05070D',
+          background: '#020D0A',
           color: '#F5F7FF',
           fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
           padding: '24px 20px 32px',

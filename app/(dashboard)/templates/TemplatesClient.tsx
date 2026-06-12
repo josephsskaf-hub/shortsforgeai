@@ -21,7 +21,7 @@ const TEMPLATES: Template[] = [
     description: "Uncover the universe's darkest secrets — black holes, alien signals, missing planets.",
     prompt: 'Create a Space Mystery Short about [topic]',
     category: 'Science',
-    accent: '#8B5CF6',
+    accent: '#10B981',
   },
   {
     emoji: '📜',
@@ -69,7 +69,7 @@ const TEMPLATES: Template[] = [
     description: 'The tools reshaping how people work, earn, and create. The future is here.',
     prompt: 'Create an AI Tools Short about [topic]',
     category: 'Tech',
-    accent: '#3B82F6',
+    accent: '#10B981',
   },
   {
     emoji: '🧠',
@@ -104,7 +104,7 @@ export default function TemplatesClient() {
         .tmpl-btn:hover {
           transform: translateY(-1px);
           filter: brightness(1.12);
-          box-shadow: 0 8px 32px rgba(59,130,246,.5) !important;
+          box-shadow: 0 8px 32px rgba(16,185,129,.5) !important;
         }
         .tmpl-emoji-box {
           transition: box-shadow 0.22s ease, transform 0.22s ease;
@@ -132,7 +132,7 @@ export default function TemplatesClient() {
           Start from a{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #22D3EE 0%, #3B82F6 60%, #8B5CF6 100%)',
+              background: 'linear-gradient(135deg, #22D3EE 0%, #10B981 60%, #10B981 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -172,7 +172,7 @@ export default function TemplatesClient() {
               <span
                 className="font-black text-lg leading-none"
                 style={{
-                  background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
+                  background: 'linear-gradient(135deg, #22D3EE, #10B981)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',

@@ -8,7 +8,7 @@ const HOOKS = [
     icon: '🎯',
     name: 'The Shocking Stat',
     example: '"99% of people don\'t know this about [TOPIC]"',
-    accent: '#60A5FA',
+    accent: '#34D399',
   },
   {
     id: 'question',
@@ -52,12 +52,12 @@ export default function ViralHookEngine() {
             gap: 8,
             padding: '5px 14px',
             borderRadius: 999,
-            background: 'rgba(59, 130, 246,.1)',
-            border: '1px solid rgba(59, 130, 246,.25)',
+            background: 'rgba(16, 185, 129,.1)',
+            border: '1px solid rgba(16, 185, 129,.25)',
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#60A5FA', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34D399', letterSpacing: '0.04em' }}>
             ⚡ HOOK ENGINE
           </span>
         </div>
@@ -71,7 +71,7 @@ export default function ViralHookEngine() {
           }}
         >
           ⚡ Viral{' '}
-          <span style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Hook Engine
           </span>
         </h2>
@@ -179,17 +179,17 @@ export default function ViralHookEngine() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #22D3EE 100%)',
-            boxShadow: '0 6px 28px rgba(59, 130, 246,.45)',
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            boxShadow: '0 6px 28px rgba(16, 185, 129,.45)',
             transition: 'transform .2s ease, box-shadow .2s ease',
           }}
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 36px rgba(59, 130, 246,.6)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 36px rgba(16, 185, 129,.6)'
           }}
           onMouseLeave={(e) => {
             ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px rgba(59, 130, 246,.45)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px rgba(16, 185, 129,.45)'
           }}
         >
           Generate Hooks For Your Niche →

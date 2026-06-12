@@ -34,7 +34,7 @@ const CYAN = '#22D3EE'
 const TEXT = '#F1F5F9'
 const MUTED = '#94A3B8'
 const GREEN = '#34d399'
-const CARD = '#0B1120'
+const CARD = '#051D15'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
 
 function dollars(cents: number, currency = 'usd'): string {
@@ -160,7 +160,7 @@ export default function AffiliatePage() {
             Become an affiliate —{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #22D3EE 0%, #3B82F6 60%, #8B5CF6 100%)',
+                background: 'linear-gradient(135deg, #22D3EE 0%, #10B981 60%, #10B981 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -180,7 +180,7 @@ export default function AffiliatePage() {
             disabled={applying}
             className="rounded-xl px-7 py-3 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #2563EB)',
+              background: 'linear-gradient(135deg, #22D3EE, #059669)',
               boxShadow: '0 4px 18px rgba(34,211,238,.35)',
               border: 'none',
               cursor: applying ? 'default' : 'pointer',
@@ -284,7 +284,7 @@ export default function AffiliatePage() {
             onClick={copyLink}
             className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #2563EB)',
+              background: 'linear-gradient(135deg, #22D3EE, #059669)',
               boxShadow: '0 4px 18px rgba(34,211,238,.35)',
               whiteSpace: 'nowrap',
               cursor: 'pointer',
@@ -307,7 +307,7 @@ export default function AffiliatePage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <Kpi label="Clicks" value={stats.clicks.toLocaleString('en-US')} accent={CYAN} />
-        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#60a5fa" />
+        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#34d399" />
         <Kpi label="Paid customers" value={stats.paid.toLocaleString('en-US')} accent={GREEN} />
         <Kpi label="Pending $" value={dollars(earnings.pending)} accent="#fbbf24" />
         <Kpi label="Approved $" value={dollars(earnings.approved)} accent={GREEN} />

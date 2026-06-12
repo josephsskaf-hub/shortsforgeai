@@ -30,11 +30,11 @@ export default function AvatarHowItWorks({ open, onClose, ctaHref = '/generate?a
     >
       <div
         className="w-full max-w-lg rounded-2xl p-6"
-        style={{ background: '#0d0d1a', border: '1.5px solid rgba(168,85,247,0.45)' }}
+        style={{ background: '#0d0d1a', border: '1.5px solid rgba(16,185,129,0.45)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
-          <div className="text-lg font-black" style={{ color: '#e9d5ff' }}>🎭 How AI Avatar works</div>
+          <div className="text-lg font-black" style={{ color: '#a7f3d0' }}>🎭 How AI Avatar works</div>
           <button type="button" onClick={onClose} className="text-sm font-bold" style={{ color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
         </div>
         <div className="text-xs mb-5" style={{ color: 'var(--muted2)' }}>
@@ -43,12 +43,12 @@ export default function AvatarHowItWorks({ open, onClose, ctaHref = '/generate?a
 
         <div className="flex flex-col gap-3">
           {STEPS.map((s, i) => (
-            <div key={s.title} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.25)' }}>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black" style={{ background: 'rgba(168,85,247,0.2)', color: '#e9d5ff' }}>
+            <div key={s.title} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.25)' }}>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black" style={{ background: 'rgba(16,185,129,0.2)', color: '#a7f3d0' }}>
                 {i + 1}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold" style={{ color: '#d8b4fe' }}>{s.icon} {s.title}</div>
+                <div className="text-sm font-bold" style={{ color: '#6ee7b7' }}>{s.icon} {s.title}</div>
                 <div className="text-xs" style={{ color: 'var(--muted2)' }}>{s.desc}</div>
               </div>
               {i === STEPS.length - 1 && <AvatarDemoLoop size={40} />}
@@ -57,13 +57,13 @@ export default function AvatarHowItWorks({ open, onClose, ctaHref = '/generate?a
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-3">
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(168,85,247,0.18)', color: '#e9d5ff', border: '1px solid rgba(168,85,247,0.4)' }}>
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.18)', color: '#a7f3d0', border: '1px solid rgba(16,185,129,0.4)' }}>
             1 Avatar Credit · 720p
           </span>
           <a
             href={ctaHref}
             className="px-5 py-2.5 rounded-xl text-sm font-bold"
-            style={{ background: 'linear-gradient(135deg,#a855f7,#6366f1)', color: '#fff', textDecoration: 'none' }}
+            style={{ background: 'linear-gradient(135deg,#10b981,#14b8a6)', color: '#fff', textDecoration: 'none' }}
           >
             Add a face →
           </a>

@@ -80,7 +80,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
     <main
       style={{
         minHeight: '100vh',
-        background: '#05070D',
+        background: '#020D0A',
         color: '#F1F5F9',
         display: 'flex',
         flexDirection: 'column',
@@ -155,7 +155,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             style={{
               display: 'inline-block',
               background: '#22D3EE',
-              color: '#05070D',
+              color: '#020D0A',
               fontWeight: 900,
               padding: '13px 26px',
               borderRadius: 12,

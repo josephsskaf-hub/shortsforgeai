@@ -97,7 +97,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   return (
     <div className="px-4 sm:px-6 py-7 pb-20 max-w-5xl mx-auto">
       <header className="mb-6">
-        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: '#93c5fd' }}>
+        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: '#6ee7b7' }}>
           Admin · Live
         </div>
         <div className="flex items-end justify-between gap-3 flex-wrap">
@@ -124,7 +124,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
                 className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
                 style={{
                   background: active ? '#22d3ee' : 'rgba(255,255,255,0.04)',
-                  color: active ? '#05070d' : 'var(--muted)',
+                  color: active ? '#020D0A' : 'var(--muted)',
                   border: `1px solid ${active ? '#22d3ee' : 'var(--border)'}`,
                 }}
               >
@@ -164,7 +164,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
                     </span>
                   </div>
                   <div className="rounded-md h-7 overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: isLeak ? '1.5px solid #ef4444' : '1px solid var(--border)' }}>
-                    <div className="h-full rounded-md" style={{ width: `${widthPct}%`, background: isLeak ? 'linear-gradient(90deg,#ef4444,#b91c1c)' : 'linear-gradient(90deg,#22d3ee,#3b82f6)' }} />
+                    <div className="h-full rounded-md" style={{ width: `${widthPct}%`, background: isLeak ? 'linear-gradient(90deg,#ef4444,#b91c1c)' : 'linear-gradient(90deg,#22d3ee,#10b981)' }} />
                   </div>
                 </div>
               )
@@ -295,13 +295,13 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
       <Section title="Growth (all-time)">
         <Card label="Total users"      value={fmt(s.totalUsers)}    hint="all signups"   accent="#22d3ee" />
         <Card label="New this week"    value={fmt(s.newThisWeek)}   hint="last 7 days"   accent="#34d399" />
-        <Card label="New this month"   value={fmt(s.newThisMonth)}  hint="last 30 days"  accent="#60a5fa" />
-        <Card label="Videos this week" value={fmt(s.videosThisWeek)} hint="last 7 days"  accent="#a78bfa" />
+        <Card label="New this month"   value={fmt(s.newThisMonth)}  hint="last 30 days"  accent="#34d399" />
+        <Card label="Videos this week" value={fmt(s.videosThisWeek)} hint="last 7 days"  accent="#34d399" />
       </Section>
 
       <Section title="Subscribers">
         <Card label="Pro"   value={fmt(s.proUsers)}   hint="plan = pro"   accent="#34d399" />
-        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#60a5fa" />
+        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#34d399" />
         <Card label="Free"  value={fmt(s.freeUsers)}  hint="no paid plan" accent="#94a3b8" />
         <Card label="Paid · 0 credits ⚠️" value={fmt(s.paidNoCredits)} hint="check Stripe webhook" accent={s.paidNoCredits > 0 ? '#f87171' : '#34d399'} />
       </Section>
@@ -315,7 +315,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
 
       {data.stripePayments && (
         <Section title="💳 Payment funnel · Stripe">
-          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="reached Stripe checkout" accent="#60a5fa" />
+          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="reached Stripe checkout" accent="#34d399" />
           <Card label="Completed ✅"        value={fmt(data.stripePayments.checkoutCompleted)} hint="payment succeeded"       accent="#34d399" />
           <Card label="Abandoned ❌"        value={fmt(data.stripePayments.checkoutAbandoned)} hint="expired without paying"  accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#34d399'} />
           <Card label="Still open ⏳"       value={fmt(data.stripePayments.checkoutOpen)}      hint="on checkout page now"    accent="#fbbf24" />

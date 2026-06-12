@@ -100,7 +100,7 @@ export default function CheckoutSuccessPage() {
           border: '1px solid var(--border)',
           borderRadius: 22,
           padding: 'clamp(24px, 5vw, 36px)',
-          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,0.08) inset',
+          boxShadow: '0 16px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(20,184,166,0.08) inset',
           textAlign: 'center',
         }}
       >
@@ -184,8 +184,8 @@ export default function CheckoutSuccessPage() {
               fontSize: '0.95rem',
               fontWeight: 900,
               color: '#fff',
-              background: 'linear-gradient(135deg, #2563EB 0%, #7c3aed 55%, #a855f7 100%)',
-              boxShadow: '0 10px 32px rgba(99,102,241,.45)',
+              background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #10b981 100%)',
+              boxShadow: '0 10px 32px rgba(20,184,166,.45)',
               letterSpacing: '-0.01em',
             }}
           >
