@@ -423,6 +423,23 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   // the page never hard-codes a CDN that can go private. Start empty so
   // gradient placeholders show immediately; hydrate on mount.
   const [showcaseVideos, setShowcaseVideos] = useState<Record<string, string>>({})
+  // Landing demo (13/06) — live script preview for guests.
+  const [demoScript, setDemoScript] = useState<string | null>(null)
+  const [demoShown, setDemoShown] = useState('')
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+
+  // Typewriter reveal — the script "writes itself" on screen.
+  useEffect(() => {
+    if (!demoScript) return
+    let i = 0
+    const id = setInterval(() => {
+      i += 3
+      setDemoShown(demoScript.slice(0, i))
+      if (i >= demoScript.length) clearInterval(id)
+    }, 16)
+    return () => clearInterval(id)
+  }, [demoScript])
 
   useEffect(() => {
     // Push #228 — serve showcase URLs from a per-session cache so an
@@ -650,6 +667,41 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       : '/generate'
     const target = user ? dest : `/signup?redirect=${encodeURIComponent(dest)}`
     router.push(target)
+  }
+
+  // Landing demo (13/06) — guests with a typed topic get the magic BEFORE the
+  // signup wall: a real structured script appears live under the form (public
+  // /api/demo-script, gpt-4o-mini). The render CTA then routes through the
+  // normal goToGenerate signup stash. Logged-in users skip straight to
+  // /generate as always.
+  async function runDemoOrGenerate() {
+    const trimmed = prompt.trim()
+    if (user || !trimmed) {
+      goToGenerate()
+      return
+    }
+    trackHomepageEvent('hero_demo_script_run')
+    setDemoError(null)
+    setDemoScript(null)
+    setDemoShown('')
+    setDemoLoading(true)
+    try {
+      const res = await fetch('/api/demo-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok || typeof data?.script !== 'string') {
+        setDemoError(typeof data?.error === 'string' ? data.error : 'Could not write the demo. Try again.')
+        return
+      }
+      setDemoScript(data.script)
+    } catch {
+      setDemoError('Could not write the demo. Try again.')
+    } finally {
+      setDemoLoading(false)
+    }
   }
 
   function goToShowcase(cardPrompt: string) {
@@ -969,7 +1021,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           onSubmit={(e) => {
             e.preventDefault()
             trackHomepageEvent('hero_prompt_box_submit')
-            goToGenerate()
+            void runDemoOrGenerate()
           }}
           className="neon-card mx-auto mt-10 flex w-full max-w-[760px] flex-col gap-4 p-4 transition focus-within:!border-cyan-400/60 sm:p-5"
         >
@@ -984,10 +1036,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           />
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || demoLoading}
             className="btn-neon w-full shrink-0 px-6 py-4 text-[15px] disabled:opacity-60"
           >
-            {submitting ? 'Loading…' : 'Generate My Short →'}
+            {submitting ? 'Loading…' : demoLoading ? '✍️ Writing your script…' : user ? 'Generate My Short →' : 'Write My Script — free, no signup →'}
           </button>
 
           {/* feature/ai-avatar — premium entry on the home prompt box, now with
@@ -1018,6 +1070,53 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <span className="shrink-0 text-lg font-bold text-emerald-200 transition-transform group-hover:translate-x-0.5">→</span>
           </button>
         </form>
+        {/* Landing demo (13/06) — the script materializes HERE, on the page,
+            before any signup. The render is the gate, not the magic. */}
+        {(demoLoading || demoShown || demoError) && (
+          <div className="neon-card mx-auto mt-4 w-full max-w-[760px] p-5 text-left">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#34D399' }}>
+                ⚡ Your script — written live by ShortAI
+              </span>
+              {demoShown && demoScript && demoShown.length >= demoScript.length && (
+                <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>done in seconds, not hours</span>
+              )}
+            </div>
+            {demoError ? (
+              <p className="text-sm font-semibold" style={{ color: '#fca5a5' }}>⚠️ {demoError}</p>
+            ) : (
+              <pre
+                className="whitespace-pre-wrap text-[13.5px] leading-relaxed"
+                style={{ fontFamily: 'inherit', color: 'var(--text2)', margin: 0, minHeight: 60 }}
+              >
+                {demoShown}
+                {(demoLoading || (demoScript && demoShown.length < demoScript.length)) && (
+                  <span className="animate-pulse-dot" style={{ color: '#34D399' }}>▌</span>
+                )}
+              </pre>
+            )}
+            {demoScript && demoShown.length >= demoScript.length && !demoError && (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => { trackHomepageEvent('hero_demo_render_cta'); goToGenerate() }}
+                  className="btn-neon px-5 py-3 text-[14px]"
+                >
+                  🎬 Turn this into a video — free (30 credits)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDemoScript(null); setDemoShown(''); setPromptText('') }}
+                  className="rounded-xl px-4 py-3 text-[13px] font-bold"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--muted2)', cursor: 'pointer' }}
+                >
+                  ↺ Try another topic
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <style jsx>{`
           .sfa-home-avatar {
             background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(20,184,166,0.14));
