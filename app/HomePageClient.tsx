@@ -728,7 +728,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 <span className="text-white">Forge</span>
                 <span className="text-cyan-400">AI</span>
               </span>
-              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.5</span>
+              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v3.0</span>
             </div>
           </Link>
 
@@ -736,6 +736,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               footer center group so links align symmetrically in both bars. */}
           <div className="hidden flex-1 items-center justify-center gap-9 md:flex">
             <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
+            {/* Face-app — AI Avatar entry in the top menu (12/06). Deep-links
+                to /generate with the avatar panel auto-open. */}
+            <Link href="/generate?avatar=1" className="flex items-center gap-1.5 text-[1rem] font-medium text-[#34D399] hover:text-[#6EE7B7] transition">
+              🎭 AI Avatar
+              <span className="rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span>
+            </Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">🔥 Viral Now</Link>
             <a href="/pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
@@ -847,6 +853,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="md:hidden border-t border-white/[0.08] bg-[#121214]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
+              <Link onClick={() => setNavOpen(false)} href="/generate?avatar=1" className="rounded-md px-3 py-2 text-sm font-bold text-[#34D399] hover:bg-emerald-400/[.06] hover:text-[#6EE7B7]">🎭 AI Avatar <span className="ml-1 rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span></Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
               <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">🔥 Viral Now</Link>
               <a onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
@@ -1702,7 +1709,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href="/history" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">My Videos</Link>
             <Link href="/pricing" className="text-[12.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Pricing</Link>
           </div>
-          <p className="text-[11.5px] text-[#94A3B8] sm:min-w-[160px] sm:text-right">© 2026 ShortsForgeAI <span className="opacity-40">· v1.5</span></p>
+          <p className="text-[11.5px] text-[#94A3B8] sm:min-w-[160px] sm:text-right">© 2026 ShortsForgeAI <span className="opacity-40">· v3.0</span></p>
         </div>
         {/* Push #116 — legal + contact strip under the main footer row. */}
         <div className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-6 pb-6 sm:px-10">

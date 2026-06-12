@@ -280,7 +280,7 @@ export default function ComingSoonPage() {
           color: 'rgba(255,255,255,0.32)',
         }}
       >
-        © 2026 ShortsForgeAI · v1.5
+        © 2026 ShortsForgeAI · v3.0
       </footer>
     </main>
   )

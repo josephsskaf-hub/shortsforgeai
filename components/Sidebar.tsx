@@ -21,6 +21,49 @@ interface SidebarProps {
 // prompts. Topic shortcuts are still reachable via the homepage hero
 // textarea.
 
+// Mono premium (12/06) — refined line-icon set for the nav. 17px, 1.7 stroke,
+// currentColor so active/hover states tint them automatically. Replaces the
+// emoji tiles, which read playful-but-cheap next to the new theme.
+const NAV_ICONS: Record<string, JSX.Element> = {
+  generate: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2.5" y="5" width="14" height="14" rx="3" />
+      <path d="M16.5 10.5 21.5 7v10l-5-3.5" />
+    </svg>
+  ),
+  thumbnails: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m3.5 17 5-5 4 4 3-3 5 5" />
+    </svg>
+  ),
+  viral: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3c1 3-3 5-3 8.5a3.5 3.5 0 0 0 7 0c0-1-.4-2-1-2.8.2 2-1 2.6-1 1.3 0-2.5-1-5.5-2-7Z" />
+      <path d="M8 14.5A6.5 6.5 0 1 0 18.5 14" />
+    </svg>
+  ),
+  videos: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M3 9h18M8 4v5M16 4v5" />
+    </svg>
+  ),
+  referral: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="8" width="17" height="4.5" rx="1.5" />
+      <path d="M5 12.5V19a1.8 1.8 0 0 0 1.8 1.8h10.4A1.8 1.8 0 0 0 19 19v-6.5M12 8v12.8M12 8c-1.8 0-3.5-1-3.5-2.6S10.4 3 12 5c1.6-2 3.5-1.2 3.5.4S13.8 8 12 8Z" />
+    </svg>
+  ),
+  pricing: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3.5h12l3.5 5.5L12 21 2.5 9 6 3.5Z" />
+      <path d="M2.5 9h19M9 9l3 12M15 9l-3 12" />
+    </svg>
+  ),
+}
+
 function NavItem({
   href,
   icon,
@@ -31,7 +74,7 @@ function NavItem({
   badge,
 }: {
   href: string
-  icon: string
+  icon: React.ReactNode
   label: string
   exact: boolean
   pathname: string
@@ -351,7 +394,7 @@ export default function Sidebar({
               <span style={{ color: '#22D3EE' }}>AI</span>
             </div>
             <span
-              aria-label="version 1.5"
+              aria-label="version 3.0"
               style={{
                 fontSize: '0.65rem',
                 color: '#94A3B8',

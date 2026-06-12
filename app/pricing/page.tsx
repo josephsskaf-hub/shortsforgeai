@@ -243,7 +243,7 @@ export default function PricingPage() {
                 <span className="text-white">Forge</span>
                 <span className="text-cyan-400">AI</span>
               </span>
-              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v1.5</span>
+              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v3.0</span>
             </div>
           </Link>
 

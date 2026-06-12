@@ -4346,7 +4346,7 @@ export default function GenerateClient() {
             <>
               <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
                 <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
-                  ShortsForgeAI v1.5
+                  ShortsForgeAI v3.0
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 flex-wrap">

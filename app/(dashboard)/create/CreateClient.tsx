@@ -595,7 +595,7 @@ export default function CreateClient() {
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              ShortsForgeAI v1.5
+              ShortsForgeAI v3.0
             </div>
             <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Generate a Short in <span className="grad-text">one click</span>
@@ -605,6 +605,26 @@ export default function CreateClient() {
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           AI writes the script, generates narration, finds visuals and renders everything automatically.
         </p>
+        {/* Face-app (12/06) — AI Avatar entry in this creation environment too. */}
+        <a
+          href="/generate?avatar=1"
+          className="mt-3 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition-all hover:scale-[1.02]"
+          style={{
+            background: 'rgba(16,185,129,0.1)',
+            border: '1px solid rgba(52,211,153,0.35)',
+            color: '#34D399',
+            textDecoration: 'none',
+          }}
+        >
+          🎭 Add a face — AI Avatar
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
+            style={{ background: 'rgba(52,211,153,0.18)', color: '#6EE7B7' }}
+          >
+            New
+          </span>
+          <span aria-hidden>→</span>
+        </a>
       </div>
 
       {/* Form (hidden during run + final + auto-pick) */}
@@ -1109,7 +1129,7 @@ function FinalView({
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
-              ShortsForgeAI v1.5
+              ShortsForgeAI v3.0
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>

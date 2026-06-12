@@ -83,8 +83,28 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         )}
       </div>
 
-      {/* Right side — credits badge + Pro badge. Auth controls live in the Sidebar. */}
+      {/* Right side — AI Avatar shortcut + credits badge + Pro badge. */}
       <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        {/* Face-app (12/06) — AI Avatar entry in every creation environment.
+            Deep-links to /generate with the avatar panel auto-open. */}
+        <Link
+          href="/generate?avatar=1"
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:scale-[1.03]"
+          style={{
+            background: 'rgba(16,185,129,0.1)',
+            border: '1px solid rgba(52,211,153,0.35)',
+            color: '#34D399',
+            textDecoration: 'none',
+          }}
+        >
+          🎭 AI Avatar
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
+            style={{ background: 'rgba(52,211,153,0.18)', color: '#6EE7B7' }}
+          >
+            New
+          </span>
+        </Link>
         {/* Push #098 — header credits badge. Red link to /pricing when 0,
             amber when <=5 and not Pro, neutral otherwise. */}
         <CreditsBadge isPro={isPro} />
