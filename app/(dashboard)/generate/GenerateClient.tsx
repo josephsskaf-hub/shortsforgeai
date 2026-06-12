@@ -425,6 +425,10 @@ export default function GenerateClient() {
   // or lips desync).
   const [avatarImageUrl, setAvatarImageUrl] = useState<string | null>(null)
   const [avatarRequestId, setAvatarRequestId] = useState<string | null>(null)
+  // Bug 12/06 — photo picked in <AvatarUpload/> but "Use this face" never
+  // pressed. Generate must NOT silently render a faceless video in that state.
+  const [avatarPending, setAvatarPending] = useState(false)
+  const [avatarOpenSignal, setAvatarOpenSignal] = useState(0)
   // CP2 — separate avatar-credit balance + paywall modal + home deep-link
   // (/generate?avatar=1 auto-opens the upload panel).
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
@@ -1705,6 +1709,19 @@ export default function GenerateClient() {
     const trimmed = (structuredScriptRef.current ?? prompt).trim()
     if (!trimmed) {
       setError('Please describe your video idea first.')
+      generationInFlightRef.current = false
+      return
+    }
+
+    // Bug 12/06 — a face photo was picked but never attached ("Use this face"
+    // not pressed, usually because the consent box was missed). Generating now
+    // would silently render a faceless video — block, reopen the panel and
+    // tell the user exactly what to do instead.
+    if (!avatarImageUrl && avatarPending) {
+      setError(
+        'Your avatar photo isn’t attached yet. In the AI Avatar panel: check the consent box, then press “Use this face” — or remove the photo to generate without an avatar.',
+      )
+      setAvatarOpenSignal((n) => n + 1)
       generationInFlightRef.current = false
       return
     }
@@ -2990,6 +3007,8 @@ export default function GenerateClient() {
             disabled={isProcessingPhase(phase)}
             credits={avatarCredits}
             initialOpen={avatarAutoOpen}
+            onPendingChange={setAvatarPending}
+            openSignal={avatarOpenSignal}
           />
 
           {/* #383c — explicit script handling. Default = let the AI structure the

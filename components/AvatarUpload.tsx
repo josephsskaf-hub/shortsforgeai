@@ -18,11 +18,18 @@ interface AvatarUploadProps {
   credits?: number | null
   /** CP2 — auto-expand the panel (home button → /generate?avatar=1). */
   initialOpen?: boolean
+  /** Bug 12/06 — tells the parent a photo is picked but NOT attached yet
+   *  ("Use this face" not pressed). GenerateClient blocks Generate on it so a
+   *  half-finished avatar never silently renders a faceless video. */
+  onPendingChange?: (pending: boolean) => void
+  /** Bug 12/06 — increment to force the panel open (used by the Generate
+   *  guard to bring the user back to the unfinished avatar step). */
+  openSignal?: number
 }
 
 const MAX_BYTES = 8 * 1024 * 1024
 
-export default function AvatarUpload({ value, onChange, disabled, credits = null, initialOpen = false }: AvatarUploadProps) {
+export default function AvatarUpload({ value, onChange, disabled, credits = null, initialOpen = false, onPendingChange, openSignal = 0 }: AvatarUploadProps) {
   const [open, setOpen] = useState(initialOpen)
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -36,6 +43,17 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
 
   // Clean up object URLs to avoid leaks.
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+
+  // Bug 12/06 — surface "photo picked but not attached" to the parent.
+  useEffect(() => {
+    onPendingChange?.(!!file && !value)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, value])
+
+  // Bug 12/06 — parent can force the panel open (Generate guard).
+  useEffect(() => {
+    if (openSignal > 0) setOpen(true)
+  }, [openSignal])
 
   function pickFile(f: File | null) {
     setError(null)
@@ -267,15 +285,31 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         </div>
       </div>
 
-      {/* Image-rights term — required (protection rule) */}
-      <label className="flex items-start gap-2 mt-4 cursor-pointer">
+      {/* Image-rights term — required (protection rule). UX 12/06: once a
+          photo is picked, the unchecked box becomes the ONLY blocker — pulse
+          it amber so nobody misses why the button is disabled. */}
+      <label
+        className="flex items-start gap-2 mt-4 cursor-pointer rounded-lg p-2 transition-colors"
+        style={{
+          background: file && !rights ? 'rgba(251,191,36,0.08)' : 'transparent',
+          border: file && !rights ? '1px solid rgba(251,191,36,0.5)' : '1px solid transparent',
+        }}
+      >
         <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-0.5" />
-        <span className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
+        <span className="text-xs leading-relaxed" style={{ color: file && !rights ? '#fde68a' : 'var(--muted)' }}>
           I confirm I have the right to use this person&apos;s image and consent to it being animated by AI for this video.
         </span>
       </label>
 
-      {error && <div className="text-xs mt-3 font-semibold" style={{ color: '#fca5a5' }}>{error}</div>}
+      {error && (
+        <div
+          className="text-xs mt-3 font-semibold rounded-lg px-3 py-2"
+          style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)' }}
+          role="alert"
+        >
+          ⚠️ {error}
+        </div>
+      )}
 
       <button
         type="button"
@@ -289,8 +323,19 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
           cursor: !file || !rights || uploading ? 'not-allowed' : 'pointer',
         }}
       >
-        {uploading ? '🔍 Checking your photo…' : 'Use this face'}
+        {uploading
+          ? '🔍 Checking your photo…'
+          : !file
+            ? '🖼️ Choose a photo first'
+            : !rights
+              ? '☝️ Check the consent box to continue'
+              : 'Use this face ✓'}
       </button>
+      {file && rights && !uploading && (
+        <div className="text-[11px] mt-2 font-semibold" style={{ color: '#c4b5fd' }}>
+          One more click — your face isn&apos;t attached to the video until you press this.
+        </div>
+      )}
     </div>
   )
 }
