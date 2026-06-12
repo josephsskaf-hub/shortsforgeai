@@ -1,5 +1,9 @@
-/* ShortsForgeAI v1.2 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ShortsForgeAI v2.0 — NEON FUTURISTA redesign (12/06)
+   Deep violet-black base + electric violet / neon cyan / hot magenta accents.
+   Every surface that reads the CSS vars below (landing AND dashboard) picks
+   up the new look automatically. New utilities: .tech-grid, .aurora-orb,
+   .neon-card, .btn-neon, .neon-text — used by the rebuilt hero. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,30 +13,31 @@ html {
 }
 
 :root {
-  --bg: #05070D;
-  --bg2: #0B1020;
-  --bg3: #0B1020;
-  --sidebar-bg: #0B1020;
-  --card: #151C2F;
-  --card2: #151C2F;
-  --indigo: #3B82F6;
-  --indigo-light: #60A5FA;
-  --indigo-dark: #1D4ED8;
-  --purple: #2563EB;
+  --bg: #040209;
+  --bg2: #0A0618;
+  --bg3: #0A0618;
+  --sidebar-bg: #080512;
+  --card: #120B26;
+  --card2: #160E2E;
+  --indigo: #8B5CF6;
+  --indigo-light: #A78BFA;
+  --indigo-dark: #6D28D9;
+  --purple: #8B5CF6;
   --purple-light: #22D3EE;
-  --pink: #22D3EE;
+  --pink: #E879F9;
   --cyan: #22D3EE;
   --green: #10b981;
   --amber: #f59e0b;
-  --text: #F5F7FF;
-  --text2: #E2E8F0;
-  --muted: #64748b;
-  --muted2: #94A3B8;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.12);
-  --glass: rgba(255,255,255,0.03);
-  --glass-border: rgba(255,255,255,0.08);
-  --glow: 0 0 40px rgba(34,211,238,.18);
+  --text: #F6F4FF;
+  --text2: #E6E1F5;
+  --muted: #6B6585;
+  --muted2: #9D96B8;
+  --border: rgba(167,139,250,0.14);
+  --border2: rgba(167,139,250,0.24);
+  --glass: rgba(139,92,246,0.05);
+  --glass-border: rgba(167,139,250,0.18);
+  --glow: 0 0 40px rgba(139,92,246,.22);
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
 }
 
 * {
@@ -49,6 +54,20 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.6;
+}
+
+/* Neon redesign — layered ambient light: two ultra-soft radial washes so the
+   violet-black base never reads as flat dead-black. Sits under everything. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(900px 600px at 12% -8%, rgba(139,92,246,0.13), transparent 60%),
+    radial-gradient(800px 540px at 88% 12%, rgba(34,211,238,0.09), transparent 60%),
+    radial-gradient(700px 700px at 50% 110%, rgba(232,121,249,0.07), transparent 62%);
 }
 
 /* Push #052 — block horizontal overflow on mobile. Some long URLs in
@@ -208,16 +227,16 @@ body::after {
 
 /* Glass card */
 .glass-card {
-  background: rgba(21, 28, 47, 0.6);
+  background: rgba(18, 11, 38, 0.6);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.14);
   border-radius: 16px;
 }
 
-/* Brand gradient button */
+/* Brand gradient button — neon violet → cyan */
 .btn-brand {
-  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 55%, #22D3EE 100%);
+  background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 45%, #22D3EE 100%);
   color: #fff;
   border: none;
   padding: 14px 20px;
@@ -226,7 +245,7 @@ body::after {
   font-weight: 800;
   cursor: pointer;
   transition: box-shadow 0.25s, transform 0.2s;
-  box-shadow: 0 4px 22px rgba(59, 130, 246, 0.28);
+  box-shadow: 0 4px 22px rgba(139, 92, 246, 0.32);
   animation: btn-pulse 2.8s ease-in-out infinite;
   letter-spacing: -0.01em;
   display: flex;
@@ -236,16 +255,133 @@ body::after {
 }
 
 .btn-brand:hover {
-  box-shadow: 0 0 40px rgba(34,211,238,.55), 0 6px 32px rgba(59,130,246,.5);
+  box-shadow: 0 0 40px rgba(34,211,238,.55), 0 6px 32px rgba(139,92,246,.55);
   transform: scale(1.035);
 }
 
-/* Gradient text */
+/* Gradient text — violet → cyan → magenta sweep */
 .grad-text {
-  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 45%, #22D3EE 100%);
+  background: linear-gradient(110deg, #A78BFA 0%, #22D3EE 50%, #E879F9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ── NEON FUTURISTA utilities (redesign 12/06) ─────────────────────────── */
+
+/* Display typeface for hero/section headings */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Tech grid — faint blueprint lines that fade out radially */
+.tech-grid {
+  position: relative;
+}
+.tech-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(167,139,250,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 35%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 35%, transparent 75%);
+}
+
+/* Aurora orbs — slow drifting blurred light blobs */
+@keyframes auroraDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(40px, -28px, 0) scale(1.08); }
+  66% { transform: translate3d(-32px, 22px, 0) scale(0.94); }
+}
+.aurora-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: auroraDrift 16s ease-in-out infinite;
+}
+
+/* Neon glass card — gradient hairline border + hover lift/glow */
+.neon-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(22,14,46,0.75), rgba(10,6,24,0.85));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(167,139,250,0.16);
+  border-radius: 18px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.neon-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(167,139,250,0.42);
+  box-shadow: 0 12px 44px rgba(139,92,246,0.22), 0 0 0 1px rgba(34,211,238,0.08);
+}
+
+/* Neon CTA — high-energy primary button */
+.btn-neon {
+  position: relative;
+  background: linear-gradient(135deg, #7C3AED, #8B5CF6 40%, #22D3EE);
+  background-size: 160% 160%;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, background-position 0.4s ease;
+  box-shadow: 0 8px 30px rgba(139,92,246,0.4), 0 0 18px rgba(34,211,238,0.18);
+}
+.btn-neon:hover {
+  transform: translateY(-1px) scale(1.02);
+  background-position: 100% 50%;
+  box-shadow: 0 10px 44px rgba(139,92,246,0.55), 0 0 34px rgba(34,211,238,0.35);
+}
+
+/* Neon text glow */
+.neon-text {
+  text-shadow: 0 0 18px rgba(34,211,238,0.6), 0 0 44px rgba(139,92,246,0.35);
+}
+
+/* Floating animation (hero phone) */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float {
+  animation: floatY 6s ease-in-out infinite;
+}
+
+/* Scanline sweep (hero phone "rendering" effect) */
+@keyframes scanline {
+  0% { top: -12%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 104%; opacity: 0; }
+}
+
+/* Equalizer bars (voiceover visual in the hero demo) */
+@keyframes eqBar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+/* Looping progress fill for the hero demo */
+@keyframes demoProgress {
+  0% { width: 4%; }
+  72% { width: 96%; }
+  86% { width: 100%; }
+  100% { width: 100%; }
+}
+
+/* Demo caption cycle (3 captions, stepped) */
+@keyframes demoCaption {
+  0%, 30% { opacity: 1; transform: translateY(0); }
+  33%, 100% { opacity: 0; transform: translateY(-6px); }
 }
 
 /* Shimmer animation for sample output cards */

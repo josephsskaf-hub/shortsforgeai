@@ -90,9 +90,9 @@ function NavItem({
             top: '16%',
             height: '68%',
             width: 3,
-            background: 'linear-gradient(180deg, #3B82F6, #22D3EE)',
+            background: 'linear-gradient(180deg, #8B5CF6, #22D3EE)',
             borderRadius: '0 3px 3px 0',
-            boxShadow: '0 0 8px rgba(34,211,238,0.6)',
+            boxShadow: '0 0 10px rgba(139,92,246,0.7)',
           }}
         />
       )}
@@ -312,8 +312,10 @@ export default function Sidebar({
         style={{
           width: 248,
           height: '100dvh',
-          background: '#0B1020',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
+          // Neon redesign (12/06) — violet-black glass column with a faint
+          // top-down violet wash instead of the flat navy slab.
+          background: 'linear-gradient(180deg, #0C0719 0%, #080512 55%, #060310 100%)',
+          borderRight: '1px solid rgba(167,139,250,0.12)',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
@@ -329,9 +331,9 @@ export default function Sidebar({
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
-              background: '#151C2F',
-              border: '1px solid rgba(34,211,238,0.35)',
-              boxShadow: '0 0 18px rgba(34,211,238,0.35)',
+              background: 'linear-gradient(135deg, #160E2E, #0C0719)',
+              border: '1px solid rgba(139,92,246,0.45)',
+              boxShadow: '0 0 18px rgba(139,92,246,0.4), 0 0 8px rgba(34,211,238,0.25)',
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

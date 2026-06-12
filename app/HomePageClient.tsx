@@ -118,6 +118,187 @@ const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
 // IDs must match SHOWCASE_QUERIES in /api/showcase-clips/route.ts
 const SHOWCASE_IDS = ['space', 'history', 'hidden', 'crime', 'facts', 'money']
 
+// ── NEON redesign (12/06) — HeroDemoPhone ────────────────────────────────────
+// CSS-only animated phone showing a Short BEING GENERATED on loop: footage
+// scenes crossfade, captions cycle, a scanline sweeps, the voiceover EQ pulses
+// and the progress bar fills to "✓ Ready to post". Zero assets, zero JS timers
+// — pure keyframes, so it costs nothing and never breaks.
+function HeroDemoPhone() {
+  return (
+    <div className="hp-wrap animate-float" aria-hidden>
+      <div className="hp-frame">
+        <div className="hp-notch" />
+        <div className="hp-screen">
+          {/* crossfading "footage" scenes */}
+          <div className="hp-clip hp-clip-a" />
+          <div className="hp-clip hp-clip-b" />
+          <div className="hp-clip hp-clip-c" />
+          {/* render scanline */}
+          <div className="hp-scan" />
+          {/* status pill */}
+          <div className="hp-status">
+            <span className="hp-dot" /> ShortsForgeAI · generating
+          </div>
+          {/* cycling captions */}
+          <div className="hp-captions">
+            <span className="hp-cap" style={{ animationDelay: '0s' }}>NASA lost footage from the Moon…</span>
+            <span className="hp-cap" style={{ animationDelay: '3s' }}>They never showed you THIS 👀</span>
+            <span className="hp-cap" style={{ animationDelay: '6s' }}>What was really up there?</span>
+          </div>
+          {/* voiceover EQ + progress */}
+          <div className="hp-footer">
+            <div className="hp-eq">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => (
+                <i key={i} style={{ animationDelay: `${(i % 5) * 0.13}s` }} />
+              ))}
+            </div>
+            <div className="hp-track"><div className="hp-fill" /></div>
+            <div className="hp-meta">
+              <span>0:52 · 9:16</span>
+              <span className="hp-ready">✓ Ready to post</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* floating proof badges */}
+      <div className="hp-badge hp-badge-views">▶ 1.2M views</div>
+      <div className="hp-badge hp-badge-speed">⚡ rendered in 60s</div>
+      <style jsx>{`
+        .hp-wrap { position: relative; width: 280px; }
+        .hp-frame {
+          position: relative;
+          width: 280px; height: 580px;
+          border-radius: 40px;
+          background: linear-gradient(160deg, #1b1133, #0a0618);
+          border: 1px solid rgba(167,139,250,0.35);
+          box-shadow:
+            0 0 0 6px rgba(8,5,18,0.9),
+            0 0 60px rgba(139,92,246,0.35),
+            0 30px 80px rgba(0,0,0,0.6);
+          padding: 10px;
+        }
+        .hp-notch {
+          position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+          width: 86px; height: 18px; border-radius: 10px;
+          background: #040209; z-index: 5;
+          border: 1px solid rgba(167,139,250,0.18);
+        }
+        .hp-screen {
+          position: relative; width: 100%; height: 100%;
+          border-radius: 32px; overflow: hidden; background: #07030f;
+        }
+        .hp-clip { position: absolute; inset: 0; opacity: 0; animation: hpClip 9s infinite; }
+        .hp-clip-a {
+          background:
+            radial-gradient(120% 80% at 20% 15%, rgba(139,92,246,0.7), transparent 55%),
+            radial-gradient(100% 70% at 85% 80%, rgba(34,211,238,0.5), transparent 60%),
+            linear-gradient(180deg, #160e2e, #05030c);
+          animation-delay: 0s;
+        }
+        .hp-clip-b {
+          background:
+            radial-gradient(110% 75% at 75% 20%, rgba(232,121,249,0.55), transparent 55%),
+            radial-gradient(90% 70% at 20% 85%, rgba(139,92,246,0.55), transparent 60%),
+            linear-gradient(180deg, #1a0f24, #060310);
+          animation-delay: 3s;
+        }
+        .hp-clip-c {
+          background:
+            radial-gradient(120% 80% at 50% 10%, rgba(34,211,238,0.55), transparent 55%),
+            radial-gradient(90% 60% at 80% 90%, rgba(16,185,129,0.4), transparent 60%),
+            linear-gradient(180deg, #0e1430, #04020b);
+          animation-delay: 6s;
+        }
+        @keyframes hpClip {
+          0% { opacity: 0; transform: scale(1.08); }
+          5% { opacity: 1; }
+          33% { opacity: 1; transform: scale(1); }
+          38% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        .hp-scan {
+          position: absolute; left: 0; right: 0; height: 70px; top: -12%;
+          background: linear-gradient(180deg, transparent, rgba(34,211,238,0.16), rgba(34,211,238,0.4), rgba(34,211,238,0.16), transparent);
+          animation: scanline 4.5s linear infinite;
+          z-index: 2;
+        }
+        .hp-status {
+          position: absolute; top: 46px; left: 50%; transform: translateX(-50%);
+          display: flex; align-items: center; gap: 6px;
+          padding: 5px 11px; border-radius: 999px;
+          background: rgba(4,2,9,0.75); backdrop-filter: blur(6px);
+          border: 1px solid rgba(167,139,250,0.35);
+          font-size: 10px; font-weight: 800; color: #d8cff5;
+          white-space: nowrap; z-index: 4;
+        }
+        .hp-dot {
+          width: 6px; height: 6px; border-radius: 999px; background: #22D3EE;
+          box-shadow: 0 0 10px rgba(34,211,238,0.9);
+          animation: pulse 1.4s infinite;
+        }
+        .hp-captions {
+          position: absolute; left: 16px; right: 16px; bottom: 118px;
+          height: 52px; z-index: 3;
+        }
+        .hp-cap {
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          text-align: center;
+          font-family: var(--font-display);
+          font-size: 16px; font-weight: 700; line-height: 1.25; color: #fff;
+          text-shadow: 0 2px 14px rgba(0,0,0,0.85);
+          opacity: 0;
+          animation: hpCap 9s infinite;
+        }
+        @keyframes hpCap {
+          0% { opacity: 0; transform: translateY(8px); }
+          4% { opacity: 1; transform: translateY(0); }
+          30% { opacity: 1; }
+          36% { opacity: 0; transform: translateY(-8px); }
+          100% { opacity: 0; }
+        }
+        .hp-footer {
+          position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4;
+          background: rgba(4,2,9,0.72); backdrop-filter: blur(8px);
+          border: 1px solid rgba(167,139,250,0.22);
+          border-radius: 14px; padding: 10px 12px;
+        }
+        .hp-eq { display: flex; align-items: flex-end; gap: 3px; height: 18px; margin-bottom: 8px; }
+        .hp-eq i {
+          flex: 1; height: 100%; border-radius: 2px;
+          background: linear-gradient(180deg, #22D3EE, #8B5CF6);
+          transform-origin: bottom; transform: scaleY(0.3);
+          animation: eqBar 0.9s ease-in-out infinite;
+        }
+        .hp-track { height: 5px; border-radius: 999px; background: rgba(167,139,250,0.16); overflow: hidden; }
+        .hp-fill {
+          height: 100%; border-radius: 999px;
+          background: linear-gradient(90deg, #8B5CF6, #22D3EE);
+          box-shadow: 0 0 12px rgba(34,211,238,0.6);
+          animation: demoProgress 9s ease-in-out infinite;
+        }
+        .hp-meta { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10px; font-weight: 700; color: #9d96b8; }
+        .hp-ready { color: #34D399; }
+        .hp-badge {
+          position: absolute; z-index: 6;
+          padding: 8px 13px; border-radius: 12px;
+          font-size: 12px; font-weight: 900; color: #fff;
+          background: rgba(10,6,24,0.85); backdrop-filter: blur(8px);
+          border: 1px solid rgba(167,139,250,0.35);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 22px rgba(139,92,246,0.25);
+          white-space: nowrap;
+        }
+        .hp-badge-views { top: 96px; right: -54px; color: #22D3EE; animation: floatY 5s ease-in-out infinite; animation-delay: -2s; }
+        .hp-badge-speed { bottom: 150px; left: -58px; color: #A78BFA; animation: floatY 7s ease-in-out infinite; animation-delay: -4s; }
+        @media (max-width: 1100px) {
+          .hp-badge-views { right: -16px; }
+          .hp-badge-speed { left: -16px; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 function trackHomepageEvent(name: string): void {
   try {
     void fetch('/api/events', {
@@ -688,57 +869,65 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           behind the hero text). Cleaner solid-dark hero without the
           autoplay video. */}
       <div style={{ minHeight: '88vh' }}>
-      <section className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 sm:px-6 sm:pt-16 sm:pb-16" style={{ zIndex: 2 }}>
-        <div className="mx-auto max-w-3xl text-center">
-        {/* #408 — ads differentiator claim: speed/zero friction ("2 clicks").
-            Message-matches the Google Ads campaign so ad promise = first fold. */}
-        <h1 className="text-balance text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl text-[#F1F5F9]">
-          From Idea to{' '}
-          <span
-            className="text-[#22D3EE]"
-            style={{ textShadow: '0 0 24px rgba(34,211,238,0.55), 0 0 48px rgba(34,211,238,0.25)' }}
-          >
-            Viral Short
-          </span>{' '}
-          in 2 Clicks
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#94A3B8]">
-          No prompts. No editing. ShortAI writes the hook, script, voice, captions and footage for YouTube, TikTok &amp; Reels — you just download and post.
-        </p>
+      <section className="tech-grid relative mx-auto max-w-7xl px-4 pt-10 pb-10 sm:px-6 sm:pt-14 sm:pb-16" style={{ zIndex: 2 }}>
+        {/* NEON redesign — drifting aurora orbs behind the first fold */}
+        <div aria-hidden className="aurora-orb" style={{ width: 440, height: 440, top: -90, left: '-8%', background: 'radial-gradient(circle, rgba(139,92,246,0.5), transparent 70%)' }} />
+        <div aria-hidden className="aurora-orb" style={{ width: 400, height: 400, top: 30, right: '-6%', background: 'radial-gradient(circle, rgba(34,211,238,0.34), transparent 70%)', animationDelay: '-8s' }} />
 
-        {/* Push #116 — live cumulative counter directly under the
-            subheadline. Reads from /api/stats on mount, ticks +1 every
-            30s so the number feels alive without lying about volume. */}
-        <p className="mt-5 text-sm font-bold text-[#34D399]">
-          🎬 {animatedTotal.toLocaleString('en-US')} videos generated by creators worldwide
-        </p>
-        {/* Push #231 — rolling 7-day momentum line under the all-time total. */}
-        <p className="mt-1.5 text-[13px] font-semibold text-[#94A3B8]">
-          🔥 <span className="text-cyan-400 font-bold">{shortsWeek.toLocaleString('en-US')}</span> videos created this week
-        </p>
+        <div className="relative grid items-center gap-10 lg:grid-cols-[1.06fr_0.94fr]">
+          <div className="mx-auto max-w-3xl text-center lg:mx-0 lg:text-left">
+            {/* #408 — ads differentiator claim: speed/zero friction ("2 clicks").
+                Message-matches the Google Ads campaign so ad promise = first fold. */}
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[rgba(167,139,250,0.35)] bg-[rgba(139,92,246,0.1)] px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+              AI Video Engine v3
+            </div>
+            <h1 className="font-display text-balance text-4xl font-bold leading-[1.06] tracking-tight sm:text-5xl lg:text-6xl text-[var(--text)]">
+              From Idea to{' '}
+              <span className="grad-text neon-text">Viral Short</span>{' '}
+              in 2 Clicks
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-[15px] sm:text-base text-[#9D96B8] lg:mx-0">
+              No prompts. No editing. ShortAI writes the hook, script, voice, captions and footage for YouTube, TikTok &amp; Reels — you just download and post.
+            </p>
 
-        {/* Push #097 — primary green go-button + trust microcopy. The
-            textarea below is preserved for high-intent visitors who
-            already know what they want to make. */}
-        <div className="mx-auto mt-8 flex w-full max-w-[770px] flex-col items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              trackHomepageEvent('hero_primary_cta_click')
-              goToGenerate()
-            }}
-            disabled={submitting}
-            className="animate-btn-pulse w-full sm:w-auto rounded-xl bg-[#10B981] px-9 py-4 text-base sm:text-lg font-extrabold text-white shadow-[0_10px_32px_rgba(16,185,129,.45)] transition hover:bg-[#059669] hover:shadow-[0_12px_40px_rgba(16,185,129,.55)] disabled:opacity-60"
-          >
-            {submitting ? 'Loading…' : 'Generate My First Short →'}
-          </button>
-          {/* Push #432 — lead with the welcome gift (30 credits), not the price.
-              Matches the new signup offer so ad promise = first fold = product. */}
-          <p className="text-[13px] font-semibold text-[#94A3B8]">
-            🎁 <span className="text-[#34D399] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
-          </p>
-        </div>
-        </div>{/* end hero content */}
+            {/* Push #116 — live cumulative counter directly under the
+                subheadline. Reads from /api/stats on mount, ticks +1 every
+                30s so the number feels alive without lying about volume. */}
+            <p className="mt-5 text-sm font-bold text-[#34D399]">
+              🎬 {animatedTotal.toLocaleString('en-US')} videos generated by creators worldwide
+            </p>
+            {/* Push #231 — rolling 7-day momentum line under the all-time total. */}
+            <p className="mt-1.5 text-[13px] font-semibold text-[#9D96B8]">
+              🔥 <span className="text-cyan-400 font-bold">{shortsWeek.toLocaleString('en-US')}</span> videos created this week
+            </p>
+
+            {/* Push #097 — primary go-button + trust microcopy (neon restyle). */}
+            <div className="mt-8 flex w-full flex-col items-center gap-3 lg:items-start">
+              <button
+                type="button"
+                onClick={() => {
+                  trackHomepageEvent('hero_primary_cta_click')
+                  goToGenerate()
+                }}
+                disabled={submitting}
+                className="btn-neon w-full sm:w-auto px-9 py-4 text-base sm:text-lg disabled:opacity-60"
+              >
+                {submitting ? 'Loading…' : 'Generate My First Short →'}
+              </button>
+              {/* Push #432 — lead with the welcome gift (30 credits), not the price. */}
+              <p className="text-[13px] font-semibold text-[#9D96B8]">
+                🎁 <span className="text-[#34D399] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
+              </p>
+            </div>
+          </div>
+
+          {/* NEON redesign — the product, live: a Short being generated on
+              loop inside a floating phone. Desktop/tablet only (lg+). */}
+          <div className="relative hidden justify-center lg:flex">
+            <HeroDemoPhone />
+          </div>
+        </div>{/* end hero grid */}
 
         {/* Push #227 — InVideo-style prompt box. Type a topic → generate.
             Push #228 — back to a tall textarea (like the pre-#227 card) for
@@ -751,7 +940,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             trackHomepageEvent('hero_prompt_box_submit')
             goToGenerate()
           }}
-          className="mx-auto mt-8 flex w-full max-w-[760px] flex-col gap-4 rounded-2xl border border-white/[0.1] bg-[#0B1120]/90 p-4 shadow-[0_18px_50px_rgba(0,0,0,.5)] backdrop-blur-md transition focus-within:border-cyan-400/60 sm:p-5"
+          className="neon-card mx-auto mt-10 flex w-full max-w-[760px] flex-col gap-4 p-4 transition focus-within:!border-cyan-400/60 sm:p-5"
         >
           <textarea
             value={prompt}
@@ -765,7 +954,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full shrink-0 rounded-xl bg-[#22D3EE] px-6 py-4 text-[15px] font-extrabold text-[#05070D] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
+            className="btn-neon w-full shrink-0 px-6 py-4 text-[15px] disabled:opacity-60"
           >
             {submitting ? 'Loading…' : 'Generate My Short →'}
           </button>
@@ -815,7 +1004,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               key={c.value}
               type="button"
               onClick={() => { setPromptText(c.value); trackHomepageEvent('hero_chip_click') }}
-              className="rounded-full border border-white/[0.12] bg-[#0B1120] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:text-white"
+              className="rounded-full border border-[rgba(167,139,250,0.22)] bg-[#120B26] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:bg-[#160E2E] hover:text-white"
             >
               {c.label}
             </button>
@@ -860,7 +1049,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ].map((t) => (
             <div
               key={t.handle}
-              className="rounded-2xl border border-white/[0.08] bg-[#0B1120] p-4 text-left"
+              className="neon-card p-4 text-left"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div
@@ -914,7 +1103,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Real AI Output — No Editing Required
             <span style={{ display: 'inline-block', width: 24, height: 1, background: '#22D3EE' }} />
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9] mb-3">
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)] mb-3">
             This is what your AI{' '}
             <span style={{ background: 'linear-gradient(135deg,#22D3EE,#3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               generates in 60s.
@@ -979,7 +1168,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             How it works
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
             Three steps to a faceless Short
           </h2>
         </div>
@@ -1041,7 +1230,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             Testimonials
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
             What creators are saying
           </h2>
         </div>
@@ -1103,7 +1292,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             Pricing
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
             Choose a plan
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
@@ -1288,7 +1477,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
             FAQ
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
             Questions, answered
           </h2>
         </div>
@@ -1353,7 +1542,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full opacity-30"
             style={{ background: '#22D3EE', filter: 'blur(120px)' }}
           />
-          <h2 className="relative text-balance text-3xl font-black tracking-tight sm:text-4xl text-[#F1F5F9]">
+          <h2 className="font-display relative text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
             Ready to Scale Your Channel?
           </h2>
           <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-[#94A3B8]">

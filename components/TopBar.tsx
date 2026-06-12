@@ -24,7 +24,8 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
       className="flex items-center gap-4 flex-shrink-0 sticky top-0 z-30 px-6"
       style={{
         height: 64,
-        background: 'rgba(11,16,32,0.9)',
+        // Neon redesign (12/06) — violet-black glass bar.
+        background: 'rgba(8,5,18,0.88)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderBottom: '1px solid var(--border)',
