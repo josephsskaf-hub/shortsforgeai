@@ -13,6 +13,7 @@
 // /api/avatar-status?engine= → /api/compose → /api/compose/status/[id].
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 type Phase = 'idle' | 'uploading' | 'submitting' | 'animating' | 'composing' | 'rendering' | 'done' | 'failed'
 
@@ -144,13 +145,42 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     setPhase('uploading')
     try {
       const file = kind === 'photo' ? await compressPhoto(rawFile) : rawFile
-      if (kind === 'video' && file.size > 4.4 * 1024 * 1024) {
-        // Honest limit until direct-to-storage upload ships: Vercel caps
-        // request bodies at ~4.5MB, so big videos can't pass through the API.
-        setUploadError('For now source videos must be under 4.5 MB (~10s compressed). Tip: export at 720p. Bigger uploads are coming soon.')
+
+      // Direct-to-storage (13/06) — videos skip Vercel entirely: a signed
+      // upload URL streams the file straight to Supabase Storage, so the
+      // real limit is the bucket's 40MB (~60s at 720p), not Vercel's 4.5MB.
+      if (kind === 'video') {
+        if (file.size > 40 * 1024 * 1024) {
+          setUploadError('Video is too large — max 40 MB (~60s at 720p). Tip: export at 720p.')
+          setPhase('idle')
+          return
+        }
+        const urlRes = await fetch('/api/avatar/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentType: file.type || 'video/mp4' }),
+        })
+        const urlData = await urlRes.json().catch(() => ({}))
+        if (!urlRes.ok || typeof urlData?.token !== 'string' || typeof urlData?.path !== 'string') {
+          setUploadError(typeof urlData?.error === 'string' ? urlData.error : 'Could not prepare the upload. Please try again.')
+          setPhase('idle')
+          return
+        }
+        const sb = createClient()
+        const { error: upErr } = await sb.storage
+          .from('avatars')
+          .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: file.type || 'video/mp4' })
+        if (upErr) {
+          setUploadError(`Upload failed: ${upErr.message}. Please try again.`)
+          setPhase('idle')
+          return
+        }
+        setVideoUrl(urlData.publicUrl as string)
+        setSourceKind('video')
         setPhase('idle')
         return
       }
+
       const fd = new FormData()
       fd.append('file', file)
       fd.append('rights', 'true')
@@ -161,14 +191,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         setPhase('idle')
         return
       }
-      if (kind === 'video') {
-        setVideoUrl(data.url)
-        setSourceKind('video')
-      } else {
-        setFaceUrl(data.url)
-        setSourceKind('photo')
-        setSavedFaces((prev) => [{ id: data.url, url: data.url, created_at: new Date().toISOString() }, ...prev].slice(0, 6))
-      }
+      // (videos returned early above via direct-to-storage — this is photo-only)
+      setFaceUrl(data.url)
+      setSourceKind('photo')
+      setSavedFaces((prev) => [{ id: data.url, url: data.url, created_at: new Date().toISOString() }, ...prev].slice(0, 6))
       setPhase('idle')
     } catch {
       setUploadError('Upload failed. Please try again.')
@@ -440,7 +466,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 </button>
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'video')} />
                 <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>
-                  ~10s of you facing the camera (talking or not). We re-voice your lips with the script. MP4/MOV, export at 720p (max 4.5 MB for now — bigger uploads coming soon).
+                  10–60s of you facing the camera (talking or not). We re-voice your lips with the script. MP4/MOV up to 40 MB — 720p export recommended.
                 </p>
               </>
             )}
