@@ -195,6 +195,16 @@ function isDroppableLine(line: string): boolean {
  * change the mode. This handles mixed-case headers like "VOICE (ElevenLabs)"
  * that the ALL-CAPS line heuristic could not catch.
  */
+// Fix 13/06 — INLINE stage prefixes. Lines like "HOOK: [Pexels: x] Five..."
+// or "MICRO REWARD 1: Habit one..." contain lowercase narration, so the
+// ALL-CAPS line heuristic never dropped them and the TTS spoke "micro reward
+// one" aloud (Joseph's gift-video render). This strips an UPPERCASE-ONLY
+// stage prefix (EN + PT variants, optional number/parenthetical, ending in
+// a colon/dash) from the head of a narration line. Uppercase-only on purpose:
+// real narration like "Fact one: octopuses..." is mixed-case and untouched.
+const INLINE_STAGE_PREFIX =
+  /^\s*(?:HOOK|GANCHO|INTRO|OUTRO|CTA|PAYOFF|PAGAMENTO|ESCALATION|ESCALADA|RHYTHM|RITMO|MICRO\s+(?:REWARD|RECOMPENSA)(?:\s*\d+)?|BEAT(?:\s*\d+)?|SCENE(?:\s*\d+)?|CENA(?:\s*\d+)?|FACT(?:\s*\d+)?|FATO(?:\s*\d+)?|PART(?:\s*\d+)?|STEP(?:\s*\d+)?)\s*(?:\([^)]*\))?\s*[:\-–—]\s*/
+
 function cleanNarration(raw: string): string {
   const kept: string[] = []
   let inMetadataSection = false
@@ -207,7 +217,10 @@ function cleanNarration(raw: string): string {
     }
     if (inMetadataSection) continue
     if (isDroppableLine(line)) continue
-    kept.push(line)
+    // Inline stage prefix ("HOOK: ...") — strip the label, keep the speech.
+    const stripped = line.replace(INLINE_STAGE_PREFIX, '')
+    if (!stripped.trim()) continue
+    kept.push(stripped)
   }
   return kept
     .join(' ')
