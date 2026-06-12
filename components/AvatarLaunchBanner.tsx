@@ -4,6 +4,7 @@
 // shell until dismissed. Links to /generate?avatar=1 (auto-opens the panel).
 // Dismissal persists in localStorage so it never nags a user twice.
 import { useEffect, useState } from 'react'
+import AvatarDemoLoop from '@/components/AvatarDemoLoop'
 
 const DISMISS_KEY = 'sf_avatar_launch_dismissed'
 
@@ -28,7 +29,7 @@ export default function AvatarLaunchBanner() {
         borderBottom: '1px solid rgba(168,85,247,0.35)',
       }}
     >
-      <span className="text-base">🎭</span>
+      <AvatarDemoLoop size={30} />
       <span className="flex-1 min-w-0" style={{ color: '#e9d5ff' }}>
         <b>NEW — AI Avatar Video:</b>{' '}
         <span className="hidden sm:inline">upload a photo and it speaks your script, lip-synced in 720p.</span>{' '}

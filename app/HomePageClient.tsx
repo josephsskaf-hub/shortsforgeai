@@ -13,6 +13,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
+import AvatarDemoLoop from '@/components/AvatarDemoLoop'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 import { HOME_CHIPS, randomTopic } from '@/lib/curatedTopics'
@@ -769,10 +770,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : 'Generate My Short →'}
           </button>
 
-          {/* feature/ai-avatar CP2 — premium entry point on the home prompt box
-              (Joseph 10/06: botão na home onde já tem a página de texto). Sends
-              the visitor to /generate with the avatar panel auto-open; the typed
-              idea survives via the same goToGenerate stash. */}
+          {/* feature/ai-avatar — premium entry on the home prompt box, now with
+              the shared live mini-demo so visitors SEE the feature (Nível 2).
+              Sends them to /generate with the avatar panel auto-open; the typed
+              idea survives via goToGenerate stash. */}
           <button
             type="button"
             onClick={() => {
@@ -782,11 +783,28 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 ? `/generate?avatar=1&prompt=${encodeURIComponent(trimmed)}`
                 : '/generate?avatar=1'
             }}
-            className="w-full shrink-0 rounded-xl border border-purple-400/50 bg-purple-400/10 px-6 py-3 text-[14px] font-bold text-purple-200 transition hover:bg-purple-400/20"
+            className="sfa-home-avatar group flex w-full shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-left transition"
           >
-            🎭 NEW · AI Avatar — upload a photo and YOU speak the script →
+            <AvatarDemoLoop size={46} />
+            <span className="flex-1 min-w-0">
+              <span className="flex items-center gap-2">
+                <span className="text-[14px] font-extrabold text-purple-100">🎭 AI Avatar</span>
+                <span className="rounded-full bg-purple-400/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-purple-50">New</span>
+              </span>
+              <span className="mt-0.5 block text-[12px] text-purple-200/80">
+                Upload a photo and <b className="text-purple-100">YOU speak the script</b>.
+              </span>
+            </span>
+            <span className="shrink-0 text-lg font-bold text-purple-200 transition-transform group-hover:translate-x-0.5">→</span>
           </button>
         </form>
+        <style jsx>{`
+          .sfa-home-avatar {
+            background: linear-gradient(135deg, rgba(168,85,247,0.16), rgba(99,102,241,0.14));
+            border: 1.5px solid rgba(168,85,247,0.5);
+          }
+          .sfa-home-avatar:hover { background: linear-gradient(135deg, rgba(168,85,247,0.24), rgba(99,102,241,0.2)); transform: translateY(-1px); }
+        `}</style>
 
         {/* #374 — Task 2: kill blank-canvas paralysis. Clickable example chips +
             a zero-cost "Surprise me" that fills the box from a curated viral-topic
