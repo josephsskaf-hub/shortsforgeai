@@ -43,6 +43,10 @@ import {
 } from '@/lib/avatar/veed'
 import { getPixabayVideoForQueries } from '@/lib/pixabay'
 import { pickLibraryClips } from '@/lib/stockLibrary'
+// Avatar B-roll fix (13/06) — reuse the Phase-1 B-roll Intelligence engine so
+// cutaways come from per-scene queries instead of prompt.slice(0,80) garbage
+// (the "menina dançando" bug Joseph hit on 12/06).
+import { brollEngine } from '@/lib/broll/broll-engine'
 
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
@@ -137,6 +141,11 @@ export async function POST(req: NextRequest) {
       // (our storage URL) that the lipsync engine re-voices with the narration.
       // When present it takes precedence over avatarImageUrl.
       avatarSourceVideoUrl?: string
+      // Verbatim fix (13/06) — 'verbatim': speak EXACTLY the user's text (no
+      // GPT expansion, no 45s-minimum padding). Joseph wrote a 10s greeting
+      // and the scaler invented a 52s script around it. 'expand' = legacy
+      // behavior (scale to the duration's word target), now explicit.
+      scriptMode?: string
     }
     try {
       body = await req.json()
@@ -214,8 +223,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const forceVerbatim = body.scriptMode === 'verbatim'
     const requested = Number(body.duration) || MIN_DURATION
-    const duration = Math.max(MIN_DURATION, Math.min(MAX_DURATION, Math.round(requested)))
+    // Verbatim fix (13/06) — the 45–60s lock exists so EXPANDED scripts fit
+    // the Shorts format. In verbatim mode the user's text IS the video, so a
+    // 10s greeting renders as ~10s (sanity-clamped 3–90s) instead of being
+    // padded with invented content.
+    const duration = forceVerbatim
+      ? Math.max(3, Math.min(90, Math.round(requested)))
+      : Math.max(MIN_DURATION, Math.min(MAX_DURATION, Math.round(requested)))
     const language = body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
     const vertical = typeof body.vertical === 'string' && body.vertical.trim()
       ? body.vertical.trim().toLowerCase()
@@ -227,6 +243,10 @@ export async function POST(req: NextRequest) {
     let narration: string
     if (verbatim) {
       narration = parsed.narration
+    } else if (forceVerbatim) {
+      // Verbatim fix (13/06) — speak EXACTLY what the user typed. No GPT
+      // rewrite, no padding to a word target. What you write is what plays.
+      narration = stripScriptMarkers(prompt)
     } else {
       const clean = stripScriptMarkers(prompt)
       try {
@@ -325,10 +345,32 @@ export async function POST(req: NextRequest) {
 
     // ── 4. B-roll cutaways (best-effort) ─────────────────────────────────
     // Hook mode: b-roll carries everything after the hook → fetch up to 6.
-    const queries = verbatim
-      ? parsed.segments.map((s) => s.pexelsQuery).filter(Boolean)
-      : [prompt.slice(0, 80)]
-    const clipUrls = await fetchCutawayClips(queries, prompt, avatarHookSeconds != null ? 6 : 3)
+    // B-roll fix (13/06) — scripts WITHOUT [Pexels:] markers used to search
+    // with prompt.slice(0,80) (raw user text) → irrelevant stock ("menina
+    // dançando"). Now the Phase-1 brollEngine derives per-scene queries from
+    // the ACTUAL narration; the raw slice is only the last-resort fallback.
+    let queries: string[]
+    if (verbatim) {
+      queries = parsed.segments.map((s) => s.pexelsQuery).filter(Boolean)
+    } else {
+      queries = []
+      try {
+        const plan = await brollEngine({
+          script: narration,
+          niche: vertical ?? 'facts',
+          tone: 'energetic',
+          duration,
+          language,
+        })
+        if (plan.degraded !== true && Array.isArray(plan.scenes)) {
+          queries = plan.scenes.map((s) => s.pexelsQuery).filter(Boolean)
+        }
+      } catch (err) {
+        console.warn('[generate-avatar] brollEngine failed — falling back to topic slice:', err instanceof Error ? err.message : String(err))
+      }
+      if (queries.length === 0) queries = [narration.slice(0, 80)]
+    }
+    const clipUrls = await fetchCutawayClips(queries, narration, avatarHookSeconds != null ? 6 : 3)
 
     const estSeconds = avatarHookSeconds != null
       ? avatarHookSeconds

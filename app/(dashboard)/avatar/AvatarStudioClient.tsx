@@ -44,6 +44,23 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [script, setScript] = useState('')
   const [hookMode, setHookMode] = useState(true)
   const [engine, setEngine] = useState<'fabric' | 'omnihuman'>('fabric')
+  // Verbatim fix (13/06) — 'verbatim' speaks EXACTLY the typed text (no GPT
+  // expansion / no 45s padding); 'expand' turns an idea into a full Short
+  // script. Auto-suggested from length until the user picks manually.
+  const [scriptMode, setScriptMode] = useState<'verbatim' | 'expand'>('verbatim')
+  const userPickedModeRef = useRef(false)
+  const scriptWords = script.trim() ? script.trim().split(/\s+/).length : 0
+
+  useEffect(() => {
+    if (userPickedModeRef.current) return
+    setScriptMode(scriptWords > 0 && scriptWords < 25 ? 'verbatim' : scriptWords === 0 ? 'verbatim' : 'expand')
+  }, [scriptWords])
+
+  // Verbatim renders are as long as the words actually take (~2.4 w/s);
+  // expanded scripts target the locked Shorts window.
+  const requestDuration = scriptMode === 'verbatim'
+    ? Math.min(90, Math.max(5, Math.round(scriptWords / 2.4)))
+    : 52
 
   // ── Voice preview (free dryRun) ───────────────────────────────────────
   const [voiceLoading, setVoiceLoading] = useState(false)
@@ -170,7 +187,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       const res = await fetch('/api/generate-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: trimmed, duration: 52, language: 'en', dryRun: true }),
+        body: JSON.stringify({ prompt: trimmed, duration: requestDuration, language: 'en', dryRun: true, scriptMode }),
       })
       const data = await res.json()
       if (!res.ok || typeof data?.voiceover_url !== 'string') {
@@ -198,12 +215,15 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: script.trim(),
-          duration: 52,
+          duration: requestDuration,
           language: 'en',
+          scriptMode,
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
             : { avatarImageUrl: faceUrl, engine }),
-          avatarMode: sourceKind === 'photo' && hookMode ? 'hook' : 'full',
+          // Hook mode only makes sense for expanded scripts — a 10s verbatim
+          // line IS the hook.
+          avatarMode: sourceKind === 'photo' && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
         }),
       })
       const data = await res.json()
@@ -443,6 +463,37 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           {/* 2 · Script */}
           <section className="neon-card p-5">
             <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted2)' }}>2 · What they say</h2>
+            {/* Verbatim fix (13/06) — explicit control over expansion. */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { userPickedModeRef.current = true; setScriptMode('verbatim') }}
+                className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                style={{
+                  background: scriptMode === 'verbatim' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: scriptMode === 'verbatim' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
+                  color: scriptMode === 'verbatim' ? '#34D399' : 'var(--muted2)',
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                }}
+              >
+                ✍️ Say exactly this — word for word
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { userPickedModeRef.current = true; setScriptMode('expand') }}
+                className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                style={{
+                  background: scriptMode === 'expand' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: scriptMode === 'expand' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
+                  color: scriptMode === 'expand' ? '#34D399' : 'var(--muted2)',
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                }}
+              >
+                ✨ Expand into a full Short script (45–60s)
+              </button>
+            </div>
             <textarea
               value={script}
               onChange={(e) => setScript(e.target.value)}
@@ -453,6 +504,11 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               className="w-full rounded-xl px-3.5 py-3 text-sm leading-relaxed resize-none"
               style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', minHeight: 140 }}
             />
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>
+              {scriptMode === 'verbatim'
+                ? `Spoken word for word — nothing added. ~${requestDuration}s of video.`
+                : 'AI builds a full 45–60s script around your idea (hook, build, payoff).'}
+            </p>
             <div className="flex items-center gap-3 mt-3 flex-wrap">
               <button
                 type="button"
@@ -472,7 +528,12 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           {sourceKind === 'photo' && (
             <section className="neon-card p-5">
               <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted2)' }}>3 · How it looks</h2>
-              <div className="flex flex-wrap gap-2">
+              {scriptMode === 'verbatim' && (
+                <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
+                  Word-for-word videos always show your face the whole time (they’re short — no b-roll needed).
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2" style={{ display: scriptMode === 'verbatim' ? 'none' : undefined }}>
                 <button
                   type="button"
                   onClick={() => setHookMode(true)}
