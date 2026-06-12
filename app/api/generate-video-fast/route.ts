@@ -322,12 +322,17 @@ export async function POST(req: NextRequest) {
       const sceneNo = idx + 1
 
       // Push #349 — pull this scene's BrollPlan metadata (1-based sceneNumber).
-      const brollMeta = brollSceneMap.get(sceneNo)
+      // Hotfix (12/06): in VERBATIM mode the user hand-picked a [Pexels: ...]
+      // query for every scene — the BrollPlan (built by splitting the marked
+      // text its own way, so scene numbers don't even align) must NEVER
+      // override them. Joseph's gift video #1: "private jet interior luxury"
+      // was replaced by a plan query that returned coins-on-dollar-bills.
+      const brollMeta = verbatim ? undefined : brollSceneMap.get(sceneNo)
       // v3.0 Phase 1: if a BrollPlan provided a specific AI-directed pexelsQuery
       // for this scene, use it as the primary search — it's far more specific
       // (e.g. "Wall Street trading floor 1987 crash") than GPT's generic scene
       // description.
-      const brollOverride = brollQueryMap.get(sceneNo)
+      const brollOverride = verbatim ? undefined : brollQueryMap.get(sceneNo)
       const relevanceScore = brollMeta?.relevanceScore
       const purpose = (brollMeta?.scenePurpose ?? scene.scenePurpose ?? '').toString()
       const durationSeconds = brollMeta?.durationSeconds
