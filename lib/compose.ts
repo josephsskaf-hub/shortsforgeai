@@ -858,9 +858,17 @@ export function buildCreatomateSource({
     realAudioDuration && realAudioDuration > 4 && realAudioDuration < 120
       ? realAudioDuration
       : duration
-  const totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, 5, 90)
+  let totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
   const hasAvatar = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
+  // Avatar tail fix (13/06) — in avatar mode the narration IS the master
+  // clock: the lip-synced face and the mp3 are the same length, so the
+  // timeline must NEVER outlive the audio. This also lets short verbatim
+  // videos (e.g. a 5s greeting) end at ~5s instead of being floored to the
+  // 45s-era minimums and padded with unrelated clips (Joseph, 13/06).
+  if (hasAvatar && realAudioDuration && realAudioDuration > 2 && realAudioDuration < 120) {
+    totalDuration = Math.min(totalDuration, clamp(Math.ceil((realAudioDuration + 0.4) * 10) / 10, 3, 90))
+  }
   // Avatar mode can render with ZERO stock clips (talking head carries the
   // whole video); every other mode still requires clips.
   if (cleanClips.length === 0 && !hasAvatar) {
@@ -1029,7 +1037,9 @@ export function buildCreatomateSource({
     const FACE_HEAD = 6 // hook stays on the face
     const FACE_TAIL = 6 // payoff + CTA stay on the face
     const cutStarts: number[] = []
-    if (cleanClips.length > 0) {
+    // Tail fix (13/06) — short avatar videos (< 16s, e.g. verbatim one-liners)
+    // get ZERO cutaways: the face carries the whole thing.
+    if (cleanClips.length > 0 && totalDuration >= 16) {
       let t = FACE_HEAD
       while (t + CUTAWAY_LEN <= totalDuration - FACE_TAIL) {
         cutStarts.push(t)

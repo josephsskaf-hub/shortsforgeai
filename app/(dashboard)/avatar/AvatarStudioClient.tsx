@@ -49,6 +49,8 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // expansion / no 45s padding); 'expand' turns an idea into a full Short
   // script. Auto-suggested from length until the user picks manually.
   const [scriptMode, setScriptMode] = useState<'verbatim' | 'expand'>('verbatim')
+  // 13/06 — narração em EN/PT/ES (o backend já suportava; o Studio mandava 'en' fixo).
+  const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
   const userPickedModeRef = useRef(false)
   const scriptWords = script.trim() ? script.trim().split(/\s+/).length : 0
 
@@ -213,7 +215,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       const res = await fetch('/api/generate-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: trimmed, duration: requestDuration, language: 'en', dryRun: true, scriptMode }),
+        body: JSON.stringify({ prompt: trimmed, duration: requestDuration, language, dryRun: true, scriptMode }),
       })
       const data = await res.json()
       if (!res.ok || typeof data?.voiceover_url !== 'string') {
@@ -242,7 +244,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         body: JSON.stringify({
           prompt: script.trim(),
           duration: requestDuration,
-          language: 'en',
+          language,
           scriptMode,
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
@@ -322,7 +324,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           clip_urls: run.clipUrls,
           voiceover_script: run.voiceoverScript,
           scene_captions: [],
-          duration: 52,
+          // Tail fix (13/06) — real audio length drives compose; this is just
+          // the fallback, so never send a 52s fallback for a 5s verbatim line.
+          duration: run.realAudioDuration != null ? Math.max(3, Math.ceil(run.realAudioDuration)) : requestDuration,
           topic: script.trim().slice(0, 200),
           quality: 'avatar',
           language: 'en',
@@ -489,6 +493,27 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           {/* 2 · Script */}
           <section className="neon-card p-5">
             <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted2)' }}>2 · What they say</h2>
+            {/* Idioma da narração (13/06) */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              <span className="text-[10px] font-black uppercase tracking-widest mr-1" style={{ color: 'var(--muted)' }}>Language</span>
+              {([['en', '🇺🇸 EN'], ['pt', '🇧🇷 PT'], ['es', '🇪🇸 ES']] as const).map(([code, label]) => (
+                <button
+                  key={code}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setLanguage(code)}
+                  className="rounded-lg px-2.5 py-1 text-[11px] font-bold"
+                  style={{
+                    background: language === code ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: language === code ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
+                    color: language === code ? '#34D399' : 'var(--muted2)',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {/* Verbatim fix (13/06) — explicit control over expansion. */}
             <div className="flex flex-wrap gap-2 mb-3">
               <button

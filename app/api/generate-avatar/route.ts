@@ -268,7 +268,14 @@ export async function POST(req: NextRequest) {
     const ttsSource = verbatim ? prompt : narration
     let audioBuffer: Buffer
     try {
-      audioBuffer = await generateTTS(ttsSource, speed ?? 1.0, vertical, 'cinematic', language)
+      // Verbatim tail fix (13/06) — the 'cinematic' Narration Engine adds
+      // dramatic pauses/padding, which inflates the mp3 past the actual
+      // speech on short word-for-word lines (Joseph's 5s greeting rendered
+      // as a 9s video with a dead tail). Verbatim uses the FLAT pass: the
+      // audio ends when the words end.
+      audioBuffer = forceVerbatim && !verbatim
+        ? await generateTTS(ttsSource, 1.0, undefined, 'free', language)
+        : await generateTTS(ttsSource, speed ?? 1.0, vertical, 'cinematic', language)
     } catch (err) {
       console.error('[generate-avatar] TTS failed:', err instanceof Error ? err.message : String(err))
       return NextResponse.json({ error: 'Voiceover generation failed. Please try again.' }, { status: 502 })
