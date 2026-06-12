@@ -192,7 +192,7 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
           position: relative;
           width: 280px; height: 580px;
           border-radius: 40px;
-          background: linear-gradient(160deg, #0B2E22, #041711);
+          background: linear-gradient(160deg, #1A1A1D, #0F0F10);
           border: 1px solid rgba(52,211,153,0.35);
           box-shadow:
             0 0 0 6px rgba(8,5,18,0.9),
@@ -203,12 +203,12 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
         .hp-notch {
           position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
           width: 86px; height: 18px; border-radius: 10px;
-          background: #020D0A; z-index: 5;
+          background: #0A0A0B; z-index: 5;
           border: 1px solid rgba(52,211,153,0.18);
         }
         .hp-screen {
           position: relative; width: 100%; height: 100%;
-          border-radius: 32px; overflow: hidden; background: #03130D;
+          border-radius: 32px; overflow: hidden; background: #0D0D0F;
         }
         .hp-clip { position: absolute; inset: 0; opacity: 0; animation: hpClip 9s infinite; }
         .hp-vid { width: 100%; height: 100%; object-fit: cover; }
@@ -216,21 +216,21 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
           background:
             radial-gradient(120% 80% at 20% 15%, rgba(16,185,129,0.7), transparent 55%),
             radial-gradient(100% 70% at 85% 80%, rgba(34,211,238,0.5), transparent 60%),
-            linear-gradient(180deg, #093325, #02100B);
+            linear-gradient(180deg, #17171A, #0A0A0C);
           animation-delay: 0s;
         }
         .hp-clip-b {
           background:
-            radial-gradient(110% 75% at 75% 20%, rgba(163,230,53,0.55), transparent 55%),
+            radial-gradient(110% 75% at 75% 20%, rgba(52,211,153,0.55), transparent 55%),
             radial-gradient(90% 70% at 20% 85%, rgba(16,185,129,0.55), transparent 60%),
-            linear-gradient(180deg, #0A2C1E, #03150E);
+            linear-gradient(180deg, #19191C, #0E0E10);
           animation-delay: 3s;
         }
         .hp-clip-c {
           background:
             radial-gradient(120% 80% at 50% 10%, rgba(34,211,238,0.55), transparent 55%),
             radial-gradient(90% 60% at 80% 90%, rgba(16,185,129,0.4), transparent 60%),
-            linear-gradient(180deg, #07301F, #020D09);
+            linear-gradient(180deg, #1B1B1E, #09090B);
           animation-delay: 6s;
         }
         @keyframes hpClip {
@@ -698,7 +698,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#020D0A] text-[#F1F5F9] font-sans">
+    <div className="min-h-screen bg-[#0A0A0B] text-[#F1F5F9] font-sans">
       {/* Subtle cyber-blue glow */}
       <div
         aria-hidden
@@ -712,12 +712,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       />
 
       {/* ───────── Top Nav ───────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#051D15]/90 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#121214]/90 backdrop-blur-xl">
         {/* Push #252 — full-width nav bar matching the footer; both use the
             same px-6 sm:px-10 padding so logo/links/buttons are flush. */}
         <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#051D15] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
@@ -785,7 +785,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-[#22D3EE] px-5 py-2.5 text-[1rem] font-bold text-[#020D0A] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
+                  className="rounded-lg bg-[#22D3EE] px-5 py-2.5 text-[1rem] font-bold text-[#0A0A0B] transition-colors hover:bg-cyan-300 shadow-[0_4px_18px_rgba(34,211,238,.35)]"
                 >
                   Start Free
                 </Link>
@@ -820,7 +820,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ) : (
               <Link
                 href="/signup"
-                className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#020D0A] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
+                className="rounded-lg bg-[#22D3EE] px-3 py-2 text-[13px] font-bold text-[#0A0A0B] transition-colors hover:bg-cyan-300 shadow-[0_4px_14px_rgba(34,211,238,.35)]"
               >
                 Start Free
               </Link>
@@ -844,7 +844,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             both Sign In (ghost) and Sign Up (solid blue) so the full auth
             choice is visible from one tap. Signed-in users get Sign Out. */}
         {navOpen && (
-          <div className="md:hidden border-t border-white/[0.08] bg-[#051D15]/95 backdrop-blur-xl">
+          <div className="md:hidden border-t border-white/[0.08] bg-[#121214]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
@@ -877,7 +877,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   <Link
                     onClick={() => setNavOpen(false)}
                     href="/signup"
-                    className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#020D0A] transition-colors hover:bg-cyan-300"
+                    className="rounded-md bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#0A0A0B] transition-colors hover:bg-cyan-300"
                   >
                     Start Free
                   </Link>
@@ -1028,7 +1028,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               key={c.value}
               type="button"
               onClick={() => { setPromptText(c.value); trackHomepageEvent('hero_chip_click') }}
-              className="rounded-full border border-[rgba(52,211,153,0.22)] bg-[#07271D] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:bg-[#093325] hover:text-white"
+              className="rounded-full border border-[rgba(52,211,153,0.22)] bg-[#131316] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:bg-[#17171A] hover:text-white"
             >
               {c.label}
             </button>
@@ -1165,7 +1165,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           Sits right under the hero so the visitor sees a creator count
           + a star quote before they even reach the showcase. */}
       <section className="relative z-10 mx-auto max-w-4xl px-4 pt-0 pb-10 sm:px-6">
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-xl border border-white/[0.08] bg-[#051D15] px-5 py-3">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-xl border border-white/[0.08] bg-[#121214] px-5 py-3">
           <span className="text-[13.5px] font-bold text-[#F1F5F9]">
             ⚡ Join 300+ creators generating Shorts with AI
           </span>
@@ -1228,11 +1228,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ].map((step, i) => (
               <div
                 key={step.title}
-                className="relative rounded-2xl border border-white/[0.08] bg-[#051D15] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+                className="relative rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)]"
               >
                 <div
                   className="absolute -top-3 left-5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
-                  style={{ background: '#051D15', border: `1px solid ${step.accent}55`, color: step.accent }}
+                  style={{ background: '#121214', border: `1px solid ${step.accent}55`, color: step.accent }}
                 >
                   Step {i + 1}
                 </div>
@@ -1281,7 +1281,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ].map((t) => (
             <div
               key={t.name}
-              className="flex flex-col rounded-2xl border border-white/[0.08] bg-[#051D15] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.15)]"
+              className="flex flex-col rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.15)]"
             >
               <div aria-hidden className="mb-3 text-[15px] tracking-widest text-[#FBBF24]">★★★★★</div>
               <p className="flex-1 text-[14px] leading-relaxed text-[#F1F5F9]">
@@ -1381,8 +1381,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   isSelected
                     ? 'border-2 border-[#10B981] bg-[#0D1830] shadow-[0_0_28px_rgba(16,185,129,0.3)]'
                     : isRecommended
-                      ? 'border-emerald-500 bg-[#051D15] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#051D15] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-emerald-500 bg-[#121214] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#121214] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
                 {isRecommended && !isSelected && (
@@ -1530,7 +1530,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ].map((f) => (
             <details
               key={f.q}
-              className="group rounded-xl border border-white/[0.08] bg-[#051D15] px-5 py-4 transition hover:border-emerald-500/40 open:border-emerald-500/40"
+              className="group rounded-xl border border-white/[0.08] bg-[#121214] px-5 py-4 transition hover:border-emerald-500/40 open:border-emerald-500/40"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-bold text-[#F1F5F9] [&::-webkit-details-marker]:hidden">
                 {f.q}
@@ -1606,7 +1606,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-3xl border-2 border-cyan-400/40 bg-[#051D15] p-8 shadow-[0_30px_80px_rgba(0,0,0,.7),0_0_60px_rgba(34,211,238,.25)]"
+            className="relative w-full max-w-md rounded-3xl border-2 border-cyan-400/40 bg-[#121214] p-8 shadow-[0_30px_80px_rgba(0,0,0,.7),0_0_60px_rgba(34,211,238,.25)]"
             style={{ animation: 'sf-exit-pop .28s cubic-bezier(.16,1,.3,1)' }}
           >
             <button
@@ -1640,7 +1640,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   type="button"
                   onClick={submitLead}
                   disabled={exitSubmitting}
-                  className="mt-4 w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#020D0A] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
+                  className="mt-4 w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-[15px] font-extrabold text-[#0A0A0B] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300 disabled:opacity-60"
                 >
                   {exitSubmitting ? 'Sending…' : 'Get my 10 viral ideas →'}
                 </button>
@@ -1659,7 +1659,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </ul>
                 <a
                   href="/signup"
-                  className="mt-5 block w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-center text-[15px] font-extrabold text-[#020D0A] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300"
+                  className="mt-5 block w-full rounded-xl bg-[#22D3EE] px-6 py-3.5 text-center text-[15px] font-extrabold text-[#0A0A0B] shadow-[0_8px_28px_rgba(34,211,238,.35)] transition hover:bg-cyan-300"
                 >
                   Make one free now →
                 </a>
@@ -1687,7 +1687,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             padding so both bars align at identical left/right edges. */}
         <div className="flex w-full flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:px-10">
           <div className="flex items-center gap-2.5 sm:min-w-[160px]">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#051D15] border border-emerald-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-emerald-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
               </svg>
@@ -1844,14 +1844,14 @@ function ShowcaseVideoCard({
   }, [inView, card.captions.length])
 
   return (
-    <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#051D15] transition-all duration-200 hover:border-emerald-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
+    <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214] transition-all duration-200 hover:border-emerald-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
       {/* 9:16 vertical preview — matches the YouTube Shorts format the
           rest of the product is built around. */}
       <div
         className="relative w-full overflow-hidden"
         style={{
           aspectRatio: '9 / 16',
-          background: `linear-gradient(135deg, ${card.accent}22 0%, #051D15 70%)`,
+          background: `linear-gradient(135deg, ${card.accent}22 0%, #121214 70%)`,
         }}
       >
         {/* Gradient poster — always painted, sits behind the video so we

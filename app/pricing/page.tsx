@@ -215,7 +215,7 @@ export default function PricingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#020D0A] text-[#F1F5F9] font-sans">
+    <div className="min-h-screen bg-[#0A0A0B] text-[#F1F5F9] font-sans">
       {/* Subtle cyber-blue glow */}
       <div
         aria-hidden
@@ -229,10 +229,10 @@ export default function PricingPage() {
       />
 
       {/* ───────── Top Nav (simple) ───────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#051D15]/90 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#121214]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#051D15] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
@@ -266,7 +266,7 @@ export default function PricingPage() {
           <div
             className="relative w-full max-w-md rounded-2xl p-7 text-center"
             style={{
-              background: '#051D15',
+              background: '#121214',
               border: '1px solid rgba(34,211,238,.35)',
               boxShadow: '0 0 60px rgba(34,211,238,.15)',
             }}
@@ -453,8 +453,8 @@ export default function PricingPage() {
                   isSelected
                     ? 'border-2 border-[#10B981] bg-[#0D1830] shadow-[0_0_28px_rgba(16,185,129,0.3)]'
                     : p.highlight
-                      ? 'border-emerald-500 bg-[#051D15] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#051D15] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-emerald-500 bg-[#121214] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#121214] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
                 {/* Push #116 — Pro now carries the amber "MOST POPULAR"
@@ -681,7 +681,7 @@ export default function PricingPage() {
             </h2>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#051D15]">
+          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#121214]">
             <table className="w-full min-w-[700px] text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-white/[0.08]">
@@ -785,7 +785,7 @@ export default function PricingPage() {
             </h2>
           </div>
 
-          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#051D15]">
+          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]">
             {FAQS.map((item, i) => {
               const isOpen = openFaq === i
               return (
@@ -964,7 +964,7 @@ export default function PricingPage() {
       <footer className="relative z-10 border-t border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#051D15] border border-emerald-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-emerald-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
               </svg>

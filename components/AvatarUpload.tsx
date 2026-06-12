@@ -234,9 +234,9 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onClick={() => onEngineChange('omnihuman')}
         className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
         style={{
-          background: engine === 'omnihuman' ? 'rgba(163,230,53,0.22)' : 'rgba(255,255,255,0.05)',
-          border: engine === 'omnihuman' ? '1.5px solid rgba(163,230,53,0.7)' : '1px solid var(--border)',
-          color: engine === 'omnihuman' ? '#d9f99d' : 'var(--muted)',
+          background: engine === 'omnihuman' ? 'rgba(52,211,153,0.22)' : 'rgba(255,255,255,0.05)',
+          border: engine === 'omnihuman' ? '1.5px solid rgba(52,211,153,0.7)' : '1px solid var(--border)',
+          color: engine === 'omnihuman' ? '#a7f3d0' : 'var(--muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >

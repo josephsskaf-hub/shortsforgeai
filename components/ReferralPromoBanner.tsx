@@ -46,7 +46,7 @@ export default function ReferralPromoBanner() {
         href="/referral"
         onClick={dismiss}
         className="shrink-0 rounded-lg px-4 py-2 text-xs font-extrabold"
-        style={{ background: '#22D3EE', color: '#020D0A' }}
+        style={{ background: '#22D3EE', color: '#0A0A0B' }}
       >
         Get my link →
       </Link>

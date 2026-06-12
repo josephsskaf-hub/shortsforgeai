@@ -158,7 +158,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         style={{
           background: isFeatured
             ? 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(11,17,32,0.96))'
-            : 'var(--card, #051D15)',
+            : 'var(--card, #121214)',
           border: `1px solid ${isFeatured ? vertColor : 'var(--border, rgba(255,255,255,0.10))'}`,
           borderRadius: 14,
           padding: isFeatured ? '18px 18px' : '16px 16px',
@@ -273,7 +273,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             display: 'block', width: '100%', maxWidth: 380, margin: '0 auto 12px',
             padding: '14px 18px', borderRadius: 12,
             background: 'linear-gradient(135deg, #22D3EE, #10B981)',
-            color: '#020D0A', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
+            color: '#0A0A0B', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >
           🎲 Surprise Me — generate my free Short

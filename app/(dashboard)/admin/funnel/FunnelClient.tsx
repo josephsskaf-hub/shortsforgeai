@@ -124,7 +124,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
                 className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
                 style={{
                   background: active ? '#22d3ee' : 'rgba(255,255,255,0.04)',
-                  color: active ? '#020D0A' : 'var(--muted)',
+                  color: active ? '#0A0A0B' : 'var(--muted)',
                   border: `1px solid ${active ? '#22d3ee' : 'var(--border)'}`,
                 }}
               >

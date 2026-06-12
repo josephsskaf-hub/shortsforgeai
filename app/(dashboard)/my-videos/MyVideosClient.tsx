@@ -373,7 +373,7 @@ function VideoCard({
       onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
-        background: 'linear-gradient(180deg, #0F1424 0%, #041711 100%)',
+        background: 'linear-gradient(180deg, #0F1424 0%, #0F0F10 100%)',
         border: isActive
           ? '1px solid rgba(16,185,129,0.55)'
           : '1px solid rgba(255,255,255,0.06)',

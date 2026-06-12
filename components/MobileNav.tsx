@@ -20,7 +20,7 @@ export default function MobileNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: '#041711',
+        background: '#0F0F10',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',

@@ -42,7 +42,7 @@ export default async function OgImage({ params }: { params: { id: string } }) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          background: '#020D0A',
+          background: '#0A0A0B',
           padding: '64px 70px',
           fontFamily: 'sans-serif',
         }}

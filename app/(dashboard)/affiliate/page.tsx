@@ -34,7 +34,7 @@ const CYAN = '#22D3EE'
 const TEXT = '#F1F5F9'
 const MUTED = '#94A3B8'
 const GREEN = '#34d399'
-const CARD = '#051D15'
+const CARD = '#121214'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
 
 function dollars(cents: number, currency = 'usd'): string {

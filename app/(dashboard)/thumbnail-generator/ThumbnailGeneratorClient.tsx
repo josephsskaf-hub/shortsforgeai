@@ -225,7 +225,7 @@ function YouTubeFeedPreview({ url }: { url: string }) {
         📺 YouTube Feed Preview
       </p>
       {/* Fake YouTube UI */}
-      <div style={{ background: '#020D0A', borderRadius: 10, padding: 16, maxWidth: 380 }}>
+      <div style={{ background: '#0A0A0B', borderRadius: 10, padding: 16, maxWidth: 380 }}>
         {/* Thumbnail */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

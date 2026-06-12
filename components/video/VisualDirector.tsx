@@ -26,7 +26,7 @@ const MOOD_COLORS: Record<string, string> = {
   luxurious:  'rgba(16,185,129,0.2)',
   mysterious: 'rgba(20,184,166,0.2)',
   futuristic: 'rgba(6,182,212,0.2)',
-  emotional:  'rgba(163,230,53,0.2)',
+  emotional:  'rgba(52,211,153,0.2)',
   tense:      'rgba(249,115,22,0.2)',
   epic:       'rgba(16,185,129,0.2)',
 }

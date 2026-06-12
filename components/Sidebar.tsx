@@ -316,7 +316,7 @@ export default function Sidebar({
           height: '100dvh',
           // Neon redesign (12/06) — violet-black glass column with a faint
           // top-down violet wash instead of the flat navy slab.
-          background: 'linear-gradient(180deg, #051D15 0%, #03130E 55%, #03150E 100%)',
+          background: 'linear-gradient(180deg, #121214 0%, #0C0C0E 55%, #0E0E10 100%)',
           borderRight: '1px solid rgba(52,211,153,0.12)',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
@@ -333,7 +333,7 @@ export default function Sidebar({
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
-              background: 'linear-gradient(135deg, #093325, #051D15)',
+              background: 'linear-gradient(135deg, #17171A, #121214)',
               border: '1px solid rgba(16,185,129,0.45)',
               boxShadow: '0 0 18px rgba(16,185,129,0.4), 0 0 8px rgba(34,211,238,0.25)',
             }}
@@ -408,7 +408,7 @@ export default function Sidebar({
               style={{
                 background: creditsZero
                   ? 'rgba(239,68,68,0.08)'
-                  : '#07271D',
+                  : '#131316',
                 border: creditsZero
                   ? '1px solid rgba(239,68,68,0.32)'
                   : '1px solid rgba(255,255,255,0.08)',
@@ -494,7 +494,7 @@ export default function Sidebar({
               <p style={{ fontSize: '0.72rem', color: '#94A3B8', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
-                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#020D0A', background: 'linear-gradient(135deg, #22D3EE, #10B981)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,211,238,0.35)' }}
+                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #10B981)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,211,238,0.35)' }}
               >
                 ⚡ Get Started Free →
               </button>
@@ -506,7 +506,7 @@ export default function Sidebar({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fca5a5', margin: 0 }}>⚠️ No credits left</p>
               </div>
-              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#020D0A', background: 'linear-gradient(135deg, #22D3EE, #10B981)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #10B981)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 Buy →
               </Link>
             </div>
@@ -530,7 +530,7 @@ export default function Sidebar({
                   left: 12,
                   right: 12,
                   zIndex: 61,
-                  background: '#07271D',
+                  background: '#131316',
                   border: '1px solid rgba(16,185,129,0.3)',
                   borderRadius: 12,
                   boxShadow: '0 10px 32px rgba(0,0,0,0.5), 0 0 24px rgba(34,211,238,0.15)',

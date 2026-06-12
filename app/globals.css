@@ -12,34 +12,36 @@ html {
   scroll-behavior: smooth;
 }
 
-/* EMERALD TECH (12/06) — money-green on green-black. Same architecture as
-   the neon theme; only the family changed: emerald/mint primaries, cyan-teal
-   support, lime as the rare spice accent. */
+/* MONO PREMIUM (12/06) — high-end clean: neutral graphite-black surfaces,
+   hairline gray borders, generous space, and ONE accent (emerald) used
+   sparingly for CTAs, live numbers and active states. Cyan as a quiet
+   secondary. No glow walls, no color-tinted backgrounds — Vercel/Linear
+   energy. Same var architecture as before. */
 :root {
-  --bg: #020D0A;
-  --bg2: #041711;
-  --bg3: #041711;
-  --sidebar-bg: #03130E;
-  --card: #07271D;
-  --card2: #093325;
+  --bg: #0A0A0B;
+  --bg2: #0F0F10;
+  --bg3: #0F0F10;
+  --sidebar-bg: #0C0C0E;
+  --card: #131316;
+  --card2: #17171A;
   --indigo: #10B981;
   --indigo-light: #34D399;
   --indigo-dark: #047857;
   --purple: #10B981;
   --purple-light: #22D3EE;
-  --pink: #A3E635;
+  --pink: #34D399;
   --cyan: #22D3EE;
   --green: #10b981;
   --amber: #f59e0b;
-  --text: #F2FBF7;
-  --text2: #DDF3EA;
-  --muted: #5E7A6E;
-  --muted2: #8FB3A4;
-  --border: rgba(52,211,153,0.14);
-  --border2: rgba(52,211,153,0.24);
-  --glass: rgba(16,185,129,0.05);
-  --glass-border: rgba(52,211,153,0.18);
-  --glow: 0 0 40px rgba(16,185,129,.22);
+  --text: #FAFAFA;
+  --text2: #E4E4E7;
+  --muted: #71717A;
+  --muted2: #A1A1AA;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --glass: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.1);
+  --glow: 0 0 0 transparent;
   --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
 }
 
@@ -68,9 +70,8 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(900px 600px at 12% -8%, rgba(16,185,129,0.12), transparent 60%),
-    radial-gradient(800px 540px at 88% 12%, rgba(34,211,238,0.08), transparent 60%),
-    radial-gradient(700px 700px at 50% 110%, rgba(163,230,53,0.05), transparent 62%);
+    radial-gradient(900px 600px at 12% -8%, rgba(16,185,129,0.05), transparent 60%),
+    radial-gradient(800px 540px at 88% 12%, rgba(255,255,255,0.025), transparent 60%);
 }
 
 /* Push #052 — block horizontal overflow on mobile. Some long URLs in
@@ -116,7 +117,7 @@ body::after {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(16, 185, 129, 0.35);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -144,8 +145,8 @@ body::after {
 }
 
 @keyframes btn-pulse {
-  0%, 100% { box-shadow: 0 4px 22px rgba(16,185,129,.28), 0 0 0px rgba(34,211,238,0); }
-  50% { box-shadow: 0 4px 38px rgba(16,185,129,.6), 0 0 32px rgba(34,211,238,.38); }
+  0%, 100% { box-shadow: 0 2px 10px rgba(16,185,129,.18); }
+  50% { box-shadow: 0 4px 22px rgba(16,185,129,.32); }
 }
 
 @keyframes resultsReveal {
@@ -230,17 +231,17 @@ body::after {
 
 /* Glass card */
 .glass-card {
-  background: rgba(5, 29, 21, 0.6);
+  background: rgba(19, 19, 22, 0.6);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid rgba(167, 139, 250, 0.14);
   border-radius: 16px;
 }
 
-/* Brand gradient button — neon violet → cyan */
+/* Brand button — flat emerald (mono premium) */
 .btn-brand {
-  background: linear-gradient(135deg, #059669 0%, #10B981 45%, #22D3EE 100%);
-  color: #fff;
+  background: #10B981;
+  color: #06241A;
   border: none;
   padding: 14px 20px;
   border-radius: 13px;
@@ -262,9 +263,9 @@ body::after {
   transform: scale(1.035);
 }
 
-/* Gradient text — violet → cyan → magenta sweep */
+/* Accent text — single emerald→mint sweep, quiet (mono premium) */
 .grad-text {
-  background: linear-gradient(110deg, #34D399 0%, #22D3EE 50%, #A3E635 100%);
+  background: linear-gradient(110deg, #10B981 0%, #34D399 60%, #6EE7B7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -288,8 +289,8 @@ body::after {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(52,211,153,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(52,211,153,0.05) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
   background-size: 44px 44px;
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 35%, transparent 75%);
   mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 35%, transparent 75%);
@@ -305,7 +306,7 @@ body::after {
   position: absolute;
   border-radius: 9999px;
   filter: blur(90px);
-  opacity: 0.5;
+  opacity: 0.2;
   pointer-events: none;
   animation: auroraDrift 16s ease-in-out infinite;
 }
@@ -313,41 +314,41 @@ body::after {
 /* Neon glass card — gradient hairline border + hover lift/glow */
 .neon-card {
   position: relative;
-  background: linear-gradient(180deg, rgba(7,39,29,0.75), rgba(3,19,14,0.85));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(52,211,153,0.16);
-  border-radius: 18px;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  background: rgba(19, 19, 22, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .neon-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(52,211,153,0.42);
-  box-shadow: 0 12px 44px rgba(16,185,129,0.22), 0 0 0 1px rgba(34,211,238,0.08);
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.45);
 }
 
 /* Neon CTA — high-energy primary button */
+/* Mono premium primary CTA — flat emerald, quiet confidence. */
 .btn-neon {
   position: relative;
-  background: linear-gradient(135deg, #059669, #10B981 40%, #22D3EE);
-  background-size: 160% 160%;
-  color: #fff;
+  background: #10B981;
+  color: #06241A;
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.25s ease, background-position 0.4s ease;
-  box-shadow: 0 8px 30px rgba(16,185,129,0.4), 0 0 18px rgba(34,211,238,0.18);
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 .btn-neon:hover {
-  transform: translateY(-1px) scale(1.02);
-  background-position: 100% 50%;
-  box-shadow: 0 10px 44px rgba(16,185,129,0.55), 0 0 34px rgba(34,211,238,0.35);
+  transform: translateY(-1px);
+  background: #34D399;
+  box-shadow: 0 8px 24px rgba(16,185,129,0.25);
 }
 
-/* Neon text glow */
+/* Kept for compat — glow retired in the mono-premium theme. */
 .neon-text {
-  text-shadow: 0 0 18px rgba(34,211,238,0.6), 0 0 44px rgba(16,185,129,0.35);
+  text-shadow: none;
 }
 
 /* Floating animation (hero phone) */

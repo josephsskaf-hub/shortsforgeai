@@ -25,7 +25,7 @@ export default function ComingSoonPage() {
       style={{
         position: 'relative',
         minHeight: '100vh',
-        background: 'var(--bg, #020D0A)',
+        background: 'var(--bg, #0A0A0B)',
         color: 'var(--text, #f5f5fa)',
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',

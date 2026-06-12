@@ -32,7 +32,7 @@ const EXAMPLES = [
     color: '#f472b6',
     glow: 'rgba(244,114,182,0.25)',
     badge: '#500724',
-    badgeText: '#d9f99d',
+    badgeText: '#a7f3d0',
     hook: 'Your brain is lying to you right now 🤯',
     script:
       "Every memory you have is a reconstruction, not a recording. Each time you remember something, your brain rewrites it slightly. This means your oldest memories are the most distorted. You've been living with edited versions of your own past...",

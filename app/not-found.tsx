@@ -9,7 +9,7 @@ export default function NotFound() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#020D0A',
+        background: '#0A0A0B',
         color: '#F5F7FF',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         display: 'flex',

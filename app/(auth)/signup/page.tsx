@@ -173,7 +173,7 @@ export default function SignupPage() {
             className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
             style={{
               background:
-                'radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #041711 50%, #060c1a 100%)',
+                'radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
             }}
           >
             <div

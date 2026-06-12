@@ -39,7 +39,7 @@ const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string
   money:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(34,197,94,.28)',  pill: 'rgba(34,197,94,.15)',  text: '#4ade80', hover: 'rgba(34,197,94,.5)'  },
   mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#c084fc', hover: 'rgba(16,185,129,.5)' },
   country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#34d399', hover: 'rgba(16,185,129,.5)' },
-  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(163,230,53,.28)', pill: 'rgba(163,230,53,.15)', text: '#f472b6', hover: 'rgba(163,230,53,.5)' },
+  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(52,211,153,.28)', pill: 'rgba(52,211,153,.15)', text: '#f472b6', hover: 'rgba(52,211,153,.5)' },
   space:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(14,165,233,.28)', pill: 'rgba(14,165,233,.15)', text: '#38bdf8', hover: 'rgba(14,165,233,.5)' },
   nature:      { bg: 'rgba(11,17,32,0.85)', border: 'rgba(74,222,128,.28)', pill: 'rgba(74,222,128,.15)', text: '#86efac', hover: 'rgba(74,222,128,.5)' },
   technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(52,211,153,.28)', pill: 'rgba(52,211,153,.15)', text: '#6ee7b7', hover: 'rgba(52,211,153,.5)' },

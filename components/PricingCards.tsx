@@ -124,7 +124,7 @@ export default function PricingCards() {
               display: 'inline-block',
               marginTop: 10,
               background: '#34d399',
-              color: '#020D0A',
+              color: '#0A0A0B',
               borderRadius: 8,
               padding: '6px 16px',
               fontWeight: 800,
