@@ -416,18 +416,21 @@ export default function Sidebar({
               AI video library backed by public.videos. /history still
               exists for the legacy Shorts Packs view but is no longer the
               primary entry point. */}
-          <NavItem href="/generate" icon="🎬" label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
+          {/* Mono premium (12/06) — refined line icons (NAV_ICONS) replace the
+              emoji tiles. Badge cleanup: every NEW removed per Joseph — the
+              ONLY New badge in the product now lives on the AI Avatar entry. */}
+          <NavItem href="/generate" icon={NAV_ICONS.generate} label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
               badge. The thumbnail click-through rate is the single biggest
               lever for Shorts performance, so we surface this tool right
               after the generator. */}
-          <NavItem href="/thumbnail-generator" icon="🖼️" label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="🔥 HOT" />
-          <NavItem href="/viral-now" icon="🔥" label="Viral Now" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
-          <NavItem href="/history" icon="🎞️" label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/thumbnail-generator" icon={NAV_ICONS.thumbnails} label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="HOT" />
+          <NavItem href="/viral-now" icon={NAV_ICONS.viral} label="Viral Now" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/history" icon={NAV_ICONS.videos} label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #444 — Invite & Earn: referral loop UI on a reachable page.
               Gated to logged-in users (the reward only applies to accounts). */}
           {isLoggedIn && (
-            <NavItem href="/referral" icon="🎁" label="Invite & Earn" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+            <NavItem href="/referral" icon={NAV_ICONS.referral} label="Invite & Earn" exact={false} pathname={pathname} onClick={onClose} />
           )}
           {/* Push #080 — examples removed (demodé). Was:
               routes to /generate?prompt=…  No auth-gated logic; safe for
@@ -437,7 +440,7 @@ export default function Sidebar({
               don't have to leave the app to find the upgrade page. The
               bottom credits card also links here, but that one is gated on
               `isLoggedIn` — this stays visible for guests too. */}
-          <NavItem href="/pricing" icon="💎" label="Pricing" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/pricing" icon={NAV_ICONS.pricing} label="Pricing" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
 

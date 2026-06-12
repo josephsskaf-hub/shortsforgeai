@@ -743,7 +743,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <span className="rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span>
             </Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
-            <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">🔥 Viral Now</Link>
+            <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Viral Now</Link>
             <a href="/pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
@@ -855,7 +855,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
               <Link onClick={() => setNavOpen(false)} href="/generate?avatar=1" className="rounded-md px-3 py-2 text-sm font-bold text-[#34D399] hover:bg-emerald-400/[.06] hover:text-[#6EE7B7]">🎭 AI Avatar <span className="ml-1 rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span></Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
-              <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">🔥 Viral Now</Link>
+              <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Viral Now</Link>
               <a onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />
