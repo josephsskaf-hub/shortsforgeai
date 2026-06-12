@@ -111,6 +111,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url: videoUrl, kind: 'video' })
     }
 
+    // Animate (13/06) — purpose=animate uploads are ANY photo (pets, products,
+    // landscapes, old family pictures): skip the face check and the face
+    // library; the photo just needs to land in storage for the i2v engine.
+    const purpose = (form.get('purpose') ?? '').toString()
+    if (purpose === 'animate') {
+      const animateUrl = await uploadAvatarPhoto(user.id, buffer, mime as 'image/jpeg' | 'image/png')
+      return NextResponse.json({ url: animateUrl, kind: 'animate' })
+    }
+
     // Face validation — reject only on a confident "no face".
     const visible = await faceVisible(buffer, mime)
     if (visible === false) {

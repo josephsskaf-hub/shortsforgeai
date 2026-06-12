@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
     // same engine the job was submitted with ('fabric' default | 'omnihuman').
     const engineParam = (req.nextUrl.searchParams.get('engine') ?? '').trim()
     const engine: AvatarEngine =
-      engineParam === 'omnihuman' ? 'omnihuman' : engineParam === 'lipsync' ? 'lipsync' : 'fabric'
+      engineParam === 'omnihuman' ? 'omnihuman'
+      : engineParam === 'lipsync' ? 'lipsync'
+      : engineParam === 'animate' ? 'animate'
+      : 'fabric'
 
     const state = await checkAvatarJob(requestId, engine)
 

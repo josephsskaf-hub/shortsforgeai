@@ -183,7 +183,14 @@ export async function brollEngine(input: BrollEngineInput): Promise<BrollPlan> {
   // Aesthetic pack (13/06) — tell the model what this niche's audience
   // expects to SEE, not just what the narration MEANS. Kills the
   // semantically-right-aesthetically-wrong picks (coins for "billionaire").
-  const pack = packForNiche(niche)
+  // Hotfix (12/06): analyze-idea returns a ONE-WORD niche ("success",
+  // "business", "habits") that often misses the trigger list and landed on
+  // DEFAULT (no bans → coin closeups and random rivers slipped into a
+  // billionaire video). If the niche word alone doesn't resolve to a real
+  // pack, re-match against the actual script text — "billionaire" in the
+  // narration is enough to lock the wealth pack.
+  let pack = packForNiche(niche)
+  if (pack.id === 'default') pack = packForNiche(`${niche} ${script}`)
 
   const userMsg = `Niche: ${niche}
 Tone: ${tone}

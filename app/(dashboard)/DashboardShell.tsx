@@ -23,6 +23,7 @@ const pageTitles: Record<string, string> = {
   '/my-videos': 'My Videos',
   '/viral-now': 'Viral Now',
   '/avatar': 'AI Avatar Studio',
+  '/animate': 'Animate a Photo',
   '/examples': 'Examples',
   '/history': 'My Videos',
   '/pricing': 'Pricing',

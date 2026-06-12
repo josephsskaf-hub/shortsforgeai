@@ -69,6 +69,13 @@ const NAV_ICONS: Record<string, JSX.Element> = {
       <path d="M17.5 5.5c1 1 1.6 2.3 1.6 3.7M20 3.5c1.6 1.6 2.5 3.6 2.5 5.7" />
     </svg>
   ),
+  animate: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4.5" width="13" height="15" rx="2.5" />
+      <path d="m8 9.5 4.5 2.5L8 14.5v-5Z" />
+      <path d="M19.5 7.5 21 6M19.5 12h2M19.5 16.5 21 18" />
+    </svg>
+  ),
 }
 
 function NavItem({
@@ -430,6 +437,8 @@ export default function Sidebar({
           {/* Avatar Studio (12/06) — the dedicated, focused /avatar page. The
               one and only NEW badge in the product. */}
           <NavItem href="/avatar" icon={NAV_ICONS.avatar} label="AI Avatar" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+          {/* Animate (13/06) — image-to-video: a real photo comes alive. */}
+          <NavItem href="/animate" icon={NAV_ICONS.animate} label="Animate a Photo" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
               badge. The thumbnail click-through rate is the single biggest
               lever for Shorts performance, so we surface this tool right

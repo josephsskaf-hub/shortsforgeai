@@ -26,15 +26,56 @@ const OMNIHUMAN_MODEL = 'fal-ai/bytedance/omnihuman/v1.5'
 // lipsync model re-animates the mouth to our narration mp3. Same fal queue.
 const LIPSYNC_MODEL = 'fal-ai/sync-lipsync'
 
+// Animate (13/06) — image-to-video: brings a REAL PHOTO to life with motion
+// (Upwork-demand feature). Kling 2.5 Turbo Pro: best quality/price on fal at
+// ~$0.07/s (~$0.35 per 5s clip).
+const ANIMATE_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'
+
 /** Which model animates the avatar. 'fabric' = talking head from a photo
  *  (default); 'omnihuman' = full-figure body & gestures from a photo ("Pro");
- *  'lipsync' = re-voice a real VIDEO of the person (Avatar Studio). */
-export type AvatarEngine = 'fabric' | 'omnihuman' | 'lipsync'
+ *  'lipsync' = re-voice a real VIDEO of the person (Avatar Studio);
+ *  'animate' = image-to-video motion (no narration — photo comes alive). */
+export type AvatarEngine = 'fabric' | 'omnihuman' | 'lipsync' | 'animate'
 
 function modelFor(engine: AvatarEngine | undefined): string {
   if (engine === 'omnihuman') return OMNIHUMAN_MODEL
   if (engine === 'lipsync') return LIPSYNC_MODEL
+  if (engine === 'animate') return ANIMATE_MODEL
   return VEED_FABRIC_MODEL
+}
+
+/**
+ * Animate (13/06) — submit an image-to-video job (photo + motion prompt).
+ * Same queue/retry pattern as submitAvatarJob; polled via checkAvatarJob
+ * with engine='animate'.
+ */
+export async function submitAnimateJob(args: {
+  imageUrl: string
+  prompt: string
+  /** '5' | '10' seconds (Kling i2v accepted durations). */
+  duration?: '5' | '10'
+}): Promise<string | null> {
+  if (!configureFal()) return null
+  const input: Record<string, unknown> = {
+    image_url: args.imageUrl,
+    prompt: args.prompt,
+    duration: args.duration ?? '5',
+  }
+  // Widen to plain string so the fal client uses its generic (untyped-input)
+  // overload — same pattern as submitAvatarJob below. The endpoint literal
+  // otherwise selects a typed overload that rejects Record<string, unknown>.
+  const model: string = ANIMATE_MODEL
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { request_id } = await fal.queue.submit(model, { input })
+      if (request_id) return request_id
+    } catch (err) {
+      const e = err as { status?: number; message?: string }
+      console.error(`[animate] queue submit attempt ${attempt} failed:`, JSON.stringify({ status: e?.status, message: e?.message }))
+      if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
+    }
+  }
+  return null
 }
 
 export interface AvatarVideoResult {
