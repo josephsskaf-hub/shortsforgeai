@@ -23,27 +23,41 @@ function getAdminClient(): SupabaseClient {
  *  Avatar Studio (12/06): the bucket now also accepts short source VIDEOS
  *  (mp4/quicktime, ≤60MB) for the lipsync engine, so existing buckets are
  *  updated in place (updateBucket is idempotent too). */
+// Fix 12/06 (prod 500s) — 40MB, NOT 60: Supabase's plan-level cap is 50MB on
+// free tier, and createBucket/updateBucket VALIDATE the config before the
+// duplicate check, so 60MB made the call fail on the existing bucket and the
+// old code treated that as fatal → every photo upload 500'd. We now check
+// getBucket FIRST and never let bucket housekeeping kill an upload.
 const AVATARS_BUCKET_CONFIG = {
   public: true,
-  fileSizeLimit: 60 * 1024 * 1024, // 60 MB — face photos + short source videos
+  fileSizeLimit: 40 * 1024 * 1024,
   allowedMimeTypes: ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'],
 }
 
 async function ensureAvatarsBucket(admin: SupabaseClient): Promise<void> {
-  const { error } = await admin.storage.createBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
-  if (!error) {
-    console.log(`[avatar/storage] created storage bucket "${AVATARS_BUCKET}"`)
-    return
+  try {
+    const { data: existing } = await admin.storage.getBucket(AVATARS_BUCKET)
+    if (existing) {
+      // Best-effort config refresh (video MIMEs / size). Never blocks.
+      const { error: updErr } = await admin.storage.updateBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
+      if (updErr) console.warn('[avatar/storage] updateBucket failed (non-blocking):', updErr.message)
+      return
+    }
+    const { error } = await admin.storage.createBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
+    if (!error) {
+      console.log(`[avatar/storage] created storage bucket "${AVATARS_BUCKET}"`)
+      return
+    }
+    const msg = (error.message ?? '').toLowerCase()
+    if (msg.includes('already exists') || msg.includes('duplicate') || msg.includes('resource already')) {
+      return
+    }
+    // Don't throw — the upload below will fail loudly if the bucket is truly
+    // missing; a config validation hiccup must not take the feature down.
+    console.warn('[avatar/storage] ensureAvatarsBucket non-fatal:', JSON.stringify(error))
+  } catch (err) {
+    console.warn('[avatar/storage] ensureAvatarsBucket threw (non-fatal):', err instanceof Error ? err.message : String(err))
   }
-  const msg = (error.message ?? '').toLowerCase()
-  if (msg.includes('already exists') || msg.includes('duplicate') || msg.includes('resource already')) {
-    // Bucket predates video support — bring its limits up to date.
-    const { error: updErr } = await admin.storage.updateBucket(AVATARS_BUCKET, AVATARS_BUCKET_CONFIG)
-    if (updErr) console.warn('[avatar/storage] updateBucket failed (non-blocking):', updErr.message)
-    return
-  }
-  console.error('[avatar/storage] ensureAvatarsBucket error:', JSON.stringify(error))
-  throw new Error(`Could not ensure avatars bucket: ${error.message}`)
 }
 
 /**
