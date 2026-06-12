@@ -63,6 +63,8 @@ FOOTAGE CUE RULES (critical — this directly controls what video clip plays):
 - Avoid person names (Pexels has no paparazzi footage of Warren Buffett)
 - Good: "forensic dna lab test tubes", "old archive crime documents", "stock market trading monitors", "ancient stone pyramid aerial"
 - Bad: "success", "billionaire", "mystery", "the answer", "time"
+- AESTHETIC RULE (13/06 — what the niche's audience expects to SEE, not just what the words mean): wealth/billionaire/money topics → use "private jet interior", "penthouse city view", "luxury watch closeup", "supercar night city", "yacht deck", "trading screens office", "man suit skyline" — NEVER "coins", "dollar bills", "cash closeup", "piggy bank", "counting money". Psychology → eyes, chess, silhouettes, crowds — never smiling stock people. Stoicism → statues, mountains, candles, journals. Mystery/dark history → fog, archives, abandoned places, storm coasts. Facts/science → space, labs, oceans, libraries.
+- UNIVERSALLY BANNED footage cues: anything with dancing, parties, nightclubs, selfies.
 
 FACT SELECTION RULES (#407 — this is what separates "huh, cool" from "WAIT, WHAT?"):
 - BANNED: the single most famous fact about the topic — the one everyone already knows. Examples of BANNED picks: World Cup -> Zidane's headbutt; Titanic -> "it sank"; Everest -> "it's the tallest mountain"; Einstein -> E=mc². If a casual viewer could name it, DO NOT use it.

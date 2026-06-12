@@ -13,6 +13,9 @@ import { deriveGlobalStyle } from './visual-consistency'
 import { splitScriptToScenes } from './scene-splitter'
 import { buildAttentionCurve } from './attention-curve'
 import { buildScenePrompt } from './prompt-builder'
+// Aesthetic packs (13/06) — per-niche approved visual universe + banned
+// clichés, injected into the GPT prompt AND enforced on its output.
+import { packForNiche, enforcePackOnQueries, UNIVERSAL_BANNED } from './aesthetic-packs'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -177,11 +180,19 @@ export async function brollEngine(input: BrollEngineInput): Promise<BrollPlan> {
     )
     .join('\n\n')
 
+  // Aesthetic pack (13/06) — tell the model what this niche's audience
+  // expects to SEE, not just what the narration MEANS. Kills the
+  // semantically-right-aesthetically-wrong picks (coins for "billionaire").
+  const pack = packForNiche(niche)
+
   const userMsg = `Niche: ${niche}
 Tone: ${tone}
 Global Mood: ${globalStyle.mood}
 Camera Style: ${globalStyle.cameraStyle}
 Lighting: ${globalStyle.lighting}
+
+VISUAL WORLD (aesthetic pack for this niche) — compose EVERY pexelsQuery inside this visual universe. Approved imagery building blocks: ${pack.vocab.join('; ')}.
+HARD NEGATIVE BLACKLIST — NEVER use these visuals (audience-tested rejects): ${[...pack.banned, ...UNIVERSAL_BANNED].join('; ')}.
 
 Generate the visual layer for these ${scenesWithMeta.length} scenes. For each scene return:
 - sceneNumber (int)
@@ -282,7 +293,14 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
     const gptQueries = asStrArr(gpt.pexelsQueries).filter((q) => q.length > 2)
     const rawGptQuery = asStr(gpt.pexelsQuery, '')
     const legacyQuery = rawGptQuery.length > 2 ? rawGptQuery : builtPrompt.pexelsQuery
-    const pexelsQueries = gptQueries.length > 0 ? gptQueries : [legacyQuery]
+    // Aesthetic pack enforcement (13/06) — hard guarantee on top of the
+    // prompt steering: banned visuals are dropped; an emptied scene gets a
+    // rotated vocab term instead of a doomed/cliché search.
+    const pexelsQueries = enforcePackOnQueries(
+      gptQueries.length > 0 ? gptQueries : [legacyQuery],
+      pack,
+      i,
+    )
     const pexelsQuery = pexelsQueries[0]
 
     const caption = asStr(
