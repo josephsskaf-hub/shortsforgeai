@@ -90,9 +90,35 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const sourceReady = sourceKind === 'photo' ? !!faceUrl : !!videoUrl
   const canGenerate = isLoggedIn && sourceReady && script.trim().length > 0 && !busy
 
+  // Fix 12/06 — Vercel functions reject bodies over ~4.5MB BEFORE our code
+  // runs, so a modern camera photo (6-12MB) failed with a generic error.
+  // Compress client-side: downscale to ≤1280px and re-encode as JPEG ~0.85.
+  // Any phone photo lands around 200-400KB with no visible quality loss.
+  async function compressPhoto(file: File): Promise<File> {
+    if (file.size < 2 * 1024 * 1024) return file // small enough — keep as-is
+    try {
+      const bitmap = await createImageBitmap(file)
+      const maxSide = 1280
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+      const w = Math.round(bitmap.width * scale)
+      const h = Math.round(bitmap.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return file
+      ctx.drawImage(bitmap, 0, 0, w, h)
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+      if (!blob) return file
+      return new File([blob], 'face.jpg', { type: 'image/jpeg' })
+    } catch {
+      return file // compression is best-effort — server still validates size
+    }
+  }
+
   // ── Upload (photo or video) ───────────────────────────────────────────
-  async function handleFile(file: File | null, kind: 'photo' | 'video') {
-    if (!file) return
+  async function handleFile(rawFile: File | null, kind: 'photo' | 'video') {
+    if (!rawFile) return
     setUploadError(null)
     if (!rights) {
       setUploadError('Please confirm you have the right to use this person’s image first (checkbox below).')
@@ -100,6 +126,14 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     }
     setPhase('uploading')
     try {
+      const file = kind === 'photo' ? await compressPhoto(rawFile) : rawFile
+      if (kind === 'video' && file.size > 4.4 * 1024 * 1024) {
+        // Honest limit until direct-to-storage upload ships: Vercel caps
+        // request bodies at ~4.5MB, so big videos can't pass through the API.
+        setUploadError('For now source videos must be under 4.5 MB (~10s compressed). Tip: export at 720p. Bigger uploads are coming soon.')
+        setPhase('idle')
+        return
+      }
       const fd = new FormData()
       fd.append('file', file)
       fd.append('rights', 'true')
@@ -386,13 +420,19 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 </button>
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'video')} />
                 <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>
-                  10–30s of you facing the camera (talking or not). We re-voice your lips with the script. MP4/MOV up to 40 MB.
+                  ~10s of you facing the camera (talking or not). We re-voice your lips with the script. MP4/MOV, export at 720p (max 4.5 MB for now — bigger uploads coming soon).
                 </p>
               </>
             )}
 
             <label className="flex items-start gap-2 mt-3 cursor-pointer">
-              <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-0.5" />
+              {/* UX: checking the box clears the stale "confirm first" error. */}
+              <input
+                type="checkbox"
+                checked={rights}
+                onChange={(e) => { setRights(e.target.checked); if (e.target.checked) setUploadError(null) }}
+                className="mt-0.5"
+              />
               <span className="text-[11px] leading-relaxed" style={{ color: 'var(--muted)' }}>
                 I confirm I have the right to use this person’s image and consent to it being animated by AI.
               </span>
