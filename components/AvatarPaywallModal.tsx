@@ -12,10 +12,12 @@ interface AvatarPaywallModalProps {
   isStudio: boolean
 }
 
+// Fix 2 (12/06) — repriced with the Hook Avatar economics (margem ~85%),
+// aligned with AVATAR_PACKS in app/api/stripe/checkout/route.ts.
 const PACKS = [
-  { id: 'avatar1', videos: 1, usd: 29, perVideo: 29, tag: null as string | null },
-  { id: 'avatar3', videos: 3, usd: 79, perVideo: 26.33, tag: 'Popular' },
-  { id: 'avatar10', videos: 10, usd: 239, perVideo: 23.9, tag: 'Best value' },
+  { id: 'avatar1', videos: 1, usd: 11.9, perVideo: 11.9, tag: null as string | null },
+  { id: 'avatar3', videos: 3, usd: 29.9, perVideo: 9.97, tag: 'Popular' },
+  { id: 'avatar10', videos: 10, usd: 79.9, perVideo: 7.99, tag: 'Best value' },
 ]
 
 function studioPrice(usd: number): string {

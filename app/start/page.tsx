@@ -408,7 +408,7 @@ export default function StartPage() {
               },
               {
                 q: 'Which plan should I pick?',
-                a: 'Basic ($4.90/month) gives you 50 Fast Mode videos — plenty for daily posting. Pro ($9.90/month) adds 100 Fast Mode videos plus 1 Cinematic (Runway AI) video per month. Both come with a 7-day money-back guarantee.',
+                a: 'Starter ($11.90/month) gives you 50 Fast Mode videos — plenty for daily posting. Creator ($24.90/month) unlocks the AI Generated engine with 240 credits, and Studio ($37.90/month) adds the premium Kling engine with 360 credits. All plans come with a 7-day money-back guarantee.',
               },
               {
                 q: 'Can I cancel anytime?',

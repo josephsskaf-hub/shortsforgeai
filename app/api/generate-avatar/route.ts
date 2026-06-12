@@ -51,24 +51,12 @@ export const dynamic = 'force-dynamic'
 const MIN_DURATION = 45
 const MAX_DURATION = 60
 
-// Rate limit — max 3 avatar jobs per account inside a rolling window. The
-// window approximates "simultaneous renders" (a VEED job takes a few minutes).
-// In-memory: good enough per warm lambda for checkpoint 1; checkpoint 2
-// replaces it with a DB-backed in-flight counter.
+// Rate limit — max 3 avatar jobs per account inside a rolling 5-min window.
+// Fix 1 (12/06): DB-BACKED via public.avatar_jobs (one row per submitted fal
+// job). The old in-memory Map was per-lambda and useless on Vercel — every
+// cold/parallel instance had its own empty Map, so the limit didn't hold.
 const RATE_WINDOW_MS = 5 * 60 * 1000
 const RATE_MAX = 3
-const recentJobs = new Map<string, number[]>()
-function rateLimited(userId: string): boolean {
-  const now = Date.now()
-  const stamps = (recentJobs.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS)
-  if (stamps.length >= RATE_MAX) {
-    recentJobs.set(userId, stamps)
-    return true
-  }
-  stamps.push(now)
-  recentJobs.set(userId, stamps)
-  return false
-}
 
 /** Best-effort b-roll cutaway clips. Never throws, may return [].
  *  Hook mode passes a higher max — b-roll carries ~85% of the timeline there,
@@ -170,11 +158,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please upload your photo first.' }, { status: 400 })
     }
 
-    if (!dryRun && rateLimited(user.id)) {
-      return NextResponse.json(
-        { error: 'You have 3 avatar videos rendering already — please wait for one to finish.' },
-        { status: 429 },
-      )
+    if (!dryRun) {
+      // Fix 1 (12/06) — count THIS user's jobs in the rolling window straight
+      // from the DB (works across every lambda instance). Fail-open on a
+      // count error: a transient DB blip must not block a paying render.
+      const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString()
+      const { count: recentCount, error: rateErr } = await supabase
+        .from('avatar_jobs')
+        .select('request_id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', windowStart)
+      if (!rateErr && (recentCount ?? 0) >= RATE_MAX) {
+        return NextResponse.json(
+          { error: 'You have 3 avatar videos rendering already — please wait for one to finish.' },
+          { status: 429 },
+        )
+      }
     }
 
     // ── CP2 paywall — avatar videos are paid via the SEPARATE avatar_credits
@@ -300,6 +299,14 @@ export async function POST(req: NextRequest) {
         { error: 'The avatar engine could not accept the job. You were not charged — please try again.' },
         { status: 502 },
       )
+    }
+
+    // Fix 1 (12/06) — register the job for the DB-backed rate limit (replaces
+    // the per-lambda Map). Best-effort: a failed insert never fails the render.
+    try {
+      await supabase.from('avatar_jobs').insert({ request_id: requestId, user_id: user.id, engine })
+    } catch (err) {
+      console.warn('[generate-avatar] avatar_jobs insert failed (non-blocking):', err instanceof Error ? err.message : String(err))
     }
 
     // ── 4. B-roll cutaways (best-effort) ─────────────────────────────────

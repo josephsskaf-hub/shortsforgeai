@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
                   </td>
                 </tr>
               </table>
-              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">Basic $4.90/mo or Pro $9.90/mo after trial · Cancel anytime · 7-day money-back guarantee</p>
+              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">Starter $11.90 · Creator $24.90 · Studio $37.90/mo after trial · Cancel anytime · 7-day money-back guarantee</p>
 
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;text-align:center;">
@@ -121,7 +121,7 @@ Every Short comes with:
 👉 See plans & start:
 ${dashboardUrl}
 
-Two paid plans, flat monthly price. Basic $4.90/mo (50 videos), Pro $9.90/mo (100 videos + Cinematic Mode). 7-day money-back guarantee.
+Three paid plans, flat monthly price. Starter $11.90/mo (50 Fast videos), Creator $24.90/mo (240 credits — AI Generated engine), Studio $37.90/mo (360 credits — premium Kling engine). 7-day money-back guarantee.
 
 — The ShortsForgeAI Team
 shortsforgeai.com`

@@ -29,18 +29,30 @@ export async function GET() {
     // where the avatar_credits migration hasn't run yet (deploy-order safety).
     let avatarCredits = 0
     let avatarFaceUrl: string | null = null
-    try {
-      const { data: avData } = await supabase
+    {
+      const { data: avData, error: avErr } = await supabase
         .from('profiles')
         .select('avatar_credits, avatar_face_url')
         .eq('id', user.id)
         .single()
-      avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
-      // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
-      const face = (avData as { avatar_face_url?: string | null } | null)?.avatar_face_url
-      avatarFaceUrl = typeof face === 'string' && face ? face : null
-    } catch {
-      avatarCredits = 0
+      if (avErr) {
+        // Fix 1 (12/06) — distinguish "migration not deployed yet" (undefined
+        // column/table → safe to default to 0) from a REAL transient error.
+        // The old catch-all silently told paying users they had 0 avatar
+        // credits on any DB/RLS blip. A real error now returns 503 so the
+        // client retries instead of rendering a false zero balance.
+        const code = (avErr as { code?: string }).code ?? ''
+        const deployOrderSafe = code === '42703' || code === '42P01'
+        if (!deployOrderSafe) {
+          console.error('[credits] avatar_credits fetch error (503, not a false 0):', avErr.message)
+          return NextResponse.json({ error: 'Balance temporarily unavailable. Please retry.' }, { status: 503 })
+        }
+      } else {
+        avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
+        // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
+        const face = (avData as { avatar_face_url?: string | null } | null)?.avatar_face_url
+        avatarFaceUrl = typeof face === 'string' && face ? face : null
+      }
     }
 
     if (error) {

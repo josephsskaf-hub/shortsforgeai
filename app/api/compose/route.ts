@@ -408,41 +408,45 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 2b — Push #258: transcribe the TTS audio via Whisper to get
-    // word-level timestamps for DIRECT caption building. Captions are now
-    // built from Whisper words directly (not mapped from script segments),
-    // eliminating drift from number expansion (e.g. "63%" → "sixty three
-    // percent"). Non-fatal: if Whisper fails the proportional fallback runs.
-    let whisperWords: WhisperWord[] | undefined
-    if (audioBuffer) {
-      try {
-        const words = await transcribeTTSWithTimestamps(audioBuffer)
-        if (words.length > 0) {
-          whisperWords = words
-          console.log(`[compose] Whisper sync: ${words.length} words for direct caption build`)
-        } else {
-          console.warn('[compose] Whisper returned 0 words — proportional fallback')
-        }
-      } catch (whisperErr) {
-        console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
-      }
-    }
+    // Step 2b + Step 3 — Fix 3 (12/06): Whisper transcription and the
+    // voiceover upload are INDEPENDENT (Whisper reads the in-memory buffer,
+    // the upload writes the same buffer to storage), but they used to run
+    // back-to-back on the hot path, adding their latencies (~2s + ~1s) to
+    // every render. They now run in PARALLEL — same outputs, same fallbacks,
+    // 1–3s less user-facing wait per video.
+    //
+    // Whisper (Push #258): word-level timestamps for DIRECT caption building
+    // (no drift from number expansion). Non-fatal — proportional fallback.
+    // Upload: avatar mode reuses the mp3 already in storage (zero work).
+    const whisperPromise: Promise<WhisperWord[] | undefined> = audioBuffer
+      ? transcribeTTSWithTimestamps(audioBuffer)
+          .then((words) => {
+            if (words.length > 0) {
+              console.log(`[compose] Whisper sync: ${words.length} words for direct caption build`)
+              return words
+            }
+            console.warn('[compose] Whisper returned 0 words — proportional fallback')
+            return undefined
+          })
+          .catch((whisperErr) => {
+            console.warn('[compose] Whisper step threw — proportional fallback:', whisperErr)
+            return undefined
+          })
+      : Promise.resolve(undefined)
 
-    // Phase 5 — Detect persona for response metadata (observability + future UI).
-    const detectedPersonaId: string | undefined = vertical
-      ? selectPersonaForScript(scaledScript, vertical, narrationTier, language).id
-      : undefined
+    const uploadPromise: Promise<{ url: string } | { uploadError: unknown }> = avatarMode
+      ? Promise.resolve({ url: voiceoverUrlBody })
+      : uploadVoiceoverToSupabase(user.id, audioBuffer as Buffer)
+          .then((url) => {
+            console.log(`[compose] voiceover stored at: ${url}`)
+            return { url }
+          })
+          .catch((err: unknown) => ({ uploadError: err }))
 
-    // Step 3 — Upload TTS to Supabase storage.
-    // feature/ai-avatar — avatar mode reuses the mp3 already in storage.
-    let voiceoverUrl: string
-    if (avatarMode) {
-      voiceoverUrl = voiceoverUrlBody
-    } else {
-    try {
-      voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer as Buffer)
-      console.log(`[compose] voiceover stored at: ${voiceoverUrl}`)
-    } catch (err) {
+    const [whisperWords, uploadResult] = await Promise.all([whisperPromise, uploadPromise])
+
+    if ('uploadError' in uploadResult) {
+      const err = uploadResult.uploadError
       // Surface FULL error object — name, message, stack head — so the
       // root cause (bucket missing, RLS, network) is visible in Vercel
       // logs. Never log the service key itself.
@@ -454,7 +458,12 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       )
     }
-    } // end avatar/standard voiceover-url branch
+    const voiceoverUrl: string = uploadResult.url
+
+    // Phase 5 — Detect persona for response metadata (observability + future UI).
+    const detectedPersonaId: string | undefined = vertical
+      ? selectPersonaForScript(scaledScript, vertical, narrationTier, language).id
+      : undefined
 
     // Step 4 — Build the Creatomate source.
     //

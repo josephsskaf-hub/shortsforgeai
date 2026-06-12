@@ -313,32 +313,37 @@ export async function GET(
                 console.log(`[compose/status] FREE AI trial consumed for user ${user.id.slice(0, 8)} — credits untouched (${current})`)
               } else {
                 // Lost the race (flag already true) → fall back to normal charge.
-                const next = Math.max(0, current - cost)
-                await supabase.from('profiles').update({ video_credits: next }).eq('id', user.id)
-                creditsDeducted = true
-                creditsRemaining = next
+                // Fix 1 (12/06) — atomic + idempotent via RPC (ledger keyed by
+                // render_id), replacing the racy read→compute→write.
+                const { data: lostBalance, error: lostErr } = await supabase
+                  .rpc('debit_video_credits', { p_render: renderId, p_cost: cost })
+                if (!lostErr && typeof lostBalance === 'number') {
+                  creditsDeducted = true
+                  creditsRemaining = lostBalance
+                } else {
+                  console.error('[compose/status] credit deduct RPC error (trial race):', lostErr?.message)
+                }
               }
             } else {
-              const next = Math.max(0, current - cost)
-              // Push #430 — welcome credits: a paid AI render also burns the
-              // legacy free-AI-trial flag. Without this, a new signup (30
-              // welcome credits, flag unused) could chain a SECOND AI video
-              // through the old trial path after spending the credits.
-              const burnTrialFlag =
-                quality === 'cinematic_ai' && profile?.free_ai_generate_used !== true
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update(
-                  burnTrialFlag
-                    ? { video_credits: next, free_ai_generate_used: true }
-                    : { video_credits: next }
-                )
-                .eq('id', user.id)
-              if (!updateError) {
+              // Fix 1 (12/06) — ATOMIC debit via RPC. One ledger row per
+              // render_id (PRIMARY KEY) makes the charge idempotent across
+              // tabs, refreshes and concurrent polls; the decrement runs
+              // inside the DB, so the old under-/double-charge races are gone.
+              const { data: newBalance, error: rpcErr } = await supabase
+                .rpc('debit_video_credits', { p_render: renderId, p_cost: cost })
+              if (!rpcErr && typeof newBalance === 'number') {
                 creditsDeducted = true
-                creditsRemaining = next
+                creditsRemaining = newBalance
+                // Push #430 — a paid AI render also burns the legacy
+                // free-AI-trial flag (behavior preserved from the old path).
+                if (quality === 'cinematic_ai' && profile?.free_ai_generate_used !== true) {
+                  await supabase
+                    .from('profiles')
+                    .update({ free_ai_generate_used: true })
+                    .eq('id', user.id)
+                }
               } else {
-                console.error('[compose/status] credit deduct error:', updateError.message)
+                console.error('[compose/status] credit deduct RPC error:', rpcErr?.message ?? 'no balance returned')
               }
             }
           } else {
@@ -346,28 +351,18 @@ export async function GET(
           }
         } else if (isAvatarRender) {
           // feature/ai-avatar CP2 — debit exactly 1 avatar credit on success.
-          // Floor at 0 (defensive); video_credits untouched.
-          const { data: avProfile, error: avFetchErr } = await supabase
-            .from('profiles')
-            .select('avatar_credits')
-            .eq('id', user.id)
-            .single()
-          if (!avFetchErr) {
-            const avCurrent = avProfile?.avatar_credits ?? 0
-            const avNext = Math.max(0, avCurrent - 1)
-            const { error: avUpdateErr } = await supabase
-              .from('profiles')
-              .update({ avatar_credits: avNext })
-              .eq('id', user.id)
-            if (!avUpdateErr) {
-              creditsDeducted = true
-              creditsRemaining = null // video_credits chip unaffected
-              console.log(`[compose/status] avatar credit debited: user ${user.id.slice(0, 8)} ${avCurrent}→${avNext}`)
-            } else {
-              console.error('[compose/status] avatar credit debit error:', avUpdateErr.message)
-            }
+          // Fix 1 (12/06) — ATOMIC + IDEMPOTENT via debit_avatar_credit RPC:
+          // a credit_debits ledger row keyed by render_id guarantees exactly
+          // one charge per render no matter how many tabs/polls race, and the
+          // decrement (floored at 0) happens inside the DB transaction.
+          const { data: avBalance, error: avRpcErr } = await supabase
+            .rpc('debit_avatar_credit', { p_render: renderId })
+          if (!avRpcErr && typeof avBalance === 'number') {
+            creditsDeducted = true
+            creditsRemaining = null // video_credits chip unaffected
+            console.log(`[compose/status] avatar credit debited (atomic): user ${user.id.slice(0, 8)} balance=${avBalance}`)
           } else {
-            console.error('[compose/status] avatar credit fetch error:', avFetchErr.message)
+            console.error('[compose/status] avatar credit debit RPC error:', avRpcErr?.message ?? 'no balance returned')
           }
         } else {
           // Cinematic — token was consumed at job start. Surface this in
@@ -480,7 +475,7 @@ export async function GET(
                 <a href="${safeVideoUrl}" style="display:inline-block;background:linear-gradient(135deg,#2563EB,#22D3EE);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
                   ⬇ Download Your Short
                 </a>
-                <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade to Basic — $9.90/mo →</a></p>
+                <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade to Starter — $11.90/mo →</a></p>
                 <p style="color:#475569;font-size:11px;margin:16px 0 0">ShortsForgeAI · <a href="https://shortsforgeai.com" style="color:#475569;">shortsforgeai.com</a></p>
               </div>
             `

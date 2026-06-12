@@ -82,16 +82,20 @@ const STARTER_PACK = {
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }
 
 // ─── feature/ai-avatar CP2 — Avatar Credit packs (one-time, USD) ─────────────
-// Premium add-on OUTSIDE the plan credits: $29/1 · $79/3 · $239/10 (spec).
+// Fix 2 (12/06) — REPRICED for the Hook Avatar economics (margem Y ≈ 85%):
+// hook render costs ~US$1.20–1.50 in VEED seconds, so $11.90/credit holds
+// ~85–88% margin while landing UNDER HeyGen's ~$5/min avatar add-on feel and
+// far under our old $29/1 (93%+ margin, above market, converted poorly).
+// $11.90/1 · $29.90/3 ($9.97/cr) · $79.90/10 ($7.99/cr).
 // Studio subscribers get 15% off (shown in the UI as a Studio benefit).
 // Same inline price_data approach as the Starter Pack — no Stripe product
 // needed. USD-only for v1 (premium add-on; BRL/INR variants can come later).
 // Webhook credits profiles.avatar_credits via metadata.avatar_credits.
 type AvatarPackId = 'avatar1' | 'avatar3' | 'avatar10'
 const AVATAR_PACKS: Record<AvatarPackId, { credits: number; usd: number; name: string }> = {
-  avatar1:  { credits: 1,  usd: 2900,  name: 'AI Avatar Video — 1 video' },
-  avatar3:  { credits: 3,  usd: 7900,  name: 'AI Avatar Videos — 3 pack' },
-  avatar10: { credits: 10, usd: 23900, name: 'AI Avatar Videos — 10 pack' },
+  avatar1:  { credits: 1,  usd: 1190, name: 'AI Avatar Video — 1 video' },
+  avatar3:  { credits: 3,  usd: 2990, name: 'AI Avatar Videos — 3 pack' },
+  avatar10: { credits: 10, usd: 7990, name: 'AI Avatar Videos — 10 pack' },
 }
 const STUDIO_AVATAR_DISCOUNT = 0.15 // 15% off for Studio (plan 'pro')
 

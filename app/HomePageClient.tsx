@@ -853,7 +853,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {
               initials: 'CF',
               accent: '#34D399',
-              quote: 'Best $9 I spend every month',
+              quote: 'Best money I spend every month',
               handle: '@cryptofactss',
               subs: '91K subs',
             },

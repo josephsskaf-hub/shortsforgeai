@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
                   </td>
                 </tr>
               </table>
-              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 24px;">Basic $4.90/mo or Pro $9.90/mo after trial · Cancel anytime</p>
+              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 24px;">Starter $11.90 · Creator $24.90 · Studio $37.90/mo after trial · Cancel anytime</p>
 
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:18px;">
                 <p style="color:#475569;font-size:12px;margin:0;text-align:center;line-height:1.6;">
