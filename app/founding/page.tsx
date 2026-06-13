@@ -10,16 +10,58 @@ import { useState } from 'react'
 
 // Two real, frame-validated Shorts produced by the Fast engine (12/06).
 // These ARE the product output — the strongest possible social proof.
+// Click-to-play (not autoplay): loading two full MP4s eagerly on a marketing
+// page is heavy and unreliable (black boxes on slow connections = looks
+// broken = kills conversion). Each card shows an inviting poster until the
+// visitor taps play, then the video streams on demand — exactly like /history.
 const PROOF_VIDEOS = [
   {
     label: 'Billionaire habits',
+    gradient: 'linear-gradient(155deg,#10231b 0%,#0c1a2e 55%,#1a1207 100%)',
     src: 'https://cqqukkvjjrguayiyjvhh.supabase.co/storage/v1/object/public/renders/e92d81bf-0068-46c3-8de7-1f67e2006756/2b312738-90c7-4572-b091-c74c9dfeb90a.mp4',
   },
   {
     label: 'Dark history',
+    gradient: 'linear-gradient(155deg,#1a1322 0%,#0c1626 60%,#06131a 100%)',
     src: 'https://cqqukkvjjrguayiyjvhh.supabase.co/storage/v1/object/public/renders/e92d81bf-0068-46c3-8de7-1f67e2006756/a6e0cf39-592d-41bf-b652-04509f22f0bc.mp4',
   },
 ]
+
+// One proof card: poster → click → streaming video (lazy, one at a time).
+function ProofCard({ label, gradient, src }: { label: string; gradient: string; src: string }) {
+  const [playing, setPlaying] = useState(false)
+  return (
+    <div className="neon-card overflow-hidden" style={{ borderRadius: 16, padding: 8 }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: 10, overflow: 'hidden', background: '#000' }}>
+        {playing ? (
+          <video
+            src={src}
+            autoPlay
+            controls
+            playsInline
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <button
+            onClick={() => setPlaying(true)}
+            aria-label={`Play ${label} Short`}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: gradient, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <span
+              style={{ width: 58, height: 58, borderRadius: '50%', background: 'rgba(16,185,129,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(16,185,129,.4)' }}
+            >
+              <span style={{ borderLeft: '17px solid #06231a', borderTop: '11px solid transparent', borderBottom: '11px solid transparent', marginLeft: 4 }} />
+            </span>
+            <span style={{ position: 'absolute', bottom: 12, left: 0, right: 0, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,.85)', fontWeight: 600 }}>
+              ▶ Watch a real Short
+            </span>
+          </button>
+        )}
+      </div>
+      <p className="text-xs mt-2 px-1" style={{ color: 'rgba(255,255,255,.6)' }}>{label} · 45s · 9:16</p>
+    </div>
+  )
+}
 
 // 3 plans. Half-price shown next to the regular price. The link carries the
 // promo so the discount applies with zero typing. Creator is the recommended
@@ -126,18 +168,7 @@ export default function FoundingPage() {
           </p>
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', maxWidth: 720 }}>
             {PROOF_VIDEOS.map((v) => (
-              <div key={v.label} className="neon-card overflow-hidden" style={{ borderRadius: 16, padding: 8 }}>
-                <video
-                  src={v.src}
-                  muted
-                  loop
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  style={{ width: '100%', aspectRatio: '9 / 16', objectFit: 'cover', borderRadius: 10, background: '#000', display: 'block' }}
-                />
-                <p className="text-xs mt-2 px-1" style={{ color: 'rgba(255,255,255,.6)' }}>{v.label} · 45s · 9:16</p>
-              </div>
+              <ProofCard key={v.label} label={v.label} gradient={v.gradient} src={v.src} />
             ))}
           </div>
         </section>
