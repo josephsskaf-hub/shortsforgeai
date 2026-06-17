@@ -10,13 +10,15 @@
 
 const MP_API = 'https://api.mercadopago.com'
 
-// One-time credit packs in BRL (Pix). Credits = Fast Shorts. Server-side source
-// of truth — the webhook resolves credits from the pack id, never from the
-// client, so the amount can't be tampered with. Régua aprovada: R$50 = 25 Shorts
-// (20% mais barato/crédito que o pack em dólar).
+// One-time credit packs in BRL (Pix). video_credits — server-side source of
+// truth (the webhook resolves credits from the pack id, never the client).
+// Régua aprovada: equivalência ao dólar pela régua dos planos (~$0,10/crédito),
+// sem ficar mais barato que a assinatura. 1 Fast = 1 cr · 1 AI Gen = 30 cr.
+//   R$50 (~$10) = 90 créditos  (3 AI Gen ou 90 Fast)
+//   R$90 (~$18) = 180 créditos (6 AI Gen ou 180 Fast)
 export const MP_PACKS: Record<string, { credits: number; brl: number; title: string }> = {
-  br50: { credits: 25, brl: 50, title: 'ShortsForgeAI — 25 Shorts (Pix)' },
-  br90: { credits: 50, brl: 90, title: 'ShortsForgeAI — 50 Shorts (Pix)' },
+  br50: { credits: 90, brl: 50, title: 'ShortsForgeAI — 90 créditos (Pix)' },
+  br90: { credits: 180, brl: 90, title: 'ShortsForgeAI — 180 créditos (Pix)' },
 }
 
 export function mpConfigured(): boolean {

@@ -602,7 +602,7 @@ export default function PricingPage() {
                 className="rounded-xl px-4 py-3 text-[13px] font-extrabold text-white"
                 style={{ background: '#059669', cursor: 'pointer' }}
               >
-                R$50 = 25 Shorts (Pix) →
+                R$50 = 90 créditos (3 AI Gen) →
               </button>
               <button
                 type="button"
@@ -610,7 +610,7 @@ export default function PricingPage() {
                 className="rounded-xl px-4 py-3 text-[13px] font-extrabold"
                 style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', color: '#F1F5F9', cursor: 'pointer' }}
               >
-                R$90 = 50 Shorts (Pix) →
+                R$90 = 180 créditos (6 AI Gen) →
               </button>
             </div>
           </div>
