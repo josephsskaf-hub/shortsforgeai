@@ -12,7 +12,6 @@ import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
-import AvatarUpload from '@/components/AvatarUpload'
 import AvatarPaywallModal from '@/components/AvatarPaywallModal'
 
 interface TaskHandle {
@@ -3082,27 +3081,9 @@ export default function GenerateClient() {
             }}
           />
 
-          {/* feature/ai-avatar — "Add a face — Premium": upload a photo and the
-              rendered video shows that person speaking the script (VEED Fabric
-              talking head as the main track, b-rolls as cutaways). */}
-          <AvatarUpload
-            value={avatarImageUrl}
-            onChange={setAvatarImageUrl}
-            disabled={isProcessingPhase(phase)}
-            credits={avatarCredits}
-            initialOpen={avatarAutoOpen}
-            onPendingChange={setAvatarPending}
-            openSignal={avatarOpenSignal}
-            savedFaceUrl={savedFaceUrl}
-            engine={avatarEngine}
-            onEngineChange={setAvatarEngine}
-            hookMode={avatarHookMode}
-            onHookModeChange={setAvatarHookMode}
-            onPreviewVoice={handlePreviewVoice}
-            voicePreviewLoading={voicePreviewLoading}
-            voicePreviewUrl={voicePreviewUrl}
-            voicePreviewError={voicePreviewError}
-          />
+          {/* AI Avatar removed from the Short flow (16/06) — Avatar and Short are
+              separate flows. The Avatar Studio lives on its own page (/avatar),
+              reachable from the top menu. */}
 
           {/* #383c — explicit script handling. Default = let the AI structure the
               text; advanced = use the pasted script verbatim. Replaces the old

@@ -605,26 +605,8 @@ export default function CreateClient() {
         <p className="text-sm" style={{ color: 'var(--muted2)' }}>
           AI writes the script, generates narration, finds visuals and renders everything automatically.
         </p>
-        {/* Face-app (12/06) — AI Avatar entry in this creation environment too. */}
-        <a
-          href="/avatar"
-          className="mt-3 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition-all hover:scale-[1.02]"
-          style={{
-            background: 'rgba(16,185,129,0.1)',
-            border: '1px solid rgba(52,211,153,0.35)',
-            color: '#34D399',
-            textDecoration: 'none',
-          }}
-        >
-          🎭 Add a face — AI Avatar
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
-            style={{ background: 'rgba(52,211,153,0.18)', color: '#6EE7B7' }}
-          >
-            New
-          </span>
-          <span aria-hidden>→</span>
-        </a>
+        {/* AI Avatar entry removed from the Short flow (16/06) — it lives on its
+            own page (/avatar), reachable from the top menu. */}
       </div>
 
       {/* Form (hidden during run + final + auto-pick) */}
