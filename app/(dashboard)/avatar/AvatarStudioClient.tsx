@@ -30,6 +30,46 @@ const PHASE_COPY: Record<Phase, string> = {
   failed: 'Something went wrong.',
 }
 
+// The browser records webm/opus, which MiniMax voice-clone rejects. Decode it
+// and re-encode as a mono 16-bit WAV (a format MiniMax accepts) client-side.
+function encodeWavMono(buffer: AudioBuffer): Blob {
+  const len = buffer.length
+  const sampleRate = buffer.sampleRate
+  const numCh = buffer.numberOfChannels
+  const mono = new Float32Array(len)
+  for (let ch = 0; ch < numCh; ch++) {
+    const data = buffer.getChannelData(ch)
+    for (let i = 0; i < len; i++) mono[i] += data[i] / numCh
+  }
+  const out = new ArrayBuffer(44 + len * 2)
+  const view = new DataView(out)
+  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)) }
+  writeStr(0, 'RIFF'); view.setUint32(4, 36 + len * 2, true); writeStr(8, 'WAVE')
+  writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true)
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true)
+  writeStr(36, 'data'); view.setUint32(40, len * 2, true)
+  let off = 44
+  for (let i = 0; i < len; i++) {
+    const s = Math.max(-1, Math.min(1, mono[i]))
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+    off += 2
+  }
+  return new Blob([out], { type: 'audio/wav' })
+}
+
+async function webmBlobToWav(blob: Blob): Promise<Blob> {
+  const arrayBuf = await blob.arrayBuffer()
+  const Ctx: typeof AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+  const ctx = new Ctx()
+  try {
+    const audioBuf = await ctx.decodeAudioData(arrayBuf)
+    return encodeWavMono(audioBuf)
+  } finally {
+    void ctx.close()
+  }
+}
+
 export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean }) {
   // ── Source state ──────────────────────────────────────────────────────
   const [sourceKind, setSourceKind] = useState<'photo' | 'video'>('photo')
@@ -67,6 +107,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [recording, setRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
+  const recordStartRef = useRef<number | null>(null)
   const userPickedModeRef = useRef(false)
   const scriptWords = script.trim() ? script.trim().split(/\s+/).length : 0
 
@@ -338,12 +379,19 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       const mr = new MediaRecorder(stream)
       recordedChunksRef.current = []
       mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data) }
-      mr.onstop = () => {
+      mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop())
-        const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' })
-        void handleVoiceClone(new File([blob], 'voice.webm', { type: 'audio/webm' }))
+        const elapsed = (Date.now() - (recordStartRef.current ?? Date.now())) / 1000
+        if (elapsed < 10) { setVoiceCloneError('Recording too short — record at least 15 seconds.'); return }
+        try {
+          const wav = await webmBlobToWav(new Blob(recordedChunksRef.current, { type: 'audio/webm' }))
+          void handleVoiceClone(new File([wav], 'voice.wav', { type: 'audio/wav' }))
+        } catch {
+          setVoiceCloneError('Could not process the recording. Try uploading an MP3 instead.')
+        }
       }
       mediaRecorderRef.current = mr
+      recordStartRef.current = Date.now()
       mr.start()
       setRecording(true)
     } catch {
