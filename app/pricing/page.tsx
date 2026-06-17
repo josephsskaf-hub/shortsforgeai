@@ -582,6 +582,40 @@ export default function PricingPage() {
           </button>
         </div>
 
+        {/* Brazilian Pix (Mercado Pago) — one-time credit packs in Real. Runs
+            alongside Stripe; for the BR public (Perrengue Chique). */}
+        <div className="mx-auto mt-4 max-w-2xl">
+          <div
+            className="rounded-2xl px-5 py-4 text-center"
+            style={{ background: 'rgba(16,185,129,0.06)', border: '1px dashed rgba(16,185,129,0.45)' }}
+          >
+            <span className="block text-[14px] font-extrabold text-[#F1F5F9]">
+              🇧🇷 No Brasil? Pague no <span style={{ color: '#34D399' }}>Pix</span>
+            </span>
+            <span className="mt-1 mb-3 block text-[12px] font-semibold text-[#94A3B8]">
+              Pagamento único · sem assinatura · créditos não expiram
+            </span>
+            <div className="flex flex-col sm:flex-row justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br50' }}
+                className="rounded-xl px-4 py-3 text-[13px] font-extrabold text-white"
+                style={{ background: '#059669', cursor: 'pointer' }}
+              >
+                R$50 = 25 Shorts (Pix) →
+              </button>
+              <button
+                type="button"
+                onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br90' }}
+                className="rounded-xl px-4 py-3 text-[13px] font-extrabold"
+                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', color: '#F1F5F9', cursor: 'pointer' }}
+              >
+                R$90 = 50 Shorts (Pix) →
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Push #114 — surface any checkout error inline so users aren't
             stranded silently when the API rejects the request. */}
         {checkoutError && (
