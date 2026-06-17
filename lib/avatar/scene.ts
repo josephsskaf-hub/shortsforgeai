@@ -59,3 +59,43 @@ export async function generateSceneImage(args: {
     `Scene image generation failed: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
   )
 }
+
+const FACESWAP_MODEL = 'fal-ai/face-swap'
+
+/**
+ * Lock the user's REAL face onto the generated scene so the identity is
+ * faithful every time (kills the "regenerate 8 times until the face looks
+ * right" lottery from FLUX Kontext). BEST-EFFORT: returns the swapped image
+ * URL, or null on ANY failure — the caller then falls back to the un-swapped
+ * scene, so this can never make the feature worse.
+ *   base = the scene image (its face gets replaced)
+ *   swap = the user's original photo (provides the real face)
+ */
+export async function swapFaceOntoScene(args: {
+  sceneImageUrl: string
+  faceImageUrl: string
+}): Promise<string | null> {
+  if (!configureFal()) return null
+  const input: Record<string, unknown> = {
+    base_image_url: args.sceneImageUrl,
+    swap_image_url: args.faceImageUrl,
+  }
+  const model: string = FACESWAP_MODEL
+  try {
+    const result = (await fal.subscribe(model, { input })) as {
+      data?: { image?: { url?: string }; images?: Array<{ url?: string }> }
+      image?: { url?: string }
+      images?: Array<{ url?: string }>
+    }
+    const url =
+      result?.data?.image?.url ??
+      result?.data?.images?.[0]?.url ??
+      result?.image?.url ??
+      result?.images?.[0]?.url ??
+      null
+    return url
+  } catch (err) {
+    console.warn('[avatar/scene] face-swap failed (using un-swapped scene):', err instanceof Error ? err.message : String(err))
+    return null
+  }
+}

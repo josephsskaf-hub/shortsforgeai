@@ -6,7 +6,7 @@
 // the client then feeds to /api/generate-avatar as the source image to animate.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateSceneImage } from '@/lib/avatar/scene'
+import { generateSceneImage, swapFaceOntoScene } from '@/lib/avatar/scene'
 import { uploadAvatarPhoto } from '@/lib/avatar/storage'
 
 export const maxDuration = 120
@@ -67,10 +67,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Face fidelity (16/06) — best-effort face-swap: lock the user's REAL face
+    // onto the generated scene so it looks like THEM every time (no more
+    // regenerating until the face matches). Falls back to the Kontext image if
+    // the swap fails for any reason — never a regression.
+    let finalUrl = falUrl
+    try {
+      const swapped = await swapFaceOntoScene({ sceneImageUrl: falUrl, faceImageUrl: imageUrl })
+      if (swapped) finalUrl = swapped
+    } catch { /* keep the Kontext image */ }
+
     // Re-host on our bucket so the avatar pipeline accepts it as a source.
     let storageUrl: string
     try {
-      const res = await fetch(falUrl)
+      const res = await fetch(finalUrl)
       if (!res.ok) throw new Error(`fetch scene image failed: ${res.status}`)
       const buf = Buffer.from(await res.arrayBuffer())
       storageUrl = await uploadAvatarPhoto(user.id, buf, 'image/jpeg')
