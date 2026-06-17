@@ -57,6 +57,16 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null)
   const [sceneLoading, setSceneLoading] = useState(false)
   const [sceneError, setSceneError] = useState<string | null>(null)
+  // Voice cloning (16/06) — clone the user's voice from a sample; the narration
+  // then speaks in that voice instead of a default one.
+  const [voiceId, setVoiceId] = useState<string | null>(null)
+  const [voiceCloning, setVoiceCloning] = useState(false)
+  const [voiceCloneError, setVoiceCloneError] = useState<string | null>(null)
+  const voiceInputRef = useRef<HTMLInputElement | null>(null)
+  // In-browser voice recorder (record a sample instead of uploading a file).
+  const [recording, setRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
   const userPickedModeRef = useRef(false)
   const scriptWords = script.trim() ? script.trim().split(/\s+/).length : 0
 
@@ -115,6 +125,16 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const busy = phase !== 'idle' && phase !== 'done' && phase !== 'failed'
   const sourceReady = sourceKind === 'photo' ? !!faceUrl : !!videoUrl
   const canGenerate = isLoggedIn && sourceReady && script.trim().length > 0 && !busy
+
+  // Warn before a refresh/close while a render is running — the job is still
+  // processing and leaving abandons it. (Note: also reminds the user not to
+  // click away to another page mid-render, which restarts the flow.)
+  useEffect(() => {
+    if (!busy) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [busy])
 
   // Fix 12/06 — Vercel functions reject bodies over ~4.5MB BEFORE our code
   // runs, so a modern camera photo (6-12MB) failed with a generic error.
@@ -239,7 +259,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       const res = await fetch('/api/generate-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: trimmed, duration: requestDuration, language, dryRun: true, scriptMode }),
+        body: JSON.stringify({ prompt: trimmed, duration: requestDuration, language, dryRun: true, scriptMode, ...(voiceId ? { voiceId } : {}) }),
       })
       const data = await res.json()
       if (!res.ok || typeof data?.voiceover_url !== 'string') {
@@ -285,6 +305,57 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     }
   }
 
+  // ── Voice clone: upload a ~30-60s sample → MiniMax clones it → narration
+  // (and the free preview) speaks in that voice.
+  async function handleVoiceClone(file: File | null) {
+    if (!file || voiceCloning) return
+    if (file.size > 12 * 1024 * 1024) { setVoiceCloneError('Audio too large — keep it under 12 MB (~1-2 min).'); return }
+    setVoiceCloning(true)
+    setVoiceCloneError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/avatar/voice', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok || typeof data?.voiceId !== 'string') {
+        setVoiceCloneError(typeof data?.error === 'string' ? data.error : 'Could not clone the voice. Try a clearer sample.')
+        return
+      }
+      setVoiceId(data.voiceId)
+    } catch {
+      setVoiceCloneError('Could not clone the voice. Try again.')
+    } finally {
+      setVoiceCloning(false)
+    }
+  }
+
+  // Record a voice sample in the browser, then clone it on stop.
+  async function startRecording() {
+    if (recording || voiceCloning) return
+    setVoiceCloneError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      recordedChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data) }
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' })
+        void handleVoiceClone(new File([blob], 'voice.webm', { type: 'audio/webm' }))
+      }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setRecording(true)
+    } catch {
+      setVoiceCloneError('Could not access the microphone. Allow mic access, or upload a file instead.')
+    }
+  }
+  function stopRecording() {
+    if (!recording) return
+    try { mediaRecorderRef.current?.stop() } catch {}
+    setRecording(false)
+  }
+
   // ── The run: generate → poll avatar → compose → poll render ──────────
   async function handleGenerate() {
     if (!canGenerate) return
@@ -301,6 +372,8 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           duration: requestDuration,
           language,
           scriptMode,
+          ...(voiceId ? { voiceId } : {}),
+          ...(sceneImageUrl ? { noBroll: true } : {}),
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
             : { avatarImageUrl: sceneImageUrl ?? faceUrl, engine }),
@@ -670,6 +743,52 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               {voiceUrl && <audio controls autoPlay src={voiceUrl} style={{ height: 30, maxWidth: 260 }} />}
             </div>
             {voiceError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{voiceError}</p>}
+          </section>
+
+          {/* 2.5 · Voice (optional) — clone the user's voice */}
+          <section className="neon-card p-5">
+            <h2 className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)' }}>
+              2.5 · Speak in your own voice <span style={{ color: '#34D399' }}>(optional)</span>
+            </h2>
+            <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
+              Upload a clear ~30-60s voice sample (one speaker, little background noise) and the narration will be spoken in that voice. Only use a voice you have the right to use.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => voiceInputRef.current?.click()}
+                disabled={busy || voiceCloning || recording}
+                className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: busy || voiceCloning || recording ? 'not-allowed' : 'pointer' }}
+              >
+                {voiceCloning ? '🎙️ Cloning the voice…' : voiceId ? '🎙️ Upload a different sample' : '🎙️ Upload a voice sample'}
+              </button>
+              <button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                disabled={busy || voiceCloning}
+                className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                style={{ background: recording ? 'rgba(239,68,68,0.15)' : 'rgba(34,211,238,0.10)', border: recording ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(34,211,238,0.4)', color: recording ? '#fca5a5' : '#22D3EE', cursor: busy || voiceCloning ? 'not-allowed' : 'pointer' }}
+              >
+                {recording ? '⏹ Stop & clone' : '🔴 Record a sample'}
+              </button>
+            </div>
+            <input
+              ref={voiceInputRef}
+              type="file"
+              accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg,audio/webm,.mp3,.m4a,.wav,.ogg"
+              className="hidden"
+              onChange={(e) => handleVoiceClone(e.target.files?.[0] ?? null)}
+            />
+            {voiceId && (
+              <p className="text-[11px] mt-2 font-bold" style={{ color: '#6ee7b7' }}>
+                ✓ Voice cloned — the narration will speak in this voice.{' '}
+                <button type="button" onClick={() => setVoiceId(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  use a default voice
+                </button>
+              </p>
+            )}
+            {voiceCloneError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{voiceCloneError}</p>}
           </section>
 
           {/* 3 · Style (photo sources only — video is always full lipsync) */}

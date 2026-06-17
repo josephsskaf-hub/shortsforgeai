@@ -31,7 +31,11 @@ function getAdminClient(): SupabaseClient {
 const AVATARS_BUCKET_CONFIG = {
   public: true,
   fileSizeLimit: 40 * 1024 * 1024,
-  allowedMimeTypes: ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'],
+  allowedMimeTypes: [
+    'image/jpeg', 'image/png', 'video/mp4', 'video/quicktime',
+    // Voice cloning (16/06) — short voice samples for the cloned-voice TTS.
+    'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg',
+  ],
 }
 
 async function ensureAvatarsBucket(admin: SupabaseClient): Promise<void> {
@@ -96,6 +100,31 @@ export async function uploadAvatarPhoto(
   const { data: pub } = admin.storage.from(AVATARS_BUCKET).getPublicUrl(filePath)
   if (!pub?.publicUrl) throw new Error('Avatar upload succeeded but no public URL was returned.')
   console.log(`[avatar/storage] photo stored: ${pub.publicUrl}`)
+  return pub.publicUrl
+}
+
+/** Upload a short voice sample and return its public URL (for voice cloning). */
+export async function uploadAvatarAudio(
+  userId: string,
+  buffer: Buffer,
+  ext: string,
+  contentType: string,
+): Promise<string> {
+  const admin = getAdminClient()
+  await ensureAvatarsBucket(admin)
+  const safeExt = /^[a-z0-9]{1,5}$/.test(ext) ? ext : 'mp3'
+  const filePath = `${userId}/voice-${Date.now()}.${safeExt}`
+  const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+  const { error: uploadError } = await admin.storage
+    .from(AVATARS_BUCKET)
+    .upload(filePath, bytes, { contentType, cacheControl: '3600', upsert: false })
+  if (uploadError) {
+    console.error('[avatar/storage] voice upload failed:', uploadError.message)
+    throw new Error(`Voice sample upload failed: ${uploadError.message}`)
+  }
+  const { data: pub } = admin.storage.from(AVATARS_BUCKET).getPublicUrl(filePath)
+  if (!pub?.publicUrl) throw new Error('Voice upload succeeded but no public URL was returned.')
+  console.log(`[avatar/storage] voice sample stored: ${pub.publicUrl}`)
   return pub.publicUrl
 }
 

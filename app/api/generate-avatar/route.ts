@@ -41,6 +41,7 @@ import {
   OMNIHUMAN_720P_USD_PER_SECOND,
   type AvatarEngine,
 } from '@/lib/avatar/veed'
+import { synthesizeWithVoice } from '@/lib/avatar/voice'
 import { getPixabayVideoForQueries } from '@/lib/pixabay'
 import { pickLibraryClips } from '@/lib/stockLibrary'
 // Avatar B-roll fix (13/06) — reuse the Phase-1 B-roll Intelligence engine so
@@ -146,6 +147,13 @@ export async function POST(req: NextRequest) {
       // and the scaler invented a 52s script around it. 'expand' = legacy
       // behavior (scale to the duration's word target), now explicit.
       scriptMode?: string
+      // Voice cloning (16/06) — when present, the narration is spoken in the
+      // user's CLONED voice (MiniMax) instead of the default TTS engine.
+      voiceId?: string
+      // Scene mode (16/06) — when the source is a generated scene (e.g. the
+      // person already IN a stadium wearing the jersey), the avatar must FILL
+      // the whole video: no stock b-roll cutaways, length = the narration.
+      noBroll?: boolean
     }
     try {
       body = await req.json()
@@ -265,17 +273,30 @@ export async function POST(req: NextRequest) {
     // markers itself, so nothing leaks into the narration. Tier 'cinematic' =
     // the avatar is the flagship product. Falls back to the flat pass when
     // the script has no markers or no vertical was sent (legacy behavior).
+    const cloneVoiceId = typeof body.voiceId === 'string' && body.voiceId.trim() ? body.voiceId.trim() : null
     const ttsSource = verbatim ? prompt : narration
     let audioBuffer: Buffer
     try {
-      // Verbatim tail fix (13/06) — the 'cinematic' Narration Engine adds
-      // dramatic pauses/padding, which inflates the mp3 past the actual
-      // speech on short word-for-word lines (Joseph's 5s greeting rendered
-      // as a 9s video with a dead tail). Verbatim uses the FLAT pass: the
-      // audio ends when the words end.
-      audioBuffer = forceVerbatim && !verbatim
-        ? await generateTTS(ttsSource, 1.0, undefined, 'free', language)
-        : await generateTTS(ttsSource, speed ?? 1.0, vertical, 'cinematic', language)
+      if (cloneVoiceId) {
+        // Cloned voice — speak the clean narration in the user's OWN voice
+        // (MiniMax). On ANY failure, fall back to the default TTS so the render
+        // never dies just because voice cloning hiccuped.
+        try {
+          audioBuffer = await synthesizeWithVoice({ voiceId: cloneVoiceId, text: narration, language })
+        } catch (cloneErr) {
+          console.warn('[generate-avatar] cloned voice failed, falling back to default TTS:', cloneErr instanceof Error ? cloneErr.message : String(cloneErr))
+          audioBuffer = await generateTTS(ttsSource, speed ?? 1.0, vertical, 'cinematic', language)
+        }
+      } else {
+        // Verbatim tail fix (13/06) — the 'cinematic' Narration Engine adds
+        // dramatic pauses/padding, which inflates the mp3 past the actual
+        // speech on short word-for-word lines (Joseph's 5s greeting rendered
+        // as a 9s video with a dead tail). Verbatim uses the FLAT pass: the
+        // audio ends when the words end.
+        audioBuffer = forceVerbatim && !verbatim
+          ? await generateTTS(ttsSource, 1.0, undefined, 'free', language)
+          : await generateTTS(ttsSource, speed ?? 1.0, vertical, 'cinematic', language)
+      }
     } catch (err) {
       console.error('[generate-avatar] TTS failed:', err instanceof Error ? err.message : String(err))
       return NextResponse.json({ error: 'Voiceover generation failed. Please try again.' }, { status: 502 })
@@ -377,7 +398,12 @@ export async function POST(req: NextRequest) {
       }
       if (queries.length === 0) queries = [narration.slice(0, 80)]
     }
-    const clipUrls = await fetchCutawayClips(queries, narration, avatarHookSeconds != null ? 6 : 3)
+    // Scene mode → no cutaways: the avatar (already in the scene) carries the
+    // whole video, so it stays "you in the stadium" the entire time and the
+    // length follows the narration (no b-roll padding stretching it out).
+    const clipUrls = body.noBroll === true
+      ? []
+      : await fetchCutawayClips(queries, narration, avatarHookSeconds != null ? 6 : 3)
 
     const estSeconds = avatarHookSeconds != null
       ? avatarHookSeconds
