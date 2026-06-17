@@ -1042,33 +1042,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {submitting ? 'Loading…' : demoLoading ? '✍️ Writing your script…' : user ? 'Generate My Short →' : 'Write My Script — free, no signup →'}
           </button>
 
-          {/* feature/ai-avatar — premium entry on the home prompt box, now with
-              the shared live mini-demo so visitors SEE the feature (Nível 2).
-              Sends them to /generate with the avatar panel auto-open; the typed
-              idea survives via goToGenerate stash. */}
-          <button
-            type="button"
-            onClick={() => {
-              trackHomepageEvent('hero_avatar_cta_click')
-              const trimmed = prompt.trim()
-              window.location.href = trimmed
-                ? `/generate?avatar=1&prompt=${encodeURIComponent(trimmed)}`
-                : '/generate?avatar=1'
-            }}
-            className="sfa-home-avatar group flex w-full shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-left transition"
-          >
-            <AvatarDemoLoop size={46} />
-            <span className="flex-1 min-w-0">
-              <span className="flex items-center gap-2">
-                <span className="text-[14px] font-extrabold text-emerald-100">🎭 AI Avatar</span>
-                <span className="rounded-full bg-emerald-400/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-50">New</span>
-              </span>
-              <span className="mt-0.5 block text-[12px] text-emerald-200/80">
-                Upload a photo and <b className="text-emerald-100">YOU speak the script</b>.
-              </span>
-            </span>
-            <span className="shrink-0 text-lg font-bold text-emerald-200 transition-transform group-hover:translate-x-0.5">→</span>
-          </button>
+          {/* AI Avatar entry removed from the home Short box (16/06) — Avatar and
+              Short are separate flows; AI Avatar lives on /avatar via the top menu. */}
         </form>
         {/* Landing demo (13/06) — the script materializes HERE, on the page,
             before any signup. The render is the gate, not the magic. */}
@@ -1413,6 +1388,84 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ───────── How we compare (15/06) ─────────
+          Market insight: OpusClip/Submagic repurpose footage you already have,
+          HeyGen is avatar-first at $89/mo, and most cap you by minutes. Our
+          edge is the FULL pipeline from one idea, no per-minute caps, lower
+          price. Surfaced right before Pricing so "more for less" lands at the
+          moment of decision. Additive section, factual. */}
+      <section className="relative z-10 mx-auto max-w-5xl px-4 pt-8 pb-4 sm:px-6">
+        <div className="mb-8 text-center">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            How we compare
+          </div>
+          <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)]">
+            One idea in. A finished Short out.
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-[15px] text-[#94A3B8]">
+            Most tools clip footage you already filmed or cap you by the minute.
+            ShortsForgeAI writes the script, narrates it, finds the footage and
+            renders the 9:16 video — from a single idea.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#121214]/80">
+          <table className="w-full min-w-[640px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-white/[0.08]">
+                <th className="px-4 py-4 text-[13px] font-semibold text-[#94A3B8]"></th>
+                <th className="px-4 py-4 text-center">
+                  <span className="text-[14px] font-extrabold text-[#34D399]">ShortsForgeAI</span>
+                </th>
+                <th className="px-4 py-4 text-center text-[13px] font-bold text-[#CBD5E1]">OpusClip</th>
+                <th className="px-4 py-4 text-center text-[13px] font-bold text-[#CBD5E1]">HeyGen</th>
+                <th className="px-4 py-4 text-center text-[13px] font-bold text-[#CBD5E1]">Submagic</th>
+              </tr>
+            </thead>
+            <tbody className="text-[13.5px]">
+              {[
+                { feat: 'Generates the script from just an idea', us: '✓', a: '—', b: '~', c: '—' },
+                { feat: 'AI voiceover included', us: '✓', a: '—', b: '✓', c: '—' },
+                { feat: 'Finds & matches the footage for you', us: '✓', a: 'clips your upload', b: 'avatar only', c: 'your upload' },
+                { feat: 'Renders a ready-to-post 9:16 video', us: '✓', a: '✓', b: '✓', c: '✓' },
+                { feat: 'No per-minute caps', us: '✓', a: '—', b: 'credit-based', c: '—' },
+                { feat: 'Try it free — no credit card', us: '✓', a: '✓', b: '✓', c: 'limited' },
+                { feat: 'Starting price', us: '$5.95/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
+              ].map((row, i) => (
+                <tr key={i} className="border-b border-white/[0.05] last:border-0">
+                  <td className="px-4 py-3 font-medium text-[#E2E8F0]">{row.feat}</td>
+                  <td className="px-4 py-3 text-center font-extrabold text-[#34D399]">{row.us}</td>
+                  <td className="px-4 py-3 text-center text-[#94A3B8]">{row.a}</td>
+                  <td className="px-4 py-3 text-center text-[#94A3B8]">{row.b}</td>
+                  <td className="px-4 py-3 text-center text-[#94A3B8]">{row.c}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-center text-[11.5px] text-[#64748B]">
+          Competitor pricing and features as publicly listed (June 2026); plans and limits may change.
+        </p>
+
+        {/* ───────── Monetization-safe (16/06) ─────────
+            Market insight: YouTube's inauthentic-content policy (Jan 2025) is
+            demonetizing mass auto-posted faceless channels. Buyers' #1 fear.
+            Our angle: original script per idea, human stays in control, you
+            review and post yourself — we are a creation tool, not an
+            auto-poster. Additive reassurance strip below the compare table. */}
+        <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] px-5 py-5 text-center">
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#34D399]">
+            Built for the new YouTube
+          </div>
+          <p className="text-[14.5px] leading-relaxed text-[#CBD5E1]">
+            YouTube now demonetizes mass-produced, auto-posted channels.
+            ShortsForgeAI writes an <span className="font-semibold text-[#F1F5F9]">original script for every idea</span> and
+            hands you a finished video to <span className="font-semibold text-[#F1F5F9]">review and post yourself</span> —
+            you stay in control of what goes out. It&apos;s a creation tool, not an auto-poster.
+          </p>
         </div>
       </section>
 
