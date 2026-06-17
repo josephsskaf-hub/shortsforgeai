@@ -452,7 +452,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px] items-start" style={{ maxWidth: 1060 }}>
+      <div className="grid gap-8 lg:grid-cols-[1fr_480px] items-start" style={{ maxWidth: 1480 }}>
         {/* ── LEFT: controls ── */}
         <div className="flex flex-col gap-5">
           {/* 1 · Source */}
@@ -759,7 +759,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         <div className="hidden lg:flex flex-col items-center gap-4 sticky top-20">
           <div
             style={{
-              width: 250, height: 520, borderRadius: 36, padding: 9,
+              width: 340, height: 710, borderRadius: 46, padding: 11,
               background: 'linear-gradient(160deg, #1A1A1D, #0A0A0C)',
               border: '1px solid var(--border2)',
               boxShadow: '0 0 0 5px rgba(8,8,10,0.9), 0 24px 60px rgba(0,0,0,0.6)',
@@ -798,7 +798,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               href={finalUrl}
               download
               className="btn-neon w-full text-center px-5 py-3 text-sm"
-              style={{ textDecoration: 'none', maxWidth: 250 }}
+              style={{ textDecoration: 'none', maxWidth: 340 }}
             >
               ⬇ Download MP4
             </a>
