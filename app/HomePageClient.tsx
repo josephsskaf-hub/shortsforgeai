@@ -1433,7 +1433,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 { feat: 'Renders a ready-to-post 9:16 video', us: '✓', a: '✓', b: '✓', c: '✓' },
                 { feat: 'No per-minute caps', us: '✓', a: '—', b: 'credit-based', c: '—' },
                 { feat: 'Try it free — no credit card', us: '✓', a: '✓', b: '✓', c: 'limited' },
-                { feat: 'Starting price', us: '$5.95/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
+                { feat: 'Starting price', us: '$11.90/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
               ].map((row, i) => (
                 <tr key={i} className="border-b border-white/[0.05] last:border-0">
                   <td className="px-4 py-3 font-medium text-[#E2E8F0]">{row.feat}</td>
