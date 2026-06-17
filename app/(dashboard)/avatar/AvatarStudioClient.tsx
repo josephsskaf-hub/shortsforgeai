@@ -146,7 +146,25 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     }
     setPhase('uploading')
     try {
-      const file = kind === 'photo' ? await compressPhoto(rawFile) : rawFile
+      // iPhone HEIC/HEIF → JPEG. Browsers (desktop) can't decode HEIC, and the
+      // vision face-check + avatar engines need JPEG/PNG — so convert BEFORE
+      // upload. Most users are on iPhone; rejecting HEIC loses them at the most
+      // critical step. Dynamic import keeps the ~1.4MB decoder out of the main
+      // bundle (loaded only when an actual HEIC is picked).
+      let photoSrc = rawFile
+      if (kind === 'photo' && (/hei[cf]/i.test(rawFile.type) || /\.hei[cf]$/i.test(rawFile.name))) {
+        try {
+          const heic2any = (await import('heic2any')).default
+          const converted = await heic2any({ blob: rawFile, toType: 'image/jpeg', quality: 0.9 })
+          const blob = Array.isArray(converted) ? converted[0] : converted
+          photoSrc = new File([blob], 'face.jpg', { type: 'image/jpeg' })
+        } catch {
+          setUploadError('Could not read this iPhone (HEIC) photo. Please try another, or a JPG/PNG.')
+          setPhase('idle')
+          return
+        }
+      }
+      const file = kind === 'photo' ? await compressPhoto(photoSrc) : rawFile
 
       // Direct-to-storage (13/06) — videos skip Vercel entirely: a signed
       // upload URL streams the file straight to Supabase Storage, so the
@@ -454,7 +472,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 >
                   {faceUrl ? '🖼️ Upload a different photo' : '🖼️ Upload a photo'}
                 </button>
-                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'photo')} />
+                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'photo')} />
                 <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>Sharp, front-facing, one person. JPG/PNG up to 8 MB.</p>
               </>
             ) : (
