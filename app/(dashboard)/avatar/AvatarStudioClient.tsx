@@ -51,6 +51,12 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [scriptMode, setScriptMode] = useState<'verbatim' | 'expand'>('verbatim')
   // 13/06 — narração em EN/PT/ES (o backend já suportava; o Studio mandava 'en' fixo).
   const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
+  // Scene mode (16/06) — describe a scene; FLUX Kontext edits the face photo
+  // into it (same face, new outfit/background), then OmniHuman animates it.
+  const [scenePrompt, setScenePrompt] = useState('')
+  const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null)
+  const [sceneLoading, setSceneLoading] = useState(false)
+  const [sceneError, setSceneError] = useState<string | null>(null)
   const userPickedModeRef = useRef(false)
   const scriptWords = script.trim() ? script.trim().split(/\s+/).length : 0
 
@@ -248,6 +254,37 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     }
   }
 
+  // ── Scene builder: face photo + prompt → a new image of the same person in
+  // the described scene (FLUX Kontext), re-hosted on our storage. The result
+  // becomes the source the avatar engine animates. Auto-switches to the Pro
+  // (body & gestures) engine since scenes are full-figure by nature.
+  async function handleBuildScene() {
+    if (sceneLoading) return
+    if (!faceUrl) { setSceneError('Upload a photo first.'); return }
+    const desc = scenePrompt.trim()
+    if (!desc) { setSceneError('Describe the scene first.'); return }
+    setSceneLoading(true)
+    setSceneError(null)
+    try {
+      const res = await fetch('/api/avatar/scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: faceUrl, prompt: desc }),
+      })
+      const data = await res.json()
+      if (!res.ok || typeof data?.url !== 'string') {
+        setSceneError(typeof data?.error === 'string' ? data.error : 'Could not build the scene. Try again.')
+        return
+      }
+      setSceneImageUrl(data.url)
+      setEngine('omnihuman')
+    } catch {
+      setSceneError('Could not build the scene. Try again.')
+    } finally {
+      setSceneLoading(false)
+    }
+  }
+
   // ── The run: generate → poll avatar → compose → poll render ──────────
   async function handleGenerate() {
     if (!canGenerate) return
@@ -266,7 +303,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           scriptMode,
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
-            : { avatarImageUrl: faceUrl, engine }),
+            : { avatarImageUrl: sceneImageUrl ?? faceUrl, engine }),
           // Hook mode only makes sense for expanded scripts — a 10s verbatim
           // line IS the hook.
           avatarMode: sourceKind === 'photo' && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
@@ -398,7 +435,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   }
 
   // ── UI ────────────────────────────────────────────────────────────────
-  const previewSrc = sourceKind === 'video' ? videoUrl : faceUrl
+  const previewSrc = sceneImageUrl ?? (sourceKind === 'video' ? videoUrl : faceUrl)
 
   return (
     <div className="px-4 sm:px-6 py-7 pb-20">
@@ -507,6 +544,48 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
             </label>
             {uploadError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }} role="alert">⚠️ {uploadError}</p>}
           </section>
+
+          {/* 1.5 · Scene (optional) — face + description → you in that scene */}
+          {sourceKind === 'photo' && faceUrl && (
+            <section className="neon-card p-5">
+              <h2 className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)' }}>
+                1.5 · Put yourself in a scene <span style={{ color: '#34D399' }}>(optional)</span>
+              </h2>
+              <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
+                Describe a scene and we&apos;ll put you in it — same face, new outfit &amp; background — then animate it. Works best with &quot;Pro — body &amp; gestures&quot;.
+              </p>
+              <textarea
+                value={scenePrompt}
+                onChange={(e) => setScenePrompt(e.target.value)}
+                disabled={busy || sceneLoading}
+                maxLength={600}
+                rows={2}
+                placeholder={'e.g. wearing a Brazil national team jersey, in the middle of a packed World Cup stadium crowd, cinematic lighting'}
+                className="w-full rounded-xl px-3.5 py-3 text-sm leading-relaxed resize-none"
+                style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+              />
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleBuildScene}
+                  disabled={sceneLoading || busy || !scenePrompt.trim()}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: sceneLoading || busy || !scenePrompt.trim() ? 'not-allowed' : 'pointer' }}
+                >
+                  {sceneLoading ? '🎬 Building the scene…' : '🎬 Build the scene'}
+                </button>
+                {sceneImageUrl && (
+                  <span className="text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
+                    ✓ Scene ready — preview on the right.{' '}
+                    <button type="button" onClick={() => setSceneImageUrl(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      use original photo
+                    </button>
+                  </span>
+                )}
+              </div>
+              {sceneError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{sceneError}</p>}
+            </section>
+          )}
 
           {/* 2 · Script */}
           <section className="neon-card p-5">
