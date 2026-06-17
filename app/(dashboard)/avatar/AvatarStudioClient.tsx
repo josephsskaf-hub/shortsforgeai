@@ -97,6 +97,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null)
   const [sceneLoading, setSceneLoading] = useState(false)
   const [sceneError, setSceneError] = useState<string | null>(null)
+  // Realism (16/06) — 'real' animates the REAL photo directly (max fidelity,
+  // no face distortion on movement); 'scene' puts the person in a generated
+  // scene (more context, softer face). Default 'real' — that's the lifelike one.
+  const [fidelity, setFidelity] = useState<'real' | 'scene'>('real')
   // Voice cloning (16/06) — clone the user's voice from a sample; the narration
   // then speaks in that voice instead of a default one.
   const [voiceId, setVoiceId] = useState<string | null>(null)
@@ -421,10 +425,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           language,
           scriptMode,
           ...(voiceId ? { voiceId } : {}),
-          ...(sceneImageUrl ? { noBroll: true } : {}),
+          ...((fidelity === 'real' || sceneImageUrl) ? { noBroll: true } : {}),
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
-            : { avatarImageUrl: sceneImageUrl ?? faceUrl, engine }),
+            : { avatarImageUrl: fidelity === 'scene' ? (sceneImageUrl ?? faceUrl) : faceUrl, engine }),
           // Hook mode only makes sense for expanded scripts — a 10s verbatim
           // line IS the hook.
           avatarMode: sourceKind === 'photo' && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
@@ -556,7 +560,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   }
 
   // ── UI ────────────────────────────────────────────────────────────────
-  const previewSrc = sceneImageUrl ?? (sourceKind === 'video' ? videoUrl : faceUrl)
+  const previewSrc = (fidelity === 'scene' && sceneImageUrl) ? sceneImageUrl : (sourceKind === 'video' ? videoUrl : faceUrl)
 
   return (
     <div className="px-4 sm:px-6 py-7 pb-20">
@@ -666,45 +670,72 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
             {uploadError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }} role="alert">⚠️ {uploadError}</p>}
           </section>
 
-          {/* 1.5 · Scene (optional) — face + description → you in that scene */}
+          {/* 1.5 · Realism — animate the REAL photo (max fidelity) vs put the
+              person in a generated scene (more context, softer face on movement). */}
           {sourceKind === 'photo' && faceUrl && (
             <section className="neon-card p-5">
-              <h2 className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)' }}>
-                1.5 · Put yourself in a scene <span style={{ color: '#34D399' }}>(optional)</span>
+              <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted2)' }}>
+                1.5 · Realism
               </h2>
-              <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
-                Describe a scene and we&apos;ll put you in it — same face, new outfit &amp; background — then animate it. Works best with &quot;Pro — body &amp; gestures&quot;.
-              </p>
-              <textarea
-                value={scenePrompt}
-                onChange={(e) => setScenePrompt(e.target.value)}
-                disabled={busy || sceneLoading}
-                maxLength={600}
-                rows={2}
-                placeholder={'e.g. wearing a Brazil national team jersey, in the middle of a packed World Cup stadium crowd, cinematic lighting'}
-                className="w-full rounded-xl px-3.5 py-3 text-sm leading-relaxed resize-none"
-                style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
-              />
-              <div className="flex items-center gap-3 mt-3 flex-wrap">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={handleBuildScene}
-                  disabled={sceneLoading || busy || !scenePrompt.trim()}
-                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: sceneLoading || busy || !scenePrompt.trim() ? 'not-allowed' : 'pointer' }}
+                  onClick={() => setFidelity('real')}
+                  disabled={busy}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold text-left"
+                  style={{ background: fidelity === 'real' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'real' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: fidelity === 'real' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
                 >
-                  {sceneLoading ? '🎬 Building the scene…' : '🎬 Build the scene'}
+                  🎯 Max realism — animate my real photo
                 </button>
-                {sceneImageUrl && (
-                  <span className="text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
-                    ✓ Scene ready — preview on the right.{' '}
-                    <button type="button" onClick={() => setSceneImageUrl(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                      use original photo
-                    </button>
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setFidelity('scene')}
+                  disabled={busy}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold text-left"
+                  style={{ background: fidelity === 'scene' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'scene' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: fidelity === 'scene' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                >
+                  🎬 Put me in a scene
+                </button>
               </div>
-              {sceneError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{sceneError}</p>}
+              <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>
+                {fidelity === 'real'
+                  ? 'Animates your REAL photo — looks exactly like you, no distortion when moving. For an even more lifelike result, use a short real VIDEO of the person (the “🎥 Video” source above).'
+                  : 'Puts you in a described scene (great for Copa/stadium context), but the face can soften when the person moves.'}
+              </p>
+              {fidelity === 'scene' && (
+                <>
+                  <textarea
+                    value={scenePrompt}
+                    onChange={(e) => setScenePrompt(e.target.value)}
+                    disabled={busy || sceneLoading}
+                    maxLength={600}
+                    rows={2}
+                    placeholder={'e.g. wearing a Brazil national team jersey, in the middle of a packed World Cup stadium crowd, cinematic lighting'}
+                    className="w-full rounded-xl px-3.5 py-3 text-sm leading-relaxed resize-none mt-2"
+                    style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+                  />
+                  <div className="flex items-center gap-3 mt-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleBuildScene}
+                      disabled={sceneLoading || busy || !scenePrompt.trim()}
+                      className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                      style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: sceneLoading || busy || !scenePrompt.trim() ? 'not-allowed' : 'pointer' }}
+                    >
+                      {sceneLoading ? '🎬 Building the scene…' : '🎬 Build the scene'}
+                    </button>
+                    {sceneImageUrl && (
+                      <span className="text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
+                        ✓ Scene ready — preview on the right.{' '}
+                        <button type="button" onClick={() => setSceneImageUrl(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                          use original photo
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                  {sceneError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{sceneError}</p>}
+                </>
+              )}
             </section>
           )}
 
