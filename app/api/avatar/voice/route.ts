@@ -63,16 +63,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Could not store the voice sample. Please try again.' }, { status: 502 })
     }
 
-    const voiceId = await cloneVoice(audioUrl)
-    if (!voiceId) {
+    const cloneRes = await cloneVoice(audioUrl)
+    if (!cloneRes.voiceId) {
+      // Surface the RAW MiniMax/fal error so we can diagnose precisely (the
+      // Vercel log dashboard truncates messages). Safe — it's the user's own
+      // debug context, no secrets.
       return NextResponse.json(
-        { error: 'Could not clone the voice. Use a clear ~30-60s sample with one speaker and little background noise.' },
+        { error: `Voice clone failed — ${cloneRes.error ?? 'unknown error'}` },
         { status: 502 },
       )
     }
 
-    console.log(`[avatar/voice] cloned user=${user.id.slice(0, 8)} voice=${voiceId}`)
-    return NextResponse.json({ voiceId })
+    console.log(`[avatar/voice] cloned user=${user.id.slice(0, 8)} voice=${cloneRes.voiceId}`)
+    return NextResponse.json({ voiceId: cloneRes.voiceId })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[avatar/voice] unexpected error:', msg)

@@ -22,10 +22,10 @@ function langBoost(language?: string): string {
   return 'English'
 }
 
-/** Clone a voice from a sample audio URL (>=10s). Returns the custom_voice_id,
- *  or null on any failure (the caller surfaces a friendly error). */
-export async function cloneVoice(audioUrl: string): Promise<string | null> {
-  if (!configureFal()) return null
+/** Clone a voice from a sample audio URL (>=10s). Returns the custom_voice_id
+ *  plus the raw error (surfaced to the client for debugging) when it fails. */
+export async function cloneVoice(audioUrl: string): Promise<{ voiceId: string | null; error?: string }> {
+  if (!configureFal()) return { voiceId: null, error: 'FAL_KEY not configured' }
   const input: Record<string, unknown> = {
     audio_url: audioUrl,
     noise_reduction: true,
@@ -38,10 +38,16 @@ export async function cloneVoice(audioUrl: string): Promise<string | null> {
       custom_voice_id?: string
     }
     const id = result?.data?.custom_voice_id ?? result?.custom_voice_id ?? null
-    return id && id.length > 0 ? id : null
+    if (id && id.length > 0) return { voiceId: id }
+    return { voiceId: null, error: 'MiniMax returned no custom_voice_id' }
   } catch (err) {
-    console.error('[avatar/voice] clone failed:', err instanceof Error ? err.message : String(err))
-    return null
+    const e = err as { status?: number; body?: unknown; message?: string }
+    const msg = e?.message ?? String(err)
+    const body = e?.body ? ` | body=${JSON.stringify(e.body)}` : ''
+    const status = e?.status ? ` (status ${e.status})` : ''
+    const full = `${msg}${status}${body}`.slice(0, 500)
+    console.error('[avatar/voice] clone failed:', full)
+    return { voiceId: null, error: full }
   }
 }
 
