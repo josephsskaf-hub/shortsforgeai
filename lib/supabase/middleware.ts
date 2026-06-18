@@ -31,30 +31,14 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // ─── Coming-soon mode ──────────────────────────────────────────────────────
-  // Toggled by NEXT_PUBLIC_COMING_SOON=true in Vercel env vars. When on,
-  // logged-out visitors are redirected to /coming-soon. Logged-in users,
-  // auth pages, API routes, dashboard, and /coming-soon itself stay reachable
-  // so the team can still sign in and use the app while the marquee is up.
-  const comingSoonOn = process.env.NEXT_PUBLIC_COMING_SOON === 'true'
-  if (comingSoonOn && !user) {
-    const isAllowed =
-      pathname === '/coming-soon' ||
-      pathname === '/login' ||
-      pathname === '/signup' ||
-      pathname === '/forgot-password' ||
-      pathname === '/reset-password' ||
-      pathname.startsWith('/api/') ||
-      pathname.startsWith('/dashboard') ||
-      pathname.startsWith('/auth/')
-
-    if (!isAllowed) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/coming-soon'
-      url.search = ''
-      return NextResponse.redirect(url)
-    }
-  }
+  // ─── NO cloaking — same content for everyone, including Googlebot ───────────
+  // The old "coming soon" gate (NEXT_PUBLIC_COMING_SOON) was removed on
+  // 2026-06-18. It used to redirect logged-out visitors — which includes search
+  // crawlers — to a /coming-soon splash while logged-in users saw the full app.
+  // That divergence could be read as cloaking by Google Ads, so it is gone:
+  // every visitor (anonymous, logged-in, or Googlebot) now receives the exact
+  // same public site. Do NOT reintroduce any auth/user-agent-based content
+  // switching on public marketing routes.
 
   // /pricing is public — anyone can browse plans.
   // Auth is enforced at the action level (checkout requires sign-in).
@@ -68,15 +52,6 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  // Don't keep a logged-in user stuck on the coming-soon page — bounce them
-  // to the dashboard so they don't accidentally see the marketing splash when
-  // they already have access.
-  if (user && pathname === '/coming-soon') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
