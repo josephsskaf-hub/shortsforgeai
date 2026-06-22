@@ -42,7 +42,7 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 const DURATION_TOLERANCE_SECONDS = 3
 // feature/ai-avatar — 'avatar' = premium talking-head render (VEED Fabric).
 // Checkpoint 1: no credit cost wired yet (billing lands in checkpoint 2).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'avatar'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'avatar'
 
 interface ComposeBody {
   generationId?: string
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
       // feature/ai-avatar — 'avatar' accepted ONLY when the request actually
       // carries an avatar payload (validated above).
       if (q === 'avatar') return isAvatarReq ? 'avatar' : 'basic_ai'
-      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' ? q : 'basic_ai'
+      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' || q === 'cinematic_veo' ? q : 'basic_ai'
     })()
 
     // Push #316 — output language. OpenAI TTS auto-detects from the script text.
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
       : undefined
     // Map render quality → narration tier so premium/cinematic users get better personas.
     const narrationTier: 'free' | 'premium' | 'cinematic' =
-      quality === 'cinematic_ai' || quality === 'cinematic_kling' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
+      quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
 
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
     // narration is the user's exact text spoken at this rate; we don't rewrite
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
     // Only the old Runway-based modes (basic, basic_ai, pro) require Pro.
     // feature/ai-avatar — 'avatar' is exempt from the Pro gate: it is paid via
     // the separate avatar-credits add-on (checkpoint 2), never the Pro plan.
-    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'avatar') {
+    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'cinematic_veo' && quality !== 'avatar') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(

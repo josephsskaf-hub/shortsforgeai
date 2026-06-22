@@ -269,7 +269,7 @@ export default function GenerateClient() {
   const planDefaultedRef = useRef<boolean>(false)
   // #402 — which AI engine the user picked: 'seedance' (AI Generated, 30 cr, all
   // plans) or 'kling' (Cinematic AI, 45 cr, Studio only).
-  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling'>('seedance')
+  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo'>('seedance')
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -1910,7 +1910,7 @@ export default function GenerateClient() {
         setQuality('cinematic_ai')
         falUsedRef.current = true
         falModelRef.current = typeof data.fal_model === 'string' ? data.fal_model : ''
-        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : 'cinematic_ai'
+        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : data.quality === 'cinematic_veo' ? 'cinematic_veo' : 'cinematic_ai'
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -2569,12 +2569,12 @@ export default function GenerateClient() {
     ? 0
     : mode === 'cinematic_ai'
     // #402 — Cinematic AI (Kling) costs 45, AI Generated (Seedance) 30.
-    ? (aiEngine === 'kling' ? 45 : 30)
+    ? (aiEngine === 'kling' ? 45 : aiEngine === 'veo' ? 40 : 30)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
   // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && freeAiUsed === false && (credits ?? 0) < 30
+  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && freeAiUsed === false && (credits ?? 0) < 30
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -5619,8 +5619,8 @@ function ModeSelector({
   cinematicTokens: number
   credits: number | null
   freeAiUsed: boolean | null
-  aiEngine: 'seedance' | 'kling'
-  setAiEngine: (e: 'seedance' | 'kling') => void
+  aiEngine: 'seedance' | 'kling' | 'veo'
+  setAiEngine: (e: 'seedance' | 'kling' | 'veo') => void
   isStarter: boolean
   isCreator: boolean
   isStudio: boolean
@@ -5646,9 +5646,11 @@ function ModeSelector({
   const seedanceUnlocked =
     isCreator || isStudio || (noPlan && freeAiUsed === false) || freeCredits >= 30
   const klingUnlocked = isStudio
+  const veoUnlocked = isCreator || isStudio || freeCredits >= 40
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
+  const veoSelected = mode === 'cinematic_ai' && aiEngine === 'veo'
   const freeTrialBadge = noPlan && freeAiUsed === false
 
   return (
@@ -5659,7 +5661,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Push #404 — Fast = Starter engine (stock, relevance-gated). Locked → upgrade. */}
         {/* #406 — tech card redesign (EngineCard). Logic identical. */}
         <EngineCard
@@ -5725,6 +5727,26 @@ function ModeSelector({
             <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(16,185,129,.15)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,.3)' }}>🔒 Studio</span>
           )}
           onClick={() => { if (isStudio) { setMode('cinematic_ai'); setAiEngine('kling') } else { onUpgrade() } }}
+        />
+
+        {/* #489 — Veo Cinematic (Veo 3.1 Fast, 40 cr). Creator+ — locked → upgrade. */}
+        <EngineCard
+          selected={veoSelected}
+          unlocked={veoUnlocked}
+          accent="139,92,246"
+          accentText="#c4b5fd"
+          icon="🎥"
+          name="Veo Cinematic"
+          engineTag="Veo 3.1 engine"
+          tierLabel="ultra"
+          quality={3}
+          features={['Google Veo 3.1 motion', 'Photoreal cinematic shots', 'Premium realism']}
+          badge={veoUnlocked ? (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,.18)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.35)' }}>40 credits</span>
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(139,92,246,.15)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.3)' }}>🔒 Creator</span>
+          )}
+          onClick={() => { if (veoUnlocked) { setMode('cinematic_ai'); setAiEngine('veo') } else { onUpgrade() } }}
         />
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,

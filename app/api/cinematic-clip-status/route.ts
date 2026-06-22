@@ -10,7 +10,10 @@ export const dynamic = 'force-dynamic'
 // passes ?model= so a Pro (Kling) generation is polled on the Kling endpoint.
 const SEEDANCE_MODEL = 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
 const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
-const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL])
+// Push #489 — Veo 3.1 Fast cinematic engine. Same { video: { url } } output, so
+// checkFalClip parses it unchanged — only the allow-list needs the model id.
+const VEO_MODEL = 'fal-ai/veo3.1/fast'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL])
 
 type ClipStatus = {
   id: string | null
