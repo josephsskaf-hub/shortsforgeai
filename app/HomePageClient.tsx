@@ -1197,6 +1197,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       {/* Push #248 — Real Output section removed entirely (heading + video).
           User did not like this section. */}
 
+      {/* ───────── #490: cinematic moving-video wall (original, fits the dark/cyan house style) ───────── */}
+      <VideoWall clips={Object.values(showcaseVideos)} />
+
       {/* ───────── AI Video Showcase ───────── */}
       {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
       <section id="showcase" className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6">
@@ -1431,6 +1434,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 { feat: 'AI voiceover included', us: '✓', a: '—', b: '✓', c: '—' },
                 { feat: 'Finds & matches the footage for you', us: '✓', a: 'clips your upload', b: 'avatar only', c: 'your upload' },
                 { feat: 'Renders a ready-to-post 9:16 video', us: '✓', a: '✓', b: '✓', c: '✓' },
+                { feat: 'Auto-writes your YouTube title, description & hashtags', us: '✓', a: '~', b: '—', c: '+$12/mo' },
                 { feat: 'No per-minute caps', us: '✓', a: '—', b: 'credit-based', c: '—' },
                 { feat: 'Try it free — no credit card', us: '✓', a: '✓', b: '✓', c: 'limited' },
                 { feat: 'Starting price', us: '$11.90/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
@@ -1465,6 +1469,39 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ShortsForgeAI writes an <span className="font-semibold text-[#F1F5F9]">original script for every idea</span> and
             hands you a finished video to <span className="font-semibold text-[#F1F5F9]">review and post yourself</span> —
             you stay in control of what goes out. It&apos;s a creation tool, not an auto-poster.
+          </p>
+        </div>
+
+        {/* ───────── Cost anchor (20/06) ─────────
+            Market insight (June 2026): AI collapsed faceless-Short production
+            to a few dollars per video, yet buyers still price it against what
+            a human charges. Anchoring our monthly price against the per-clip
+            cost of a freelancer/agency makes "more for less" concrete right
+            before Pricing. Ranges are public market rates, not competitor
+            per-Short claims — kept as ranges to stay factual. Additive. */}
+        <div className="mx-auto mt-6 max-w-3xl">
+          <div className="mb-4 text-center text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            What one finished Short costs
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#121214]/80 px-5 py-5 text-center">
+              <div className="text-[12px] font-semibold text-[#94A3B8]">Freelance editor</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#CBD5E1]">$15–40</div>
+              <div className="mt-1 text-[12px] text-[#64748B]">per clip · you still write &amp; voice it</div>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#121214]/80 px-5 py-5 text-center">
+              <div className="text-[12px] font-semibold text-[#94A3B8]">Short-form agency</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#CBD5E1]">$30–80</div>
+              <div className="mt-1 text-[12px] text-[#64748B]">per clip · slow turnaround</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/[0.06] px-5 py-5 text-center shadow-[0_0_24px_rgba(16,185,129,0.12)]">
+              <div className="text-[12px] font-extrabold text-[#34D399]">ShortsForgeAI</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#34D399]">from $11.90</div>
+              <div className="mt-1 text-[12px] text-[#94A3B8]">a whole month of Shorts · script, voice &amp; footage included</div>
+            </div>
+          </div>
+          <p className="mt-3 text-center text-[11.5px] text-[#64748B]">
+            Freelancer and agency figures are typical market rates for a comparable short-form clip (June 2026).
           </p>
         </div>
       </section>
@@ -1945,6 +1982,64 @@ function LazyVideo({
 // initial paint (before the first frame) and the fallback if the CDN
 // fails. We fade the video in on `canplay` to avoid the harsh swap from
 // gradient to first-frame-black that some browsers do.
+// #490 — Cinematic moving-video WALL. Original component in the existing
+// dark/cyan house style (additive, does not replace the showcase grid). A dense
+// grid of auto-playing, muted, looping 9:16 clips that gives the "alive" premium
+// feel. Each tile lazy-mounts via IntersectionObserver so only on-screen clips load.
+function WallTile({ url }: { url: string }) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const vref = useRef<HTMLVideoElement | null>(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return }
+    const io = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) { setInView(true); io.disconnect() } },
+      { rootMargin: '300px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  useEffect(() => {
+    if (inView && vref.current) vref.current.play().catch(() => {/* autoplay blocked */})
+  }, [inView])
+  return (
+    <div
+      ref={ref}
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] transition-transform duration-300 hover:scale-[1.03]"
+      style={{ aspectRatio: '9 / 16', background: '#121214' }}
+    >
+      {inView && url && (
+        <video ref={vref} src={url} autoPlay muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover" />
+      )}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'linear-gradient(180deg, rgba(11,17,32,0.20), rgba(11,17,32,0) 45%, rgba(11,17,32,0.45))' }}
+      />
+    </div>
+  )
+}
+
+function VideoWall({ clips }: { clips: string[] }) {
+  const valid = clips.filter(Boolean)
+  if (valid.length < 3) return null // wait until showcase clips have loaded
+  const tiles = Array.from({ length: 12 }, (_, i) => valid[i % valid.length])
+  return (
+    <section className="relative z-10 mx-auto max-w-6xl px-4 pt-12 pb-2 sm:px-6">
+      <div className="mb-6 text-center">
+        <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-cyan-400">100% generated with AI</div>
+        <h2 className="text-2xl font-black text-white sm:text-3xl">A wall of Shorts, made in seconds</h2>
+        <p className="mt-2 text-sm text-white/50">Every clip below was generated — no filming, no editing.</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+        {tiles.map((url, i) => (<WallTile key={i} url={url} />))}
+      </div>
+    </section>
+  )
+}
+
 function ShowcaseVideoCard({
   card,
   onGenerate,
