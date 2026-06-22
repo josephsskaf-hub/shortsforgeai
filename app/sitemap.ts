@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { NICHE_SLUGS } from './free-ai-shorts/[niche]/page'
+import { COMPETITOR_SLUGS } from './alternatives/[competitor]/page'
 
 // #458 — SEO: sitemap so Google can discover and index every public page.
 // The site had none, so search engines were barely crawling it — free organic
@@ -31,5 +32,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
-  return [...staticEntries, ...nicheEntries]
+  // #482 — comparison / "X alternative" SEO pages (/alternatives/[competitor]).
+  const altEntries = COMPETITOR_SLUGS.map((slug) => ({
+    url: `${BASE}/alternatives/${slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+  return [...staticEntries, ...nicheEntries, ...altEntries]
 }
