@@ -87,6 +87,13 @@ export interface ComposeInputs {
    */
   watermark?: boolean
   /**
+   * #482 — when true, append a "Made with ShortsForgeAI" end card in the final
+   * CTA window. Option A: shown on FREE + Starter renders (every posted video
+   * becomes an ad — the Loom/CapCut viral loop); clean on Creator/Studio.
+   * Decision made server-side in /api/compose (never trusts the client).
+   */
+  endCard?: boolean
+  /**
    * AI Avatar (feature/ai-avatar) — public URL of the VEED Fabric talking-head
    * MP4. When present the avatar becomes the MAIN video track (muted — the
    * voiceover track stays the single audio source; VEED lip-synced to that
@@ -842,6 +849,7 @@ export function buildCreatomateSource({
   whisperWords,
   musicUrl,
   watermark = false,
+  endCard = false,
   avatarUrl = null,
   avatarHookSeconds = null,
 }: ComposeInputs): Record<string, unknown> {
@@ -1347,6 +1355,30 @@ export function buildCreatomateSource({
     stroke_color: 'rgba(99,102,241,0.9)',
     stroke_width: 2,
   })
+
+  // Track 7 — #482 "Made with ShortsForgeAI" end card (free + Starter only).
+  // Sits just above the URL CTA in the final CTA window (no captions there —
+  // they stop before the CTA tail), so every video those users post becomes an
+  // ad for the product (the Loom/CapCut viral loop). Clean on Creator/Studio.
+  if (endCard) {
+    elements.push({
+      type: 'text',
+      track: 7,
+      time: round3(ctaTime),
+      duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
+      text: 'Made with ShortsForgeAI',
+      x: '50%',
+      y: '80%',
+      width: '86%',
+      font_family: 'Montserrat',
+      font_size: 44,
+      font_weight: '800',
+      fill_color: '#ffffff',
+      stroke_color: 'rgba(99,102,241,0.95)',
+      stroke_width: 3,
+      background_color: 'rgba(13,13,20,0.55)',
+    })
+  }
 
   // Track 8 — background music (Push #293).
   // Phonk / motivational track from Pixabay at low volume, looping under

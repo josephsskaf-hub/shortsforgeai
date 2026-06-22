@@ -237,6 +237,7 @@ export async function POST(req: NextRequest) {
     let isFreeAiTrial = false
     let isFreePlanAi = false
     let isFreePlanFast = false
+    let withEndCard = false
     if (quality === 'cinematic_ai' || quality === 'fast') {
       const { data: prof } = await supabase
         .from('profiles')
@@ -248,6 +249,12 @@ export async function POST(req: NextRequest) {
         'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
       ])
       const isFreePlan = !PAID_PLANS.has((prof?.plan ?? 'free').toLowerCase())
+      // #482 — end card (Option A): free + Starter get the "Made with
+      // ShortsForgeAI" end card so every posted video advertises the product.
+      // Clean on Creator/Studio (they're not free and not in STARTER_PLANS).
+      const STARTER_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial'])
+      const isStarterPlan = STARTER_PLANS.has((prof?.plan ?? 'free').toLowerCase())
+      withEndCard = isFreePlan || isStarterPlan
       if (quality === 'cinematic_ai') {
         const used = prof?.free_ai_generate_used === true
         const creds = prof?.video_credits ?? 0
@@ -525,6 +532,11 @@ export async function POST(req: NextRequest) {
           isFreePlanAi ||
           isFreePlanFast ||
           FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase()), // #434 — Joseph's self-promo accounts always watermarked
+        // #482 — end card on free + Starter; also on Joseph's own self-promo
+        // accounts so his daily content advertises the product.
+        endCard:
+          withEndCard ||
+          FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase()),
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
