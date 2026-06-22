@@ -158,6 +158,121 @@ const COMPETITORS: Record<string, Competitor> = {
       },
     ],
   },
+  pika: {
+    name: 'Pika',
+    h1: 'The Pika Alternative That Builds the Whole Faceless Short From One Idea',
+    intro:
+      'Pika is a generative AI video tool — you prompt it and it produces short, animated or cinematic clips (typically 5–10 seconds) from text or an image, with creative effects like morphing and motion control. It is built for generating individual scenes, not for assembling a complete, narrated, captioned short. ShortsForgeAI takes one idea and produces the entire faceless YouTube Short — script, AI voice, footage, and captions — in about 60 seconds.',
+    theyDo: 'Pika focuses on generating short, eye-catching AI video clips and effects from a text or image prompt.',
+    pickThem: 'Pick Pika when you want to generate a striking standalone AI clip or visual effect to drop into a larger edit; pick ShortsForgeAI when you want the whole faceless Short finished end to end.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'Adds AI voiceover (narration)', sfa: true, them: false },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: false },
+      { feature: 'Generates short cinematic AI clips', sfa: true, them: true },
+      { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Short clips only' },
+      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Pika alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is the strongest Pika alternative for full faceless Shorts, because it does not just generate a clip — it writes the script, adds the AI voice, pulls the footage, and burns in captions to deliver a finished vertical Short in about 60 seconds.' },
+      { q: 'Can Pika make a complete YouTube Short with voiceover and captions?', a: 'Not on its own — Pika generates short AI clips, and you would still need to add a script, narration, and captions yourself. ShortsForgeAI handles that entire pipeline automatically from a single idea.' },
+      { q: 'Is ShortsForgeAI cheaper than Pika?', a: 'ShortsForgeAI starts at $11.90/mo and turns one idea into a complete faceless Short. Pika prices change, so check their site, but the bigger difference is scope: Pika gives you clips, ShortsForgeAI gives you the whole video.' },
+    ],
+  },
+  fliki: {
+    name: 'Fliki',
+    h1: 'The Fliki Alternative That Turns One Idea Into a Finished Faceless Short',
+    intro:
+      'Fliki is a text-to-video platform with a huge AI voice library (2,500+ voices, 80+ languages) that turns scripts, blog posts, or prompts into videos with voiceover, stock visuals, and captions. It is powerful and multilingual, but it is built around a script you bring and an editor you work in. ShortsForgeAI is built for one thing — taking a single idea and producing a finished faceless YouTube Short, script and all, in about 60 seconds.',
+    theyDo: 'Fliki turns scripts and blog posts into videos using the largest AI voice and language library in the category.',
+    pickThem: 'Pick Fliki when you need many languages, voice cloning, or fine control over a script you already have; pick ShortsForgeAI when you want to go from raw idea to a finished Short with no scripting or editing.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: 'Needs your script' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: true },
+      { feature: 'Huge multilingual voice library (80+ languages)', sfa: 'English-focused', them: true },
+      { feature: 'Finished Short in ~60 seconds, no editor', sfa: true, them: 'Edit in timeline' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Fliki alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is a great Fliki alternative when you want a finished Short without writing the script yourself — it generates the script, AI voice, footage, and captions from a single idea in about 60 seconds.' },
+      { q: 'Does ShortsForgeAI write the script like Fliki, or do I bring my own?', a: 'Fliki expects you to bring a script, blog post, or prompt to shape. ShortsForgeAI writes the script for you from just an idea, so you never start with a blank page.' },
+      { q: 'Should I use Fliki or ShortsForgeAI for faceless content?', a: 'Choose Fliki if you need many languages, accents, or voice cloning. Choose ShortsForgeAI if you mainly publish English faceless Shorts and want the whole video built automatically for $11.90/mo.' },
+    ],
+  },
+  revid: {
+    name: 'Revid',
+    h1: 'The Revid Alternative That Builds the Whole Faceless Short From One Idea',
+    intro:
+      'Revid.ai is a faceless-video platform that turns a script, prompt, or URL into a short with AI voice, captions, and B-roll, plus dozens of visual styles and templates. It is a close competitor in the faceless niche, but workflows tend to run longer and lean on you to paste in or guide the content. ShortsForgeAI is tuned to take one idea and deliver a finished faceless YouTube Short in about 60 seconds.',
+    theyDo: 'Revid turns scripts, prompts, or URLs into faceless short and long-form videos with a large library of visual styles.',
+    pickThem: 'Pick Revid if you want lots of visual-style presets and templates and do not mind a longer per-video workflow; pick ShortsForgeAI when speed from idea to finished Short matters most.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: true },
+      { feature: 'Writes the script for you', sfa: true, them: 'Paste or guide it' },
+      { feature: 'AI voiceover', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Matching footage / B-roll', sfa: true, them: true },
+      { feature: 'Fully faceless output', sfa: true, them: true },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Longer per video' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Revid alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is a strong Revid alternative when speed is the priority — it turns a single idea into a finished faceless Short (script, AI voice, footage, captions) in about 60 seconds, without pasting in a script or URL first.' },
+      { q: 'Is ShortsForgeAI faster than Revid for making a Short?', a: 'For a single faceless Short, yes — ShortsForgeAI is built to deliver a finished video in roughly 60 seconds from one idea, while Revid workflows often take longer per video. Revid does offer more visual-style presets.' },
+      { q: 'Revid vs ShortsForgeAI — which is better for a faceless channel?', a: 'Both make faceless Shorts. Pick Revid for its larger library of styles and templates; pick ShortsForgeAI for the fastest idea-to-finished-Short flow at $11.90/mo.' },
+    ],
+  },
+  crayo: {
+    name: 'Crayo',
+    h1: 'The Crayo Alternative That Builds the Whole Faceless Short From One Idea',
+    intro:
+      'Crayo.ai is built for faceless short-form at scale, with polished niche templates like Reddit-story, fake-texts, and split-screen, turning a prompt or YouTube link into a clip with voiceover, subtitles, and music. It shines for those specific viral formats. ShortsForgeAI is broader and idea-first: give it one idea and it writes the script and produces a finished faceless YouTube Short in about 60 seconds.',
+    theyDo: 'Crayo specializes in high-volume faceless clips built around viral templates like Reddit-story, fake-texts, and split-screen.',
+    pickThem: 'Pick Crayo if your channel lives on Reddit-story, fake-text, or split-screen formats; pick ShortsForgeAI when you want an idea turned into a complete, narrated faceless Short without picking a template.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: true },
+      { feature: 'Writes the script for you', sfa: true, them: 'Prompt-based' },
+      { feature: 'AI voiceover', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Matching footage / B-roll', sfa: true, them: 'Template-driven' },
+      { feature: 'Reddit-story / fake-text / split-screen templates', sfa: false, them: true },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Crayo alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is a solid Crayo alternative when you want narrated, footage-driven Shorts from a single idea rather than template-driven formats — it writes the script, adds AI voice and footage, and captions it in about 60 seconds.' },
+      { q: 'Crayo vs ShortsForgeAI — which should I use?', a: 'Use Crayo if your channel relies on Reddit-story, fake-texts, or split-screen templates. Use ShortsForgeAI if you want any idea turned into a complete faceless Short without choosing a template.' },
+      { q: 'Does ShortsForgeAI do faceless Shorts like Crayo?', a: 'Yes — ShortsForgeAI produces fully faceless Shorts with AI voice, footage, and captions, starting at $11.90/mo. The difference is approach: ShortsForgeAI is idea-first and footage-driven, Crayo is template-first.' },
+    ],
+  },
+  capcut: {
+    name: 'CapCut',
+    h1: 'The CapCut Alternative That Builds the Whole Faceless Short Automatically',
+    intro:
+      'CapCut is a full video editor with templates, effects, auto-captions, AI avatars, and a growing set of AI generation tools — incredibly capable, but it is fundamentally a hands-on editor where you assemble and refine the video. ShortsForgeAI removes the editing entirely: from one idea it generates the script, AI voice, footage, and captions and hands you a finished faceless YouTube Short in about 60 seconds.',
+    theyDo: 'CapCut is a powerful template-and-timeline video editor with AI tools layered on top for manual short-form creation.',
+    pickThem: 'Pick CapCut when you want full manual control to edit, polish, and customize every detail; pick ShortsForgeAI when you want a finished faceless Short with zero editing.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: 'AI assist, manual' },
+      { feature: 'AI voiceover', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: false },
+      { feature: 'No timeline editing required', sfa: true, them: false },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best CapCut alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is the best CapCut alternative for hands-off faceless Shorts — instead of editing in a timeline, you give it one idea and it returns a finished Short with script, AI voice, footage, and captions in about 60 seconds.' },
+      { q: 'Can CapCut make a faceless Short automatically like ShortsForgeAI?', a: 'CapCut has AI tools, but it is still an editor — you assemble and refine the video yourself. ShortsForgeAI builds the entire faceless Short for you from a single idea, with no editing.' },
+      { q: 'Should I use CapCut or ShortsForgeAI?', a: 'Use CapCut when you want full manual control and detailed editing (and its free tier). Use ShortsForgeAI when you want speed and automation — a complete faceless Short from one idea for $11.90/mo.' },
+    ],
+  },
 }
 
 export const COMPETITOR_SLUGS = Object.keys(COMPETITORS)

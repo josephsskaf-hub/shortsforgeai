@@ -117,6 +117,84 @@ const NICHES: Record<string, Niche> = {
       'What’s really at the edge of the universe',
     ],
   },
+  truecrime: {
+    label: 'True Crime',
+    h1: 'Free AI True Crime Shorts Generator',
+    intro:
+      'Turn any unsolved case or cold case into a gripping, binge-worthy YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
+    ideas: [
+      'The cold case solved by a single typo',
+      'The killer who mailed the police his own confession',
+      'The 911 call that proved she did it',
+      'The murder that stayed unsolved for 40 years — until a DNA test',
+      'The witness who described a face that didn’t exist',
+    ],
+  },
+  psychology: {
+    label: 'Psychology Facts',
+    h1: 'Free AI Psychology Shorts Generator',
+    intro:
+      'Turn any mind trick or behavior insight into a scroll-stopping YouTube Short in about 60 seconds. The AI writes the script, voices it, adds captions and footage automatically — fully faceless.',
+    ideas: [
+      'Say this one sentence and people instantly trust you',
+      'The reason your brain remembers embarrassment forever',
+      'Why silence makes people tell you everything',
+      'The 7-second trick that ends almost any argument',
+      'The dark psychology trick used in every supermarket',
+    ],
+  },
+  sports: {
+    label: 'Sports Legends',
+    h1: 'Free AI Sports Legends Shorts Generator',
+    intro:
+      'Turn any iconic moment or legendary athlete into an electric YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and footage — no editing skills needed, completely faceless.',
+    ideas: [
+      'The shot that ended a career in one second',
+      'The athlete who was told he’d never walk again',
+      'The 13 seconds that rewrote sports history',
+      'The record nobody has touched in 50 years',
+      'The play coaches still can’t explain',
+    ],
+  },
+  science: {
+    label: 'Science Facts',
+    h1: 'Free AI Science Shorts Generator',
+    intro:
+      'Turn any mind-blowing science fact into a jaw-dropping YouTube Short in about 60 seconds. The AI writes, voices, captions and sources the footage automatically — no filming required.',
+    ideas: [
+      'There’s enough gold in the ocean to make everyone rich — here’s the catch',
+      'A teaspoon of a neutron star weighs 6 billion tons',
+      'Your atoms are older than the sun',
+      'The experiment that proved reality isn’t real until you look',
+      'Why time runs faster at your head than your feet',
+    ],
+  },
+  conspiracy: {
+    label: 'Conspiracies & Cover-ups',
+    h1: 'Free AI Conspiracy Shorts Generator',
+    intro:
+      'Turn any conspiracy or alleged cover-up into a suspenseful YouTube Short in about 60 seconds. The AI writes the script, voices it, adds captions and footage — fully faceless, ready to post.',
+    ideas: [
+      'The “accident” that destroyed the evidence days before the trial',
+      'The document declassified 50 years too late',
+      'The town that doesn’t officially exist on any map',
+      'The whistleblower who vanished a week before testifying',
+      'The patent the government buried for 30 years',
+    ],
+  },
+  luxury: {
+    label: 'Luxury & Billionaire',
+    h1: 'Free AI Luxury & Billionaire Shorts Generator',
+    intro:
+      'Turn any luxury or billionaire topic into an aspirational, scroll-stopping YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
+    ideas: [
+      'What a $500 million yacht actually costs to run per day',
+      'The hotel room that costs more per night than a house',
+      'How billionaires legally pay almost zero tax',
+      'The watch worth more than a private jet',
+      'Inside the $2 billion home nobody is allowed to enter',
+    ],
+  },
 }
 
 export const NICHE_SLUGS = Object.keys(NICHES)
