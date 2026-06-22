@@ -13,7 +13,8 @@ const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
 // Push #489 — Veo 3.1 Fast cinematic engine. Same { video: { url } } output, so
 // checkFalClip parses it unchanged — only the allow-list needs the model id.
 const VEO_MODEL = 'fal-ai/veo3.1/fast'
-const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL])
+const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL])
 
 type ClipStatus = {
   id: string | null

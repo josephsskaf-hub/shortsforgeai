@@ -269,7 +269,7 @@ export default function GenerateClient() {
   const planDefaultedRef = useRef<boolean>(false)
   // #402 — which AI engine the user picked: 'seedance' (AI Generated, 30 cr, all
   // plans) or 'kling' (Cinematic AI, 45 cr, Studio only).
-  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo'>('seedance')
+  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo' | 'sora'>('seedance')
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -1910,7 +1910,7 @@ export default function GenerateClient() {
         setQuality('cinematic_ai')
         falUsedRef.current = true
         falModelRef.current = typeof data.fal_model === 'string' ? data.fal_model : ''
-        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : data.quality === 'cinematic_veo' ? 'cinematic_veo' : 'cinematic_ai'
+        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : data.quality === 'cinematic_veo' ? 'cinematic_veo' : data.quality === 'cinematic_sora' ? 'cinematic_sora' : 'cinematic_ai'
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -2569,12 +2569,12 @@ export default function GenerateClient() {
     ? 0
     : mode === 'cinematic_ai'
     // #402 — Cinematic AI (Kling) costs 45, AI Generated (Seedance) 30.
-    ? (aiEngine === 'kling' ? 45 : aiEngine === 'veo' ? 40 : 30)
+    ? (aiEngine === 'kling' ? 60 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : 40)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
   // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && freeAiUsed === false && (credits ?? 0) < 30
+  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && freeAiUsed === false && (credits ?? 0) < 40
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -5619,8 +5619,8 @@ function ModeSelector({
   cinematicTokens: number
   credits: number | null
   freeAiUsed: boolean | null
-  aiEngine: 'seedance' | 'kling' | 'veo'
-  setAiEngine: (e: 'seedance' | 'kling' | 'veo') => void
+  aiEngine: 'seedance' | 'kling' | 'veo' | 'sora'
+  setAiEngine: (e: 'seedance' | 'kling' | 'veo' | 'sora') => void
   isStarter: boolean
   isCreator: boolean
   isStudio: boolean
@@ -5646,11 +5646,11 @@ function ModeSelector({
   const seedanceUnlocked =
     isCreator || isStudio || (noPlan && freeAiUsed === false) || freeCredits >= 30
   const klingUnlocked = isStudio
-  const veoUnlocked = isCreator || isStudio || freeCredits >= 40
+  const cinematicUnlocked = isCreator || isStudio || (credits ?? 0) >= 60
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
-  const veoSelected = mode === 'cinematic_ai' && aiEngine === 'veo'
+  const cinematicSelected = mode === 'cinematic_ai' && (aiEngine === 'kling' || aiEngine === 'veo' || aiEngine === 'sora')
   const freeTrialBadge = noPlan && freeAiUsed === false
 
   return (
@@ -5661,7 +5661,7 @@ function ModeSelector({
       >
         Generation mode
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Push #404 — Fast = Starter engine (stock, relevance-gated). Locked → upgrade. */}
         {/* #406 — tech card redesign (EngineCard). Logic identical. */}
         <EngineCard
@@ -5701,53 +5701,62 @@ function ModeSelector({
                summary line under the cards, so the badge slot stays empty. */
             <></>
           ) : seedanceUnlocked ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>30 credits</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>40 credits</span>
           ) : (
             <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,.15)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>🔒 Creator</span>
           )}
           onClick={() => { if (seedanceUnlocked) { setMode('cinematic_ai'); setAiEngine('seedance') } else { onUpgrade() } }}
         />
 
-        {/* #402 — Cinematic AI (Kling, 45 cr). Studio-only — locked → upgrade. */}
-        {/* #406 — tech card redesign (EngineCard). Logic identical. */}
-        <EngineCard
-          selected={klingSelected}
-          unlocked={klingUnlocked}
-          accent="16,185,129"
-          accentText="#6ee7b7"
-          icon="🎬"
-          name="Cinematic AI"
-          engineTag="Studio engine"
-          tierLabel="flagship"
-          quality={3}
-          features={cinematicFeatures_kling}
-          badge={isStudio ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,.35)' }}>45 credits</span>
-          ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(16,185,129,.15)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,.3)' }}>🔒 Studio</span>
-          )}
-          onClick={() => { if (isStudio) { setMode('cinematic_ai'); setAiEngine('kling') } else { onUpgrade() } }}
-        />
-
-        {/* #489 — Veo Cinematic (Veo 3.1 Fast, 40 cr). Creator+ — locked → upgrade. */}
-        <EngineCard
-          selected={veoSelected}
-          unlocked={veoUnlocked}
-          accent="139,92,246"
-          accentText="#c4b5fd"
-          icon="🎥"
-          name="Veo Cinematic"
-          engineTag="Veo 3.1 engine"
-          tierLabel="ultra"
-          quality={3}
-          features={['Google Veo 3.1 motion', 'Photoreal cinematic shots', 'Premium realism']}
-          badge={veoUnlocked ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,.18)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.35)' }}>40 credits</span>
-          ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(139,92,246,.15)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.3)' }}>🔒 Creator</span>
-          )}
-          onClick={() => { if (veoUnlocked) { setMode('cinematic_ai'); setAiEngine('veo') } else { onUpgrade() } }}
-        />
+        {/* #491 — Motores A: one Cinematic card with a model picker (Veo 3.1 /
+            Sora 2 / Kling). Premium models gated by credits/plan; clicking a
+            model sets the engine + mode. Custom card (mirrors EngineCard style). */}
+        <div
+          className="relative rounded-2xl p-4 text-left overflow-hidden"
+          style={{
+            background: cinematicSelected
+              ? 'linear-gradient(160deg, rgba(139,92,246,.16) 0%, rgba(139,92,246,.06) 55%, rgba(255,255,255,.02) 100%)'
+              : 'rgba(255,255,255,.03)',
+            border: cinematicSelected ? '1.5px solid rgba(139,92,246,.65)' : '1.5px solid var(--border)',
+            boxShadow: cinematicSelected ? '0 0 34px rgba(139,92,246,.20)' : 'none',
+          }}
+        >
+          <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent 5%, rgba(139,92,246,${cinematicSelected ? '.95' : '.35'}) 50%, transparent 95%)` }} />
+          <div className="relative flex items-center gap-2.5 mb-2.5">
+            <span className="grid place-items-center rounded-xl" style={{ width: 34, height: 34, background: 'rgba(139,92,246,.14)', fontSize: 18 }}>🎬</span>
+            <div className="min-w-0">
+              <div className="text-sm font-black" style={{ color: 'var(--text)' }}>Cinematic AI</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#c4b5fd' }}>Hollywood engine</div>
+            </div>
+          </div>
+          <p className="text-xs mb-2.5" style={{ color: 'var(--muted2)' }}>Pick the model — same idea, a photoreal cinematic Short.</p>
+          <div className="flex flex-col gap-1.5">
+            {([
+              { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 180 },
+              { key: 'sora', label: 'Sora 2', sub: 'OpenAI · top realism', cr: 200 },
+              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 60 },
+            ] as { key: 'veo' | 'sora' | 'kling'; label: string; sub: string; cr: number }[]).map((m) => {
+              const active = mode === 'cinematic_ai' && aiEngine === m.key
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => { if (cinematicUnlocked) { setMode('cinematic_ai'); setAiEngine(m.key) } else { onUpgrade() } }}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 transition-all"
+                  style={{ background: active ? 'rgba(139,92,246,.18)' : 'rgba(255,255,255,.04)', border: active ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid var(--border)', cursor: 'pointer' }}
+                >
+                  <span className="text-left">
+                    <span className="block text-xs font-bold" style={{ color: 'var(--text)' }}>{m.label}</span>
+                    <span className="block text-[10px]" style={{ color: 'var(--muted)' }}>{m.sub}</span>
+                  </span>
+                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: 'rgba(139,92,246,.18)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.3)' }}>
+                    {cinematicUnlocked ? `${m.cr} cr` : '🔒'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Cinematic Mode — Pro + token required. Locked card for Free,
             Basic, AND Pro-with-0-tokens (resets monthly). */}

@@ -15,11 +15,13 @@ export const maxDuration = 60
 // Push #402 — two user-selectable engines with different credit costs.
 // AI Generated (Seedance) = 30 cr, available to all paid plans. Cinematic AI
 // (Kling) = 45 cr, Studio-only (premium). Free trial only ever uses Seedance.
-const SEEDANCE_CREDIT_COST = 30
-const KLING_CREDIT_COST = 45
-// Push #489 — Veo 3.1 Fast cinematic engine (Google, via fal). Priced between
-// Seedance (30) and Kling (45). Audio off (our TTS is the only audio track).
-const VEO_CREDIT_COST = 40
+const SEEDANCE_CREDIT_COST = 40
+const KLING_CREDIT_COST = 60
+// Push #489/#491 — premium cinematic engines (Veo 3.1 Fast, Sora 2) via fal.
+// Priced for a fat margin: fal ~$0.80/clip × ~6 clips ≈ $4.80 cost/video, so
+// 180/200 credits (~$18–$20 retail at $0.10/cr) ≈ 73–76% margin, under Higgsfield.
+const VEO_CREDIT_COST = 180
+const SORA_CREDIT_COST = 200
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
 // #368 — Seedance 1.5 Pro. The earlier 'submit error' (#366) was fal EXHAUSTED
@@ -36,11 +38,23 @@ const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
 // Push #489 — Veo 3.1 Fast: Google's cinematic text-to-video on fal. 9:16, 8s,
 // audio off; identical { video: { url } } output, same fal.queue submit/poll.
 const VEO_MODEL = 'fal-ai/veo3.1/fast'
+// Push #491 — Sora 2 (OpenAI) text-to-video on fal. Same { video: { url } }
+// output + fal.queue pattern. Has native audio, but compose mutes every clip
+// track (volume 0%), so the TTS narration stays the only audio.
+const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
 // Back-compat: other modules import FAL_MODEL.
 const FAL_MODEL = SEEDANCE_MODEL
 
 // Build the per-model fal input (params differ between Seedance and Kling).
 function buildFalInput(model: string, prompt: string): Record<string, unknown> {
+  if (model === SORA_MODEL) {
+    return {
+      prompt,
+      aspect_ratio: '9:16',
+      resolution: '720p',
+      duration: '8',
+    }
+  }
   if (model === VEO_MODEL) {
     return {
       prompt,
@@ -220,6 +234,7 @@ export async function POST(req: NextRequest) {
     // (Studio-only, 45 cr); anything else = AI Generated (Seedance, 30 cr).
     const wantsKling = body.engine === 'kling'
     const wantsVeo = body.engine === 'veo'
+    const wantsSora = body.engine === 'sora'
 
     // Upfront balance + free-trial eligibility check (deduction/flag-flip happens
     // in compose/status on SUCCESS).
@@ -249,14 +264,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Push #402 — per-engine cost: Cinematic (Kling) 45, AI Generated (Seedance) 30.
-    const cost = wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : SEEDANCE_CREDIT_COST
+    const cost = wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
     // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
     // email confirmation. The free trial ALWAYS uses Seedance (never Kling).
     const emailConfirmed = !!user.email_confirmed_at
     const freeAlreadyUsed = profile?.free_ai_generate_used === true
     const eligibleForFree = !freeAlreadyUsed && emailConfirmed
-    const isFreeTrial = !wantsKling && !wantsVeo && balance < SEEDANCE_CREDIT_COST && eligibleForFree
+    const isFreeTrial = !wantsKling && !wantsVeo && !wantsSora && balance < SEEDANCE_CREDIT_COST && eligibleForFree
 
     // Push #404 — AI Generated (Seedance) requires a Creator or Studio plan (or
     // the one-time free trial). Starter (Fast) users and trial-exhausted free
@@ -266,7 +281,7 @@ export async function POST(req: NextRequest) {
     // Push #430 — welcome credits: a free-plan user holding enough credits
     // (30 on signup) may pay for AI Generated with them. Their render is
     // watermarked server-side in /api/compose (free plan = watermark).
-    const paysWithCredits = !wantsKling && balance >= (wantsVeo ? VEO_CREDIT_COST : SEEDANCE_CREDIT_COST)
+    const paysWithCredits = !wantsKling && balance >= (wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST)
     if (!wantsKling && !isCreatorPlus && !isFreeTrial && !paysWithCredits) {
       return NextResponse.json(
         {
@@ -382,7 +397,7 @@ export async function POST(req: NextRequest) {
     // Studio above). If Kling fails entirely, fall back to Seedance AND drop the
     // charge to the Seedance price so the user is never billed 45 cr for a
     // Seedance video. Single model per generation keeps the status poll simple.
-    let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : SEEDANCE_MODEL
+    let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
 
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
@@ -444,7 +459,7 @@ export async function POST(req: NextRequest) {
       fal_model: usedModel, // #401 — which engine ran (client passes it to clip-status)
       // #402 — quality drives the credit cost in compose/status. Reflects the
       // engine that ACTUALLY ran (so a Kling→Seedance fallback charges 30, not 45).
-      quality: usedModel === KLING_MODEL ? 'cinematic_kling' : usedModel === VEO_MODEL ? 'cinematic_veo' : 'cinematic_ai',
+      quality: usedModel === KLING_MODEL ? 'cinematic_kling' : usedModel === VEO_MODEL ? 'cinematic_veo' : usedModel === SORA_MODEL ? 'cinematic_sora' : 'cinematic_ai',
       verbatim,
       speed: parsedScript.speed,
     })

@@ -252,9 +252,9 @@ export async function POST(req: NextRequest) {
         // can experience the product before paying; full credits are granted
         // by the invoice.payment_succeeded handler on Day 4 first charge.
         const isTrial = session.payment_status === 'no_payment_required'
-        // Push #404 — 3-tier credits: Studio(pro) 360 (8 Kling@45), Creator(basic)
-        // 240 (8 Seedance@30), Starter 50 (50 Fast@1).
-        const planCredits = tier === 'pro' ? 360 : tier === 'starter' ? 50 : 240
+        // Push #404/#491 — Studio(pro) 600 (≈3 Veo/Sora premium + extras), Creator(basic)
+        // 240, Starter 50. Studio bumped 360→600 for the premium Veo/Sora engines.
+        const planCredits = tier === 'pro' ? 600 : tier === 'starter' ? 50 : 240
         const creditsToGrant = isTrial ? 5 : planCredits
 
         const { data: currentProfile } = await supabase
@@ -357,8 +357,8 @@ export async function POST(req: NextRequest) {
 
         const renewalUserId = subscription.metadata?.supabase_user_id
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : subscription.metadata?.tier === 'starter' ? 'starter' : 'basic'
-        // Push #404 — renewal credits: Studio 360, Creator 240, Starter 50.
-        const renewalCredits = renewalTier === 'pro' ? 360 : renewalTier === 'starter' ? 50 : 240
+        // Push #404/#491 — renewal credits: Studio 600, Creator 240, Starter 50.
+        const renewalCredits = renewalTier === 'pro' ? 600 : renewalTier === 'starter' ? 50 : 240
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,

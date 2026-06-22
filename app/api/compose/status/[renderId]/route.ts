@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 // shouldDeductCredits whitelist (no billing exists yet). Checkpoint 2 wires
 // the separate avatar-credits debit here (on SUCCESS only — protection rule:
 // a failed render never charges).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'avatar'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'avatar'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
@@ -33,13 +33,17 @@ function creditCostFor(quality: Quality): number {
       // the avatar-credit debit arrives with checkpoint 2's billing.
       return 0
     case 'cinematic_ai':
-      return 30
-    case 'cinematic_kling':
-      // #402 — Cinematic AI (Kling) premium engine, Studio-only.
-      return 45
-    case 'cinematic_veo':
-      // #489 — Veo 3.1 Fast cinematic engine. Keep in sync with VEO_CREDIT_COST.
+      // Push #491 — repriced 30 → 40 (Seedance, ~6 clips/video margin).
       return 40
+    case 'cinematic_kling':
+      // #402 — Cinematic AI (Kling). Push #491 — repriced 45 → 60.
+      return 60
+    case 'cinematic_veo':
+      // #489/#491 — Veo 3.1 Fast premium. Keep in sync with VEO_CREDIT_COST.
+      return 180
+    case 'cinematic_sora':
+      // #491 — Sora 2 premium. Keep in sync with SORA_CREDIT_COST.
+      return 200
     case 'pro':
       return 20
     case 'basic':
@@ -189,7 +193,7 @@ export async function GET(
     // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
     // and the fast||cinematic_ai deduction path both fire correctly.
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'avatar'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'avatar'
         ? (qParam as Quality)
         : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -236,7 +240,7 @@ export async function GET(
       // cinematic_token consumed upstream in /api/generate-video. Only
       // Fast Mode still draws from the regular credit pool.
       // Push #315 — cinematic_ai also deducts from video_credits (3 credits).
-      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo'
+      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora'
       // feature/ai-avatar CP2 — avatar renders debit the SEPARATE avatar_credits
       // balance (1 per finished video), NEVER video_credits. Success-only, so a
       // failed VEED/render charges nothing (protection rule). Shares the same
