@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { NICHE_SLUGS } from './free-ai-shorts/[niche]/page'
 import { COMPETITOR_SLUGS } from './alternatives/[competitor]/page'
+import { PT_SLUGS } from './pt/[slug]/page'
 
 // #458 — SEO: sitemap so Google can discover and index every public page.
 // The site had none, so search engines were barely crawling it — free organic
@@ -15,6 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/pt', priority: 0.9, freq: 'weekly' },
     { path: '/start', priority: 0.8, freq: 'weekly' },
     { path: '/free-script-generator', priority: 0.8, freq: 'weekly' },
+    { path: '/free-hook-generator', priority: 0.8, freq: 'weekly' },
+    { path: '/partners', priority: 0.7, freq: 'weekly' },
     { path: '/signup', priority: 0.7, freq: 'monthly' },
     { path: '/login', priority: 0.4, freq: 'monthly' },
     { path: '/referral', priority: 0.5, freq: 'monthly' },
@@ -41,5 +44,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
-  return [...staticEntries, ...nicheEntries, ...altEntries]
+  // #487 — Portuguese SEO pages (/pt/[slug]).
+  const ptEntries = PT_SLUGS.map((slug) => ({
+    url: `${BASE}/pt/${slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+  return [...staticEntries, ...nicheEntries, ...altEntries, ...ptEntries]
 }
