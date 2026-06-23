@@ -417,7 +417,7 @@ export default function Sidebar({
                 lineHeight: 1,
               }}
             >
-              v1.5
+              v3.0
             </span>
           </div>
         </Link>
