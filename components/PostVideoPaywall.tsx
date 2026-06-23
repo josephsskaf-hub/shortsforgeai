@@ -104,7 +104,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           price={PLANS.basic.priceLabel}
           renew={PLANS.basic.periodLabel}
           features={[
-            `${PLANS.basic.credits} Fast Mode videos / month`,
+            `${PLANS.basic.credits} credits / month`,
             'Email support',
           ]}
           ctaLabel={
@@ -125,7 +125,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
           price={PLANS.pro.priceLabel}
           renew={PLANS.pro.periodLabel}
           features={[
-            `${PLANS.pro.credits} Fast Mode videos / month`,
+            `${PLANS.pro.credits} credits / month`,
             '1 Cinematic AI video / month',
             'Download without watermark',
           ]}

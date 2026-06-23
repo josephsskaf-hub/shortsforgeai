@@ -63,7 +63,7 @@ export default function StickyUpgradeBar({ isPro }: StickyUpgradeBarProps) {
               minWidth: 0,
             }}
           >
-            Upgrade to Pro — unlimited Shorts, HD quality, priority queue
+            Upgrade to Pro — more Shorts, HD quality, priority queue
           </p>
 
           <button

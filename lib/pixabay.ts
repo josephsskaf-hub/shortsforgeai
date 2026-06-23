@@ -221,6 +221,7 @@ async function searchAndFilter(
 ): Promise<string | null> {
   const hits = await searchPixabay(query, 7, category)
 
+  let landscapeFallback: string | null = null
   for (const video of hits) {
     if (hasLifestylePollution(video, sceneNeedsPeople)) {
       console.log(
@@ -247,11 +248,13 @@ async function searchAndFilter(
       console.log(
         `[pixabay] ${label} ACCEPTED id=${video.id} tags="${video.tags.slice(0, 60)}" url="${url.slice(0, 60)}"`,
       )
-      return url
+      const rez = video.videos?.large
+      if (rez && rez.height >= rez.width) return url
+      if (!landscapeFallback) landscapeFallback = url
     }
   }
 
-  return null
+  return landscapeFallback
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -362,7 +365,7 @@ function concretizeQueries(originalQueries: string[], hint?: string): string[] {
   }
   const seen = new Set<string>()
   const out: string[] = []
-  for (const q of [...boosted, ...originalQueries]) {
+  for (const q of [...originalQueries, ...boosted]) {
     const k = q.toLowerCase().trim()
     if (k && !seen.has(k)) { seen.add(k); out.push(q) }
   }
