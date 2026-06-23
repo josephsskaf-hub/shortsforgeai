@@ -52,7 +52,7 @@ function buildFalInput(model: string, prompt: string): Record<string, unknown> {
       prompt,
       aspect_ratio: '9:16',
       resolution: '720p',
-      duration: '8',
+      duration: 8,
     }
   }
   if (model === VEO_MODEL) {
@@ -60,9 +60,9 @@ function buildFalInput(model: string, prompt: string): Record<string, unknown> {
       prompt,
       aspect_ratio: '9:16',
       duration: '8s',
-      resolution: '720p',
+      resolution: '1080p',
       generate_audio: false,
-      negative_prompt: 'blur, distort, low quality, watermark, text, logo, caption',
+      negative_prompt: 'human face, person, people, crowd, cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
     }
   }
   if (model === KLING_MODEL) {
@@ -70,15 +70,15 @@ function buildFalInput(model: string, prompt: string): Record<string, unknown> {
       prompt,
       duration: '10',
       aspect_ratio: '9:16',
-      negative_prompt: 'blur, distort, low quality, watermark, text',
-      cfg_scale: 0.5,
+      negative_prompt: 'people, person, human, face, crowd, logo, caption, blur, distort, low quality, watermark, text',
+      cfg_scale: 0.6,
     }
   }
   // Seedance (default)
   return {
     prompt,
     aspect_ratio: '9:16',
-    resolution: '720p',
+    resolution: '1080p',
     duration: '10',
     generate_audio: false,
   }
