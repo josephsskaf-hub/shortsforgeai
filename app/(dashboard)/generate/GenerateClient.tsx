@@ -1890,10 +1890,15 @@ export default function GenerateClient() {
     // Push #315 — Cinematic AI mode submits to fal.ai queue, then polls.
     if (mode === 'cinematic_ai') {
       try {
+        // L2B - thread the smart BrollPlan into the AI engine (same plan Fast uses)
+        let cinePlan: BrollPlan | null = brollPlan
+        if (!cinePlan && brollPlanPromiseRef.current) { try { cinePlan = await brollPlanPromiseRef.current } catch { cinePlan = null } }
+        const cineUsable = !!cinePlan && cinePlan.degraded !== true && Array.isArray(cinePlan.scenes) && cinePlan.scenes.length > 0
+        const cineBrollScenes = cineUsable ? cinePlan!.scenes.map((s) => ({ sceneNumber: s.sceneNumber, brollPrompt: s.brollPrompt, shotType: s.shotType, negativePrompt: s.negativePrompt })) : undefined
         const res = await fetch('/api/generate-video-cinematic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine }),
+          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }

@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string; duration?: number; engine?: string }
+    let body: { prompt?: string; duration?: number; engine?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
     try {
       body = await req.json()
     } catch {
@@ -229,6 +229,10 @@ export async function POST(req: NextRequest) {
     }
 
     const duration = Number(body.duration) || 45
+    // L2B - smart BrollPlan threaded from the client
+    const planScenes = Array.isArray(body.brollScenes) ? body.brollScenes : []
+    const gStyle = body.globalStyle
+    const styleSuffix = gStyle && (gStyle.mood || gStyle.lighting || gStyle.cameraStyle) ? `, ${[gStyle.mood, gStyle.lighting, gStyle.cameraStyle].filter(Boolean).join(', ')}, consistent color grade across all scenes` : ''
     // #442 — base clip count on the selected duration for now; in verbatim mode
     // we re-size it to the actual SCRIPT length below (the video follows the
     // script, not the button), so footage always covers the narration.
@@ -372,11 +376,16 @@ export async function POST(req: NextRequest) {
       }))
     }
 
+    // L2B - prefer the smart BrollPlan per-scene cinematic prompt when provided
+    if (planScenes.length > 0) {
+      scenes = scenes.map((s, i) => { const bp = planScenes[i]?.brollPrompt; return bp && bp.trim().length > 20 ? { ...s, aiPrompt: bp.trim() } : s })
+    }
+
     // #441 — verbatim path has no cinematic description (description === stock
     // query). Generate a real faceless shot description per scene from the
     // narration so Seedance gets a shot to direct, not keyword soup. Best-effort:
     // on failure each scene falls back to its stock query in submitAllScenes.
-    if (verbatim) {
+    if (verbatim && planScenes.length === 0) {
       try {
         const aiPrompts = await generateCinematicDescriptions(scenes, prompt)
         scenes = scenes.map((s, i) => ({
@@ -410,7 +419,7 @@ export async function POST(req: NextRequest) {
         // buildFacelessCinematicPrompt then strips any person nouns + forces
         // environment-first b-roll, on-brand for this faceless channel.
         const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
-        const cinematic = buildFacelessCinematicPrompt(visualPrompt)
+        const cinematic = buildFacelessCinematicPrompt(visualPrompt) + styleSuffix
         let id = await submitToFal(cinematic, model)
         if (!id) {
           await new Promise((r) => setTimeout(r, 800))
