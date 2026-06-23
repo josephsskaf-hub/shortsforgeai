@@ -1005,7 +1005,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               className="group relative flex min-h-[230px] flex-col justify-between overflow-hidden rounded-2xl border border-[rgba(139,92,246,0.35)] p-6 text-left sm:p-7"
               style={{ background: 'radial-gradient(circle at 65% 20%, rgba(139,92,246,0.38), #140d22 55%, #0b0b10 82%)' }}
             >
-              <video autoPlay muted loop playsInline preload="metadata" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-45" src={showcaseVideos['0']} /><div className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(115deg, rgba(20,13,34,0.9) 25%, rgba(20,13,34,0.42))' }} /><span className="relative z-10 text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">★ Flagship</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">★ Flagship</span>
               <div className="relative z-10">
                 <div className="font-display text-3xl font-bold text-white sm:text-4xl">Cinematic AI</div>
                 <div className="mt-1.5 text-sm text-[#CFC6E6]">Veo 3.1 · Sora 2 · Kling — one prompt, one click.</div>
