@@ -250,6 +250,78 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'Does ShortsForgeAI do faceless Shorts like Crayo?', a: 'Yes — ShortsForgeAI produces fully faceless Shorts with AI voice, footage, and captions, starting at $11.90/mo. The difference is approach: ShortsForgeAI is idea-first and footage-driven, Crayo is template-first.' },
     ],
   },
+  autoshorts: {
+    name: 'AutoShorts',
+    h1: 'The AutoShorts Alternative With Better Scripts — and Real Proof',
+    intro:
+      'AutoShorts also generates faceless videos on autopilot, but creators report weak, repetitive scripts over static images that get few views. ShortsForgeAI is built around a viral hook structure (hook → micro-rewards → payoff) and matches real footage to each line — from one idea, in about 60 seconds, starting at $11.90/mo with a 7-day money-back and a free first Short.',
+    theyDo: 'AutoShorts auto-generates and can auto-post faceless videos on a schedule.',
+    pickThem:
+      'Pick AutoShorts if hands-off scheduled auto-posting is all you want. Pick ShortsForgeAI if you care about the script and footage actually being good — and want it cheaper.',
+    rows: [
+      { feature: 'Creates the full video from just an idea', sfa: true, them: true },
+      { feature: 'Viral hook structure baked into the script', sfa: true, them: false },
+      { feature: 'Footage matched per script line (not generic stock)', sfa: true, them: 'Often static' },
+      { feature: 'AI voiceover included', sfa: true, them: true },
+      { feature: 'Auto-captions included', sfa: true, them: true },
+      { feature: 'Fully faceless — no footage needed', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'Is there a cheaper AutoShorts alternative with better scripts?', a: 'ShortsForgeAI starts at $11.90/month and builds each Short around a viral hook structure with footage matched to the narration, instead of generic stock over a flat script. Your first Short is free, no credit card.' },
+      { q: 'Why do AI faceless videos sometimes get no views?', a: 'Usually the script and footage. A faceless Short lives or dies on the hook and the first 2 seconds. ShortsForgeAI writes a hook-first script and matches specific footage per line, which is what holds retention.' },
+      { q: 'Can I try it before paying?', a: 'Yes — your first Short is free with no credit card, and paid plans include a 7-day money-back guarantee.' },
+    ],
+  },
+  klap: {
+    name: 'Klap',
+    h1: 'The Klap Alternative That Creates the Short From Scratch',
+    intro:
+      'Klap turns a long video you already have into short clips. ShortsForgeAI starts from the opposite end: you give it a topic and it writes the script, records the voiceover, finds the footage and captions it into a finished 9:16 Short — no source video, no camera — in about 60 seconds from $11.90/mo.',
+    theyDo: 'Klap repurposes existing long-form video into short vertical clips.',
+    pickThem:
+      'Pick Klap if you already film long videos and just want them auto-clipped. Pick ShortsForgeAI if you want faceless Shorts created from just an idea.',
+    rows: [
+      { feature: 'Creates the full video from just an idea', sfa: true, them: false },
+      { feature: 'Needs you to upload existing footage', sfa: 'No', them: 'Yes' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover included', sfa: true, them: false },
+      { feature: 'Finds & matches the footage automatically', sfa: true, them: false },
+      { feature: 'Fully faceless — no camera needed', sfa: true, them: 'Needs your video' },
+      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'Is there a Klap alternative that builds the video from scratch?', a: 'Yes. ShortsForgeAI generates a complete faceless Short — script, AI voiceover, footage and captions — from one idea, with no video upload. Klap instead clips long videos you already filmed.' },
+      { q: 'Can I make faceless Shorts without any footage?', a: 'Yes. You only need a topic. ShortsForgeAI writes, voices, sources footage and captions it into a 9:16 video automatically.' },
+      { q: 'How much does it cost?', a: 'Plans start at $11.90/month with a 7-day money-back guarantee. Your first Short is free, no credit card required.' },
+    ],
+  },
+  quso: {
+    name: 'Quso',
+    h1: 'The Quso Alternative Built to Generate Shorts, Not Just Repurpose Them',
+    intro:
+      'Quso (formerly Vidyo.ai) repurposes long videos into clips and schedules them. ShortsForgeAI is for creators who start with nothing but a topic: it writes the hook-driven script, records the AI voiceover, finds matching footage and captions it into a ready-to-post 9:16 Short in about 60 seconds, starting at $11.90/mo.',
+    theyDo: 'Quso repurposes and schedules clips from long-form videos you already have.',
+    pickThem:
+      'Pick Quso if you already have long videos to clip and schedule. Pick ShortsForgeAI if you want a finished faceless Short generated from a single idea.',
+    rows: [
+      { feature: 'Creates the full video from just an idea', sfa: true, them: false },
+      { feature: 'Needs you to upload existing footage', sfa: 'No', them: 'Yes' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'Viral hook structure baked into the script', sfa: true, them: false },
+      { feature: 'AI voiceover included', sfa: true, them: 'Limited' },
+      { feature: 'Fully faceless — no source video needed', sfa: true, them: 'Needs your video' },
+      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is a good Quso (Vidyo.ai) alternative for faceless Shorts?', a: 'ShortsForgeAI is purpose-built for faceless short-form: it writes a hook-driven script, voices it, finds footage and renders a 9:16 Short from one idea in about 60 seconds, from $11.90/month.' },
+      { q: 'Does it work without uploading a video?', a: 'Yes. You type a topic and get a finished vertical Short — no source footage, no camera.' },
+      { q: 'Is the first Short really free?', a: 'Yes, your first Short is free with no credit card, and paid plans include a 7-day money-back guarantee.' },
+    ],
+  },
   capcut: {
     name: 'CapCut',
     h1: 'The CapCut Alternative That Builds the Whole Faceless Short Automatically',
