@@ -1248,7 +1248,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           User did not like this section. */}
 
       {/* ───────── #490: cinematic moving-video wall (original, fits the dark/cyan house style) ───────── */}
-      <VideoWall clips={Object.values(showcaseVideos)} />
+      {/* video wall removido */}
 
       {/* ───────── AI Video Showcase ───────── */}
       {/* ───────── Push #080: 3×2 showcase grid — bigger cards, cleaner header ───── */}
