@@ -51,7 +51,7 @@ export default function DashboardShell({
       {/* Glow orbs */}
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{ width: 600, height: 600, background: '#10B981', top: -200, right: -150, opacity: 0.07, filter: 'blur(120px)', zIndex: 0 }}
+        style={{ width: 600, height: 600, background: '#8B5CF6', top: -200, right: -150, opacity: 0.07, filter: 'blur(120px)', zIndex: 0 }}
       />
       <div
         className="fixed rounded-full pointer-events-none"

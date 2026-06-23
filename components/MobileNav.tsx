@@ -51,7 +51,7 @@ export default function MobileNav() {
                     left: '20%',
                     right: '20%',
                     height: 2,
-                    background: 'linear-gradient(90deg, #22D3EE, #10B981)',
+                    background: 'linear-gradient(90deg, #22D3EE, #8B5CF6)',
                     borderRadius: '0 0 4px 4px',
                     boxShadow: '0 0 8px rgba(34,211,238,0.5)',
                   }}

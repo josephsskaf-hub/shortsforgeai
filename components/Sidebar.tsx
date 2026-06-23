@@ -113,7 +113,7 @@ function NavItem({
   // Push #435 — badge palette: HOT = amber, NEW = green, others = cyan.
   const isHot = !!badge && /hot/i.test(badge)
   const isNew = !!badge && /new/i.test(badge)
-  const badgeColor = isHot ? '251,191,36' : isNew ? '16,185,129' : '34,211,238'
+  const badgeColor = isHot ? '251,191,36' : isNew ? '139,92,246' : '34,211,238'
 
   return (
     <Link
@@ -126,17 +126,17 @@ function NavItem({
         // Neon redesign (12/06) — active item matches the landing's violet→cyan
         // gradient language (.neon-card / .btn-neon family).
         background: active
-          ? 'linear-gradient(90deg, rgba(16,185,129,0.2), rgba(34,211,238,0.07))'
+          ? 'linear-gradient(90deg, rgba(139,92,246,0.2), rgba(34,211,238,0.07))'
           : hovered
-          ? 'rgba(16,185,129,0.08)'
+          ? 'rgba(139,92,246,0.08)'
           : 'transparent',
         color: active ? '#A7F3D0' : hovered ? 'var(--text)' : 'var(--muted2)',
         border: active
-          ? '1px solid rgba(52,211,153,0.35)'
+          ? '1px solid rgba(167,139,250,0.35)'
           : '1px solid transparent',
         textDecoration: 'none',
         fontSize: '0.88rem',
-        boxShadow: active ? '0 0 24px rgba(16,185,129,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        boxShadow: active ? '0 0 24px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
         transform: hovered && !active ? 'translateX(3px)' : 'translateX(0)',
         transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
       }}
@@ -149,9 +149,9 @@ function NavItem({
             top: '16%',
             height: '68%',
             width: 3,
-            background: 'linear-gradient(180deg, #10B981, #22D3EE)',
+            background: 'linear-gradient(180deg, #8B5CF6, #22D3EE)',
             borderRadius: '0 3px 3px 0',
-            boxShadow: '0 0 10px rgba(16,185,129,0.7)',
+            boxShadow: '0 0 10px rgba(139,92,246,0.7)',
           }}
         />
       )}
@@ -167,14 +167,14 @@ function NavItem({
           justifyContent: 'center',
           fontSize: '1.05rem',
           background: active
-            ? 'linear-gradient(135deg, rgba(16,185,129,0.24), rgba(34,211,238,0.12))'
+            ? 'linear-gradient(135deg, rgba(139,92,246,0.24), rgba(34,211,238,0.12))'
             : hovered
-            ? 'rgba(16,185,129,0.1)'
+            ? 'rgba(139,92,246,0.1)'
             : 'rgba(255,255,255,0.03)',
           border: active
-            ? '1px solid rgba(52,211,153,0.5)'
-            : '1px solid rgba(52,211,153,0.1)',
-          boxShadow: active ? '0 0 14px rgba(16,185,129,0.4)' : 'none',
+            ? '1px solid rgba(167,139,250,0.5)'
+            : '1px solid rgba(167,139,250,0.1)',
+          boxShadow: active ? '0 0 14px rgba(139,92,246,0.4)' : 'none',
           filter: active ? 'drop-shadow(0 0 4px rgba(34,211,238,0.35))' : 'none',
           transition: 'all 0.18s ease',
         }}
@@ -374,7 +374,7 @@ export default function Sidebar({
           // Neon redesign (12/06) — violet-black glass column with a faint
           // top-down violet wash instead of the flat navy slab.
           background: 'linear-gradient(180deg, #121214 0%, #0C0C0E 55%, #0E0E10 100%)',
-          borderRight: '1px solid rgba(52,211,153,0.12)',
+          borderRight: '1px solid rgba(167,139,250,0.12)',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
@@ -391,12 +391,12 @@ export default function Sidebar({
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
               background: 'linear-gradient(135deg, #17171A, #121214)',
-              border: '1px solid rgba(16,185,129,0.45)',
-              boxShadow: '0 0 18px rgba(16,185,129,0.4), 0 0 8px rgba(34,211,238,0.25)',
+              border: '1px solid rgba(139,92,246,0.45)',
+              boxShadow: '0 0 18px rgba(139,92,246,0.4), 0 0 8px rgba(34,211,238,0.25)',
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
+              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#8B5CF6" strokeWidth="0.5" strokeLinejoin="round" />
             </svg>
           </div>
           <div className="flex flex-col" style={{ gap: 2 }}>
@@ -518,7 +518,7 @@ export default function Sidebar({
                             marginLeft: 6,
                             fontSize: '0.7rem',
                             fontWeight: 800,
-                            color: '#6ee7b7',
+                            color: '#c4b5fd',
                           }}
                         >
                           · 🎬 {cinematicTokens}
@@ -559,7 +559,7 @@ export default function Sidebar({
               <p style={{ fontSize: '0.72rem', color: '#94A3B8', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
-                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #10B981)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,211,238,0.35)' }}
+                style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #8B5CF6)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(34,211,238,0.35)' }}
               >
                 ⚡ Get Started Free →
               </button>
@@ -571,7 +571,7 @@ export default function Sidebar({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fca5a5', margin: 0 }}>⚠️ No credits left</p>
               </div>
-              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #10B981)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#0A0A0B', background: 'linear-gradient(135deg, #22D3EE, #8B5CF6)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 Buy →
               </Link>
             </div>
@@ -596,7 +596,7 @@ export default function Sidebar({
                   right: 12,
                   zIndex: 61,
                   background: '#131316',
-                  border: '1px solid rgba(16,185,129,0.3)',
+                  border: '1px solid rgba(139,92,246,0.3)',
                   borderRadius: 12,
                   boxShadow: '0 10px 32px rgba(0,0,0,0.5), 0 0 24px rgba(34,211,238,0.15)',
                   padding: 6,
@@ -647,7 +647,7 @@ export default function Sidebar({
                       color: 'var(--text2)', textDecoration: 'none',
                       transition: 'background 0.12s ease',
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.14)' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(139,92,246,0.14)' }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                   >
                     <span style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
@@ -662,7 +662,7 @@ export default function Sidebar({
             <div
               style={{
                 width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                background: isLoggedIn ? 'linear-gradient(135deg, #059669, #22D3EE)' : 'rgba(255,255,255,0.06)',
+                background: isLoggedIn ? 'linear-gradient(135deg, #7c3aed, #22D3EE)' : 'rgba(255,255,255,0.06)',
                 border: isLoggedIn ? 'none' : '1px solid rgba(255,255,255,0.08)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '0.85rem', fontWeight: 800, color: '#fff',
@@ -701,8 +701,8 @@ export default function Sidebar({
                 aria-haspopup="menu"
                 aria-expanded={settingsOpen}
                 style={{
-                  background: settingsOpen ? 'rgba(16,185,129,0.2)' : 'transparent',
-                  border: settingsOpen ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                  background: settingsOpen ? 'rgba(139,92,246,0.2)' : 'transparent',
+                  border: settingsOpen ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 8,
                   color: settingsOpen ? '#22D3EE' : 'var(--muted)',
                   cursor: 'pointer', padding: '5px 7px', fontSize: '0.85rem',
@@ -732,7 +732,7 @@ export default function Sidebar({
               <button
                 onClick={() => setShowAuthModal(true)}
                 style={{
-                  background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8,
+                  background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 8,
                   color: '#22D3EE', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
                 }}
               >

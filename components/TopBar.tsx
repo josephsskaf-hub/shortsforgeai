@@ -91,16 +91,16 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
           href="/avatar"
           className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:scale-[1.03]"
           style={{
-            background: 'rgba(16,185,129,0.1)',
-            border: '1px solid rgba(52,211,153,0.35)',
-            color: '#34D399',
+            background: 'rgba(139,92,246,0.1)',
+            border: '1px solid rgba(167,139,250,0.35)',
+            color: '#A78BFA',
             textDecoration: 'none',
           }}
         >
           🎭 AI Avatar
           <span
             className="rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
-            style={{ background: 'rgba(52,211,153,0.18)', color: '#6EE7B7' }}
+            style={{ background: 'rgba(167,139,250,0.18)', color: '#C4B5FD' }}
           >
             New
           </span>
@@ -112,14 +112,14 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
             style={{
-              background: 'rgba(16,185,129,.08)',
-              border: '1px solid rgba(16,185,129,.18)',
-              color: '#34d399',
+              background: 'rgba(139,92,246,.08)',
+              border: '1px solid rgba(139,92,246,.18)',
+              color: '#a78bfa',
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#10b981', boxShadow: '0 0 6px rgba(52,211,153,.5)' }}
+              style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(167,139,250,.5)' }}
             />
             Pro
           </div>
