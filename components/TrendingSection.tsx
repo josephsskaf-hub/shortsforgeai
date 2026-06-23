@@ -7,7 +7,7 @@ const TRENDING = [
     id: 'banks',
     emoji: '🏦',
     niche: 'Money Facts',
-    nicheColor: '#34d399',
+    nicheColor: '#a78bfa',
     title: 'The Dark Truth About Banks',
     views: '2.3M views',
     accent: '#f59e0b',
@@ -192,7 +192,7 @@ export default function TrendingSection() {
                   fontWeight: 800,
                   color: '#fff',
                   textDecoration: 'none',
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
                   boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
                   transition: 'transform .2s ease, box-shadow .2s ease',
                 }}

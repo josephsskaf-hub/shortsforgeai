@@ -78,7 +78,7 @@ export default function PricingCards() {
       <div className="text-center mb-5">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#6EE7B7' }}
+          style={{ fontSize: '0.62rem', color: '#C4B5FD' }}
         >
           Pricing
         </div>
@@ -110,11 +110,11 @@ export default function PricingCards() {
           className="rounded-xl px-4 py-4 text-sm mb-4 mx-auto text-center"
           style={{
             maxWidth: 720,
-            background: 'rgba(52,211,153,.07)',
-            border: '1px solid rgba(52,211,153,.25)',
+            background: 'rgba(167,139,250,.07)',
+            border: '1px solid rgba(167,139,250,.25)',
           }}
         >
-          <p style={{ color: '#34d399', fontWeight: 800 }}>✅ You already have an active subscription!</p>
+          <p style={{ color: '#a78bfa', fontWeight: 800 }}>✅ You already have an active subscription!</p>
           <p style={{ color: '#94a3b8', marginTop: 4, fontSize: '0.75rem' }}>
             Your plan is active. Credits may still be syncing.
           </p>
@@ -123,7 +123,7 @@ export default function PricingCards() {
             style={{
               display: 'inline-block',
               marginTop: 10,
-              background: '#34d399',
+              background: '#a78bfa',
               color: '#0A0A0B',
               borderRadius: 8,
               padding: '6px 16px',
@@ -245,12 +245,12 @@ function PlanCard({
     return 'rgba(11,17,32,0.85)'
   }
   function border(): string {
-    if (isSelected) return '2px solid #10B981'
+    if (isSelected) return '2px solid #8B5CF6'
     if (highlight) return '2px solid rgba(5,150,105,.45)'
     return '1px solid var(--border)'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(16,185,129,0.3)'
+    if (isSelected) return '0 0 28px rgba(139,92,246,0.3)'
     if (highlight) return '0 0 40px rgba(5,150,105,.18)'
     return '0 0 20px rgba(5,150,105,.04)'
   }
@@ -283,7 +283,7 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (!isPaid || isSelected) return
-        e.currentTarget.style.borderColor = '#10B981'
+        e.currentTarget.style.borderColor = '#8B5CF6'
         e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
         e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
       }}
@@ -297,7 +297,7 @@ function PlanCard({
       {badge && !isSelected && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff' }}
+          style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff' }}
         >
           {badge}
         </div>
@@ -322,7 +322,7 @@ function PlanCard({
       <div className="mb-4">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#6EE7B7' : 'var(--muted)' }}
+          style={{ color: highlight ? '#C4B5FD' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -335,7 +335,7 @@ function PlanCard({
           </span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: '#6EE7B7', fontWeight: 700 }}>
+          <p className="text-xs mb-1" style={{ color: '#C4B5FD', fontWeight: 700 }}>
             {renewNote}
           </p>
         )}
@@ -347,7 +347,7 @@ function PlanCard({
       <div className="flex flex-col gap-2 mb-5 flex-1">
         {features.map((f) => (
           <div key={f} className="flex items-start gap-2 text-xs">
-            <span style={{ color: '#34d399', fontSize: '0.75rem', marginTop: 2 }}>✓</span>
+            <span style={{ color: '#a78bfa', fontSize: '0.75rem', marginTop: 2 }}>✓</span>
             <span style={{ color: 'var(--text2)' }}>{f}</span>
           </div>
         ))}
@@ -365,8 +365,8 @@ function PlanCard({
           className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black text-white"
           style={{
             background: isSelected
-              ? '#10B981'
-              : 'linear-gradient(135deg, #059669, #047857)',
+              ? '#8B5CF6'
+              : 'linear-gradient(135deg, #7C3AED, #6D28D9)',
             boxShadow: isSelected
               ? '0 4px 22px rgba(16, 185, 129,.35)'
               : '0 4px 18px rgba(5,150,105,.28)',

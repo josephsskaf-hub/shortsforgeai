@@ -117,9 +117,9 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#10b981', boxShadow: '0 0 6px rgba(16,185,129,.5)' }}
+                style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,.5)' }}
               />
-              <span className="text-xs font-medium" style={{ color: '#34d399' }}>
+              <span className="text-xs font-medium" style={{ color: '#a78bfa' }}>
                 Ready to post
               </span>
             </div>
@@ -131,9 +131,9 @@ export default function ResultCard({ video, index, total = 5, niche }: ResultCar
           onClick={handleCopy}
           className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all"
           style={{
-            background: copied ? 'rgba(16,185,129,.1)' : 'rgba(16, 185, 129,.1)',
-            border: copied ? '1px solid rgba(16,185,129,.28)' : '1px solid rgba(16, 185, 129,.25)',
-            color: copied ? '#34d399' : 'var(--indigo-light)',
+            background: copied ? 'rgba(139,92,246,.1)' : 'rgba(16, 185, 129,.1)',
+            border: copied ? '1px solid rgba(139,92,246,.28)' : '1px solid rgba(16, 185, 129,.25)',
+            color: copied ? '#a78bfa' : 'var(--indigo-light)',
             cursor: 'pointer',
           }}
         >

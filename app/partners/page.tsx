@@ -47,7 +47,7 @@ export default function PartnersPage() {
           <p style={{ fontSize: '1.05rem', color: '#CBD5E1', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 600 }}>
             Send creators a tool that turns one idea into a finished faceless Short in 60 seconds — and earn <b style={{ color: '#fff' }}>40% recurring commission</b> on every customer, every month they stay. 60-day cookie. Free account included.
           </p>
-          <a href={APPLY} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>Apply to become a partner →</a>
+          <a href={APPLY} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>Apply to become a partner →</a>
         </section>
 
         {/* Earnings */}

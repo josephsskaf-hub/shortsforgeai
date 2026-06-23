@@ -119,7 +119,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
       <div className="mb-4 pr-8">
         <div
           className="text-[10px] font-black uppercase tracking-widest mb-1"
-          style={{ color: '#34D399' }}
+          style={{ color: '#A78BFA' }}
         >
           Welcome
         </div>
@@ -186,7 +186,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
                 height: 22,
                 borderRadius: '50%',
                 background: 'rgba(16, 185, 129,.18)',
-                color: '#34D399',
+                color: '#A78BFA',
                 fontSize: '0.7rem',
                 flexShrink: 0,
               }}

@@ -196,7 +196,7 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#6ee7b7' }}
+          style={{ fontSize: '0.62rem', color: '#c4b5fd' }}
         >
           Admin · Staging
         </div>
@@ -326,7 +326,7 @@ function RefreshIndicator({
             width: 7,
             height: 7,
             borderRadius: '50%',
-            background: 'rgba(52,211,153,0.7)',
+            background: 'rgba(167,139,250,0.7)',
           }}
         />
       )}

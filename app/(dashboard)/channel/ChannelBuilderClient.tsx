@@ -15,9 +15,9 @@ const CHANNEL_NICHES = [
     posting: '1–2x daily',
     style: 'Dark cinematic, text overlays',
     hooks: ['This bank NEVER told you...', 'The #1 wealth secret hidden from you', '95% of people get this WRONG about money'],
-    color: 'rgba(16,185,129,.1)',
-    border: 'rgba(16,185,129,.25)',
-    accent: '#34d399',
+    color: 'rgba(139,92,246,.1)',
+    border: 'rgba(139,92,246,.25)',
+    accent: '#a78bfa',
   },
   {
     id: 'mind',
@@ -32,7 +32,7 @@ const CHANNEL_NICHES = [
     hooks: ['Your brain does THIS without you knowing', 'Scientists JUST discovered something terrifying', 'The human mind can do things you never imagined'],
     color: 'rgba(16, 185, 129,.1)',
     border: 'rgba(16, 185, 129,.25)',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
   {
     id: 'dark',
@@ -102,7 +102,7 @@ export default function ChannelBuilderClient() {
           <div>
             <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Build Your{' '}
-              <span style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Viral Channel
               </span>
             </h1>
@@ -253,7 +253,7 @@ export default function ChannelBuilderClient() {
                     'Set up auto-publish with YouTube Studio',
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text2)' }}>
-                      <span style={{ color: '#34d399', flexShrink: 0 }}>✓</span>
+                      <span style={{ color: '#a78bfa', flexShrink: 0 }}>✓</span>
                       {item}
                     </div>
                   ))}
@@ -354,7 +354,7 @@ export default function ChannelBuilderClient() {
                         <div className="font-bold" style={{ color: 'var(--text)' }}>{label}</div>
                         <div className="mt-0.5" style={{ color: 'var(--muted)' }}>{note}</div>
                       </div>
-                      <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ background: 'rgba(52,211,153,.1)', color: '#34d399' }}>{when}</span>
+                      <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ background: 'rgba(167,139,250,.1)', color: '#a78bfa' }}>{when}</span>
                     </div>
                   ))}
                 </div>
@@ -377,7 +377,7 @@ export default function ChannelBuilderClient() {
               href={`/dashboard?niche=${selected.id}`}
               className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white"
               style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
                 boxShadow: '0 4px 22px rgba(16, 185, 129,.4)',
                 textDecoration: 'none',
               }}

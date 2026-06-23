@@ -79,7 +79,7 @@ function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
           style={{
             fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
             fontWeight: 900,
-            background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)',
+            background: 'linear-gradient(135deg, #A78BFA, #22D3EE, #22D3EE)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.03em',

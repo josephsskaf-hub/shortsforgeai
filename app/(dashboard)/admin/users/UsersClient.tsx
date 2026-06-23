@@ -179,7 +179,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#6ee7b7' }}
+          style={{ fontSize: '0.62rem', color: '#c4b5fd' }}
         >
           Admin · Staging
         </div>
@@ -221,14 +221,14 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
           className="grid gap-3"
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}
         >
-          <MetricCard label="Pro subscribers"   value={stats?.pro   ?? null} hint="plan = pro"   accent="#34d399" />
-          <MetricCard label="Basic subscribers" value={stats?.basic ?? null} hint="plan = basic" accent="#34d399" />
+          <MetricCard label="Pro subscribers"   value={stats?.pro   ?? null} hint="plan = pro"   accent="#a78bfa" />
+          <MetricCard label="Basic subscribers" value={stats?.basic ?? null} hint="plan = basic" accent="#a78bfa" />
           <MetricCard label="Free users"        value={stats?.free  ?? null} hint="no paid plan" accent="#94a3b8" />
           <MetricCard
             label="Paid · 0 credits ⚠️"
             value={stats?.paidNoCredits ?? null}
             hint="pro/basic with no credits"
-            accent={stats?.paidNoCredits ? '#f87171' : '#34d399'}
+            accent={stats?.paidNoCredits ? '#f87171' : '#a78bfa'}
           />
           <MetricCard
             label="Checkout abandonado 🔥"
@@ -323,7 +323,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                           color: u.credits === null ? '#94a3b8'
                             : u.credits <= 0 ? '#f87171'
                             : u.credits <= 5 ? '#fbbf24'
-                            : '#34d399',
+                            : '#a78bfa',
                           fontSize: '0.95rem',
                         }}>
                           {u.credits === null ? '—' : u.credits}
@@ -458,7 +458,7 @@ function RefreshIndicator({
             width: 7,
             height: 7,
             borderRadius: '50%',
-            background: 'rgba(52,211,153,0.7)',
+            background: 'rgba(167,139,250,0.7)',
           }}
         />
       )}
@@ -522,7 +522,7 @@ function PlanBadge({ plan, credits }: { plan: string | null; credits: number | n
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <span
           className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
-          style={{ background: 'rgba(52,211,153,.12)', color: '#34d399', border: '1px solid rgba(52,211,153,.3)' }}
+          style={{ background: 'rgba(167,139,250,.12)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.3)' }}
         >
           Pro
         </span>
@@ -538,7 +538,7 @@ function PlanBadge({ plan, credits }: { plan: string | null; credits: number | n
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <span
           className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold"
-          style={{ background: 'rgba(52,211,153,.12)', color: '#34d399', border: '1px solid rgba(52,211,153,.3)' }}
+          style={{ background: 'rgba(167,139,250,.12)', color: '#a78bfa', border: '1px solid rgba(167,139,250,.3)' }}
         >
           Basic
         </span>

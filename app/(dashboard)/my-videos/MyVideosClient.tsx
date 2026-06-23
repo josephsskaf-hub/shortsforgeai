@@ -44,9 +44,9 @@ function statusChip(s: VideoRow['status']) {
     return {
       label: 'Ready',
       emoji: '✅',
-      fg: '#34d399',
-      bg: 'rgba(52,211,153,.12)',
-      border: 'rgba(52,211,153,.40)',
+      fg: '#a78bfa',
+      bg: 'rgba(167,139,250,.12)',
+      border: 'rgba(167,139,250,.40)',
       pulse: false,
     }
   if (s === 'failed' || s === 'cancelled')
@@ -199,7 +199,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
           style={{
             background: 'linear-gradient(180deg, rgba(11,17,32,.85), rgba(11,16,32,.65))',
             border: '1px solid rgba(16, 185, 129,.18)',
-            boxShadow: '0 0 80px rgba(16,185,129,.08)',
+            boxShadow: '0 0 80px rgba(139,92,246,.08)',
           }}
         >
           <div className="text-5xl mb-4">⚡</div>
@@ -213,9 +213,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
               color: '#FFFFFF',
-              boxShadow: '0 4px 22px rgba(16,185,129,.4)',
+              boxShadow: '0 4px 22px rgba(139,92,246,.4)',
               textDecoration: 'none',
             }}
           >
@@ -375,7 +375,7 @@ function VideoCard({
       style={{
         background: 'linear-gradient(180deg, #0F1424 0%, #0F0F10 100%)',
         border: isActive
-          ? '1px solid rgba(16,185,129,0.55)'
+          ? '1px solid rgba(139,92,246,0.55)'
           : '1px solid rgba(255,255,255,0.06)',
         boxShadow: isActive
           ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
@@ -580,10 +580,10 @@ function VideoCard({
                 rel="noreferrer"
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center transition-all"
                 style={{
-                  background: 'linear-gradient(135deg, #059669, #22D3EE)',
+                  background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
                   color: '#fff',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 18px rgba(16,185,129,.35)',
+                  boxShadow: '0 4px 18px rgba(139,92,246,.35)',
                 }}
               >
                 ▶ Open
@@ -612,12 +612,12 @@ function VideoCard({
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1"
                 style={{
                   background: isCopied
-                    ? 'rgba(52,211,153,.12)'
+                    ? 'rgba(167,139,250,.12)'
                     : 'rgba(255,255,255,.04)',
                   border: isCopied
-                    ? '1px solid rgba(52,211,153,.45)'
+                    ? '1px solid rgba(167,139,250,.45)'
                     : '1px solid var(--border)',
-                  color: isCopied ? '#34d399' : 'var(--text2)',
+                  color: isCopied ? '#a78bfa' : 'var(--text2)',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
@@ -630,7 +630,7 @@ function VideoCard({
                 style={{
                   background: 'rgba(16, 185, 129,.10)',
                   border: '1px solid rgba(16, 185, 129,.32)',
-                  color: '#34D399',
+                  color: '#A78BFA',
                   textDecoration: 'none',
                 }}
               >
@@ -728,7 +728,7 @@ function Header({ count }: { count: number }) {
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #059669, #22D3EE)',
+            background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
             color: '#FFFFFF',
             boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
             textDecoration: 'none',

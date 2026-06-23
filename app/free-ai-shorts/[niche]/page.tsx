@@ -247,7 +247,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           </p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
+            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Generate my free {n.label} Short →
           </Link>

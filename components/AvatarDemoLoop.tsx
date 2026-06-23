@@ -26,17 +26,17 @@ export default function AvatarDemoLoop({ size = 56, className }: AvatarDemoLoopP
         >
           <defs>
             <linearGradient id="sfaFace" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#10b981" />
+              <stop offset="0%" stopColor="#8b5cf6" />
               <stop offset="100%" stopColor="#14b8a6" />
             </linearGradient>
           </defs>
           <circle cx="32" cy="32" r="32" fill="url(#sfaFace)" opacity="0.18" />
           {/* head */}
-          <circle cx="32" cy="25" r="11" fill="#6ee7b7" />
+          <circle cx="32" cy="25" r="11" fill="#c4b5fd" />
           {/* shoulders */}
-          <path d="M14 56c0-10 8-16 18-16s18 6 18 16z" fill="#6ee7b7" />
+          <path d="M14 56c0-10 8-16 18-16s18 6 18 16z" fill="#c4b5fd" />
           {/* animated mouth (talking) */}
-          <rect className="sfa-mouth" x="28" y="28" width="8" height="2.4" rx="1.2" fill="#047857" />
+          <rect className="sfa-mouth" x="28" y="28" width="8" height="2.4" rx="1.2" fill="#6D28D9" />
         </svg>
       </div>
 
@@ -49,7 +49,7 @@ export default function AvatarDemoLoop({ size = 56, className }: AvatarDemoLoopP
             style={{
               width: 3,
               borderRadius: 3,
-              background: 'linear-gradient(180deg,#6ee7b7,#14b8a6)',
+              background: 'linear-gradient(180deg,#c4b5fd,#14b8a6)',
               animationDelay: `${b * 0.12}s`,
             }}
           />

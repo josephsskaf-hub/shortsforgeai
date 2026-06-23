@@ -75,7 +75,7 @@ export default function StickyUpgradeBar({ isPro }: StickyUpgradeBarProps) {
               borderRadius: 10,
               background: '#fff',
               border: 'none',
-              color: '#047857',
+              color: '#6D28D9',
               fontSize: '0.75rem',
               fontWeight: 800,
               cursor: 'pointer',

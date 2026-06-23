@@ -197,12 +197,12 @@ function PlanCard({
     return 'rgba(11,17,32,0.85)'
   }
   function border(): string {
-    if (isSelected) return '2px solid #10B981'
+    if (isSelected) return '2px solid #8B5CF6'
     if (highlight) return '2px solid rgba(5, 150, 105,.55)'
     return '1px solid var(--border)'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(16,185,129,0.3)'
+    if (isSelected) return '0 0 28px rgba(139,92,246,0.3)'
     if (highlight) return '0 0 24px rgba(5, 150, 105,.18)'
     return 'none'
   }
@@ -231,7 +231,7 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (isSelected) return
-        e.currentTarget.style.borderColor = '#10B981'
+        e.currentTarget.style.borderColor = '#8B5CF6'
         e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
         e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
       }}
@@ -270,7 +270,7 @@ function PlanCard({
       >
         {price}
       </div>
-      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#6ee7b7', fontWeight: 700 }}>
+      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#c4b5fd', fontWeight: 700 }}>
         {renew}
       </p>
       <ul className="flex flex-col gap-1.5 mb-4 flex-1">
@@ -280,7 +280,7 @@ function PlanCard({
             className="flex items-start gap-2 text-xs"
             style={{ color: 'var(--text2)' }}
           >
-            <span style={{ color: '#34d399', marginTop: 1 }}>✓</span>
+            <span style={{ color: '#a78bfa', marginTop: 1 }}>✓</span>
             <span>{f}</span>
           </li>
         ))}
@@ -295,7 +295,7 @@ function PlanCard({
         }}
         className="rounded-xl py-2.5 text-sm font-black text-center text-white"
         style={{
-          background: isSelected ? '#10B981' : 'linear-gradient(135deg, #059669, #059669)',
+          background: isSelected ? '#8B5CF6' : 'linear-gradient(135deg, #7C3AED, #7C3AED)',
           boxShadow: isSelected
             ? '0 4px 22px rgba(16, 185, 129,.35)'
             : '0 6px 22px rgba(5, 150, 105,.32)',

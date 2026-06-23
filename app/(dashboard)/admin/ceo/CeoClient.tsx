@@ -93,19 +93,19 @@ export default function CeoClient({ data: initialData, viewerEmail, denied }: Pr
         <BigCard
           label="Monthly Recurring Revenue"
           value={money(data.mrr)}
-          accent="#34d399"
+          accent="#a78bfa"
           sub={`Pro ×${data.proUsers}  ·  Basic ×${data.basicUsers}`}
         />
-        <Card label="Pro subscribers"   value={fmt(data.proUsers)}   accent="#34d399" hint="$9.90/mo each" />
-        <Card label="Basic subscribers" value={fmt(data.basicUsers)} accent="#34d399" hint="$4.90/mo each" />
-        <Card label="Total paid"        value={fmt(data.paidTotal)}  accent="#34d399" hint="active plans" />
+        <Card label="Pro subscribers"   value={fmt(data.proUsers)}   accent="#a78bfa" hint="$9.90/mo each" />
+        <Card label="Basic subscribers" value={fmt(data.basicUsers)} accent="#a78bfa" hint="$4.90/mo each" />
+        <Card label="Total paid"        value={fmt(data.paidTotal)}  accent="#a78bfa" hint="active plans" />
       </Section>
 
       {/* ── Row 2: Growth ──────────────────────────────────────────────── */}
       <Section title="📈 Growth">
         <Card label="New today"       value={fmt(data.signupsToday)}     accent="#22d3ee" hint="last 24 h" />
         <Card label="New this week"   value={fmt(data.signupsThisWeek)}  accent="#22d3ee" hint="last 7 days" />
-        <Card label="New this month"  value={fmt(data.signupsThisMonth)} accent="#34d399" hint="last 30 days" />
+        <Card label="New this month"  value={fmt(data.signupsThisMonth)} accent="#a78bfa" hint="last 30 days" />
         <RateCard
           label="Signup → Paid"
           value={data.signupToPaidRate}
@@ -133,7 +133,7 @@ export default function CeoClient({ data: initialData, viewerEmail, denied }: Pr
           sub={`${data.checkoutCompleted} paid / ${data.checkoutCompleted + data.checkoutAbandoned} resolved`}
         />
         <Card label="Checkout abandoned" value={fmt(data.checkoutAbandoned)}
-          accent={data.checkoutAbandoned > 0 ? '#f87171' : '#34d399'} hint="Stripe expired" />
+          accent={data.checkoutAbandoned > 0 ? '#f87171' : '#a78bfa'} hint="Stripe expired" />
       </Section>
 
       {/* ── Hot leads table ────────────────────────────────────────────── */}
@@ -195,7 +195,7 @@ export default function CeoClient({ data: initialData, viewerEmail, denied }: Pr
                 {data.atRiskUsers.map((u, i) => (
                   <tr key={i} style={{ borderTop: '1px solid rgba(245,158,11,0.1)', background: i % 2 === 0 ? 'transparent' : 'rgba(11,17,32,0.4)' }}>
                     <td className="px-4 py-2 font-mono" style={{ color: 'var(--text)' }}>{u.email}</td>
-                    <td className="px-4 py-2 uppercase text-[10px] font-black" style={{ color: u.plan === 'pro' ? '#34d399' : '#34d399' }}>{u.plan}</td>
+                    <td className="px-4 py-2 uppercase text-[10px] font-black" style={{ color: u.plan === 'pro' ? '#a78bfa' : '#a78bfa' }}>{u.plan}</td>
                     <td className="px-4 py-2 font-black" style={{ color: u.credits === 0 ? '#f87171' : '#f59e0b' }}>
                       {u.credits === 0 ? '0 ⚠️' : u.credits}
                     </td>
@@ -251,7 +251,7 @@ function BigCard({ label, value, accent, sub }: { label: string; value: string; 
 
 function RateCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   const isGood = value !== '—' && parseFloat(value) >= 10
-  const accent = value === '—' ? '#94a3b8' : isGood ? '#34d399' : '#f59e0b'
+  const accent = value === '—' ? '#94a3b8' : isGood ? '#a78bfa' : '#f59e0b'
   return (
     <div className="rounded-xl p-4" style={{ background: 'rgba(11,17,32,0.85)', border: `1px solid ${accent}33` }}>
       <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>{label}</div>

@@ -91,7 +91,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
               className="flex items-center gap-2 py-1.5 text-sm"
               style={{ color: 'var(--text2)' }}
             >
-              <span style={{ color: '#34d399', fontSize: '0.8rem' }}>✓</span>
+              <span style={{ color: '#a78bfa', fontSize: '0.8rem' }}>✓</span>
               {f}
             </div>
           ))}
@@ -101,7 +101,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           onClick={() => router.push('/pricing')}
           className="w-full rounded-xl py-4 font-black text-base text-white mb-3 transition-all"
           style={{
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
             boxShadow: '0 4px 28px rgba(16, 185, 129,.45)',
             animation: 'btn-pulse 2.8s ease-in-out infinite',
             cursor: 'pointer',

@@ -300,7 +300,7 @@ export function generateMetadata({ params }: { params: { competitor: string } })
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
 
 function Cell({ v }: { v: boolean | string }) {
-  if (v === true) return <span style={{ color: '#10B981', fontWeight: 900 }}>✓</span>
+  if (v === true) return <span style={{ color: '#8B5CF6', fontWeight: 900 }}>✓</span>
   if (v === false) return <span style={{ color: '#64748B', fontWeight: 900 }}>—</span>
   return <span style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>{v}</span>
 }
@@ -342,7 +342,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
           </p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
+            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Try ShortsForgeAI free →
           </Link>

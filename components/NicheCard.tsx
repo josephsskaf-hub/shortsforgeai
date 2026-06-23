@@ -92,12 +92,12 @@ export default function NicheCard({
             className="flex items-center px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(16, 185, 129,.15)', border: '1px solid rgba(16, 185, 129,.3)' }}
           >
-            <span className="text-xs font-black uppercase tracking-wide" style={{ color: '#34D399', fontSize: '0.55rem' }}>{badge}</span>
+            <span className="text-xs font-black uppercase tracking-wide" style={{ color: '#A78BFA', fontSize: '0.55rem' }}>{badge}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full animate-pulse-dot" style={{ background: '#10b981', boxShadow: '0 0 7px rgba(16,185,129,.55)' }} />
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#34d399' }}>Live</span>
+            <div className="w-2 h-2 rounded-full animate-pulse-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 7px rgba(139,92,246,.55)' }} />
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#a78bfa' }}>Live</span>
           </div>
         )}
       </div>
@@ -137,7 +137,7 @@ export default function NicheCard({
           background:
             disabled || loading
               ? 'rgba(16, 185, 129,.3)'
-              : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
           boxShadow: disabled || loading ? 'none' : selected ? '0 6px 28px rgba(16, 185, 129,.45)' : '0 4px 22px rgba(16, 185, 129,.28)',
           animation: disabled || loading ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
           cursor: disabled || loading ? 'not-allowed' : 'pointer',

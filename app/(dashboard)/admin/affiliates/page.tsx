@@ -26,14 +26,14 @@ interface Affiliate {
 const CYAN = '#22D3EE'
 const TEXT = '#F1F5F9'
 const MUTED = '#94A3B8'
-const GREEN = '#34d399'
+const GREEN = '#a78bfa'
 const CARD = '#121214'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
 const PAGE_BG = '#0A0A0B'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
   pending: { bg: 'rgba(251,191,36,0.14)', color: '#fbbf24' },
-  active: { bg: 'rgba(52,211,153,0.14)', color: GREEN },
+  active: { bg: 'rgba(167,139,250,0.14)', color: GREEN },
   suspended: { bg: 'rgba(239,68,68,0.14)', color: '#ef4444' },
 }
 
@@ -267,7 +267,7 @@ export default function AdminAffiliatesPage() {
                               disabled={busy}
                               onClick={() => post(a.id, { action: 'approve' })}
                               className="rounded-md px-2.5 py-1 text-[11px] font-black"
-                              style={{ background: 'rgba(52,211,153,.14)', color: GREEN, border: '1px solid rgba(52,211,153,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ background: 'rgba(167,139,250,.14)', color: GREEN, border: '1px solid rgba(167,139,250,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
                             >
                               Approve
                             </button>
@@ -278,7 +278,7 @@ export default function AdminAffiliatesPage() {
                               disabled={busy}
                               onClick={() => post(a.id, { action: 'activate' })}
                               className="rounded-md px-2.5 py-1 text-[11px] font-black"
-                              style={{ background: 'rgba(52,211,153,.14)', color: GREEN, border: '1px solid rgba(52,211,153,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ background: 'rgba(167,139,250,.14)', color: GREEN, border: '1px solid rgba(167,139,250,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
                             >
                               Activate
                             </button>

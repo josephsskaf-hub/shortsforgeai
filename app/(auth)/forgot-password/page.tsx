@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
             ⚡
           </div>
           <div>
-            <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               ShortsForgeAI
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
                   type="submit"
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
-                  style={{ background: '#10B981', color: '#FFFFFF', boxShadow: '0 4px 22px rgba(16, 185, 129,.3)', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                  style={{ background: '#8B5CF6', color: '#FFFFFF', boxShadow: '0 4px 22px rgba(16, 185, 129,.3)', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
                 >
                   {loading ? 'Sending...' : '📧 Send Reset Link'}
                 </button>

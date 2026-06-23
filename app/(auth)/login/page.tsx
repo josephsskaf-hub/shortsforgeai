@@ -123,7 +123,7 @@ export default function LoginPage() {
             className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
             style={{
               background:
-                'radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
+                'radial-gradient(circle at top left, rgba(139,92,246,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
             }}
           >
             {/* Dot pattern overlay */}
@@ -158,7 +158,7 @@ export default function LoginPage() {
                   <div
                     className="font-black text-sm tracking-tight"
                     style={{
-                      background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+                      background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}
@@ -203,9 +203,9 @@ export default function LoginPage() {
                     <span
                       className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{
-                        background: 'rgba(16,185,129,.18)',
-                        border: '1px solid rgba(16,185,129,.35)',
-                        color: '#34d399',
+                        background: 'rgba(139,92,246,.18)',
+                        border: '1px solid rgba(139,92,246,.35)',
+                        color: '#a78bfa',
                         fontSize: '0.7rem',
                         fontWeight: 800,
                       }}
@@ -270,7 +270,7 @@ export default function LoginPage() {
               <div
                 className="font-black text-sm tracking-tight"
                 style={{
-                  background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+                  background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -447,7 +447,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                 style={{
-                  background: '#10B981',
+                  background: '#8B5CF6',
                   color: '#FFFFFF',
                   boxShadow: '0 4px 22px rgba(16, 185, 129,.3)',
                   opacity: loading ? 0.7 : 1,

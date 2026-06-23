@@ -33,7 +33,7 @@ interface AffiliateMe {
 const CYAN = '#22D3EE'
 const TEXT = '#F1F5F9'
 const MUTED = '#94A3B8'
-const GREEN = '#34d399'
+const GREEN = '#a78bfa'
 const CARD = '#121214'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
 
@@ -54,7 +54,7 @@ function fmtDate(iso: string | null): string {
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
   pending: { bg: 'rgba(251,191,36,0.14)', color: '#fbbf24' },
-  approved: { bg: 'rgba(52,211,153,0.14)', color: GREEN },
+  approved: { bg: 'rgba(167,139,250,0.14)', color: GREEN },
   paid: { bg: 'rgba(34,211,238,0.14)', color: CYAN },
   clawed_back: { bg: 'rgba(239,68,68,0.14)', color: '#ef4444' },
 }
@@ -160,7 +160,7 @@ export default function AffiliatePage() {
             Become an affiliate —{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #22D3EE 0%, #10B981 60%, #10B981 100%)',
+                background: 'linear-gradient(135deg, #22D3EE 0%, #8B5CF6 60%, #8B5CF6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -180,7 +180,7 @@ export default function AffiliatePage() {
             disabled={applying}
             className="rounded-xl px-7 py-3 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #059669)',
+              background: 'linear-gradient(135deg, #22D3EE, #7C3AED)',
               boxShadow: '0 4px 18px rgba(34,211,238,.35)',
               border: 'none',
               cursor: applying ? 'default' : 'pointer',
@@ -284,7 +284,7 @@ export default function AffiliatePage() {
             onClick={copyLink}
             className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #059669)',
+              background: 'linear-gradient(135deg, #22D3EE, #7C3AED)',
               boxShadow: '0 4px 18px rgba(34,211,238,.35)',
               whiteSpace: 'nowrap',
               cursor: 'pointer',
@@ -307,7 +307,7 @@ export default function AffiliatePage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <Kpi label="Clicks" value={stats.clicks.toLocaleString('en-US')} accent={CYAN} />
-        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#34d399" />
+        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#a78bfa" />
         <Kpi label="Paid customers" value={stats.paid.toLocaleString('en-US')} accent={GREEN} />
         <Kpi label="Pending $" value={dollars(earnings.pending)} accent="#fbbf24" />
         <Kpi label="Approved $" value={dollars(earnings.approved)} accent={GREEN} />

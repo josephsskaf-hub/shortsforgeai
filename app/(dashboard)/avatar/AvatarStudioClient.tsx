@@ -566,7 +566,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     <div className="px-4 sm:px-6 py-7 pb-20">
       {/* Header */}
       <div className="mb-7">
-        <div className="font-black uppercase tracking-[.18em] mb-2" style={{ fontSize: '0.65rem', color: '#34D399' }}>
+        <div className="font-black uppercase tracking-[.18em] mb-2" style={{ fontSize: '0.65rem', color: '#A78BFA' }}>
           Avatar Studio
         </div>
         <h1 className="font-display font-bold tracking-tight" style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
@@ -593,9 +593,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                     disabled={busy}
                     className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
                     style={{
-                      background: sourceKind === k ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: sourceKind === k ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
-                      color: sourceKind === k ? '#34D399' : 'var(--muted2)',
+                      background: sourceKind === k ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: sourceKind === k ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
+                      color: sourceKind === k ? '#A78BFA' : 'var(--muted2)',
                       cursor: busy ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -616,7 +616,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                         onClick={() => setFaceUrl(f.url)}
                         disabled={busy}
                         title="Use this saved face"
-                        style={{ borderRadius: 999, padding: 2, border: faceUrl === f.url ? '2px solid #34D399' : '2px solid transparent', background: 'none', cursor: 'pointer' }}
+                        style={{ borderRadius: 999, padding: 2, border: faceUrl === f.url ? '2px solid #A78BFA' : '2px solid transparent', background: 'none', cursor: 'pointer' }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={f.url} alt="Saved face" className="h-11 w-11 rounded-full object-cover" />
@@ -683,7 +683,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setFidelity('real')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold text-left"
-                  style={{ background: fidelity === 'real' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'real' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: fidelity === 'real' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: fidelity === 'real' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'real' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: fidelity === 'real' ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   🎯 Max realism — animate my real photo
                 </button>
@@ -692,7 +692,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setFidelity('scene')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold text-left"
-                  style={{ background: fidelity === 'scene' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'scene' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: fidelity === 'scene' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: fidelity === 'scene' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: fidelity === 'scene' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: fidelity === 'scene' ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   🎬 Put me in a scene
                 </button>
@@ -720,12 +720,12 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                       onClick={handleBuildScene}
                       disabled={sceneLoading || busy || !scenePrompt.trim()}
                       className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                      style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: sceneLoading || busy || !scenePrompt.trim() ? 'not-allowed' : 'pointer' }}
+                      style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(167,139,250,0.45)', color: '#A78BFA', cursor: sceneLoading || busy || !scenePrompt.trim() ? 'not-allowed' : 'pointer' }}
                     >
                       {sceneLoading ? '🎬 Building the scene…' : '🎬 Build the scene'}
                     </button>
                     {sceneImageUrl && (
-                      <span className="text-[11px] font-bold" style={{ color: '#6ee7b7' }}>
+                      <span className="text-[11px] font-bold" style={{ color: '#c4b5fd' }}>
                         ✓ Scene ready — preview on the right.{' '}
                         <button type="button" onClick={() => setSceneImageUrl(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
                           use original photo
@@ -753,9 +753,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setLanguage(code)}
                   className="rounded-lg px-2.5 py-1 text-[11px] font-bold"
                   style={{
-                    background: language === code ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: language === code ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
-                    color: language === code ? '#34D399' : 'var(--muted2)',
+                    background: language === code ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: language === code ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
+                    color: language === code ? '#A78BFA' : 'var(--muted2)',
                     cursor: busy ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -771,9 +771,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 onClick={() => { userPickedModeRef.current = true; setScriptMode('verbatim') }}
                 className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
                 style={{
-                  background: scriptMode === 'verbatim' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
-                  border: scriptMode === 'verbatim' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
-                  color: scriptMode === 'verbatim' ? '#34D399' : 'var(--muted2)',
+                  background: scriptMode === 'verbatim' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: scriptMode === 'verbatim' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
+                  color: scriptMode === 'verbatim' ? '#A78BFA' : 'var(--muted2)',
                   cursor: busy ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -785,9 +785,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 onClick={() => { userPickedModeRef.current = true; setScriptMode('expand') }}
                 className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
                 style={{
-                  background: scriptMode === 'expand' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
-                  border: scriptMode === 'expand' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)',
-                  color: scriptMode === 'expand' ? '#34D399' : 'var(--muted2)',
+                  background: scriptMode === 'expand' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: scriptMode === 'expand' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
+                  color: scriptMode === 'expand' ? '#A78BFA' : 'var(--muted2)',
                   cursor: busy ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -827,7 +827,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           {/* 2.5 · Voice (optional) — clone the user's voice */}
           <section className="neon-card p-5">
             <h2 className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted2)' }}>
-              2.5 · Speak in your own voice <span style={{ color: '#34D399' }}>(optional)</span>
+              2.5 · Speak in your own voice <span style={{ color: '#A78BFA' }}>(optional)</span>
             </h2>
             <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
               Upload a clear ~30-60s voice sample (one speaker, little background noise) and the narration will be spoken in that voice. Only use a voice you have the right to use.
@@ -838,7 +838,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 onClick={() => voiceInputRef.current?.click()}
                 disabled={busy || voiceCloning || recording}
                 className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(52,211,153,0.45)', color: '#34D399', cursor: busy || voiceCloning || recording ? 'not-allowed' : 'pointer' }}
+                style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(167,139,250,0.45)', color: '#A78BFA', cursor: busy || voiceCloning || recording ? 'not-allowed' : 'pointer' }}
               >
                 {voiceCloning ? '🎙️ Cloning the voice…' : voiceId ? '🎙️ Upload a different sample' : '🎙️ Upload a voice sample'}
               </button>
@@ -860,7 +860,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               onChange={(e) => handleVoiceClone(e.target.files?.[0] ?? null)}
             />
             {voiceId && (
-              <p className="text-[11px] mt-2 font-bold" style={{ color: '#6ee7b7' }}>
+              <p className="text-[11px] mt-2 font-bold" style={{ color: '#c4b5fd' }}>
                 ✓ Voice cloned — the narration will speak in this voice.{' '}
                 <button type="button" onClick={() => setVoiceId(null)} className="underline" style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>
                   use a default voice
@@ -885,7 +885,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setHookMode(true)}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: hookMode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: hookMode ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: hookMode ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: hookMode ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: hookMode ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: hookMode ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   ⚡ Hook intro — you open, b-roll tells the story
                 </button>
@@ -894,7 +894,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setHookMode(false)}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: !hookMode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: !hookMode ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: !hookMode ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: !hookMode ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: !hookMode ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: !hookMode ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   🎬 Full video — face the whole time
                 </button>
@@ -905,7 +905,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setEngine('fabric')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: engine === 'fabric' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'fabric' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: engine === 'fabric' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: engine === 'fabric' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'fabric' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: engine === 'fabric' ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   🎙️ Standard — talking head
                 </button>
@@ -914,7 +914,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   onClick={() => setEngine('omnihuman')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: engine === 'omnihuman' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'omnihuman' ? '1px solid rgba(52,211,153,0.5)' : '1px solid var(--border)', color: engine === 'omnihuman' ? '#34D399' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: engine === 'omnihuman' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'omnihuman' ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)', color: engine === 'omnihuman' ? '#A78BFA' : 'var(--muted2)', cursor: 'pointer' }}
                 >
                   🕺 Pro — body & gestures <span style={{ fontSize: 8 }}>BETA</span>
                 </button>
@@ -935,18 +935,18 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
             </button>
             <p className="text-[12px] text-center" style={{ color: 'var(--muted)' }}>
               1 Avatar Credit · debited only on success ·{' '}
-              <span style={{ color: (avatarCredits ?? 0) > 0 ? '#34D399' : '#f87171', fontWeight: 700 }}>
+              <span style={{ color: (avatarCredits ?? 0) > 0 ? '#A78BFA' : '#f87171', fontWeight: 700 }}>
                 you have {avatarCredits === null ? '—' : avatarCredits}
               </span>
               {(avatarCredits ?? 1) < 1 && (
                 <>
-                  {' '}· <Link href="/generate?avatar=1" style={{ color: '#34D399' }}>get credits from $11.90</Link>
+                  {' '}· <Link href="/generate?avatar=1" style={{ color: '#A78BFA' }}>get credits from $11.90</Link>
                 </>
               )}
             </p>
             {!isLoggedIn && (
               <p className="text-[12px] text-center" style={{ color: 'var(--muted2)' }}>
-                <Link href="/login?redirect=/avatar" style={{ color: '#34D399', fontWeight: 700 }}>Sign in</Link> to create your avatar video.
+                <Link href="/login?redirect=/avatar" style={{ color: '#A78BFA', fontWeight: 700 }}>Sign in</Link> to create your avatar video.
               </p>
             )}
             {error && <p className="text-sm font-semibold rounded-xl px-4 py-3" style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }} role="alert">⚠️ {error}</p>}
@@ -984,7 +984,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   <div className="spinner-sm" style={{ position: 'relative' }}><div className="spinner-sm-inner" /></div>
                   <p className="text-center text-[12px] font-bold" style={{ color: 'var(--text2)' }}>{PHASE_COPY[phase]}</p>
                   <div style={{ width: '85%', height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                    <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #10B981, #22D3EE)', transition: 'width 0.6s ease' }} />
+                    <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #8B5CF6, #22D3EE)', transition: 'width 0.6s ease' }} />
                   </div>
                 </div>
               )}

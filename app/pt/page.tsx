@@ -73,7 +73,7 @@ export default function PtLandingPage() {
           <p style={{ fontSize: '1.05rem', color: '#CBD5E1', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 640 }}>
             Você digita uma ideia e o ShortsForgeAI monta o Short faceless inteiro: <b>roteiro + voz de IA + imagens + legendas</b>, em cerca de 60 segundos. Pronto para postar no YouTube Shorts, TikTok e Reels.
           </p>
-          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>
+          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>
             Criar meu primeiro vídeo grátis →
           </Link>
           <p style={{ fontSize: '0.82rem', color: '#94A3B8', margin: '10px 0 0' }}>

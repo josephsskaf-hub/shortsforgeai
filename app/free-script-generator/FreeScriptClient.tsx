@@ -98,7 +98,7 @@ export default function FreeScriptClient() {
           <button
             onClick={() => generate()}
             disabled={loading}
-            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}
+            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? '✍️ Writing your script…' : 'Generate my script →'}
           </button>

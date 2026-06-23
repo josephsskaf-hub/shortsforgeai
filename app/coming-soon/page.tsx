@@ -92,7 +92,7 @@ export default function ComingSoonPage() {
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'linear-gradient(135deg, #059669, #059669)',
+              background: 'linear-gradient(135deg, #7C3AED, #7C3AED)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -106,7 +106,7 @@ export default function ComingSoonPage() {
             style={{
               fontWeight: 900,
               fontSize: '1.15rem',
-              background: 'linear-gradient(135deg, #10B981, #22D3EE)',
+              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               letterSpacing: '-0.02em',
@@ -134,12 +134,12 @@ export default function ComingSoonPage() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#34d399',
-              boxShadow: '0 0 10px rgba(52,211,153,0.7)',
+              background: '#a78bfa',
+              boxShadow: '0 0 10px rgba(167,139,250,0.7)',
               display: 'inline-block',
             }}
           />
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#6ee7b7', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.05em' }}>
             EM BREVE · COMING SOON
           </span>
         </div>
@@ -158,7 +158,7 @@ export default function ComingSoonPage() {
           Estamos preparando algo{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #10B981, #22D3EE, #22D3EE)',
+              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -223,7 +223,7 @@ export default function ComingSoonPage() {
                 fontSize: '0.9rem',
                 fontWeight: 800,
                 color: '#fff',
-                background: 'linear-gradient(135deg, #059669, #059669)',
+                background: 'linear-gradient(135deg, #7C3AED, #7C3AED)',
                 border: 'none',
                 cursor: 'pointer',
                 boxShadow: '0 6px 24px rgba(16, 185, 129,.4)',
@@ -241,9 +241,9 @@ export default function ComingSoonPage() {
               margin: '0 auto',
               padding: '16px 20px',
               borderRadius: 14,
-              background: 'rgba(16,185,129,0.08)',
-              border: '1px solid rgba(16,185,129,0.32)',
-              color: '#6ee7b7',
+              background: 'rgba(139,92,246,0.08)',
+              border: '1px solid rgba(139,92,246,0.32)',
+              color: '#c4b5fd',
               fontWeight: 700,
               fontSize: '0.92rem',
             }}
@@ -261,7 +261,7 @@ export default function ComingSoonPage() {
           Já tem uma conta?{' '}
           <Link
             href="/login"
-            style={{ color: '#6ee7b7', textDecoration: 'none', fontWeight: 700 }}
+            style={{ color: '#c4b5fd', textDecoration: 'none', fontWeight: 700 }}
           >
             Entrar
           </Link>

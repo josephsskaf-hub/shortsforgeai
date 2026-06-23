@@ -87,7 +87,7 @@ export default function ExamplesClient() {
       <header className="mb-7">
         <div
           className="font-black uppercase tracking-[.16em] mb-1"
-          style={{ fontSize: '0.68rem', color: '#10B981' }}
+          style={{ fontSize: '0.68rem', color: '#8B5CF6' }}
         >
           Examples
         </div>
@@ -179,7 +179,7 @@ function ExampleCard({ example }: { example: Example }) {
         href={href}
         className="rounded-xl py-2.5 text-sm font-black text-center mt-auto"
         style={{
-          background: '#10B981',
+          background: '#8B5CF6',
           color: '#FFFFFF',
           boxShadow: '0 4px 18px rgba(16, 185, 129,.3)',
           textDecoration: 'none',
@@ -198,7 +198,7 @@ function Badge({ children }: { children: React.ReactNode }) {
       style={{
         background: 'rgba(16, 185, 129,.10)',
         border: '1px solid rgba(16, 185, 129,.32)',
-        color: '#10B981',
+        color: '#8B5CF6',
       }}
     >
       {children}

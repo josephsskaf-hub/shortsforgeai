@@ -86,7 +86,7 @@ const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
     category: 'Hidden Places',
     title: 'Cities erased from every map',
     prompt: 'Dark cinematic short about real hidden cities that governments removed from world maps',
-    accent: '#34D399',
+    accent: '#A78BFA',
     captions: ["These cities officially don't exist", 'Governments wiped them from every map', 'But people still live there...'],
     genTime: 48,
   },
@@ -102,7 +102,7 @@ const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
     category: 'Weird Facts',
     title: 'Facts your brain refuses to believe',
     prompt: 'Punchy weird facts short with 5 facts that sound fake but are 100% true',
-    accent: '#34D399',
+    accent: '#A78BFA',
     captions: ['Your brain will say this is fake', "But it's 100% verified", 'Ready to feel small?'],
     genTime: 44,
   },
@@ -110,7 +110,7 @@ const SHOWCASE_BASE: Omit<ShowcaseCard, 'videoUrl'>[] = [
     category: 'Money Psychology',
     title: 'Why the rich think differently',
     prompt: 'Money psychology short about the mental habits that separate the wealthy from everyone else',
-    accent: '#34D399',
+    accent: '#A78BFA',
     captions: ['Billionaires think about money differently', 'This one habit changes everything', 'Most people will never learn this'],
     genTime: 59,
   },
@@ -193,10 +193,10 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
           width: 280px; height: 580px;
           border-radius: 40px;
           background: linear-gradient(160deg, #1A1A1D, #0F0F10);
-          border: 1px solid rgba(52,211,153,0.35);
+          border: 1px solid rgba(167,139,250,0.35);
           box-shadow:
             0 0 0 6px rgba(8,5,18,0.9),
-            0 0 60px rgba(16,185,129,0.35),
+            0 0 60px rgba(139,92,246,0.35),
             0 30px 80px rgba(0,0,0,0.6);
           padding: 10px;
         }
@@ -204,7 +204,7 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
           position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
           width: 86px; height: 18px; border-radius: 10px;
           background: #0A0A0B; z-index: 5;
-          border: 1px solid rgba(52,211,153,0.18);
+          border: 1px solid rgba(167,139,250,0.18);
         }
         .hp-screen {
           position: relative; width: 100%; height: 100%;
@@ -214,22 +214,22 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
         .hp-vid { width: 100%; height: 100%; object-fit: cover; }
         .hp-clip-a {
           background:
-            radial-gradient(120% 80% at 20% 15%, rgba(16,185,129,0.7), transparent 55%),
+            radial-gradient(120% 80% at 20% 15%, rgba(139,92,246,0.7), transparent 55%),
             radial-gradient(100% 70% at 85% 80%, rgba(34,211,238,0.5), transparent 60%),
             linear-gradient(180deg, #17171A, #0A0A0C);
           animation-delay: 0s;
         }
         .hp-clip-b {
           background:
-            radial-gradient(110% 75% at 75% 20%, rgba(52,211,153,0.55), transparent 55%),
-            radial-gradient(90% 70% at 20% 85%, rgba(16,185,129,0.55), transparent 60%),
+            radial-gradient(110% 75% at 75% 20%, rgba(167,139,250,0.55), transparent 55%),
+            radial-gradient(90% 70% at 20% 85%, rgba(139,92,246,0.55), transparent 60%),
             linear-gradient(180deg, #19191C, #0E0E10);
           animation-delay: 3s;
         }
         .hp-clip-c {
           background:
             radial-gradient(120% 80% at 50% 10%, rgba(34,211,238,0.55), transparent 55%),
-            radial-gradient(90% 60% at 80% 90%, rgba(16,185,129,0.4), transparent 60%),
+            radial-gradient(90% 60% at 80% 90%, rgba(139,92,246,0.4), transparent 60%),
             linear-gradient(180deg, #1B1B1E, #09090B);
           animation-delay: 6s;
         }
@@ -251,7 +251,7 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
           display: flex; align-items: center; gap: 6px;
           padding: 5px 11px; border-radius: 999px;
           background: rgba(4,2,9,0.75); backdrop-filter: blur(6px);
-          border: 1px solid rgba(52,211,153,0.35);
+          border: 1px solid rgba(167,139,250,0.35);
           font-size: 10px; font-weight: 800; color: #d8cff5;
           white-space: nowrap; z-index: 4;
         }
@@ -284,36 +284,36 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
         .hp-footer {
           position: absolute; left: 14px; right: 14px; bottom: 16px; z-index: 4;
           background: rgba(4,2,9,0.72); backdrop-filter: blur(8px);
-          border: 1px solid rgba(52,211,153,0.22);
+          border: 1px solid rgba(167,139,250,0.22);
           border-radius: 14px; padding: 10px 12px;
         }
         .hp-eq { display: flex; align-items: flex-end; gap: 3px; height: 18px; margin-bottom: 8px; }
         .hp-eq i {
           flex: 1; height: 100%; border-radius: 2px;
-          background: linear-gradient(180deg, #22D3EE, #10B981);
+          background: linear-gradient(180deg, #22D3EE, #8B5CF6);
           transform-origin: bottom; transform: scaleY(0.3);
           animation: eqBar 0.9s ease-in-out infinite;
         }
-        .hp-track { height: 5px; border-radius: 999px; background: rgba(52,211,153,0.16); overflow: hidden; }
+        .hp-track { height: 5px; border-radius: 999px; background: rgba(167,139,250,0.16); overflow: hidden; }
         .hp-fill {
           height: 100%; border-radius: 999px;
-          background: linear-gradient(90deg, #10B981, #22D3EE);
+          background: linear-gradient(90deg, #8B5CF6, #22D3EE);
           box-shadow: 0 0 12px rgba(34,211,238,0.6);
           animation: demoProgress 9s ease-in-out infinite;
         }
         .hp-meta { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10px; font-weight: 700; color: #9d96b8; }
-        .hp-ready { color: #34D399; }
+        .hp-ready { color: #A78BFA; }
         .hp-badge {
           position: absolute; z-index: 6;
           padding: 8px 13px; border-radius: 12px;
           font-size: 12px; font-weight: 900; color: #fff;
           background: rgba(10,6,24,0.85); backdrop-filter: blur(8px);
-          border: 1px solid rgba(52,211,153,0.35);
-          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 22px rgba(16,185,129,0.25);
+          border: 1px solid rgba(167,139,250,0.35);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 22px rgba(139,92,246,0.25);
           white-space: nowrap;
         }
         .hp-badge-views { top: 96px; right: -54px; color: #22D3EE; animation: floatY 5s ease-in-out infinite; animation-delay: -2s; }
-        .hp-badge-speed { bottom: 150px; left: -58px; color: #34D399; animation: floatY 7s ease-in-out infinite; animation-delay: -4s; }
+        .hp-badge-speed { bottom: 150px; left: -58px; color: #A78BFA; animation: floatY 7s ease-in-out infinite; animation-delay: -4s; }
         @media (max-width: 1100px) {
           .hp-badge-views { right: -16px; }
           .hp-badge-speed { left: -16px; }
@@ -775,7 +775,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <div
         aria-hidden
         className="pointer-events-none fixed -bottom-[400px] -left-[200px] h-[700px] w-[700px] rounded-full opacity-[0.05]"
-        style={{ background: '#10B981', filter: 'blur(160px)' }}
+        style={{ background: '#8B5CF6', filter: 'blur(160px)' }}
       />
 
       {/* ───────── Top Nav ───────── */}
@@ -784,9 +784,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             same px-6 sm:px-10 padding so logo/links/buttons are flush. */}
         <div className="flex h-[68px] w-full items-center justify-between px-6 sm:px-10">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-violet-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#8B5CF6" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
@@ -805,9 +805,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <Link href="/generate" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">AI Video Generator</Link>
             {/* Face-app — AI Avatar entry in the top menu (12/06). Deep-links
                 to /generate with the avatar panel auto-open. */}
-            <Link href="/avatar" className="flex items-center gap-1.5 text-[1rem] font-medium text-[#34D399] hover:text-[#6EE7B7] transition">
+            <Link href="/avatar" className="flex items-center gap-1.5 text-[1rem] font-medium text-[#A78BFA] hover:text-[#C4B5FD] transition">
               🎭 AI Avatar
-              <span className="rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span>
+              <span className="rounded-full bg-violet-400/15 border border-violet-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-violet-300">New</span>
             </Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Viral Now</Link>
@@ -920,7 +920,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div className="md:hidden border-t border-white/[0.08] bg-[#121214]/95 backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">
               <Link onClick={() => setNavOpen(false)} href="/generate" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">AI Video Generator</Link>
-              <Link onClick={() => setNavOpen(false)} href="/avatar" className="rounded-md px-3 py-2 text-sm font-bold text-[#34D399] hover:bg-emerald-400/[.06] hover:text-[#6EE7B7]">🎭 AI Avatar <span className="ml-1 rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">New</span></Link>
+              <Link onClick={() => setNavOpen(false)} href="/avatar" className="rounded-md px-3 py-2 text-sm font-bold text-[#A78BFA] hover:bg-violet-400/[.06] hover:text-[#C4B5FD]">🎭 AI Avatar <span className="ml-1 rounded-full bg-violet-400/15 border border-violet-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-violet-300">New</span></Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
               <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Viral Now</Link>
               <a onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
@@ -969,7 +969,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
       <div style={{ minHeight: '88vh' }}>
       <section className="tech-grid relative mx-auto max-w-7xl px-4 pt-10 pb-10 sm:px-6 sm:pt-14 sm:pb-16" style={{ zIndex: 2 }}>
         {/* NEON redesign — drifting aurora orbs behind the first fold */}
-        <div aria-hidden className="aurora-orb" style={{ width: 440, height: 440, top: -90, left: '-8%', background: 'radial-gradient(circle, rgba(16,185,129,0.5), transparent 70%)' }} />
+        <div aria-hidden className="aurora-orb" style={{ width: 440, height: 440, top: -90, left: '-8%', background: 'radial-gradient(circle, rgba(139,92,246,0.5), transparent 70%)' }} />
         <div aria-hidden className="aurora-orb" style={{ width: 400, height: 400, top: 30, right: '-6%', background: 'radial-gradient(circle, rgba(34,211,238,0.34), transparent 70%)', animationDelay: '-8s' }} />
 
         {/* Push #490 — Studio dashboard hero (variação 2 aprovada): compact
@@ -991,7 +991,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#9D96B8]">
               No prompts. No editing. ShortAI writes the hook, script, voice, captions and footage for YouTube, TikTok &amp; Reels — you just download and post.
             </p>
-            <p className="mt-4 text-sm font-bold text-[#34D399]">
+            <p className="mt-4 text-sm font-bold text-[#A78BFA]">
               🎬 {animatedTotal.toLocaleString('en-US')} videos generated · 🔥 <span className="text-cyan-400">{shortsWeek.toLocaleString('en-US')}</span> this week
             </p>
           </div>
@@ -1046,7 +1046,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             {([
               { href: '/generate', label: 'AI Generator', color: '#a78bfa', icon: 'wand' },
               { href: THUMBNAIL_ROUTE, label: 'Thumbnails', color: '#fcd34d', icon: 'image' },
-              { href: '/animate', label: 'Animate Photo', color: '#34d399', icon: 'play' },
+              { href: '/animate', label: 'Animate Photo', color: '#a78bfa', icon: 'play' },
               { href: '/avatar', label: 'AI Avatar', color: '#22D3EE', icon: 'user' },
               { href: '/pricing', label: 'Pricing', color: '#9a9aa3', icon: 'dots' },
             ] as const).map((t) => (
@@ -1058,7 +1058,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
           {/* Push #432 — welcome-gift trust line under the dashboard. */}
           <p className="mt-5 text-center text-[13px] font-semibold text-[#9D96B8]">
-            🎁 <span className="text-[#34D399] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
+            🎁 <span className="text-[#A78BFA] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
           </p>
         </div>{/* end hero grid */}
 
@@ -1100,7 +1100,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         {(demoLoading || demoShown || demoError) && (
           <div className="neon-card mx-auto mt-4 w-full max-w-[760px] p-5 text-left">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#34D399' }}>
+              <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#A78BFA' }}>
                 ⚡ Your script — written live by ShortAI
               </span>
               {demoShown && demoScript && demoShown.length >= demoScript.length && (
@@ -1116,7 +1116,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               >
                 {demoShown}
                 {(demoLoading || (demoScript && demoShown.length < demoScript.length)) && (
-                  <span className="animate-pulse-dot" style={{ color: '#34D399' }}>▌</span>
+                  <span className="animate-pulse-dot" style={{ color: '#A78BFA' }}>▌</span>
                 )}
               </pre>
             )}
@@ -1144,10 +1144,10 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
         <style jsx>{`
           .sfa-home-avatar {
-            background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(20,184,166,0.14));
-            border: 1.5px solid rgba(16,185,129,0.5);
+            background: linear-gradient(135deg, rgba(139,92,246,0.16), rgba(20,184,166,0.14));
+            border: 1.5px solid rgba(139,92,246,0.5);
           }
-          .sfa-home-avatar:hover { background: linear-gradient(135deg, rgba(16,185,129,0.24), rgba(20,184,166,0.2)); transform: translateY(-1px); }
+          .sfa-home-avatar:hover { background: linear-gradient(135deg, rgba(139,92,246,0.24), rgba(20,184,166,0.2)); transform: translateY(-1px); }
         `}</style>
 
         {/* #374 — Task 2: kill blank-canvas paralysis. Clickable example chips +
@@ -1159,7 +1159,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               key={c.value}
               type="button"
               onClick={() => { setPromptText(c.value); trackHomepageEvent('hero_chip_click') }}
-              className="rounded-full border border-[rgba(52,211,153,0.22)] bg-[#131316] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:bg-[#17171A] hover:text-white"
+              className="rounded-full border border-[rgba(167,139,250,0.22)] bg-[#131316] px-3.5 py-2 text-[13px] font-semibold text-[#CBD5E1] transition hover:border-cyan-400/60 hover:bg-[#17171A] hover:text-white"
             >
               {c.label}
             </button>
@@ -1189,14 +1189,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             },
             {
               initials: 'MT',
-              accent: '#34D399',
+              accent: '#A78BFA',
               quote: 'I post 3 Shorts/day without touching a camera',
               handle: '@moneywithtom',
               subs: '28K subs',
             },
             {
               initials: 'CF',
-              accent: '#34D399',
+              accent: '#A78BFA',
               quote: 'Best money I spend every month',
               handle: '@cryptofactss',
               subs: '91K subs',
@@ -1221,7 +1221,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[13px] font-bold text-[#F1F5F9]">{t.handle}</span>
-                  <span className="text-[11px] font-bold text-[#34D399]">{t.subs}</span>
+                  <span className="text-[11px] font-bold text-[#A78BFA]">{t.subs}</span>
                 </div>
               </div>
               <p className="text-[13.5px] text-[#F1F5F9] leading-snug">
@@ -1263,7 +1263,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </div>
           <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)] mb-3">
             This is what your AI{' '}
-            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               generates in 60s.
             </span>
           </h2>
@@ -1305,7 +1305,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           </span>
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
           {/* Push #104 — live counter pulled from /api/stats. */}
-          <span className="text-[13.5px] font-bold text-[#34D399]">
+          <span className="text-[13.5px] font-bold text-[#A78BFA]">
             ⚡ {shortsToday.toLocaleString('en-US')} Shorts created today
           </span>
           <span aria-hidden className="hidden h-4 w-px bg-white/10 sm:block" />
@@ -1337,7 +1337,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <div
             aria-hidden
             className="pointer-events-none absolute left-0 right-0 top-1/2 hidden h-px -translate-y-1/2 md:block"
-            style={{ background: 'linear-gradient(90deg, transparent 0%, #22D3EE55 20%, #10B98155 50%, #34D39955 80%, transparent 100%)' }}
+            style={{ background: 'linear-gradient(90deg, transparent 0%, #22D3EE55 20%, #8B5CF655 50%, #A78BFA55 80%, transparent 100%)' }}
           />
           <div className="relative grid grid-cols-1 gap-5 md:grid-cols-3">
             {[
@@ -1351,18 +1351,18 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 icon: '🤖',
                 title: 'AI creates script, voice, captions & B-roll',
                 body: 'Hook, script, narration, captions and B-roll — stitched into a vertical short.',
-                accent: '#10B981',
+                accent: '#8B5CF6',
               },
               {
                 icon: '📥',
                 title: 'Download your Short',
                 body: 'Faceless Short ready for YouTube Shorts, TikTok & Reels. Just download and post.',
-                accent: '#34D399',
+                accent: '#A78BFA',
               },
             ].map((step, i) => (
               <div
                 key={step.title}
-                className="relative rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+                className="relative rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-violet-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)]"
               >
                 <div
                   className="absolute -top-3 left-5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
@@ -1415,13 +1415,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ].map((t) => (
             <div
               key={t.name}
-              className="flex flex-col rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-emerald-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.15)]"
+              className="flex flex-col rounded-2xl border border-white/[0.08] bg-[#121214] p-6 transition hover:border-violet-500/50 hover:shadow-[0_0_24px_rgba(34,211,238,0.15)]"
             >
               <div aria-hidden className="mb-3 text-[15px] tracking-widest text-[#FBBF24]">★★★★★</div>
               <p className="flex-1 text-[14px] leading-relaxed text-[#F1F5F9]">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <div className="mt-4 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.07] px-3 py-2 text-[13px] font-extrabold text-[#34D399]">
+              <div className="mt-4 rounded-lg border border-violet-500/25 bg-violet-500/[0.07] px-3 py-2 text-[13px] font-extrabold text-[#A78BFA]">
                 📈 {t.result}
               </div>
               <div className="mt-4 flex items-center gap-3">
@@ -1471,7 +1471,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <tr className="border-b border-white/[0.08]">
                 <th className="px-4 py-4 text-[13px] font-semibold text-[#94A3B8]"></th>
                 <th className="px-4 py-4 text-center">
-                  <span className="text-[14px] font-extrabold text-[#34D399]">ShortsForgeAI</span>
+                  <span className="text-[14px] font-extrabold text-[#A78BFA]">ShortsForgeAI</span>
                 </th>
                 <th className="px-4 py-4 text-center text-[13px] font-bold text-[#CBD5E1]">OpusClip</th>
                 <th className="px-4 py-4 text-center text-[13px] font-bold text-[#CBD5E1]">HeyGen</th>
@@ -1491,7 +1491,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               ].map((row, i) => (
                 <tr key={i} className="border-b border-white/[0.05] last:border-0">
                   <td className="px-4 py-3 font-medium text-[#E2E8F0]">{row.feat}</td>
-                  <td className="px-4 py-3 text-center font-extrabold text-[#34D399]">{row.us}</td>
+                  <td className="px-4 py-3 text-center font-extrabold text-[#A78BFA]">{row.us}</td>
                   <td className="px-4 py-3 text-center text-[#94A3B8]">{row.a}</td>
                   <td className="px-4 py-3 text-center text-[#94A3B8]">{row.b}</td>
                   <td className="px-4 py-3 text-center text-[#94A3B8]">{row.c}</td>
@@ -1510,8 +1510,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Our angle: original script per idea, human stays in control, you
             review and post yourself — we are a creation tool, not an
             auto-poster. Additive reassurance strip below the compare table. */}
-        <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] px-5 py-5 text-center">
-          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#34D399]">
+        <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-violet-400/20 bg-violet-400/[0.04] px-5 py-5 text-center">
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#A78BFA]">
             Built for the new YouTube
           </div>
           <p className="text-[14.5px] leading-relaxed text-[#CBD5E1]">
@@ -1544,9 +1544,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <div className="mt-1 text-2xl font-extrabold text-[#CBD5E1]">$30–80</div>
               <div className="mt-1 text-[12px] text-[#64748B]">per clip · slow turnaround</div>
             </div>
-            <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/[0.06] px-5 py-5 text-center shadow-[0_0_24px_rgba(16,185,129,0.12)]">
-              <div className="text-[12px] font-extrabold text-[#34D399]">ShortsForgeAI</div>
-              <div className="mt-1 text-2xl font-extrabold text-[#34D399]">from $11.90</div>
+            <div className="rounded-2xl border border-violet-400/30 bg-violet-400/[0.06] px-5 py-5 text-center shadow-[0_0_24px_rgba(139,92,246,0.12)]">
+              <div className="text-[12px] font-extrabold text-[#A78BFA]">ShortsForgeAI</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#A78BFA]">from $11.90</div>
               <div className="mt-1 text-[12px] text-[#94A3B8]">a whole month of Shorts · script, voice &amp; footage included</div>
             </div>
           </div>
@@ -1576,7 +1576,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               type="button"
               onClick={() => setPricingBilling('monthly')}
               className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                pricingBilling === 'monthly' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
+                pricingBilling === 'monthly' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Monthly
@@ -1585,11 +1585,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               type="button"
               onClick={() => setPricingBilling('annual')}
               className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                pricingBilling === 'annual' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
+                pricingBilling === 'annual' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Annual
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300">
+              <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-black text-violet-300">
                 2 MONTHS FREE
               </span>
             </button>
@@ -1625,14 +1625,14 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 cursor-pointer ${
                   isSelected
-                    ? 'border-2 border-[#10B981] bg-[#0D1830] shadow-[0_0_28px_rgba(16,185,129,0.3)]'
+                    ? 'border-2 border-[#8B5CF6] bg-[#0D1830] shadow-[0_0_28px_rgba(139,92,246,0.3)]'
                     : isRecommended
-                      ? 'border-emerald-500 bg-[#121214] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#121214] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-violet-500 bg-[#121214] shadow-[0_0_30px_rgba(139,92,246,0.15)] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#121214] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
                 {isRecommended && !isSelected && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#059669] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(16,185,129,.45)]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#7C3AED] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(139,92,246,.45)]">
                     Recommended
                   </div>
                 )}
@@ -1675,8 +1675,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   }}
                   className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                     isRecommended || isSelected
-                      ? 'bg-[#059669] text-white shadow-[0_8px_24px_rgba(16,185,129,.4)] hover:bg-emerald-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-emerald-500/40'
+                      ? 'bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(139,92,246,.4)] hover:bg-violet-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                      : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-violet-500/40'
                   }`}
                 >
                   {checkoutTier === plan.tier ? 'Starting…' : `${ctaLabel} →`}
@@ -1696,13 +1696,13 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
         </div>
 
         {/* Push #231 — money-back guarantee badge under the pricing CTAs. */}
-        <div className="mx-auto mt-7 flex max-w-xl items-center justify-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-5 py-4 text-center">
+        <div className="mx-auto mt-7 flex max-w-xl items-center justify-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] px-5 py-4 text-center">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="shrink-0">
-            <path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5l8-3z" fill="#10B98122" stroke="#34D399" strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M8.5 12l2.5 2.5L16 9.5" stroke="#34D399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5l8-3z" fill="#8B5CF622" stroke="#A78BFA" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M8.5 12l2.5 2.5L16 9.5" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="text-left">
-            <p className="text-[14px] font-extrabold text-[#34D399]">7-day money-back guarantee</p>
+            <p className="text-[14px] font-extrabold text-[#A78BFA]">7-day money-back guarantee</p>
             <p className="text-[12.5px] text-[#94A3B8]">
               Not happy with your first video? We&apos;ll refund you. No questions asked.
             </p>
@@ -1717,8 +1717,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
 
         {/* Push #171 — already subscribed info banner */}
         {alreadySubscribed && (
-          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-5 py-4 text-center">
-            <p className="text-[13px] font-bold text-emerald-400">
+          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-violet-500/30 bg-violet-500/[0.07] px-5 py-4 text-center">
+            <p className="text-[13px] font-bold text-violet-400">
               ✅ You already have an active subscription!
             </p>
             <p className="mt-1 text-[12px] text-[#94A3B8]">
@@ -1726,7 +1726,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </p>
             <a
               href="/generate"
-              className="mt-3 inline-block rounded-lg bg-emerald-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(52,211,153,.35)] transition hover:bg-emerald-400"
+              className="mt-3 inline-block rounded-lg bg-violet-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(167,139,250,.35)] transition hover:bg-violet-400"
             >
               Go to Dashboard →
             </a>
@@ -1776,7 +1776,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           ].map((f) => (
             <details
               key={f.q}
-              className="group rounded-xl border border-white/[0.08] bg-[#121214] px-5 py-4 transition hover:border-emerald-500/40 open:border-emerald-500/40"
+              className="group rounded-xl border border-white/[0.08] bg-[#121214] px-5 py-4 transition hover:border-violet-500/40 open:border-violet-500/40"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-bold text-[#F1F5F9] [&::-webkit-details-marker]:hidden">
                 {f.q}
@@ -1800,7 +1800,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           back to #pricing. */}
       <section className="relative z-10 mx-auto max-w-6xl px-4 pt-12 pb-4 sm:px-6 sm:pt-16">
         <div
-          className="relative overflow-hidden rounded-3xl border border-emerald-500/30 p-10 text-center sm:p-14"
+          className="relative overflow-hidden rounded-3xl border border-violet-500/30 p-10 text-center sm:p-14"
           style={{
             background:
               'linear-gradient(135deg, rgba(34,211,238,0.10) 0%, rgba(11,17,32,0.95) 50%, rgba(5,150,105,0.12) 100%)',
@@ -1823,7 +1823,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               type="button"
               onClick={() => goToGenerate()}
               disabled={submitting}
-              className="w-full sm:w-auto rounded-xl bg-[#059669] px-7 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(16,185,129,.4)] transition hover:bg-emerald-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
+              className="w-full sm:w-auto rounded-xl bg-[#7C3AED] px-7 py-4 text-base font-extrabold text-white shadow-[0_8px_28px_rgba(139,92,246,.4)] transition hover:bg-violet-500 hover:shadow-[0_10px_36px_rgba(34,211,238,.45)] disabled:opacity-60"
             >
               Start Free Today
             </button>
@@ -1933,7 +1933,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             padding so both bars align at identical left/right edges. */}
         <div className="flex w-full flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:px-10">
           <div className="flex items-center gap-2.5 sm:min-w-[160px]">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-emerald-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-violet-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
               </svg>
@@ -2148,7 +2148,7 @@ function ShowcaseVideoCard({
   }, [inView, card.captions.length])
 
   return (
-    <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214] transition-all duration-200 hover:border-emerald-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
+    <div ref={cardRef} className="group flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214] transition-all duration-200 hover:border-violet-500/60 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]">
       {/* 9:16 vertical preview — matches the YouTube Shorts format the
           rest of the product is built around. */}
       <div
@@ -2202,12 +2202,12 @@ function ShowcaseVideoCard({
           <span
             className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] backdrop-blur-md"
             style={{
-              background: 'rgba(16,185,129,.18)',
-              border: '1px solid rgba(16,185,129,.45)',
-              color: '#34D399',
+              background: 'rgba(139,92,246,.18)',
+              border: '1px solid rgba(139,92,246,.45)',
+              color: '#A78BFA',
             }}
           >
-            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#34D399', boxShadow: '0 0 6px #34D399' }} />
+            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#A78BFA', boxShadow: '0 0 6px #A78BFA' }} />
             AI · {card.genTime}s
           </span>
         </div>
@@ -2281,7 +2281,7 @@ function ShowcaseVideoCard({
         <button
           type="button"
           onClick={onGenerate}
-          className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-emerald-500/50 hover:bg-white/[0.04]"
+          className="mt-auto inline-flex items-center justify-between rounded-xl border border-white/[0.08] bg-transparent px-3 py-2.5 text-[12px] sm:text-[13px] font-bold text-[#F1F5F9] transition hover:border-violet-500/50 hover:bg-white/[0.04]"
         >
           <span>Generate similar</span>
           <span style={{ color: card.accent }}>→</span>

@@ -18,9 +18,9 @@ interface SceneCardProps {
 
 const PURPOSE_BADGE: Record<ScenePurpose, { label: string; className: string }> = {
   hook:        { label: 'HOOK',        className: 'bg-red-500/20 text-red-400 border border-red-500/30' },
-  payoff:      { label: 'PAYOFF',      className: 'bg-green-500/20 text-green-400 border border-green-500/30' },
+  payoff:      { label: 'PAYOFF',      className: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' },
   escalation:  { label: 'ESCALATION', className: 'bg-orange-500/20 text-orange-400 border border-orange-500/30' },
-  explanation: { label: 'EXPLAIN',    className: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' },
+  explanation: { label: 'EXPLAIN',    className: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' },
   transition:  { label: 'TRANSITION', className: 'bg-gray-500/20 text-gray-400 border border-gray-500/30' },
 }
 
@@ -48,14 +48,14 @@ const SHOT_LABEL: Record<ShotType, string> = {
 
 const SOURCE_BADGE: Record<VisualSource, { label: string; className: string }> = {
   pexels: { label: 'Pexels',  className: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' },
-  ai:     { label: 'AI Gen',  className: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' },
+  ai:     { label: 'AI Gen',  className: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' },
   stock:  { label: 'Stock',   className: 'bg-gray-500/20 text-gray-400 border border-gray-500/30' },
 }
 
 function RelevanceDot({ score }: { score: number }) {
   const color =
     score >= 80
-      ? '#22c55e' // green-500
+      ? '#22c55e' // violet-500
       : score >= 60
       ? '#eab308' // yellow-500
       : '#ef4444' // red-500
@@ -243,7 +243,7 @@ export default function SceneCard({
             borderRadius: 6,
             letterSpacing: '0.06em',
           }}
-          className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+          className="bg-violet-500/20 text-violet-400 border border-violet-500/30"
         >
           {MOOD_BADGE[scene.visualMood]}
         </span>
@@ -331,7 +331,7 @@ export default function SceneCard({
             boxSizing: 'border-box',
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(16,185,129,0.5)'
+            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)'
           }}
         />
       </div>
@@ -346,21 +346,21 @@ export default function SceneCard({
             fontSize: 12,
             fontWeight: 600,
             borderRadius: 8,
-            border: '1px solid rgba(16,185,129,0.4)',
-            background: 'rgba(16,185,129,0.12)',
+            border: '1px solid rgba(139,92,246,0.4)',
+            background: 'rgba(139,92,246,0.12)',
             color: 'rgba(110,231,183,0.9)',
             cursor: isRegenerating ? 'not-allowed' : 'pointer',
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
             if (!isRegenerating) {
-              e.currentTarget.style.background = 'rgba(16,185,129,0.22)'
-              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.7)'
+              e.currentTarget.style.background = 'rgba(139,92,246,0.22)'
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.7)'
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(16,185,129,0.12)'
-            e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)'
+            e.currentTarget.style.background = 'rgba(139,92,246,0.12)'
+            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)'
           }}
         >
           {isRegenerating ? 'Regenerating...' : 'Regenerate'}
@@ -409,21 +409,21 @@ export default function SceneCard({
             fontSize: 12,
             fontWeight: 600,
             borderRadius: 8,
-            border: '1px solid rgba(16,185,129,0.4)',
-            background: 'rgba(16,185,129,0.12)',
+            border: '1px solid rgba(139,92,246,0.4)',
+            background: 'rgba(139,92,246,0.12)',
             color: 'rgba(110,231,183,0.9)',
             cursor: isRegenerating ? 'not-allowed' : 'pointer',
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
             if (!isRegenerating) {
-              e.currentTarget.style.background = 'rgba(16,185,129,0.22)'
-              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.7)'
+              e.currentTarget.style.background = 'rgba(139,92,246,0.22)'
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.7)'
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(16,185,129,0.12)'
-            e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)'
+            e.currentTarget.style.background = 'rgba(139,92,246,0.12)'
+            e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)'
           }}
         >
           More Cinematic
@@ -543,8 +543,8 @@ export default function SceneCard({
                 fontSize: 12,
                 fontWeight: 600,
                 borderRadius: 8,
-                border: '1px solid rgba(16,185,129,0.4)',
-                background: 'rgba(16,185,129,0.2)',
+                border: '1px solid rgba(139,92,246,0.4)',
+                background: 'rgba(139,92,246,0.2)',
                 color: 'rgba(110,231,183,0.9)',
                 cursor: !customInstruction.trim() || isRegenerating ? 'not-allowed' : 'pointer',
               }}

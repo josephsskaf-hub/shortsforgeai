@@ -138,7 +138,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
         {/* Top accent */}
         <div
           className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, #10B981, #22D3EE, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, #8B5CF6, #22D3EE, transparent)' }}
         />
         {/* Glow orb */}
         <div
@@ -169,7 +169,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               ⚡
             </div>
             <div>
-              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 ShortsForgeAI
               </div>
               <div className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>
@@ -204,9 +204,9 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               {tab === 'signup' && (
                 <div
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold mb-5"
-                  style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.18)', color: '#34d399' }}
+                  style={{ background: 'rgba(139,92,246,.07)', border: '1px solid rgba(139,92,246,.18)', color: '#a78bfa' }}
                 >
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#34d399', boxShadow: '0 0 6px rgba(52,211,153,.5)' }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#a78bfa', boxShadow: '0 0 6px rgba(167,139,250,.5)' }} />
                   Free tier · 1 AI video credit — no card required
                 </div>
               )}
@@ -324,7 +324,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-black text-sm text-white transition-all mt-1 flex items-center justify-center gap-2"
                   style={{
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
                     boxShadow: loading ? 'none' : '0 4px 28px rgba(16, 185, 129,.45)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',

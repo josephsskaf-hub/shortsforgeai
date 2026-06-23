@@ -7,13 +7,13 @@ const RESULTS = [
     icon: '✅',
     label: 'Hook style detected',
     value: 'Shocking Stat',
-    accent: '#34d399',
+    accent: '#a78bfa',
   },
   {
     icon: '✅',
     label: 'Retention pattern',
     value: 'Fast-cut mystery reveal',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
   {
     icon: '✅',
@@ -57,7 +57,7 @@ export default function CloneViral() {
               fontSize: '0.6rem',
               fontWeight: 900,
               color: '#fff',
-              background: 'linear-gradient(135deg, #34d399, #14b8a6)',
+              background: 'linear-gradient(135deg, #a78bfa, #14b8a6)',
               letterSpacing: '0.05em',
             }}
           >
@@ -186,7 +186,7 @@ export default function CloneViral() {
               style={{
                 fontSize: '0.65rem',
                 fontWeight: 800,
-                color: '#6ee7b7',
+                color: '#c4b5fd',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 marginBottom: 2,
@@ -261,7 +261,7 @@ export default function CloneViral() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #10B981, #059669)',
+            background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
             boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
             flexShrink: 0,
           }}

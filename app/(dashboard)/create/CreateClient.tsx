@@ -579,8 +579,8 @@ export default function CreateClient() {
           className="fixed bottom-6 left-1/2 z-50 px-5 py-3 rounded-xl text-sm font-bold text-white"
           style={{
             transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg,#10b981,#059669)',
-            boxShadow: '0 4px 24px rgba(16,185,129,.4)',
+            background: 'linear-gradient(135deg,#8b5cf6,#7C3AED)',
+            boxShadow: '0 4px 24px rgba(139,92,246,.4)',
           }}
         >
           ✅ Copied!
@@ -590,7 +590,7 @@ export default function CreateClient() {
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 0 24px rgba(16, 185, 129,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', boxShadow: '0 0 24px rgba(16, 185, 129,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
             ⚡
           </div>
           <div>
@@ -852,7 +852,7 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+                : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.45)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
@@ -889,7 +889,7 @@ export default function CreateClient() {
             style={{
               background: creditsZero
                 ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+                : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.55)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
@@ -1042,7 +1042,7 @@ function ProgressView({
           className="h-full transition-all"
           style={{
             width: `${Math.min(100, Math.max(2, progress))}%`,
-            background: 'linear-gradient(90deg, #10B981, #22D3EE, #22D3EE, #22D3EE, #10B981)',
+            background: 'linear-gradient(90deg, #8B5CF6, #22D3EE, #22D3EE, #22D3EE, #8B5CF6)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 2.4s linear infinite',
             transitionDuration: '600ms',
@@ -1107,7 +1107,7 @@ function FinalView({
         {/* Top bar: version + format */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
@@ -1171,7 +1171,7 @@ function FinalView({
         {/* Creator row + reactions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(16, 185, 129,.4)' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(16, 185, 129,.4)' }}>
               {userInitial}
             </div>
             <div>
@@ -1242,7 +1242,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#10B981,#059669,#22D3EE)',
+              background: 'linear-gradient(135deg,#8B5CF6,#7C3AED,#22D3EE)',
               boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1256,7 +1256,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#10B981,#059669,#22D3EE)',
+              background: 'linear-gradient(135deg,#8B5CF6,#7C3AED,#22D3EE)',
               boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1359,7 +1359,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
           boxShadow: '0 0 80px rgba(16, 185, 129,.25), 0 30px 80px rgba(0,0,0,.5)',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #10B981, #22D3EE, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #8B5CF6, #22D3EE, transparent)' }} />
         <div className="p-7 relative z-10">
           <button
             onClick={onClose}
@@ -1384,7 +1384,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
             href="/pricing"
             className="block w-full text-center rounded-xl py-3.5 text-sm font-black text-white transition-all"
             style={{
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
               boxShadow: '0 4px 28px rgba(16, 185, 129,.45)',
               textDecoration: 'none',
             }}

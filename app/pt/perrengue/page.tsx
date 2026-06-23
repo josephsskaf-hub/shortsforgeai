@@ -36,7 +36,7 @@ export default function PerrenguePage() {
             <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Cupom exclusivo</div>
             <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#22D3EE', letterSpacing: '2px' }}>{CODE}</div>
           </div>
-          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '15px 34px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>Criar meu primeiro Short grátis →</Link>
+          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 34px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>Criar meu primeiro Short grátis →</Link>
           <p style={{ fontSize: '0.82rem', color: '#94A3B8', margin: '10px 0 0' }}>Primeiro vídeo grátis · sem cartão · pague no Pix</p>
         </section>
       </div>

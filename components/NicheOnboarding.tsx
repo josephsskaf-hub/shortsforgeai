@@ -17,9 +17,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 const VERTICAL_COLORS: Record<string, string> = {
-  money: '#10b981',
-  mystery: '#10b981',
-  country: '#10b981',
+  money: '#8b5cf6',
+  mystery: '#8b5cf6',
+  country: '#8b5cf6',
   ai: '#14b8a6',
   psychology: '#ec4899',
   history: '#d97706',
@@ -29,8 +29,8 @@ const VERTICAL_COLORS: Record<string, string> = {
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   Hot: { bg: 'rgba(239,68,68,0.18)', color: '#ef4444' },
   Trending: { bg: 'rgba(249,115,22,0.18)', color: '#f97316' },
-  'High Retention': { bg: 'rgba(16,185,129,0.18)', color: '#10b981' },
-  Viral: { bg: 'rgba(16,185,129,0.18)', color: '#10b981' },
+  'High Retention': { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
+  Viral: { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
 }
 
 type Starter = {
@@ -157,7 +157,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         onClick={() => generate(s, isFeatured)}
         style={{
           background: isFeatured
-            ? 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(11,17,32,0.96))'
+            ? 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(11,17,32,0.96))'
             : 'var(--card, #121214)',
           border: `1px solid ${isFeatured ? vertColor : 'var(--border, rgba(255,255,255,0.10))'}`,
           borderRadius: 14,
@@ -272,7 +272,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           style={{
             display: 'block', width: '100%', maxWidth: 380, margin: '0 auto 12px',
             padding: '14px 18px', borderRadius: 12,
-            background: 'linear-gradient(135deg, #22D3EE, #10B981)',
+            background: 'linear-gradient(135deg, #22D3EE, #8B5CF6)',
             color: '#0A0A0B', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >

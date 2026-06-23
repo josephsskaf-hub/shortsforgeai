@@ -42,20 +42,20 @@ const BENEFITS: { icon: string; title: string; desc: string; accent: string }[] 
     icon: '🧠',
     title: 'AI Writes the Script',
     desc: 'No writing skills needed. Our AI crafts a viral-optimized script for any niche automatically.',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
   {
     icon: '📥',
     title: 'Watermark-Free MP4',
     desc: 'Download clean, professional-quality vertical video — ready for YouTube, TikTok, or Reels.',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
 ]
 
 const SOCIAL_PROOF: { icon: string; text: string; accent: string }[] = [
   { icon: '⚡', text: '300+ videos generated', accent: '#22D3EE' },
   { icon: '★★★★★', text: '4.8★ average rating', accent: '#FBBF24' },
-  { icon: '🎬', text: '300+ active creators', accent: '#34D399' },
+  { icon: '🎬', text: '300+ active creators', accent: '#A78BFA' },
 ]
 
 export default function StartPage() {
@@ -78,7 +78,7 @@ export default function StartPage() {
               fontSize: '1.05rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
-              background: 'linear-gradient(135deg, #10B981, #22D3EE)',
+              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -102,7 +102,7 @@ export default function StartPage() {
             The Smart AI Tool That Turns Any Idea Into a{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+                background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -137,13 +137,13 @@ export default function StartPage() {
             style={{
               padding: '18px 32px',
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
               color: '#FFFFFF',
               fontSize: '1.1rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
               textDecoration: 'none',
-              boxShadow: '0 10px 36px rgba(16,185,129,.50)',
+              boxShadow: '0 10px 36px rgba(139,92,246,.50)',
               boxSizing: 'border-box',
               minHeight: 58,
               display: 'inline-flex',
@@ -245,7 +245,7 @@ export default function StartPage() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: 'linear-gradient(135deg, #059669, #22D3EE)',
+                    background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
                     color: '#FFFFFF',
                     fontWeight: 900,
                     fontSize: '1rem',
@@ -283,7 +283,7 @@ export default function StartPage() {
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.14em',
-                color: '#34D399',
+                color: '#A78BFA',
                 textTransform: 'uppercase',
                 marginBottom: 6,
               }}
@@ -540,7 +540,7 @@ export default function StartPage() {
               style={{
                 padding: '15px 32px',
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #059669, #22D3EE)',
+                background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
                 color: '#FFFFFF',
                 fontWeight: 900,
                 fontSize: '1rem',
@@ -576,13 +576,13 @@ export default function StartPage() {
             style={{
               padding: '16px 28px',
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
               color: '#FFFFFF',
               fontSize: '1rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
               textDecoration: 'none',
-              boxShadow: '0 8px 28px rgba(16,185,129,.40)',
+              boxShadow: '0 8px 28px rgba(139,92,246,.40)',
               boxSizing: 'border-box',
               minHeight: 52,
               display: 'inline-flex',

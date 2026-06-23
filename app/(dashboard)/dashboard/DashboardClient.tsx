@@ -37,12 +37,12 @@ interface DashboardClientProps {
 const VERTICAL_COLORS: Record<string, { bg: string; border: string; pill: string; text: string; hover: string }> = {
   billionaire: { bg: 'rgba(11,17,32,0.85)', border: 'rgba(251,191,36,.28)', pill: 'rgba(251,191,36,.15)', text: '#fbbf24', hover: 'rgba(251,191,36,.5)' },
   money:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(34,197,94,.28)',  pill: 'rgba(34,197,94,.15)',  text: '#4ade80', hover: 'rgba(34,197,94,.5)'  },
-  mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#c084fc', hover: 'rgba(16,185,129,.5)' },
-  country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(16,185,129,.28)', pill: 'rgba(16,185,129,.15)', text: '#34d399', hover: 'rgba(16,185,129,.5)' },
-  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(52,211,153,.28)', pill: 'rgba(52,211,153,.15)', text: '#f472b6', hover: 'rgba(52,211,153,.5)' },
+  mystery:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(139,92,246,.28)', pill: 'rgba(139,92,246,.15)', text: '#c084fc', hover: 'rgba(139,92,246,.5)' },
+  country:     { bg: 'rgba(11,17,32,0.85)', border: 'rgba(139,92,246,.28)', pill: 'rgba(139,92,246,.15)', text: '#a78bfa', hover: 'rgba(139,92,246,.5)' },
+  learning:    { bg: 'rgba(11,17,32,0.85)', border: 'rgba(167,139,250,.28)', pill: 'rgba(167,139,250,.15)', text: '#f472b6', hover: 'rgba(167,139,250,.5)' },
   space:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(14,165,233,.28)', pill: 'rgba(14,165,233,.15)', text: '#38bdf8', hover: 'rgba(14,165,233,.5)' },
   nature:      { bg: 'rgba(11,17,32,0.85)', border: 'rgba(74,222,128,.28)', pill: 'rgba(74,222,128,.15)', text: '#86efac', hover: 'rgba(74,222,128,.5)' },
-  technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(52,211,153,.28)', pill: 'rgba(52,211,153,.15)', text: '#6ee7b7', hover: 'rgba(52,211,153,.5)' },
+  technology:  { bg: 'rgba(11,17,32,0.85)', border: 'rgba(167,139,250,.28)', pill: 'rgba(167,139,250,.15)', text: '#c4b5fd', hover: 'rgba(167,139,250,.5)' },
   crime:       { bg: 'rgba(11,17,32,0.85)', border: 'rgba(248,113,113,.28)', pill: 'rgba(248,113,113,.15)', text: '#fca5a5', hover: 'rgba(248,113,113,.5)' },
 }
 const DEFAULT_VERTICAL = { bg: 'rgba(11,17,32,0.85)', border: 'rgba(239,68,68,.22)', pill: 'rgba(239,68,68,.14)', text: '#f87171', hover: 'rgba(239,68,68,.5)' }
@@ -196,11 +196,11 @@ export default function DashboardClient({
         <div className="flex justify-center mb-3 relative z-10">
           <div
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
-            style={{ background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.22)', color: '#34d399' }}
+            style={{ background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.22)', color: '#a78bfa' }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#10b981', boxShadow: '0 0 6px rgba(52,211,153,.7)', animation: 'pulse 1.8s ease-in-out infinite' }}
+              style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(167,139,250,.7)', animation: 'pulse 1.8s ease-in-out infinite' }}
             />
             ⚡ Viral Engine Online
           </div>
@@ -213,7 +213,7 @@ export default function DashboardClient({
           Your next{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #10B981, #22D3EE, #22D3EE)',
+              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -234,7 +234,7 @@ export default function DashboardClient({
           href="/generate"
           className="relative z-10 inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #7C3AED 0%, #7C3AED 55%, #22D3EE 100%)',
             boxShadow: '0 4px 32px rgba(16, 185, 129,.5)',
             textDecoration: 'none',
           }}
@@ -361,9 +361,9 @@ export default function DashboardClient({
           <span
             className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
             style={{
-              background: 'rgba(16,185,129,.1)',
-              border: '1px solid rgba(16,185,129,.3)',
-              color: '#34d399',
+              background: 'rgba(139,92,246,.1)',
+              border: '1px solid rgba(139,92,246,.3)',
+              color: '#a78bfa',
             }}
           >
             Powered by RunwayML
@@ -553,10 +553,10 @@ export default function DashboardClient({
               style={{
                 background: creditsZero
                   ? 'linear-gradient(135deg, rgba(239,68,68,.25), rgba(239,68,68,.12))'
-                  : 'linear-gradient(135deg, rgba(16,185,129,.25), rgba(52,211,153,.12))',
+                  : 'linear-gradient(135deg, rgba(139,92,246,.25), rgba(167,139,250,.12))',
                 border: creditsZero
                   ? '1px solid rgba(239,68,68,.4)'
-                  : '1px solid rgba(16,185,129,.4)',
+                  : '1px solid rgba(139,92,246,.4)',
               }}
             >
               ⚡
@@ -580,7 +580,7 @@ export default function DashboardClient({
               ) : (
                 <div className="font-black" style={{ fontSize: '1rem', color: 'var(--text)' }}>
                   You have{' '}
-                  <span style={{ color: creditsZero ? '#f87171' : '#34d399' }}>
+                  <span style={{ color: creditsZero ? '#f87171' : '#a78bfa' }}>
                     {credits ?? 0} credit{credits === 1 ? '' : 's'}
                   </span>{' '}
                   available
@@ -627,7 +627,7 @@ export default function DashboardClient({
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border)' }} />
           <div className="flex items-center gap-1.5">
-            <span style={{ fontSize: '0.7rem', color: '#34d399' }}>●</span>
+            <span style={{ fontSize: '0.7rem', color: '#a78bfa' }}>●</span>
             <span className="text-xs" style={{ color: 'var(--muted)' }}>Viral Engine Online</span>
           </div>
           <div className="ml-auto">

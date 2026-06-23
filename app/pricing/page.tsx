@@ -225,16 +225,16 @@ export default function PricingPage() {
       <div
         aria-hidden
         className="pointer-events-none fixed -bottom-[400px] -left-[200px] h-[700px] w-[700px] rounded-full opacity-[0.05]"
-        style={{ background: '#10B981', filter: 'blur(160px)' }}
+        style={{ background: '#8B5CF6', filter: 'blur(160px)' }}
       />
 
       {/* ───────── Top Nav (simple) ───────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#121214]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-emerald-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-violet-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#10B981" strokeWidth="0.5" strokeLinejoin="round" />
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#8B5CF6" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
@@ -288,7 +288,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => { setShowExitModal(false); handleBuy('basic') }}
               className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
-              style={{ background: 'linear-gradient(135deg,#10B981,#22D3EE)', boxShadow: '0 8px 24px rgba(16,185,129,.4)' }}
+              style={{ background: 'linear-gradient(135deg,#8B5CF6,#22D3EE)', boxShadow: '0 8px 24px rgba(139,92,246,.4)' }}
             >
               Get Creator — $24.90/mo →
             </button>
@@ -379,7 +379,7 @@ export default function PricingPage() {
             At <strong className="text-[#22D3EE]">{shortsPerWeek}</strong> Shorts/week →{' '}
             <strong className="text-[#22D3EE]">{(shortsPerWeek * 4).toLocaleString()}</strong>{' '}
             Shorts/month → estimated{' '}
-            <strong className="text-[#34D399]">
+            <strong className="text-[#A78BFA]">
               {(shortsPerWeek * 4 * 500).toLocaleString()}
             </strong>{' '}
             views/month
@@ -398,7 +398,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('monthly')}
               className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'monthly' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'monthly' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Monthly
@@ -407,11 +407,11 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('annual')}
               className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'annual' ? 'bg-[#059669] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'annual' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               Annual
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300">
+              <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-black text-violet-300">
                 2 MONTHS FREE
               </span>
             </button>
@@ -451,10 +451,10 @@ export default function PricingPage() {
                   isPaid ? 'cursor-pointer' : ''
                 } ${
                   isSelected
-                    ? 'border-2 border-[#10B981] bg-[#0D1830] shadow-[0_0_28px_rgba(16,185,129,0.3)]'
+                    ? 'border-2 border-[#8B5CF6] bg-[#0D1830] shadow-[0_0_28px_rgba(139,92,246,0.3)]'
                     : p.highlight
-                      ? 'border-emerald-500 bg-[#121214] shadow-[0_0_30px_rgba(16,185,129,0.15)] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#121214] hover:border-[#10B981] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-violet-500 bg-[#121214] shadow-[0_0_30px_rgba(139,92,246,0.15)] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      : 'border-white/[0.08] bg-[#121214] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
                 }`}
               >
                 {/* Push #116 — Pro now carries the amber "MOST POPULAR"
@@ -474,7 +474,7 @@ export default function PricingPage() {
                     🔥 Most Popular
                   </div>
                 ) : p.highlight && !isSelected ? (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#059669] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(16,185,129,.45)]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#7C3AED] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(139,92,246,.45)]">
                     Best Value
                   </div>
                 ) : null}
@@ -526,8 +526,8 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                       p.highlight || isSelected
-                        ? 'bg-[#059669] text-white shadow-[0_8px_24px_rgba(16,185,129,.4)] hover:bg-emerald-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-emerald-500/40'
+                        ? 'bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(139,92,246,.4)] hover:bg-violet-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-violet-500/40'
                     }`}
                   >
                     {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
@@ -542,8 +542,8 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
                       isSelected
-                        ? 'bg-[#059669] text-white shadow-[0_8px_24px_rgba(16,185,129,.4)] hover:bg-emerald-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-emerald-500/40'
+                        ? 'bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(139,92,246,.4)] hover:bg-violet-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
+                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-violet-500/40'
                     }`}
                   >
                     {ctaLabel} →
@@ -587,10 +587,10 @@ export default function PricingPage() {
         <div className="mx-auto mt-4 max-w-2xl">
           <div
             className="rounded-2xl px-5 py-4 text-center"
-            style={{ background: 'rgba(16,185,129,0.06)', border: '1px dashed rgba(16,185,129,0.45)' }}
+            style={{ background: 'rgba(139,92,246,0.06)', border: '1px dashed rgba(139,92,246,0.45)' }}
           >
             <span className="block text-[14px] font-extrabold text-[#F1F5F9]">
-              🇧🇷 No Brasil? Pague no <span style={{ color: '#34D399' }}>Pix</span>
+              🇧🇷 No Brasil? Pague no <span style={{ color: '#A78BFA' }}>Pix</span>
             </span>
             <span className="mt-1 mb-3 block text-[12px] font-semibold text-[#94A3B8]">
               Pagamento único · sem assinatura · créditos não expiram
@@ -600,7 +600,7 @@ export default function PricingPage() {
                 type="button"
                 onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br50' }}
                 className="rounded-xl px-4 py-3 text-[13px] font-extrabold text-white"
-                style={{ background: '#059669', cursor: 'pointer' }}
+                style={{ background: '#7C3AED', cursor: 'pointer' }}
               >
                 R$50 = 90 créditos (3 AI Gen) →
               </button>
@@ -627,8 +627,8 @@ export default function PricingPage() {
         {/* Push #171 — "already subscribed" info banner. Shown instead of
             the old silent redirect so users understand their plan is active. */}
         {alreadySubscribed && (
-          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-5 py-4 text-center">
-            <p className="text-[13px] font-bold text-emerald-400">
+          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-violet-500/30 bg-violet-500/[0.07] px-5 py-4 text-center">
+            <p className="text-[13px] font-bold text-violet-400">
               ✅ You already have an active subscription!
             </p>
             <p className="mt-1 text-[12px] text-[#94A3B8]">
@@ -636,7 +636,7 @@ export default function PricingPage() {
             </p>
             <a
               href="/generate"
-              className="mt-3 inline-block rounded-lg bg-emerald-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(52,211,153,.35)] transition hover:bg-emerald-400"
+              className="mt-3 inline-block rounded-lg bg-violet-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(167,139,250,.35)] transition hover:bg-violet-400"
             >
               Go to Dashboard →
             </a>
@@ -648,13 +648,13 @@ export default function PricingPage() {
             table below. */}
         <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-bold text-[#F1F5F9]">
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#34D399]">✓</span> Cancel anytime
+            <span className="text-[#A78BFA]">✓</span> Cancel anytime
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#34D399]">✓</span> Instant access
+            <span className="text-[#A78BFA]">✓</span> Instant access
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#34D399]">✓</span> 7-day money-back guarantee
+            <span className="text-[#A78BFA]">✓</span> 7-day money-back guarantee
           </span>
         </div>
 
@@ -877,9 +877,9 @@ export default function PricingPage() {
         <div
           className="mx-auto mt-12 max-w-3xl rounded-2xl p-5 sm:p-6"
           style={{
-            background: 'rgba(52,211,153,.06)',
-            border: '1px solid rgba(52,211,153,.35)',
-            boxShadow: '0 0 40px rgba(52,211,153,.10)',
+            background: 'rgba(167,139,250,.06)',
+            border: '1px solid rgba(167,139,250,.35)',
+            boxShadow: '0 0 40px rgba(167,139,250,.10)',
           }}
         >
           <div className="flex items-start gap-3 sm:gap-4">
@@ -998,7 +998,7 @@ export default function PricingPage() {
       <footer className="relative z-10 border-t border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-emerald-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-violet-500/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
               </svg>

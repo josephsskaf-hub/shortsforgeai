@@ -26,7 +26,7 @@ const MOOD_TEXT_COLORS: Record<VisualMood, string> = {
   futuristic: 'rgba(103,232,249,0.85)', // cyan-300
   emotional:  'rgba(249,168,212,0.85)', // pink-300
   tense:      'rgba(252,165,165,0.85)', // red-300
-  epic:       'rgba(52,211,153,0.85)', // emerald-400
+  epic:       'rgba(167,139,250,0.85)', // violet-400
 }
 
 export default function ScenePreview({ scene, pexelsClip }: ScenePreviewProps) {

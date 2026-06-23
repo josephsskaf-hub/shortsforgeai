@@ -23,12 +23,12 @@ const PACING_LABEL: Record<GlobalVisualStyle['pacing'], string> = {
 const MOOD_COLORS: Record<string, string> = {
   dark:       'rgba(239,68,68,0.2)',
   energetic:  'rgba(234,179,8,0.2)',
-  luxurious:  'rgba(16,185,129,0.2)',
+  luxurious:  'rgba(139,92,246,0.2)',
   mysterious: 'rgba(20,184,166,0.2)',
   futuristic: 'rgba(6,182,212,0.2)',
-  emotional:  'rgba(52,211,153,0.2)',
+  emotional:  'rgba(167,139,250,0.2)',
   tense:      'rgba(249,115,22,0.2)',
-  epic:       'rgba(16,185,129,0.2)',
+  epic:       'rgba(139,92,246,0.2)',
 }
 
 const MOOD_TEXT_COLORS: Record<string, string> = {
@@ -105,7 +105,7 @@ export default function VisualDirector({
   const [localScenes, setLocalScenes] = useState<BrollScene[]>(scenes)
   const [history, setHistory] = useState<SceneHistory>(() => initHistory(scenes))
 
-  const moodBg = MOOD_COLORS[globalStyle.mood] ?? 'rgba(16,185,129,0.15)'
+  const moodBg = MOOD_COLORS[globalStyle.mood] ?? 'rgba(139,92,246,0.15)'
   const moodText = MOOD_TEXT_COLORS[globalStyle.mood] ?? 'rgb(110,231,183)'
 
   // Derived stats
@@ -163,8 +163,8 @@ export default function VisualDirector({
             width: 40,
             height: 40,
             borderRadius: '50%',
-            border: '3px solid rgba(16,185,129,0.2)',
-            borderTopColor: 'rgb(16,185,129)',
+            border: '3px solid rgba(139,92,246,0.2)',
+            borderTopColor: 'rgb(139,92,246)',
             animation: 'spin 0.8s linear infinite',
           }}
         />
@@ -243,20 +243,20 @@ export default function VisualDirector({
               fontSize: 13,
               fontWeight: 700,
               borderRadius: 10,
-              border: '1px solid rgba(16,185,129,0.5)',
-              background: 'rgba(16,185,129,0.15)',
+              border: '1px solid rgba(139,92,246,0.5)',
+              background: 'rgba(139,92,246,0.15)',
               color: 'rgba(110,231,183,0.95)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               whiteSpace: 'nowrap',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(16,185,129,0.28)'
-              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.8)'
+              e.currentTarget.style.background = 'rgba(139,92,246,0.28)'
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.8)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(16,185,129,0.15)'
-              e.currentTarget.style.borderColor = 'rgba(16,185,129,0.5)'
+              e.currentTarget.style.background = 'rgba(139,92,246,0.15)'
+              e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)'
             }}
           >
             Regenerate All

@@ -42,10 +42,10 @@ export default function CopyButton({
         className={`w-full flex items-center justify-center gap-2 rounded-[13px] px-5 py-4 text-sm font-extrabold text-white transition-all ${className}`}
         style={{
           background: copied
-            ? 'linear-gradient(135deg, #10b981, #059669)'
-            : 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            ? 'linear-gradient(135deg, #8b5cf6, #7C3AED)'
+            : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
           boxShadow: copied
-            ? '0 4px 22px rgba(16,185,129,.35)'
+            ? '0 4px 22px rgba(139,92,246,.35)'
             : '0 4px 22px rgba(16, 185, 129,.35)',
           animation: copied ? 'none' : 'btn-pulse 2.8s ease-in-out infinite',
           letterSpacing: '-0.01em',
@@ -62,9 +62,9 @@ export default function CopyButton({
         onClick={handleCopy}
         className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${className}`}
         style={{
-          background: copied ? 'rgba(16,185,129,.09)' : 'rgba(16, 185, 129,.07)',
-          border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(16, 185, 129,.18)',
-          color: copied ? '#34d399' : 'var(--indigo-light)',
+          background: copied ? 'rgba(139,92,246,.09)' : 'rgba(16, 185, 129,.07)',
+          border: copied ? '1px solid rgba(139,92,246,.22)' : '1px solid rgba(16, 185, 129,.18)',
+          color: copied ? '#a78bfa' : 'var(--indigo-light)',
         }}
       >
         {copied ? '✅' : '📋'} {copied ? 'Copied' : 'Copy'}
@@ -77,9 +77,9 @@ export default function CopyButton({
       onClick={handleCopy}
       className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${className}`}
       style={{
-        background: copied ? 'rgba(16,185,129,.09)' : 'rgba(16, 185, 129,.07)',
-        border: copied ? '1px solid rgba(16,185,129,.22)' : '1px solid rgba(16, 185, 129,.18)',
-        color: copied ? '#34d399' : 'var(--indigo-light)',
+        background: copied ? 'rgba(139,92,246,.09)' : 'rgba(16, 185, 129,.07)',
+        border: copied ? '1px solid rgba(139,92,246,.22)' : '1px solid rgba(16, 185, 129,.18)',
+        color: copied ? '#a78bfa' : 'var(--indigo-light)',
       }}
     >
       {copied ? '✅' : '📋'} {copied ? 'Copied!' : label}

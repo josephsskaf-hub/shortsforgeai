@@ -8,14 +8,14 @@ const HOOKS = [
     icon: '🎯',
     name: 'The Shocking Stat',
     example: '"99% of people don\'t know this about [TOPIC]"',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
   {
     id: 'question',
     icon: '❓',
     name: 'The Question Hook',
     example: '"What would happen if [TOPIC]?"',
-    accent: '#34d399',
+    accent: '#a78bfa',
   },
   {
     id: 'claim',
@@ -57,7 +57,7 @@ export default function ViralHookEngine() {
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34D399', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#A78BFA', letterSpacing: '0.04em' }}>
             ⚡ HOOK ENGINE
           </span>
         </div>
@@ -71,7 +71,7 @@ export default function ViralHookEngine() {
           }}
         >
           ⚡ Viral{' '}
-          <span style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Hook Engine
           </span>
         </h2>
@@ -179,7 +179,7 @@ export default function ViralHookEngine() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
             boxShadow: '0 6px 28px rgba(16, 185, 129,.45)',
             transition: 'transform .2s ease, box-shadow .2s ease',
           }}

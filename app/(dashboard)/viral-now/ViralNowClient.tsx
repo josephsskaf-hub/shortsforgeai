@@ -8,9 +8,9 @@ import { getNextRefreshMs } from '@/lib/viralTopics'
 // ── Vertical color map ───────────────────────────────────────────────────────
 const VERTICAL_COLORS: Record<string, string> = {
   billionaire: '#f59e0b',
-  money:       '#10b981',
-  mystery:     '#10b981',
-  country:     '#10b981',
+  money:       '#8b5cf6',
+  mystery:     '#8b5cf6',
+  country:     '#8b5cf6',
   learning:    '#06b6d4',
   ai:          '#14b8a6',
   psychology:  '#ec4899',
@@ -19,7 +19,7 @@ const VERTICAL_COLORS: Record<string, string> = {
   health:      '#22c55e',
   space:       '#0ea5e9',
   nature:      '#4ade80',
-  technology:  '#34d399',
+  technology:  '#a78bfa',
   crime:       '#f87171',
 }
 
@@ -27,8 +27,8 @@ const VERTICAL_COLORS: Record<string, string> = {
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   'Hot':           { bg: 'rgba(239,68,68,0.18)',   color: '#ef4444' },
   'Trending':      { bg: 'rgba(249,115,22,0.18)',  color: '#f97316' },
-  'High Retention':{ bg: 'rgba(16,185,129,0.18)',  color: '#10b981' },
-  'Viral':         { bg: 'rgba(16,185,129,0.18)',  color: '#10b981' },
+  'High Retention':{ bg: 'rgba(139,92,246,0.18)',  color: '#8b5cf6' },
+  'Viral':         { bg: 'rgba(139,92,246,0.18)',  color: '#8b5cf6' },
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

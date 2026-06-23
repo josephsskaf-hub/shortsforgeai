@@ -35,7 +35,7 @@ export default function AvatarPaywallModal({ open, onClose, isStudio }: AvatarPa
     >
       <div
         className="w-full max-w-2xl rounded-2xl p-6"
-        style={{ background: '#0d0d1a', border: '1.5px solid rgba(16,185,129,0.45)' }}
+        style={{ background: '#0d0d1a', border: '1.5px solid rgba(139,92,246,0.45)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
@@ -64,15 +64,15 @@ export default function AvatarPaywallModal({ open, onClose, isStudio }: AvatarPa
               onClick={() => { window.location.href = `/api/stripe/checkout?pack=${p.id}` }}
               className="relative text-left rounded-xl p-4 transition-all"
               style={{
-                background: p.tag === 'Popular' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.03)',
-                border: p.tag === 'Popular' ? '1.5px solid rgba(16,185,129,0.65)' : '1.5px solid var(--border)',
+                background: p.tag === 'Popular' ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.03)',
+                border: p.tag === 'Popular' ? '1.5px solid rgba(139,92,246,0.65)' : '1.5px solid var(--border)',
                 cursor: 'pointer',
               }}
             >
               {p.tag && (
                 <span
                   className="absolute -top-2.5 left-3 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style={{ background: '#10b981', color: '#fff' }}
+                  style={{ background: '#8b5cf6', color: '#fff' }}
                 >
                   {p.tag}
                 </span>
@@ -80,7 +80,7 @@ export default function AvatarPaywallModal({ open, onClose, isStudio }: AvatarPa
               <div className="text-sm font-bold mb-1" style={{ color: 'var(--text)' }}>
                 {p.videos} avatar video{p.videos > 1 ? 's' : ''}
               </div>
-              <div className="text-2xl font-black" style={{ color: '#6ee7b7' }}>
+              <div className="text-2xl font-black" style={{ color: '#c4b5fd' }}>
                 {isStudio ? (
                   <>
                     <span className="text-sm line-through mr-1.5" style={{ color: 'var(--muted2)' }}>${p.usd}</span>
@@ -101,7 +101,7 @@ export default function AvatarPaywallModal({ open, onClose, isStudio }: AvatarPa
 
         {!isStudio && (
           <div className="text-[11px] mt-4 text-center" style={{ color: 'var(--muted2)' }}>
-            💎 Studio members get <span style={{ color: '#6ee7b7', fontWeight: 700 }}>15% off</span> every avatar pack.
+            💎 Studio members get <span style={{ color: '#c4b5fd', fontWeight: 700 }}>15% off</span> every avatar pack.
           </div>
         )}
       </div>

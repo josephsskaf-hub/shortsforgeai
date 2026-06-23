@@ -111,13 +111,13 @@ export default function CheckoutSuccessPage() {
             height: 64,
             borderRadius: '50%',
             margin: '0 auto 14px',
-            background: 'linear-gradient(135deg, rgba(52,211,153,.25), rgba(52,211,153,.10))',
-            border: '1px solid rgba(52,211,153,.45)',
+            background: 'linear-gradient(135deg, rgba(167,139,250,.25), rgba(167,139,250,.10))',
+            border: '1px solid rgba(167,139,250,.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '2rem',
-            color: '#34d399',
+            color: '#a78bfa',
             fontWeight: 900,
           }}
         >
@@ -157,7 +157,7 @@ export default function CheckoutSuccessPage() {
           style={{
             marginTop: 14,
             fontSize: '0.9rem',
-            color: '#34d399',
+            color: '#a78bfa',
             fontWeight: 700,
             letterSpacing: '-0.01em',
           }}
@@ -184,7 +184,7 @@ export default function CheckoutSuccessPage() {
               fontSize: '0.95rem',
               fontWeight: 900,
               color: '#fff',
-              background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #10b981 100%)',
+              background: 'linear-gradient(135deg, #7C3AED 0%, #7C3AED 55%, #8b5cf6 100%)',
               boxShadow: '0 10px 32px rgba(20,184,166,.45)',
               letterSpacing: '-0.01em',
             }}

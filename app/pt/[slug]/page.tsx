@@ -108,7 +108,7 @@ export default function PtSeoPage({ params }: { params: { slug: string } }) {
           <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#22D3EE', background: 'rgba(34,211,238,0.1)', borderRadius: 999, padding: '6px 14px' }}>🇧🇷 Em português · Pix</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: 900, lineHeight: 1.15, margin: '16px 0 0' }}>{pg.h1}</h1>
           <p style={{ fontSize: '1.02rem', color: '#CBD5E1', lineHeight: 1.6, margin: '14px 0 0' }}>{pg.intro}</p>
-          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 20, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '14px 30px', borderRadius: 14, textDecoration: 'none', fontSize: '1.02rem' }}>Criar meu primeiro vídeo grátis →</Link>
+          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 20, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '14px 30px', borderRadius: 14, textDecoration: 'none', fontSize: '1.02rem' }}>Criar meu primeiro vídeo grátis →</Link>
         </section>
 
         {pg.sections.map((s) => (

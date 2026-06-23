@@ -111,9 +111,9 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(16,185,129,.1)',
-                border: '1px solid rgba(16,185,129,.2)',
-                color: '#34d399',
+                background: 'rgba(139,92,246,.1)',
+                border: '1px solid rgba(139,92,246,.2)',
+                color: '#a78bfa',
               }}
             >
               ⚡ Videos in ~60 seconds
@@ -224,7 +224,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             onClick={onConfirm}
             className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-black text-white mb-3 transition-all"
             style={{
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+              background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
               boxShadow: '0 6px 28px rgba(16, 185, 129,.45)',
               animation: 'btn-pulse 2.8s ease-in-out infinite',
               border: 'none',

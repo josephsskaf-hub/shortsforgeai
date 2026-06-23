@@ -194,9 +194,9 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
     <span
       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
       style={{
-        background: credits < 1 ? 'rgba(248,113,113,0.15)' : 'rgba(16,185,129,0.18)',
+        background: credits < 1 ? 'rgba(248,113,113,0.15)' : 'rgba(139,92,246,0.18)',
         color: credits < 1 ? '#fca5a5' : '#a7f3d0',
-        border: `1px solid ${credits < 1 ? 'rgba(248,113,113,0.4)' : 'rgba(16,185,129,0.4)'}`,
+        border: `1px solid ${credits < 1 ? 'rgba(248,113,113,0.4)' : 'rgba(139,92,246,0.4)'}`,
       }}
     >
       1 Avatar Credit · 720p{credits !== null ? ` · you have ${credits}` : ''}
@@ -204,7 +204,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
   ) : (
     <span
       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-      style={{ background: 'rgba(16,185,129,0.18)', color: '#a7f3d0', border: '1px solid rgba(16,185,129,0.4)' }}
+      style={{ background: 'rgba(139,92,246,0.18)', color: '#a7f3d0', border: '1px solid rgba(139,92,246,0.4)' }}
     >
       1 Avatar Credit · 720p
     </span>
@@ -220,8 +220,8 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onClick={() => onEngineChange('fabric')}
         className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
         style={{
-          background: engine === 'fabric' ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.05)',
-          border: engine === 'fabric' ? '1.5px solid rgba(16,185,129,0.7)' : '1px solid var(--border)',
+          background: engine === 'fabric' ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.05)',
+          border: engine === 'fabric' ? '1.5px solid rgba(139,92,246,0.7)' : '1px solid var(--border)',
           color: engine === 'fabric' ? '#a7f3d0' : 'var(--muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
@@ -234,8 +234,8 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onClick={() => onEngineChange('omnihuman')}
         className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
         style={{
-          background: engine === 'omnihuman' ? 'rgba(52,211,153,0.22)' : 'rgba(255,255,255,0.05)',
-          border: engine === 'omnihuman' ? '1.5px solid rgba(52,211,153,0.7)' : '1px solid var(--border)',
+          background: engine === 'omnihuman' ? 'rgba(167,139,250,0.22)' : 'rgba(255,255,255,0.05)',
+          border: engine === 'omnihuman' ? '1.5px solid rgba(167,139,250,0.7)' : '1px solid var(--border)',
           color: engine === 'omnihuman' ? '#a7f3d0' : 'var(--muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
@@ -269,8 +269,8 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onClick={() => onHookModeChange(false)}
         className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all"
         style={{
-          background: !hookMode ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.05)',
-          border: !hookMode ? '1.5px solid rgba(16,185,129,0.7)' : '1px solid var(--border)',
+          background: !hookMode ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.05)',
+          border: !hookMode ? '1.5px solid rgba(139,92,246,0.7)' : '1px solid var(--border)',
           color: !hookMode ? '#a7f3d0' : 'var(--muted)',
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
@@ -312,17 +312,17 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
     return (
       <div
         className="mt-3 flex items-center gap-3 rounded-xl px-4 py-3"
-        style={{ maxWidth: 830, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.45)' }}
+        style={{ maxWidth: 830, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.45)' }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={value}
           alt="Your avatar face"
           className="h-11 w-11 rounded-full object-cover"
-          style={{ border: '2px solid rgba(16,185,129,0.6)' }}
+          style={{ border: '2px solid rgba(139,92,246,0.6)' }}
         />
         <div className="flex-1">
-          <div className="text-sm font-bold" style={{ color: '#6ee7b7' }}>🎭 AI Avatar ready</div>
+          <div className="text-sm font-bold" style={{ color: '#c4b5fd' }}>🎭 AI Avatar ready</div>
           <div className="text-xs" style={{ color: 'var(--muted2)' }}>
             {hookMode
               ? 'This person opens the video speaking the hook (~8s); b-roll covers the rest.'
@@ -363,14 +363,14 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-black" style={{ color: '#a7f3d0' }}>🎭 Add a face — AI Avatar</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.3)', color: '#d1fae5' }}>New</span>
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.3)', color: '#d1fae5' }}>New</span>
             </div>
             <div className="text-xs mt-0.5" style={{ color: 'var(--muted2)' }}>
-              Upload a photo and your video shows that person <b style={{ color: '#6ee7b7' }}>speaking your script</b>.
+              Upload a photo and your video shows that person <b style={{ color: '#c4b5fd' }}>speaking your script</b>.
             </div>
             <div className="mt-1.5">{creditPill}</div>
           </div>
-          <span className="shrink-0 text-lg font-bold transition-transform group-hover:translate-x-0.5" style={{ color: '#6ee7b7' }}>→</span>
+          <span className="shrink-0 text-lg font-bold transition-transform group-hover:translate-x-0.5" style={{ color: '#c4b5fd' }}>→</span>
         </button>
         <button
           type="button"
@@ -383,7 +383,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         <AvatarHowItWorks open={howOpen} onClose={() => setHowOpen(false)} />
         <style jsx>{`
           .sfa-entry {
-            background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(20,184,166,0.14));
+            background: linear-gradient(135deg, rgba(139,92,246,0.14), rgba(20,184,166,0.14));
             border: 1.5px solid transparent;
             background-clip: padding-box;
             position: relative;
@@ -391,7 +391,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
           .sfa-entry::before {
             content: '';
             position: absolute; inset: 0; border-radius: 16px; padding: 1.5px;
-            background: linear-gradient(135deg, rgba(16,185,129,0.7), rgba(20,184,166,0.5), rgba(16,185,129,0.7));
+            background: linear-gradient(135deg, rgba(139,92,246,0.7), rgba(20,184,166,0.5), rgba(139,92,246,0.7));
             background-size: 200% 200%;
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             -webkit-mask-composite: xor; mask-composite: exclude;
@@ -410,10 +410,10 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
   return (
     <div
       className="mt-3 rounded-2xl p-4"
-      style={{ maxWidth: 830, background: 'rgba(16,185,129,0.06)', border: '1.5px solid rgba(16,185,129,0.4)' }}
+      style={{ maxWidth: 830, background: 'rgba(139,92,246,0.06)', border: '1.5px solid rgba(139,92,246,0.4)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: '#6ee7b7' }}>
+        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: '#c4b5fd' }}>
           <AvatarDemoLoop size={28} />
           AI Avatar — add a face
         </div>
@@ -431,15 +431,15 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
           onClick={useSavedFace}
           disabled={disabled}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 mb-3 text-left transition-all"
-          style={{ background: 'rgba(16,185,129,0.1)', border: '1.5px solid rgba(16,185,129,0.5)', cursor: disabled ? 'not-allowed' : 'pointer' }}
+          style={{ background: 'rgba(139,92,246,0.1)', border: '1.5px solid rgba(139,92,246,0.5)', cursor: disabled ? 'not-allowed' : 'pointer' }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={savedFaceUrl} alt="Your saved face" className="h-10 w-10 rounded-full object-cover" style={{ border: '2px solid rgba(16,185,129,0.6)' }} />
+          <img src={savedFaceUrl} alt="Your saved face" className="h-10 w-10 rounded-full object-cover" style={{ border: '2px solid rgba(139,92,246,0.6)' }} />
           <div className="flex-1 min-w-0">
             <div className="text-xs font-bold" style={{ color: '#a7f3d0' }}>⚡ Use my saved face</div>
             <div className="text-[11px]" style={{ color: 'var(--muted2)' }}>Your last approved photo — one click, no re-upload.</div>
           </div>
-          <span className="text-sm font-bold" style={{ color: '#6ee7b7' }}>→</span>
+          <span className="text-sm font-bold" style={{ color: '#c4b5fd' }}>→</span>
         </button>
       )}
 
@@ -449,11 +449,11 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className="flex items-center gap-4 rounded-xl p-3 transition-colors"
-        style={{ border: `1.5px dashed ${dragging ? 'rgba(16,185,129,0.9)' : 'var(--border)'}`, background: dragging ? 'rgba(16,185,129,0.1)' : 'transparent' }}
+        style={{ border: `1.5px dashed ${dragging ? 'rgba(139,92,246,0.9)' : 'var(--border)'}`, background: dragging ? 'rgba(139,92,246,0.1)' : 'transparent' }}
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="Selected face preview" className="h-16 w-16 rounded-full object-cover" style={{ border: '2px solid rgba(16,185,129,0.6)' }} />
+          <img src={previewUrl} alt="Selected face preview" className="h-16 w-16 rounded-full object-cover" style={{ border: '2px solid rgba(139,92,246,0.6)' }} />
         ) : (
           <div className="h-16 w-16 rounded-full flex items-center justify-center text-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px dashed var(--border)' }}>🙂</div>
         )}
@@ -521,7 +521,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
         onClick={handleUpload}
         className="mt-4 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
         style={{
-          background: !file || !rights || uploading ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #10b981, #14b8a6)',
+          background: !file || !rights || uploading ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #8b5cf6, #14b8a6)',
           color: !file || !rights || uploading ? 'var(--muted)' : '#fff',
           border: 'none',
           cursor: !file || !rights || uploading ? 'not-allowed' : 'pointer',
@@ -536,7 +536,7 @@ export default function AvatarUpload({ value, onChange, disabled, credits = null
               : 'Use this face ✓'}
       </button>
       {file && rights && !uploading && (
-        <div className="text-[11px] mt-2 font-semibold" style={{ color: '#6ee7b7' }}>
+        <div className="text-[11px] mt-2 font-semibold" style={{ color: '#c4b5fd' }}>
           One more click — your face isn&apos;t attached to the video until you press this.
         </div>
       )}

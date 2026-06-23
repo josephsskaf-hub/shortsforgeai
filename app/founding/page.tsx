@@ -48,7 +48,7 @@ function ProofCard({ label, gradient, src }: { label: string; gradient: string; 
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: gradient, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <span
-              style={{ width: 58, height: 58, borderRadius: '50%', background: 'rgba(16,185,129,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(16,185,129,.4)' }}
+              style={{ width: 58, height: 58, borderRadius: '50%', background: 'rgba(139,92,246,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(139,92,246,.4)' }}
             >
               <span style={{ borderLeft: '17px solid #06231a', borderTop: '11px solid transparent', borderBottom: '11px solid transparent', marginLeft: 4 }} />
             </span>
@@ -113,7 +113,7 @@ export default function FoundingPage() {
       {/* Ambient glow */}
       <div
         className="fixed rounded-full pointer-events-none"
-        style={{ width: 620, height: 620, background: '#10B981', top: -240, right: -160, opacity: 0.08, filter: 'blur(140px)', zIndex: 0 }}
+        style={{ width: 620, height: 620, background: '#8B5CF6', top: -240, right: -160, opacity: 0.08, filter: 'blur(140px)', zIndex: 0 }}
       />
       <div
         className="fixed rounded-full pointer-events-none"
@@ -124,17 +124,17 @@ export default function FoundingPage() {
         {/* Brand */}
         <header className="flex items-center gap-2 pt-7 pb-2">
           <span className="font-display text-lg font-extrabold tracking-tight">
-            ShortsForge<span style={{ color: '#10B981' }}>AI</span>
+            ShortsForge<span style={{ color: '#8B5CF6' }}>AI</span>
           </span>
         </header>
 
         {/* Scarcity ribbon */}
         <div
           className="inline-flex items-center gap-2 rounded-full px-3 py-1 mt-6"
-          style={{ border: '1px solid rgba(16,185,129,.45)', background: 'rgba(16,185,129,.10)' }}
+          style={{ border: '1px solid rgba(139,92,246,.45)', background: 'rgba(139,92,246,.10)' }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-          <span className="text-xs font-semibold" style={{ color: '#6ee7b7', letterSpacing: '.04em' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8B5CF6', display: 'inline-block' }} />
+          <span className="text-xs font-semibold" style={{ color: '#c4b5fd', letterSpacing: '.04em' }}>
             FOUNDING OFFER · ONLY 10 SEATS
           </span>
         </div>
@@ -143,7 +143,7 @@ export default function FoundingPage() {
         <section className="pt-5 pb-2" style={{ maxWidth: 760 }}>
           <h1 className="font-display font-extrabold tracking-tight" style={{ fontSize: 'clamp(2.1rem, 5.5vw, 3.6rem)', lineHeight: 1.04 }}>
             Become a founding member.<br />
-            <span className="grad-text" style={{ color: '#10B981' }}>50% off — locked forever.</span>
+            <span className="grad-text" style={{ color: '#8B5CF6' }}>50% off — locked forever.</span>
           </h1>
           <p className="mt-5 text-base md:text-lg" style={{ color: 'rgba(255,255,255,.72)', maxWidth: 620 }}>
             Type a topic. The AI writes the script, picks the footage, voices it and
@@ -187,26 +187,26 @@ export default function FoundingPage() {
                 style={{
                   borderRadius: 16,
                   padding: 20,
-                  border: p.highlight ? '1.5px solid rgba(16,185,129,.6)' : '1px solid rgba(255,255,255,.08)',
-                  boxShadow: p.highlight ? '0 0 0 1px rgba(16,185,129,.25), 0 20px 60px rgba(0,0,0,.45)' : undefined,
+                  border: p.highlight ? '1.5px solid rgba(139,92,246,.6)' : '1px solid rgba(255,255,255,.08)',
+                  boxShadow: p.highlight ? '0 0 0 1px rgba(139,92,246,.25), 0 20px 60px rgba(0,0,0,.45)' : undefined,
                 }}
               >
                 {p.highlight && (
-                  <span className="text-[10px] font-bold mb-2 inline-block" style={{ color: '#0A0A0B', background: '#10B981', borderRadius: 6, padding: '2px 8px', width: 'fit-content', letterSpacing: '.05em' }}>
+                  <span className="text-[10px] font-bold mb-2 inline-block" style={{ color: '#0A0A0B', background: '#8B5CF6', borderRadius: 6, padding: '2px 8px', width: 'fit-content', letterSpacing: '.05em' }}>
                     MOST POPULAR
                   </span>
                 )}
                 <h3 className="font-display text-lg font-bold">{p.name}</h3>
                 <p className="text-xs mb-3" style={{ color: 'rgba(255,255,255,.55)' }}>{p.blurb}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-display text-3xl font-extrabold" style={{ color: '#10B981' }}>{p.founder}</span>
+                  <span className="font-display text-3xl font-extrabold" style={{ color: '#8B5CF6' }}>{p.founder}</span>
                   <span className="text-sm line-through" style={{ color: 'rgba(255,255,255,.4)' }}>{p.regular}</span>
                   <span className="text-xs" style={{ color: 'rgba(255,255,255,.5)' }}>/mo</span>
                 </div>
                 <ul className="mt-4 mb-5 space-y-2 flex-1">
                   {p.bullets.map((b) => (
                     <li key={b} className="text-sm flex items-start gap-2" style={{ color: 'rgba(255,255,255,.78)' }}>
-                      <span style={{ color: '#10B981' }}>✓</span> {b}
+                      <span style={{ color: '#8B5CF6' }}>✓</span> {b}
                     </li>
                   ))}
                 </ul>
@@ -251,7 +251,7 @@ export default function FoundingPage() {
 }
 
 const ctaStyle: React.CSSProperties = {
-  background: '#10B981',
+  background: '#8B5CF6',
   color: '#06231a',
   fontWeight: 700,
   fontSize: '0.95rem',

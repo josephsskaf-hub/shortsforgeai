@@ -97,7 +97,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   return (
     <div className="px-4 sm:px-6 py-7 pb-20 max-w-5xl mx-auto">
       <header className="mb-6">
-        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: '#6ee7b7' }}>
+        <div className="font-black uppercase tracking-widest mb-1" style={{ fontSize: '0.62rem', color: '#c4b5fd' }}>
           Admin · Live
         </div>
         <div className="flex items-end justify-between gap-3 flex-wrap">
@@ -164,7 +164,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
                     </span>
                   </div>
                   <div className="rounded-md h-7 overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: isLeak ? '1.5px solid #ef4444' : '1px solid var(--border)' }}>
-                    <div className="h-full rounded-md" style={{ width: `${widthPct}%`, background: isLeak ? 'linear-gradient(90deg,#ef4444,#b91c1c)' : 'linear-gradient(90deg,#22d3ee,#10b981)' }} />
+                    <div className="h-full rounded-md" style={{ width: `${widthPct}%`, background: isLeak ? 'linear-gradient(90deg,#ef4444,#b91c1c)' : 'linear-gradient(90deg,#22d3ee,#8b5cf6)' }} />
                   </div>
                 </div>
               )
@@ -251,7 +251,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
                     <td className="px-3 py-2" style={{ color: 'var(--text)' }}>{src.source}</td>
                     <td className="px-3 py-2">{fmt(src.signups)}</td>
                     <td className="px-3 py-2">{fmt(src.activated)}</td>
-                    <td className="px-3 py-2" style={{ color: src.paid > 0 ? '#34d399' : 'var(--muted)' }}>{fmt(src.paid)}</td>
+                    <td className="px-3 py-2" style={{ color: src.paid > 0 ? '#a78bfa' : 'var(--muted)' }}>{fmt(src.paid)}</td>
                     <td className="px-3 py-2">{src.activationRate}</td>
                     <td className="px-3 py-2">{src.signupToPaid}</td>
                   </tr>
@@ -294,16 +294,16 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
       {/* ── Existing real-stats sections ──────────────────────────────────── */}
       <Section title="Growth (all-time)">
         <Card label="Total users"      value={fmt(s.totalUsers)}    hint="all signups"   accent="#22d3ee" />
-        <Card label="New this week"    value={fmt(s.newThisWeek)}   hint="last 7 days"   accent="#34d399" />
-        <Card label="New this month"   value={fmt(s.newThisMonth)}  hint="last 30 days"  accent="#34d399" />
-        <Card label="Videos this week" value={fmt(s.videosThisWeek)} hint="last 7 days"  accent="#34d399" />
+        <Card label="New this week"    value={fmt(s.newThisWeek)}   hint="last 7 days"   accent="#a78bfa" />
+        <Card label="New this month"   value={fmt(s.newThisMonth)}  hint="last 30 days"  accent="#a78bfa" />
+        <Card label="Videos this week" value={fmt(s.videosThisWeek)} hint="last 7 days"  accent="#a78bfa" />
       </Section>
 
       <Section title="Subscribers">
-        <Card label="Pro"   value={fmt(s.proUsers)}   hint="plan = pro"   accent="#34d399" />
-        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#34d399" />
+        <Card label="Pro"   value={fmt(s.proUsers)}   hint="plan = pro"   accent="#a78bfa" />
+        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#a78bfa" />
         <Card label="Free"  value={fmt(s.freeUsers)}  hint="no paid plan" accent="#94a3b8" />
-        <Card label="Paid · 0 credits ⚠️" value={fmt(s.paidNoCredits)} hint="check Stripe webhook" accent={s.paidNoCredits > 0 ? '#f87171' : '#34d399'} />
+        <Card label="Paid · 0 credits ⚠️" value={fmt(s.paidNoCredits)} hint="check Stripe webhook" accent={s.paidNoCredits > 0 ? '#f87171' : '#a78bfa'} />
       </Section>
 
       <Section title="Conversion rates (all-time)">
@@ -315,12 +315,12 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
 
       {data.stripePayments && (
         <Section title="💳 Payment funnel · Stripe">
-          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="reached Stripe checkout" accent="#34d399" />
-          <Card label="Completed ✅"        value={fmt(data.stripePayments.checkoutCompleted)} hint="payment succeeded"       accent="#34d399" />
-          <Card label="Abandoned ❌"        value={fmt(data.stripePayments.checkoutAbandoned)} hint="expired without paying"  accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#34d399'} />
+          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="reached Stripe checkout" accent="#a78bfa" />
+          <Card label="Completed ✅"        value={fmt(data.stripePayments.checkoutCompleted)} hint="payment succeeded"       accent="#a78bfa" />
+          <Card label="Abandoned ❌"        value={fmt(data.stripePayments.checkoutAbandoned)} hint="expired without paying"  accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#a78bfa'} />
           <Card label="Still open ⏳"       value={fmt(data.stripePayments.checkoutOpen)}      hint="on checkout page now"    accent="#fbbf24" />
           <RateCard label="Checkout → Payment" value={data.stripePayments.conversionRate} sub={`${data.stripePayments.checkoutCompleted} / ${data.stripePayments.checkoutCompleted + data.stripePayments.checkoutAbandoned}`} />
-          <Card label="Failed payments (30d)" value={fmt(data.stripePayments.recentFailedPayments)} hint="invoice.payment_failed" accent={data.stripePayments.recentFailedPayments > 0 ? '#f87171' : '#34d399'} />
+          <Card label="Failed payments (30d)" value={fmt(data.stripePayments.recentFailedPayments)} hint="invoice.payment_failed" accent={data.stripePayments.recentFailedPayments > 0 ? '#f87171' : '#a78bfa'} />
         </Section>
       )}
 
@@ -363,7 +363,7 @@ function Card({ label, value, hint, accent }: { label: string; value: string; hi
 
 function RateCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   const isGood = value !== '—' && parseFloat(value) >= 10
-  const accent = value === '—' ? '#94a3b8' : isGood ? '#34d399' : '#f59e0b'
+  const accent = value === '—' ? '#94a3b8' : isGood ? '#a78bfa' : '#f59e0b'
   return (
     <div className="rounded-xl p-4" style={{ background: 'rgba(11,17,32,0.85)', border: `1px solid ${accent}33` }}>
       <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>

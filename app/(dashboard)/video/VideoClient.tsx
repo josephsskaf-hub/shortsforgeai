@@ -50,21 +50,21 @@ function StepCircle({
       className="w-12 h-12 rounded-2xl flex items-center justify-center font-black flex-shrink-0 transition-all"
       style={{
         background: isDone
-          ? 'linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.18))'
+          ? 'linear-gradient(135deg, rgba(139,92,246,.3), rgba(167,139,250,.18))'
           : isActive
           ? 'linear-gradient(135deg, rgba(16, 185, 129,.4), rgba(34, 211, 238,.25))'
           : 'rgba(255,255,255,.04)',
         border: isDone
-          ? '1px solid rgba(16,185,129,.5)'
+          ? '1px solid rgba(139,92,246,.5)'
           : isActive
           ? '1px solid rgba(34, 211, 238,.55)'
           : '1px solid var(--border)',
-        color: isDone ? '#34d399' : isActive ? '#22D3EE' : 'var(--muted)',
+        color: isDone ? '#a78bfa' : isActive ? '#22D3EE' : 'var(--muted)',
         fontSize: isDone ? '1.25rem' : '1.1rem',
         boxShadow: isActive
           ? '0 0 24px rgba(34, 211, 238,.35)'
           : isDone
-          ? '0 0 14px rgba(16,185,129,.25)'
+          ? '0 0 14px rgba(139,92,246,.25)'
           : 'none',
       }}
     >
@@ -504,7 +504,7 @@ export default function VideoClient() {
                     height: 2,
                     background:
                       s.id < step
-                        ? 'linear-gradient(90deg, rgba(16,185,129,.6), rgba(52,211,153,.3))'
+                        ? 'linear-gradient(90deg, rgba(139,92,246,.6), rgba(167,139,250,.3))'
                         : 'rgba(255,255,255,.06)',
                   }}
                 />
@@ -536,7 +536,7 @@ export default function VideoClient() {
                 border: isActive
                   ? '1px solid rgba(34, 211, 238,.45)'
                   : isDone
-                  ? '1px solid rgba(16,185,129,.25)'
+                  ? '1px solid rgba(139,92,246,.25)'
                   : '1px solid var(--border)',
                 boxShadow: isActive ? '0 12px 48px rgba(34, 211, 238,.18)' : 'none',
                 opacity: status === 'pending' ? 0.55 : 1,
@@ -563,7 +563,7 @@ export default function VideoClient() {
                 {isDone && (
                   <span
                     className="text-xs font-black px-2 py-1 rounded"
-                    style={{ background: 'rgba(16,185,129,.1)', color: '#34d399', border: '1px solid rgba(16,185,129,.3)' }}
+                    style={{ background: 'rgba(139,92,246,.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,.3)' }}
                   >
                     ✓ Done
                   </span>
@@ -800,7 +800,7 @@ function Step2Scenes({
                 </span>
                 <span
                   className="font-bold px-2 py-0.5 rounded"
-                  style={{ background: 'rgba(16,185,129,.1)', color: '#34d399' }}
+                  style={{ background: 'rgba(139,92,246,.1)', color: '#a78bfa' }}
                 >
                   {s.emotionalTone}
                 </span>
@@ -1131,10 +1131,10 @@ function CopyChip({ label, value }: { label: string; value: string }) {
       className="rounded-xl px-3.5 py-2 text-xs font-bold transition-all"
       style={{
         background: copied
-          ? 'linear-gradient(135deg, rgba(16,185,129,.25), rgba(52,211,153,.15))'
+          ? 'linear-gradient(135deg, rgba(139,92,246,.25), rgba(167,139,250,.15))'
           : 'rgba(16, 185, 129,.12)',
-        border: copied ? '1px solid rgba(16,185,129,.45)' : '1px solid rgba(16, 185, 129,.3)',
-        color: copied ? '#34d399' : 'var(--indigo-light)',
+        border: copied ? '1px solid rgba(139,92,246,.45)' : '1px solid rgba(16, 185, 129,.3)',
+        color: copied ? '#a78bfa' : 'var(--indigo-light)',
         cursor: 'pointer',
       }}
     >
@@ -1345,9 +1345,9 @@ function Step5Export({
       <div
         className="w-20 h-20 rounded-3xl flex items-center justify-center"
         style={{
-          background: 'linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.18))',
-          border: '1px solid rgba(16,185,129,.5)',
-          boxShadow: '0 0 32px rgba(16,185,129,.35)',
+          background: 'linear-gradient(135deg, rgba(139,92,246,.3), rgba(167,139,250,.18))',
+          border: '1px solid rgba(139,92,246,.5)',
+          boxShadow: '0 0 32px rgba(139,92,246,.35)',
           fontSize: '2.4rem',
         }}
       >

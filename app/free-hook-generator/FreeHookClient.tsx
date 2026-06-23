@@ -53,7 +53,7 @@ export default function FreeHookClient() {
           <textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Billionaire money habits" rows={2} maxLength={200}
             style={{ width: '100%', boxSizing: 'border-box', background: '#0A0A0B', color: '#F1F5F9', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit' }} />
           <button onClick={() => generate()} disabled={loading}
-            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#10B981)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
             {loading ? '✍️ Writing hooks…' : 'Generate 5 hooks →'}
           </button>
           <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>

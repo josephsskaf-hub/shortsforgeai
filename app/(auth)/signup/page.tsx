@@ -24,8 +24,8 @@ function scorePassword(pw: string): Strength {
 
   if (score <= 1) return { level: 2, label: 'Weak', color: '#f59e0b' }
   if (score === 2 || score === 3)
-    return { level: 3, label: 'Good', color: '#10b981' }
-  return { level: 4, label: 'Strong', color: '#10b981' }
+    return { level: 3, label: 'Good', color: '#8b5cf6' }
+  return { level: 4, label: 'Strong', color: '#8b5cf6' }
 }
 
 export default function SignupPage() {
@@ -173,7 +173,7 @@ export default function SignupPage() {
             className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
             style={{
               background:
-                'radial-gradient(circle at top left, rgba(16,185,129,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
+                'radial-gradient(circle at top left, rgba(139,92,246,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
             }}
           >
             <div
@@ -207,7 +207,7 @@ export default function SignupPage() {
                   <div
                     className="font-black text-sm tracking-tight"
                     style={{
-                      background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+                      background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}
@@ -241,16 +241,16 @@ export default function SignupPage() {
               <div
                 className="inline-flex items-center gap-2 mb-7 px-3 py-1.5 rounded-full text-xs font-bold"
                 style={{
-                  background: 'rgba(16,185,129,.12)',
-                  border: '1px solid rgba(16,185,129,.3)',
-                  color: '#34d399',
+                  background: 'rgba(139,92,246,.12)',
+                  border: '1px solid rgba(139,92,246,.3)',
+                  color: '#a78bfa',
                 }}
               >
                 <span
                   className="w-2 h-2 rounded-full animate-pulse-dot"
                   style={{
-                    background: '#34d399',
-                    boxShadow: '0 0 6px rgba(52,211,153,.6)',
+                    background: '#a78bfa',
+                    boxShadow: '0 0 6px rgba(167,139,250,.6)',
                   }}
                 />
                 🎁 30 free credits · No credit card
@@ -270,9 +270,9 @@ export default function SignupPage() {
                     <span
                       className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{
-                        background: 'rgba(16,185,129,.18)',
-                        border: '1px solid rgba(16,185,129,.35)',
-                        color: '#34d399',
+                        background: 'rgba(139,92,246,.18)',
+                        border: '1px solid rgba(139,92,246,.35)',
+                        color: '#a78bfa',
                         fontSize: '0.7rem',
                         fontWeight: 800,
                       }}
@@ -340,7 +340,7 @@ export default function SignupPage() {
               <div
                 className="font-black text-sm tracking-tight"
                 style={{
-                  background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+                  background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -565,7 +565,7 @@ export default function SignupPage() {
                     disabled={loading}
                     className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                     style={{
-                      background: '#10B981',
+                      background: '#8B5CF6',
                       color: '#FFFFFF',
                       boxShadow: '0 4px 22px rgba(16, 185, 129,.3)',
                       opacity: loading ? 0.7 : 1,

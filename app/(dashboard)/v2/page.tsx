@@ -220,10 +220,10 @@ export default function V2PrototypePage() {
           }}
         >
           <div className="text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-            <strong style={{ color: '#6ee7b7' }}>{duration}</strong> · {engineMeta?.label} engine ·{' '}
+            <strong style={{ color: '#c4b5fd' }}>{duration}</strong> · {engineMeta?.label} engine ·{' '}
             <span style={{ color: 'var(--muted)' }}>{engineMeta?.providerHint}</span>
           </div>
-          <div className="text-xs font-bold" style={{ color: '#6ee7b7' }}>
+          <div className="text-xs font-bold" style={{ color: '#c4b5fd' }}>
             Estimated cost: {cost.basic} / {cost.pro} credits (basic / pro)
           </div>
         </div>
@@ -309,7 +309,7 @@ export default function V2PrototypePage() {
       </section>
 
       <p className="text-[11px] text-center" style={{ color: 'var(--muted)' }}>
-        V2 is a parallel surface. V1 lives at <Link href="/generate" style={{ color: '#6ee7b7', textDecoration: 'none' }}>/generate</Link> and is unaffected by anything on this page.
+        V2 is a parallel surface. V1 lives at <Link href="/generate" style={{ color: '#c4b5fd', textDecoration: 'none' }}>/generate</Link> and is unaffected by anything on this page.
       </p>
     </main>
   )
@@ -326,7 +326,7 @@ function Chip({ children }: { children: React.ReactNode }) {
         borderRadius: 999,
         background: 'rgba(5,150,105,.10)',
         border: '1px solid rgba(5,150,105,.25)',
-        color: '#6ee7b7',
+        color: '#c4b5fd',
         letterSpacing: '0.02em',
       }}
     >
@@ -470,7 +470,7 @@ function EngineSelector({
               }}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-sm font-black" style={{ color: selected ? '#6ee7b7' : 'var(--text)' }}>
+                <span className="text-sm font-black" style={{ color: selected ? '#c4b5fd' : 'var(--text)' }}>
                   {e.label}
                 </span>
                 {research && (

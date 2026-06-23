@@ -22,7 +22,7 @@ const THUMBNAILS = [
     icon: '❓',
     style: 'The Question',
     text: 'What Would Happen If You Did THIS Every Day?',
-    accent: '#34d399',
+    accent: '#a78bfa',
   },
   {
     id: 'warning',
@@ -84,7 +84,7 @@ export default function ThumbnailGenerator() {
           }}
         >
           🖼️{' '}
-          <span style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Thumbnail Text Generator
           </span>
         </h2>

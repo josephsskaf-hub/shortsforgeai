@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(16, 185, 129,.45)' }}>
             ⚡
           </div>
-          <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             ShortsForgeAI
           </div>
         </Link>
@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
                   disabled={loading || !ready}
                   className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                   style={{
-                    background: '#10B981',
+                    background: '#8B5CF6',
                     color: '#FFFFFF',
                     boxShadow: '0 4px 22px rgba(16, 185, 129,.3)',
                     opacity: (loading || !ready) ? 0.7 : 1,

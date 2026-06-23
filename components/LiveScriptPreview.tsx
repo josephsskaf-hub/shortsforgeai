@@ -7,10 +7,10 @@ import Link from 'next/link'
 const EXAMPLES = [
   {
     niche: '💰 Money Facts',
-    color: '#34d399',
-    glow: 'rgba(52,211,153,0.25)',
+    color: '#a78bfa',
+    glow: 'rgba(167,139,250,0.25)',
     badge: '#064e3b',
-    badgeText: '#6ee7b7',
+    badgeText: '#c4b5fd',
     hook: 'The bank never told you this... 🏦',
     script:
       "Every dollar in your savings account is losing value right now. Inflation is eating 4% per year. The average savings account pays 0.5%. That means you're losing 3.5% annually just by doing nothing. Here's what the wealthy do instead...",
@@ -200,7 +200,7 @@ export default function LiveScriptPreview() {
           Watch it generate{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #34D399, #22D3EE)',
+              background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -367,7 +367,7 @@ export default function LiveScriptPreview() {
             <div
               style={{
                 fontSize: '0.82rem',
-                color: '#34d399',
+                color: '#a78bfa',
                 lineHeight: 1.5,
                 minHeight: '1.5em',
                 fontWeight: 600,
@@ -426,7 +426,7 @@ export default function LiveScriptPreview() {
             fontWeight: 900,
             color: '#fff',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
             boxShadow: '0 6px 30px rgba(16, 185, 129,0.45)',
           }}
         >

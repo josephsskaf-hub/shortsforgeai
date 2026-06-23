@@ -27,7 +27,7 @@ export default function ReferralPage() {
           Invite &amp;{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #22D3EE 0%, #10B981 60%, #10B981 100%)',
+              background: 'linear-gradient(135deg, #22D3EE 0%, #8B5CF6 60%, #8B5CF6 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',

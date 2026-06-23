@@ -7,7 +7,7 @@ const STAGES = [
     icon: '🎯',
     name: 'HOOK',
     desc: 'Stop the scroll. Make them stay.',
-    accent: '#34D399',
+    accent: '#A78BFA',
   },
   {
     id: 'curiosity',
@@ -15,7 +15,7 @@ const STAGES = [
     icon: '🤔',
     name: 'CURIOSITY',
     desc: 'Build intrigue. Keep them watching.',
-    accent: '#34d399',
+    accent: '#a78bfa',
   },
   {
     id: 'value',
@@ -85,12 +85,12 @@ export default function RetentionMap() {
               gap: 8,
               padding: '5px 14px',
               borderRadius: 999,
-              background: 'rgba(52,211,153,.1)',
-              border: '1px solid rgba(52,211,153,.25)',
+              background: 'rgba(167,139,250,.1)',
+              border: '1px solid rgba(167,139,250,.25)',
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#6ee7b7', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.04em' }}>
               📊 RETENTION MAP
             </span>
           </div>
@@ -104,7 +104,7 @@ export default function RetentionMap() {
             }}
           >
             Script Built For{' '}
-            <span style={{ background: 'linear-gradient(135deg, #34d399, #34D399, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ background: 'linear-gradient(135deg, #a78bfa, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Retention
             </span>
             , Not Just Views

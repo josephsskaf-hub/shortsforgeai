@@ -161,9 +161,9 @@ function colorFor(score: number): { bar: string; text: string; glow: string } {
     }
   }
   return {
-    bar: 'linear-gradient(90deg, #10b981, #34d399)',
-    text: '#34d399',
-    glow: 'rgba(16,185,129,.35)',
+    bar: 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
+    text: '#a78bfa',
+    glow: 'rgba(139,92,246,.35)',
   }
 }
 

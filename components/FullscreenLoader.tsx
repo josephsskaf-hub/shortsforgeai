@@ -107,7 +107,7 @@ export default function FullscreenLoader() {
                 key={i}
                 className="flex items-center gap-2.5 text-xs transition-all duration-300"
                 style={{
-                  color: done ? '#34d399' : active ? 'var(--text)' : 'var(--muted)',
+                  color: done ? '#a78bfa' : active ? 'var(--text)' : 'var(--muted)',
                   opacity: done || active ? 1 : 0.45,
                 }}
               >
@@ -115,12 +115,12 @@ export default function FullscreenLoader() {
                   className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
                   style={{
                     background: done
-                      ? 'rgba(16,185,129,.2)'
+                      ? 'rgba(139,92,246,.2)'
                       : active
                       ? 'rgba(16, 185, 129,.2)'
                       : 'transparent',
                     border: done
-                      ? '1px solid rgba(16,185,129,.3)'
+                      ? '1px solid rgba(139,92,246,.3)'
                       : active
                       ? '1px solid rgba(16, 185, 129,.35)'
                       : '1px solid rgba(255,255,255,.08)',
