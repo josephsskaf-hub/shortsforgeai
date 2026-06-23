@@ -109,7 +109,7 @@ function buildFacelessCinematicPrompt(raw: string): string {
     `${s}, faceless cinematic b-roll, empty scene focused on the environment, ` +
     `objects and scenery, no people, no human faces, documentary establishing shot, ` +
     `photorealistic, ultra-detailed, dramatic cinematic lighting, smooth camera motion, ` +
-    `9:16 vertical, no text, no watermark, no logo`
+    `9:16 vertical, subject framed in the upper two-thirds with the lower third clear for captions, no text, no watermark, no logo`
   )
 }
 
@@ -139,6 +139,9 @@ RULES:
 - Anchor the shot on the LITERAL subject of that scene's narration (the exact place, object, event, number, or concept being said).
 - FACELESS only: show environment, landscapes, architecture, money, screens, objects, hands, or silhouettes/crowds seen from behind or far away. NEVER an identifiable person or face in the foreground. Never invent a random human to fill the scene.
 - Include a camera move (aerial, slow push-in, tracking, pan, or macro), plus lighting and mood.
+- VARY the camera move and framing across scenes — do not repeat the same shot type; rotate aerial / tracking / slow push-in / macro / wide / low-angle.
+- Keep ONE consistent look across all scenes: same dark cinematic mood, color palette and lighting, as if from the same film.
+- Frame the subject in the upper two-thirds; keep the lower third uncluttered for on-screen captions.
 - Vertical 9:16, cinematic, photorealistic. No on-screen text, captions, or logos.
 - Output ONLY valid JSON: { "descriptions": ["...", "..."] } with EXACTLY ${scenes.length} items, in scene order.`
 
@@ -320,7 +323,7 @@ export async function POST(req: NextRequest) {
     // clips (lower words/sec) since extra footage is just trimmed — never repeated.
     // Stays within the tested 2..6 range; never drops below the button's count.
     if (verbatim) {
-      const SECONDS_PER_CLIP = 10 // Seedance clip duration
+      const SECONDS_PER_CLIP = (wantsVeo || wantsSora) ? 8 : 10 // Veo/Sora 8s, Seedance/Kling 10s
       const WORDS_PER_SECOND = 2.5 // ~ElevenLabs at speed 1.05 (conservative)
       const words = parsedScript.narration.split(/\s+/).filter(Boolean).length
       const estSeconds = words / WORDS_PER_SECOND
