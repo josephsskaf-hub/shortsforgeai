@@ -1,68 +1,70 @@
 'use client'
 
+// ROBO1-HONEST-2026-06-28 — Replaced invented "300+ Active Creators" /
+// "300+ Videos Generated" / "94% Retention" / "#1 Tool" counters (none of
+// which were verifiable) with HONEST trust signals: indie-founder
+// transparency, the free-first promise, the real FOUNDING50 founding-member
+// framing (first 10 seats, 50% off locked forever — mirrors /founding), and
+// concrete capability badges. No invented numbers remain. The default export
+// and its (prop-less) API are unchanged so importers still compile.
+
 import { useEffect, useRef, useState } from 'react'
 
-interface Stat {
+interface TrustSignal {
   id: string
-  target: number
-  suffix: string
-  label: string
-  prefix?: string
-  format?: 'number' | 'percent' | 'rank'
-  decimals?: number
+  icon: string
+  title: string
+  sub: string
+  accent: string
 }
 
-const STATS: Stat[] = [
-  { id: 'scripts', target: 300, suffix: '+', label: 'Videos Generated', format: 'number' },
-  { id: 'creators', target: 300, suffix: '+', label: 'Active Creators', format: 'number' },
-  { id: 'retention', target: 94, suffix: '%', label: 'Retention Rate', format: 'percent' },
-  { id: 'rank', target: 1, suffix: '', prefix: '#', label: 'Tool for Faceless Channels', format: 'rank' },
+// Only real, verifiable claims. "First Short free" and the FOUNDING50 terms
+// are product facts; the capability line describes the actual output spec.
+const TRUST_SIGNALS: TrustSignal[] = [
+  {
+    id: 'free',
+    icon: '🎬',
+    title: 'Your first Short is free',
+    sub: 'No credit card to start',
+    accent: '#22D3EE',
+  },
+  {
+    id: 'founder',
+    icon: '🔑',
+    title: 'Founding offer — only 10 seats',
+    sub: '50% off, locked for life',
+    accent: '#A78BFA',
+  },
+  {
+    id: 'indie',
+    icon: '⚡',
+    title: 'Built by an indie founder',
+    sub: 'Shipping improvements daily',
+    accent: '#34D399',
+  },
+  {
+    id: 'spec',
+    icon: '✅',
+    title: 'Ready to post, per topic',
+    sub: '9:16 · ~60s · English · AI voice + B-roll',
+    accent: '#FBBF24',
+  },
 ]
 
-function formatNumber(n: number, format?: string): string {
-  if (format === 'percent' || format === 'rank') return Math.round(n).toString()
-  return Math.round(n).toLocaleString('en-US')
-}
-
-function useCountUp(target: number, durationMs: number, start: boolean) {
-  const [value, setValue] = useState(0)
-  const startTimeRef = useRef<number | null>(null)
-  const rafRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (!start) return
-    function step(ts: number) {
-      if (startTimeRef.current === null) startTimeRef.current = ts
-      const elapsed = ts - startTimeRef.current
-      const progress = Math.min(1, elapsed / durationMs)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setValue(target * eased)
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(step)
-      }
-    }
-    rafRef.current = requestAnimationFrame(step)
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [target, durationMs, start])
-
-  return value
-}
-
-function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
-  const value = useCountUp(stat.target, 1800, animate)
+function SignalCard({ signal, visible, index }: { signal: TrustSignal; visible: boolean; index: number }) {
   return (
     <div
       style={{
         position: 'relative',
-        padding: '28px 22px 26px',
+        padding: '24px 20px',
         borderRadius: 18,
         background: 'linear-gradient(160deg, rgba(20,20,38,.85), rgba(13,13,28,.9))',
-        border: '1px solid rgba(16, 185, 129,.18)',
-        textAlign: 'center',
+        border: `1px solid ${signal.accent}2e`,
+        textAlign: 'left',
         overflow: 'hidden',
-        transition: 'transform .25s ease, border-color .25s ease, box-shadow .25s ease',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(14px)',
+        transition: `opacity .5s ease ${index * 90}ms, transform .5s ease ${index * 90}ms, border-color .25s ease, box-shadow .25s ease`,
       }}
       className="stat-card"
     >
@@ -70,37 +72,43 @@ function StatCard({ stat, animate }: { stat: Stat; animate: boolean }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129,.16), transparent 70%)',
+          background: `radial-gradient(ellipse at 12% 0%, ${signal.accent}26, transparent 70%)`,
           pointerEvents: 'none',
         }}
       />
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div
           style={{
-            fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
-            fontWeight: 900,
-            background: 'linear-gradient(135deg, #A78BFA, #22D3EE, #22D3EE)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.05,
-            marginBottom: 8,
+            fontSize: '1.5rem',
+            lineHeight: 1,
+            marginBottom: 12,
+          }}
+          aria-hidden
+        >
+          {signal.icon}
+        </div>
+        <div
+          style={{
+            fontSize: '0.98rem',
+            fontWeight: 800,
+            color: 'var(--text)',
+            letterSpacing: '-0.01em',
+            lineHeight: 1.25,
+            marginBottom: 6,
           }}
         >
-          {stat.prefix ?? ''}
-          {formatNumber(value, stat.format)}
-          {stat.suffix}
+          {signal.title}
         </div>
         <div
           style={{
             fontSize: '0.78rem',
-            fontWeight: 700,
+            fontWeight: 600,
             color: 'var(--muted2)',
-            letterSpacing: '0.01em',
+            letterSpacing: '0.005em',
             lineHeight: 1.4,
           }}
         >
-          {stat.label}
+          {signal.sub}
         </div>
       </div>
     </div>
@@ -151,7 +159,7 @@ export default function SocialProof() {
             marginBottom: 10,
           }}
         >
-          Trusted By Creators
+          Why creators start here
         </div>
         <h2
           style={{
@@ -162,13 +170,13 @@ export default function SocialProof() {
             margin: 0,
           }}
         >
-          The numbers don't lie.
+          No hype. Just your first Short, free.
         </h2>
       </div>
 
       <div className="social-proof-grid">
-        {STATS.map((s) => (
-          <StatCard key={s.id} stat={s} animate={visible} />
+        {TRUST_SIGNALS.map((s, i) => (
+          <SignalCard key={s.id} signal={s} visible={visible} index={i} />
         ))}
       </div>
 

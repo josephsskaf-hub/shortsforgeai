@@ -36,7 +36,7 @@ const STARTER_FEATURES = [
 ]
 
 const BASIC_FEATURES = [
-  '4 AI-generated videos/month',
+  '6 AI-generated videos/month',
   'Seedance AI engine (great quality)',
   'AI writes script + voiceover',
   'Auto-captions pipeline',
@@ -45,7 +45,7 @@ const BASIC_FEATURES = [
 ]
 
 const PRO_FEATURES = [
-  '8 cinematic AI videos/month',
+  '6 cinematic AI videos/month',
   'Kling 2.5 engine (top-tier cinematic)',
   'AI writes script + voiceover',
   'Auto-captions pipeline',
@@ -145,7 +145,7 @@ export default function PricingCards() {
           name={PLANS.starter.name}
           price={PLANS.starter.priceLabel}
           period="/ month"
-          tagline="15 AI Short videos/month. Just $0.19 per video."
+          tagline="50 Fast-Mode Shorts/month from smart stock footage + AI voiceover."
           features={STARTER_FEATURES}
           selected={selectedPlan === 'starter'}
           onSelect={() => setSelectedPlan('starter')}
@@ -154,7 +154,7 @@ export default function PricingCards() {
               purchasing === 'starter'
                 ? 'Loading…'
                 : selectedPlan === 'starter'
-                  ? 'Continue with Spark'
+                  ? 'Continue with Starter'
                   : PLANS.starter.cta,
             onClick: () => handleBuy('starter'),
             loading: purchasing === 'starter',
@@ -166,7 +166,7 @@ export default function PricingCards() {
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          tagline="50 Fast Mode renders/month. Under $0.10 per video."
+          tagline="240 credits/month — 6 AI-generated Shorts on the Seedance engine."
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
@@ -175,7 +175,7 @@ export default function PricingCards() {
               purchasing === 'basic'
                 ? 'Loading…'
                 : selectedPlan === 'basic'
-                  ? 'Continue with Basic'
+                  ? 'Continue with Creator'
                   : PLANS.basic.cta,
             onClick: () => handleBuy('basic'),
             loading: purchasing === 'basic',
@@ -187,7 +187,7 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline="100 Fast Mode renders/month — built for daily posting."
+          tagline="Premium Kling engine + 360 credits — up to 9 AI or 6 cinematic Shorts/month."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight
@@ -198,7 +198,7 @@ export default function PricingCards() {
               purchasing === 'pro'
                 ? 'Loading…'
                 : selectedPlan === 'pro'
-                  ? 'Continue with Pro'
+                  ? 'Continue with Studio'
                   : PLANS.pro.cta,
             onClick: () => handleBuy('pro'),
             loading: purchasing === 'pro',

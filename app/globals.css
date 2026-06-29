@@ -507,3 +507,36 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ── ROBO5-PERF-2026-06-28 — accessibility + perceived-performance win ──────
+   Appended block (does not edit any rule above). Respects the user's OS
+   "reduce motion" setting: when enabled, we collapse animations, transitions
+   and smooth scrolling so the app feels instant and avoids motion that can
+   trigger vestibular discomfort. Zero impact on default rendering — this only
+   activates when the OS explicitly requests reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Responsive media — never let an image/video overflow its container.
+   Not set globally above (the existing `img` rule only tunes rendering),
+   so this is additive, not a duplicate. */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ROBO5-PERF-2026-06-29 — prevent iOS Safari from auto-inflating font sizes on narrow viewports */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* end ROBO5-PERF-2026-06-29 */
+

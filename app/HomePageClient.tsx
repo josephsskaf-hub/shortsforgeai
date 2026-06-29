@@ -983,16 +983,22 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
               AI Video Engine v3
             </div>
+            {/* ROBO1-CONV-2026-06-29 */}
+            {/* ROBO1-CONV-2026-06-28 — hero tightened to the positioning
+                (one idea → one finished Short, built deliberately per topic;
+                NOT a long-video re-clipper) + one honest FOUNDING50 urgency
+                line (first 10 founding members, 50% off locked for life —
+                mirrors /founding). No fake countdown, no invented numbers. */}
             <h1 className="font-display text-balance text-4xl font-bold leading-[1.06] tracking-tight sm:text-5xl lg:text-6xl text-[var(--text)]">
-              From Idea to{' '}
-              <span className="grad-text neon-text">Viral Short</span>{' '}
-              in 2 Clicks
+              One idea in.{' '}
+              <span className="grad-text neon-text">One ready-to-post Short</span>{' '}
+              out.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#9D96B8]">
-              No prompts. No editing. ShortAI writes the hook, script, voice, captions and footage for YouTube, TikTok &amp; Reels — you just download and post.
+              Not a long-video re-clipper. Type one topic and ShortsForgeAI builds a finished faceless Short deliberately for that idea — hook, script, AI voice, captions and B-roll, 9:16 · ~60s · English — then you download and post to YouTube, TikTok &amp; Reels.
             </p>
             <p className="mt-4 text-sm font-bold text-[#A78BFA]">
-              🎬 {animatedTotal.toLocaleString('en-US')} videos generated · 🔥 <span className="text-cyan-400">{shortsWeek.toLocaleString('en-US')}</span> this week
+              🔑 Founding offer — the first <span className="text-cyan-400">10 members</span> lock 50% off for life
             </p>
           </div>
 
@@ -1005,15 +1011,15 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               className="group relative flex min-h-[230px] flex-col justify-between overflow-hidden rounded-2xl border border-[rgba(139,92,246,0.35)] p-6 text-left sm:p-7"
               style={{ background: 'radial-gradient(circle at 65% 20%, rgba(139,92,246,0.38), #140d22 55%, #0b0b10 82%)' }}
             >
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">★ Flagship</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">★ Start here</span>
               <div className="relative z-10">
-                <div className="font-display text-3xl font-bold text-white sm:text-4xl">Cinematic AI</div>
-                <div className="mt-1.5 text-sm text-[#CFC6E6]">Veo 3.1 · Sora 2 · Kling — one prompt, one click.</div>
+                <div className="font-display text-3xl font-bold text-white sm:text-4xl">Generate your first Short</div>
+                <div className="mt-1.5 text-sm text-[#CFC6E6]">One idea → a finished 9:16 Short. Free to try — no credit card.</div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-[13px] font-bold text-white transition group-hover:brightness-110">Generate now →</span>
-                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">Veo 3.1</span>
-                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">Sora 2</span>
-                  <span className="rounded-lg border border-[rgba(34,211,238,0.4)] px-3 py-1.5 text-[11px] text-[#22D3EE]">Kling</span>
+                  <span className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-[13px] font-bold text-white transition group-hover:brightness-110">Generate my first Short — free →</span>
+                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">AI voice + B-roll</span>
+                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">~60s</span>
+                  <span className="rounded-lg border border-[rgba(34,211,238,0.4)] px-3 py-1.5 text-[11px] text-[#22D3EE]">No card</span>
                 </div>
               </div>
             </button>
@@ -1057,8 +1063,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             ))}
           </div>
           {/* Push #432 — welcome-gift trust line under the dashboard. */}
+          {/* ROBO1-CONV-2026-06-28 — free-first reassurance row. */}
           <p className="mt-5 text-center text-[13px] font-semibold text-[#9D96B8]">
-            🎁 <span className="text-[#A78BFA] font-bold">30 free credits on signup</span> · No credit card · Cancel anytime
+            🎁 <span className="text-[#A78BFA] font-bold">Your first Short is free</span> · No credit card · Cancel anytime
           </p>
         </div>{/* end hero grid */}
 

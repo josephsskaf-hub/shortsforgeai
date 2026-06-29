@@ -13,8 +13,8 @@ import { fal } from '@fal-ai/client'
 export const maxDuration = 60
 
 // Push #402 — two user-selectable engines with different credit costs.
-// AI Generated (Seedance) = 30 cr, available to all paid plans. Cinematic AI
-// (Kling) = 45 cr, Studio-only (premium). Free trial only ever uses Seedance.
+// AI Generated (Seedance) = 40 cr, available to all paid plans. Cinematic AI
+// (Kling) = 60 cr, Studio-only (premium). Free trial only ever uses Seedance.
 const SEEDANCE_CREDIT_COST = 40
 const KLING_CREDIT_COST = 60
 // Push #489/#491 — premium cinematic engines (Veo 3.1 Fast, Sora 2) via fal.

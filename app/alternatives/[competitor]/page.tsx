@@ -345,6 +345,30 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'Should I use CapCut or ShortsForgeAI?', a: 'Use CapCut when you want full manual control and detailed editing (and its free tier). Use ShortsForgeAI when you want speed and automation — a complete faceless Short from one idea for $11.90/mo.' },
     ],
   },
+  // ROBO2-SEO-2026-06-29
+  pictory: {
+    name: 'Pictory',
+    h1: 'The Pictory Alternative That Builds the Whole Short From One Idea',
+    intro:
+      'Pictory turns long-form written content — blog posts, articles, scripts — and long videos into summarized short videos with stock visuals, AI voiceover, and auto-captions. It is mature and great for repurposing content you already have, but it expects you to bring that content and work in its editor. ShortsForgeAI is idea-first: you give it one idea and it writes the script and returns a finished faceless 9:16 Short in about 60 seconds, with no article or source video needed.',
+    theyDo: 'Pictory summarizes blog posts, articles, scripts, and long videos into shorter videos with stock visuals and AI voiceover.',
+    pickThem: 'Pick Pictory if you have blogs, articles, or long videos to convert and want a mature editor with a big stock library; pick ShortsForgeAI when you want a finished faceless Short from a single idea with no scripting or editing.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: 'Needs your content' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: true },
+      { feature: 'Repurposes blog posts & long videos', sfa: false, them: true },
+      { feature: 'Finished Short in ~60 seconds, no editor', sfa: true, them: 'Edit in timeline' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Pictory alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is a strong Pictory alternative when you want a finished Short without bringing your own content — it writes the script, adds the AI voice, pulls the footage, and burns in captions to deliver a faceless 9:16 Short from a single idea in about 60 seconds.' },
+      { q: 'Does ShortsForgeAI need a blog post or video like Pictory?', a: 'No. Pictory is built to repurpose written content or long videos you already have. ShortsForgeAI starts from just an idea — it writes the script for you, so you never need an article or source video.' },
+      { q: 'Should I use Pictory or ShortsForgeAI?', a: 'Choose Pictory if you have blogs, articles, or long videos to convert and want a mature editor with a big stock library. Choose ShortsForgeAI if you want a finished faceless Short from one idea with no scripting or editing, from $11.90/mo.' },
+    ],
+  },
 }
 
 export const COMPETITOR_SLUGS = Object.keys(COMPETITORS)
