@@ -7,6 +7,7 @@
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 export const metadata: Metadata = {
   title: 'Cheapest AI Shorts Maker — Make YouTube Shorts Cheap, First One Free | ShortsForgeAI',
@@ -125,6 +126,7 @@ export default function CheapestAiShortsMakerPage() {
           <Link href="/start" style={{ background: '#8B5CF6', color: '#fff', fontWeight: 800, padding: '14px 30px', borderRadius: 12, textDecoration: 'none' }}>Make my first Short →</Link>
         </div>
       </div>
+      <StickyFreeShortCTA />
     </main>
   )
 }

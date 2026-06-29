@@ -7,6 +7,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 export const dynamic = 'force-static'
 export const dynamicParams = false
@@ -369,6 +370,81 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'Should I use Pictory or ShortsForgeAI?', a: 'Choose Pictory if you have blogs, articles, or long videos to convert and want a mature editor with a big stock library. Choose ShortsForgeAI if you want a finished faceless Short from one idea with no scripting or editing, from $11.90/mo.' },
     ],
   },
+  // ROBO2-SEO-2026-06-29b — VEED (editor) / Vizard (repurposer) / Descript (text-editor)
+  veed: {
+    name: 'VEED',
+    h1: 'The VEED Alternative That Builds the Whole Short — No Editor to Learn',
+    intro:
+      'VEED is a powerful browser-based video editor with AI tools — auto-subtitles, screen recording, a stock library and a full timeline. It is built for people who want to sit down and edit. ShortsForgeAI removes the editor entirely: you give it one idea and it writes the script, records the AI voiceover, finds the footage and captions it into a finished faceless 9:16 Short in about 60 seconds. No timeline, no camera, nothing to assemble.',
+    theyDo: 'VEED is a browser-based video editor with AI helpers, auto-subtitles and screen recording — you assemble and refine the video on a timeline.',
+    pickThem:
+      'Pick VEED if you want hands-on control to edit, trim and brand a video on a timeline (and its screen recorder). Pick ShortsForgeAI if you want a finished faceless Short from one idea with zero editing.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: 'AI add-on, manual' },
+      { feature: 'AI voiceover included', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: false },
+      { feature: 'No timeline editing required', sfa: true, them: false },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best VEED alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is the best VEED alternative for hands-off faceless Shorts — instead of editing on a timeline, you give it one idea and it returns a finished 9:16 Short with script, AI voice, footage and captions in about 60 seconds.' },
+      { q: 'Can VEED make a Short automatically like ShortsForgeAI?', a: 'VEED has AI helpers, but it is fundamentally an editor — you still assemble and refine the video yourself. ShortsForgeAI builds the entire faceless Short for you from a single idea, with no editing.' },
+      { q: 'Should I use VEED or ShortsForgeAI?', a: 'Use VEED when you want full manual control, screen recording and detailed editing. Use ShortsForgeAI when you want a complete faceless Short generated from one idea for $11.90/mo, first one free.' },
+    ],
+  },
+  vizard: {
+    name: 'Vizard',
+    h1: 'The Vizard Alternative That Creates the Short From Scratch',
+    intro:
+      'Vizard uses AI to turn a long video you already have — a podcast, webinar or talking-head recording — into short clips, with highlight detection, captions and viral scores. It is excellent at repurposing. But if you are faceless and starting from just an idea, there is no long video to clip. ShortsForgeAI builds the whole Short from a topic: it writes the script, records the AI voiceover, finds footage matched to each line and captions it, in about 60 seconds.',
+    theyDo: 'Vizard repurposes long videos (podcasts, webinars, interviews) into short vertical clips using AI highlight detection.',
+    pickThem:
+      'Pick Vizard if you already record long videos and want the best moments auto-clipped and captioned. Pick ShortsForgeAI if you want a faceless Short created from just an idea, with no source video.',
+    rows: [
+      { feature: 'Creates the full video from just an idea', sfa: true, them: false },
+      { feature: 'Needs you to upload an existing long video', sfa: 'No', them: 'Yes' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover (new narration)', sfa: true, them: 'Uses your audio' },
+      { feature: 'Finds & matches footage automatically', sfa: true, them: 'Clips your video' },
+      { feature: 'Fully faceless — no camera needed', sfa: true, them: 'Needs your video' },
+      { feature: 'Auto-captions included', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'Is there a Vizard alternative that builds the video from scratch?', a: 'Yes. ShortsForgeAI generates a complete faceless Short — script, AI voiceover, footage and captions — from one idea, with no video to upload. Vizard instead clips long videos you already recorded.' },
+      { q: 'Can I make faceless Shorts without recording a long video first?', a: 'Yes. You only need a topic. ShortsForgeAI writes the script, voices it, finds matching footage and captions it into a 9:16 Short automatically — nothing to record or clip.' },
+      { q: 'Vizard vs ShortsForgeAI — which should I use?', a: 'Use Vizard if you already produce long videos and want them auto-clipped into highlights. Use ShortsForgeAI if you want a finished faceless Short generated from a single idea, from $11.90/mo, first one free.' },
+    ],
+  },
+  descript: {
+    name: 'Descript',
+    h1: 'The Descript Alternative That Generates the Whole Short — Nothing to Record',
+    intro:
+      'Descript is a text-based video and podcast editor: it transcribes your recording so you can edit the video by editing the words, clone your voice with Overdub, and remove filler words. It is brilliant for podcasters and talking-head creators polishing footage they already recorded. ShortsForgeAI is for when you have no recording at all — just an idea. It writes the script, voices it with AI, finds the footage and captions it into a faceless 9:16 Short in about 60 seconds.',
+    theyDo: 'Descript is a text-based editor for podcasts and talking-head video — you record, it transcribes, and you edit by editing the transcript.',
+    pickThem:
+      'Pick Descript if you record podcasts or talking-head video and want to edit by editing text, clone your own voice, or strip filler words. Pick ShortsForgeAI if you want a faceless Short generated from one idea, with nothing to record.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Needs you to record audio/video first', sfa: 'No', them: 'Yes' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover from text (no training)', sfa: true, them: 'Overdub clones your voice' },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: false },
+      { feature: 'Fully faceless — no camera or mic', sfa: true, them: 'Needs your recording' },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Descript alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is a strong Descript alternative when you have nothing recorded — it writes the script, adds an AI voice, pulls footage and burns in captions to deliver a faceless 9:16 Short from one idea in about 60 seconds, with no transcript to edit.' },
+      { q: 'Does ShortsForgeAI need a recording like Descript?', a: 'No. Descript edits audio or video you already recorded by editing its transcript. ShortsForgeAI starts from just an idea and generates the voiceover for you, so you never record anything.' },
+      { q: 'Should I use Descript or ShortsForgeAI?', a: 'Use Descript if you record podcasts or talking-head video and want text-based editing and voice cloning. Use ShortsForgeAI if you want a finished faceless Short from a single idea with no recording or editing, from $11.90/mo.' },
+    ],
+  },
 }
 
 export const COMPETITOR_SLUGS = Object.keys(COMPETITORS)
@@ -537,6 +613,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
           ))}
         </nav>
       </div>
+      <StickyFreeShortCTA href={signupUrl} />
     </main>
   )
 }
