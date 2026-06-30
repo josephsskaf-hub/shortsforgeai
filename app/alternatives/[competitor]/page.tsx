@@ -445,6 +445,79 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'Should I use Descript or ShortsForgeAI?', a: 'Use Descript if you record podcasts or talking-head video and want text-based editing and voice cloning. Use ShortsForgeAI if you want a finished faceless Short from a single idea with no recording or editing, from $11.90/mo.' },
     ],
   },
+  // ROBO-SEO-2026-06-30 — Synthesia (avatar) / Canva (design editor) / Kapwing (browser editor)
+  synthesia: {
+    name: 'Synthesia',
+    h1: 'The Synthesia Alternative for Faceless Shorts — No AI Avatar on Screen',
+    intro:
+      'Synthesia is the leading AI-avatar platform: you pick a digital presenter, type a script and it generates a talking-head video in 140+ languages — great for training, explainers and corporate comms. But there is always a face on screen. ShortsForgeAI is the opposite: fully faceless Shorts built from cinematic footage, AI voiceover and captions, generated from one idea in about 60 seconds, starting at $11.90/mo.',
+    theyDo: 'Synthesia creates AI-avatar / talking-head videos with a digital presenter on screen, in 140+ languages.',
+    pickThem:
+      'Pick Synthesia if you want a polished on-screen AI presenter for training, explainers or multilingual corporate video. Pick ShortsForgeAI if you want classic faceless Shorts — footage + voiceover + captions, no avatar and no face at all.',
+    rows: [
+      { feature: 'Fully faceless (no avatar, no face)', sfa: true, them: false },
+      { feature: 'Creates the full Short from just an idea', sfa: true, them: 'Script → avatar' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover included', sfa: true, them: true },
+      { feature: 'Cinematic B-roll footage matched per scene', sfa: true, them: 'Avatar-centric' },
+      { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'Corporate / training' },
+      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Synthesia alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. Synthesia is centered on AI-avatar presenters for training and corporate video.' },
+      { q: 'Can I make videos without an AI avatar or presenter?', a: 'Yes. ShortsForgeAI never puts a presenter on screen. It assembles real footage, an AI voiceover and captions into a faceless 9:16 Short from a single idea.' },
+      { q: 'Is ShortsForgeAI cheaper than Synthesia?', a: 'ShortsForgeAI starts at $11.90/month with a free first Short and no credit card. Synthesia pricing changes over time, so check their site, but the bigger difference is scope: Synthesia makes avatar videos, ShortsForgeAI makes faceless Shorts.' },
+    ],
+  },
+  canva: {
+    name: 'Canva',
+    h1: 'The Canva Alternative That Builds the Whole Short — No Template to Edit',
+    intro:
+      'Canva is an all-in-one design suite with a video editor, Magic Studio AI tools, thousands of templates and a huge asset library. It is fantastic when you want to design and edit something yourself. ShortsForgeAI removes the design work entirely: from one idea it writes the script, records the AI voiceover, finds footage and captions it into a finished faceless 9:16 Short in about 60 seconds — no template to pick, no canvas to arrange.',
+    theyDo: 'Canva is a template-and-design editor with AI tools — you pick a template and assemble the video yourself.',
+    pickThem:
+      'Pick Canva when you want to design and customize a video by hand with templates, brand kits and a big asset library (and its free tier). Pick ShortsForgeAI when you want a finished faceless Short generated from one idea with no design work.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover included', sfa: true, them: 'Limited' },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: 'You pick assets' },
+      { feature: 'No template or canvas to edit', sfa: true, them: false },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You design it' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Canva alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is the best Canva alternative for hands-off faceless Shorts — instead of picking a template and arranging it, you give it one idea and it returns a finished 9:16 Short with script, AI voice, footage and captions in about 60 seconds.' },
+      { q: 'Can Canva make a Short automatically like ShortsForgeAI?', a: 'Canva has AI tools, but it is still a design editor — you choose a template and assemble the video yourself. ShortsForgeAI builds the entire faceless Short for you from a single idea, with no design work.' },
+      { q: 'Should I use Canva or ShortsForgeAI?', a: 'Use Canva when you want full creative control to design and brand a video by hand (and its free tier). Use ShortsForgeAI when you want a complete faceless Short generated from one idea for $11.90/mo, first one free.' },
+    ],
+  },
+  kapwing: {
+    name: 'Kapwing',
+    h1: 'The Kapwing Alternative That Generates the Whole Short — No Editor to Open',
+    intro:
+      'Kapwing is a popular browser-based video editor with AI helpers — auto-subtitles, a text-to-video tool, a stock library and a collaborative timeline. It is built for editing in the browser. ShortsForgeAI removes the editor: you give it one idea and it writes the script, records the AI voiceover, finds footage matched to each line and captions it into a finished faceless 9:16 Short in about 60 seconds. No timeline, no camera, nothing to assemble.',
+    theyDo: 'Kapwing is a browser-based, collaborative video editor with AI helpers and a timeline you edit on.',
+    pickThem:
+      'Pick Kapwing if you want hands-on control to edit, subtitle and collaborate on a video in the browser (and its free tier). Pick ShortsForgeAI if you want a finished faceless Short generated from one idea with zero editing.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: 'AI tool, manual' },
+      { feature: 'AI voiceover included', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: false },
+      { feature: 'No timeline editing required', sfa: true, them: false },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free + paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Kapwing alternative for faceless YouTube Shorts?', a: 'ShortsForgeAI is the best Kapwing alternative for hands-off faceless Shorts — instead of editing on a timeline, you give it one idea and it returns a finished 9:16 Short with script, AI voice, footage and captions in about 60 seconds.' },
+      { q: 'Can Kapwing make a Short automatically like ShortsForgeAI?', a: 'Kapwing has AI helpers and a text-to-video tool, but it is fundamentally an editor — you still assemble and refine the video yourself. ShortsForgeAI builds the entire faceless Short for you from a single idea, with no editing.' },
+      { q: 'Should I use Kapwing or ShortsForgeAI?', a: 'Use Kapwing when you want to edit, subtitle and collaborate on a video in the browser (and its free tier). Use ShortsForgeAI when you want a complete faceless Short generated from one idea for $11.90/mo, first one free.' },
+    ],
+  },
 }
 
 export const COMPETITOR_SLUGS = Object.keys(COMPETITORS)

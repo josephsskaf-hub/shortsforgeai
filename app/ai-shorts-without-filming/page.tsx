@@ -1,0 +1,133 @@
+// ROBO2-SEO-2026-06-29c — high-intent SEO page for the "without filming / no camera /
+// faceless" buyer cluster (make YouTube Shorts without filming / faceless shorts no
+// camera / AI shorts without showing your face / no recording). Honest angle: the
+// video is generated from a single idea — script, AI voiceover, footage and captions —
+// so you never film, never show your face and never record your voice. Idea-first,
+// not a re-clipper (clip cutters still need footage you filmed). Static page; added to
+// sitemap. FAQ JSON-LD for rich results. No invented prices: pricing links to /pricing.
+import type { Metadata } from 'next'
+import type { CSSProperties } from 'react'
+import Link from 'next/link'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+
+export const metadata: Metadata = {
+  title: 'Make YouTube Shorts Without Filming — Faceless AI Shorts, No Camera | ShortsForgeAI',
+  description:
+    'Make faceless YouTube Shorts without filming anything. Type one idea and get a finished 9:16 Short — script, AI voiceover, footage and captions — in about 60 seconds. No camera, no face, no recording. First Short free, no credit card.',
+  alternates: { canonical: 'https://www.shortsforgeai.com/ai-shorts-without-filming' },
+  openGraph: {
+    title: 'Make YouTube Shorts without filming — faceless AI, no camera',
+    description:
+      'Turn one idea into a finished faceless Short: script, AI voiceover, footage and captions. No camera, no face, no recording. First Short free, no card.',
+    url: 'https://www.shortsforgeai.com/ai-shorts-without-filming',
+    type: 'website',
+  },
+}
+
+const STEPS: { n: string; t: string; d: string }[] = [
+  { n: '1', t: 'Type one idea — never open a camera', d: 'No footage to upload, nothing to record, no face on screen. One line is enough — "the island too dangerous to visit", "the money habit that quietly makes you broke".' },
+  { n: '2', t: 'AI builds every layer for you', d: 'It writes the hook and script, generates an AI voiceover so your own voice stays private, matches footage to each line and burns in captions — all without you filming a single frame.' },
+  { n: '3', t: 'Download a ready-to-post Short', d: 'A finished 9:16 video in about 60 seconds. Post it to YouTube, TikTok or Reels exactly as-is — no editor, no timeline, no recording session.' },
+]
+
+const NO_NEED: { t: string; d: string }[] = [
+  { t: 'No camera', d: 'Nothing to set up, point or buy. The visuals are generated and matched to your script, so there is no shot to capture and no lighting to worry about.' },
+  { t: 'No face on screen', d: 'It is built for faceless channels. You never appear, so you can run a channel in money, mystery, geography or finance niches while staying completely anonymous.' },
+  { t: 'No recording your voice', d: 'A natural AI voiceover narrates the Short. You do not need a microphone, a quiet room, or to like the sound of your own voice — keep your real voice private.' },
+  { t: 'No editing skills', d: 'There is no timeline to learn and no clips to drag around. The script, voiceover, footage and captions are assembled in one pass, so a first-timer ships the same quality as a pro.' },
+]
+
+const FAQ: { q: string; a: string }[] = [
+  { q: 'Can I make YouTube Shorts without filming anything?', a: 'Yes. ShortsForgeAI builds the entire Short from a single idea — it writes the script, generates an AI voiceover, matches footage to each line and adds captions. You never open a camera, upload footage or record your voice, and your first Short is free with no credit card.' },
+  { q: 'How do I make faceless Shorts with no camera?', a: 'Type one topic, let the AI generate the script, voiceover, footage and captions, then download a finished 9:16 video in about 60 seconds. Because every visual is generated and matched to your script, there is nothing to film and no camera to own.' },
+  { q: 'Will my face or voice ever be shown?', a: 'No. The channel format is faceless by design — you never appear on screen, and the narration is an AI voiceover, so your own voice stays private. It is made for anonymous creators who want a channel without being on camera.' },
+  { q: 'Is this just a clip cutter like OpusClip or Submagic?', a: 'No. Clip cutters re-clip a long video you already filmed — which still requires you to record footage first. ShortsForgeAI works the other way around: it creates the video from an idea, so you start with nothing but a topic and never film at all.' },
+  { q: 'Do I need editing skills to make a Short without filming?', a: 'No. There is no timeline and no clips to arrange. The script, AI voiceover, footage and captions are generated and assembled automatically, so you get a ready-to-post Short without touching an editor.' },
+  { q: 'How much does it cost to make Shorts without filming?', a: 'Your first Short is free with no credit card. After that you pick the engine per video — AI Gen (Seedance) is the lowest-cost AI engine — and you can see current plans on the pricing page.' },
+]
+
+export default function AiShortsWithoutFilmingPage() {
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+  }
+  const h2: CSSProperties = { fontSize: 'clamp(1.3rem, 3.5vw, 1.7rem)', fontWeight: 800, margin: '44px 0 12px' }
+  const p: CSSProperties = { fontSize: '1rem', color: '#9D96B8', lineHeight: 1.65, margin: '0 0 12px' }
+  return (
+    <main style={{ minHeight: '100vh', background: '#0A0A0B', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: '64px 20px 88px' }}>
+        <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4B5FD', border: '1px solid rgba(139,92,246,0.4)', background: 'rgba(139,92,246,0.12)', borderRadius: 999, padding: '6px 12px' }}>
+          Shorts Without Filming
+        </span>
+        <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.8rem)', fontWeight: 900, lineHeight: 1.12, margin: '18px 0 0' }}>
+          Make YouTube Shorts Without Filming a Single Frame
+        </h1>
+        <p style={{ fontSize: '1.08rem', color: '#C9C4DE', lineHeight: 1.6, margin: '16px 0 0' }}>
+          ShortsForgeAI turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. A ready-to-post 9:16 video in about 60 seconds. Your first Short is free with no credit card.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
+          <Link href="/start" style={{ background: '#8B5CF6', color: '#fff', fontWeight: 800, padding: '14px 26px', borderRadius: 12, textDecoration: 'none' }}>Make your first Short free →</Link>
+          <Link href="/pricing" style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#F1F5F9', fontWeight: 700, padding: '14px 22px', borderRadius: 12, textDecoration: 'none' }}>See pricing</Link>
+        </div>
+        <p style={{ fontSize: 13, color: '#34D399', fontWeight: 700, margin: '12px 0 0' }}>
+          🎁 First Short free · No credit card · No camera, ever
+        </p>
+
+        <h2 style={h2}>Make a faceless Short without filming in 3 steps</h2>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {STEPS.map((s) => (
+            <div key={s.n} style={{ display: 'flex', gap: 14, background: '#101016', border: '1px solid #1f1f27', borderRadius: 14, padding: '16px 18px' }}>
+              <span style={{ flex: 'none', width: 30, height: 30, borderRadius: 8, background: 'rgba(139,92,246,0.18)', color: '#C4B5FD', fontWeight: 800, display: 'grid', placeItems: 'center' }}>{s.n}</span>
+              <div>
+                <div style={{ fontWeight: 700, color: '#F1F5F9' }}>{s.t}</div>
+                <div style={{ fontSize: 14, color: '#9D96B8', marginTop: 3, lineHeight: 1.55 }}>{s.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h2 style={h2}>What you never need</h2>
+        <p style={p}>
+          A faceless Short usually means stitching together stock clips, recording a voiceover and fighting an editor. ShortsForgeAI removes every one of those steps — here is what you can leave behind.
+        </p>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {NO_NEED.map((w) => (
+            <div key={w.t} style={{ background: '#101016', border: '1px solid #1f1f27', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, color: '#F1F5F9' }}>{w.t}</div>
+              <div style={{ fontSize: 14, color: '#9D96B8', marginTop: 6, lineHeight: 1.6 }}>{w.d}</div>
+            </div>
+          ))}
+        </div>
+
+        <h2 style={h2}>Idea-first — not a clip cutter</h2>
+        <p style={p}>
+          Most “AI Shorts” tools (OpusClip, Submagic, Klap) re-clip a long video you already filmed — which still means recording footage first. That is the opposite of filming nothing. ShortsForgeAI <strong style={{ color: '#F1F5F9' }}>creates the entire video from a topic</strong>, so you start with just an idea and never capture a frame. See the full breakdown of <Link href="/youtube-shorts-from-topic" style={{ color: '#C4B5FD' }}>making a YouTube Short from a topic</Link>, or how it compares under <Link href="/alternatives" style={{ color: '#C4B5FD' }}>alternatives</Link>.
+        </p>
+
+        <h2 style={h2}>Stay anonymous, ship daily</h2>
+        <p style={p}>
+          Because you never appear and never record your voice, you can run a faceless channel in money, mystery, geography or finance niches while staying completely private. Pick the engine per video — <strong style={{ color: '#F1F5F9' }}>AI Gen (Seedance) is the lowest-cost AI engine</strong> and is all most creators need to post every day. Looking for the most affordable path? See the <Link href="/cheapest-ai-shorts-maker" style={{ color: '#C4B5FD' }}>cheapest AI shorts maker</Link> breakdown, or compare plans on the <Link href="/pricing" style={{ color: '#C4B5FD' }}>pricing page</Link>.
+        </p>
+
+        <h2 style={h2}>Frequently asked questions</h2>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {FAQ.map((f) => (
+            <div key={f.q} style={{ background: '#101016', border: '1px solid #1f1f27', borderRadius: 14, padding: '16px 18px' }}>
+              <div style={{ fontWeight: 700, color: '#F1F5F9' }}>{f.q}</div>
+              <div style={{ fontSize: 14, color: '#9D96B8', marginTop: 6, lineHeight: 1.6 }}>{f.a}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(139,92,246,0.18), #0c0c12 70%)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 18, padding: '34px 22px' }}>
+          <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Make a Short without filming — the first one’s free.</div>
+          <p style={{ color: '#9D96B8', margin: '8px 0 18px' }}>One idea in, a ready-to-post Short out. No camera, no card.</p>
+          <Link href="/start" style={{ background: '#8B5CF6', color: '#fff', fontWeight: 800, padding: '14px 30px', borderRadius: 12, textDecoration: 'none' }}>Make my first Short →</Link>
+        </div>
+      </div>
+      <StickyFreeShortCTA />
+    </main>
+  )
+}
