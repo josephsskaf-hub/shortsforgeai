@@ -177,10 +177,10 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="wrap">
           <div className="sec-h"><h2>This is what the AI makes in 60 seconds.</h2><p>Each one was created from a single topic — script, voice, footage and captions, automatically.</p></div>
           <div className="grid4">
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-nasa.mp4" poster="/videos/example-nasa.jpg" /><span className="lab">AI · 54s</span><div className="vt">What NASA hides about the Moon</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-roman.mp4" poster="/videos/example-roman.jpg" /><span className="lab">AI · 61s</span><div className="vt">The Roman invention we still use</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-cities.mp4" poster="/videos/example-cities.jpg" /><span className="lab">AI · 48s</span><div className="vt">Cities erased from every map</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-fbi.mp4" poster="/videos/example-fbi.jpg" /><span className="lab">AI · 57s</span><div className="vt">The case that broke the FBI</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-turkmenistan.mp4" poster="/videos/example-turkmenistan.jpg" /><span className="lab">AI · 60s</span><div className="vt">The desert hole that's been on fire for 54 years</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-sentinel.mp4" poster="/videos/example-sentinel.jpg" /><span className="lab">AI · 60s</span><div className="vt">The island where getting close can get you killed</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-japan-ai.mp4" poster="/videos/example-japan-ai.jpg" /><span className="lab">AI · 53s</span><div className="vt">Japan built an AI that hires other AIs to think for it</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-shutdown.mp4" poster="/videos/example-shutdown.jpg" /><span className="lab">AI · 45s</span><div className="vt">Three days after launch, the US shut this AI down</div></div>
           </div>
         </div>
       </section>
