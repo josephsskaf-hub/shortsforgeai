@@ -2,6 +2,7 @@
 // Self-contained, styles scoped under .klp so they don't leak into the rest of the app.
 // Marker: KINEO-LANDING-2026-06-30
 import Link from 'next/link'
+import NavCreditsBadge from '@/components/NavCreditsBadge'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -104,6 +105,10 @@ const KLP_CSS = `
 .klp .tcard .tlink{margin-top:14px;color:var(--blue);font-size:.86rem;font-weight:600}
 .klp .badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);background:rgba(41,151,255,.12);border:1px solid rgba(41,151,255,.3);padding:2px 7px;border-radius:6px}
 .klp .pricing-more{margin-top:18px;text-align:center;font-size:13.5px}
+.klp .nav-cta{display:flex;align-items:center;gap:10px}
+.klp .hvid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
+.klp .vcard .hvid{border-radius:18px}
+.klp .vcard{justify-content:flex-end}
 @media(max-width:820px){.klp .tools{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.klp .tools{grid-template-columns:1fr}}
 @media(max-width:880px){.klp .hero-grid{grid-template-columns:1fr;gap:44px;text-align:center}.klp .hl h1{margin-left:auto;margin-right:auto}.klp .hl .sub{margin-left:auto;margin-right:auto}.klp .composer{margin-left:auto;margin-right:auto}.klp .price{grid-template-columns:1fr;max-width:400px;margin:0 auto}}
@@ -119,9 +124,9 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <nav><div className="wrap nav-in">
         <div className="logo"><div className="mk">⚡</div> Kineo</div>
-        <div className="nav-links"><a href="#how">How it works</a><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
+        <div className="nav-links"><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
         {initialUser
-          ? <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Open app</Link>
+          ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Open app</Link></div>
           : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
       </div></nav>
 
@@ -140,7 +145,8 @@ export default function KineoLanding({ initialUser }: Props) {
           </div>
           <div className="hr">
             <div className="phone"><div className="screen">
-              <span className="b9">9:16 · 58s</span><div className="pl">▶</div>
+              <video className="hvid" src="/videos/hero-loop.mp4" autoPlay loop muted playsInline />
+              <span className="b9">9:16 · 58s</span>
               <div className="cap">The island too dangerous to visit</div>
               <div className="cmeta">AI voice · B-roll · captions · ready to post</div>
             </div></div>
@@ -163,10 +169,10 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="wrap">
           <div className="sec-h"><h2>This is what the AI makes in 60 seconds.</h2><p>Each one was created from a single topic — script, voice, footage and captions, automatically.</p></div>
           <div className="grid4">
-            <div className="vcard"><span className="lab">AI · 54s</span><div className="vt">What NASA hides about the Moon</div></div>
-            <div className="vcard"><span className="lab">AI · 61s</span><div className="vt">The Roman invention we still use</div></div>
-            <div className="vcard"><span className="lab">AI · 48s</span><div className="vt">Cities erased from every map</div></div>
-            <div className="vcard"><span className="lab">AI · 57s</span><div className="vt">The case that broke the FBI</div></div>
+            <div className="vcard"><video className="hvid" src="/videos/example-nasa.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 54s</span><div className="vt">What NASA hides about the Moon</div></div>
+            <div className="vcard"><video className="hvid" src="/videos/example-roman.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 61s</span><div className="vt">The Roman invention we still use</div></div>
+            <div className="vcard"><video className="hvid" src="/videos/example-cities.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 48s</span><div className="vt">Cities erased from every map</div></div>
+            <div className="vcard"><video className="hvid" src="/videos/example-fbi.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 57s</span><div className="vt">The case that broke the FBI</div></div>
           </div>
         </div>
       </section>
