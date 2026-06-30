@@ -101,7 +101,7 @@ const KLP_CSS = `
 @media(max-width:520px){.klp .composer{flex-direction:column;align-items:stretch;padding:14px;gap:12px}}
 `
 
-export default function KineoLanding(_props: Props) {
+export default function KineoLanding({ initialUser }: Props) {
   return (
     <main className="klp">
       <style dangerouslySetInnerHTML={{ __html: KLP_CSS }} />
@@ -109,7 +109,9 @@ export default function KineoLanding(_props: Props) {
       <nav><div className="wrap nav-in">
         <div className="logo"><div className="mk">⚡</div> Kineo</div>
         <div className="nav-links"><a href="#how">How it works</a><a href="#samples">Examples</a><a href="#compare">Compare</a><a href="#pricing">Pricing</a></div>
-        <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>
+        {initialUser
+          ? <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Open app</Link>
+          : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
       </div></nav>
 
       <header className="hero">
