@@ -44,9 +44,9 @@ function statusChip(s: VideoRow['status']) {
     return {
       label: 'Ready',
       emoji: '✅',
-      fg: '#a78bfa',
-      bg: 'rgba(167,139,250,.12)',
-      border: 'rgba(167,139,250,.40)',
+      fg: '#2997ff',
+      bg: 'rgba(41,151,255,.12)',
+      border: 'rgba(41,151,255,.40)',
       pulse: false,
     }
   if (s === 'failed' || s === 'cancelled')
@@ -98,6 +98,20 @@ function starsFor(score: number): string {
   const clamped = Math.max(0, Math.min(5, score))
   const full = Math.round(clamped)
   return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full)
+}
+
+// Derive a human-readable generation-engine label from credits_used.
+// Mirrors the credit-cost tiers documented in app/pricing/page.tsx's FAQ:
+// Fast (smart stock) = 1 credit, AI Generated (Seedance) = ~30-45 credits,
+// Cinematic (Kling) = ~50-65 credits. Returns null when credits_used is
+// missing/zero/outside known ranges so the caller can skip the badge
+// instead of guessing.
+function engineLabelFor(credits: number | null): string | null {
+  if (!credits || credits <= 0) return null
+  if (credits <= 2) return '⚡ Fast'
+  if (credits >= 30 && credits <= 45) return '✨ AI Generated'
+  if (credits >= 50 && credits <= 65) return '🎬 Cinematic'
+  return null
 }
 
 export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
@@ -197,9 +211,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         <div
           className="rounded-2xl p-8 sm:p-14 text-center"
           style={{
-            background: 'linear-gradient(180deg, rgba(11,17,32,.85), rgba(11,16,32,.65))',
-            border: '1px solid rgba(16, 185, 129,.18)',
-            boxShadow: '0 0 80px rgba(139,92,246,.08)',
+            background: '#161618',
+            border: '1px solid rgba(41,151,255,.18)',
+            boxShadow: '0 0 80px rgba(41,151,255,.08)',
           }}
         >
           <div className="text-5xl mb-4">⚡</div>
@@ -213,9 +227,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             href="/generate"
             className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
             style={{
-              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
+              background: '#2997ff',
               color: '#FFFFFF',
-              boxShadow: '0 4px 22px rgba(139,92,246,.4)',
+              boxShadow: '0 4px 22px rgba(41,151,255,.4)',
               textDecoration: 'none',
             }}
           >
@@ -310,14 +324,16 @@ function VideoCard({
   const cardRef = useRef<HTMLDivElement | null>(null)
   const [hovered, setHovered] = useState(false)
   const [previewFailed, setPreviewFailed] = useState(false)
-  // Push #153 — autoplay when card is 40% visible in viewport.
+  // Push #153 — autoplay when card is visible in viewport (threshold
+  // lowered to 0.1 so multi-column grid cards start playing as soon as
+  // they're barely on screen, instead of waiting for 40% visibility).
   const [isVisible, setIsVisible] = useState(false)
   useEffect(() => {
     const el = cardRef.current
     if (!el || !playable) return
     const obs = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.4 }
+      { threshold: 0.1 }
     )
     obs.observe(el)
     return () => obs.disconnect()
@@ -364,6 +380,12 @@ function VideoCard({
       ? v.quality.toUpperCase()
       : 'HD'
 
+  // Engine badge — which AI engine generated this video (Fast/AI Generated/
+  // Cinematic), derived from credits_used. Distinct from the quality badge
+  // above: this answers "which engine made it", not "how good is it".
+  // Renders nothing when credits_used is null/0/unrecognized.
+  const engineText = engineLabelFor(v.credits_used)
+
   const isActive = hovered || isPinned
 
   return (
@@ -373,12 +395,12 @@ function VideoCard({
       onPointerLeave={(e) => { if (e.pointerType !== 'touch') setHovered(false) }}
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
       style={{
-        background: 'linear-gradient(180deg, #0F1424 0%, #0F0F10 100%)',
+        background: '#161618',
         border: isActive
-          ? '1px solid rgba(139,92,246,0.55)'
+          ? '1px solid rgba(41,151,255,0.55)'
           : '1px solid rgba(255,255,255,0.06)',
         boxShadow: isActive
-          ? '0 0 32px rgba(34,211,238,0.22), 0 18px 40px rgba(0,0,0,0.45)'
+          ? '0 0 32px rgba(41,151,255,0.22), 0 18px 40px rgba(0,0,0,0.45)'
           : '0 8px 22px rgba(0,0,0,0.35)',
         transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
       }}
@@ -389,7 +411,7 @@ function VideoCard({
         style={{
           background: v.thumbnail_url
             ? `center / cover no-repeat url(${v.thumbnail_url})`
-            : 'linear-gradient(135deg, rgba(5,150,105,.22), rgba(34,211,238,.10))',
+            : 'linear-gradient(135deg, rgba(41,151,255,.18), rgba(41,151,255,.08))',
           aspectRatio: '9 / 16',
           overflow: 'hidden',
           cursor: playable && !previewFailed ? 'pointer' : 'default',
@@ -457,27 +479,48 @@ function VideoCard({
           </div>
         )}
 
-        {/* Top-left: quality badge */}
+        {/* Top-left: engine badge (which AI engine generated this video) +
+            quality badge (how good it is), stacked vertically. */}
         {playable && (
-          <span
-            className="absolute"
-            style={{
-              top: 8,
-              left: 8,
-              padding: '3px 9px',
-              borderRadius: 6,
-              background: 'rgba(11,17,32,.7)',
-              border: '1px solid rgba(34,211,238,.45)',
-              color: '#22D3EE',
-              fontSize: '0.6rem',
-              fontWeight: 900,
-              letterSpacing: '0.06em',
-              backdropFilter: 'blur(8px)',
-            }}
-            title="Output quality"
+          <div
+            className="absolute flex flex-col items-start"
+            style={{ top: 8, left: 8, gap: 4 }}
           >
-            {qualityText}
-          </span>
+            {engineText && (
+              <span
+                style={{
+                  padding: '3px 9px',
+                  borderRadius: 6,
+                  background: 'rgba(41,151,255,.1)',
+                  border: '1px solid rgba(41,151,255,.3)',
+                  color: '#2997ff',
+                  fontSize: '0.6rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  backdropFilter: 'blur(8px)',
+                }}
+                title="Generation engine"
+              >
+                {engineText}
+              </span>
+            )}
+            <span
+              style={{
+                padding: '3px 9px',
+                borderRadius: 6,
+                background: 'rgba(41,151,255,.1)',
+                border: '1px solid rgba(41,151,255,.3)',
+                color: '#2997ff',
+                fontSize: '0.6rem',
+                fontWeight: 900,
+                letterSpacing: '0.06em',
+                backdropFilter: 'blur(8px)',
+              }}
+              title="Output quality"
+            >
+              {qualityText}
+            </span>
+          </div>
         )}
 
         {/* Top-right: status badge — Ready / Processing... / Failed.
@@ -580,10 +623,10 @@ function VideoCard({
                 rel="noreferrer"
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center transition-all"
                 style={{
-                  background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+                  background: '#2997ff',
                   color: '#fff',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 18px rgba(139,92,246,.35)',
+                  boxShadow: '0 4px 18px rgba(41,151,255,.35)',
                 }}
               >
                 ▶ Open
@@ -612,12 +655,12 @@ function VideoCard({
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1"
                 style={{
                   background: isCopied
-                    ? 'rgba(167,139,250,.12)'
+                    ? 'rgba(41,151,255,.12)'
                     : 'rgba(255,255,255,.04)',
                   border: isCopied
-                    ? '1px solid rgba(167,139,250,.45)'
+                    ? '1px solid rgba(41,151,255,.45)'
                     : '1px solid var(--border)',
-                  color: isCopied ? '#a78bfa' : 'var(--text2)',
+                  color: isCopied ? '#2997ff' : 'var(--text2)',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
@@ -628,9 +671,9 @@ function VideoCard({
                 href={generateSimilarHref}
                 className="rounded-lg px-3 py-2 text-xs font-bold flex-1 text-center"
                 style={{
-                  background: 'rgba(16, 185, 129,.10)',
-                  border: '1px solid rgba(16, 185, 129,.32)',
-                  color: '#A78BFA',
+                  background: 'rgba(41,151,255,.10)',
+                  border: '1px solid rgba(41,151,255,.32)',
+                  color: '#2997ff',
                   textDecoration: 'none',
                 }}
               >
@@ -678,9 +721,9 @@ function FilterTabs({
             className="rounded-full px-3.5 py-1.5 text-xs font-bold"
             style={{
               background: active
-                ? 'linear-gradient(135deg, rgba(5,150,105,.85), rgba(4,120,87,.85))'
+                ? '#2997ff'
                 : 'rgba(255,255,255,.04)',
-              border: active ? '1px solid rgba(5,150,105,.6)' : '1px solid var(--border)',
+              border: active ? '1px solid #2997ff' : '1px solid var(--border)',
               color: active ? '#fff' : 'var(--muted)',
               cursor: 'pointer',
               transition: 'all 0.15s',
@@ -728,9 +771,9 @@ function Header({ count }: { count: number }) {
           href="/generate"
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+            background: '#2997ff',
             color: '#FFFFFF',
-            boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
+            boxShadow: '0 4px 18px rgba(41,151,255,.35)',
             textDecoration: 'none',
           }}
         >

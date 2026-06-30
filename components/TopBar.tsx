@@ -24,8 +24,8 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
       className="flex items-center gap-4 flex-shrink-0 sticky top-0 z-30 px-6"
       style={{
         height: 64,
-        // Neon redesign (12/06) — violet-black glass bar.
-        background: 'rgba(8,5,18,0.88)',
+        // Kineo re-skin — black glass bar.
+        background: 'rgba(0,0,0,0.88)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderBottom: '1px solid var(--border)',
@@ -57,20 +57,20 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         className="md:hidden flex items-center justify-center flex-shrink-0"
         style={{
           width: 32, height: 32, borderRadius: 10, textDecoration: 'none',
-          background: 'rgba(34,211,238,0.08)',
-          border: '1px solid rgba(34,211,238,0.35)',
-          boxShadow: '0 0 14px rgba(34,211,238,0.3)',
+          background: 'rgba(41,151,255,0.08)',
+          border: '1px solid rgba(41,151,255,0.35)',
+          boxShadow: '0 0 14px rgba(41,151,255,0.3)',
         }}
         aria-label="Home"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
+          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" />
         </svg>
       </Link>
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs min-w-0" style={{ color: 'var(--muted)' }}>
-        <Link href="/" className="hidden sm:inline" style={{ textDecoration: 'none', color: 'inherit' }}>ShortsForgeAI</Link>
+        <Link href="/" className="hidden sm:inline" style={{ textDecoration: 'none', color: 'inherit' }}>Kineo</Link>
         <span className="hidden sm:inline" style={{ opacity: 0.3 }}>›</span>
         <span className="font-semibold truncate" style={{ color: 'var(--text)' }}>
           {title}
@@ -91,16 +91,16 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
           href="/avatar"
           className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:scale-[1.03]"
           style={{
-            background: 'rgba(139,92,246,0.1)',
-            border: '1px solid rgba(167,139,250,0.35)',
-            color: '#A78BFA',
+            background: 'rgba(41,151,255,0.1)',
+            border: '1px solid rgba(41,151,255,0.35)',
+            color: '#2997ff',
             textDecoration: 'none',
           }}
         >
           🎭 AI Avatar
           <span
             className="rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
-            style={{ background: 'rgba(167,139,250,0.18)', color: '#C4B5FD' }}
+            style={{ background: 'rgba(41,151,255,0.18)', color: '#2997ff' }}
           >
             New
           </span>
@@ -112,14 +112,14 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
             style={{
-              background: 'rgba(139,92,246,.08)',
-              border: '1px solid rgba(139,92,246,.18)',
-              color: '#a78bfa',
+              background: 'rgba(41,151,255,.08)',
+              border: '1px solid rgba(41,151,255,.18)',
+              color: '#2997ff',
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(167,139,250,.5)' }}
+              style={{ background: '#2997ff', boxShadow: '0 0 6px rgba(41,151,255,.5)' }}
             />
             Pro
           </div>
@@ -201,8 +201,8 @@ function CreditsBadge({ isPro }: { isPro: boolean }) {
   const colors = isZero
     ? { fg: '#f87171', bg: 'rgba(239,68,68,.10)', border: 'rgba(239,68,68,.35)' }
     : isLow
-    ? { fg: '#fbbf24', bg: 'rgba(251,191,36,.10)', border: 'rgba(251,191,36,.35)' }
-    : { fg: '#cbd5e1', bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)' }
+    ? { fg: '#2997ff', bg: 'rgba(41,151,255,.10)', border: 'rgba(41,151,255,.35)' }
+    : { fg: '#f5f5f7', bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)' }
 
   const label = (
     <span

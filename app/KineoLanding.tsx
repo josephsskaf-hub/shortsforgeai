@@ -32,13 +32,13 @@ const KLP_CSS = `
 .klp .nav-links a:hover{color:var(--txt)}
 .klp .hero{position:relative;padding:78px 0 84px;overflow:hidden}
 .klp .hero .glow{position:absolute;width:820px;height:520px;left:42%;top:-120px;transform:translateX(-50%);background:radial-gradient(ellipse at center,rgba(120,140,175,.2),transparent 70%);pointer-events:none}
-.klp .hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.06fr .94fr;gap:48px;align-items:center}
+.klp .hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.35fr .65fr;gap:48px;align-items:center}
 .klp .hl h1{font-size:clamp(2.4rem,5.2vw,4rem);font-weight:600;line-height:1.04;letter-spacing:-.035em;margin:16px 0 0;max-width:13ch}
 .klp .hl .sub{font-size:clamp(1.05rem,2.1vw,1.28rem);color:var(--muted);max-width:480px;margin:20px 0 0;line-height:1.45}
-.klp .composer{display:flex;gap:9px;align-items:center;margin-top:30px;background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:9px 9px 9px 18px;max-width:520px;box-shadow:0 20px 50px -24px rgba(0,0,0,.9)}
-.klp .composer .ci{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--txt);font-size:15.5px;font-family:inherit;padding:8px 0}
+.klp .composer{display:flex;flex-direction:column;gap:14px;margin-top:30px;background:var(--card);border:1px solid var(--line2);border-radius:22px;padding:22px;width:100%;max-width:730px;min-height:300px;box-shadow:0 20px 50px -24px rgba(0,0,0,.9)}
+.klp .composer .ci{flex:1;width:100%;min-height:170px;resize:none;background:transparent;border:none;outline:none;color:var(--txt);font-size:17px;line-height:1.5;font-family:inherit;padding:6px 2px}
 .klp .composer .ci::placeholder{color:var(--muted2)}
-.klp .composer .cbtn{white-space:nowrap;padding:13px 24px;font-size:15px;border-radius:13px}
+.klp .composer .cbtn{align-self:flex-end;white-space:nowrap;padding:14px 28px;font-size:15.5px;border-radius:13px}
 .klp .hl .trust{margin-top:15px;font-size:13.5px;color:var(--muted2)}
 .klp .hl .trust b{color:var(--txt);font-weight:600}
 .klp .hr{display:flex;justify-content:center}
@@ -123,10 +123,10 @@ export default function KineoLanding({ initialUser }: Props) {
       <style dangerouslySetInnerHTML={{ __html: KLP_CSS }} />
 
       <nav><div className="wrap nav-in">
-        <div className="logo"><div className="mk">⚡</div> Kineo</div>
+        <Link href="/" className="logo"><div className="mk">⚡</div> Kineo</Link>
         <div className="nav-links"><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
         {initialUser
-          ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Open app</Link></div>
+          ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Dashboard</Link></div>
           : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
       </div></nav>
 
@@ -138,7 +138,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <h1 className="gtxt">One idea in. A finished Short out.</h1>
             <p className="sub">No camera, no editing. The AI writes the script, records the voice, finds the footage and adds captions — a ready-to-post 9:16 Short in ~60 seconds.</p>
             <form className="composer" action="/generate" method="get">
-              <input className="ci" name="topic" placeholder="Type a topic — e.g. the island too dangerous to visit" />
+              <textarea className="ci" name="topic" rows={5} placeholder="Type a topic — e.g. the island too dangerous to visit" />
               <button className="btn btn-w cbtn" type="submit">Generate — free →</button>
             </form>
             <p className="trust">First Short <b>free</b> · no credit card · from <b>$11.90/mo</b></p>

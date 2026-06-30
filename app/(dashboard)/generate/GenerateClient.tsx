@@ -2179,7 +2179,7 @@ export default function GenerateClient() {
       try {
         await navigator.share({
           title: 'My AI Short',
-          text: 'Made with ShortsForgeAI',
+          text: 'Made with Kineo',
           url: finalVideoUrl,
         })
         return
@@ -2867,7 +2867,7 @@ export default function GenerateClient() {
               maxWidth: 440,
               width: '100%',
               borderRadius: 20,
-              background: 'linear-gradient(145deg, #0D1830 0%, #121214 100%)',
+              background: 'linear-gradient(145deg, #161618 0%, #161618 100%)',
               border: '1px solid rgba(16,185,129,0.4)',
               boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(16,185,129,.15)',
               padding: '32px 28px 28px',
@@ -2885,7 +2885,7 @@ export default function GenerateClient() {
                 right: 14,
                 background: 'none',
                 border: 'none',
-                color: '#94A3B8',
+                color: '#86868b',
                 fontSize: 22,
                 lineHeight: 1,
                 cursor: 'pointer',
@@ -2907,7 +2907,7 @@ export default function GenerateClient() {
             </h2>
             <p style={{
               fontSize: '0.9rem',
-              color: '#94A3B8',
+              color: '#86868b',
               marginBottom: 22,
               lineHeight: 1.55,
             }}>
@@ -2916,7 +2916,7 @@ export default function GenerateClient() {
                   "Pro $9.90/100 videos" — a 2-generations-old price that broke
                   trust at the exact moment of purchase. */}
               Upgrade to Studio and never run out of credits.
-              Get <strong style={{ color: '#22D3EE' }}>360 credits/month</strong> + the premium
+              Get <strong style={{ color: '#2997ff' }}>360 credits/month</strong> + the premium
               Kling engine and keep your channel growing on autopilot.
             </p>
             <a
@@ -3012,15 +3012,15 @@ export default function GenerateClient() {
                   style={{
                     background:
                       pickedNiche === t.key
-                        ? 'linear-gradient(135deg, #059669, #22D3EE)'
+                        ? 'linear-gradient(135deg, #059669, #2997ff)'
                         : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${
-                      pickedNiche === t.key ? 'rgba(34,211,238,0.75)' : 'var(--border)'
+                      pickedNiche === t.key ? 'rgba(41,151,255,0.75)' : 'var(--border)'
                     }`,
                     color: pickedNiche === t.key ? '#fff' : 'var(--muted)',
                     boxShadow:
                       pickedNiche === t.key
-                        ? '0 4px 18px rgba(34,211,238,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+                        ? '0 4px 18px rgba(41,151,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
                         : 'none',
                     transform: pickedNiche === t.key ? 'translateY(-1px)' : 'none',
                     textShadow: pickedNiche === t.key ? '0 1px 2px rgba(0,0,0,0.25)' : 'none',
@@ -3170,9 +3170,9 @@ export default function GenerateClient() {
                 onClick={() => { setPrompt(randomTopic(prompt)); structuredScriptRef.current = null; if (fromHome) setFromHome(false) }}
                 className="text-left px-3 py-2 rounded-lg text-xs font-bold transition-all"
                 style={{
-                  background: 'rgba(34,211,238,0.10)',
-                  border: '1px solid rgba(34,211,238,0.45)',
-                  color: '#67e8f9',
+                  background: 'rgba(41,151,255,0.10)',
+                  border: '1px solid rgba(41,151,255,0.45)',
+                  color: '#7cc0ff',
                   cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -3288,14 +3288,14 @@ export default function GenerateClient() {
                 background:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
-                    : 'linear-gradient(135deg, #10B981, #22D3EE)',
+                    : 'linear-gradient(135deg, #10B981, #2997ff)',
                 border: 'none',
                 cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
                 color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
                 boxShadow:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'none'
-                    : '0 10px 34px rgba(34, 211, 238,.45)',
+                    : '0 10px 34px rgba(41, 151, 255,.45)',
                 minHeight: 52,
               }}
             >
@@ -3654,7 +3654,7 @@ export default function GenerateClient() {
                 <div className="flex items-center gap-2 mb-1.5">
                   <span aria-hidden="true">⚡</span>
                   <span className="font-bold" style={{ color: '#6ee7b7' }}>
-                    ShortsForgeAI rendering engine
+                    Kineo rendering engine
                   </span>
                 </div>
                 <div>
@@ -3920,9 +3920,9 @@ export default function GenerateClient() {
                       onClick={handleSharePublic}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                       style={{
-                        background: sharedPublic ? 'rgba(52,211,153,.12)' : 'rgba(34,211,238,.12)',
-                        border: sharedPublic ? '1px solid rgba(52,211,153,.45)' : '1px solid rgba(34,211,238,.45)',
-                        color: sharedPublic ? '#34d399' : '#22D3EE',
+                        background: sharedPublic ? 'rgba(52,211,153,.12)' : 'rgba(41,151,255,.12)',
+                        border: sharedPublic ? '1px solid rgba(52,211,153,.45)' : '1px solid rgba(41,151,255,.45)',
+                        color: sharedPublic ? '#34d399' : '#2997ff',
                         cursor: 'pointer',
                         transition: 'all 0.15s',
                         whiteSpace: 'nowrap',
@@ -4039,13 +4039,13 @@ export default function GenerateClient() {
                 className="rounded-2xl mt-6 w-full"
                 style={{
                   maxWidth: 480,
-                  background: 'rgba(34,211,238,.05)',
-                  border: '1px solid #22D3EE',
+                  background: 'rgba(41,151,255,.05)',
+                  border: '1px solid #2997ff',
                 }}
               >
                 <summary
                   className="cursor-pointer select-none px-5 py-3 text-sm font-black"
-                  style={{ color: '#22D3EE', listStyle: 'none' }}
+                  style={{ color: '#2997ff', listStyle: 'none' }}
                 >
                   ✅ What to do next ▾
                 </summary>
@@ -4058,7 +4058,7 @@ export default function GenerateClient() {
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                    <span style={{ color: '#22D3EE', fontWeight: 800 }}>2</span>
+                    <span style={{ color: '#2997ff', fontWeight: 800 }}>2</span>
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Post to YouTube</span>{' '}
                       — click the red "Post to YouTube" button above to upload directly. Or open{' '}
@@ -4066,7 +4066,7 @@ export default function GenerateClient() {
                         href="https://studio.youtube.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: '#22D3EE', textDecoration: 'underline', fontWeight: 700 }}
+                        style={{ color: '#2997ff', textDecoration: 'underline', fontWeight: 700 }}
                       >
                         studio.youtube.com
                       </a>{' '}
@@ -4074,7 +4074,7 @@ export default function GenerateClient() {
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                    <span style={{ color: '#22D3EE', fontWeight: 800 }}>3</span>
+                    <span style={{ color: '#2997ff', fontWeight: 800 }}>3</span>
                     <div className="flex-1">
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Paste the description</span>{' '}
                       — copy the ready-made caption below.
@@ -4083,7 +4083,7 @@ export default function GenerateClient() {
                           className="rounded-lg mt-2 p-3 text-xs"
                           style={{
                             background: 'rgba(0,0,0,.30)',
-                            border: '1px solid rgba(34,211,238,.25)',
+                            border: '1px solid rgba(41,151,255,.25)',
                             color: 'var(--muted2)',
                             whiteSpace: 'pre-wrap',
                             lineHeight: 1.5,
@@ -4102,12 +4102,12 @@ export default function GenerateClient() {
                           background:
                             copiedSection === 'next-steps-desc'
                               ? 'rgba(52,211,153,.12)'
-                              : 'rgba(34,211,238,.10)',
+                              : 'rgba(41,151,255,.10)',
                           border:
                             copiedSection === 'next-steps-desc'
                               ? '1px solid rgba(52,211,153,.45)'
-                              : '1px solid rgba(34,211,238,.45)',
-                          color: copiedSection === 'next-steps-desc' ? '#34d399' : '#22D3EE',
+                              : '1px solid rgba(41,151,255,.45)',
+                          color: copiedSection === 'next-steps-desc' ? '#34d399' : '#2997ff',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
                         }}
@@ -4224,7 +4224,7 @@ export default function GenerateClient() {
                     : `${selectedCost === 0 ? 'Free' : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}`}
                 </span>
                 <span>·</span>
-                <span style={{ color: mode === 'fast' ? '#34d399' : mode === 'cinematic_ai' ? '#fcd34d' : '#fbbf24', fontWeight: 700 }}>
+                <span style={{ color: mode === 'fast' ? '#34d399' : mode === 'cinematic_ai' ? '#2997ff' : '#2997ff', fontWeight: 700 }}>
                   {mode === 'fast' ? 'Fast Mode ⚡' : mode === 'cinematic_ai' ? 'AI Video 🤖' : 'Cinematic 🎬'}
                 </span>
               </div>
@@ -4285,7 +4285,7 @@ export default function GenerateClient() {
                   <button
                     type="button"
                     onClick={() => {
-                      const reminder = `ShortsForgeAI — track this video performance:\nPrompt: ${prompt.slice(0, 80)}...\nGenerated: ${new Date().toLocaleDateString()}\nYouTube link: [paste here]`
+                      const reminder = `Kineo — track this video performance:\nPrompt: ${prompt.slice(0, 80)}...\nGenerated: ${new Date().toLocaleDateString()}\nYouTube link: [paste here]`
                       navigator.clipboard.writeText(reminder).catch(() => {})
                       setCopiedSection('perf_reminder')
                       setTimeout(() => setCopiedSection((c) => (c === 'perf_reminder' ? null : c)), 1800)
@@ -4332,7 +4332,7 @@ export default function GenerateClient() {
             <>
               <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
                 <p className="text-[10px] font-bold uppercase tracking-widest w-full text-center" style={{ color: 'var(--muted)', letterSpacing: '0.18em' }}>
-                  ShortsForgeAI v3.0
+                  Kineo v3.0
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -4451,7 +4451,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
       return { label: 'Completed', fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)' }
     if (s === 'failed' || s === 'cancelled')
       return { label: 'Failed', fg: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)' }
-    return { label: 'Processing', fg: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)' }
+    return { label: 'Processing', fg: '#2997ff', bg: 'rgba(41, 151, 255,.10)', border: 'rgba(41, 151, 255,.32)' }
   }
 
   function formatDate(iso: string): string {
@@ -4663,7 +4663,7 @@ function PipelineStages({
     },
     {
       label: 'Rendering final video',
-      sub: 'ShortsForgeAI engine',
+      sub: 'Kineo engine',
       status: renderDone ? 'done' : renderActive ? 'active' : 'queued',
     },
     {
@@ -4774,7 +4774,7 @@ function ViralIntelligencePanel({
     viralScore >= 75
       ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong' }
       : viralScore >= 50
-      ? { color: '#22D3EE', bg: 'rgba(34, 211, 238,.10)', border: 'rgba(34, 211, 238,.32)', label: 'Good' }
+      ? { color: '#2997ff', bg: 'rgba(41, 151, 255,.10)', border: 'rgba(41, 151, 255,.32)', label: 'Good' }
       : { color: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)', label: 'Needs work' }
 
   const topSuggestions = improvementSuggestions.slice(0, 2)
@@ -4858,13 +4858,13 @@ function ViralIntelligencePanel({
                 onClick={interactive ? () => onApply!(n, i) : undefined}
                 className="rounded-xl px-4 py-3 flex items-center gap-3 text-left w-full transition-all"
                 style={{
-                  background: busy ? 'rgba(34, 211, 238,.14)' : 'rgba(34, 211, 238,.06)',
-                  border: '1px solid rgba(34, 211, 238,.30)',
+                  background: busy ? 'rgba(41, 151, 255,.14)' : 'rgba(41, 151, 255,.06)',
+                  border: '1px solid rgba(41, 151, 255,.30)',
                   cursor: !interactive ? 'default' : applyingIndex != null ? 'wait' : 'pointer',
                   opacity: otherBusy ? 0.45 : 1,
                 }}
               >
-                <span style={{ color: '#22D3EE', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>
+                <span style={{ color: '#2997ff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>
                   {busy ? '⏳' : '→'}
                 </span>
                 <span className="text-xs font-bold" style={{ color: 'var(--text2)', lineHeight: 1.45, flex: 1 }}>
@@ -4872,7 +4872,7 @@ function ViralIntelligencePanel({
                 </span>
                 <span
                   className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: '#22D3EE' }}
+                  style={{ color: '#2997ff' }}
                 >
                   {busy ? 'Applying…' : 'Apply'}
                 </span>
@@ -4916,9 +4916,9 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
       <div
         className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
         style={{
-          background: low ? 'rgba(34, 211, 238,.10)' : 'rgba(52,211,153,.08)',
-          border: low ? '1px solid rgba(34, 211, 238,.35)' : '1px solid rgba(52,211,153,.30)',
-          color: low ? '#22D3EE' : '#34d399',
+          background: low ? 'rgba(41, 151, 255,.10)' : 'rgba(52,211,153,.08)',
+          border: low ? '1px solid rgba(41, 151, 255,.35)' : '1px solid rgba(52,211,153,.30)',
+          color: low ? '#2997ff' : '#34d399',
         }}
       >
         <span
@@ -4927,16 +4927,16 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: low ? '#22D3EE' : '#34d399',
-            boxShadow: low ? '0 0 8px rgba(34, 211, 238,.5)' : '0 0 8px rgba(52,211,153,.5)',
+            background: low ? '#2997ff' : '#34d399',
+            boxShadow: low ? '0 0 8px rgba(41, 151, 255,.5)' : '0 0 8px rgba(52,211,153,.5)',
             display: 'inline-block',
           }}
         />
         {credits} credit{credits === 1 ? '' : 's'} left
       </div>
       {low && (
-        <p className="text-[11px] mt-1.5" style={{ color: '#22D3EE', fontWeight: 600 }}>
-          Running low. <a href="/pricing" style={{ color: '#22D3EE', textDecoration: 'underline' }}>Upgrade to keep creating.</a>
+        <p className="text-[11px] mt-1.5" style={{ color: '#2997ff', fontWeight: 600 }}>
+          Running low. <a href="/pricing" style={{ color: '#2997ff', textDecoration: 'underline' }}>Upgrade to keep creating.</a>
         </p>
       )}
     </div>
@@ -5110,7 +5110,7 @@ function UpsellSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
       style={{
-        background: 'linear-gradient(135deg, rgba(251,191,36,.04), rgba(16,185,129,.04))',
+        background: 'linear-gradient(135deg, rgba(41,151,255,.04), rgba(16,185,129,.04))',
         border: '1px solid rgba(255,255,255,.08)',
       }}
     >
@@ -5133,7 +5133,7 @@ function UpsellSection({
           style={{
             fontSize: '0.85rem',
             fontWeight: 700,
-            color: '#FBBF24',
+            color: '#2997ff',
             marginBottom: 14,
           }}
         >
@@ -5144,8 +5144,8 @@ function UpsellSection({
       {/* Pro pitch card */}
       <div
         style={{
-          border: '1px solid rgba(251,191,36,.3)',
-          background: 'rgba(251,191,36,.05)',
+          border: '1px solid rgba(41,151,255,.3)',
+          background: 'rgba(41,151,255,.05)',
           borderRadius: 14,
           padding: '16px 20px',
           marginBottom: 14,
@@ -5154,7 +5154,7 @@ function UpsellSection({
         <div
           style={{
             fontSize: '0.72rem',
-            color: '#FBBF24',
+            color: '#2997ff',
             fontWeight: 800,
             letterSpacing: '.12em',
             marginBottom: 8,
@@ -5179,7 +5179,7 @@ function UpsellSection({
         <ul
           style={{
             fontSize: '0.85rem',
-            color: '#94A3B8',
+            color: '#86868b',
             marginBottom: 16,
             paddingLeft: 18,
             lineHeight: 1.65,
@@ -5197,13 +5197,13 @@ function UpsellSection({
             width: '100%',
             padding: '12px',
             borderRadius: 10,
-            background: upgradeLoading ? 'rgba(251,191,36,.5)' : '#FBBF24',
+            background: upgradeLoading ? 'rgba(41,151,255,.5)' : '#2997ff',
             color: '#0A0A0F',
             fontWeight: 800,
             fontSize: '0.95rem',
             border: 'none',
             cursor: upgradeLoading ? 'wait' : 'pointer',
-            boxShadow: '0 6px 22px rgba(251,191,36,.28)',
+            boxShadow: '0 6px 22px rgba(41,151,255,.28)',
           }}
         >
           {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $24.90/mo →'}
@@ -5211,7 +5211,7 @@ function UpsellSection({
         <div
           style={{
             fontSize: '0.74rem',
-            color: '#94A3B8',
+            color: '#86868b',
             textAlign: 'center',
             marginTop: 8,
             fontWeight: 600,
@@ -5270,7 +5270,7 @@ function NextActionSection({
           onClick={onAnother}
           className="rounded-xl px-5 py-3 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #22D3EE 100%)',
+            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #2997ff 100%)',
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 6px 22px rgba(16, 185, 129,.4)',
@@ -5692,8 +5692,8 @@ function ModeSelector({
         <EngineCard
           selected={seedanceSelected}
           unlocked={seedanceUnlocked}
-          accent="245,158,11"
-          accentText="#fcd34d"
+          accent="41,151,255"
+          accentText="#2997ff"
           icon="✨"
           name="AI Generated"
           engineTag="Creator engine"
@@ -5706,9 +5706,9 @@ function ModeSelector({
                summary line under the cards, so the badge slot stays empty. */
             <></>
           ) : seedanceUnlocked ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>40 credits</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>40 credits</span>
           ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,.15)', color: '#fcd34d', border: '1px solid rgba(245,158,11,.3)' }}>🔒 Creator</span>
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.15)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>🔒 Creator</span>
           )}
           onClick={() => { if (seedanceUnlocked) { setMode('cinematic_ai'); setAiEngine('seedance') } else { onUpgrade() } }}
         />
@@ -5720,18 +5720,18 @@ function ModeSelector({
           className="relative rounded-2xl p-4 text-left overflow-hidden"
           style={{
             background: cinematicSelected
-              ? 'linear-gradient(160deg, rgba(139,92,246,.16) 0%, rgba(139,92,246,.06) 55%, rgba(255,255,255,.02) 100%)'
+              ? 'linear-gradient(160deg, rgba(41,151,255,.16) 0%, rgba(41,151,255,.06) 55%, rgba(255,255,255,.02) 100%)'
               : 'rgba(255,255,255,.03)',
-            border: cinematicSelected ? '1.5px solid rgba(139,92,246,.65)' : '1.5px solid var(--border)',
-            boxShadow: cinematicSelected ? '0 0 34px rgba(139,92,246,.20)' : 'none',
+            border: cinematicSelected ? '1.5px solid rgba(41,151,255,.65)' : '1.5px solid var(--border)',
+            boxShadow: cinematicSelected ? '0 0 34px rgba(41,151,255,.20)' : 'none',
           }}
         >
-          <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent 5%, rgba(139,92,246,${cinematicSelected ? '.95' : '.35'}) 50%, transparent 95%)` }} />
+          <span aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent 5%, rgba(41,151,255,${cinematicSelected ? '.95' : '.35'}) 50%, transparent 95%)` }} />
           <div className="relative flex items-center gap-2.5 mb-2.5">
-            <span className="grid place-items-center rounded-xl" style={{ width: 34, height: 34, background: 'rgba(139,92,246,.14)', fontSize: 18 }}>🎬</span>
+            <span className="grid place-items-center rounded-xl" style={{ width: 34, height: 34, background: 'rgba(41,151,255,.14)', fontSize: 18 }}>🎬</span>
             <div className="min-w-0">
               <div className="text-sm font-black" style={{ color: 'var(--text)' }}>Cinematic AI</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#c4b5fd' }}>Hollywood engine</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7cc0ff' }}>Hollywood engine</div>
             </div>
           </div>
           <p className="text-xs mb-2.5" style={{ color: 'var(--muted2)' }}>Pick the model — same idea, a photoreal cinematic Short.</p>
@@ -5748,13 +5748,13 @@ function ModeSelector({
                   type="button"
                   onClick={() => { if (cinematicUnlocked) { setMode('cinematic_ai'); setAiEngine(m.key) } else { onUpgrade() } }}
                   className="flex items-center justify-between rounded-lg px-3 py-2 transition-all"
-                  style={{ background: active ? 'rgba(139,92,246,.18)' : 'rgba(255,255,255,.04)', border: active ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid var(--border)', cursor: 'pointer' }}
+                  style={{ background: active ? 'rgba(41,151,255,.18)' : 'rgba(255,255,255,.04)', border: active ? '1.5px solid rgba(41,151,255,.6)' : '1.5px solid var(--border)', cursor: 'pointer' }}
                 >
                   <span className="text-left">
                     <span className="block text-xs font-bold" style={{ color: 'var(--text)' }}>{m.label}</span>
                     <span className="block text-[10px]" style={{ color: 'var(--muted)' }}>{m.sub}</span>
                   </span>
-                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: 'rgba(139,92,246,.18)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,.3)' }}>
+                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: 'rgba(41,151,255,.18)', color: '#7cc0ff', border: '1px solid rgba(41,151,255,.3)' }}>
                     {cinematicUnlocked ? `${m.cr} cr` : '🔒'}
                   </span>
                 </button>
@@ -6073,7 +6073,7 @@ function UpgradeModal({
         style={{
           width: '100%',
           maxWidth: 460,
-          background: '#121214',
+          background: '#161618',
           border: '1px solid rgba(52,211,153,0.35)',
           borderRadius: 20,
           padding: '28px 24px',
@@ -6093,16 +6093,16 @@ function UpgradeModal({
 
         {/* #466 — social proof + live urgency right at the decision point */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
-          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700 }}>
+          <span style={{ fontSize: '0.78rem', color: '#86868b', fontWeight: 700 }}>
             ✨ Join 300+ creators making Shorts with AI
           </span>
           <span
             style={{
               fontSize: '0.78rem',
-              color: '#fbbf24',
+              color: '#2997ff',
               fontWeight: 800,
-              background: 'rgba(251,191,36,0.10)',
-              border: '1px solid rgba(251,191,36,0.35)',
+              background: 'rgba(41,151,255,0.10)',
+              border: '1px solid rgba(41,151,255,0.35)',
               borderRadius: 999,
               padding: '3px 10px',
               whiteSpace: 'nowrap',
@@ -6159,12 +6159,12 @@ function UpgradeModal({
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: 'block', fontWeight: 900, color: '#F1F5F9', fontSize: '0.98rem' }}>
                     {plan.name}{' '}
-                    <span style={{ color: recommended ? '#34d399' : '#94a3b8', fontWeight: 800 }}>
+                    <span style={{ color: recommended ? '#34d399' : '#86868b', fontWeight: 800 }}>
                       {plan.priceLabel}
                       <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>{plan.periodLabel}</span>
                     </span>
                   </span>
-                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#86868b', marginTop: 2 }}>
                     {unlocks[plan.tier]}
                   </span>
                 </span>
@@ -6211,8 +6211,8 @@ function UpgradeModal({
             padding: '13px 16px',
             borderRadius: 14,
             cursor: loading ? 'not-allowed' : 'pointer',
-            background: 'rgba(34,211,238,0.08)',
-            border: '1px dashed rgba(34,211,238,0.45)',
+            background: 'rgba(41,151,255,0.08)',
+            border: '1px dashed rgba(41,151,255,0.45)',
             color: '#E2E8F0',
             fontSize: '0.9rem',
             fontWeight: 800,
@@ -6221,8 +6221,8 @@ function UpgradeModal({
           }}
         >
           Not ready for a subscription?{' '}
-          <span style={{ color: '#22D3EE' }}>Start with 10 Shorts for $4.90 →</span>
-          <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', marginTop: 2 }}>
+          <span style={{ color: '#2997ff' }}>Start with 10 Shorts for $4.90 →</span>
+          <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
             One-time · no subscription · credits never expire
           </span>
         </button>
@@ -6239,7 +6239,7 @@ function UpgradeModal({
               gap: 6,
               fontSize: '0.84rem',
               fontWeight: 800,
-              color: '#22D3EE',
+              color: '#2997ff',
               textDecoration: 'none',
               lineHeight: 1.4,
             }}
@@ -6256,7 +6256,7 @@ function UpgradeModal({
             margin: '16px auto 0',
             background: 'transparent',
             border: 'none',
-            color: '#94a3b8',
+            color: '#86868b',
             fontSize: '0.85rem',
             fontWeight: 600,
             textDecoration: 'underline',
@@ -6266,7 +6266,7 @@ function UpgradeModal({
         >
           Maybe later
         </button>
-        <p style={{ marginTop: 12, fontSize: '0.8rem', color: '#fbbf24', fontWeight: 800 }}>
+        <p style={{ marginTop: 12, fontSize: '0.8rem', color: '#2997ff', fontWeight: 800 }}>
           🔥 Founding Creator — 50% off your first month · only 50 spots
         </p>
       </div>
@@ -6327,12 +6327,12 @@ function UrgencyModal({
           position: 'relative',
           width: '100%',
           maxWidth: 460,
-          background: '#121214',
-          border: '1px solid rgba(251,191,36,0.45)',
+          background: '#161618',
+          border: '1px solid rgba(41,151,255,0.45)',
           borderRadius: 20,
           padding: '32px 28px',
           textAlign: 'center',
-          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(251,191,36,0.20)',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(41,151,255,0.20)',
         }}
       >
         <button
@@ -6348,7 +6348,7 @@ function UrgencyModal({
             borderRadius: 999,
             border: 'none',
             background: 'rgba(255,255,255,0.05)',
-            color: '#94a3b8',
+            color: '#86868b',
             fontSize: '1.1rem',
             fontWeight: 700,
             cursor: 'pointer',
@@ -6432,7 +6432,7 @@ function UrgencyModal({
             borderRadius: 10,
             background: 'rgba(255,255,255,.05)',
             border: '1px solid rgba(255,255,255,.12)',
-            color: '#94A3B8',
+            color: '#86868b',
             fontSize: '0.82rem',
             fontWeight: 700,
             cursor: loading ? 'not-allowed' : 'pointer',
@@ -6448,7 +6448,7 @@ function UrgencyModal({
           style={{
             marginTop: 14,
             fontSize: '0.74rem',
-            color: '#94a3b8',
+            color: '#86868b',
             fontWeight: 600,
           }}
         >
