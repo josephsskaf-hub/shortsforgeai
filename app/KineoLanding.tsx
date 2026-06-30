@@ -107,7 +107,7 @@ const KLP_CSS = `
 .klp .badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);background:rgba(41,151,255,.12);border:1px solid rgba(41,151,255,.3);padding:2px 7px;border-radius:6px}
 .klp .pricing-more{margin-top:18px;text-align:center;font-size:13.5px}
 .klp .nav-cta{display:flex;align-items:center;gap:10px}
-.klp .hvid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
+.klp .hvid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 .klp .vcard .hvid{border-radius:18px}
 .klp .vcard{justify-content:flex-end}
 @media(max-width:820px){.klp .tools{grid-template-columns:repeat(2,1fr)}}
