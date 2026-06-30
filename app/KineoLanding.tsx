@@ -28,7 +28,7 @@ const KLP_CSS = `
 .klp nav{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.7);backdrop-filter:blur(20px);border-bottom:1px solid var(--line)}
 .klp .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px}
 .klp .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;letter-spacing:-.01em}
-.klp .logo .mk{width:28px;height:28px;border-radius:8px;background:linear-gradient(160deg,#3a3a3d,#1c1c1e);border:1px solid #3a3a3d;display:grid;place-items:center;font-size:14px}
+.klp .logo .mk{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#17171a,#161618);border:1px solid rgba(41,151,255,.45);box-shadow:0 0 14px rgba(41,151,255,.4),0 0 6px rgba(41,151,255,.25);display:grid;place-items:center;font-size:14px}
 .klp .nav-links{display:flex;gap:32px;font-size:14px;color:var(--muted);font-weight:500}
 .klp .nav-links a:hover{color:var(--txt)}
 .klp .hero{position:relative;padding:78px 0 84px;overflow:hidden}
@@ -124,7 +124,14 @@ export default function KineoLanding({ initialUser }: Props) {
       <style dangerouslySetInnerHTML={{ __html: KLP_CSS }} />
 
       <nav><div className="wrap nav-in">
-        <Link href="/" className="logo"><div className="mk">⚡</div> Kineo</Link>
+        <Link href="/" className="logo">
+          <div className="mk">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" stroke="#2997ff" strokeWidth="0.5" strokeLinejoin="round" />
+            </svg>
+          </div>
+          Kineo
+        </Link>
         <div className="nav-links"><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
         {initialUser
           ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Dashboard</Link></div>

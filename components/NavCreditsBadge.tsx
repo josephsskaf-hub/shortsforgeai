@@ -25,7 +25,12 @@ export default function NavCreditsBadge() {
         }
         const data = await res.json()
         if (!cancelled) {
-          setCredits(typeof data.video_credits === 'number' ? data.video_credits : 0)
+          // Bug fix 30/06: /api/credits responds with the field `credits`
+          // (see app/api/credits/route.ts), not `video_credits` (that's the
+          // underlying Postgres column name) — this badge was always
+          // falling through to 0 regardless of the real balance. TopBar's
+          // CreditsBadge already reads `data.credits` correctly; matched here.
+          setCredits(typeof data.credits === 'number' ? data.credits : 0)
         }
       } catch {
         if (!cancelled) setCredits(null)
