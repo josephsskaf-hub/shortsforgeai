@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import HomePageClient from './HomePageClient'
+import KineoLanding from './KineoLanding'
 
 // Push #066 — homepage auth hydration fix.
 //
@@ -36,7 +36,7 @@ export default async function HomePage() {
   }
 
   return (
-    <HomePageClient
+    <KineoLanding
       initialUser={user ? { id: user.id } : null}
       initialEmail={email}
       initialIsPro={isPro}
