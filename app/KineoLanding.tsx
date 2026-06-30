@@ -95,6 +95,17 @@ const KLP_CSS = `
 .klp .final .fcta{display:flex;justify-content:center;margin-top:30px}
 .klp footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted2);font-size:13.5px;text-align:center}
 .klp footer a:hover{color:var(--muted)}
+.klp .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.klp .tcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 22px;transition:.2s;display:flex;flex-direction:column;gap:6px}
+.klp .tcard:hover{border-color:var(--line2);transform:translateY(-3px)}
+.klp .tcard .ti{font-size:26px}
+.klp .tcard h3{font-size:1.05rem;font-weight:600;letter-spacing:-.01em;margin-top:6px;display:flex;align-items:center;gap:7px}
+.klp .tcard p{font-size:.92rem;color:var(--muted);line-height:1.55;margin-top:2px}
+.klp .tcard .tlink{margin-top:14px;color:var(--blue);font-size:.86rem;font-weight:600}
+.klp .badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);background:rgba(41,151,255,.12);border:1px solid rgba(41,151,255,.3);padding:2px 7px;border-radius:6px}
+.klp .pricing-more{margin-top:18px;text-align:center;font-size:13.5px}
+@media(max-width:820px){.klp .tools{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.klp .tools{grid-template-columns:1fr}}
 @media(max-width:880px){.klp .hero-grid{grid-template-columns:1fr;gap:44px;text-align:center}.klp .hl h1{margin-left:auto;margin-right:auto}.klp .hl .sub{margin-left:auto;margin-right:auto}.klp .composer{margin-left:auto;margin-right:auto}.klp .price{grid-template-columns:1fr;max-width:400px;margin:0 auto}}
 @media(max-width:820px){.klp .grid4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:780px){.klp .steps{grid-template-columns:1fr}.klp .nav-links{display:none}}
@@ -108,7 +119,7 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <nav><div className="wrap nav-in">
         <div className="logo"><div className="mk">⚡</div> Kineo</div>
-        <div className="nav-links"><a href="#how">How it works</a><a href="#samples">Examples</a><a href="#compare">Compare</a><a href="#pricing">Pricing</a></div>
+        <div className="nav-links"><a href="#how">How it works</a><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
         {initialUser
           ? <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Open app</Link>
           : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
@@ -177,6 +188,38 @@ export default function KineoLanding({ initialUser }: Props) {
         </div>
       </section>
 
+      <section id="toolkit">
+        <div className="wrap">
+          <div className="sec-h"><h2>One idea — or a whole toolkit.</h2><p>Kineo isn&apos;t just topic-to-Short. Bring your own photo, catch what&apos;s trending, or find your next niche.</p></div>
+          <div className="tools">
+            <Link href="/avatar" className="tcard">
+              <span className="ti">🎭</span>
+              <h3>AI Avatar <span className="badge">New</span></h3>
+              <p>Upload one photo and script — get a lip-synced talking video in about a minute.</p>
+              <span className="tlink">Try AI Avatar →</span>
+            </Link>
+            <Link href="/animate" className="tcard">
+              <span className="ti">🌀</span>
+              <h3>Animate a Photo</h3>
+              <p>Bring any still photo to life as a moving, postable video.</p>
+              <span className="tlink">Animate a photo →</span>
+            </Link>
+            <Link href="/viral-now" className="tcard">
+              <span className="ti">🔥</span>
+              <h3>Viral Now</h3>
+              <p>Today&apos;s trending topics, ready to turn into a Short with one click.</p>
+              <span className="tlink">See what&apos;s trending →</span>
+            </Link>
+            <Link href="/channel" className="tcard">
+              <span className="ti">📺</span>
+              <h3>Channel Builder</h3>
+              <p>Pick a winning niche with real RPM, growth and competition data.</p>
+              <span className="tlink">Find your niche →</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section id="pricing">
         <div className="wrap">
           <div className="sec-h"><h2>Simple pricing. First Short free.</h2><p>Three plans, flat monthly price — done-for-you Shorts at every level.</p></div>
@@ -201,6 +244,7 @@ export default function KineoLanding({ initialUser }: Props) {
             </div>
           </div>
           <div className="snote">Not ready for a plan? <b>Start with 10 Shorts for $4.90</b> — one-time, no subscription, credits never expire.</div>
+          <div className="pricing-more"><Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link></div>
         </div>
       </section>
 
