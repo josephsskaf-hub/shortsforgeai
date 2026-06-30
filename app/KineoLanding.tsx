@@ -132,7 +132,7 @@ export default function KineoLanding({ initialUser }: Props) {
           </div>
           Kineo
         </Link>
-        <div className="nav-links"><a href="#samples">Examples</a><a href="#toolkit">Toolkit</a><a href="#pricing">Pricing</a><Link href="/avatar">AI Avatar</Link></div>
+        <div className="nav-links"><Link href="/generate">Video Generation</Link><Link href="/avatar">AI Avatar</Link><a href="#samples">Examples</a><a href="#pricing">Pricing</a></div>
         {initialUser
           ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Dashboard</Link></div>
           : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
