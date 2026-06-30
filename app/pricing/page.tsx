@@ -223,41 +223,38 @@ export default function PricingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-[#F1F5F9] font-sans">
+    <div className="min-h-screen bg-[#000000] text-[#f5f5f7] font-sans">
       {/* Subtle cyber-blue glow */}
       <div
         aria-hidden
         className="pointer-events-none fixed -top-[300px] -right-[200px] h-[800px] w-[800px] rounded-full opacity-[0.07]"
-        style={{ background: '#22D3EE', filter: 'blur(140px)' }}
+        style={{ background: '#2997ff', filter: 'blur(140px)' }}
       />
       <div
         aria-hidden
         className="pointer-events-none fixed -bottom-[400px] -left-[200px] h-[700px] w-[700px] rounded-full opacity-[0.05]"
-        style={{ background: '#8B5CF6', filter: 'blur(160px)' }}
+        style={{ background: '#2997ff', filter: 'blur(160px)' }}
       />
 
       {/* ───────── Top Nav (simple) ───────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#121214]/90 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#161618]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#121214] border border-violet-500/40 text-lg shadow-[0_0_14px_rgba(34,211,238,.35)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#161618] border border-[#2997ff]/40 text-lg shadow-[0_0_14px_rgba(41,151,255,.35)]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" stroke="#8B5CF6" strokeWidth="0.5" strokeLinejoin="round" />
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" stroke="#2997ff" strokeWidth="0.5" strokeLinejoin="round" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-[15px] font-extrabold tracking-tight">
-                <span className="text-white">Shorts</span>
-                <span className="text-white">Forge</span>
-                <span className="text-cyan-400">AI</span>
+              <span className="text-[15px] font-extrabold tracking-tight text-white">
+                Kineo
               </span>
-              <span className="text-[10px] font-semibold text-[#94A3B8] mt-0.5">v3.0</span>
             </div>
           </Link>
 
           <Link
             href="/"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-[#94A3B8] hover:text-[#F1F5F9] hover:bg-white/[.04] transition"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-[#86868b] hover:text-[#f5f5f7] hover:bg-white/[.04] transition"
           >
             ← Back to Home
           </Link>
@@ -274,41 +271,41 @@ export default function PricingPage() {
           <div
             className="relative w-full max-w-md rounded-2xl p-7 text-center"
             style={{
-              background: '#121214',
-              border: '1px solid rgba(34,211,238,.35)',
-              boxShadow: '0 0 60px rgba(34,211,238,.15)',
+              background: '#161618',
+              border: '1px solid rgba(41,151,255,.35)',
+              boxShadow: '0 0 60px rgba(41,151,255,.15)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowExitModal(false)}
-              className="absolute top-3 right-4 text-[#94A3B8] hover:text-white text-xl font-bold"
+              className="absolute top-3 right-4 text-[#86868b] hover:text-white text-xl font-bold"
               aria-label="Close"
             >×</button>
             <div className="text-4xl mb-3">⚡</div>
-            <h2 className="text-2xl font-black text-[#F1F5F9] mb-2">
+            <h2 className="text-2xl font-black text-[#f5f5f7] mb-2">
               Don&apos;t leave yet!
             </h2>
-            <p className="text-[14px] text-[#94A3B8] mb-5 leading-relaxed">
+            <p className="text-[14px] text-[#86868b] mb-5 leading-relaxed">
               Start generating viral Shorts today. Cancel anytime, no contracts.
             </p>
             <button
               type="button"
               onClick={() => { setShowExitModal(false); handleBuy('basic') }}
               className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
-              style={{ background: 'linear-gradient(135deg,#8B5CF6,#22D3EE)', boxShadow: '0 8px 24px rgba(139,92,246,.4)' }}
+              style={{ background: 'linear-gradient(135deg,#2997ff,#2997ff)', boxShadow: '0 8px 24px rgba(41,151,255,.4)' }}
             >
               Get Creator — $24.90/mo →
             </button>
             <button
               type="button"
               onClick={() => { setShowExitModal(false); handleBuy('pro') }}
-              className="w-full rounded-xl py-3 text-[14px] font-extrabold text-[#F1F5F9] mb-3"
+              className="w-full rounded-xl py-3 text-[14px] font-extrabold text-[#f5f5f7] mb-3"
               style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}
             >
               Get Studio — $37.90/mo →
             </button>
-            <p className="text-[11px] text-[#475569]">Cancel anytime · 7-day money-back guarantee</p>
+            <p className="text-[11px] text-[#6e6e73]">Cancel anytime · 7-day money-back guarantee</p>
           </div>
         </div>
       )}
@@ -316,13 +313,13 @@ export default function PricingPage() {
       {/* ───────── Pricing ───────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-16 sm:px-6 sm:pt-16">
         <div className="mb-10 text-center">
-          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#2997ff]">
             Pricing
           </div>
-          <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#F1F5F9]">
+          <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
             Simple, credit-based pricing.
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
+          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#86868b]">
             Three plans, flat monthly price. From $11.90/mo — done-for-you Shorts at every level.
           </p>
 
@@ -336,7 +333,7 @@ export default function PricingPage() {
               { icon: '↩️', label: 'Cancel anytime' },
               { icon: '🔒', label: '7-day money-back guarantee' },
             ].map(({ icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#94A3B8]">
+              <div key={label} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#86868b]">
                 <span>{icon}</span>
                 <span>{label}</span>
               </div>
@@ -357,7 +354,7 @@ export default function PricingPage() {
         >
           <label
             htmlFor="roi-slider"
-            className="block text-[12px] font-bold text-[#F1F5F9] mb-3"
+            className="block text-[12px] font-bold text-[#f5f5f7] mb-3"
           >
             How many Shorts per week do you want to post?
           </label>
@@ -370,15 +367,15 @@ export default function PricingPage() {
               step={1}
               value={shortsPerWeek}
               onChange={(e) => setShortsPerWeek(Number(e.target.value))}
-              className="w-full accent-cyan-400"
+              className="w-full accent-[#2997ff]"
               style={{ flex: 1 }}
             />
             <div
               className="rounded-lg px-3 py-1 text-[13px] font-black tabular-nums"
               style={{
-                background: 'rgba(34,211,238,.10)',
-                border: '1px solid rgba(34,211,238,.32)',
-                color: '#22D3EE',
+                background: 'rgba(41,151,255,.10)',
+                border: '1px solid rgba(41,151,255,.32)',
+                color: '#2997ff',
                 minWidth: 64,
                 textAlign: 'center',
               }}
@@ -386,16 +383,16 @@ export default function PricingPage() {
               {shortsPerWeek}/wk
             </div>
           </div>
-          <p className="mt-4 text-[13.5px] text-[#F1F5F9] leading-snug">
-            At <strong className="text-[#22D3EE]">{shortsPerWeek}</strong> Shorts/week →{' '}
-            <strong className="text-[#22D3EE]">{(shortsPerWeek * 4).toLocaleString()}</strong>{' '}
+          <p className="mt-4 text-[13.5px] text-[#f5f5f7] leading-snug">
+            At <strong className="text-[#2997ff]">{shortsPerWeek}</strong> Shorts/week →{' '}
+            <strong className="text-[#2997ff]">{(shortsPerWeek * 4).toLocaleString()}</strong>{' '}
             Shorts/month → estimated{' '}
-            <strong className="text-[#A78BFA]">
+            <strong className="text-[#2997ff]">
               {(shortsPerWeek * 4 * 500).toLocaleString()}
             </strong>{' '}
             views/month
           </p>
-          <p className="mt-2 text-[12px] font-semibold text-[#94A3B8]">
+          <p className="mt-2 text-[12px] font-semibold text-[#86868b]">
             Any plan pays for itself with just 1 viral Short.
           </p>
         </div>
@@ -409,7 +406,7 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('monthly')}
               className={`rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'monthly' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'monthly' ? 'bg-[#2997ff] text-white' : 'text-[#86868b] hover:text-white'
               }`}
             >
               Monthly
@@ -418,11 +415,11 @@ export default function PricingPage() {
               type="button"
               onClick={() => setBilling('annual')}
               className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-extrabold transition ${
-                billing === 'annual' ? 'bg-[#7C3AED] text-white' : 'text-[#94A3B8] hover:text-white'
+                billing === 'annual' ? 'bg-[#2997ff] text-white' : 'text-[#86868b] hover:text-white'
               }`}
             >
               Annual
-              <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-black text-violet-300">
+              <span className="rounded-full bg-[#2997ff]/20 px-2 py-0.5 text-[10px] font-black text-[#2997ff]">
                 2 MONTHS FREE
               </span>
             </button>
@@ -436,14 +433,44 @@ export default function PricingPage() {
             reminding visitors they can try before they ever pay. */}
         <div
           className="mx-auto mb-7 max-w-2xl rounded-2xl px-5 py-4 text-center"
-          style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.4)' }}
+          style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.4)' }}
         >
-          <p className="text-[13.5px] font-extrabold text-[#F1F5F9]">
-            🔑 Founding offer — the first <span style={{ color: '#A78BFA' }}>10 members</span> lock <span style={{ color: '#A78BFA' }}>50% off for life</span>.
+          <p className="text-[13.5px] font-extrabold text-[#f5f5f7]">
+            🔑 Founding offer — the first <span style={{ color: '#2997ff' }}>10 members</span> lock <span style={{ color: '#2997ff' }}>50% off for life</span>.
           </p>
-          <p className="mt-1.5 text-[12.5px] font-semibold text-[#94A3B8]">
-            Not sure yet? <Link href="/signup" className="font-bold text-cyan-400 hover:text-cyan-300">Make your first Short free</Link> — no credit card needed.
+          <p className="mt-1.5 text-[12.5px] font-semibold text-[#86868b]">
+            Not sure yet? <Link href="/signup" className="font-bold text-[#2997ff] hover:text-[#2997ff]">Make your first Short free</Link> — no credit card needed.
           </p>
+        </div>
+
+        {/* ROBO-ENTRY-490 (Joseph aprovou 30/06) — $4.90 one-time Starter Pack
+            featured as the lowest-commitment ENTRY OFFER above the monthly
+            plans, to win a cheaper first "yes". Position/emphasis only — same
+            /api/stripe/checkout?pack=starter and price as the 0-credit modal.
+            "No subscription" framing keeps it from cannibalizing the subs. */}
+        <div className="mx-auto mb-7 max-w-2xl">
+          <button
+            type="button"
+            onClick={() => {
+              trackPricingEvent('starter_pack_checkout_clicked')
+              window.location.href = '/api/stripe/checkout?pack=starter'
+            }}
+            className="block w-full rounded-2xl px-5 py-4 text-left transition hover:bg-[rgba(41,151,255,0.10)]"
+            style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.5)', boxShadow: '0 0 28px rgba(41,151,255,0.10)', cursor: 'pointer' }}
+          >
+            <span className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[.12em]" style={{ background: 'rgba(41,151,255,0.14)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}>
+              ⚡ Cheapest way to start
+            </span>
+            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-[15.5px] font-black text-[#f5f5f7]">
+                Start with 10 Shorts — <span style={{ color: '#2997ff' }}>$4.90</span> one-time
+              </span>
+              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Get 10 Shorts →</span>
+            </span>
+            <span className="mt-1.5 block text-[12px] font-semibold text-[#86868b]">
+              No subscription · credits never expire · the lowest-commitment way to try the engine before picking a monthly plan.
+            </span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
@@ -479,10 +506,10 @@ export default function PricingPage() {
                   isPaid ? 'cursor-pointer' : ''
                 } ${
                   isSelected
-                    ? 'border-2 border-[#8B5CF6] bg-[#0D1830] shadow-[0_0_28px_rgba(139,92,246,0.3)]'
+                    ? 'border-2 border-[#2997ff] bg-[#1d1d1f] shadow-[0_0_28px_rgba(41,151,255,0.3)]'
                     : p.highlight
-                      ? 'border-violet-500 bg-[#121214] shadow-[0_0_30px_rgba(139,92,246,0.15)] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
-                      : 'border-white/[0.08] bg-[#121214] hover:border-[#8B5CF6] hover:bg-[rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.18)]'
+                      ? 'border-[#2997ff] bg-[#161618] shadow-[0_0_30px_rgba(41,151,255,0.15)] hover:border-[#2997ff] hover:bg-[rgba(41,151,255,0.06)] hover:shadow-[0_0_20px_rgba(41,151,255,0.18)]'
+                      : 'border-white/[0.08] bg-[#161618] hover:border-[#2997ff] hover:bg-[rgba(41,151,255,0.06)] hover:shadow-[0_0_20px_rgba(41,151,255,0.18)]'
                 }`}
               >
                 {/* Push #116 — Pro now carries the amber "MOST POPULAR"
@@ -493,16 +520,16 @@ export default function PricingPage() {
                   <div
                     className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
                     style={{
-                      background: 'rgba(251,191,36,.15)',
-                      border: '1px solid rgba(251,191,36,.4)',
-                      color: '#FBBF24',
-                      boxShadow: '0 4px 18px rgba(251,191,36,.25)',
+                      background: 'rgba(41,151,255,.15)',
+                      border: '1px solid rgba(41,151,255,.4)',
+                      color: '#2997ff',
+                      boxShadow: '0 4px 18px rgba(41,151,255,.25)',
                     }}
                   >
                     🔥 Most Popular
                   </div>
                 ) : p.highlight && !isSelected ? (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#7C3AED] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(139,92,246,.45)]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2997ff] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(41,151,255,.45)]">
                     Best Value
                   </div>
                 ) : null}
@@ -513,28 +540,28 @@ export default function PricingPage() {
                     </svg>
                   </div>
                 )}
-                <div className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                <div className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                   {p.name}
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
-                  <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#F1F5F9]">
+                  <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#f5f5f7]">
                     {billing === 'annual' && ANNUAL[p.tier] ? ANNUAL[p.tier].perMonth : p.price}
                   </span>
                 </div>
-                <div className="mt-1 text-[12.5px] font-semibold text-cyan-400">
+                <div className="mt-1 text-[12.5px] font-semibold text-[#2997ff]">
                   {billing === 'annual' && ANNUAL[p.tier]
                     ? `/ month · billed annually (${ANNUAL[p.tier].total}/yr)`
                     : p.priceSub}
                 </div>
                 {'tagline' in p && p.tagline && (
-                  <p className="mt-2 text-[12px] text-[#94A3B8] leading-snug">
+                  <p className="mt-2 text-[12px] text-[#86868b] leading-snug">
                     {p.tagline}
                   </p>
                 )}
                 <ul className="mt-5 mb-6 flex flex-col gap-2.5">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-[13.5px] text-[#F1F5F9]">
-                      <span className="mt-[3px] text-cyan-400">✓</span>
+                    <li key={f} className="flex items-start gap-2 text-[13.5px] text-[#f5f5f7]">
+                      <span className="mt-[3px] text-[#2997ff]">✓</span>
                       <span>{f}</span>
                     </li>
                   ))}
@@ -554,8 +581,8 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
                       p.highlight || isSelected
-                        ? 'bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(139,92,246,.4)] hover:bg-violet-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-violet-500/40'
+                        ? 'bg-[#2997ff] text-white shadow-[0_8px_24px_rgba(41,151,255,.4)] hover:bg-[#2997ff] hover:shadow-[0_10px_32px_rgba(41,151,255,.4)]'
+                        : 'border border-white/[0.08] text-[#f5f5f7] hover:bg-white/5 hover:border-[#2997ff]/40'
                     }`}
                   >
                     {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
@@ -570,15 +597,15 @@ export default function PricingPage() {
                     }}
                     className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
                       isSelected
-                        ? 'bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(139,92,246,.4)] hover:bg-violet-500 hover:shadow-[0_10px_32px_rgba(34,211,238,.4)]'
-                        : 'border border-white/[0.08] text-[#F1F5F9] hover:bg-white/5 hover:border-violet-500/40'
+                        ? 'bg-[#2997ff] text-white shadow-[0_8px_24px_rgba(41,151,255,.4)] hover:bg-[#2997ff] hover:shadow-[0_10px_32px_rgba(41,151,255,.4)]'
+                        : 'border border-white/[0.08] text-[#f5f5f7] hover:bg-white/5 hover:border-[#2997ff]/40'
                     }`}
                   >
                     {ctaLabel} →
                   </a>
                 )}
                 {isPaid && (
-                  <p className="mt-2 text-center text-[12px] font-semibold text-[#94A3B8]">
+                  <p className="mt-2 text-center text-[12px] font-semibold text-[#86868b]">
                     First Short free, no card · cancel anytime
                   </p>
                 )}
@@ -587,40 +614,21 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* #474 — Starter Pack: one-time, low-commitment alternative to the
-            monthly plans. Now discoverable here on /pricing (was only inside the
-            0-credit modal). Secondary styling so it doesn't cannibalize the subs. */}
-        <div className="mx-auto mt-6 max-w-2xl">
-          <button
-            type="button"
-            onClick={() => {
-              trackPricingEvent('starter_pack_checkout_clicked')
-              window.location.href = '/api/stripe/checkout?pack=starter'
-            }}
-            className="block w-full rounded-2xl px-5 py-4 text-center transition hover:bg-[rgba(34,211,238,0.10)]"
-            style={{ background: 'rgba(34,211,238,0.06)', border: '1px dashed rgba(34,211,238,0.45)', cursor: 'pointer' }}
-          >
-            <span className="block text-[14px] font-extrabold text-[#F1F5F9]">
-              Not ready for a monthly plan?{' '}
-              <span style={{ color: '#22D3EE' }}>Start with 10 Shorts for $4.90 →</span>
-            </span>
-            <span className="mt-1 block text-[12px] font-semibold text-[#94A3B8]">
-              One-time payment · no subscription · credits never expire
-            </span>
-          </button>
-        </div>
+        {/* ROBO-ENTRY-490 — the one-time $4.90 Starter Pack was moved UP to a
+            featured entry offer above the plans; the duplicate secondary button
+            that used to sit here was removed to avoid a repeated adjacent CTA. */}
 
         {/* Brazilian Pix (Mercado Pago) — one-time credit packs in Real. Runs
             alongside Stripe; for the BR public (Perrengue Chique). */}
         <div className="mx-auto mt-4 max-w-2xl">
           <div
             className="rounded-2xl px-5 py-4 text-center"
-            style={{ background: 'rgba(139,92,246,0.06)', border: '1px dashed rgba(139,92,246,0.45)' }}
+            style={{ background: 'rgba(41,151,255,0.06)', border: '1px dashed rgba(41,151,255,0.45)' }}
           >
-            <span className="block text-[14px] font-extrabold text-[#F1F5F9]">
-              🇧🇷 No Brasil? Pague no <span style={{ color: '#A78BFA' }}>Pix</span>
+            <span className="block text-[14px] font-extrabold text-[#f5f5f7]">
+              🇧🇷 No Brasil? Pague no <span style={{ color: '#2997ff' }}>Pix</span>
             </span>
-            <span className="mt-1 mb-3 block text-[12px] font-semibold text-[#94A3B8]">
+            <span className="mt-1 mb-3 block text-[12px] font-semibold text-[#86868b]">
               Pagamento único · sem assinatura · créditos não expiram
             </span>
             <div className="flex flex-col sm:flex-row justify-center gap-2">
@@ -628,7 +636,7 @@ export default function PricingPage() {
                 type="button"
                 onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br50' }}
                 className="rounded-xl px-4 py-3 text-[13px] font-extrabold text-white"
-                style={{ background: '#7C3AED', cursor: 'pointer' }}
+                style={{ background: '#2997ff', cursor: 'pointer' }}
               >
                 R$50 = 90 créditos (3 AI Gen) →
               </button>
@@ -636,7 +644,7 @@ export default function PricingPage() {
                 type="button"
                 onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br90' }}
                 className="rounded-xl px-4 py-3 text-[13px] font-extrabold"
-                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', color: '#F1F5F9', cursor: 'pointer' }}
+                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', color: '#f5f5f7', cursor: 'pointer' }}
               >
                 R$90 = 180 créditos (6 AI Gen) →
               </button>
@@ -655,16 +663,16 @@ export default function PricingPage() {
         {/* Push #171 — "already subscribed" info banner. Shown instead of
             the old silent redirect so users understand their plan is active. */}
         {alreadySubscribed && (
-          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-violet-500/30 bg-violet-500/[0.07] px-5 py-4 text-center">
-            <p className="text-[13px] font-bold text-violet-400">
+          <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-[#2997ff]/30 bg-[#2997ff]/[0.07] px-5 py-4 text-center">
+            <p className="text-[13px] font-bold text-[#2997ff]">
               ✅ You already have an active subscription!
             </p>
-            <p className="mt-1 text-[12px] text-[#94A3B8]">
+            <p className="mt-1 text-[12px] text-[#86868b]">
               Your plan is active. If your credits look low, they may still be syncing.
             </p>
             <a
               href="/generate"
-              className="mt-3 inline-block rounded-lg bg-violet-500 px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(167,139,250,.35)] transition hover:bg-violet-400"
+              className="mt-3 inline-block rounded-lg bg-[#2997ff] px-5 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_rgba(41,151,255,.35)] transition hover:bg-[#2997ff]"
             >
               Go to Dashboard →
             </a>
@@ -674,15 +682,15 @@ export default function PricingPage() {
         {/* Push #097 — Guarantee row directly under the plan cards.
             Reinforces buyer confidence between the CTA and the comparison
             table below. */}
-        <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-bold text-[#F1F5F9]">
+        <div className="mx-auto mt-6 flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-bold text-[#f5f5f7]">
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#A78BFA]">✓</span> Cancel anytime
+            <span className="text-[#2997ff]">✓</span> Cancel anytime
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#A78BFA]">✓</span> Instant access
+            <span className="text-[#2997ff]">✓</span> Instant access
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-[#A78BFA]">✓</span> 7-day money-back guarantee
+            <span className="text-[#2997ff]">✓</span> 7-day money-back guarantee
           </span>
         </div>
 
@@ -720,10 +728,10 @@ export default function PricingPage() {
               <div className="text-[18px] mb-2" aria-hidden>
                 {c.icon}
               </div>
-              <p className="text-[13.5px] font-bold text-[#F1F5F9] leading-snug mb-1.5">
+              <p className="text-[13.5px] font-bold text-[#f5f5f7] leading-snug mb-1.5">
                 {c.title}
               </p>
-              <p className="text-[12.5px] text-[#94A3B8] leading-snug">
+              <p className="text-[12.5px] text-[#86868b] leading-snug">
                 {c.body}
               </p>
             </div>
@@ -736,31 +744,31 @@ export default function PricingPage() {
             small viewports so the table never breaks layout. */}
         <div className="mt-16">
           <div className="mb-6 text-center">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#2997ff]">
               Compare plans
             </div>
-            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#F1F5F9]">
+            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#f5f5f7]">
               What you get at each tier
             </h2>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#121214]">
+          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#161618]">
             <table className="w-full min-w-[700px] text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-white/[0.08]">
-                  <th className="px-5 py-4 text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                  <th className="px-5 py-4 text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Feature
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Free
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Starter
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#94A3B8]">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Creator
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-cyan-400">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#2997ff]">
                     Studio
                   </th>
                 </tr>
@@ -819,18 +827,18 @@ export default function PricingPage() {
                   },
                 ].map((row) => (
                   <tr key={row.label} className="border-b border-white/[0.04] last:border-0">
-                    <td className="px-5 py-3.5 font-semibold text-[#F1F5F9]">{row.label}</td>
-                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.free}</td>
-                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.starter}</td>
-                    <td className="px-5 py-3.5 text-center text-[#94A3B8]">{row.basic}</td>
-                    <td className="px-5 py-3.5 text-center font-bold text-cyan-300">{row.pro}</td>
+                    <td className="px-5 py-3.5 font-semibold text-[#f5f5f7]">{row.label}</td>
+                    <td className="px-5 py-3.5 text-center text-[#86868b]">{row.free}</td>
+                    <td className="px-5 py-3.5 text-center text-[#86868b]">{row.starter}</td>
+                    <td className="px-5 py-3.5 text-center text-[#86868b]">{row.basic}</td>
+                    <td className="px-5 py-3.5 text-center font-bold text-[#2997ff]">{row.pro}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <p className="mt-4 text-center text-[12px] text-[#94A3B8]">
+          <p className="mt-4 text-center text-[12px] text-[#86868b]">
             ⚡ Fast (smart stock) is included on every paid plan. ✨ AI Generated (Seedance) starts at Creator. 🎬 Cinematic AI (Kling) — our highest quality — is exclusive to Studio.
           </p>
         </div>
@@ -840,15 +848,15 @@ export default function PricingPage() {
             useState toggle so the page stays static-renderable. */}
         <div className="mt-16">
           <div className="mb-6 text-center">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-400">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#2997ff]">
               FAQ
             </div>
-            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#F1F5F9]">
+            <h2 className="text-balance text-2xl font-black tracking-tight sm:text-3xl text-[#f5f5f7]">
               💬 Frequently Asked Questions
             </h2>
           </div>
 
-          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]">
+          <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[#161618]">
             {FAQS.map((item, i) => {
               const isOpen = openFaq === i
               return (
@@ -862,12 +870,12 @@ export default function PricingPage() {
                     aria-expanded={isOpen}
                     className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-white/[.02]"
                   >
-                    <span className="text-[14.5px] font-bold text-[#F1F5F9]">
+                    <span className="text-[14.5px] font-bold text-[#f5f5f7]">
                       {item.q}
                     </span>
                     <span
                       aria-hidden
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-cyan-400 transition-transform duration-200 ${
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/[0.08] text-[#2997ff] transition-transform duration-200 ${
                         isOpen ? 'rotate-45' : ''
                       }`}
                       style={{ fontSize: 16, lineHeight: 1 }}
@@ -877,7 +885,7 @@ export default function PricingPage() {
                   </button>
                   {isOpen && (
                     <div className="px-5 pb-4 -mt-1">
-                      <p className="text-[13.5px] leading-relaxed text-[#94A3B8]">
+                      <p className="text-[13.5px] leading-relaxed text-[#86868b]">
                         {item.a}
                       </p>
                     </div>
@@ -887,11 +895,11 @@ export default function PricingPage() {
             })}
           </div>
 
-          <p className="mt-5 text-center text-[12.5px] text-[#94A3B8]">
+          <p className="mt-5 text-center text-[12.5px] text-[#86868b]">
             Still have questions?{' '}
             <a
               href="mailto:support@shortsforgeai.com"
-              className="font-bold text-cyan-400 hover:text-cyan-300"
+              className="font-bold text-[#2997ff] hover:text-[#2997ff]"
             >
               Email us →
             </a>
@@ -906,9 +914,9 @@ export default function PricingPage() {
         <div
           className="mx-auto mt-12 max-w-3xl rounded-2xl p-5 sm:p-6"
           style={{
-            background: 'rgba(167,139,250,.06)',
-            border: '1px solid rgba(167,139,250,.35)',
-            boxShadow: '0 0 40px rgba(167,139,250,.10)',
+            background: 'rgba(41,151,255,.06)',
+            border: '1px solid rgba(41,151,255,.35)',
+            boxShadow: '0 0 40px rgba(41,151,255,.10)',
           }}
         >
           <div className="flex items-start gap-3 sm:gap-4">
@@ -923,10 +931,10 @@ export default function PricingPage() {
               🛡️
             </div>
             <div>
-              <div className="text-[14px] font-black text-[#F1F5F9] mb-1">
+              <div className="text-[14px] font-black text-[#f5f5f7] mb-1">
                 7-day money-back guarantee — all plans
               </div>
-              <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
+              <p className="text-[13px] text-[#86868b] leading-relaxed m-0">
                 If you&apos;re not happy in the first 7 days, email us and we&apos;ll refund 100%. No questions asked. Works for all plans.
               </p>
             </div>
@@ -972,7 +980,7 @@ export default function PricingPage() {
               borderRadius: 10,
               background: 'rgba(255,255,255,.06)',
               border: '1px solid rgba(255,255,255,.12)',
-              color: '#F1F5F9',
+              color: '#f5f5f7',
               fontSize: '0.75rem',
               fontWeight: 800,
               cursor: 'pointer',
@@ -991,7 +999,7 @@ export default function PricingPage() {
               borderRadius: 10,
               background: 'rgba(255,255,255,.06)',
               border: '1px solid rgba(255,255,255,.12)',
-              color: '#F1F5F9',
+              color: '#f5f5f7',
               fontSize: '0.75rem',
               fontWeight: 800,
               cursor: 'pointer',
@@ -1008,14 +1016,14 @@ export default function PricingPage() {
               flex: 1,
               padding: '12px 8px',
               borderRadius: 10,
-              background: '#FBBF24',
-              color: '#0A0A0F',
+              background: '#2997ff',
+              color: '#ffffff',
               fontSize: '0.8rem',
               fontWeight: 800,
               cursor: 'pointer',
               minHeight: 48,
               border: 'none',
-              boxShadow: '0 8px 22px rgba(251,191,36,.35)',
+              boxShadow: '0 8px 22px rgba(41,151,255,.35)',
             }}
           >
             {purchasing === 'pro' ? 'Loading…' : 'Studio $37.90 🔥'}
@@ -1027,24 +1035,24 @@ export default function PricingPage() {
       <footer className="relative z-10 border-t border-white/[0.08]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#121214] border border-violet-500/40 text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#161618] border border-[#2997ff]/40 text-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#22D3EE" />
+                <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" />
               </svg>
             </div>
-            <span className="text-[13px] font-bold text-[#F1F5F9]">
-              <span>ShortsForge</span><span className="text-cyan-400">AI</span>
+            <span className="text-[13px] font-bold text-[#f5f5f7]">
+              Kineo
             </span>
           </div>
-          <p className="text-[11.5px] text-[#94A3B8]">© 2026 ShortsForgeAI</p>
+          <p className="text-[11.5px] text-[#86868b]">© 2026 Kineo</p>
         </div>
         {/* Push #116 — legal + contact strip. */}
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-6 sm:px-6">
-          <Link href="/terms" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Terms of Service</Link>
-          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
-          <Link href="/privacy" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Privacy Policy</Link>
-          <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
-          <a href="mailto:support@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
+          <Link href="/terms" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Terms of Service</Link>
+          <span aria-hidden className="text-[11.5px] text-[#86868b] opacity-40">·</span>
+          <Link href="/privacy" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Privacy Policy</Link>
+          <span aria-hidden className="text-[11.5px] text-[#86868b] opacity-40">·</span>
+          <a href="mailto:support@shortsforgeai.com" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Contact</a>
         </div>
       </footer>
     </div>

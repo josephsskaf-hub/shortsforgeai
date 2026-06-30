@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 // Score alignment. Matching keyword density between ad copy and landing
 // page increases relevance score → better Ad Rank → higher CTR.
 export const metadata: Metadata = {
-  title: 'ShortsForgeAI — AI YouTube Shorts Generator · From $11.90/mo',
+  title: 'Kineo — AI YouTube Shorts Generator · From $11.90/mo',
   description:
     'Turn any topic into a viral YouTube Short in 60 seconds. AI writes the script, finds footage, adds voiceover & captions. From $11.90/mo · 7-day money-back guarantee.',
   keywords: [
@@ -37,11 +37,11 @@ export const metadata: Metadata = {
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
       'Type a topic. AI writes, voices & edits your YouTube Short automatically. From $11.90/mo · 7-day money-back guarantee · No editing skills needed.',
-    url: 'https://shortsforgeai.vercel.app',
-    siteName: 'ShortsForgeAI',
+    url: 'https://www.usekineo.com',
+    siteName: 'Kineo',
     images: [
       {
-        url: 'https://shortsforgeai.vercel.app/og-image.png',
+        url: 'https://www.usekineo.com/og-image.png',
         width: 1200,
         height: 630,
       },
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
       'Type a topic. AI writes, voices & edits your YouTube Short in 60 seconds. From $11.90/mo · Try free today.',
-    images: ['https://shortsforgeai.vercel.app/og-image.png'],
+    images: ['https://www.usekineo.com/og-image.png'],
   },
   icons: {
     icon: '/favicon.svg',
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   // ("Add to Home Screen") with a black-translucent status bar.
   appleWebApp: {
     capable: true,
-    title: 'ShortsForgeAI',
+    title: 'Kineo',
     statusBarStyle: 'black-translucent',
   },
 }
