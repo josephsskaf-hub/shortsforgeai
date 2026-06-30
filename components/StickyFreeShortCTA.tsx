@@ -54,9 +54,9 @@ export default function StickyFreeShortCTA({
             gap: 12,
             padding: '10px 12px 10px 16px',
             borderRadius: 16,
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.92))',
-            border: '1px solid rgba(34,211,238,0.35)',
-            boxShadow: '0 -6px 28px rgba(8,12,24,0.55)',
+            background: 'linear-gradient(135deg, rgba(22,22,24,0.96), rgba(22,22,24,0.92))',
+            border: '1px solid rgba(41,151,255,0.35)',
+            boxShadow: '0 -6px 28px rgba(0,0,0,0.55)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
           }}
@@ -64,7 +64,7 @@ export default function StickyFreeShortCTA({
           <span style={{ fontSize: '1.15rem', flexShrink: 0 }} aria-hidden>
             ⚡
           </span>
-          <p style={{ flex: 1, margin: 0, minWidth: 0, fontSize: '0.84rem', fontWeight: 700, color: '#F1F5F9', lineHeight: 1.3 }}>
+          <p style={{ flex: 1, margin: 0, minWidth: 0, fontSize: '0.84rem', fontWeight: 700, color: '#f5f5f7', lineHeight: 1.3 }}>
             {label}
           </p>
           <Link
@@ -72,9 +72,9 @@ export default function StickyFreeShortCTA({
             style={{
               flexShrink: 0,
               padding: '9px 18px',
-              borderRadius: 11,
-              background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)',
-              color: '#0A0A0B',
+              borderRadius: 980,
+              background: '#f5f5f7',
+              color: '#000',
               fontWeight: 900,
               fontSize: '0.82rem',
               textDecoration: 'none',

@@ -92,17 +92,17 @@ export default function ChannelBuilderClient() {
       <div className="mb-7">
         <div
           className="font-black uppercase mb-2 flex items-center gap-2"
-          style={{ fontSize: '0.65rem', letterSpacing: '0.18em', color: '#22D3EE' }}
+          style={{ fontSize: '0.65rem', letterSpacing: '0.18em', color: '#2997ff' }}
         >
-          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#2997ff', verticalAlign: 'middle' }} />
           Faceless Channel Builder
-          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#2997ff', verticalAlign: 'middle' }} />
         </div>
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-black tracking-tight mb-1" style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Build Your{' '}
-              <span style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg, #2997ff, #5cb3ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Viral Channel
               </span>
             </h1>
@@ -249,11 +249,11 @@ export default function ChannelBuilderClient() {
                     'Channel description: include target niche keywords',
                     'Banner: use Canva faceless channel template',
                     'Enable channel memberships (at 500 subs)',
-                    'Link shortsforgeai.com in description',
+                    'Link usekineo.com in description',
                     'Set up auto-publish with YouTube Studio',
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs" style={{ color: 'var(--text2)' }}>
-                      <span style={{ color: '#a78bfa', flexShrink: 0 }}>✓</span>
+                      <span style={{ color: '#2997ff', flexShrink: 0 }}>✓</span>
                       {item}
                     </div>
                   ))}
@@ -287,7 +287,7 @@ export default function ChannelBuilderClient() {
 
               <div className="rounded-2xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                 <h3 className="font-black text-sm mb-1" style={{ color: 'var(--text)' }}>⚡ Weekly Content Plan</h3>
-                <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Use ShortsForgeAI to batch-create your week in one session.</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Use Kineo to batch-create your week in one session.</p>
                 <div className="flex flex-col gap-2">
                   {[
                     { day: 'Monday', tip: 'Generate 2 packs (10 scripts) — schedule week' },
@@ -354,7 +354,7 @@ export default function ChannelBuilderClient() {
                         <div className="font-bold" style={{ color: 'var(--text)' }}>{label}</div>
                         <div className="mt-0.5" style={{ color: 'var(--muted)' }}>{note}</div>
                       </div>
-                      <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ background: 'rgba(167,139,250,.1)', color: '#a78bfa' }}>{when}</span>
+                      <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ background: 'rgba(41,151,255,.1)', color: '#2997ff' }}>{when}</span>
                     </div>
                   ))}
                 </div>
@@ -377,7 +377,7 @@ export default function ChannelBuilderClient() {
               href={`/dashboard?niche=${selected.id}`}
               className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white"
               style={{
-                background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
+                background: 'linear-gradient(135deg, #2997ff 0%, #1f7fe0 55%, #5cb3ff 100%)',
                 boxShadow: '0 4px 22px rgba(16, 185, 129,.4)',
                 textDecoration: 'none',
               }}

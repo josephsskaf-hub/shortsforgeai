@@ -4,7 +4,7 @@
 // renders a title and the client card.
 import ReferralCard from '@/components/ReferralCard'
 
-export const metadata = { title: 'Invite & Earn — ShortsForgeAI' }
+export const metadata = { title: 'Invite & Earn — Kineo' }
 
 export default function ReferralPage() {
   return (
@@ -13,11 +13,11 @@ export default function ReferralPage() {
       <header className="mb-7">
         <div
           className="font-black uppercase tracking-[.18em] mb-3 flex items-center gap-2"
-          style={{ fontSize: '0.65rem', color: '#22D3EE' }}
+          style={{ fontSize: '0.65rem', color: '#2997ff' }}
         >
-          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#2997ff', verticalAlign: 'middle' }} />
           Referrals
-          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#22D3EE', verticalAlign: 'middle' }} />
+          <span style={{ display: 'inline-block', width: 18, height: 1, background: '#2997ff', verticalAlign: 'middle' }} />
         </div>
 
         <h1
@@ -27,7 +27,7 @@ export default function ReferralPage() {
           Invite &amp;{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #22D3EE 0%, #8B5CF6 60%, #8B5CF6 100%)',
+              background: 'linear-gradient(135deg, #2997ff 0%, #2997ff 60%, #2997ff 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',

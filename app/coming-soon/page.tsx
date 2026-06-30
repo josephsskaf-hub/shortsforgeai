@@ -25,8 +25,8 @@ export default function ComingSoonPage() {
       style={{
         position: 'relative',
         minHeight: '100vh',
-        background: 'var(--bg, #0A0A0B)',
-        color: 'var(--text, #f5f5fa)',
+        background: 'var(--bg, #000)',
+        color: 'var(--text, #f5f5f7)',
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',
         display: 'flex',
@@ -42,7 +42,7 @@ export default function ComingSoonPage() {
           position: 'absolute',
           width: 900,
           height: 900,
-          background: 'radial-gradient(circle, rgba(5,150,105,0.18), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(41,151,255,0.18), transparent 65%)',
           top: -300,
           right: -200,
           filter: 'blur(120px)',
@@ -57,7 +57,7 @@ export default function ComingSoonPage() {
           position: 'absolute',
           width: 700,
           height: 700,
-          background: 'radial-gradient(circle, rgba(5, 150, 105,0.16), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(41, 151, 255,0.16), transparent 65%)',
           bottom: -240,
           left: -160,
           filter: 'blur(100px)',
@@ -92,12 +92,12 @@ export default function ComingSoonPage() {
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'linear-gradient(135deg, #7C3AED, #7C3AED)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.3rem',
-              boxShadow: '0 0 28px rgba(16, 185, 129,.55)',
+              boxShadow: '0 0 28px rgba(41,151,255,.55)',
             }}
           >
             ⚡
@@ -106,13 +106,13 @@ export default function ComingSoonPage() {
             style={{
               fontWeight: 900,
               fontSize: '1.15rem',
-              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               letterSpacing: '-0.02em',
             }}
           >
-            ShortsForgeAI
+            Kineo
           </span>
         </Link>
 
@@ -124,8 +124,8 @@ export default function ComingSoonPage() {
             gap: 8,
             padding: '6px 14px',
             borderRadius: 999,
-            background: 'rgba(5,150,105,0.12)',
-            border: '1px solid rgba(5,150,105,0.32)',
+            background: 'rgba(41,151,255,0.12)',
+            border: '1px solid rgba(41,151,255,0.32)',
             marginBottom: 22,
           }}
         >
@@ -134,12 +134,12 @@ export default function ComingSoonPage() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#a78bfa',
-              boxShadow: '0 0 10px rgba(167,139,250,0.7)',
+              background: '#2997ff',
+              boxShadow: '0 0 10px rgba(41,151,255,0.7)',
               display: 'inline-block',
             }}
           />
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.05em' }}>
             EM BREVE · COMING SOON
           </span>
         </div>
@@ -158,7 +158,7 @@ export default function ComingSoonPage() {
           Estamos preparando algo{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE, #22D3EE)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff, #2997ff)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -222,11 +222,11 @@ export default function ComingSoonPage() {
                 borderRadius: 12,
                 fontSize: '0.9rem',
                 fontWeight: 800,
-                color: '#fff',
-                background: 'linear-gradient(135deg, #7C3AED, #7C3AED)',
+                color: '#000',
+                background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 6px 24px rgba(16, 185, 129,.4)',
+                boxShadow: '0 6px 24px rgba(41,151,255,.4)',
                 whiteSpace: 'nowrap',
                 fontFamily: 'inherit',
               }}
@@ -241,9 +241,9 @@ export default function ComingSoonPage() {
               margin: '0 auto',
               padding: '16px 20px',
               borderRadius: 14,
-              background: 'rgba(139,92,246,0.08)',
-              border: '1px solid rgba(139,92,246,0.32)',
-              color: '#c4b5fd',
+              background: 'rgba(41,151,255,0.08)',
+              border: '1px solid rgba(41,151,255,0.32)',
+              color: '#2997ff',
               fontWeight: 700,
               fontSize: '0.92rem',
             }}
@@ -261,7 +261,7 @@ export default function ComingSoonPage() {
           Já tem uma conta?{' '}
           <Link
             href="/login"
-            style={{ color: '#c4b5fd', textDecoration: 'none', fontWeight: 700 }}
+            style={{ color: '#2997ff', textDecoration: 'none', fontWeight: 700 }}
           >
             Entrar
           </Link>
@@ -280,7 +280,7 @@ export default function ComingSoonPage() {
           color: 'rgba(255,255,255,0.32)',
         }}
       >
-        © 2026 ShortsForgeAI · v3.0
+        © 2026 Kineo · v3.0
       </footer>
     </main>
   )

@@ -1,7 +1,7 @@
 'use client'
 
-// Push #118 — Social proof notification toast.
-// Floating bottom-left toast that auto-cycles through realistic social-proof
+// Push #118 — Product highlight notification toast.
+// Floating bottom-left toast that auto-cycles through honest product-fact
 // messages every 45–90 seconds. Fades in / slides up on show, fades out
 // after 4 s. Only mounts on /pricing, /generate, and /start routes.
 
@@ -9,18 +9,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 
 const MESSAGES = [
-  { emoji: '🎉', text: 'Marcus from Austin just upgraded to Pro' },
-  { emoji: '⚡', text: 'Sarah from London generated 3 Shorts today' },
-  { emoji: '🚀', text: 'Daniel from Toronto just created his first Short' },
-  { emoji: '💎', text: 'Priya from Dubai upgraded to Pro' },
-  { emoji: '🎬', text: 'James from Sydney generated a viral finance Short' },
-  { emoji: '⚡', text: 'Ava from New York generated 5 Shorts this week' },
-  { emoji: '🎉', text: 'Luca from Berlin just signed up and generated a Short' },
-  { emoji: '💎', text: 'Chen from Singapore upgraded to Pro just now' },
-  { emoji: '🚀', text: 'Fatima from Lagos generated her first AI Short' },
-  { emoji: '⚡', text: 'Ryan from Los Angeles created 2 Shorts today' },
-  { emoji: '🎉', text: 'Emma from Paris just upgraded to Pro' },
-  { emoji: '🎬', text: 'Mateo from Madrid generated a trending history Short' },
+  { emoji: '⚡', text: 'Script, voiceover, footage & captions in ~60s' },
+  { emoji: '🎬', text: 'Faceless YouTube Shorts — no camera, no editing' },
+  { emoji: '🚀', text: 'First Short is free, no card required' },
+  { emoji: '💎', text: 'AI voiceover + auto captions on every Short' },
+  { emoji: '🎉', text: 'New topic in, ready-to-post Short out' },
+  { emoji: '⚡', text: 'Built for daily YouTube Shorts creators' },
 ]
 
 const ALLOWED_PATHS = ['/pricing', '/generate', '/start']
@@ -123,8 +117,8 @@ export default function SocialProofToast() {
           padding: '10px 14px',
           borderRadius: 14,
           background: 'rgba(15, 15, 28, 0.96)',
-          border: '1px solid rgba(34,211,238,.22)',
-          boxShadow: '0 8px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(34,211,238,.08)',
+          border: '1px solid rgba(41,151,255,.22)',
+          boxShadow: '0 8px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(41,151,255,.08)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           pointerEvents: 'none',
@@ -154,7 +148,7 @@ export default function SocialProofToast() {
               marginTop: 2,
             }}
           >
-            ShortsForgeAI
+            Kineo
           </p>
         </div>
       </div>

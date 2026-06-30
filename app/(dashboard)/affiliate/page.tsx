@@ -30,11 +30,11 @@ interface AffiliateMe {
   recent?: Commission[]
 }
 
-const CYAN = '#22D3EE'
+const CYAN = '#2997ff'
 const TEXT = '#F1F5F9'
-const MUTED = '#94A3B8'
-const GREEN = '#a78bfa'
-const CARD = '#121214'
+const MUTED = '#86868b'
+const GREEN = '#2997ff'
+const CARD = '#161618'
 const BORDER = '1px solid rgba(255,255,255,0.08)'
 
 function dollars(cents: number, currency = 'usd'): string {
@@ -54,8 +54,8 @@ function fmtDate(iso: string | null): string {
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
   pending: { bg: 'rgba(251,191,36,0.14)', color: '#fbbf24' },
-  approved: { bg: 'rgba(167,139,250,0.14)', color: GREEN },
-  paid: { bg: 'rgba(34,211,238,0.14)', color: CYAN },
+  approved: { bg: 'rgba(41,151,255,0.14)', color: GREEN },
+  paid: { bg: 'rgba(41,151,255,0.14)', color: CYAN },
   clawed_back: { bg: 'rgba(239,68,68,0.14)', color: '#ef4444' },
 }
 
@@ -153,14 +153,14 @@ export default function AffiliatePage() {
       <div className={wrap}>
         <div
           className="rounded-2xl p-8 text-center"
-          style={{ background: CARD, border: '1px solid rgba(34,211,238,.28)', boxShadow: '0 0 40px rgba(34,211,238,.08)' }}
+          style={{ background: CARD, border: '1px solid rgba(41,151,255,.28)', boxShadow: '0 0 40px rgba(41,151,255,.08)' }}
         >
           <div className="text-5xl mb-4">🤝</div>
           <h1 className="font-black tracking-tight mb-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: TEXT }}>
             Become an affiliate —{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #22D3EE 0%, #8B5CF6 60%, #8B5CF6 100%)',
+                background: 'linear-gradient(135deg, #2997ff 0%, #2997ff 60%, #2997ff 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -171,7 +171,7 @@ export default function AffiliatePage() {
             on everyone you bring
           </h1>
           <p className="text-sm mb-6 mx-auto" style={{ color: MUTED, maxWidth: 460, lineHeight: 1.6 }}>
-            Share your link, send people to ShortsForgeAI, and earn 40% of every payment they make — for
+            Share your link, send people to Kineo, and earn 40% of every payment they make — for
             as long as they stay subscribed.
           </p>
           <button
@@ -180,8 +180,8 @@ export default function AffiliatePage() {
             disabled={applying}
             className="rounded-xl px-7 py-3 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #7C3AED)',
-              boxShadow: '0 4px 18px rgba(34,211,238,.35)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
+              boxShadow: '0 4px 18px rgba(41,151,255,.35)',
               border: 'none',
               cursor: applying ? 'default' : 'pointer',
               opacity: applying ? 0.7 : 1,
@@ -260,7 +260,7 @@ export default function AffiliatePage() {
       {/* Share link */}
       <div
         className="rounded-2xl p-5 mb-5"
-        style={{ background: CARD, border: '1px solid rgba(34,211,238,.28)', boxShadow: '0 0 30px rgba(34,211,238,.08)' }}
+        style={{ background: CARD, border: '1px solid rgba(41,151,255,.28)', boxShadow: '0 0 30px rgba(41,151,255,.08)' }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: MUTED }}>
           Your share link
@@ -273,7 +273,7 @@ export default function AffiliatePage() {
             className="flex-1 rounded-xl px-3 py-2.5 text-xs"
             style={{
               background: 'rgba(13,13,28,.85)',
-              border: '1px solid rgba(34,211,238,.3)',
+              border: '1px solid rgba(41,151,255,.3)',
               color: TEXT,
               outline: 'none',
               fontFamily: 'inherit',
@@ -284,8 +284,8 @@ export default function AffiliatePage() {
             onClick={copyLink}
             className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
             style={{
-              background: 'linear-gradient(135deg, #22D3EE, #7C3AED)',
-              boxShadow: '0 4px 18px rgba(34,211,238,.35)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
+              boxShadow: '0 4px 18px rgba(41,151,255,.35)',
               whiteSpace: 'nowrap',
               cursor: 'pointer',
               border: 'none',
@@ -297,7 +297,7 @@ export default function AffiliatePage() {
         {a.coupon_code ? (
           <div className="text-xs mt-3" style={{ color: MUTED }}>
             Coupon code:{' '}
-            <span className="font-black px-2 py-0.5 rounded" style={{ background: 'rgba(34,211,238,.12)', color: CYAN }}>
+            <span className="font-black px-2 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.12)', color: CYAN }}>
               {a.coupon_code}
             </span>
           </div>
@@ -307,7 +307,7 @@ export default function AffiliatePage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <Kpi label="Clicks" value={stats.clicks.toLocaleString('en-US')} accent={CYAN} />
-        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#a78bfa" />
+        <Kpi label="Signups" value={stats.signups.toLocaleString('en-US')} accent="#2997ff" />
         <Kpi label="Paid customers" value={stats.paid.toLocaleString('en-US')} accent={GREEN} />
         <Kpi label="Pending $" value={dollars(earnings.pending)} accent="#fbbf24" />
         <Kpi label="Approved $" value={dollars(earnings.approved)} accent={GREEN} />

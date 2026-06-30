@@ -14,7 +14,7 @@
 import Link from 'next/link'
 
 const linkStyle: React.CSSProperties = {
-  color: '#94A3B8',
+  color: '#86868b',
   textDecoration: 'none',
 }
 
@@ -41,7 +41,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
     links: [
       // No /alternatives index exists (only a [competitor] dynamic route with
       // dynamicParams=false), so we deep-link the highest-intent comparison.
-      { href: '/alternatives/opusclip', label: 'ShortsForgeAI vs OpusClip' },
+      { href: '/alternatives/opusclip', label: 'Kineo vs OpusClip' },
     ],
   },
 ]
@@ -54,7 +54,7 @@ export default function Footer() {
         padding: '32px 16px 28px',
         marginTop: 24,
         background: 'transparent',
-        color: '#94A3B8',
+        color: '#86868b',
         fontSize: 12,
         lineHeight: 1.5,
       }}
@@ -65,9 +65,9 @@ export default function Footer() {
           href="/"
           style={{ ...linkStyle, color: '#FAFAFA', fontWeight: 800, fontSize: 15 }}
         >
-          ⚡ ShortsForgeAI
+          ⚡ Kineo
         </Link>
-        <p style={{ margin: '6px auto 0', maxWidth: 460, color: '#94A3B8' }}>
+        <p style={{ margin: '6px auto 0', maxWidth: 460, color: '#86868b' }}>
           Turn one idea into a ready-to-post faceless YouTube Short — script,
           AI voiceover, footage &amp; captions in ~60s. First Short free, no card.
         </p>
@@ -116,7 +116,7 @@ export default function Footer() {
       {/* Legal + contact (preserved) */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontWeight: 600 }}>
-          © 2026 ShortsForgeAI · All rights reserved
+          © 2026 Kineo · All rights reserved
         </div>
         <div
           style={{

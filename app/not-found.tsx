@@ -9,8 +9,8 @@ export default function NotFound() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#0A0A0B',
-        color: '#F5F7FF',
+        background: '#000',
+        color: '#f5f5f7',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         display: 'flex',
         flexDirection: 'column',
@@ -25,13 +25,13 @@ export default function NotFound() {
             fontWeight: 900,
             fontSize: '1rem',
             letterSpacing: '-0.01em',
-            background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
+            background: 'linear-gradient(135deg, #2997ff, #2997ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             textDecoration: 'none',
           }}
         >
-          ⚡ ShortsForgeAI
+          Kineo
         </Link>
       </div>
 
@@ -54,7 +54,7 @@ export default function NotFound() {
             fontWeight: 900,
             letterSpacing: '-0.04em',
             lineHeight: 1,
-            background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
+            background: 'linear-gradient(135deg, #2997ff, #2997ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             marginBottom: 16,
@@ -76,7 +76,7 @@ export default function NotFound() {
         <p
           style={{
             fontSize: '0.95rem',
-            color: '#94A3B8',
+            color: '#86868b',
             lineHeight: 1.55,
             margin: 0,
             marginBottom: 28,
@@ -115,9 +115,9 @@ export default function NotFound() {
           <Link
             href="/"
             style={{
-              background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               color: '#FFFFFF',
-              boxShadow: '0 8px 26px rgba(34,211,238,.35)',
+              boxShadow: '0 8px 26px rgba(41,151,255,.35)',
             }}
           >
             ← Back to Home
@@ -127,7 +127,7 @@ export default function NotFound() {
             style={{
               background: 'rgba(255,255,255,.04)',
               border: '1px solid rgba(255,255,255,.10)',
-              color: '#F5F7FF',
+              color: '#f5f5f7',
               fontWeight: 700,
             }}
           >

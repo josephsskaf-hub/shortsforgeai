@@ -36,24 +36,24 @@ export default function FreeHookClient() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0A0A0B', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '28px 18px 64px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ color: '#22D3EE', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>⚡ ShortsForgeAI</Link>
-          <Link href="/free-script-generator" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '0.8rem' }}>Free script generator →</Link>
+          <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>Kineo</Link>
+          <Link href="/free-script-generator" style={{ color: '#86868b', textDecoration: 'none', fontSize: '0.8rem' }}>Free script generator →</Link>
         </div>
 
         <section style={{ marginTop: 32, textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#22D3EE', background: 'rgba(34,211,238,0.1)', borderRadius: 999, padding: '6px 14px' }}>Free · no signup</div>
+          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.1)', borderRadius: 999, padding: '6px 14px' }}>Free · no signup</div>
           <h1 style={{ fontSize: 'clamp(1.7rem, 5vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15, margin: '14px 0 0' }}>Free Viral Hook Generator</h1>
           <p style={{ fontSize: '1rem', color: '#CBD5E1', lineHeight: 1.6, margin: '14px auto 0', maxWidth: 600 }}>Type a topic and get 5 scroll-stopping hooks for your next YouTube Short or TikTok. No account needed.</p>
         </section>
 
         <section style={{ marginTop: 26, ...CARD, borderRadius: 16, padding: 18 }}>
           <textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Billionaire money habits" rows={2} maxLength={200}
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0A0A0B', color: '#F1F5F9', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit' }} />
+            style={{ width: '100%', boxSizing: 'border-box', background: '#000', color: '#f5f5f7', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit' }} />
           <button onClick={() => generate()} disabled={loading}
-            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
             {loading ? '✍️ Writing hooks…' : 'Generate 5 hooks →'}
           </button>
           <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -70,22 +70,22 @@ export default function FreeHookClient() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {hooks.map((h, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ minWidth: 24, height: 24, borderRadius: 6, background: 'rgba(34,211,238,0.12)', color: '#22D3EE', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</div>
+                  <div style={{ minWidth: 24, height: 24, borderRadius: 6, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</div>
                   <div style={{ fontSize: '1.02rem', lineHeight: 1.45, fontWeight: 600 }}>{h}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center' }}>
+            <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>Turn a hook into a finished video 🎬</div>
-              <p style={{ color: '#94A3B8', fontSize: '0.88rem', margin: '0 0 12px' }}>AI writes the rest, adds voiceover, footage and captions — a ready-to-post Short in ~60s. First one free.</p>
-              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#22D3EE', color: '#0A0A0B', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
+              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI writes the rest, adds voiceover, footage and captions — a ready-to-post Short in ~60s. First one free.</p>
+              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
             </div>
           </section>
         )}
 
-        <section style={{ marginTop: 30, color: '#94A3B8', fontSize: '0.92rem', lineHeight: 1.65 }}>
-          <h2 style={{ color: '#F1F5F9', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>Why the hook decides everything</h2>
-          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers ShortsForgeAI. Pick one, then <Link href={SIGNUP} style={{ color: '#22D3EE' }}>turn it into a finished faceless Short in ~60s →</Link></p>
+        <section style={{ marginTop: 30, color: '#86868b', fontSize: '0.92rem', lineHeight: 1.65 }}>
+          <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>Why the hook decides everything</h2>
+          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in ~60s →</Link></p>
         </section>
       </div>
     </main>

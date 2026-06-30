@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import AvatarLandingClient from '@/components/AvatarLandingClient'
 
 export const metadata: Metadata = {
-  title: 'AI Avatar Video — your face, speaking any script | ShortsForgeAI',
+  title: 'AI Avatar Video — your face, speaking any script | Kineo',
   description:
     'Upload one photo and get a 720p lip-synced video of that person speaking your script — with footage, captions and music. No camera, no editing. From $11.90.',
   alternates: { canonical: 'https://shortsforgeai.com/ai-avatar' },

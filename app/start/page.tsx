@@ -30,32 +30,32 @@ const BENEFITS: { icon: string; title: string; desc: string; accent: string }[] 
     icon: '🎭',
     title: '100% Faceless',
     desc: 'Never show your face or use a camera. The AI generates everything — visuals, voice, text.',
-    accent: '#22D3EE',
+    accent: '#2997ff',
   },
   {
     icon: '⚡',
     title: 'Ready in 60 Seconds',
     desc: 'Fast Mode renders your full Short in under a minute. Post daily without spending hours editing.',
-    accent: '#FBBF24',
+    accent: '#2997ff',
   },
   {
     icon: '🧠',
     title: 'AI Writes the Script',
     desc: 'No writing skills needed. Our AI crafts a viral-optimized script for any niche automatically.',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
   {
     icon: '📥',
     title: 'Watermark-Free MP4',
     desc: 'Download clean, professional-quality vertical video — ready for YouTube, TikTok, or Reels.',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
 ]
 
 const SOCIAL_PROOF: { icon: string; text: string; accent: string }[] = [
-  { icon: '⚡', text: '300+ videos generated', accent: '#22D3EE' },
-  { icon: '★★★★★', text: '4.8★ average rating', accent: '#FBBF24' },
-  { icon: '🎬', text: '300+ active creators', accent: '#A78BFA' },
+  { icon: '⚡', text: '300+ videos generated', accent: '#2997ff' },
+  { icon: '★★★★★', text: '4.8★ average rating', accent: '#2997ff' },
+  { icon: '🎬', text: '300+ active creators', accent: '#2997ff' },
 ]
 
 export default function StartPage() {
@@ -63,7 +63,7 @@ export default function StartPage() {
     <main
       style={{
         minHeight: '100vh',
-        background: '#0A0A0B',
+        background: '#000',
         color: '#F5F7FF',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
         padding: '32px 20px 48px',
@@ -78,12 +78,12 @@ export default function StartPage() {
               fontSize: '1.05rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
-              background: 'linear-gradient(135deg, #8B5CF6, #22D3EE)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
           >
-            ShortsForgeAI
+            Kineo
           </span>
         </div>
 
@@ -102,7 +102,7 @@ export default function StartPage() {
             The Smart AI Tool That Turns Any Idea Into a{' '}
             <span
               style={{
-                background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
+                background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -113,7 +113,7 @@ export default function StartPage() {
           <p
             style={{
               fontSize: 'clamp(0.95rem, 2.6vw, 1.15rem)',
-              color: '#94A3B8',
+              color: '#86868b',
               maxWidth: 520,
               margin: '0 auto 10px',
               lineHeight: 1.55,
@@ -137,13 +137,13 @@ export default function StartPage() {
             style={{
               padding: '18px 32px',
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               color: '#FFFFFF',
               fontSize: '1.1rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
               textDecoration: 'none',
-              boxShadow: '0 10px 36px rgba(139,92,246,.50)',
+              boxShadow: '0 10px 36px rgba(41,151,255,.50)',
               boxSizing: 'border-box',
               minHeight: 58,
               display: 'inline-flex',
@@ -204,7 +204,7 @@ export default function StartPage() {
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.14em',
-                color: '#22D3EE',
+                color: '#2997ff',
                 textTransform: 'uppercase',
                 marginBottom: 6,
               }}
@@ -245,7 +245,7 @@ export default function StartPage() {
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+                    background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                     color: '#FFFFFF',
                     fontWeight: 900,
                     fontSize: '1rem',
@@ -267,7 +267,7 @@ export default function StartPage() {
                 >
                   {s.title}
                 </div>
-                <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.8rem', color: '#86868b', margin: 0, lineHeight: 1.5 }}>
                   {s.desc}
                 </p>
               </div>
@@ -275,7 +275,7 @@ export default function StartPage() {
           </div>
         </section>
 
-        {/* Why creators choose ShortsForgeAI */}
+        {/* Why creators choose Kineo */}
         <section style={{ marginBottom: 52 }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <div
@@ -283,7 +283,7 @@ export default function StartPage() {
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.14em',
-                color: '#A78BFA',
+                color: '#2997ff',
                 textTransform: 'uppercase',
                 marginBottom: 6,
               }}
@@ -348,7 +348,7 @@ export default function StartPage() {
                   >
                     {b.title}
                   </div>
-                  <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '0.8rem', color: '#86868b', margin: 0, lineHeight: 1.5 }}>
                     {b.desc}
                   </p>
                 </div>
@@ -400,7 +400,7 @@ export default function StartPage() {
             {[
               {
                 q: 'Do I need a camera or show my face?',
-                a: 'No — never. ShortsForgeAI generates the visuals, voiceover, and subtitles automatically from any topic you type. 100% faceless, 100% hands-free.',
+                a: 'No — never. Kineo generates the visuals, voiceover, and subtitles automatically from any topic you type. 100% faceless, 100% hands-free.',
               },
               {
                 q: 'How long does it take to make a video?',
@@ -443,7 +443,7 @@ export default function StartPage() {
                   style={{
                     marginTop: 10,
                     marginBottom: 0,
-                    color: '#94A3B8',
+                    color: '#86868b',
                     fontSize: '0.88rem',
                     lineHeight: 1.55,
                   }}
@@ -460,11 +460,11 @@ export default function StartPage() {
           <div
             style={{
               position: 'relative',
-              background: 'linear-gradient(180deg, rgba(34,211,238,.06), rgba(11,17,32,.85))',
-              border: '2px solid rgba(34,211,238,.45)',
+              background: 'linear-gradient(180deg, rgba(41,151,255,.06), rgba(11,17,32,.85))',
+              border: '2px solid rgba(41,151,255,.45)',
               borderRadius: 20,
               padding: '28px 24px',
-              boxShadow: '0 0 40px rgba(34,211,238,.14)',
+              boxShadow: '0 0 40px rgba(41,151,255,.14)',
               textAlign: 'center',
             }}
           >
@@ -474,15 +474,15 @@ export default function StartPage() {
                 top: -12,
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: '#22D3EE',
-                color: '#0A0A0B',
+                background: '#2997ff',
+                color: '#000',
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.12em',
                 textTransform: 'uppercase',
                 padding: '4px 14px',
                 borderRadius: 999,
-                boxShadow: '0 4px 18px rgba(34,211,238,.45)',
+                boxShadow: '0 4px 18px rgba(41,151,255,.45)',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -493,7 +493,7 @@ export default function StartPage() {
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 letterSpacing: '.14em',
-                color: '#94A3B8',
+                color: '#86868b',
                 textTransform: 'uppercase',
                 marginBottom: 8,
               }}
@@ -514,7 +514,7 @@ export default function StartPage() {
               </span>
               <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600 }}>/mo</span>
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#22D3EE', fontWeight: 800, marginBottom: 6 }}>
+            <p style={{ fontSize: '0.8rem', color: '#2997ff', fontWeight: 800, marginBottom: 6 }}>
               50 Fast Mode renders/month · Under $0.10 per video
             </p>
             <div
@@ -525,7 +525,7 @@ export default function StartPage() {
                 gap: '4px 16px',
                 marginBottom: 20,
                 fontSize: '0.8rem',
-                color: '#94A3B8',
+                color: '#86868b',
                 fontWeight: 600,
               }}
             >
@@ -540,12 +540,12 @@ export default function StartPage() {
               style={{
                 padding: '15px 32px',
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+                background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                 color: '#FFFFFF',
                 fontWeight: 900,
                 fontSize: '1rem',
                 textDecoration: 'none',
-                boxShadow: '0 8px 28px rgba(34,211,238,.4)',
+                boxShadow: '0 8px 28px rgba(41,151,255,.4)',
                 boxSizing: 'border-box',
                 minHeight: 52,
                 display: 'inline-flex',
@@ -576,13 +576,13 @@ export default function StartPage() {
             style={{
               padding: '16px 28px',
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #8b5cf6, #7C3AED)',
+              background: 'linear-gradient(135deg, #2997ff, #2997ff)',
               color: '#FFFFFF',
               fontSize: '1rem',
               fontWeight: 900,
               letterSpacing: '-0.01em',
               textDecoration: 'none',
-              boxShadow: '0 8px 28px rgba(139,92,246,.40)',
+              boxShadow: '0 8px 28px rgba(41,151,255,.40)',
               boxSizing: 'border-box',
               minHeight: 52,
               display: 'inline-flex',

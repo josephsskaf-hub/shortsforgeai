@@ -579,8 +579,8 @@ export default function CreateClient() {
           className="fixed bottom-6 left-1/2 z-50 px-5 py-3 rounded-xl text-sm font-bold text-white"
           style={{
             transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg,#8b5cf6,#7C3AED)',
-            boxShadow: '0 4px 24px rgba(139,92,246,.4)',
+            background: 'linear-gradient(135deg,#2997ff,#2997ff)',
+            boxShadow: '0 4px 24px rgba(41,151,255,.4)',
           }}
         >
           ✅ Copied!
@@ -590,12 +590,12 @@ export default function CreateClient() {
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', boxShadow: '0 0 24px rgba(16, 185, 129,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#2997ff,#2997ff)', boxShadow: '0 0 24px rgba(16, 185, 129,.5)', flexShrink: 0, fontSize: '1.35rem', lineHeight: 1 }}>
             ⚡
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--indigo-light)', fontSize: '0.62rem' }}>
-              ShortsForgeAI v3.0
+              Kineo v3.0
             </div>
             <h1 className="font-black tracking-tight" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.7rem)', color: 'var(--text)', lineHeight: 1.1 }}>
               Generate a Short in <span className="grad-text">one click</span>
@@ -637,11 +637,11 @@ export default function CreateClient() {
               style={{
                 background: suggestLoading
                   ? 'rgba(255,255,255,.04)'
-                  : 'linear-gradient(135deg, rgba(34, 211, 238,.25), rgba(16, 185, 129,.18))',
-                border: '1px solid rgba(34, 211, 238,.45)',
-                color: suggestLoading ? 'var(--muted)' : '#22D3EE',
+                  : 'linear-gradient(135deg, rgba(41, 151, 255,.25), rgba(16, 185, 129,.18))',
+                border: '1px solid rgba(41, 151, 255,.45)',
+                color: suggestLoading ? 'var(--muted)' : '#2997ff',
                 cursor: suggestLoading ? 'wait' : 'pointer',
-                boxShadow: suggestLoading ? 'none' : '0 0 16px rgba(34, 211, 238,.18)',
+                boxShadow: suggestLoading ? 'none' : '0 0 16px rgba(41, 151, 255,.18)',
               }}
             >
               {suggestLoading ? '⏳ Picking...' : '✨ Surprise me'}
@@ -657,8 +657,8 @@ export default function CreateClient() {
                   <span
                     className="px-2 py-0.5 rounded-full"
                     style={{
-                      background: 'rgba(34, 211, 238,.15)',
-                      color: '#22D3EE',
+                      background: 'rgba(41, 151, 255,.15)',
+                      color: '#2997ff',
                       fontSize: '0.55rem',
                       letterSpacing: '0.06em',
                     }}
@@ -816,7 +816,7 @@ export default function CreateClient() {
                       {m.label}
                     </span>
                     {m.disabled && (
-                      <span style={{ fontSize: '0.5rem', fontWeight: 800, color: '#22D3EE', background: 'rgba(34, 211, 238,.15)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>
+                      <span style={{ fontSize: '0.5rem', fontWeight: 800, color: '#2997ff', background: 'rgba(41, 151, 255,.15)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>
                         SOON
                       </span>
                     )}
@@ -851,8 +851,8 @@ export default function CreateClient() {
             className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-base font-black text-white transition-all"
             style={{
               background: creditsZero
-                ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
+                ? 'linear-gradient(135deg, #86868b, #64748b)'
+                : 'linear-gradient(135deg, #2997ff 0%, #2997ff 55%, #2997ff 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.45)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
@@ -888,8 +888,8 @@ export default function CreateClient() {
             className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-base font-black text-white"
             style={{
               background: creditsZero
-                ? 'linear-gradient(135deg, #94a3b8, #64748b)'
-                : 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
+                ? 'linear-gradient(135deg, #86868b, #64748b)'
+                : 'linear-gradient(135deg, #2997ff 0%, #2997ff 55%, #2997ff 100%)',
               boxShadow: creditsZero ? 'none' : '0 4px 28px rgba(16, 185, 129,.55)',
               cursor: creditsLoading || suggestLoading ? 'not-allowed' : 'pointer',
               border: 'none',
@@ -993,8 +993,8 @@ function ProgressView({
     >
       <style jsx>{`
         @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 32px rgba(34, 211, 238,.4); transform: scale(1); }
-          50% { box-shadow: 0 0 56px rgba(34, 211, 238,.65); transform: scale(1.04); }
+          0%, 100% { box-shadow: 0 0 32px rgba(41, 151, 255,.4); transform: scale(1); }
+          50% { box-shadow: 0 0 56px rgba(41, 151, 255,.65); transform: scale(1.04); }
         }
         @keyframes shimmer {
           0% { background-position: -200% 0; }
@@ -1005,8 +1005,8 @@ function ProgressView({
       <div
         className="w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-5"
         style={{
-          background: 'linear-gradient(135deg, rgba(34, 211, 238,.35), rgba(16, 185, 129,.2))',
-          border: '1px solid rgba(34, 211, 238,.5)',
+          background: 'linear-gradient(135deg, rgba(41, 151, 255,.35), rgba(16, 185, 129,.2))',
+          border: '1px solid rgba(41, 151, 255,.5)',
           fontSize: '2rem',
           animation: 'pulseGlow 1.6s ease-in-out infinite',
         }}
@@ -1025,9 +1025,9 @@ function ProgressView({
         <div
           className="rounded-xl px-4 py-2.5 mb-4 mx-auto inline-block max-w-full"
           style={{
-            background: 'rgba(34, 211, 238,.08)',
-            border: '1px solid rgba(34, 211, 238,.25)',
-            color: '#22D3EE',
+            background: 'rgba(41, 151, 255,.08)',
+            border: '1px solid rgba(41, 151, 255,.25)',
+            color: '#2997ff',
             fontSize: '0.78rem',
             fontWeight: 600,
           }}
@@ -1042,7 +1042,7 @@ function ProgressView({
           className="h-full transition-all"
           style={{
             width: `${Math.min(100, Math.max(2, progress))}%`,
-            background: 'linear-gradient(90deg, #8B5CF6, #22D3EE, #22D3EE, #22D3EE, #8B5CF6)',
+            background: 'linear-gradient(90deg, #2997ff, #2997ff, #2997ff, #2997ff, #2997ff)',
             backgroundSize: '200% 100%',
             animation: 'shimmer 2.4s linear infinite',
             transitionDuration: '600ms',
@@ -1081,13 +1081,13 @@ function FinalView({
           style={{
             background: 'rgba(245,158,11,.07)',
             border: '1px solid rgba(245,158,11,.25)',
-            color: '#22D3EE',
+            color: '#2997ff',
           }}
         >
           <span className="text-lg mt-0.5">⚠️</span>
           <div>
             <div className="font-bold mb-0.5" style={{ color: '#fde68a' }}>MP4 render pending</div>
-            <div className="text-xs" style={{ color: '#22D3EE', opacity: 0.85 }}>{renderError}</div>
+            <div className="text-xs" style={{ color: '#2997ff', opacity: 0.85 }}>{renderError}</div>
             <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
               Script and visuals are ready below. Use the AI Video button to generate the final MP4.
             </div>
@@ -1107,11 +1107,11 @@ function FinalView({
         {/* Top bar: version + format */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#2997ff,#2997ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
               ⚡
             </div>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--indigo-light)', letterSpacing: '0.04em' }}>
-              ShortsForgeAI v3.0
+              Kineo v3.0
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '3px 10px' }}>
@@ -1171,11 +1171,11 @@ function FinalView({
         {/* Creator row + reactions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(16, 185, 129,.4)' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2997ff,#2997ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: '0 0 12px rgba(16, 185, 129,.4)' }}>
               {userInitial}
             </div>
             <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text)' }}>ShortsForgeAI</div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text)' }}>Kineo</div>
               <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 1 }}>AI-generated · {final.niche}</div>
             </div>
           </div>
@@ -1222,7 +1222,7 @@ function FinalView({
           <Link
             href={`/generate?prompt=${encodeURIComponent(video.videoPrompt || video.title)}&autoanalyze=1`}
             title="Generate AI video"
-            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(34, 211, 238,.12)', border: '1px solid rgba(34, 211, 238,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(41, 151, 255,.12)', border: '1px solid rgba(41, 151, 255,.28)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
           >🎬</Link>
         </div>
 
@@ -1242,7 +1242,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#8B5CF6,#7C3AED,#22D3EE)',
+              background: 'linear-gradient(135deg,#2997ff,#2997ff,#2997ff)',
               boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1256,7 +1256,7 @@ function FinalView({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#8B5CF6,#7C3AED,#22D3EE)',
+              background: 'linear-gradient(135deg,#2997ff,#2997ff,#2997ff)',
               boxShadow: '0 4px 24px rgba(16, 185, 129,.45)',
               color: '#fff', fontWeight: 900, fontSize: '0.95rem',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -1359,7 +1359,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
           boxShadow: '0 0 80px rgba(16, 185, 129,.25), 0 30px 80px rgba(0,0,0,.5)',
         }}
       >
-        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #8B5CF6, #22D3EE, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #2997ff, #2997ff, transparent)' }} />
         <div className="p-7 relative z-10">
           <button
             onClick={onClose}
@@ -1384,7 +1384,7 @@ function NoCreditsModal({ onClose }: { onClose: () => void }) {
             href="/pricing"
             className="block w-full text-center rounded-xl py-3.5 text-sm font-black text-white transition-all"
             style={{
-              background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
+              background: 'linear-gradient(135deg, #2997ff 0%, #2997ff 55%, #2997ff 100%)',
               boxShadow: '0 4px 28px rgba(16, 185, 129,.45)',
               textDecoration: 'none',
             }}

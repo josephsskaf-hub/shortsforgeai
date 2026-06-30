@@ -8,7 +8,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 export const runtime = 'edge'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
-export const alt = 'A viral Short made with ShortsForgeAI'
+export const alt = 'A viral Short made with Kineo'
 
 async function getTitle(id: string): Promise<string> {
   try {
@@ -42,18 +42,18 @@ export default async function OgImage({ params }: { params: { id: string } }) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          background: '#0A0A0B',
+          background: '#000',
           padding: '64px 70px',
           fontFamily: 'sans-serif',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', color: '#22D3EE', fontSize: 40, fontWeight: 800 }}>
-          ShortsForgeAI
+        <div style={{ display: 'flex', alignItems: 'center', color: '#2997ff', fontSize: 40, fontWeight: 800 }}>
+          Kineo
         </div>
         <div style={{ display: 'flex', color: '#F1F5F9', fontSize: 60, fontWeight: 800, lineHeight: 1.18 }}>
           {title}
         </div>
-        <div style={{ display: 'flex', color: '#94A3B8', fontSize: 32, fontWeight: 600 }}>
+        <div style={{ display: 'flex', color: '#86868b', fontSize: 32, fontWeight: 600 }}>
           Made in ~60 seconds with AI — make your own free
         </div>
       </div>

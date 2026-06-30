@@ -206,7 +206,7 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { niche: string } }): Metadata {
   const n = NICHES[params.niche]
   if (!n) return {}
-  const title = `${n.h1} — ShortsForgeAI`
+  const title = `${n.h1} — Kineo`
   const description = `${n.intro} Your first Short is free, no credit card required.`
   const url = `https://www.shortsforgeai.com/free-ai-shorts/${params.niche}`
   return {
@@ -228,10 +228,10 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
   const signupUrl = `/signup?utm_source=seo&utm_medium=niche&utm_campaign=${params.niche}`
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0A0A0B', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '28px 18px 64px' }}>
-        <Link href="/" style={{ color: '#22D3EE', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>
-          ⚡ ShortsForgeAI
+        <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>
+          Kineo
         </Link>
 
         {/* Hero */}
@@ -242,12 +242,12 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           <p style={{ fontSize: '1.02rem', color: '#CBD5E1', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 620 }}>
             {n.intro}
           </p>
-          <p style={{ fontSize: '0.85rem', color: '#94A3B8', margin: '10px 0 0' }}>
-            Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#22D3EE' }}>first one free</b>, no card needed
+          <p style={{ fontSize: '0.85rem', color: '#86868b', margin: '10px 0 0' }}>
+            Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#2997ff' }}>first one free</b>, no card needed
           </p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
+            style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Generate my free {n.label} Short →
           </Link>
@@ -263,9 +263,9 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
               { n: '3', t: 'Download & post', d: 'Get a vertical 9:16 MP4 in about a minute, ready for YouTube Shorts, TikTok or Reels.' },
             ].map((s) => (
               <div key={s.n} style={{ ...CARD, borderRadius: 14, padding: 16 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(34,211,238,0.12)', color: '#22D3EE', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{s.n}</div>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{s.n}</div>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>{s.t}</div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#94A3B8', lineHeight: 1.5 }}>{s.d}</p>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#86868b', lineHeight: 1.5 }}>{s.d}</p>
               </div>
             ))}
           </div>
@@ -278,9 +278,9 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {n.ideas.map((idea) => (
-              <Link key={idea} href={signupUrl} style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Link key={idea} href={signupUrl} style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{idea}</span>
-                <span style={{ color: '#22D3EE', fontWeight: 900, whiteSpace: 'nowrap' }}>Make it →</span>
+                <span style={{ color: '#2997ff', fontWeight: 900, whiteSpace: 'nowrap' }}>Make it →</span>
               </Link>
             ))}
           </div>
@@ -292,7 +292,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           <p style={{ color: '#CBD5E1', margin: '8px 0 18px', fontSize: '0.95rem' }}>No script, no voiceover, no editing. No credit card required.</p>
           <Link
             href={signupUrl}
-            style={{ display: 'inline-block', background: '#22D3EE', color: '#0A0A0B', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
+            style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
           >
             Start free →
           </Link>
@@ -303,7 +303,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           {NICHE_SLUGS.filter((s) => s !== params.niche).map((s, i) => (
             <span key={s}>
               {i > 0 && ' · '}
-              <Link href={`/free-ai-shorts/${s}`} style={{ color: '#94A3B8', textDecoration: 'none' }}>{NICHES[s].label}</Link>
+              <Link href={`/free-ai-shorts/${s}`} style={{ color: '#86868b', textDecoration: 'none' }}>{NICHES[s].label}</Link>
             </span>
           ))}
         </nav>

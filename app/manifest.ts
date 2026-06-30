@@ -6,8 +6,8 @@ import type { MetadataRoute } from 'next'
 // /manifest.webmanifest and auto-injects the <link> tag site-wide.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'ShortsForgeAI — AI YouTube Shorts Generator',
-    short_name: 'ShortsForgeAI',
+    name: 'Kineo — AI YouTube Shorts Generator',
+    short_name: 'Kineo',
     description:
       'Turn any topic into a viral YouTube Short in 60 seconds. AI writes the script, finds footage, adds voiceover & captions.',
     id: '/',

@@ -326,7 +326,7 @@ export default function ViralNowClient() {
         fontSize: '0.72rem',
         color: 'var(--muted, #6b7280)',
       }}>
-        6 topics &middot; Refreshes every 4 hours &middot; Powered by ShortsForgeAI
+        6 topics &middot; Refreshes every 4 hours &middot; Powered by Kineo
       </p>
 
       {/* ── Keyframes via style tag ── */}

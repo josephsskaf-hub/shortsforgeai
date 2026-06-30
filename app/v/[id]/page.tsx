@@ -49,13 +49,13 @@ function titleFor(v: VideoRow | null): string {
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const v = await getVideo(params.id)
   const title = titleFor(v)
-  const desc = 'Made in 60 seconds with ShortsForgeAI — type any topic and AI writes the script, voiceover, captions and footage. Make your own viral Short for free.'
+  const desc = 'Made in 60 seconds with Kineo — type any topic and AI writes the script, voiceover, captions and footage. Make your own viral Short for free.'
   // #462 — og:image is now produced by the sibling opengraph-image.tsx (a
   // generated, always-valid 1200x630 card). We don't set images here anymore —
   // the static fallback didn't exist, which broke every link preview.
   return {
     metadataBase: new URL('https://www.shortsforgeai.com'),
-    title: `${title} · ShortsForgeAI`,
+    title: `${title} · Kineo`,
     description: desc,
     openGraph: {
       title,
@@ -80,8 +80,8 @@ export default async function PublicVideoPage({ params }: { params: { id: string
     <main
       style={{
         minHeight: '100vh',
-        background: '#0A0A0B',
-        color: '#F1F5F9',
+        background: '#000',
+        color: '#f5f5f7',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -91,9 +91,9 @@ export default async function PublicVideoPage({ params }: { params: { id: string
     >
       <Link
         href="/"
-        style={{ alignSelf: 'flex-start', color: '#22D3EE', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}
+        style={{ alignSelf: 'flex-start', color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}
       >
-        ⚡ ShortsForgeAI
+        Kineo
       </Link>
 
       <div style={{ width: '100%', maxWidth: 380, marginTop: 18 }}>
@@ -108,7 +108,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
               aspectRatio: '9 / 16',
               borderRadius: 18,
               background: '#000',
-              border: '1px solid rgba(34,211,238,0.25)',
+              border: '1px solid rgba(41,151,255,0.25)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
             }}
           />
@@ -125,7 +125,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
               justifyContent: 'center',
               textAlign: 'center',
               padding: 20,
-              color: '#94A3B8',
+              color: '#86868b',
             }}
           >
             This video isn&apos;t available right now.
@@ -141,8 +141,8 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             marginTop: 20,
             padding: 18,
             borderRadius: 16,
-            background: 'rgba(34,211,238,0.08)',
-            border: '1px solid rgba(34,211,238,0.3)',
+            background: 'rgba(41,151,255,0.08)',
+            border: '1px solid rgba(41,151,255,0.3)',
             textAlign: 'center',
           }}
         >
@@ -154,8 +154,8 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             href="/signup?utm_source=public_video&utm_medium=share"
             style={{
               display: 'inline-block',
-              background: '#22D3EE',
-              color: '#0A0A0B',
+              background: '#2997ff',
+              color: '#000',
               fontWeight: 900,
               padding: '13px 26px',
               borderRadius: 12,

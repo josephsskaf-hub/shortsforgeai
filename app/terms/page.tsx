@@ -6,9 +6,9 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — ShortsForgeAI',
+  title: 'Terms of Service — Kineo',
   description:
-    'Terms governing your use of ShortsForgeAI, including acceptable use, AI-generated content, payments, refunds, and limitation of liability.',
+    'Terms governing your use of Kineo, including acceptable use, AI-generated content, payments, refunds, and limitation of liability.',
 }
 
 export default function TermsPage() {
@@ -17,7 +17,7 @@ export default function TermsPage() {
       <main
         style={{
           minHeight: '100vh',
-          background: '#0A0A0B',
+          background: '#000',
           color: '#F5F7FF',
           fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
           padding: '24px 20px 32px',
@@ -31,7 +31,7 @@ export default function TermsPage() {
               marginBottom: 24,
               fontSize: '0.8rem',
               fontWeight: 700,
-              color: '#94A3B8',
+              color: '#86868b',
               textDecoration: 'none',
             }}
           >
@@ -48,12 +48,12 @@ export default function TermsPage() {
           >
             Terms of Service
           </h1>
-          <p style={{ color: '#94A3B8', fontSize: 13, margin: 0, marginBottom: 28 }}>
+          <p style={{ color: '#86868b', fontSize: 13, margin: 0, marginBottom: 28 }}>
             Last updated: May 2026
           </p>
 
           <Section title="1. Acceptance">
-            By creating an account or using ShortsForgeAI (&ldquo;the
+            By creating an account or using Kineo (&ldquo;the
             Service&rdquo;) you agree to these Terms. If you don&apos;t
             agree, please don&apos;t use the Service.
           </Section>
@@ -86,7 +86,7 @@ export default function TermsPage() {
             money-back guarantee on the first paid month — email{' '}
             <a
               href="mailto:support@shortsforgeai.com"
-              style={{ color: '#22D3EE', textDecoration: 'none' }}
+              style={{ color: '#2997ff', textDecoration: 'none' }}
             >
               support@shortsforgeai.com
             </a>{' '}
@@ -122,7 +122,7 @@ export default function TermsPage() {
             Questions about these Terms?{' '}
             <a
               href="mailto:support@shortsforgeai.com"
-              style={{ color: '#22D3EE', textDecoration: 'none' }}
+              style={{ color: '#2997ff', textDecoration: 'none' }}
             >
               support@shortsforgeai.com
             </a>

@@ -65,16 +65,16 @@ export default function FreeScriptClient() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0A0A0B', color: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '28px 18px 64px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ color: '#22D3EE', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>⚡ ShortsForgeAI</Link>
-          <Link href="/pricing" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '0.8rem' }}>Pricing</Link>
+          <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>Kineo</Link>
+          <Link href="/pricing" style={{ color: '#86868b', textDecoration: 'none', fontSize: '0.8rem' }}>Pricing</Link>
         </div>
 
         {/* Hero */}
         <section style={{ marginTop: 32, textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#22D3EE', background: 'rgba(34,211,238,0.1)', borderRadius: 999, padding: '6px 14px' }}>
+          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.1)', borderRadius: 999, padding: '6px 14px' }}>
             Free · no signup
           </div>
           <h1 style={{ fontSize: 'clamp(1.7rem, 5vw, 2.4rem)', fontWeight: 900, lineHeight: 1.15, margin: '14px 0 0' }}>
@@ -93,12 +93,12 @@ export default function FreeScriptClient() {
             placeholder="e.g. The island humans are forbidden to enter"
             rows={2}
             maxLength={200}
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0A0A0B', color: '#F1F5F9', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#000', color: '#f5f5f7', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', fontSize: '1rem', resize: 'vertical', fontFamily: 'inherit' }}
           />
           <button
             onClick={() => generate()}
             disabled={loading}
-            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', color: '#0A0A0B', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}
+            style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '14px', borderRadius: 12, border: 'none', fontSize: '1.02rem', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? '✍️ Writing your script…' : 'Generate my script →'}
           </button>
@@ -119,28 +119,28 @@ export default function FreeScriptClient() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {lines.map((l, i) => (
                 <div key={i}>
-                  {l.label && <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.06em', color: '#22D3EE', marginBottom: 2 }}>{l.label}</div>}
+                  {l.label && <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.06em', color: '#2997ff', marginBottom: 2 }}>{l.label}</div>}
                   <div style={{ fontSize: '1rem', lineHeight: 1.5 }}>{l.text}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center' }}>
+            <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>Now turn this into a finished video 🎬</div>
-              <p style={{ color: '#94A3B8', fontSize: '0.88rem', margin: '0 0 12px' }}>AI adds the voiceover, footage and captions — a ready-to-post 9:16 Short in ~60s. First one free.</p>
-              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#22D3EE', color: '#0A0A0B', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
+              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI adds the voiceover, footage and captions — a ready-to-post 9:16 Short in ~60s. First one free.</p>
+              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
             </div>
           </section>
         )}
 
         {/* SEO copy */}
-        <section style={{ marginTop: 30, color: '#94A3B8', fontSize: '0.92rem', lineHeight: 1.65 }}>
-          <h2 style={{ color: '#F1F5F9', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>How the free script generator works</h2>
+        <section style={{ marginTop: 30, color: '#86868b', fontSize: '0.92rem', lineHeight: 1.65 }}>
+          <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>How the free script generator works</h2>
           <p style={{ margin: '0 0 14px' }}>
-            This free tool writes a complete, retention-optimized script for a 45-60 second faceless YouTube Short. It uses the same viral structure that powers ShortsForgeAI — a pattern-interrupt <b>hook</b>, three escalating <b>facts</b>, and a <b>payoff</b> that delivers on the hook. Works for any niche: finance, history, mystery, motivation and more. No login, no credit card.
+            This free tool writes a complete, retention-optimized script for a 45-60 second faceless YouTube Short. It uses the same viral structure that powers Kineo — a pattern-interrupt <b>hook</b>, three escalating <b>facts</b>, and a <b>payoff</b> that delivers on the hook. Works for any niche: finance, history, mystery, motivation and more. No login, no credit card.
         </p>
-          <h2 style={{ color: '#F1F5F9', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>From script to finished Short</h2>
+          <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>From script to finished Short</h2>
           <p style={{ margin: 0 }}>
-            A script is step one. Inside ShortsForgeAI, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={SIGNUP} style={{ color: '#22D3EE' }}>Make your first one free →</Link>
+            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={SIGNUP} style={{ color: '#2997ff' }}>Make your first one free →</Link>
           </p>
         </section>
       </div>

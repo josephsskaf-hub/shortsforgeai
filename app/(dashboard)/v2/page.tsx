@@ -89,7 +89,7 @@ const EXAMPLES: {
   },
   {
     title: 'Product Demo',
-    prompt: 'Demo the new ShortsForgeAI flow in under a minute.',
+    prompt: 'Demo the new Kineo flow in under a minute.',
     duration: '50s',
     platform: 'Instagram Reels',
     type: 'Product Video',
@@ -136,7 +136,7 @@ export default function V2PrototypePage() {
         style={{
           background: 'linear-gradient(135deg, rgba(34, 211, 238,.10), rgba(245,158,11,.06))',
           border: '1px solid rgba(34, 211, 238,.40)',
-          color: '#22D3EE',
+          color: '#2997ff',
         }}
       >
         <span

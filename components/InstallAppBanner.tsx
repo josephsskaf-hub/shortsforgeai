@@ -107,7 +107,7 @@ export default function InstallAppBanner() {
         padding: '12px 14px',
         borderRadius: 16,
         background: 'rgba(11,17,32,0.97)',
-        border: '1px solid rgba(34,211,238,0.35)',
+        border: '1px solid rgba(41,151,255,0.35)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         backdropFilter: 'blur(10px)',
         maxWidth: 480,
@@ -119,7 +119,7 @@ export default function InstallAppBanner() {
           width: 40,
           height: 40,
           borderRadius: 11,
-          background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)',
+          background: 'linear-gradient(135deg,#2997ff,#2997ff)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -132,18 +132,18 @@ export default function InstallAppBanner() {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, color: '#e2e8f0', lineHeight: 1.3 }}>
-          Get the ShortsForgeAI app
+          Get the Kineo app
         </p>
         {mode === 'ios' ? (
-          <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.4 }}>
-            Tap <span style={{ color: '#22D3EE', fontWeight: 700 }}>Share</span>{' '}
+          <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#86868b', lineHeight: 1.4 }}>
+            Tap <span style={{ color: '#2997ff', fontWeight: 700 }}>Share</span>{' '}
             <span aria-hidden>⎙</span> then{' '}
-            <span style={{ color: '#22D3EE', fontWeight: 700 }}>
+            <span style={{ color: '#2997ff', fontWeight: 700 }}>
               Add to Home Screen
             </span>
           </p>
         ) : (
-          <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#86868b', lineHeight: 1.4 }}>
             Full screen, faster, one tap away
           </p>
         )}
@@ -156,7 +156,7 @@ export default function InstallAppBanner() {
             padding: '9px 16px',
             borderRadius: 11,
             border: 'none',
-            background: 'linear-gradient(135deg,#7C3AED,#22D3EE)',
+            background: 'linear-gradient(135deg,#2997ff,#2997ff)',
             color: '#fff',
             fontSize: '0.75rem',
             fontWeight: 900,

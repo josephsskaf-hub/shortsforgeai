@@ -3,6 +3,7 @@
 // Marker: KINEO-LANDING-2026-06-30
 import Link from 'next/link'
 import NavCreditsBadge from '@/components/NavCreditsBadge'
+import AutoplayVideo from '@/components/AutoplayVideo'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -145,7 +146,7 @@ export default function KineoLanding({ initialUser }: Props) {
           </div>
           <div className="hr">
             <div className="phone"><div className="screen">
-              <video className="hvid" src="/videos/hero-loop.mp4" autoPlay loop muted playsInline />
+              <AutoplayVideo className="hvid" src="/videos/hero-loop.mp4" poster="/videos/hero-loop.jpg" />
               <span className="b9">9:16 · 58s</span>
               <div className="cap">The island too dangerous to visit</div>
               <div className="cmeta">AI voice · B-roll · captions · ready to post</div>
@@ -169,10 +170,10 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="wrap">
           <div className="sec-h"><h2>This is what the AI makes in 60 seconds.</h2><p>Each one was created from a single topic — script, voice, footage and captions, automatically.</p></div>
           <div className="grid4">
-            <div className="vcard"><video className="hvid" src="/videos/example-nasa.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 54s</span><div className="vt">What NASA hides about the Moon</div></div>
-            <div className="vcard"><video className="hvid" src="/videos/example-roman.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 61s</span><div className="vt">The Roman invention we still use</div></div>
-            <div className="vcard"><video className="hvid" src="/videos/example-cities.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 48s</span><div className="vt">Cities erased from every map</div></div>
-            <div className="vcard"><video className="hvid" src="/videos/example-fbi.mp4" autoPlay loop muted playsInline /><span className="lab">AI · 57s</span><div className="vt">The case that broke the FBI</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-nasa.mp4" poster="/videos/example-nasa.jpg" /><span className="lab">AI · 54s</span><div className="vt">What NASA hides about the Moon</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-roman.mp4" poster="/videos/example-roman.jpg" /><span className="lab">AI · 61s</span><div className="vt">The Roman invention we still use</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-cities.mp4" poster="/videos/example-cities.jpg" /><span className="lab">AI · 48s</span><div className="vt">Cities erased from every map</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-fbi.mp4" poster="/videos/example-fbi.jpg" /><span className="lab">AI · 57s</span><div className="vt">The case that broke the FBI</div></div>
           </div>
         </div>
       </section>

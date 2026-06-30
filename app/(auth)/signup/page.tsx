@@ -24,8 +24,8 @@ function scorePassword(pw: string): Strength {
 
   if (score <= 1) return { level: 2, label: 'Weak', color: '#f59e0b' }
   if (score === 2 || score === 3)
-    return { level: 3, label: 'Good', color: '#8b5cf6' }
-  return { level: 4, label: 'Strong', color: '#8b5cf6' }
+    return { level: 3, label: 'Good', color: '#2997ff' }
+  return { level: 4, label: 'Strong', color: '#2997ff' }
 }
 
 export default function SignupPage() {
@@ -132,13 +132,13 @@ export default function SignupPage() {
         className="min-h-screen flex items-center justify-center p-4 relative"
         style={{ background: 'var(--bg)' }}
       >
-        {/* Glow orbs */}
+        {/* Glow orbs — subtle Kineo blue */}
         <div
           className="fixed rounded-full pointer-events-none"
           style={{
             width: 600,
             height: 600,
-            background: 'var(--indigo)',
+            background: '#2997ff',
             top: -200,
             right: -150,
             opacity: 0.08,
@@ -151,7 +151,7 @@ export default function SignupPage() {
           style={{
             width: 500,
             height: 500,
-            background: 'var(--purple)',
+            background: '#2997ff',
             bottom: -150,
             left: 300,
             opacity: 0.06,
@@ -163,9 +163,9 @@ export default function SignupPage() {
         <div
           className="w-full max-w-4xl relative z-10 rounded-2xl overflow-hidden grid md:grid-cols-2"
           style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border2)',
-            boxShadow: '0 0 80px rgba(16, 185, 129,.08)',
+            background: '#161618',
+            border: '1px solid #2a2a2d',
+            boxShadow: '0 0 80px rgba(41,151,255,.08)',
           }}
         >
           {/* LEFT — value prop panel (desktop only) */}
@@ -173,7 +173,7 @@ export default function SignupPage() {
             className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden"
             style={{
               background:
-                'radial-gradient(circle at top left, rgba(139,92,246,0.22), transparent 55%), linear-gradient(135deg, #0f1629 0%, #0F0F10 50%, #060c1a 100%)',
+                'radial-gradient(circle at top left, rgba(41,151,255,0.18), transparent 55%), linear-gradient(135deg, #0c0c0e 0%, #000000 50%, #0c0c0e 100%)',
             }}
           >
             <div
@@ -196,9 +196,8 @@ export default function SignupPage() {
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
                   style={{
-                    background:
-                      'linear-gradient(135deg, var(--indigo), var(--purple))',
-                    boxShadow: '0 0 24px rgba(16, 185, 129,.45)',
+                    background: '#2997ff',
+                    boxShadow: '0 0 24px rgba(41,151,255,.45)',
                   }}
                 >
                   ⚡
@@ -206,20 +205,16 @@ export default function SignupPage() {
                 <div>
                   <div
                     className="font-black text-sm tracking-tight"
-                    style={{
-                      background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
+                    style={{ color: '#f5f5f7' }}
                   >
-                    ShortsForgeAI
+                    Kineo
                   </div>
                   <div
                     className="text-xs font-bold tracking-widest px-1.5 py-0.5 rounded w-fit mt-1"
                     style={{
-                      background: 'rgba(16, 185, 129,.15)',
-                      border: '1px solid rgba(16, 185, 129,.3)',
-                      color: 'var(--indigo-light)',
+                      background: 'rgba(41,151,255,.15)',
+                      border: '1px solid rgba(41,151,255,.3)',
+                      color: '#2997ff',
                       fontSize: '0.52rem',
                     }}
                   >
@@ -232,25 +227,25 @@ export default function SignupPage() {
                 className="text-2xl font-black tracking-tight mb-1"
                 style={{ color: 'var(--text)' }}
               >
-                Join 300+ creators
+                Start creating Shorts with AI
               </h2>
               <p className="text-sm mb-8" style={{ color: 'var(--muted2)' }}>
-                Already building Shorts with AI — every single day.
+                Script, footage, voiceover, captions — done in ~60s.
               </p>
 
               <div
                 className="inline-flex items-center gap-2 mb-7 px-3 py-1.5 rounded-full text-xs font-bold"
                 style={{
-                  background: 'rgba(139,92,246,.12)',
-                  border: '1px solid rgba(139,92,246,.3)',
-                  color: '#a78bfa',
+                  background: 'rgba(41,151,255,.12)',
+                  border: '1px solid rgba(41,151,255,.3)',
+                  color: '#2997ff',
                 }}
               >
                 <span
                   className="w-2 h-2 rounded-full animate-pulse-dot"
                   style={{
-                    background: '#a78bfa',
-                    boxShadow: '0 0 6px rgba(167,139,250,.6)',
+                    background: '#2997ff',
+                    boxShadow: '0 0 6px rgba(41,151,255,.6)',
                   }}
                 />
                 🎁 30 free credits · No credit card
@@ -270,9 +265,9 @@ export default function SignupPage() {
                     <span
                       className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{
-                        background: 'rgba(139,92,246,.18)',
-                        border: '1px solid rgba(139,92,246,.35)',
-                        color: '#a78bfa',
+                        background: 'rgba(41,151,255,.18)',
+                        border: '1px solid rgba(41,151,255,.35)',
+                        color: '#2997ff',
                         fontSize: '0.7rem',
                         fontWeight: 800,
                       }}
@@ -293,16 +288,16 @@ export default function SignupPage() {
               }}
             >
               <p
-                className="text-sm italic mb-2"
+                className="text-sm font-semibold mb-1"
                 style={{ color: 'var(--text2)' }}
               >
-                &ldquo;Made $2,400 last month from my Shorts.&rdquo;
+                7-day money-back guarantee
               </p>
               <p
-                className="text-xs font-semibold"
+                className="text-xs"
                 style={{ color: 'var(--muted2)' }}
               >
-                — @ryan_finance · 47K subs
+                First Short free, no card needed.
               </p>
             </div>
           </div>
@@ -330,22 +325,17 @@ export default function SignupPage() {
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
                 style={{
-                  background:
-                    'linear-gradient(135deg, var(--indigo), var(--purple))',
-                  boxShadow: '0 0 24px rgba(16, 185, 129,.45)',
+                  background: '#2997ff',
+                  boxShadow: '0 0 24px rgba(41,151,255,.45)',
                 }}
               >
                 ⚡
               </div>
               <div
                 className="font-black text-sm tracking-tight"
-                style={{
-                  background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+                style={{ color: '#f5f5f7' }}
               >
-                ShortsForgeAI
+                Kineo
               </div>
             </Link>
 
@@ -366,7 +356,7 @@ export default function SignupPage() {
                 <Link
                   href="/login"
                   className="inline-block mt-6 text-sm font-semibold"
-                  style={{ color: 'var(--indigo-light)' }}
+                  style={{ color: '#2997ff' }}
                 >
                   Back to Sign In
                 </Link>
@@ -432,8 +422,8 @@ export default function SignupPage() {
                         fontFamily: 'inherit',
                       }}
                       onFocus={(e) => {
-                        e.target.style.borderColor = 'rgba(16, 185, 129,.5)'
-                        e.target.style.background = 'rgba(16, 185, 129,.04)'
+                        e.target.style.borderColor = 'rgba(41,151,255,.5)'
+                        e.target.style.background = 'rgba(41,151,255,.04)'
                       }}
                       onBlur={(e) => {
                         e.target.style.borderColor = 'var(--border2)'
@@ -465,8 +455,8 @@ export default function SignupPage() {
                           fontFamily: 'inherit',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(16, 185, 129,.5)'
-                          e.target.style.background = 'rgba(16, 185, 129,.04)'
+                          e.target.style.borderColor = 'rgba(41,151,255,.5)'
+                          e.target.style.background = 'rgba(41,151,255,.04)'
                         }}
                         onBlur={(e) => {
                           e.target.style.borderColor = 'var(--border2)'
@@ -565,9 +555,9 @@ export default function SignupPage() {
                     disabled={loading}
                     className="w-full rounded-xl py-3.5 font-bold text-sm transition-all mt-1"
                     style={{
-                      background: '#8B5CF6',
-                      color: '#FFFFFF',
-                      boxShadow: '0 4px 22px rgba(16, 185, 129,.3)',
+                      background: '#f5f5f7',
+                      color: '#000',
+                      boxShadow: '0 4px 22px rgba(41,151,255,.3)',
                       opacity: loading ? 0.7 : 1,
                       cursor: loading ? 'not-allowed' : 'pointer',
                     }}
@@ -584,7 +574,7 @@ export default function SignupPage() {
                   <Link
                     href="/login"
                     className="font-semibold transition-colors"
-                    style={{ color: 'var(--indigo-light)' }}
+                    style={{ color: '#2997ff' }}
                   >
                     Sign in
                   </Link>

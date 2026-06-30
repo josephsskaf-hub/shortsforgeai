@@ -149,7 +149,7 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <div className="px-4 sm:px-6 py-7 pb-20">
       <div className="mb-7">
-        <div className="font-black uppercase tracking-[.18em] mb-2" style={{ fontSize: '0.65rem', color: '#A78BFA' }}>
+        <div className="font-black uppercase tracking-[.18em] mb-2" style={{ fontSize: '0.65rem', color: '#2997ff' }}>
           Animate
         </div>
         <h1 className="font-display font-bold tracking-tight" style={{ fontSize: 'clamp(1.55rem, 4vw, 2rem)', color: 'var(--text)', lineHeight: 1.1 }}>
@@ -189,9 +189,9 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                   onClick={() => setPrompt(p.prompt)}
                   className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
                   style={{
-                    background: prompt === p.prompt ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: prompt === p.prompt ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
-                    color: prompt === p.prompt ? '#A78BFA' : 'var(--muted2)',
+                    background: prompt === p.prompt ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: prompt === p.prompt ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)',
+                    color: prompt === p.prompt ? '#2997ff' : 'var(--muted2)',
                     cursor: busy ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -217,9 +217,9 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                   onClick={() => setDuration(d)}
                   className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
                   style={{
-                    background: duration === d ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: duration === d ? '1px solid rgba(167,139,250,0.5)' : '1px solid var(--border)',
-                    color: duration === d ? '#A78BFA' : 'var(--muted2)',
+                    background: duration === d ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: duration === d ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)',
+                    color: duration === d ? '#2997ff' : 'var(--muted2)',
                     cursor: busy ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -241,12 +241,12 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </button>
             <p className="text-[12px] text-center" style={{ color: 'var(--muted)' }}>
               10 credits per clip ·{' '}
-              <span style={{ color: (credits ?? 0) >= 10 ? '#A78BFA' : '#f87171', fontWeight: 700 }}>
+              <span style={{ color: (credits ?? 0) >= 10 ? '#2997ff' : '#f87171', fontWeight: 700 }}>
                 you have {credits === null ? '—' : credits}
               </span>
               {!isLoggedIn && (
                 <>
-                  {' '}· <Link href="/login?redirect=/animate" style={{ color: '#A78BFA', fontWeight: 700 }}>sign in</Link>
+                  {' '}· <Link href="/login?redirect=/animate" style={{ color: '#2997ff', fontWeight: 700 }}>sign in</Link>
                 </>
               )}
             </p>

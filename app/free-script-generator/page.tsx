@@ -10,7 +10,7 @@ import FreeScriptClient from './FreeScriptClient'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.shortsforgeai.com'),
-  title: 'Free YouTube Short Script Generator (AI, No Signup) — ShortsForgeAI',
+  title: 'Free YouTube Short Script Generator (AI, No Signup) — Kineo',
   description:
     'Generate a viral, hook-driven YouTube Short script free with AI — no signup. Type a topic, get a 45-60s faceless script (hook, facts, payoff) instantly. Then turn it into a finished video in 60s.',
   alternates: { canonical: 'https://www.shortsforgeai.com/free-script-generator' },

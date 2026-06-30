@@ -6,9 +6,9 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — ShortsForgeAI',
+  title: 'Privacy Policy — Kineo',
   description:
-    'How ShortsForgeAI collects, uses, and protects your data. LGPD- and GDPR-aware: full deletion rights and a clear contact for requests.',
+    'How Kineo collects, uses, and protects your data. LGPD- and GDPR-aware: full deletion rights and a clear contact for requests.',
 }
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <main
         style={{
           minHeight: '100vh',
-          background: '#0A0A0B',
+          background: '#000',
           color: '#F5F7FF',
           fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
           padding: '24px 20px 32px',
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
               marginBottom: 24,
               fontSize: '0.8rem',
               fontWeight: 700,
-              color: '#94A3B8',
+              color: '#86868b',
               textDecoration: 'none',
             }}
           >
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
           >
             Privacy Policy
           </h1>
-          <p style={{ color: '#94A3B8', fontSize: 13, margin: 0, marginBottom: 28 }}>
+          <p style={{ color: '#86868b', fontSize: 13, margin: 0, marginBottom: 28 }}>
             Last updated: May 2026
           </p>
 
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
             store about you. Email{' '}
             <a
               href="mailto:support@shortsforgeai.com"
-              style={{ color: '#22D3EE', textDecoration: 'none' }}
+              style={{ color: '#2997ff', textDecoration: 'none' }}
             >
               support@shortsforgeai.com
             </a>{' '}
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
             Privacy questions?{' '}
             <a
               href="mailto:support@shortsforgeai.com"
-              style={{ color: '#22D3EE', textDecoration: 'none' }}
+              style={{ color: '#2997ff', textDecoration: 'none' }}
             >
               support@shortsforgeai.com
             </a>

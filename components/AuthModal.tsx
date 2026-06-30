@@ -138,7 +138,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
         {/* Top accent */}
         <div
           className="absolute top-0 left-0 right-0 h-0.5 pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, #8B5CF6, #22D3EE, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, #2997ff, #2997ff, transparent)' }}
         />
         {/* Glow orb */}
         <div
@@ -169,8 +169,8 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               ⚡
             </div>
             <div>
-              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                ShortsForgeAI
+              <div className="font-black text-sm tracking-tight" style={{ background: 'linear-gradient(135deg, #2997ff, #2997ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Kineo
               </div>
               <div className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>
                 Create AI Shorts with video generation
@@ -204,9 +204,9 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
               {tab === 'signup' && (
                 <div
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold mb-5"
-                  style={{ background: 'rgba(139,92,246,.07)', border: '1px solid rgba(139,92,246,.18)', color: '#a78bfa' }}
+                  style={{ background: 'rgba(41,151,255,.07)', border: '1px solid rgba(41,151,255,.18)', color: '#2997ff' }}
                 >
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#a78bfa', boxShadow: '0 0 6px rgba(167,139,250,.5)' }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#2997ff', boxShadow: '0 0 6px rgba(41,151,255,.5)' }} />
                   Free tier · 1 AI video credit — no card required
                 </div>
               )}
@@ -295,14 +295,14 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                 {emailAlreadyExists && (
                   <div
                     className="rounded-xl px-4 py-3 text-xs"
-                    style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: '#22D3EE' }}
+                    style={{ background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: '#2997ff' }}
                   >
                     <span className="font-bold">Email already registered.</span>{' '}
                     <button
                       type="button"
                       onClick={() => switchTab('login')}
                       className="font-bold underline"
-                      style={{ color: '#22D3EE', background: 'none', border: 'none', cursor: 'pointer' }}
+                      style={{ color: '#2997ff', background: 'none', border: 'none', cursor: 'pointer' }}
                     >
                       Sign in →
                     </button>
@@ -324,7 +324,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   disabled={loading}
                   className="w-full rounded-xl py-3.5 font-black text-sm text-white transition-all mt-1 flex items-center justify-center gap-2"
                   style={{
-                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
+                    background: 'linear-gradient(135deg, #2997ff 0%, #2997ff 55%, #2997ff 100%)',
                     boxShadow: loading ? 'none' : '0 4px 28px rgba(16, 185, 129,.45)',
                     opacity: loading ? 0.7 : 1,
                     cursor: loading ? 'not-allowed' : 'pointer',
