@@ -117,9 +117,9 @@ const KLP_CSS = `
 @media(max-width:780px){.klp .steps{grid-template-columns:1fr}.klp .nav-links{display:none}}
 @media(max-width:520px){.klp .composer{flex-direction:column;align-items:stretch;padding:14px;gap:12px}}
 .klp .hero-center{position:relative;z-index:1;text-align:center;max-width:760px;margin:0 auto}
-.klp .hero-center h1{margin-left:auto;margin-right:auto;max-width:16ch}
+.klp .hero-center h1{margin:0 auto;font-size:clamp(3rem,7.4vw,5.8rem);font-weight:600;line-height:1.03;letter-spacing:-.04em}
 .klp .hero-center .sub{margin-left:auto;margin-right:auto}
-.klp .hero-center .composer{margin:30px auto 0;max-width:640px;min-height:auto;text-align:left}
+.klp .hero-center .composer{margin:48px auto 0;max-width:640px;min-height:auto;text-align:left}
 .klp .hero-center .composer .ci{min-height:104px}
 .klp .hero-center .trust{text-align:center}
 .klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:980px;margin:52px auto 0}
@@ -154,14 +154,11 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="glow" />
         <div className="wrap">
           <div className="hero-center">
-            <p className="eyebrow">AI YouTube Shorts generator</p>
-            <h1 className="gtxt">Type an idea. Get a video.</h1>
-            <p className="sub">No camera, no editing. The AI writes the script, records the voice, finds the footage and adds captions — a ready-to-post 9:16 Short in ~60 seconds.</p>
+            <h1 className="gtxt">Type an idea.<br />Get a video.</h1>
             <form className="composer" action="/generate" method="get">
               <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
               <button className="btn btn-w cbtn" type="submit">Generate — free →</button>
             </form>
-            <p className="trust">First Short <b>free</b> · no credit card · from <b>$11.90/mo</b></p>
           </div>
           <div id="samples" className="hero-gallery">
             <div className="vcard"><AutoplayVideo className="hvid" src="/videos/hero-loop.mp4" poster="/videos/hero-loop.jpg" /><span className="lab">AI · 58s</span><div className="vt">The island too dangerous to visit</div></div>
