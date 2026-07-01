@@ -157,7 +157,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <h1 className="gtxt">Type an idea.<br />Get a video.</h1>
             <form className="composer" action="/generate" method="get">
               <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
-              <button className="btn btn-w cbtn" type="submit">Generate — free →</button>
+              <button className="btn btn-w cbtn" type="submit">Generate →</button>
             </form>
           </div>
           <div id="samples" className="hero-gallery">
