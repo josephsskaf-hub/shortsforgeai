@@ -121,13 +121,13 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
       <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
         <div
           className="rounded-2xl p-8 text-center"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+          style={{ background: '#161618', border: '1px solid #2a2a2d', borderRadius: 20 }}
         >
           <div className="text-5xl mb-3">🔒</div>
-          <h1 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>
+          <h1 className="text-xl font-semibold mb-2" style={{ color: '#f5f5f7' }}>
             Access denied.
           </h1>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>
+          <p className="text-sm" style={{ color: '#86868b' }}>
             This page is only available to staging admins.
           </p>
         </div>
@@ -196,16 +196,25 @@ export default function MetricsClient({ metrics: initialMetrics, viewerEmail, de
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#c4b5fd' }}
+          style={{ fontSize: '0.62rem', color: '#2997ff' }}
         >
           Admin · Staging
         </div>
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="font-black tracking-tight mb-1" style={{ fontSize: '1.6rem', color: 'var(--text)' }}>
+            <h1
+              className="font-semibold tracking-tight mb-1"
+              style={{
+                fontSize: '1.6rem',
+                background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               Conversion Metrics
             </h1>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs" style={{ color: '#86868b' }}>
               Live counts from the staging Supabase project. Signed in as {viewerEmail}.
             </p>
           </div>
@@ -306,7 +315,7 @@ function RefreshIndicator({
   return (
     <div
       className="flex items-center gap-1.5 text-[11px]"
-      style={{ color: 'var(--muted)' }}
+      style={{ color: '#86868b' }}
     >
       {refreshing ? (
         <span
@@ -315,7 +324,7 @@ function RefreshIndicator({
             width: 7,
             height: 7,
             borderRadius: '50%',
-            background: '#22D3EE',
+            background: '#2997ff',
             animation: 'pulse 1s ease-in-out infinite',
           }}
         />
@@ -326,7 +335,7 @@ function RefreshIndicator({
             width: 7,
             height: 7,
             borderRadius: '50%',
-            background: 'rgba(167,139,250,0.7)',
+            background: 'rgba(41,151,255,0.7)',
           }}
         />
       )}
@@ -353,9 +362,9 @@ function AdminNav({ active }: { active: 'metrics' | 'funnel' | 'users' | 'ceo' }
             href={t.href}
             className="text-xs font-bold rounded-lg px-3 py-1.5"
             style={{
-              background: isActive ? 'rgba(5, 150, 105,.18)' : 'rgba(255,255,255,.04)',
-              border: `1px solid ${isActive ? 'rgba(5, 150, 105,.45)' : 'var(--border)'}`,
-              color: isActive ? '#22D3EE' : 'var(--muted2)',
+              background: isActive ? 'rgba(41,151,255,.18)' : 'rgba(255,255,255,.04)',
+              border: `1px solid ${isActive ? 'rgba(41,151,255,.45)' : '#2a2a2d'}`,
+              color: isActive ? '#2997ff' : '#6e6e73',
               textDecoration: 'none',
             }}
           >
@@ -380,13 +389,13 @@ function Section({
     <section className="mb-7">
       <div className="mb-3">
         <h2
-          className="font-black tracking-tight mb-0.5"
-          style={{ fontSize: '0.95rem', color: 'var(--text)' }}
+          className="font-semibold tracking-tight mb-0.5"
+          style={{ fontSize: '0.95rem', color: '#f5f5f7' }}
         >
           {title}
         </h2>
         {subtitle && (
-          <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
+          <p className="text-[11px]" style={{ color: '#86868b' }}>
             {subtitle}
           </p>
         )}
@@ -416,28 +425,29 @@ function MetricCard({ card }: { card: Card }) {
     <div
       className="rounded-xl p-4"
       style={{
-        background: 'rgba(11,17,32,0.85)',
-        border: '1px solid var(--border)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
+        borderRadius: 20,
       }}
     >
       <div
         className="text-[10px] font-black uppercase tracking-widest mb-2"
-        style={{ color: 'var(--muted)' }}
+        style={{ color: '#86868b' }}
       >
         {card.label}
       </div>
       <div
-        className="font-black"
+        className="font-semibold"
         style={{
           fontSize: '1.7rem',
           lineHeight: 1.1,
-          color: isAvailable ? 'var(--text)' : 'var(--muted2)',
+          color: isAvailable ? '#f5f5f7' : '#6e6e73',
         }}
       >
         {isAvailable ? (isString ? (card.value as string) : fmt(card.value as number)) : '—'}
       </div>
       {card.hint && (
-        <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>
+        <p className="text-[11px] mt-1.5" style={{ color: '#86868b' }}>
           {card.hint}
         </p>
       )}

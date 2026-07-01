@@ -7,28 +7,28 @@ const TRENDING = [
     id: 'banks',
     emoji: '🏦',
     niche: 'Money Facts',
-    nicheColor: '#a78bfa',
+    nicheColor: '#2997ff',
     title: 'The Dark Truth About Banks',
     views: '2.3M views',
-    accent: '#f59e0b',
+    accent: '#86868b',
   },
   {
     id: 'brain',
     emoji: '🧠',
     niche: 'Psychology',
-    nicheColor: '#22D3EE',
+    nicheColor: '#2997ff',
     title: 'This Is How Your Brain Lies To You',
     views: '1.8M views',
-    accent: '#ef4444',
+    accent: '#f5f5f7',
   },
   {
     id: 'gov',
     emoji: '👁️',
     niche: 'Conspiracies',
-    nicheColor: '#f87171',
+    nicheColor: '#86868b',
     title: "The Government Can't Hide This Anymore",
     views: '4.1M views',
-    accent: '#dc2626',
+    accent: '#2997ff',
   },
 ]
 
@@ -51,8 +51,8 @@ export default function TrendingSection() {
             gap: 8,
             padding: '5px 14px',
             borderRadius: 999,
-            background: 'rgba(239,68,68,.08)',
-            border: '1px solid rgba(239,68,68,.22)',
+            background: 'rgba(41,151,255,.08)',
+            border: '1px solid rgba(41,151,255,.22)',
             marginBottom: 12,
           }}
         >
@@ -61,28 +61,31 @@ export default function TrendingSection() {
               width: 7,
               height: 7,
               borderRadius: '50%',
-              background: '#ef4444',
-              boxShadow: '0 0 8px rgba(239,68,68,.7)',
+              background: '#2997ff',
+              boxShadow: '0 0 8px rgba(41,151,255,.7)',
               display: 'inline-block',
               animation: 'pulse-trend 1.4s ease-in-out infinite',
             }}
           />
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f87171', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.04em' }}>
             🔥 TRENDING THIS WEEK
           </span>
         </div>
         <h2
           style={{
             fontSize: 'clamp(1.4rem, 3.6vw, 1.9rem)',
-            fontWeight: 900,
-            letterSpacing: '-0.02em',
-            color: 'var(--text)',
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+            background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: 0,
           }}
         >
-          What's <span style={{ background: 'linear-gradient(135deg, #f87171, #fb923c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>going viral</span> right now
+          What's <span style={{ color: '#2997ff', WebkitTextFillColor: '#2997ff' }}>going viral</span> right now
         </h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 8, fontWeight: 500 }}>
+        <p style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 8, fontWeight: 500 }}>
           Topics blowing up across faceless YouTube — generate similar Shorts in seconds.
         </p>
       </div>
@@ -96,8 +99,8 @@ export default function TrendingSection() {
               position: 'relative',
               borderRadius: 18,
               padding: '20px 20px 18px',
-              background: 'linear-gradient(160deg, rgba(20,20,38,.95), rgba(13,13,28,.95))',
-              border: '1px solid rgba(255,255,255,.07)',
+              background: '#161618',
+              border: '1px solid #2a2a2d',
               overflow: 'hidden',
               transition: 'transform .25s ease, border-color .25s ease, box-shadow .25s ease',
             }}
@@ -119,8 +122,8 @@ export default function TrendingSection() {
                     gap: 6,
                     padding: '4px 10px',
                     borderRadius: 999,
-                    background: 'rgba(255,255,255,.04)',
-                    border: '1px solid rgba(255,255,255,.08)',
+                    background: '#1d1d1f',
+                    border: '1px solid #2a2a2d',
                     fontSize: '0.62rem',
                     fontWeight: 800,
                     color: item.nicheColor,
@@ -136,11 +139,11 @@ export default function TrendingSection() {
                     gap: 5,
                     padding: '4px 10px',
                     borderRadius: 999,
-                    background: 'linear-gradient(135deg, rgba(239,68,68,.15), rgba(249,115,22,.12))',
-                    border: '1px solid rgba(239,68,68,.3)',
+                    background: 'rgba(41,151,255,.1)',
+                    border: '1px solid rgba(41,151,255,.3)',
                     fontSize: '0.62rem',
                     fontWeight: 900,
-                    color: '#fca5a5',
+                    color: '#2997ff',
                     letterSpacing: '0.02em',
                   }}
                 >
@@ -168,8 +171,8 @@ export default function TrendingSection() {
                 <h3
                   style={{
                     fontSize: '1rem',
-                    fontWeight: 900,
-                    color: 'var(--text)',
+                    fontWeight: 700,
+                    color: '#f5f5f7',
                     lineHeight: 1.3,
                     letterSpacing: '-0.01em',
                     margin: 0,
@@ -187,20 +190,22 @@ export default function TrendingSection() {
                   justifyContent: 'center',
                   gap: 6,
                   padding: '11px 16px',
-                  borderRadius: 11,
+                  borderRadius: 980,
                   fontSize: '0.78rem',
-                  fontWeight: 800,
-                  color: '#fff',
+                  fontWeight: 600,
+                  color: '#000',
                   textDecoration: 'none',
-                  background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
-                  boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
-                  transition: 'transform .2s ease, box-shadow .2s ease',
+                  background: '#f5f5f7',
+                  boxShadow: 'none',
+                  transition: 'transform .18s ease, background .18s ease',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 26px rgba(16, 185, 129,.55)'
+                  ;(e.currentTarget as HTMLElement).style.background = '#fff'
+                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(16, 185, 129,.35)'
+                  ;(e.currentTarget as HTMLElement).style.background = '#f5f5f7'
+                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
                 }}
               >
                 Generate Similar →
@@ -218,8 +223,8 @@ export default function TrendingSection() {
         }
         .trending-card:hover {
           transform: translateY(-3px) scale(1.02);
-          border-color: rgba(16, 185, 129,.35) !important;
-          box-shadow: 0 14px 44px rgba(16, 185, 129,.18);
+          border-color: #3a3a3d !important;
+          box-shadow: 0 14px 44px rgba(0,0,0,.35);
         }
         @media (max-width: 900px) { .trending-grid { grid-template-columns: 1fr; } }
         @keyframes pulse-trend { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(0.85)} }

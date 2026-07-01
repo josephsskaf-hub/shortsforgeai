@@ -87,17 +87,17 @@ export default function ExamplesClient() {
       <header className="mb-7">
         <div
           className="font-black uppercase tracking-[.16em] mb-1"
-          style={{ fontSize: '0.68rem', color: '#8B5CF6' }}
+          style={{ fontSize: '0.68rem', color: '#2997ff' }}
         >
           Examples
         </div>
         <h1
           className="font-black tracking-tight mb-1"
-          style={{ fontSize: '1.6rem', color: 'var(--text)' }}
+          style={{ fontSize: '1.6rem', color: '#f5f5f7' }}
         >
           Pick a viral style to remix
         </h1>
-        <p className="text-sm" style={{ color: 'var(--muted)' }}>
+        <p className="text-sm" style={{ color: '#86868b' }}>
           Click any card to drop the sample prompt straight into Generate.
         </p>
       </header>
@@ -120,8 +120,8 @@ function ExampleCard({ example }: { example: Example }) {
     <div
       className="rounded-2xl p-5 flex flex-col"
       style={{
-        background: 'rgba(11,17,32,0.85)',
-        border: '1px solid var(--border)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
         transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
       }}
     >
@@ -132,9 +132,8 @@ function ExampleCard({ example }: { example: Example }) {
             width: 40,
             height: 40,
             borderRadius: 12,
-            background:
-              'linear-gradient(135deg, rgba(16, 185, 129,.18), rgba(5, 150, 105,.12))',
-            border: '1px solid rgba(16, 185, 129,.28)',
+            background: 'rgba(41,151,255,.14)',
+            border: '1px solid rgba(41,151,255,.28)',
             fontSize: '1.3rem',
           }}
         >
@@ -143,14 +142,14 @@ function ExampleCard({ example }: { example: Example }) {
         <div className="flex-1 min-w-0">
           <h2
             className="font-black tracking-tight"
-            style={{ fontSize: '1.05rem', color: 'var(--text)', lineHeight: 1.2 }}
+            style={{ fontSize: '1.05rem', color: '#f5f5f7', lineHeight: 1.2 }}
           >
             {example.name}
           </h2>
         </div>
       </div>
 
-      <p className="text-sm mb-3" style={{ color: 'var(--muted2)', lineHeight: 1.55 }}>
+      <p className="text-sm mb-3" style={{ color: '#86868b', lineHeight: 1.55 }}>
         {example.description}
       </p>
 
@@ -158,8 +157,8 @@ function ExampleCard({ example }: { example: Example }) {
         className="rounded-xl px-3 py-2.5 mb-3 whitespace-pre-wrap"
         style={{
           background: 'rgba(0,0,0,.35)',
-          border: '1px solid var(--border)',
-          color: 'var(--text2)',
+          border: '1px solid #2a2a2d',
+          color: '#f5f5f7',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontSize: '0.75rem',
           lineHeight: 1.55,
@@ -177,11 +176,10 @@ function ExampleCard({ example }: { example: Example }) {
 
       <Link
         href={href}
-        className="rounded-xl py-2.5 text-sm font-black text-center mt-auto"
+        className="rounded-[980px] py-2.5 text-sm font-black text-center mt-auto transition-all"
         style={{
-          background: '#8B5CF6',
-          color: '#FFFFFF',
-          boxShadow: '0 4px 18px rgba(16, 185, 129,.3)',
+          background: '#f5f5f7',
+          color: '#000',
           textDecoration: 'none',
         }}
       >
@@ -196,9 +194,9 @@ function Badge({ children }: { children: React.ReactNode }) {
     <span
       className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
       style={{
-        background: 'rgba(16, 185, 129,.10)',
-        border: '1px solid rgba(16, 185, 129,.32)',
-        color: '#8B5CF6',
+        background: 'rgba(41,151,255,.10)',
+        border: '1px solid rgba(41,151,255,.32)',
+        color: '#2997ff',
       }}
     >
       {children}

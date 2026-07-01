@@ -7,7 +7,7 @@ const STAGES = [
     icon: '🎯',
     name: 'HOOK',
     desc: 'Stop the scroll. Make them stay.',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
   {
     id: 'curiosity',
@@ -15,7 +15,7 @@ const STAGES = [
     icon: '🤔',
     name: 'CURIOSITY',
     desc: 'Build intrigue. Keep them watching.',
-    accent: '#a78bfa',
+    accent: '#2997ff',
   },
   {
     id: 'value',
@@ -23,7 +23,7 @@ const STAGES = [
     icon: '📖',
     name: 'VALUE',
     desc: 'Deliver the info. Earn the trust.',
-    accent: '#f59e0b',
+    accent: '#86868b',
   },
   {
     id: 'escalation',
@@ -31,15 +31,15 @@ const STAGES = [
     icon: '🔥',
     name: 'ESCALATION',
     desc: 'Raise the stakes. Peak tension.',
-    accent: '#ef4444',
+    accent: '#f5f5f7',
   },
   {
     id: 'cta',
     range: '32–35s',
     icon: '📣',
     name: 'CTA',
-    desc: 'Channel plug + shortsforgeai.com',
-    accent: '#22D3EE',
+    desc: 'Channel plug + usekineo.com',
+    accent: '#2997ff',
   },
 ]
 
@@ -59,9 +59,9 @@ export default function RetentionMap() {
           position: 'relative',
           borderRadius: 24,
           padding: '44px 28px 48px',
-          background: 'linear-gradient(135deg, rgba(16, 185, 129,.08), rgba(34, 211, 238,.05) 60%, rgba(245,158,11,.06))',
-          border: '1px solid rgba(16, 185, 129,.18)',
-          boxShadow: '0 0 80px rgba(16, 185, 129,.10)',
+          background: '#161618',
+          border: '1px solid #2a2a2d',
+          boxShadow: '0 0 80px rgba(41,151,255,.08)',
           overflow: 'hidden',
         }}
       >
@@ -72,7 +72,7 @@ export default function RetentionMap() {
             right: -80,
             width: 380,
             height: 380,
-            background: 'radial-gradient(ellipse, rgba(34, 211, 238,.18) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(41,151,255,.14) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -85,26 +85,29 @@ export default function RetentionMap() {
               gap: 8,
               padding: '5px 14px',
               borderRadius: 999,
-              background: 'rgba(167,139,250,.1)',
-              border: '1px solid rgba(167,139,250,.25)',
+              background: 'rgba(41,151,255,.1)',
+              border: '1px solid rgba(41,151,255,.25)',
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.04em' }}>
               📊 RETENTION MAP
             </span>
           </div>
           <h2
             style={{
               fontSize: 'clamp(1.55rem, 4vw, 2.15rem)',
-              fontWeight: 900,
-              letterSpacing: '-0.02em',
-              color: 'var(--text)',
+              fontWeight: 600,
+              letterSpacing: '-0.025em',
+              background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
               margin: 0,
             }}
           >
             Script Built For{' '}
-            <span style={{ background: 'linear-gradient(135deg, #a78bfa, #A78BFA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <span style={{ color: '#2997ff', WebkitTextFillColor: '#2997ff' }}>
               Retention
             </span>
             , Not Just Views
@@ -112,7 +115,7 @@ export default function RetentionMap() {
           <p
             style={{
               fontSize: '0.95rem',
-              color: 'var(--muted2)',
+              color: '#86868b',
               marginTop: 12,
               maxWidth: 600,
               marginLeft: 'auto',
@@ -133,8 +136,8 @@ export default function RetentionMap() {
                   position: 'relative',
                   padding: '18px 16px 18px',
                   borderRadius: 14,
-                  background: 'linear-gradient(160deg, rgba(14,14,28,.95), rgba(8,8,18,.95))',
-                  border: '1px solid rgba(255,255,255,.06)',
+                  background: '#1d1d1f',
+                  border: '1px solid #2a2a2d',
                   borderTop: `3px solid ${s.accent}`,
                   overflow: 'hidden',
                   transition: 'transform .25s ease, box-shadow .25s ease',
@@ -183,7 +186,7 @@ export default function RetentionMap() {
                     style={{
                       fontSize: '0.86rem',
                       fontWeight: 900,
-                      color: 'var(--text)',
+                      color: '#f5f5f7',
                       letterSpacing: '0.04em',
                       marginBottom: 6,
                     }}
@@ -193,7 +196,7 @@ export default function RetentionMap() {
                   <p
                     style={{
                       fontSize: '0.74rem',
-                      color: 'var(--muted2)',
+                      color: '#86868b',
                       lineHeight: 1.45,
                       margin: 0,
                     }}

@@ -26,28 +26,28 @@ const TRUST_SIGNALS: TrustSignal[] = [
     icon: '🎬',
     title: 'Your first Short is free',
     sub: 'No credit card to start',
-    accent: '#22D3EE',
+    accent: '#2997ff',
   },
   {
     id: 'founder',
     icon: '🔑',
     title: 'Founding offer — only 10 seats',
     sub: '50% off, locked for life',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
   {
     id: 'indie',
     icon: '⚡',
     title: 'Built by an indie founder',
     sub: 'Shipping improvements daily',
-    accent: '#34D399',
+    accent: '#f5f5f7',
   },
   {
     id: 'spec',
     icon: '✅',
     title: 'Ready to post, per topic',
     sub: '9:16 · ~60s · English · AI voice + B-roll',
-    accent: '#FBBF24',
+    accent: '#86868b',
   },
 ]
 
@@ -58,7 +58,7 @@ function SignalCard({ signal, visible, index }: { signal: TrustSignal; visible: 
         position: 'relative',
         padding: '24px 20px',
         borderRadius: 18,
-        background: 'linear-gradient(160deg, rgba(20,20,38,.85), rgba(13,13,28,.9))',
+        background: '#161618',
         border: `1px solid ${signal.accent}2e`,
         textAlign: 'left',
         overflow: 'hidden',
@@ -91,7 +91,7 @@ function SignalCard({ signal, visible, index }: { signal: TrustSignal; visible: 
           style={{
             fontSize: '0.98rem',
             fontWeight: 800,
-            color: 'var(--text)',
+            color: '#f5f5f7',
             letterSpacing: '-0.01em',
             lineHeight: 1.25,
             marginBottom: 6,
@@ -103,7 +103,7 @@ function SignalCard({ signal, visible, index }: { signal: TrustSignal; visible: 
           style={{
             fontSize: '0.78rem',
             fontWeight: 600,
-            color: 'var(--muted2)',
+            color: '#86868b',
             letterSpacing: '0.005em',
             lineHeight: 1.4,
           }}
@@ -154,7 +154,7 @@ export default function SocialProof() {
             fontSize: '0.6rem',
             fontWeight: 800,
             letterSpacing: '0.14em',
-            color: 'var(--indigo-light)',
+            color: '#2997ff',
             textTransform: 'uppercase',
             marginBottom: 10,
           }}
@@ -164,9 +164,12 @@ export default function SocialProof() {
         <h2
           style={{
             fontSize: 'clamp(1.4rem, 3.6vw, 2rem)',
-            fontWeight: 900,
-            letterSpacing: '-0.02em',
-            color: 'var(--text)',
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+            background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: 0,
           }}
         >
@@ -190,8 +193,8 @@ export default function SocialProof() {
         }
         .stat-card:hover {
           transform: translateY(-3px) scale(1.02);
-          border-color: rgba(16, 185, 129,.4) !important;
-          box-shadow: 0 14px 38px rgba(16, 185, 129,.18);
+          border-color: #3a3a3d !important;
+          box-shadow: 0 14px 38px rgba(0,0,0,.35);
         }
         @media (max-width: 900px) { .social-proof-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 480px) { .social-proof-grid { grid-template-columns: 1fr; } }

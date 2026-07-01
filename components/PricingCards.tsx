@@ -78,7 +78,7 @@ export default function PricingCards() {
       <div className="text-center mb-5">
         <div
           className="font-black uppercase tracking-widest mb-1"
-          style={{ fontSize: '0.62rem', color: '#C4B5FD' }}
+          style={{ fontSize: '0.62rem', color: 'var(--blue, #2997ff)' }}
         >
           Pricing
         </div>
@@ -95,9 +95,9 @@ export default function PricingCards() {
           className="rounded-xl px-4 py-3 text-sm mb-4 mx-auto"
           style={{
             maxWidth: 720,
-            background: 'rgba(239,68,68,.07)',
-            border: '1px solid rgba(239,68,68,.25)',
-            color: '#f87171',
+            background: 'rgba(245,245,247,.05)',
+            border: '1px solid #3a3a3d',
+            color: '#f5f5f7',
           }}
         >
           {error}
@@ -110,12 +110,12 @@ export default function PricingCards() {
           className="rounded-xl px-4 py-4 text-sm mb-4 mx-auto text-center"
           style={{
             maxWidth: 720,
-            background: 'rgba(167,139,250,.07)',
-            border: '1px solid rgba(167,139,250,.25)',
+            background: 'rgba(41,151,255,.06)',
+            border: '1px solid rgba(41,151,255,.25)',
           }}
         >
-          <p style={{ color: '#a78bfa', fontWeight: 800 }}>✅ You already have an active subscription!</p>
-          <p style={{ color: '#94a3b8', marginTop: 4, fontSize: '0.75rem' }}>
+          <p style={{ color: 'var(--blue, #2997ff)', fontWeight: 800 }}>✅ You already have an active subscription!</p>
+          <p style={{ color: '#86868b', marginTop: 4, fontSize: '0.75rem' }}>
             Your plan is active. Credits may still be syncing.
           </p>
           <a
@@ -123,9 +123,9 @@ export default function PricingCards() {
             style={{
               display: 'inline-block',
               marginTop: 10,
-              background: '#a78bfa',
-              color: '#0A0A0B',
-              borderRadius: 8,
+              background: '#f5f5f7',
+              color: '#000',
+              borderRadius: 980,
               padding: '6px 16px',
               fontWeight: 800,
               fontSize: '0.8rem',
@@ -240,19 +240,19 @@ function PlanCard({
   const isSelected = !!selected
 
   function background(): string {
-    if (isSelected) return '#0D1830'
-    if (highlight) return 'linear-gradient(135deg, rgba(5,150,105,.10), rgba(4,120,87,.06))'
-    return 'rgba(11,17,32,0.85)'
+    if (isSelected) return '#1d1d1f'
+    if (highlight) return '#1d1d1f'
+    return '#161618'
   }
   function border(): string {
-    if (isSelected) return '2px solid #8B5CF6'
-    if (highlight) return '2px solid rgba(5,150,105,.45)'
-    return '1px solid var(--border)'
+    if (isSelected) return '2px solid #2997ff'
+    if (highlight) return '2px solid #48484a'
+    return '1px solid #2a2a2d'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(139,92,246,0.3)'
-    if (highlight) return '0 0 40px rgba(5,150,105,.18)'
-    return '0 0 20px rgba(5,150,105,.04)'
+    if (isSelected) return '0 0 28px rgba(41,151,255,0.18)'
+    if (highlight) return 'none'
+    return 'none'
   }
 
   return (
@@ -283,9 +283,9 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (!isPaid || isSelected) return
-        e.currentTarget.style.borderColor = '#8B5CF6'
-        e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
-        e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
+        e.currentTarget.style.borderColor = '#48484a'
+        e.currentTarget.style.background = '#1d1d1f'
+        e.currentTarget.style.boxShadow = 'none'
       }}
       onMouseLeave={(e) => {
         if (!isPaid || isSelected) return
@@ -297,7 +297,7 @@ function PlanCard({
       {badge && !isSelected && (
         <div
           className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-black"
-          style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff' }}
+          style={{ background: '#2997ff', color: '#fff' }}
         >
           {badge}
         </div>
@@ -307,9 +307,9 @@ function PlanCard({
           className="absolute top-4 right-4 flex items-center justify-center rounded-full"
           style={{
             width: 26, height: 26,
-            background: '#22C55E',
+            background: '#2997ff',
             color: '#FFFFFF',
-            boxShadow: '0 4px 14px rgba(34,197,94,.45)',
+            boxShadow: 'none',
           }}
           aria-label="Selected"
         >
@@ -322,7 +322,7 @@ function PlanCard({
       <div className="mb-4">
         <div
           className="text-xs font-black uppercase tracking-widest mb-2"
-          style={{ color: highlight ? '#C4B5FD' : 'var(--muted)' }}
+          style={{ color: highlight ? 'var(--blue, #2997ff)' : 'var(--muted)' }}
         >
           {name}
         </div>
@@ -335,7 +335,7 @@ function PlanCard({
           </span>
         </div>
         {renewNote && (
-          <p className="text-xs mb-1" style={{ color: '#C4B5FD', fontWeight: 700 }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--blue, #2997ff)', fontWeight: 700 }}>
             {renewNote}
           </p>
         )}
@@ -347,7 +347,7 @@ function PlanCard({
       <div className="flex flex-col gap-2 mb-5 flex-1">
         {features.map((f) => (
           <div key={f} className="flex items-start gap-2 text-xs">
-            <span style={{ color: '#a78bfa', fontSize: '0.75rem', marginTop: 2 }}>✓</span>
+            <span style={{ color: 'var(--blue, #2997ff)', fontSize: '0.75rem', marginTop: 2 }}>✓</span>
             <span style={{ color: 'var(--text2)' }}>{f}</span>
           </div>
         ))}
@@ -362,14 +362,11 @@ function PlanCard({
           disabled={cta.loading}
           // Push #052 — bump mobile tap-target above the 44px minimum
           // (py-3.5 → ~46px tall) without changing desktop density.
-          className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black text-white"
+          className="w-full rounded-xl py-3.5 sm:py-3 text-sm font-black"
           style={{
-            background: isSelected
-              ? '#8B5CF6'
-              : 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-            boxShadow: isSelected
-              ? '0 4px 22px rgba(16, 185, 129,.35)'
-              : '0 4px 18px rgba(5,150,105,.28)',
+            background: '#f5f5f7',
+            color: '#000',
+            boxShadow: 'none',
             border: 'none',
             cursor: cta.loading ? 'wait' : 'pointer',
             opacity: cta.loading ? 0.7 : 1,

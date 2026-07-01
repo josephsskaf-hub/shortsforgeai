@@ -112,8 +112,8 @@ export default function EnablePushBanner() {
         gap: 12,
         padding: '12px 14px',
         borderRadius: 16,
-        background: 'rgba(11,17,32,0.97)',
-        border: '1px solid rgba(167,139,250,0.35)',
+        background: 'rgba(22,22,24,0.97)',
+        border: '1px solid #2a2a2d',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         backdropFilter: 'blur(10px)',
         maxWidth: 480,
@@ -125,7 +125,7 @@ export default function EnablePushBanner() {
           width: 40,
           height: 40,
           borderRadius: 11,
-          background: 'linear-gradient(135deg,#7C3AED,#a78bfa)',
+          background: '#2997ff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -137,10 +137,10 @@ export default function EnablePushBanner() {
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, color: '#e2e8f0', lineHeight: 1.3 }}>
+        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, color: '#f5f5f7', lineHeight: 1.3 }}>
           Know when your video is ready
         </p>
-        <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.4 }}>
+        <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#86868b', lineHeight: 1.4 }}>
           Renders take a few minutes — we&apos;ll ping you the second it&apos;s done
         </p>
       </div>
@@ -152,7 +152,7 @@ export default function EnablePushBanner() {
           padding: '9px 16px',
           borderRadius: 11,
           border: 'none',
-          background: 'linear-gradient(135deg,#7C3AED,#a78bfa)',
+          background: '#2997ff',
           color: '#fff',
           fontSize: '0.75rem',
           fontWeight: 900,
@@ -172,7 +172,7 @@ export default function EnablePushBanner() {
           borderRadius: 8,
           border: 'none',
           background: 'rgba(255,255,255,0.06)',
-          color: '#64748b',
+          color: '#86868b',
           fontSize: '0.8rem',
           fontWeight: 700,
           cursor: 'pointer',

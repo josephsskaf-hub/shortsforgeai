@@ -23,17 +23,17 @@ interface Affiliate {
   owed: number
 }
 
-const CYAN = '#22D3EE'
-const TEXT = '#F1F5F9'
-const MUTED = '#94A3B8'
-const GREEN = '#a78bfa'
-const CARD = '#121214'
-const BORDER = '1px solid rgba(255,255,255,0.08)'
-const PAGE_BG = '#0A0A0B'
+const BLUE = '#2997ff'
+const TEXT = '#f5f5f7'
+const MUTED = '#86868b'
+const GREEN = '#2997ff'
+const CARD = '#161618'
+const BORDER = '1px solid #2a2a2d'
+const PAGE_BG = '#000'
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-  pending: { bg: 'rgba(251,191,36,0.14)', color: '#fbbf24' },
-  active: { bg: 'rgba(167,139,250,0.14)', color: GREEN },
+  pending: { bg: 'rgba(245,245,247,0.12)', color: '#f5f5f7' },
+  active: { bg: 'rgba(41,151,255,0.14)', color: GREEN },
   suspended: { bg: 'rgba(239,68,68,0.14)', color: '#ef4444' },
 }
 
@@ -127,9 +127,9 @@ export default function AdminAffiliatesPage() {
     return (
       <div style={{ background: PAGE_BG, minHeight: '100vh' }}>
         <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <div className="rounded-2xl p-10" style={{ background: CARD, border: BORDER }}>
+          <div className="rounded-2xl p-10" style={{ background: CARD, border: BORDER, borderRadius: 20 }}>
             <div className="text-4xl mb-3">🔒</div>
-            <h1 className="text-xl font-black" style={{ color: TEXT }}>Not authorized</h1>
+            <h1 className="text-xl font-semibold" style={{ color: TEXT }}>Not authorized</h1>
             <p className="mt-2 text-sm" style={{ color: MUTED }}>Admin only.</p>
           </div>
         </div>
@@ -143,10 +143,19 @@ export default function AdminAffiliatesPage() {
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[.16em]" style={{ color: CYAN }}>
+            <div className="text-[11px] font-extrabold uppercase tracking-[.16em]" style={{ color: BLUE }}>
               Admin
             </div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: TEXT }}>
+            <h1
+              className="text-2xl font-semibold tracking-tight"
+              style={{
+                color: TEXT,
+                background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               Affiliates
             </h1>
             <p className="mt-1 text-xs" style={{ color: MUTED }}>
@@ -157,7 +166,7 @@ export default function AdminAffiliatesPage() {
             <a
               href="/api/admin/affiliates/export"
               className="rounded-lg px-2.5 py-1.5"
-              style={{ background: 'rgba(34,211,238,.12)', color: CYAN, border: '1px solid rgba(34,211,238,.3)' }}
+              style={{ background: 'rgba(41,151,255,.12)', color: BLUE, border: '1px solid rgba(41,151,255,.3)' }}
             >
               Export commissions CSV
             </a>
@@ -172,9 +181,9 @@ export default function AdminAffiliatesPage() {
         </div>
 
         {loading && !affiliates ? (
-          <div className="rounded-2xl" style={{ background: CARD, border: BORDER, height: 200 }} />
+          <div className="rounded-2xl" style={{ background: CARD, border: BORDER, height: 200, borderRadius: 20 }} />
         ) : (
-          <div className="rounded-2xl overflow-x-auto" style={{ background: CARD, border: BORDER }}>
+          <div className="rounded-2xl overflow-x-auto" style={{ background: CARD, border: BORDER, borderRadius: 20 }}>
             <table className="w-full text-left text-xs" style={{ minWidth: 920 }}>
               <thead>
                 <tr style={{ color: MUTED }}>
@@ -203,7 +212,7 @@ export default function AdminAffiliatesPage() {
                       </td>
                       {/* Code */}
                       <td className="px-3 py-3">
-                        <span className="font-black px-2 py-0.5 rounded" style={{ background: 'rgba(34,211,238,.12)', color: CYAN }}>
+                        <span className="font-black px-2 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.12)', color: BLUE }}>
                           {a.code}
                         </span>
                       </td>
@@ -217,14 +226,14 @@ export default function AdminAffiliatesPage() {
                             value={rateDraft[a.id] ?? ''}
                             onChange={(e) => setRateDraft((d) => ({ ...d, [a.id]: e.target.value }))}
                             className="w-14 rounded-md px-2 py-1 text-xs"
-                            style={{ background: 'rgba(13,13,28,.85)', border: BORDER, color: TEXT, outline: 'none' }}
+                            style={{ background: '#1d1d1f', border: BORDER, color: TEXT, outline: 'none' }}
                           />
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => saveRate(a.id)}
                             className="rounded-md px-2 py-1 text-[11px] font-bold"
-                            style={{ background: 'rgba(34,211,238,.12)', color: CYAN, border: '1px solid rgba(34,211,238,.3)', cursor: busy ? 'default' : 'pointer' }}
+                            style={{ background: 'rgba(41,151,255,.12)', color: BLUE, border: '1px solid rgba(41,151,255,.3)', cursor: busy ? 'default' : 'pointer' }}
                           >
                             Save
                           </button>
@@ -235,7 +244,7 @@ export default function AdminAffiliatesPage() {
                       <td className="px-3 py-3" style={{ color: MUTED }}>{a.signups.toLocaleString('en-US')}</td>
                       <td className="px-3 py-3" style={{ color: a.paid > 0 ? GREEN : MUTED }}>{a.paid.toLocaleString('en-US')}</td>
                       {/* Owed */}
-                      <td className="px-3 py-3 font-black" style={{ color: a.owed > 0 ? '#fbbf24' : MUTED }}>{dollars(a.owed)}</td>
+                      <td className="px-3 py-3 font-black" style={{ color: a.owed > 0 ? TEXT : MUTED }}>{dollars(a.owed)}</td>
                       {/* Coupon editor */}
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1">
@@ -245,7 +254,7 @@ export default function AdminAffiliatesPage() {
                             placeholder="—"
                             onChange={(e) => setCouponDraft((d) => ({ ...d, [a.id]: e.target.value }))}
                             className="w-24 rounded-md px-2 py-1 text-xs"
-                            style={{ background: 'rgba(13,13,28,.85)', border: BORDER, color: TEXT, outline: 'none' }}
+                            style={{ background: '#1d1d1f', border: BORDER, color: TEXT, outline: 'none' }}
                           />
                           <button
                             type="button"
@@ -267,7 +276,7 @@ export default function AdminAffiliatesPage() {
                               disabled={busy}
                               onClick={() => post(a.id, { action: 'approve' })}
                               className="rounded-md px-2.5 py-1 text-[11px] font-black"
-                              style={{ background: 'rgba(167,139,250,.14)', color: GREEN, border: '1px solid rgba(167,139,250,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ background: 'rgba(41,151,255,.14)', color: GREEN, border: '1px solid rgba(41,151,255,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
                             >
                               Approve
                             </button>
@@ -278,7 +287,7 @@ export default function AdminAffiliatesPage() {
                               disabled={busy}
                               onClick={() => post(a.id, { action: 'activate' })}
                               className="rounded-md px-2.5 py-1 text-[11px] font-black"
-                              style={{ background: 'rgba(167,139,250,.14)', color: GREEN, border: '1px solid rgba(167,139,250,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ background: 'rgba(41,151,255,.14)', color: GREEN, border: '1px solid rgba(41,151,255,.35)', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
                             >
                               Activate
                             </button>

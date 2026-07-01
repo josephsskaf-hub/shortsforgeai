@@ -8,28 +8,28 @@ const HOOKS = [
     icon: '🎯',
     name: 'The Shocking Stat',
     example: '"99% of people don\'t know this about [TOPIC]"',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
   {
     id: 'question',
     icon: '❓',
     name: 'The Question Hook',
     example: '"What would happen if [TOPIC]?"',
-    accent: '#a78bfa',
+    accent: '#2997ff',
   },
   {
     id: 'claim',
     icon: '🔥',
     name: 'The Bold Claim',
     example: '"This is the most [TOPIC] thing ever discovered"',
-    accent: '#f59e0b',
+    accent: '#86868b',
   },
   {
     id: 'fear',
     icon: '😱',
     name: 'The Fear Trigger',
     example: '"Stop what you\'re doing. [TOPIC] is more dangerous than you think"',
-    accent: '#ef4444',
+    accent: '#f5f5f7',
   },
 ]
 
@@ -52,33 +52,36 @@ export default function ViralHookEngine() {
             gap: 8,
             padding: '5px 14px',
             borderRadius: 999,
-            background: 'rgba(16, 185, 129,.1)',
-            border: '1px solid rgba(16, 185, 129,.25)',
+            background: 'rgba(41,151,255,.1)',
+            border: '1px solid rgba(41,151,255,.25)',
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#A78BFA', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.04em' }}>
             ⚡ HOOK ENGINE
           </span>
         </div>
         <h2
           style={{
             fontSize: 'clamp(1.6rem, 4vw, 2.2rem)',
-            fontWeight: 900,
-            letterSpacing: '-0.02em',
-            color: 'var(--text)',
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+            background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: 0,
           }}
         >
           ⚡ Viral{' '}
-          <span style={{ background: 'linear-gradient(135deg, #A78BFA, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ color: '#2997ff', WebkitTextFillColor: '#2997ff' }}>
             Hook Engine
           </span>
         </h2>
         <p
           style={{
             fontSize: '0.95rem',
-            color: 'var(--muted2)',
+            color: '#86868b',
             marginTop: 12,
             maxWidth: 580,
             marginLeft: 'auto',
@@ -99,8 +102,8 @@ export default function ViralHookEngine() {
               position: 'relative',
               padding: '20px 20px 18px 22px',
               borderRadius: 16,
-              background: 'linear-gradient(160deg, rgba(18,18,34,.92), rgba(11,11,24,.92))',
-              border: '1px solid rgba(255,255,255,.07)',
+              background: '#161618',
+              border: '1px solid #2a2a2d',
               borderLeft: `3px solid ${h.accent}`,
               overflow: 'hidden',
               transition: 'transform .25s ease, border-color .25s ease, box-shadow .25s ease',
@@ -138,8 +141,8 @@ export default function ViralHookEngine() {
                 <h3
                   style={{
                     fontSize: '0.92rem',
-                    fontWeight: 900,
-                    color: 'var(--text)',
+                    fontWeight: 700,
+                    color: '#f5f5f7',
                     margin: 0,
                     letterSpacing: '-0.01em',
                   }}
@@ -150,7 +153,7 @@ export default function ViralHookEngine() {
               <p
                 style={{
                   fontSize: '0.82rem',
-                  color: 'var(--muted2)',
+                  color: '#86868b',
                   fontStyle: 'italic',
                   lineHeight: 1.55,
                   margin: 0,
@@ -174,22 +177,22 @@ export default function ViralHookEngine() {
             alignItems: 'center',
             gap: 8,
             padding: '14px 32px',
-            borderRadius: 14,
+            borderRadius: 980,
             fontSize: '0.92rem',
-            fontWeight: 900,
-            color: '#fff',
+            fontWeight: 600,
+            color: '#000',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
-            boxShadow: '0 6px 28px rgba(16, 185, 129,.45)',
-            transition: 'transform .2s ease, box-shadow .2s ease',
+            background: '#f5f5f7',
+            boxShadow: 'none',
+            transition: 'transform .18s ease, background .18s ease',
           }}
           onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 10px 36px rgba(16, 185, 129,.6)'
+            ;(e.currentTarget as HTMLElement).style.background = '#fff'
+            ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'
           }}
           onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 28px rgba(16, 185, 129,.45)'
+            ;(e.currentTarget as HTMLElement).style.background = '#f5f5f7'
+            ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
           }}
         >
           Generate Hooks For Your Niche →
@@ -206,7 +209,7 @@ export default function ViralHookEngine() {
         }
         .hook-card:hover {
           transform: translateY(-3px);
-          border-color: rgba(255,255,255,.18) !important;
+          border-color: #3a3a3d !important;
           box-shadow: 0 14px 38px rgba(0,0,0,.4);
         }
         @media (max-width: 720px) { .hook-grid { grid-template-columns: 1fr; } }

@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 // This empty layout is intentional — it documents the isolation and
 // guards against any future top-level wrapper being added globally.
 export const metadata: Metadata = {
-  title: 'ShortsForgeAI — The Smart AI Tool That Turns Any Idea Into a Viral Short',
+  title: 'Kineo — The Smart AI Tool That Turns Any Idea Into a Viral Short',
   description:
     'AI writes the script, finds footage, adds captions & music. Ready in 60 seconds. 30 free credits on signup, no credit card.',
   robots: {

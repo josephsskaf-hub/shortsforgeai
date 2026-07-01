@@ -67,17 +67,15 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
     <section
       className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
       style={{
-        background:
-          'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
-        border: '1px solid rgba(5, 150, 105,.45)',
-        boxShadow:
-          '0 0 32px rgba(5, 150, 105,.18), inset 0 1px 0 rgba(255,255,255,.04)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
+        boxShadow: 'none',
       }}
     >
       <div className="text-center mb-5">
         <div
           className="text-[10px] font-black uppercase tracking-widest mb-1"
-          style={{ color: '#22D3EE' }}
+          style={{ color: '#2997ff' }}
         >
           Keep creating
         </div>
@@ -89,7 +87,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         </h3>
         <p className="text-xs" style={{ color: 'var(--muted)' }}>
           {credits} credit{credits === 1 ? '' : 's'} left.{' '}
-          <span style={{ color: '#fbbf24', fontWeight: 800 }}>Founding offer: 50% off your first month</span>
+          <span style={{ color: '#f5f5f7', fontWeight: 800 }}>Founding offer: 50% off your first month</span>
           {' '}· cancel anytime · 7-day money-back.
         </p>
       </div>
@@ -144,6 +142,41 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         />
       </div>
 
+      {/* ROBO-ENTRY-490 (Joseph aprovou 30/06) — lowest-commitment option on the
+          post-Short nudge. A free user who just made their first Short faces a
+          big jump straight to $24.90/mo; the $4.90 one-time 10-Shorts pack is a
+          far easier first "yes". Same checkout as the 0-credit modal + /pricing. */}
+      <button
+        type="button"
+        onClick={() => {
+          try {
+            void fetch('/api/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'post_video_paywall' } }),
+              keepalive: true,
+            })
+          } catch { /* non-blocking */ }
+          window.location.href = '/api/stripe/checkout?pack=starter'
+        }}
+        className="block w-full rounded-xl px-4 py-3 mb-3 text-center"
+        style={{
+          background: 'rgba(41,151,255,0.06)',
+          border: '1px dashed rgba(41,151,255,0.4)',
+          color: '#f5f5f7',
+          fontSize: '0.86rem',
+          fontWeight: 800,
+          lineHeight: 1.35,
+          cursor: 'pointer',
+        }}
+      >
+        Not ready for a monthly plan?{' '}
+        <span style={{ color: '#2997ff' }}>Start with 10 Shorts for $4.90 →</span>
+        <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
+          One-time · no subscription · credits never expire
+        </span>
+      </button>
+
       <div className="text-center">
         <button
           type="button"
@@ -192,18 +225,18 @@ function PlanCard({
   const isSelected = !!selected
 
   function background(): string {
-    if (isSelected) return '#0D1830'
-    if (highlight) return 'linear-gradient(135deg, rgba(5,150,105,.10), rgba(4,120,87,.06))'
-    return 'rgba(11,17,32,0.85)'
+    if (isSelected) return '#1d1d1f'
+    if (highlight) return '#1d1d1f'
+    return '#161618'
   }
   function border(): string {
-    if (isSelected) return '2px solid #8B5CF6'
-    if (highlight) return '2px solid rgba(5, 150, 105,.55)'
-    return '1px solid var(--border)'
+    if (isSelected) return '2px solid #2997ff'
+    if (highlight) return '2px solid #48484a'
+    return '1px solid #2a2a2d'
   }
   function shadow(): string {
-    if (isSelected) return '0 0 28px rgba(139,92,246,0.3)'
-    if (highlight) return '0 0 24px rgba(5, 150, 105,.18)'
+    if (isSelected) return '0 0 28px rgba(41,151,255,0.18)'
+    if (highlight) return 'none'
     return 'none'
   }
 
@@ -231,9 +264,9 @@ function PlanCard({
       }}
       onMouseEnter={(e) => {
         if (isSelected) return
-        e.currentTarget.style.borderColor = '#8B5CF6'
-        e.currentTarget.style.background = 'rgba(34, 211, 238, 0.06)'
-        e.currentTarget.style.boxShadow = '0 0 20px rgba(34,211,238,0.18)'
+        e.currentTarget.style.borderColor = '#48484a'
+        e.currentTarget.style.background = '#1d1d1f'
+        e.currentTarget.style.boxShadow = 'none'
       }}
       onMouseLeave={(e) => {
         if (isSelected) return
@@ -247,9 +280,9 @@ function PlanCard({
           className="absolute top-3 right-3 flex items-center justify-center rounded-full"
           style={{
             width: 22, height: 22,
-            background: '#22C55E',
+            background: '#2997ff',
             color: '#FFFFFF',
-            boxShadow: '0 4px 14px rgba(34,197,94,.45)',
+            boxShadow: 'none',
           }}
           aria-label="Selected"
         >
@@ -260,7 +293,7 @@ function PlanCard({
       )}
       <div
         className="text-xs font-black uppercase tracking-widest mb-1"
-        style={{ color: highlight ? '#22D3EE' : 'var(--muted)' }}
+        style={{ color: highlight ? '#2997ff' : 'var(--muted)' }}
       >
         {name}
       </div>
@@ -270,7 +303,7 @@ function PlanCard({
       >
         {price}
       </div>
-      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#c4b5fd', fontWeight: 700 }}>
+      <p className="text-[11px] mt-0.5 mb-3" style={{ color: '#86868b', fontWeight: 700 }}>
         {renew}
       </p>
       <ul className="flex flex-col gap-1.5 mb-4 flex-1">
@@ -280,7 +313,7 @@ function PlanCard({
             className="flex items-start gap-2 text-xs"
             style={{ color: 'var(--text2)' }}
           >
-            <span style={{ color: '#a78bfa', marginTop: 1 }}>✓</span>
+            <span style={{ color: '#2997ff', marginTop: 1 }}>✓</span>
             <span>{f}</span>
           </li>
         ))}
@@ -293,12 +326,11 @@ function PlanCard({
           if (onSelect) onSelect()
           if (onClick) onClick()
         }}
-        className="rounded-xl py-2.5 text-sm font-black text-center text-white"
+        className="rounded-xl py-2.5 text-sm font-black text-center"
         style={{
-          background: isSelected ? '#8B5CF6' : 'linear-gradient(135deg, #7C3AED, #7C3AED)',
-          boxShadow: isSelected
-            ? '0 4px 22px rgba(16, 185, 129,.35)'
-            : '0 6px 22px rgba(5, 150, 105,.32)',
+          background: '#f5f5f7',
+          color: '#000',
+          boxShadow: 'none',
           border: 'none',
           cursor: loading ? 'wait' : 'pointer',
           opacity: loading ? 0.7 : 1,

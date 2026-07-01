@@ -19,9 +19,9 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
       <div
         className="w-full max-w-md rounded-2xl p-8 animate-fade-in text-center relative"
         style={{
-          background: 'var(--card2)',
-          border: '1px solid rgba(16, 185, 129,.25)',
-          boxShadow: '0 0 80px rgba(16, 185, 129,.18)',
+          background: '#1d1d1f',
+          border: '1px solid #2a2a2d',
+          boxShadow: '0 0 80px rgba(0,0,0,.5)',
         }}
       >
         {/* Close */}
@@ -30,8 +30,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
           className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all"
           style={{
             background: 'rgba(255,255,255,.04)',
-            border: '1px solid var(--border)',
-            color: 'var(--muted2)',
+            border: '1px solid #2a2a2d',
+            color: '#86868b',
           }}
         >
           ✕
@@ -41,8 +41,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5"
           style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129,.2), rgba(5, 150, 105,.15))',
-            border: '1px solid rgba(16, 185, 129,.3)',
+            background: '#161618',
+            border: '1px solid #2a2a2d',
           }}
         >
           ⚡
@@ -51,9 +51,9 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <div
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-3"
           style={{
-            background: 'rgba(245,158,11,.12)',
-            border: '1px solid rgba(245,158,11,.25)',
-            color: '#22D3EE',
+            background: 'rgba(41,151,255,.12)',
+            border: '1px solid rgba(41,151,255,.25)',
+            color: '#2997ff',
           }}
         >
           🔒 Free Limit Reached
@@ -61,12 +61,12 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
 
         <h2
           className="text-2xl font-black mb-2 tracking-tight"
-          style={{ color: 'var(--text)' }}
+          style={{ color: '#f5f5f7' }}
         >
           You&apos;ve used all your{' '}
           <span className="grad-text">free renders</span>
         </h2>
-        <p className="text-sm mb-7" style={{ color: 'var(--muted)' }}>
+        <p className="text-sm mb-7" style={{ color: '#86868b' }}>
           Activate a plan to keep your pipeline running — from $11.90/mo.
         </p>
 
@@ -74,8 +74,8 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <div
           className="rounded-xl p-4 mb-6 text-left"
           style={{
-            background: 'rgba(16, 185, 129,.05)',
-            border: '1px solid rgba(16, 185, 129,.12)',
+            background: '#161618',
+            border: '1px solid #2a2a2d',
           }}
         >
           {[
@@ -89,9 +89,9 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             <div
               key={f}
               className="flex items-center gap-2 py-1.5 text-sm"
-              style={{ color: 'var(--text2)' }}
+              style={{ color: '#f5f5f7' }}
             >
-              <span style={{ color: '#a78bfa', fontSize: '0.8rem' }}>✓</span>
+              <span style={{ color: '#2997ff', fontSize: '0.8rem' }}>✓</span>
               {f}
             </div>
           ))}
@@ -99,12 +99,20 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
 
         <button
           onClick={() => router.push('/pricing')}
-          className="w-full rounded-xl py-4 font-black text-base text-white mb-3 transition-all"
+          className="w-full rounded-xl py-4 font-black text-base mb-3 transition-all"
           style={{
-            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
-            boxShadow: '0 4px 28px rgba(16, 185, 129,.45)',
-            animation: 'btn-pulse 2.8s ease-in-out infinite',
+            background: '#f5f5f7',
+            color: '#000',
+            boxShadow: 'none',
             cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = '#fff'
+            ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLElement).style.background = '#f5f5f7'
+            ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
           }}
         >
           Activate Plan →
@@ -113,7 +121,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         <button
           onClick={() => router.push('/pricing')}
           className="w-full text-sm font-medium transition-colors"
-          style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{ color: '#86868b', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           View pricing details →
         </button>

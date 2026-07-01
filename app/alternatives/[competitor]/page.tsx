@@ -518,6 +518,32 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'Should I use Kapwing or Kineo?', a: 'Use Kapwing when you want to edit, subtitle and collaborate on a video in the browser (and its free tier). Use Kineo when you want a complete faceless Short generated from one idea for $11.90/mo, first one free.' },
     ],
   },
+  // ROBO-SEO-2026-06-30b — RunwayML (generative AI clip model, same category
+  // pattern as the existing Pika entry above: standalone clips vs. finished Short).
+  runwayml: {
+    name: 'Runway',
+    h1: 'The Runway Alternative That Builds the Whole Faceless Short From One Idea',
+    intro:
+      'Runway (RunwayML) is a leading generative AI video model — you prompt it and it generates short, high-fidelity AI video clips, with tools for camera control, motion brushes and video-to-video effects. It is built for generating raw creative footage and VFX, not for assembling a complete narrated, captioned Short. Kineo takes one idea and produces the entire faceless YouTube Short — script, AI voice, footage, and captions — in about 60 seconds.',
+    theyDo: 'Runway focuses on generating AI video clips and creative effects from a text or image prompt, aimed at filmmakers and VFX/creative work.',
+    pickThem:
+      'Pick Runway when you want to generate a striking standalone AI clip or visual effect for a larger creative or VFX project; pick Kineo when you want the whole faceless Short finished end to end.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'Adds AI voiceover (narration)', sfa: true, them: false },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: false },
+      { feature: 'Generates high-fidelity AI video clips', sfa: 'Stock + AI footage', them: true },
+      { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Clips only' },
+      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Paid plans' },
+    ],
+    faq: [
+      { q: 'What is the best Runway (RunwayML) alternative for faceless YouTube Shorts?', a: 'Kineo is the strongest Runway alternative for full faceless Shorts, because it does not just generate a clip — it writes the script, adds the AI voice, pulls the footage, and burns in captions to deliver a finished vertical Short in about 60 seconds.' },
+      { q: 'Can Runway make a complete YouTube Short with voiceover and captions?', a: 'Not on its own — Runway generates AI video clips, and you would still need to add a script, narration, and captions yourself, typically in a separate editor. Kineo handles that entire pipeline automatically from a single idea.' },
+      { q: 'Is Kineo cheaper than Runway?', a: 'Kineo starts at $11.90/mo and turns one idea into a complete faceless Short. Runway prices change, so check their site, but the bigger difference is scope: Runway gives you AI-generated clips for creative/VFX work, Kineo gives you the whole finished Short.' },
+    ],
+  },
 }
 
 export const COMPETITOR_SLUGS = Object.keys(COMPETITORS)

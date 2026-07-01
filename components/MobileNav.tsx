@@ -20,8 +20,8 @@ export default function MobileNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: '#0F0F10',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: '#000',
+        borderTop: '1px solid #2a2a2d',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 6px)',
@@ -40,7 +40,7 @@ export default function MobileNav() {
               className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all"
               style={{
                 textDecoration: 'none',
-                background: active ? 'rgba(34,211,238,0.05)' : 'transparent',
+                background: active ? 'rgba(41,151,255,0.08)' : 'transparent',
               }}
             >
               {/* Active top indicator */}
@@ -51,9 +51,9 @@ export default function MobileNav() {
                     left: '20%',
                     right: '20%',
                     height: 2,
-                    background: 'linear-gradient(90deg, #22D3EE, #8B5CF6)',
+                    background: '#2997ff',
                     borderRadius: '0 0 4px 4px',
-                    boxShadow: '0 0 8px rgba(34,211,238,0.5)',
+                    boxShadow: '0 0 8px rgba(41,151,255,0.5)',
                   }}
                 />
               )}
@@ -64,7 +64,7 @@ export default function MobileNav() {
                   fontSize: '1.25rem',
                   lineHeight: 1,
                   filter: active
-                    ? 'drop-shadow(0 0 8px rgba(34,211,238,0.7))'
+                    ? 'drop-shadow(0 0 8px rgba(41,151,255,0.7))'
                     : 'none',
                   transition: 'filter 0.18s ease',
                   transform: active ? 'scale(1.08)' : 'scale(1)',
@@ -82,7 +82,7 @@ export default function MobileNav() {
                   fontWeight: 700,
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase' as const,
-                  color: active ? '#22D3EE' : '#64748B',
+                  color: active ? '#2997ff' : '#86868b',
                   transition: 'color 0.18s ease',
                 }}
               >

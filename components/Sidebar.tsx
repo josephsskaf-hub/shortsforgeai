@@ -705,15 +705,18 @@ export default function Sidebar({
               <button
                 onClick={handleSignOut}
                 title="Sign out"
+                aria-label="Sign out"
                 style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
                   background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 7px', fontSize: '0.75rem',
+                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 9px', fontSize: '0.75rem',
                   flexShrink: 0, transition: 'all 0.15s',
                 }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.4)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
               >
-                🚪
+                <span aria-hidden="true">🚪</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Sign out</span>
               </button>
             ) : (
               <button

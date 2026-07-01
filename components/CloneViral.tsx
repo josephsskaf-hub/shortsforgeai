@@ -7,19 +7,19 @@ const RESULTS = [
     icon: '✅',
     label: 'Hook style detected',
     value: 'Shocking Stat',
-    accent: '#a78bfa',
+    accent: '#2997ff',
   },
   {
     icon: '✅',
     label: 'Retention pattern',
     value: 'Fast-cut mystery reveal',
-    accent: '#A78BFA',
+    accent: '#2997ff',
   },
   {
     icon: '✅',
     label: 'CTA timing',
     value: '33s mark',
-    accent: '#22D3EE',
+    accent: '#2997ff',
   },
 ]
 
@@ -42,12 +42,12 @@ export default function CloneViral() {
             gap: 8,
             padding: '5px 14px',
             borderRadius: 999,
-            background: 'rgba(245,158,11,.1)',
-            border: '1px solid rgba(245,158,11,.25)',
+            background: 'rgba(41,151,255,.1)',
+            border: '1px solid rgba(41,151,255,.25)',
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#22D3EE', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.04em' }}>
             🎬 CLONE ANY VIRAL SHORT
           </span>
           <span
@@ -56,8 +56,8 @@ export default function CloneViral() {
               borderRadius: 999,
               fontSize: '0.6rem',
               fontWeight: 900,
-              color: '#fff',
-              background: 'linear-gradient(135deg, #a78bfa, #14b8a6)',
+              color: '#000',
+              background: '#f5f5f7',
               letterSpacing: '0.05em',
             }}
           >
@@ -67,21 +67,24 @@ export default function CloneViral() {
         <h2
           style={{
             fontSize: 'clamp(1.55rem, 4vw, 2.15rem)',
-            fontWeight: 900,
-            letterSpacing: '-0.02em',
-            color: 'var(--text)',
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+            background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: 0,
           }}
         >
           Paste A Viral Video URL →{' '}
-          <span style={{ background: 'linear-gradient(135deg, #f59e0b, #22D3EE, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ color: '#2997ff', WebkitTextFillColor: '#2997ff' }}>
             Get A Script Like It
           </span>
         </h2>
         <p
           style={{
             fontSize: '0.95rem',
-            color: 'var(--muted2)',
+            color: '#86868b',
             marginTop: 12,
             maxWidth: 620,
             marginLeft: 'auto',
@@ -99,9 +102,9 @@ export default function CloneViral() {
           margin: '0 auto',
           padding: '28px 24px 26px',
           borderRadius: 20,
-          background: 'linear-gradient(160deg, rgba(14,14,28,.95), rgba(8,8,18,.95))',
-          border: '1px solid rgba(245,158,11,.18)',
-          boxShadow: '0 0 60px rgba(245,158,11,.08)',
+          background: '#161618',
+          border: '1px solid #2a2a2d',
+          boxShadow: '0 0 60px rgba(41,151,255,.06)',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -114,7 +117,7 @@ export default function CloneViral() {
             transform: 'translateX(-50%)',
             width: 460,
             height: 220,
-            background: 'radial-gradient(ellipse, rgba(34, 211, 238,.16) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(41,151,255,.14) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -128,7 +131,7 @@ export default function CloneViral() {
               marginBottom: 12,
               fontSize: '0.7rem',
               fontWeight: 800,
-              color: 'var(--muted2)',
+              color: '#86868b',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
             }}
@@ -141,12 +144,12 @@ export default function CloneViral() {
               className="clone-input"
               style={{
                 flex: 1,
-                background: 'rgba(0,0,0,.45)',
-                border: '1px solid rgba(255,255,255,.08)',
+                background: '#000',
+                border: '1px solid #2a2a2d',
                 borderRadius: 12,
                 padding: '14px 16px',
                 fontSize: '0.88rem',
-                color: 'var(--muted)',
+                color: '#86868b',
                 fontFamily: 'monospace',
                 letterSpacing: '-0.01em',
                 userSelect: 'none',
@@ -159,13 +162,13 @@ export default function CloneViral() {
               className="clone-btn"
               style={{
                 padding: '14px 22px',
-                borderRadius: 12,
+                borderRadius: 980,
                 fontSize: '0.86rem',
-                fontWeight: 900,
-                color: '#fff',
+                fontWeight: 600,
+                color: '#000',
                 border: 'none',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #22D3EE 55%, #22D3EE 100%)',
-                boxShadow: '0 4px 22px rgba(34, 211, 238,.4)',
+                background: '#f5f5f7',
+                boxShadow: 'none',
                 cursor: 'not-allowed',
                 whiteSpace: 'nowrap',
                 opacity: 0.95,
@@ -186,7 +189,7 @@ export default function CloneViral() {
               style={{
                 fontSize: '0.65rem',
                 fontWeight: 800,
-                color: '#c4b5fd',
+                color: '#2997ff',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 marginBottom: 2,
@@ -203,8 +206,8 @@ export default function CloneViral() {
                   gap: 12,
                   padding: '12px 14px',
                   borderRadius: 10,
-                  background: 'rgba(255,255,255,.03)',
-                  border: '1px solid rgba(255,255,255,.06)',
+                  background: '#1d1d1f',
+                  border: '1px solid #2a2a2d',
                   borderLeft: `3px solid ${r.accent}`,
                 }}
               >
@@ -213,7 +216,7 @@ export default function CloneViral() {
                   style={{
                     fontSize: '0.78rem',
                     fontWeight: 700,
-                    color: 'var(--muted2)',
+                    color: '#86868b',
                     minWidth: 168,
                   }}
                 >
@@ -223,7 +226,7 @@ export default function CloneViral() {
                   style={{
                     fontSize: '0.86rem',
                     fontWeight: 800,
-                    color: 'var(--text)',
+                    color: '#f5f5f7',
                   }}
                 >
                   {r.value}
@@ -245,24 +248,24 @@ export default function CloneViral() {
           flexWrap: 'wrap',
           padding: '14px 20px',
           borderRadius: 14,
-          background: 'rgba(16, 185, 129,.06)',
-          border: '1px solid rgba(16, 185, 129,.18)',
+          background: '#161618',
+          border: '1px solid #2a2a2d',
         }}
       >
-        <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: 0, fontWeight: 600 }}>
+        <p style={{ fontSize: '0.82rem', color: '#86868b', margin: 0, fontWeight: 600 }}>
           🔒 Available for Pro members. Connect your YouTube channel to unlock.
         </p>
         <Link
           href="/pricing"
           style={{
             padding: '10px 22px',
-            borderRadius: 10,
+            borderRadius: 980,
             fontSize: '0.82rem',
-            fontWeight: 900,
-            color: '#fff',
+            fontWeight: 600,
+            color: '#000',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
-            boxShadow: '0 4px 18px rgba(16, 185, 129,.35)',
+            background: '#f5f5f7',
+            boxShadow: 'none',
             flexShrink: 0,
           }}
         >

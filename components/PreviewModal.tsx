@@ -50,15 +50,15 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(8,8,15,.9)', backdropFilter: 'blur(24px)' }}
+      style={{ background: 'rgba(0,0,0,.85)', backdropFilter: 'blur(24px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         className="w-full max-w-lg rounded-[22px] overflow-hidden animate-fade-in relative"
         style={{
           background: 'var(--card2)',
-          border: '1px solid rgba(16, 185, 129,.28)',
-          boxShadow: '0 0 100px rgba(16, 185, 129,.18)',
+          border: '1px solid #2a2a2d',
+          boxShadow: '0 20px 60px rgba(0,0,0,.6)',
         }}
       >
         {/* Close */}
@@ -84,8 +84,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(16, 185, 129,.2), rgba(5, 150, 105,.14))',
-                border: '1px solid rgba(16, 185, 129,.28)',
+                background: '#1d1d1f',
+                border: '1px solid #2a2a2d',
               }}
             >
               {niche.emoji}
@@ -93,7 +93,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div>
               <div
                 className="text-xs font-bold uppercase tracking-widest mb-0.5"
-                style={{ color: 'var(--indigo-light)' }}
+                style={{ color: 'var(--blue, #2997ff)' }}
               >
                 Ready to generate
               </div>
@@ -111,9 +111,9 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(139,92,246,.1)',
-                border: '1px solid rgba(139,92,246,.2)',
-                color: '#a78bfa',
+                background: 'rgba(245,245,247,.08)',
+                border: '1px solid #2a2a2d',
+                color: '#f5f5f7',
               }}
             >
               ⚡ Videos in ~60 seconds
@@ -121,9 +121,9 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(16, 185, 129,.1)',
-                border: '1px solid rgba(16, 185, 129,.2)',
-                color: 'var(--indigo-light)',
+                background: 'rgba(41,151,255,.1)',
+                border: '1px solid rgba(41,151,255,.25)',
+                color: 'var(--blue, #2997ff)',
               }}
             >
               👥 300+ creators use this
@@ -143,8 +143,8 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
           <div
             className="rounded-[14px] p-4"
             style={{
-              background: 'rgba(16, 185, 129,.05)',
-              border: '1px solid rgba(16, 185, 129,.15)',
+              background: '#161618',
+              border: '1px solid #2a2a2d',
             }}
           >
             {/* Hook */}
@@ -160,7 +160,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 style={{
                   color: 'var(--text)',
                   fontStyle: 'italic',
-                  borderLeft: '2px solid var(--indigo-light)',
+                  borderLeft: '2px solid var(--blue, #2997ff)',
                   paddingLeft: 10,
                 }}
               >
@@ -195,9 +195,9 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                     key={tag}
                     className="px-2 py-0.5 rounded-md text-xs font-medium"
                     style={{
-                      background: 'rgba(16, 185, 129,.1)',
-                      border: '1px solid rgba(16, 185, 129,.2)',
-                      color: 'var(--indigo-light)',
+                      background: 'rgba(41,151,255,.1)',
+                      border: '1px solid rgba(41,151,255,.25)',
+                      color: 'var(--blue, #2997ff)',
                     }}
                   >
                     {tag}
@@ -222,10 +222,11 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
         >
           <button
             onClick={onConfirm}
-            className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-black text-white mb-3 transition-all"
+            className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-base font-black mb-3 transition-all"
             style={{
-              background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
-              boxShadow: '0 6px 28px rgba(16, 185, 129,.45)',
+              background: '#f5f5f7',
+              color: '#000',
+              boxShadow: 'none',
               animation: 'btn-pulse 2.8s ease-in-out infinite',
               border: 'none',
               cursor: 'pointer',

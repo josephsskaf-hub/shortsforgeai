@@ -1,6 +1,8 @@
-// Push #191 — updated pricing.
-// Basic = $4.90/month  (50 Fast Mode videos)
-// Pro   = $9.90/month (150 credits = up to 5 AI Generated videos OR 150 Fast)
+// Push #404 — current 3-tier pricing.
+// Starter = $11.90/month (50 credits, Fast/stock engine, 1 credit/video)
+// Creator = $24.90/month (240 credits, Seedance AI engine, 40 credits/video → 6 videos)
+// Studio  = $37.90/month (360 credits, Kling premium engine, 60 credits/video → 6 videos,
+//           falls back to Seedance → 9 videos)
 //
 // All checkout buttons on every surface link to /api/stripe/checkout?tier=...
 // The server route handles currency detection (BRL for BR users) and creates
@@ -50,7 +52,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     annualPerMonthLabel: '$9.92',
     annualHref: '/api/stripe/checkout?tier=starter&billing=annual',
   },
-  // Push #404 — CREATOR: Seedance AI engine. 30 credits/video → 8 videos.
+  // Push #404 — CREATOR: Seedance AI engine. 40 credits/video → 6 videos.
   basic: {
     tier: 'basic',
     name: 'Creator',
@@ -64,7 +66,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     annualPerMonthLabel: '$20.75',
     annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
   },
-  // Push #404 — STUDIO: Kling premium engine (fallback Seedance). 45 cr/video → 8 videos.
+  // Push #404 — STUDIO: Kling premium engine (fallback Seedance). 60 cr/video → 6 videos (or 9 on Seedance).
   pro: {
     tier: 'pro',
     name: 'Studio',

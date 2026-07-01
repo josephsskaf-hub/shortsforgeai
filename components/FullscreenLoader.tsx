@@ -43,9 +43,9 @@ export default function FullscreenLoader() {
       <div
         className="rounded-[26px] p-10 text-center mx-4"
         style={{
-          background: 'var(--card2)',
-          border: '1px solid rgba(16, 185, 129,.22)',
-          boxShadow: '0 0 100px rgba(16, 185, 129,.18)',
+          background: '#1d1d1f',
+          border: '1px solid #2a2a2d',
+          boxShadow: '0 0 100px rgba(41,151,255,.18)',
           minWidth: 320,
           maxWidth: 420,
           width: '100%',
@@ -61,7 +61,7 @@ export default function FullscreenLoader() {
         {/* Title */}
         <div
           className="font-black mb-1 tracking-tight"
-          style={{ fontSize: '1.05rem', color: 'var(--text)' }}
+          style={{ fontSize: '1.05rem', color: '#f5f5f7' }}
         >
           Forging your viral shorts...
         </div>
@@ -69,7 +69,7 @@ export default function FullscreenLoader() {
         {/* Step label */}
         <div
           className="text-sm mb-6 transition-all duration-500"
-          style={{ color: 'var(--indigo-light)', minHeight: 20 }}
+          style={{ color: '#2997ff', minHeight: 20 }}
         >
           {currentStep.label}
         </div>
@@ -83,8 +83,8 @@ export default function FullscreenLoader() {
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, var(--indigo), var(--purple), #22D3EE)',
-              boxShadow: '0 0 12px rgba(16, 185, 129,.6)',
+              background: '#2997ff',
+              boxShadow: '0 0 12px rgba(41,151,255,.6)',
             }}
           />
         </div>
@@ -92,7 +92,7 @@ export default function FullscreenLoader() {
         {/* Progress pct */}
         <div
           className="text-xs font-bold"
-          style={{ color: 'var(--muted2)' }}
+          style={{ color: '#6e6e73' }}
         >
           {progress}% complete
         </div>
@@ -107,7 +107,7 @@ export default function FullscreenLoader() {
                 key={i}
                 className="flex items-center gap-2.5 text-xs transition-all duration-300"
                 style={{
-                  color: done ? '#a78bfa' : active ? 'var(--text)' : 'var(--muted)',
+                  color: done ? '#2997ff' : active ? '#f5f5f7' : '#86868b',
                   opacity: done || active ? 1 : 0.45,
                 }}
               >
@@ -115,14 +115,14 @@ export default function FullscreenLoader() {
                   className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
                   style={{
                     background: done
-                      ? 'rgba(139,92,246,.2)'
+                      ? 'rgba(41,151,255,.2)'
                       : active
-                      ? 'rgba(16, 185, 129,.2)'
+                      ? 'rgba(41,151,255,.2)'
                       : 'transparent',
                     border: done
-                      ? '1px solid rgba(139,92,246,.3)'
+                      ? '1px solid rgba(41,151,255,.3)'
                       : active
-                      ? '1px solid rgba(16, 185, 129,.35)'
+                      ? '1px solid rgba(41,151,255,.35)'
                       : '1px solid rgba(255,255,255,.08)',
                   }}
                 >
@@ -137,7 +137,7 @@ export default function FullscreenLoader() {
         {/* Trust tag */}
         <div
           className="mt-5 text-xs font-medium"
-          style={{ color: 'var(--muted)', fontSize: '0.68rem' }}
+          style={{ color: '#86868b', fontSize: '0.68rem' }}
         >
           📱 YouTube Shorts · TikTok · Reels
         </div>

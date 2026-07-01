@@ -17,20 +17,20 @@
 import { useEffect, useRef, useState } from 'react'
 
 const VERTICAL_COLORS: Record<string, string> = {
-  money: '#8b5cf6',
-  mystery: '#8b5cf6',
-  country: '#8b5cf6',
-  ai: '#14b8a6',
-  psychology: '#ec4899',
-  history: '#d97706',
-  science: '#14b8a6',
-  space: '#0ea5e9',
+  money: '#2997ff',
+  mystery: '#2997ff',
+  country: '#2997ff',
+  ai: '#2997ff',
+  psychology: '#2997ff',
+  history: '#2997ff',
+  science: '#2997ff',
+  space: '#2997ff',
 }
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
-  Hot: { bg: 'rgba(239,68,68,0.18)', color: '#ef4444' },
-  Trending: { bg: 'rgba(249,115,22,0.18)', color: '#f97316' },
-  'High Retention': { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
-  Viral: { bg: 'rgba(139,92,246,0.18)', color: '#8b5cf6' },
+  Hot: { bg: 'rgba(245,245,247,0.14)', color: '#f5f5f7' },
+  Trending: { bg: 'rgba(245,245,247,0.14)', color: '#f5f5f7' },
+  'High Retention': { bg: 'rgba(41,151,255,0.18)', color: '#2997ff' },
+  Viral: { bg: 'rgba(41,151,255,0.18)', color: '#2997ff' },
 }
 
 type Starter = {
@@ -157,44 +157,44 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         onClick={() => generate(s, isFeatured)}
         style={{
           background: isFeatured
-            ? 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(11,17,32,0.96))'
-            : 'var(--card, #121214)',
-          border: `1px solid ${isFeatured ? vertColor : 'var(--border, rgba(255,255,255,0.10))'}`,
-          borderRadius: 14,
+            ? 'linear-gradient(135deg, rgba(41,151,255,0.08), #161618)'
+            : '#161618',
+          border: `1px solid ${isFeatured ? '#48484a' : '#2a2a2d'}`,
+          borderRadius: 20,
           padding: isFeatured ? '18px 18px' : '16px 16px',
           display: 'flex', flexDirection: 'column', gap: 8,
           gridColumn: isFeatured ? '1 / -1' : 'auto',
           cursor: 'pointer',
-          boxShadow: isFeatured ? `0 0 28px ${vertColor}33` : 'none',
+          boxShadow: isFeatured ? '0 0 28px rgba(41,151,255,0.12)' : 'none',
           transition: 'border-color 0.2s, transform 0.15s, box-shadow 0.2s',
         }}
-        onMouseEnter={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = vertColor; t.style.transform = 'translateY(-2px)'; t.style.boxShadow = `0 8px 28px ${vertColor}33` }}
-        onMouseLeave={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = isFeatured ? vertColor : 'var(--border, rgba(255,255,255,0.10))'; t.style.transform = 'translateY(0)'; t.style.boxShadow = isFeatured ? `0 0 28px ${vertColor}33` : 'none' }}
+        onMouseEnter={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = '#3a3a3d'; t.style.transform = 'translateY(-2px)'; t.style.boxShadow = '0 8px 28px rgba(0,0,0,0.4)' }}
+        onMouseLeave={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = isFeatured ? '#48484a' : '#2a2a2d'; t.style.transform = 'translateY(0)'; t.style.boxShadow = isFeatured ? '0 0 28px rgba(41,151,255,0.12)' : 'none' }}
       >
         {isFeatured && (
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: vertColor, letterSpacing: '0.02em', marginBottom: 2 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.02em', marginBottom: 2 }}>
             🔥 Best Pick Right Now
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: vertColor + '22', color: vertColor, whiteSpace: 'nowrap' }}>{s.label}</span>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: 'rgba(245,245,247,0.08)', color: '#86868b', whiteSpace: 'nowrap' }}>{s.label}</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af' }}>🔥 {s.score}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86868b' }}>🔥 {s.score}</span>
           <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{s.badge}</span>
         </div>
 
-        <p style={{ margin: 0, fontSize: isFeatured ? '1.18rem' : '1.02rem', fontWeight: 900, lineHeight: 1.25, color: '#F1F5F9', letterSpacing: '-0.01em' }}>{s.title}</p>
-        <p style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#9ca3af', lineHeight: 1.45 }}>{s.hook}</p>
-        <p style={{ margin: 0, fontSize: '0.74rem', color: '#cbd5e1', fontWeight: 600 }}>
-          🧠 <span style={{ color: '#94A3B8', fontWeight: 700 }}>Why it works:</span> {s.why}
+        <p style={{ margin: 0, fontSize: isFeatured ? '1.18rem' : '1.02rem', fontWeight: 900, lineHeight: 1.25, color: '#f5f5f7', letterSpacing: '-0.01em' }}>{s.title}</p>
+        <p style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#86868b', lineHeight: 1.45 }}>{s.hook}</p>
+        <p style={{ margin: 0, fontSize: '0.74rem', color: '#d2d2d7', fontWeight: 600 }}>
+          🧠 <span style={{ color: '#86868b', fontWeight: 700 }}>Why it works:</span> {s.why}
         </p>
-        <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748B', fontWeight: 700, letterSpacing: '0.01em' }}>
+        <p style={{ margin: 0, fontSize: '0.7rem', color: '#6e6e73', fontWeight: 700, letterSpacing: '0.01em' }}>
           Output: 60s • 9:16 • Voiceover • Captions • Fast
         </p>
 
         {hookOpen && (
-          <div style={{ margin: '2px 0', padding: '10px 12px', borderRadius: 10, background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.20)' }}>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#E2E8F0', fontStyle: 'italic', lineHeight: 1.5 }}>“{s.previewHook}”</p>
+          <div style={{ margin: '2px 0', padding: '10px 12px', borderRadius: 10, background: 'rgba(41,151,255,0.06)', border: '1px solid rgba(41,151,255,0.20)' }}>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#f5f5f7', fontStyle: 'italic', lineHeight: 1.5 }}>"{s.previewHook}"</p>
           </div>
         )}
 
@@ -203,19 +203,19 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             type="button"
             onClick={(e) => { e.stopPropagation(); generate(s, isFeatured) }}
             style={{
-              flex: 1, padding: '11px 0', borderRadius: 9, border: 'none',
-              background: `linear-gradient(90deg, ${vertColor}, #ef4444)`, color: '#fff',
+              flex: 1, padding: '11px 0', borderRadius: 980, border: 'none',
+              background: '#f5f5f7', color: '#000',
               fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'opacity 0.15s',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f7' }}
           >
             Generate Free Short →
           </button>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); togglePreview(s) }}
-            style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'underline' }}
+            style={{ background: 'transparent', border: 'none', color: '#6e6e73', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'underline' }}
           >
             {hookOpen ? 'Hide hook' : 'Preview hook'}
           </button>
@@ -231,7 +231,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
       aria-label="Pick a viral idea to create your first Short"
       style={{
         position: 'fixed', inset: 0, zIndex: 1200,
-        background: 'rgba(5,7,13,0.94)',
+        background: 'rgba(0,0,0,0.94)',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         overflowY: 'auto', padding: '30px 16px 56px',
@@ -251,17 +251,17 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
 
       <div style={{ width: '100%', maxWidth: 760 }}>
         {/* Hero */}
-        <h1 className="vo-h1" style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F1F5F9', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
+        <h1 className="vo-h1" style={{ fontSize: '1.6rem', fontWeight: 600, color: '#f5f5f7', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2, letterSpacing: '-0.03em' }}>
           Pick a viral idea. We&apos;ll turn it into a Short.
         </h1>
-        <p style={{ fontSize: '0.92rem', color: '#94A3B8', textAlign: 'center', margin: '0 0 4px' }}>
-          Your first Short is <b style={{ color: '#22D3EE' }}>free</b>. No credit card required. No script, no voiceover, no editing.
+        <p style={{ fontSize: '0.92rem', color: '#86868b', textAlign: 'center', margin: '0 0 4px' }}>
+          Your first Short is <b style={{ color: '#2997ff' }}>free</b>. No credit card required. No script, no voiceover, no editing.
         </p>
-        <p style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', margin: '0 0 6px' }}>
+        <p style={{ fontSize: '0.8rem', color: '#6e6e73', textAlign: 'center', margin: '0 0 6px' }}>
           Script • Voiceover • Captions • Visuals • Ready in ~60s
         </p>
-        <p style={{ fontSize: '0.76rem', color: '#94A3B8', textAlign: 'center', margin: '0 0 18px' }}>
-          Real Shorts, real views — <b style={{ color: '#fbbf24' }}>one reached 11.4K</b>.
+        <p style={{ fontSize: '0.76rem', color: '#86868b', textAlign: 'center', margin: '0 0 18px' }}>
+          Real Shorts, real views — <b style={{ color: '#f5f5f7' }}>one reached 11.4K</b>.
         </p>
 
         {/* Surprise Me */}
@@ -271,9 +271,9 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           onClick={surprise}
           style={{
             display: 'block', width: '100%', maxWidth: 380, margin: '0 auto 12px',
-            padding: '14px 18px', borderRadius: 12,
-            background: 'linear-gradient(135deg, #22D3EE, #8B5CF6)',
-            color: '#0A0A0B', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
+            padding: '14px 18px', borderRadius: 980,
+            background: '#f5f5f7',
+            color: '#000', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >
           🎲 Surprise Me — generate my free Short
@@ -289,16 +289,16 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             placeholder="Type any topic, niche, product or idea…"
             style={{
               flex: 1, padding: '11px 14px', borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)',
-              color: '#F1F5F9', fontSize: '0.9rem', outline: 'none',
+              border: '1px solid #2a2a2d', background: '#161618',
+              color: '#f5f5f7', fontSize: '0.9rem', outline: 'none',
             }}
           />
           <button
             type="button"
             onClick={generateCustom}
             style={{
-              padding: '11px 18px', borderRadius: 10, border: '1px solid rgba(34,211,238,0.4)',
-              background: 'rgba(34,211,238,0.12)', color: '#22D3EE', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', whiteSpace: 'nowrap',
+              padding: '11px 18px', borderRadius: 980, border: '1px solid #48484a',
+              background: 'transparent', color: '#f5f5f7', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
             Generate My Free Short
@@ -316,9 +316,9 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
                 onClick={() => selectFilter(f)}
                 style={{
                   flex: '0 0 auto', padding: '6px 14px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                  border: `1px solid ${active ? 'rgba(34,211,238,0.5)' : 'rgba(255,255,255,0.12)'}`,
-                  background: active ? 'rgba(34,211,238,0.14)' : 'transparent',
-                  color: active ? '#22D3EE' : '#94A3B8',
+                  border: `1px solid ${active ? '#48484a' : '#2a2a2d'}`,
+                  background: active ? '#1d1d1f' : 'transparent',
+                  color: active ? '#f5f5f7' : '#86868b',
                   transition: 'all 0.15s',
                 }}
               >
@@ -337,7 +337,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
         <button
           type="button"
           onClick={onClose}
-          style={{ display: 'block', margin: '22px auto 0', background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+          style={{ display: 'block', margin: '22px auto 0', background: 'transparent', border: 'none', color: '#6e6e73', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
         >
           Skip — I&apos;ll type my own idea
         </button>

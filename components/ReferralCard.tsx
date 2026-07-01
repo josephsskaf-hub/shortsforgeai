@@ -53,9 +53,9 @@ export default function ReferralCard() {
       <div
         className="rounded-[20px] px-5 py-4 mb-5"
         style={{
-          background: 'rgba(11,17,32,0.85)',
-          border: '1px solid rgba(34, 211, 238,.28)',
-          boxShadow: '0 0 30px rgba(34, 211, 238,.08)',
+          background: '#161618',
+          border: '1px solid #2a2a2d',
+          boxShadow: 'none',
           height: 168,
           animation: 'pulse 1.4s ease-in-out infinite',
         }}
@@ -69,7 +69,7 @@ export default function ReferralCard() {
       <div
         className="rounded-[20px] px-5 py-4 mb-5"
         style={{
-          background: 'rgba(11,17,32,0.85)',
+          background: '#161618',
           border: '1px solid var(--border)',
         }}
       >
@@ -77,8 +77,8 @@ export default function ReferralCard() {
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(139,92,246,.12))',
-              border: '1px solid rgba(34,211,238,.4)',
+              background: '#1d1d1f',
+              border: '1px solid #2a2a2d',
             }}
           >
             🎁
@@ -95,17 +95,17 @@ export default function ReferralCard() {
     <div
       className="rounded-[20px] px-5 py-4 mb-5"
       style={{
-        background: 'rgba(11,17,32,0.85)',
-        border: '1px solid rgba(34, 211, 238,.28)',
-        boxShadow: '0 0 30px rgba(34, 211, 238,.08)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
+        boxShadow: 'none',
       }}
     >
       <div className="flex items-center gap-4 mb-3">
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(34,211,238,.25), rgba(139,92,246,.12))',
-            border: '1px solid rgba(34,211,238,.4)',
+            background: '#1d1d1f',
+            border: '1px solid #2a2a2d',
           }}
         >
           🎁
@@ -119,7 +119,7 @@ export default function ReferralCard() {
           </div>
           <div className="font-black" style={{ fontSize: '1rem', color: 'var(--text)' }}>
             🎁 Invite friends — you both get{' '}
-            <span style={{ color: '#a78bfa' }}>{referral.rewardCredits} free credits</span>
+            <span style={{ color: 'var(--blue, #2997ff)' }}>{referral.rewardCredits} free credits</span>
           </div>
           <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
             You and your friend each get {referral.rewardCredits} free credits when they create their
@@ -136,8 +136,8 @@ export default function ReferralCard() {
           onFocus={(e) => e.currentTarget.select()}
           className="flex-1 rounded-xl px-3 py-2.5 text-xs"
           style={{
-            background: 'rgba(13,13,28,.85)',
-            border: '1px solid rgba(34,211,238,.3)',
+            background: '#161618',
+            border: '1px solid #2a2a2d',
             color: 'var(--text)',
             outline: 'none',
             fontFamily: 'inherit',
@@ -146,10 +146,11 @@ export default function ReferralCard() {
         <button
           type="button"
           onClick={copyReferral}
-          className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+          className="rounded-xl px-5 py-2.5 text-sm font-black"
           style={{
-            background: 'linear-gradient(135deg, #22D3EE, #7C3AED)',
-            boxShadow: '0 4px 18px rgba(34,211,238,.35)',
+            background: '#f5f5f7',
+            color: '#000',
+            boxShadow: 'none',
             whiteSpace: 'nowrap',
             cursor: 'pointer',
             border: 'none',
@@ -161,10 +162,10 @@ export default function ReferralCard() {
 
       {/* Earned stats */}
       <div className="text-xs font-bold" style={{ color: 'var(--muted2)' }}>
-        🎉 <span style={{ color: '#a78bfa' }}>{referral.count}</span> friend
+        🎉 <span style={{ color: 'var(--blue, #2997ff)' }}>{referral.count}</span> friend
         {referral.count === 1 ? '' : 's'} joined
         {' · '}
-        <span style={{ color: '#a78bfa' }}>{referral.count * referral.rewardCredits}</span> credits
+        <span style={{ color: 'var(--blue, #2997ff)' }}>{referral.count * referral.rewardCredits}</span> credits
         earned
       </div>
     </div>

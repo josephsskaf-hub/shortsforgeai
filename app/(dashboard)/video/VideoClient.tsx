@@ -50,21 +50,21 @@ function StepCircle({
       className="w-12 h-12 rounded-2xl flex items-center justify-center font-black flex-shrink-0 transition-all"
       style={{
         background: isDone
-          ? 'linear-gradient(135deg, rgba(139,92,246,.3), rgba(167,139,250,.18))'
+          ? 'rgba(41,151,255,.18)'
           : isActive
-          ? 'linear-gradient(135deg, rgba(16, 185, 129,.4), rgba(34, 211, 238,.25))'
+          ? 'rgba(41,151,255,.22)'
           : 'rgba(255,255,255,.04)',
         border: isDone
-          ? '1px solid rgba(139,92,246,.5)'
+          ? '1px solid rgba(41,151,255,.4)'
           : isActive
-          ? '1px solid rgba(34, 211, 238,.55)'
-          : '1px solid var(--border)',
-        color: isDone ? '#a78bfa' : isActive ? '#22D3EE' : 'var(--muted)',
+          ? '1px solid rgba(41,151,255,.55)'
+          : '1px solid #2a2a2d',
+        color: isDone ? '#2997ff' : isActive ? '#2997ff' : '#86868b',
         fontSize: isDone ? '1.25rem' : '1.1rem',
         boxShadow: isActive
-          ? '0 0 24px rgba(34, 211, 238,.35)'
+          ? '0 0 24px rgba(41,151,255,.3)'
           : isDone
-          ? '0 0 14px rgba(139,92,246,.25)'
+          ? '0 0 14px rgba(41,151,255,.2)'
           : 'none',
       }}
     >
@@ -80,8 +80,8 @@ function Spinner() {
       style={{
         width: 18,
         height: 18,
-        border: '2px solid rgba(34, 211, 238,.25)',
-        borderTopColor: '#22D3EE',
+        border: '2px solid rgba(41,151,255,.25)',
+        borderTopColor: '#2997ff',
         animation: 'spin 0.9s linear infinite',
       }}
     />
@@ -398,26 +398,27 @@ export default function VideoClient() {
   if (!hasScript) {
     return (
       <main className="px-6 py-10 max-w-3xl mx-auto">
-        <h1 className="font-black text-2xl mb-3" style={{ color: 'var(--text)' }}>
+        <h1 className="font-black text-2xl mb-3" style={{ color: '#f5f5f7' }}>
           🎬 Video Studio
         </h1>
         <div
           className="rounded-2xl p-6"
           style={{
-            background: 'rgba(11,17,32,0.85)',
-            border: '1px solid var(--border)',
+            background: '#161618',
+            border: '1px solid #2a2a2d',
           }}
         >
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--muted2)' }}>
+          <p className="text-sm leading-relaxed" style={{ color: '#86868b' }}>
             No script loaded yet. Generate an addictive micro-knowledge script first, then click{' '}
-            <span style={{ color: '#22D3EE', fontWeight: 700 }}>🎬 Create Video</span> on
+            <span style={{ color: '#2997ff', fontWeight: 700 }}>🎬 Create Video</span> on
             any result card to start the pipeline.
           </p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+            className="mt-5 rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              background: '#f5f5f7',
+              color: '#000',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -451,18 +452,18 @@ export default function VideoClient() {
           <span
             className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
             style={{
-              background: 'linear-gradient(135deg, rgba(34, 211, 238,.2), rgba(5, 150, 105,.15))',
-              border: '1px solid rgba(34, 211, 238,.3)',
-              color: '#22D3EE',
+              background: 'rgba(41,151,255,.14)',
+              border: '1px solid rgba(41,151,255,.3)',
+              color: '#2997ff',
             }}
           >
             Beta · Video Studio
           </span>
         </div>
-        <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: 'var(--text)' }}>
+        <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ color: '#f5f5f7' }}>
           🎬 Build Your Viral Short
         </h1>
-        <p className="text-sm" style={{ color: 'var(--muted2)' }}>
+        <p className="text-sm" style={{ color: '#86868b' }}>
           Automated pipeline: script → scenes → voiceover → footage → export.
         </p>
       </div>
@@ -471,8 +472,8 @@ export default function VideoClient() {
       <div
         className="hidden sm:flex items-center justify-between mb-6 rounded-2xl px-4 py-3"
         style={{
-          background: 'rgba(11,17,32,0.7)',
-          border: '1px solid var(--border)',
+          background: '#161618',
+          border: '1px solid #2a2a2d',
         }}
       >
         {STEPS.map((s, i) => {
@@ -491,7 +492,7 @@ export default function VideoClient() {
                 <div className="text-left hidden md:block">
                   <div
                     className="text-xs font-black uppercase tracking-wider"
-                    style={{ color: status === 'pending' ? 'var(--muted)' : 'var(--text)', fontSize: '0.65rem' }}
+                    style={{ color: status === 'pending' ? '#86868b' : '#f5f5f7', fontSize: '0.65rem' }}
                   >
                     {s.title}
                   </div>
@@ -504,7 +505,7 @@ export default function VideoClient() {
                     height: 2,
                     background:
                       s.id < step
-                        ? 'linear-gradient(90deg, rgba(139,92,246,.6), rgba(167,139,250,.3))'
+                        ? 'rgba(41,151,255,.5)'
                         : 'rgba(255,255,255,.06)',
                   }}
                 />
@@ -529,41 +530,41 @@ export default function VideoClient() {
               className="step-card rounded-2xl overflow-hidden transition-all"
               style={{
                 background: isActive
-                  ? 'rgba(11,17,32,0.92)'
+                  ? '#1d1d1f'
                   : isDone
-                  ? 'rgba(11,17,32,0.7)'
-                  : 'rgba(11,17,32,0.5)',
+                  ? '#161618'
+                  : '#161618',
                 border: isActive
-                  ? '1px solid rgba(34, 211, 238,.45)'
+                  ? '1px solid rgba(41,151,255,.45)'
                   : isDone
-                  ? '1px solid rgba(139,92,246,.25)'
-                  : '1px solid var(--border)',
-                boxShadow: isActive ? '0 12px 48px rgba(34, 211, 238,.18)' : 'none',
+                  ? '1px solid #3a3a3d'
+                  : '1px solid #2a2a2d',
+                boxShadow: isActive ? '0 12px 48px rgba(41,151,255,.14)' : 'none',
                 opacity: status === 'pending' ? 0.55 : 1,
               }}
             >
               <div
                 className="flex items-center gap-3 px-5 py-4"
                 style={{
-                  borderBottom: isActive || isDone ? '1px solid var(--border)' : 'none',
+                  borderBottom: isActive || isDone ? '1px solid #2a2a2d' : 'none',
                 }}
               >
                 <StepCircle emoji={s.emoji} status={status} number={s.id} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                  <div className="text-xs font-black uppercase tracking-widest" style={{ color: '#86868b' }}>
                     Step {s.id} of {STEPS.length}
                   </div>
-                  <div className="font-black" style={{ color: 'var(--text)', fontSize: '1.05rem' }}>
+                  <div className="font-black" style={{ color: '#f5f5f7', fontSize: '1.05rem' }}>
                     {s.title}
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--muted2)' }}>
+                  <div className="text-xs mt-0.5" style={{ color: '#86868b' }}>
                     {s.subtitle}
                   </div>
                 </div>
                 {isDone && (
                   <span
                     className="text-xs font-black px-2 py-1 rounded"
-                    style={{ background: 'rgba(139,92,246,.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,.3)' }}
+                    style={{ background: 'rgba(41,151,255,.12)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}
                   >
                     ✓ Done
                   </span>
@@ -663,16 +664,16 @@ function Step1Review({
     <div className="flex flex-col gap-4">
       {hook && (
         <div>
-          <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--indigo-light)' }}>
+          <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: '#2997ff' }}>
             🪝 Hook
           </div>
           <div
             className="rounded-xl px-4 py-3 text-sm font-bold italic leading-snug"
             style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129,.09), rgba(5, 150, 105,.05))',
-              border: '1px solid rgba(16, 185, 129,.2)',
-              borderLeft: '3px solid var(--indigo-light)',
-              color: 'var(--text)',
+              background: 'rgba(41,151,255,.06)',
+              border: '1px solid rgba(41,151,255,.2)',
+              borderLeft: '3px solid #2997ff',
+              color: '#f5f5f7',
             }}
           >
             {hook}
@@ -680,23 +681,23 @@ function Step1Review({
         </div>
       )}
       <div>
-        <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--muted2)' }}>
+        <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: '#86868b' }}>
           📌 Title
         </div>
         <div
           className="rounded-xl px-4 py-3 text-sm font-bold leading-snug"
-          style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)', color: 'var(--text)' }}
+          style={{ background: 'rgba(0,0,0,.22)', border: '1px solid #2a2a2d', color: '#f5f5f7' }}
         >
           {title}
         </div>
       </div>
       <div>
-        <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--muted2)' }}>
+        <div className="text-xs font-black uppercase tracking-widest mb-1.5" style={{ color: '#86868b' }}>
           📝 Script
         </div>
         <div
           className="rounded-xl px-4 py-3 text-sm leading-loose whitespace-pre-line"
-          style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)', color: 'var(--muted2)', maxHeight: 280, overflowY: 'auto' }}
+          style={{ background: 'rgba(0,0,0,.22)', border: '1px solid #2a2a2d', color: '#86868b', maxHeight: 280, overflowY: 'auto' }}
         >
           {script}
         </div>
@@ -704,9 +705,10 @@ function Step1Review({
       {!done && (
         <button
           onClick={onContinue}
-          className="self-start rounded-xl px-5 py-2.5 text-sm font-bold text-white transition-all"
+          className="self-start rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
           style={{
-            background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+            background: '#f5f5f7',
+            color: '#000',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -739,7 +741,7 @@ function Step2Scenes({
     return (
       <div className="flex items-center gap-3 py-6">
         <Spinner />
-        <span className="text-sm font-medium" style={{ color: 'var(--muted2)' }}>
+        <span className="text-sm font-medium" style={{ color: '#86868b' }}>
           AI is parsing your script into cinematic scenes...
         </span>
       </div>
@@ -758,9 +760,9 @@ function Step2Scenes({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(16, 185, 129,.12)',
-            border: '1px solid rgba(16, 185, 129,.3)',
-            color: 'var(--indigo-light)',
+            background: 'rgba(41,151,255,.12)',
+            border: '1px solid rgba(41,151,255,.3)',
+            color: '#2997ff',
             cursor: 'pointer',
           }}
         >
@@ -777,14 +779,14 @@ function Step2Scenes({
           <div
             key={s.sceneNumber}
             className="rounded-xl p-3.5 flex gap-3"
-            style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)' }}
+            style={{ background: 'rgba(0,0,0,.22)', border: '1px solid #2a2a2d' }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center font-black flex-shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(16, 185, 129,.3), rgba(5, 150, 105,.18))',
-                border: '1px solid rgba(16, 185, 129,.4)',
-                color: 'var(--indigo-light)',
+                background: 'rgba(41,151,255,.16)',
+                border: '1px solid rgba(41,151,255,.4)',
+                color: '#2997ff',
                 fontSize: '0.85rem',
               }}
             >
@@ -794,22 +796,22 @@ function Step2Scenes({
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span
                   className="font-bold px-2 py-0.5 rounded"
-                  style={{ background: 'rgba(34, 211, 238,.12)', color: '#22D3EE' }}
+                  style={{ background: 'rgba(41,151,255,.12)', color: '#2997ff' }}
                 >
                   {s.duration}s
                 </span>
                 <span
                   className="font-bold px-2 py-0.5 rounded"
-                  style={{ background: 'rgba(139,92,246,.1)', color: '#a78bfa' }}
+                  style={{ background: 'rgba(255,255,255,.06)', color: '#f5f5f7' }}
                 >
                   {s.emotionalTone}
                 </span>
-                <span style={{ color: 'var(--muted)' }}>🔎 {s.searchQuery}</span>
+                <span style={{ color: '#86868b' }}>🔎 {s.searchQuery}</span>
               </div>
-              <div className="text-sm font-semibold leading-snug" style={{ color: 'var(--text)' }}>
+              <div className="text-sm font-semibold leading-snug" style={{ color: '#f5f5f7' }}>
                 "{s.narration}"
               </div>
-              <div className="text-xs leading-relaxed" style={{ color: 'var(--muted2)' }}>
+              <div className="text-xs leading-relaxed" style={{ color: '#86868b' }}>
                 🎥 {s.visualDescription}
               </div>
             </div>
@@ -819,9 +821,10 @@ function Step2Scenes({
       {!done && (
         <button
           onClick={onContinue}
-          className="self-start rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+          className="self-start rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
           style={{
-            background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+            background: '#f5f5f7',
+            color: '#000',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -852,7 +855,7 @@ function Step3Voiceover({
     return (
       <div className="flex items-center gap-3 py-6">
         <Spinner />
-        <span className="text-sm font-medium" style={{ color: 'var(--muted2)' }}>
+        <span className="text-sm font-medium" style={{ color: '#86868b' }}>
           Generating voiceover with OpenAI TTS...
         </span>
       </div>
@@ -871,9 +874,9 @@ function Step3Voiceover({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(16, 185, 129,.12)',
-            border: '1px solid rgba(16, 185, 129,.3)',
-            color: 'var(--indigo-light)',
+            background: 'rgba(41,151,255,.12)',
+            border: '1px solid rgba(41,151,255,.3)',
+            color: '#2997ff',
             cursor: 'pointer',
           }}
         >
@@ -887,9 +890,9 @@ function Step3Voiceover({
     <div className="flex flex-col gap-3">
       <div
         className="rounded-xl p-4"
-        style={{ background: 'rgba(0,0,0,.22)', border: '1px solid var(--border)' }}
+        style={{ background: 'rgba(0,0,0,.22)', border: '1px solid #2a2a2d' }}
       >
-        <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+        <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#86868b' }}>
           🎙️ Onyx voice · cinematic narration
         </div>
         <audio src={url} controls style={{ width: '100%' }} />
@@ -897,7 +900,7 @@ function Step3Voiceover({
           href={url}
           download="voiceover.mp3"
           className="inline-block mt-2.5 text-xs font-bold"
-          style={{ color: 'var(--indigo-light)' }}
+          style={{ color: '#2997ff' }}
         >
           ⬇ Download MP3
         </a>
@@ -905,9 +908,10 @@ function Step3Voiceover({
       {!done && (
         <button
           onClick={onContinue}
-          className="self-start rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+          className="self-start rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
           style={{
-            background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+            background: '#f5f5f7',
+            color: '#000',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -944,7 +948,7 @@ function Step4Stock({
     return (
       <div className="flex items-center gap-3 py-6">
         <Spinner />
-        <span className="text-sm font-medium" style={{ color: 'var(--muted2)' }}>
+        <span className="text-sm font-medium" style={{ color: '#86868b' }}>
           Scanning stock footage library...
         </span>
       </div>
@@ -963,9 +967,9 @@ function Step4Stock({
           onClick={onRetry}
           className="self-start rounded-xl px-4 py-2 text-xs font-bold"
           style={{
-            background: 'rgba(16, 185, 129,.12)',
-            border: '1px solid rgba(16, 185, 129,.3)',
-            color: 'var(--indigo-light)',
+            background: 'rgba(41,151,255,.12)',
+            border: '1px solid rgba(41,151,255,.3)',
+            color: '#2997ff',
             cursor: 'pointer',
           }}
         >
@@ -983,11 +987,11 @@ function Step4Stock({
         return (
           <div key={s.sceneNumber}>
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--muted2)' }}>
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: '#86868b' }}>
                 Scene {s.sceneNumber} · 🔎 {s.searchQuery}
               </div>
               {clips.length === 0 && (
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>
+                <span className="text-xs" style={{ color: '#86868b' }}>
                   No clips found
                 </span>
               )}
@@ -1002,8 +1006,8 @@ function Step4Stock({
                     className="relative rounded-lg overflow-hidden transition-all"
                     style={{
                       aspectRatio: '9 / 16',
-                      border: isSelected ? '2px solid #22D3EE' : '1px solid var(--border)',
-                      boxShadow: isSelected ? '0 0 16px rgba(34, 211, 238,.4)' : 'none',
+                      border: isSelected ? '2px solid #2997ff' : '1px solid #2a2a2d',
+                      boxShadow: isSelected ? '0 0 16px rgba(41,151,255,.4)' : 'none',
                       background: 'rgba(0,0,0,.4)',
                       cursor: 'pointer',
                       padding: 0,
@@ -1020,14 +1024,14 @@ function Step4Stock({
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>
+                      <div className="w-full h-full flex items-center justify-center text-xs" style={{ color: '#86868b' }}>
                         🎞️
                       </div>
                     )}
                     {isSelected && (
                       <div
                         className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black"
-                        style={{ background: '#22D3EE', color: '#1e1b4b' }}
+                        style={{ background: '#2997ff', color: '#fff' }}
                       >
                         ✓
                       </div>
@@ -1052,9 +1056,10 @@ function Step4Stock({
       {!done && (
         <button
           onClick={onContinue}
-          className="self-start rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+          className="self-start rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
           style={{
-            background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+            background: '#f5f5f7',
+            color: '#000',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -1094,14 +1099,14 @@ function ProgressBar({ progress }: { progress: number }) {
   return (
     <div
       className="w-full h-2 rounded-full overflow-hidden"
-      style={{ background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)' }}
+      style={{ background: 'rgba(255,255,255,.06)', border: '1px solid #2a2a2d' }}
     >
       <div
         className="h-full transition-all"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(16, 185, 129,.85), rgba(34, 211, 238,1))',
-          boxShadow: '0 0 16px rgba(34, 211, 238,.55)',
+          background: '#2997ff',
+          boxShadow: '0 0 16px rgba(41,151,255,.5)',
           transitionDuration: '600ms',
         }}
       />
@@ -1131,10 +1136,10 @@ function CopyChip({ label, value }: { label: string; value: string }) {
       className="rounded-xl px-3.5 py-2 text-xs font-bold transition-all"
       style={{
         background: copied
-          ? 'linear-gradient(135deg, rgba(139,92,246,.25), rgba(167,139,250,.15))'
-          : 'rgba(16, 185, 129,.12)',
-        border: copied ? '1px solid rgba(139,92,246,.45)' : '1px solid rgba(16, 185, 129,.3)',
-        color: copied ? '#a78bfa' : 'var(--indigo-light)',
+          ? 'rgba(41,151,255,.2)'
+          : 'rgba(41,151,255,.12)',
+        border: copied ? '1px solid rgba(41,151,255,.45)' : '1px solid rgba(41,151,255,.3)',
+        color: '#2997ff',
         cursor: 'pointer',
       }}
     >
@@ -1188,19 +1193,19 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(16, 185, 129,.18))',
-            border: '1px solid rgba(34, 211, 238,.45)',
-            boxShadow: '0 0 32px rgba(34, 211, 238,.35)',
+            background: 'rgba(41,151,255,.16)',
+            border: '1px solid rgba(41,151,255,.4)',
+            boxShadow: '0 0 32px rgba(41,151,255,.25)',
             fontSize: '2.4rem',
           }}
         >
           🎬
         </div>
         <div>
-          <div className="font-black text-xl mb-1" style={{ color: 'var(--text)' }}>
+          <div className="font-black text-xl mb-1" style={{ color: '#f5f5f7' }}>
             Ready to render
           </div>
-          <div className="text-sm max-w-sm" style={{ color: 'var(--muted2)' }}>
+          <div className="text-sm max-w-sm" style={{ color: '#86868b' }}>
             We'll auto-stitch your scenes, narration, captions, and soundtrack into a 1080×1920
             MP4 — about 35 seconds, post-ready.
           </div>
@@ -1209,9 +1214,9 @@ function Step5Export({
           <div
             className="rounded-xl px-4 py-2 text-xs font-semibold"
             style={{
-              background: 'rgba(245,158,11,.08)',
-              border: '1px solid rgba(245,158,11,.3)',
-              color: '#22D3EE',
+              background: 'rgba(41,151,255,.08)',
+              border: '1px solid rgba(41,151,255,.3)',
+              color: '#2997ff',
             }}
           >
             ⚠ Select at least one stock clip in Step 4
@@ -1220,17 +1225,15 @@ function Step5Export({
         <button
           onClick={onStart}
           disabled={selectedClipsCount === 0}
-          className="rounded-xl px-6 py-3 text-sm font-black text-white transition-all"
+          className="rounded-[980px] px-6 py-3 text-sm font-black transition-all"
           style={{
             background:
               selectedClipsCount === 0
                 ? 'rgba(255,255,255,.04)'
-                : 'linear-gradient(135deg, var(--indigo), var(--purple))',
+                : '#f5f5f7',
             border: 'none',
-            boxShadow:
-              selectedClipsCount === 0 ? 'none' : '0 8px 28px rgba(34, 211, 238,.35)',
             cursor: selectedClipsCount === 0 ? 'not-allowed' : 'pointer',
-            color: selectedClipsCount === 0 ? 'var(--muted)' : '#fff',
+            color: selectedClipsCount === 0 ? '#86868b' : '#000',
           }}
         >
           🎬 Render My Short
@@ -1246,9 +1249,9 @@ function Step5Export({
         <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.3), rgba(16, 185, 129,.18))',
-            border: '1px solid rgba(34, 211, 238,.45)',
-            boxShadow: '0 0 32px rgba(34, 211, 238,.45)',
+            background: 'rgba(41,151,255,.16)',
+            border: '1px solid rgba(41,151,255,.4)',
+            boxShadow: '0 0 32px rgba(41,151,255,.35)',
             fontSize: '2.4rem',
             animation: 'pulse 1.6s ease-in-out infinite',
           }}
@@ -1256,22 +1259,22 @@ function Step5Export({
           🎬
         </div>
         <div className="w-full max-w-md flex flex-col gap-3">
-          <div className="font-black text-lg" style={{ color: 'var(--text)' }}>
+          <div className="font-black text-lg" style={{ color: '#f5f5f7' }}>
             {currentStage.label}
           </div>
           <ProgressBar progress={progress} />
-          <div className="text-xs font-bold" style={{ color: 'var(--muted)' }}>
+          <div className="text-xs font-bold" style={{ color: '#86868b' }}>
             {progress}%
           </div>
         </div>
-        <div className="text-xs max-w-sm" style={{ color: 'var(--muted2)' }}>
+        <div className="text-xs max-w-sm" style={{ color: '#86868b' }}>
           Hang tight — this typically takes 30–90 seconds. Your video is being assembled in the
           cloud.
         </div>
         <style jsx>{`
           @keyframes pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 32px rgba(34, 211, 238,.45); }
-            50% { transform: scale(1.04); box-shadow: 0 0 48px rgba(34, 211, 238,.65); }
+            0%, 100% { transform: scale(1); box-shadow: 0 0 32px rgba(41,151,255,.35); }
+            50% { transform: scale(1.04); box-shadow: 0 0 48px rgba(41,151,255,.5); }
           }
         `}</style>
       </div>
@@ -1293,7 +1296,7 @@ function Step5Export({
           ⚠️
         </div>
         <div>
-          <div className="font-black text-lg mb-1" style={{ color: 'var(--text)' }}>
+          <div className="font-black text-lg mb-1" style={{ color: '#f5f5f7' }}>
             Render failed
           </div>
           <div
@@ -1310,9 +1313,10 @@ function Step5Export({
         <div className="flex gap-2">
           <button
             onClick={onRetry}
-            className="rounded-xl px-5 py-2.5 text-sm font-bold text-white"
+            className="rounded-[980px] px-5 py-2.5 text-sm font-bold transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              background: '#f5f5f7',
+              color: '#000',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -1324,8 +1328,8 @@ function Step5Export({
             className="rounded-xl px-5 py-2.5 text-sm font-bold"
             style={{
               background: 'rgba(255,255,255,.04)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
+              border: '1px solid #2a2a2d',
+              color: '#f5f5f7',
               cursor: 'pointer',
             }}
           >
@@ -1345,19 +1349,19 @@ function Step5Export({
       <div
         className="w-20 h-20 rounded-3xl flex items-center justify-center"
         style={{
-          background: 'linear-gradient(135deg, rgba(139,92,246,.3), rgba(167,139,250,.18))',
-          border: '1px solid rgba(139,92,246,.5)',
-          boxShadow: '0 0 32px rgba(139,92,246,.35)',
+          background: 'rgba(41,151,255,.16)',
+          border: '1px solid rgba(41,151,255,.45)',
+          boxShadow: '0 0 32px rgba(41,151,255,.3)',
           fontSize: '2.4rem',
         }}
       >
         ✓
       </div>
       <div>
-        <div className="font-black text-xl mb-1" style={{ color: 'var(--text)' }}>
+        <div className="font-black text-xl mb-1" style={{ color: '#f5f5f7' }}>
           Your Short is ready!
         </div>
-        <div className="text-sm max-w-sm" style={{ color: 'var(--muted2)' }}>
+        <div className="text-sm max-w-sm" style={{ color: '#86868b' }}>
           {isMock || !url
             ? 'Mock render complete — see setup note below.'
             : '1080×1920 MP4, post-ready. Download or copy your assets.'}
@@ -1368,8 +1372,8 @@ function Step5Export({
         <div
           className="rounded-2xl overflow-hidden w-full max-w-[280px]"
           style={{
-            border: '1px solid rgba(34, 211, 238,.35)',
-            boxShadow: '0 12px 48px rgba(34, 211, 238,.18)',
+            border: '1px solid rgba(41,151,255,.35)',
+            boxShadow: '0 12px 48px rgba(41,151,255,.14)',
             background: '#000',
           }}
         >
@@ -1384,20 +1388,20 @@ function Step5Export({
         <div
           className="rounded-2xl px-5 py-4 max-w-md w-full text-left"
           style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238,.1), rgba(16, 185, 129,.06))',
-            border: '1px solid rgba(34, 211, 238,.3)',
+            background: 'rgba(41,151,255,.08)',
+            border: '1px solid rgba(41,151,255,.3)',
           }}
         >
           <div
             className="text-xs font-black uppercase tracking-widest mb-1"
-            style={{ color: '#22D3EE' }}
+            style={{ color: '#2997ff' }}
           >
             🛠 Setup required
           </div>
-          <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+          <div className="text-sm font-semibold mb-1" style={{ color: '#f5f5f7' }}>
             Add CREATOMATE_API_KEY to enable real rendering
           </div>
-          <div className="text-xs leading-relaxed" style={{ color: 'var(--muted2)' }}>
+          <div className="text-xs leading-relaxed" style={{ color: '#86868b' }}>
             Your composition is fully built — voiceover, captions, transitions, soundtrack, and
             CTA are wired up. Add a Creatomate API key in your env to produce the final MP4.
           </div>
@@ -1411,9 +1415,10 @@ function Step5Export({
             download={`${(title || 'shortsforge').replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}.mp4`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-xl px-5 py-2.5 text-sm font-black text-white"
+            className="rounded-[980px] px-5 py-2.5 text-sm font-black transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--indigo), var(--purple))',
+              background: '#f5f5f7',
+              color: '#000',
               border: 'none',
               cursor: 'pointer',
               textDecoration: 'none',
@@ -1427,8 +1432,8 @@ function Step5Export({
             className="rounded-xl px-5 py-2.5 text-sm font-bold"
             style={{
               background: 'rgba(255,255,255,.04)',
-              border: '1px solid var(--border)',
-              color: 'var(--muted)',
+              border: '1px solid #2a2a2d',
+              color: '#86868b',
               cursor: 'not-allowed',
             }}
           >
@@ -1443,8 +1448,8 @@ function Step5Export({
           className="rounded-xl px-4 py-2.5 text-sm font-bold"
           style={{
             background: 'rgba(255,255,255,.04)',
-            border: '1px solid var(--border)',
-            color: 'var(--text)',
+            border: '1px solid #2a2a2d',
+            color: '#f5f5f7',
             cursor: 'pointer',
           }}
         >

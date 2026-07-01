@@ -7,10 +7,10 @@ import Link from 'next/link'
 const EXAMPLES = [
   {
     niche: '💰 Money Facts',
-    color: '#a78bfa',
-    glow: 'rgba(167,139,250,0.25)',
-    badge: '#064e3b',
-    badgeText: '#c4b5fd',
+    color: '#2997ff',
+    glow: 'rgba(41,151,255,0.25)',
+    badge: '#1d1d1f',
+    badgeText: '#2997ff',
     hook: 'The bank never told you this... 🏦',
     script:
       "Every dollar in your savings account is losing value right now. Inflation is eating 4% per year. The average savings account pays 0.5%. That means you're losing 3.5% annually just by doing nothing. Here's what the wealthy do instead...",
@@ -18,10 +18,10 @@ const EXAMPLES = [
   },
   {
     niche: '😱 Dark Mysteries',
-    color: '#22D3EE',
-    glow: 'rgba(34, 211, 238,0.25)',
-    badge: '#2e1065',
-    badgeText: '#22D3EE',
+    color: '#f5f5f7',
+    glow: 'rgba(245,245,247,0.18)',
+    badge: '#1d1d1f',
+    badgeText: '#f5f5f7',
     hook: 'This was erased from history books... 😱',
     script:
       'In 1908, a massive explosion in Siberia leveled 800 square miles of forest. No crater was ever found. Scientists still debate the cause 100 years later. Some say comet. Some say meteor. Others say something else entirely...',
@@ -29,10 +29,10 @@ const EXAMPLES = [
   },
   {
     niche: '🤯 Mind Blowing Facts',
-    color: '#f472b6',
-    glow: 'rgba(244,114,182,0.25)',
-    badge: '#500724',
-    badgeText: '#a7f3d0',
+    color: '#86868b',
+    glow: 'rgba(134,134,139,0.22)',
+    badge: '#1d1d1f',
+    badgeText: '#f5f5f7',
     hook: 'Your brain is lying to you right now 🤯',
     script:
       "Every memory you have is a reconstruction, not a recording. Each time you remember something, your brain rewrites it slightly. This means your oldest memories are the most distorted. You've been living with edited versions of your own past...",
@@ -181,7 +181,7 @@ export default function LiveScriptPreview() {
             fontSize: '0.6rem',
             fontWeight: 800,
             letterSpacing: '0.14em',
-            color: 'var(--indigo-light)',
+            color: '#2997ff',
             textTransform: 'uppercase',
             marginBottom: 10,
           }}
@@ -191,24 +191,25 @@ export default function LiveScriptPreview() {
         <h2
           style={{
             fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-            fontWeight: 900,
-            letterSpacing: '-0.02em',
-            color: 'var(--text)',
+            fontWeight: 600,
+            letterSpacing: '-0.03em',
             marginBottom: 10,
+            background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
           }}
         >
           Watch it generate{' '}
           <span
             style={{
-              background: 'linear-gradient(135deg, #A78BFA, #22D3EE)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: '#2997ff',
+              WebkitTextFillColor: '#2997ff',
             }}
           >
             in real time
           </span>
         </h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted2)', fontWeight: 500 }}>
+        <p style={{ fontSize: '0.9rem', color: '#6e6e73', fontWeight: 500 }}>
           See the product working before you sign up.
         </p>
       </div>
@@ -216,7 +217,7 @@ export default function LiveScriptPreview() {
       {/* Terminal card */}
       <div
         style={{
-          background: 'rgba(8,8,20,0.95)',
+          background: '#161618',
           border: `1px solid ${ex.color}40`,
           borderRadius: 20,
           boxShadow: `0 0 0 1px ${ex.color}18 inset, 0 0 60px ${ex.glow}`,
@@ -305,7 +306,7 @@ export default function LiveScriptPreview() {
               style={{
                 fontSize: '0.9rem',
                 fontWeight: 700,
-                color: '#f1f5f9',
+                color: '#f5f5f7',
                 lineHeight: 1.5,
                 minHeight: '1.5em',
               }}
@@ -336,7 +337,7 @@ export default function LiveScriptPreview() {
             <div
               style={{
                 fontSize: '0.82rem',
-                color: '#94a3b8',
+                color: '#86868b',
                 lineHeight: 1.75,
                 minHeight: '3em',
               }}
@@ -367,7 +368,7 @@ export default function LiveScriptPreview() {
             <div
               style={{
                 fontSize: '0.82rem',
-                color: '#a78bfa',
+                color: '#2997ff',
                 lineHeight: 1.5,
                 minHeight: '1.5em',
                 fontWeight: 600,
@@ -391,7 +392,7 @@ export default function LiveScriptPreview() {
           }}
         >
           <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-            shortsforgeai · ~35s · YouTube Shorts
+            kineo · ~35s · YouTube Shorts
           </span>
           {/* Niche indicator dots */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -421,18 +422,18 @@ export default function LiveScriptPreview() {
             alignItems: 'center',
             gap: 8,
             padding: '14px 32px',
-            borderRadius: 14,
+            borderRadius: 980,
             fontSize: '0.92rem',
             fontWeight: 900,
-            color: '#fff',
+            color: '#000',
             textDecoration: 'none',
-            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 55%, #22D3EE 100%)',
-            boxShadow: '0 6px 30px rgba(16, 185, 129,0.45)',
+            background: '#f5f5f7',
+            boxShadow: '0 6px 30px rgba(255,255,255,0.18)',
           }}
         >
           ⚡ Generate yours →
         </Link>
-        <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 10 }}>
+        <p style={{ fontSize: '0.76rem', color: '#86868b', marginTop: 10 }}>
           Free to start · No credit card required
         </p>
       </div>

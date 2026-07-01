@@ -33,20 +33,20 @@ export default function ReferralPromoBanner() {
       role="status"
       className="mx-auto mt-4 flex w-full max-w-3xl items-center gap-3 rounded-xl px-4 py-3"
       style={{
-        background: 'rgba(34, 211, 238, 0.10)',
-        border: '1px solid rgba(34, 211, 238, 0.35)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
       }}
     >
       <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎁</span>
-      <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, color: '#E2F6FB', lineHeight: 1.4 }}>
-        Invite a friend — you <span style={{ color: '#22D3EE' }}>both get 30 free credits</span> when they
+      <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, color: '#f5f5f7', lineHeight: 1.4 }}>
+        Invite a friend — you <span style={{ color: 'var(--blue, #2997ff)' }}>both get 30 free credits</span> when they
         make their first video. No limit.
       </span>
       <Link
         href="/referral"
         onClick={dismiss}
         className="shrink-0 rounded-lg px-4 py-2 text-xs font-extrabold"
-        style={{ background: '#22D3EE', color: '#0A0A0B' }}
+        style={{ background: '#f5f5f7', color: '#000', borderRadius: 980 }}
       >
         Get my link →
       </Link>
@@ -57,8 +57,8 @@ export default function ReferralPromoBanner() {
         className="shrink-0"
         style={{
           width: 26, height: 26, borderRadius: 8,
-          background: 'transparent', border: '1px solid rgba(34,211,238,0.35)',
-          color: '#22D3EE', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer',
+          background: 'transparent', border: '1px solid #3a3a3d',
+          color: '#86868b', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >

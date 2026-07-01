@@ -87,10 +87,9 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
     <section
       className="rounded-2xl p-5 sm:p-6 mb-6 relative"
       style={{
-        background:
-          'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
-        border: '1px solid rgba(16, 185, 129,.28)',
-        boxShadow: '0 0 28px rgba(16, 185, 129,.10)',
+        background: '#161618',
+        border: '1px solid #2a2a2d',
+        boxShadow: 'none',
       }}
     >
       <button
@@ -106,8 +105,8 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
           height: 28,
           borderRadius: 8,
           background: 'rgba(255,255,255,.04)',
-          border: '1px solid var(--border)',
-          color: 'var(--muted)',
+          border: '1px solid #2a2a2d',
+          color: '#86868b',
           cursor: 'pointer',
           fontSize: '0.95rem',
           lineHeight: 1,
@@ -119,17 +118,17 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
       <div className="mb-4 pr-8">
         <div
           className="text-[10px] font-black uppercase tracking-widest mb-1"
-          style={{ color: '#A78BFA' }}
+          style={{ color: '#2997ff' }}
         >
           Welcome
         </div>
         <h2
           className="font-black tracking-tight mb-1"
-          style={{ fontSize: '1.25rem', color: 'var(--text)' }}
+          style={{ fontSize: '1.25rem', color: '#f5f5f7' }}
         >
           Create your first AI Short
         </h2>
-        <p className="text-sm" style={{ color: 'var(--muted2)' }}>
+        <p className="text-sm" style={{ color: '#6e6e73' }}>
           Pick a topic below to get started.
         </p>
       </div>
@@ -145,19 +144,19 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
             onClick={() => handlePick(q.prompt)}
             className="rounded-xl px-4 py-3 text-sm font-bold text-left"
             style={{
-              background: 'rgba(255,255,255,.04)',
-              border: '1px solid rgba(16, 185, 129,.28)',
-              color: 'var(--text)',
+              background: '#1d1d1f',
+              border: '1px solid #2a2a2d',
+              color: '#f5f5f7',
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(16, 185, 129,.14)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(16, 185, 129,.5)'
+              ;(e.currentTarget as HTMLElement).style.background = '#232325'
+              ;(e.currentTarget as HTMLElement).style.borderColor = '#48484a'
             }}
             onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(16, 185, 129,.28)'
+              ;(e.currentTarget as HTMLElement).style.background = '#1d1d1f'
+              ;(e.currentTarget as HTMLElement).style.borderColor = '#2a2a2d'
             }}
           >
             {q.label}
@@ -177,7 +176,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
           <li
             key={step}
             className="flex items-center gap-2 text-xs"
-            style={{ color: 'var(--muted2)' }}
+            style={{ color: '#6e6e73' }}
           >
             <span
               className="inline-flex items-center justify-center font-black"
@@ -185,8 +184,8 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
-                background: 'rgba(16, 185, 129,.18)',
-                color: '#A78BFA',
+                background: 'rgba(41,151,255,.16)',
+                color: '#2997ff',
                 fontSize: '0.7rem',
                 flexShrink: 0,
               }}
