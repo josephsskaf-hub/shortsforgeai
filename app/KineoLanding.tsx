@@ -155,7 +155,7 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="wrap">
           <div className="hero-center">
             <p className="eyebrow">AI YouTube Shorts generator</p>
-            <h1 className="gtxt">One idea in. A finished Short out.</h1>
+            <h1 className="gtxt">Type an idea. Get a video.</h1>
             <p className="sub">No camera, no editing. The AI writes the script, records the voice, finds the footage and adds captions — a ready-to-post 9:16 Short in ~60 seconds.</p>
             <form className="composer" action="/generate" method="get">
               <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
