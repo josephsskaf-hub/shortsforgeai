@@ -122,7 +122,7 @@ const KLP_CSS = `
 .klp .hero-center .composer{margin:48px auto 0;max-width:640px;min-height:auto;text-align:left}
 .klp .hero-center .composer .ci{min-height:104px}
 .klp .hero-center .trust{text-align:center}
-.klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:980px;margin:52px auto 0}
+.klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(6,1fr);gap:12px;max-width:1160px;margin:52px auto 0}
 .klp .hero-gallery .vcard{aspect-ratio:9/16;padding:13px}
 .klp .hero-gallery .vcard .vt{font-size:12.5px}
 .klp .gallery-cap{position:relative;z-index:1;margin-top:20px;text-align:center;font-size:13.5px;color:var(--muted2)}

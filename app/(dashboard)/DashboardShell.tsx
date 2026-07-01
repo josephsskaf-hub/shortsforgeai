@@ -33,6 +33,13 @@ const pageTitles: Record<string, string> = {
   '/channel': 'Channel Builder',
   '/admin/metrics': 'Admin · Metrics',
   '/thumbnail-generator': 'AI Thumbnail Generator',
+  '/referral': 'Invite & Earn',
+  '/affiliate': 'Affiliate Dashboard',
+  '/admin/ceo': 'Admin · CEO',
+  '/admin/funnel': 'Admin · Funnel',
+  '/admin/users': 'Admin · Users',
+  '/admin/affiliates': 'Admin · Affiliates',
+  '/v2': 'Create (V2 Beta)',
 }
 
 export default function DashboardShell({

@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import AnimateClient from './AnimateClient'
 
-export const metadata = { title: 'Animate a Photo — ShortsForgeAI' }
+export const metadata = { title: 'Animate a Photo — Kineo' }
 
 export default async function AnimatePage() {
   const supabase = createClient()

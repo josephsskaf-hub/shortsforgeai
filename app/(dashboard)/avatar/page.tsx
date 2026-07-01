@@ -4,7 +4,7 @@
 import { createClient } from '@/lib/supabase/server'
 import AvatarStudioClient from './AvatarStudioClient'
 
-export const metadata = { title: 'AI Avatar Studio — ShortsForgeAI' }
+export const metadata = { title: 'AI Avatar Studio — Kineo' }
 
 export default async function AvatarStudioPage() {
   const supabase = createClient()

@@ -546,9 +546,10 @@ export default function Sidebar({
               <p style={{ fontSize: '0.72rem', color: '#86868b', lineHeight: 1.5, marginBottom: 10 }}>Sign up and start generating viral videos instantly.</p>
               <button
                 onClick={() => setShowAuthModal(true)}
+                aria-label="Get started free — sign up"
                 style={{ display: 'block', width: '100%', textAlign: 'center', borderRadius: 10, padding: '9px 0', fontSize: '0.8rem', fontWeight: 800, color: '#0A0A0B', background: '#2997ff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(41,151,255,0.35)' }}
               >
-                ⚡ Get Started Free →
+                <span aria-hidden="true">⚡ </span>Get Started Free →
               </button>
             </div>
           </div>
@@ -685,6 +686,7 @@ export default function Sidebar({
               <button
                 onClick={() => setSettingsOpen((v) => !v)}
                 title="Account settings"
+                aria-label="Account settings"
                 aria-haspopup="menu"
                 aria-expanded={settingsOpen}
                 style={{
@@ -697,7 +699,7 @@ export default function Sidebar({
                   lineHeight: 1,
                 }}
               >
-                ⚙
+                <span aria-hidden="true">⚙</span>
               </button>
             )}
 
@@ -721,6 +723,7 @@ export default function Sidebar({
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
+                aria-label="Sign in"
                 style={{
                   background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.3)', borderRadius: 8,
                   color: '#2997ff', cursor: 'pointer', padding: '5px 8px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
