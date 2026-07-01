@@ -1,9 +1,9 @@
 // Kineo landing — new Apple-dark redesign (replaces the old HomePageClient on the homepage).
 // Self-contained, styles scoped under .klp so they don't leak into the rest of the app.
-// Marker: KINEO-LANDING-V2-2026-06-30
+// Marker: KINEO-LANDING-V3-2026-06-30
 import Link from 'next/link'
 import NavCreditsBadge from '@/components/NavCreditsBadge'
-import AutoplayVideo from '@/components/AutoplayVideo'
+import HeroGallery from './HeroGallery'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -128,6 +128,13 @@ const KLP_CSS = `
 .klp .gallery-cap{position:relative;z-index:1;margin-top:20px;text-align:center;font-size:13.5px;color:var(--muted2)}
 @media(max-width:900px){.klp .hero-gallery{grid-template-columns:repeat(3,1fr);max-width:560px}}
 @media(max-width:560px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:380px}}
+.klp .platforms{position:relative;z-index:1;margin:22px auto 0;text-align:center;font-size:12px;font-weight:600;letter-spacing:.09em;color:var(--muted2);text-transform:uppercase}
+.klp .platforms b{color:var(--muted);font-weight:700}
+.klp .faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.klp .qa{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+.klp .qa h3{font-size:1.08rem;font-weight:600;letter-spacing:-.01em}
+.klp .qa p{margin-top:8px;color:var(--muted);font-size:.98rem;line-height:1.6}
+@media(max-width:560px){.klp .hero-center h1{font-size:clamp(2.4rem,11vw,3.3rem)}.klp .hero-gallery{gap:10px}}
 `
 
 export default function KineoLanding({ initialUser }: Props) {
@@ -160,14 +167,9 @@ export default function KineoLanding({ initialUser }: Props) {
               <button className="btn btn-w cbtn" type="submit">Generate →</button>
             </form>
           </div>
-          <div id="samples" className="hero-gallery">
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/hero-loop.mp4" poster="/videos/hero-loop.jpg" /><span className="lab">AI · 58s</span><div className="vt">The island too dangerous to visit</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-turkmenistan.mp4" poster="/videos/example-turkmenistan.jpg" /><span className="lab">AI · 60s</span><div className="vt">The desert hole on fire for 54 years</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-sentinel.mp4" poster="/videos/example-sentinel.jpg" /><span className="lab">AI · 60s</span><div className="vt">The island where getting close can kill you</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-japan-ai.mp4" poster="/videos/example-japan-ai.jpg" /><span className="lab">AI · 53s</span><div className="vt">Japan&apos;s AI that hires other AIs</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-shutdown.mp4" poster="/videos/example-shutdown.jpg" /><span className="lab">AI · 45s</span><div className="vt">Three days after launch, the US shut this AI down</div></div>
-          </div>
+          <HeroGallery />
           <p className="gallery-cap">Each one made from a single topic — script, voice, footage and captions, automatically.</p>
+          <div className="platforms">Built for <b>YouTube Shorts</b> · <b>TikTok</b> · <b>Reels</b></div>
         </div>
       </header>
 
@@ -245,6 +247,19 @@ export default function KineoLanding({ initialUser }: Props) {
           </div>
           <div className="snote">Not ready for a plan? <b>Start with 10 Shorts for $4.90</b> — one-time, no subscription, credits never expire.</div>
           <div className="pricing-more"><Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link></div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div className="wrap">
+          <div className="sec-h"><h2>Questions, answered.</h2></div>
+          <div className="faq">
+            <div className="qa"><h3>Is the video really mine to post?</h3><p>Yes. Everything Kineo makes is yours — download the MP4 and post it to YouTube, TikTok or Reels, monetize it, whatever you want.</p></div>
+            <div className="qa"><h3>Do I need any editing skills?</h3><p>None. You type one idea and the AI writes the script, records the voice, finds the footage and adds captions. You just download.</p></div>
+            <div className="qa"><h3>Is there a watermark?</h3><p>Paid plans export clean, watermark-free MP4s. The free trial adds a small mark so you can test the output first.</p></div>
+            <div className="qa"><h3>Can I use my own script?</h3><p>Yes — paste your script and pick &ldquo;Use my script as is&rdquo; and the AI narrates it word for word.</p></div>
+            <div className="qa"><h3>Can I cancel anytime?</h3><p>Anytime, in one click. Plans are month to month and your credits never expire.</p></div>
+          </div>
         </div>
       </section>
 
