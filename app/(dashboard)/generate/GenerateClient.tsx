@@ -1161,10 +1161,18 @@ export default function GenerateClient() {
         // Push #235 — when the fast endpoint returned a verbatim user script,
         // narrate THAT (and its captions) instead of the analyze-idea brief, and
         // forward the user's requested speed so compose skips word-count scaling.
-        const voiceoverScript =
+        // KINEO-VOICEOVER-FALLBACK-2026-06-30 — nunca deixar narração vazia chegar
+        // no /api/compose (ele quebra com "voiceover_script is required"). Se o
+        // roteiro sair vazio (ex.: prompt puramente visual, sem nada pra narrar),
+        // cai no próprio texto da ideia do usuário para o render não falhar.
+        const builtVoiceover =
           fastVoiceover && fastVoiceover.trim().length > 0
             ? fastVoiceover
             : buildVoiceoverScript(prompt, analysis)
+        const voiceoverScript =
+          builtVoiceover && builtVoiceover.trim().length > 0
+            ? builtVoiceover
+            : (prompt ?? '').trim()
         const sceneCaptions =
           fastCaptions && fastCaptions.length > 0
             ? fastCaptions
