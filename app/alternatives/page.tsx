@@ -3,7 +3,8 @@
 // existed at that route. This page lists every /alternatives/[competitor] comparison page
 // (OpusClip, InVideo, Submagic, HeyGen, Pika, Fliki, Revid, Crayo, AutoShorts, Klap, Quso,
 // CapCut, Pictory, VEED, Vizard, Descript, Synthesia, Canva, Kapwing, Runway, Synthesys,
-// D-ID, SendShort, Luma Dream Machine) so users and search engines can reach them from one
+// D-ID, SendShort, Luma Dream Machine, BigMotion AI, Faceless.so, Faceless.video) so users
+// and search engines can reach them from one
 // place. Data is sourced from the same COMPETITORS object the dynamic route uses, so this
 // page never drifts out of sync when new competitors are added.
 import type { Metadata } from 'next'
