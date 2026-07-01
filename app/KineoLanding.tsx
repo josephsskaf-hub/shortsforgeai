@@ -1,6 +1,6 @@
 // Kineo landing — new Apple-dark redesign (replaces the old HomePageClient on the homepage).
 // Self-contained, styles scoped under .klp so they don't leak into the rest of the app.
-// Marker: KINEO-LANDING-2026-06-30
+// Marker: KINEO-LANDING-V2-2026-06-30
 import Link from 'next/link'
 import NavCreditsBadge from '@/components/NavCreditsBadge'
 import AutoplayVideo from '@/components/AutoplayVideo'
@@ -116,6 +116,18 @@ const KLP_CSS = `
 @media(max-width:820px){.klp .grid4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:780px){.klp .steps{grid-template-columns:1fr}.klp .nav-links{display:none}}
 @media(max-width:520px){.klp .composer{flex-direction:column;align-items:stretch;padding:14px;gap:12px}}
+.klp .hero-center{position:relative;z-index:1;text-align:center;max-width:760px;margin:0 auto}
+.klp .hero-center h1{margin-left:auto;margin-right:auto;max-width:16ch}
+.klp .hero-center .sub{margin-left:auto;margin-right:auto}
+.klp .hero-center .composer{margin:30px auto 0;max-width:640px;min-height:auto;text-align:left}
+.klp .hero-center .composer .ci{min-height:104px}
+.klp .hero-center .trust{text-align:center}
+.klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;max-width:980px;margin:52px auto 0}
+.klp .hero-gallery .vcard{aspect-ratio:9/16;padding:13px}
+.klp .hero-gallery .vcard .vt{font-size:12.5px}
+.klp .gallery-cap{position:relative;z-index:1;margin-top:20px;text-align:center;font-size:13.5px;color:var(--muted2)}
+@media(max-width:900px){.klp .hero-gallery{grid-template-columns:repeat(3,1fr);max-width:560px}}
+@media(max-width:560px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:380px}}
 `
 
 export default function KineoLanding({ initialUser }: Props) {
@@ -140,50 +152,27 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <header className="hero">
         <div className="glow" />
-        <div className="wrap hero-grid">
-          <div className="hl">
+        <div className="wrap">
+          <div className="hero-center">
             <p className="eyebrow">AI YouTube Shorts generator</p>
             <h1 className="gtxt">One idea in. A finished Short out.</h1>
             <p className="sub">No camera, no editing. The AI writes the script, records the voice, finds the footage and adds captions — a ready-to-post 9:16 Short in ~60 seconds.</p>
             <form className="composer" action="/generate" method="get">
-              <textarea className="ci" name="topic" rows={5} placeholder="Type a topic — e.g. the island too dangerous to visit" />
+              <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
               <button className="btn btn-w cbtn" type="submit">Generate — free →</button>
             </form>
             <p className="trust">First Short <b>free</b> · no credit card · from <b>$11.90/mo</b></p>
           </div>
-          <div className="hr">
-            <div className="phone"><div className="screen">
-              <AutoplayVideo className="hvid" src="/videos/hero-loop.mp4" poster="/videos/hero-loop.jpg" />
-              <span className="b9">9:16 · 58s</span>
-              <div className="cap">The island too dangerous to visit</div>
-              <div className="cmeta">AI voice · B-roll · captions · ready to post</div>
-            </div></div>
-          </div>
-        </div>
-      </header>
-
-      <section id="how">
-        <div className="wrap">
-          <div className="sec-h"><h2>From an idea to a Short in three steps.</h2><p>It generates the whole video — it doesn&apos;t re-clip one you already filmed.</p></div>
-          <div className="steps">
-            <div className="step"><div className="n">Step 1</div><h3>Type one idea</h3><p>A topic, a fact, a hook — one sentence is enough. No script, no source footage needed.</p></div>
-            <div className="step"><div className="n">Step 2</div><h3>AI builds the Short</h3><p>Hook-first script, AI voiceover, footage matched to every line, and captions — assembled automatically.</p></div>
-            <div className="step"><div className="n">Step 3</div><h3>Download and post</h3><p>A finished vertical 9:16 video in ~60 seconds, ready for YouTube Shorts, TikTok and Reels.</p></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="samples">
-        <div className="wrap">
-          <div className="sec-h"><h2>This is what the AI makes in 60 seconds.</h2><p>Each one was created from a single topic — script, voice, footage and captions, automatically.</p></div>
-          <div className="grid4">
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-turkmenistan.mp4" poster="/videos/example-turkmenistan.jpg" /><span className="lab">AI · 60s</span><div className="vt">The desert hole that's been on fire for 54 years</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-sentinel.mp4" poster="/videos/example-sentinel.jpg" /><span className="lab">AI · 60s</span><div className="vt">The island where getting close can get you killed</div></div>
-            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-japan-ai.mp4" poster="/videos/example-japan-ai.jpg" /><span className="lab">AI · 53s</span><div className="vt">Japan built an AI that hires other AIs to think for it</div></div>
+          <div id="samples" className="hero-gallery">
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/hero-loop.mp4" poster="/videos/hero-loop.jpg" /><span className="lab">AI · 58s</span><div className="vt">The island too dangerous to visit</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-turkmenistan.mp4" poster="/videos/example-turkmenistan.jpg" /><span className="lab">AI · 60s</span><div className="vt">The desert hole on fire for 54 years</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-sentinel.mp4" poster="/videos/example-sentinel.jpg" /><span className="lab">AI · 60s</span><div className="vt">The island where getting close can kill you</div></div>
+            <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-japan-ai.mp4" poster="/videos/example-japan-ai.jpg" /><span className="lab">AI · 53s</span><div className="vt">Japan&apos;s AI that hires other AIs</div></div>
             <div className="vcard"><AutoplayVideo className="hvid" src="/videos/example-shutdown.mp4" poster="/videos/example-shutdown.jpg" /><span className="lab">AI · 45s</span><div className="vt">Three days after launch, the US shut this AI down</div></div>
           </div>
+          <p className="gallery-cap">Each one made from a single topic — script, voice, footage and captions, automatically.</p>
         </div>
-      </section>
+      </header>
 
       <section id="compare">
         <div className="wrap">

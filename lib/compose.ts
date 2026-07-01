@@ -12,7 +12,7 @@ import { selectPersonaForScript, describeVoiceSelection } from '@/lib/narration/
 import { splitIntoSections, hasViralSections } from '@/lib/narration/section-tts'
 
 const CREATOMATE_BASE = 'https://api.creatomate.com/v1'
-const CTA_TEXT = 'shortsforgeai.com'
+const CTA_TEXT = 'usekineo.com'
 const CTA_TAIL_SECONDS = 2.5
 // Push #293 — Background music volume. 18% keeps the phonk audible and
 // energetic without competing with the narrator. InVideo uses 15-20% range.
@@ -1367,7 +1367,7 @@ export function buildCreatomateSource({
       track: 7,
       time: round3(ctaTime),
       duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
-      text: 'Made with ShortsForgeAI',
+      text: 'Made with Kineo',
       x: '50%',
       y: '80%',
       width: '86%',
@@ -1412,7 +1412,7 @@ export function buildCreatomateSource({
       track: 9,
       time: 0,
       duration: totalDuration,
-      text: 'shortsforgeai.com',
+      text: 'usekineo.com',
       x: '50%',
       y: '5%',
       width: '80%',
