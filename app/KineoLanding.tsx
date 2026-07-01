@@ -64,8 +64,8 @@ const KLP_CSS = `
 .klp .vcard:hover{border-color:var(--line2);transform:translateY(-4px)}
 .klp .vcard .lab{position:absolute;top:12px;left:12px;font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.08);padding:3px 8px;border-radius:7px}
 .klp .vcard .vt{font-size:14px;font-weight:700;line-height:1.25;color:#fff}
-.klp .cmp{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden}
-.klp .cmp table{width:100%;border-collapse:collapse;font-size:14.5px}
+.klp .cmp{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow-x:auto}
+.klp .cmp table{width:100%;min-width:560px;border-collapse:collapse;font-size:14.5px}
 .klp .cmp th,.klp .cmp td{padding:16px 18px;text-align:center;border-bottom:1px solid var(--line)}
 .klp .cmp th:first-child,.klp .cmp td:first-child{text-align:left;color:var(--muted);font-weight:400}
 .klp .cmp thead th{font-weight:600;color:var(--muted)}
