@@ -10,8 +10,9 @@
 // launch offer.
 
 import Link from 'next/link'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import ExitIntentOffer from '@/components/ExitIntentOffer'
 
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
@@ -159,10 +160,9 @@ export default function PricingPage() {
     pro: { total: '$379', perMonth: '$31.58' },
   }
 
-  // Conversion — exit-intent modal. Fires once when the user's cursor
-  // leaves the viewport through the top (typical "closing tab" motion).
-  const [showExitModal, setShowExitModal] = useState<boolean>(false)
-  const exitShownRef = useRef(false)
+  // Conversion — exit-intent modal extracted to <ExitIntentOffer />
+  // (components/ExitIntentOffer.tsx): Starter Pack rescue offer, once per
+  // session, desktop mouseleave + mobile inactivity/scroll-up triggers.
 
   // Push #173 — iOS Safari blocks window.location.href inside async/await
   // (user gesture chain is severed after the first await). Fix: navigate
@@ -209,19 +209,6 @@ export default function PricingPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Conversion — exit-intent: fire modal once when cursor exits through top
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const onMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !exitShownRef.current) {
-        exitShownRef.current = true
-        setShowExitModal(true)
-      }
-    }
-    document.addEventListener('mouseleave', onMouseLeave)
-    return () => document.removeEventListener('mouseleave', onMouseLeave)
-  }, [])
-
   return (
     <div className="min-h-screen bg-[#000000] text-[#f5f5f7] font-sans">
       {/* Subtle cyber-blue glow */}
@@ -261,54 +248,8 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      {/* ───────── Exit-intent modal ───────── */}
-      {showExitModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setShowExitModal(false)}
-        >
-          <div
-            className="relative w-full max-w-md rounded-2xl p-7 text-center"
-            style={{
-              background: '#161618',
-              border: '1px solid rgba(41,151,255,.35)',
-              boxShadow: '0 0 60px rgba(41,151,255,.15)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowExitModal(false)}
-              className="absolute top-3 right-4 text-[#86868b] hover:text-white text-xl font-bold"
-              aria-label="Close"
-            >×</button>
-            <div className="text-4xl mb-3">⚡</div>
-            <h2 className="text-2xl font-black text-[#f5f5f7] mb-2">
-              Don&apos;t leave yet!
-            </h2>
-            <p className="text-[14px] text-[#86868b] mb-5 leading-relaxed">
-              Start generating viral Shorts today. Cancel anytime, no contracts.
-            </p>
-            <button
-              type="button"
-              onClick={() => { setShowExitModal(false); handleBuy('basic') }}
-              className="w-full rounded-xl py-3.5 text-[15px] font-extrabold text-white mb-3"
-              style={{ background: 'linear-gradient(135deg,#2997ff,#2997ff)', boxShadow: '0 8px 24px rgba(41,151,255,.4)' }}
-            >
-              Get Creator — $24.90/mo →
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowExitModal(false); handleBuy('pro') }}
-              className="w-full rounded-xl py-3 text-[14px] font-extrabold text-[#f5f5f7] mb-3"
-              style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)' }}
-            >
-              Get Studio — $37.90/mo →
-            </button>
-            <p className="text-[11px] text-[#6e6e73]">Cancel anytime · 7-day money-back guarantee</p>
-          </div>
-        </div>
-      )}
+      {/* ───────── Exit-intent modal (Starter Pack rescue offer) ───────── */}
+      <ExitIntentOffer />
 
       {/* ───────── Pricing ───────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 pt-12 pb-16 sm:px-6 sm:pt-16">

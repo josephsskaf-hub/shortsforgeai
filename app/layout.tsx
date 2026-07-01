@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
+import StructuredData from '@/components/StructuredData'
 import './globals.css'
 
 // Push #117 — explicit viewport so iOS Safari renders pages at the
@@ -125,7 +126,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body>{children}</body>
+      <body><StructuredData />{children}</body>
     </html>
   )
 }

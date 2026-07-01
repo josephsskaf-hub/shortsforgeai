@@ -690,7 +690,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-schedules series across multiple platforms', sfa: false, them: true },
       { feature: 'Turns Reddit threads / blogs into videos', sfa: false, them: true },
       { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Runs on a schedule' },
-      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'Free tier + paid plans' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'From ~$20/mo' },
     ],
     faq: [
       { q: 'What is the best Faceless.so alternative for faceless YouTube Shorts?', a: 'Kineo is a strong Faceless.so alternative when per-video quality matters more than scheduled volume — it turns one idea into a finished faceless Short with a hook-driven script, AI voice, matched footage and captions in about 60 seconds, from $11.90/mo.' },
@@ -702,7 +702,7 @@ export const COMPETITORS: Record<string, Competitor> = {
     name: 'Faceless.video',
     h1: 'The Faceless.video Alternative That Puts You in Control of Every Short',
     intro:
-      'Faceless.video runs a faceless channel for you: pick a niche, and it creates videos — script, AI voiceover, music, captions and AI visuals — and auto-posts them to TikTok, YouTube Shorts and Instagram Reels on a set schedule (up to twice a day), with plans from roughly $19 to $49/mo. It is genuinely hands-off, but users report repetitive content and occasional visual glitches across batches. Kineo takes the opposite bet: one idea, one hook-driven script, one finished 9:16 Short in about 60 seconds — so you approve every video before it goes out, from $11.90/mo.',
+      'Faceless.video runs a faceless channel for you: pick a niche, and it creates videos — script, AI voiceover, music, captions and AI visuals — and auto-posts them to TikTok, YouTube Shorts and Instagram Reels on a set schedule (up to twice a day), with plans from $15 to $45/mo per series. It is genuinely hands-off, but users report repetitive content and occasional visual glitches across batches. Kineo takes the opposite bet: one idea, one hook-driven script, one finished 9:16 Short in about 60 seconds — so you approve every video before it goes out, from $11.90/mo.',
     theyDo: 'Faceless.video auto-creates and auto-posts faceless videos to TikTok, YouTube Shorts and Instagram Reels on a recurring schedule.',
     pickThem:
       'Pick Faceless.video if you want a channel that posts itself on a schedule and you accept batch-generated content. Pick Kineo if you want to choose each topic, get a hook-driven script, and review the finished Short before posting — for less per month.',
@@ -714,12 +714,12 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions included', sfa: true, them: true },
       { feature: 'Auto-posts to your accounts on a schedule', sfa: false, them: true },
       { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Runs on a schedule' },
-      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'From ~$19/mo' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'From $15/mo per series' },
     ],
     faq: [
       { q: 'What is the best Faceless.video alternative for faceless YouTube Shorts?', a: 'Kineo is a strong Faceless.video alternative when you want control over each video — it turns one idea into a finished faceless Short with a hook-driven script, AI voice, matched footage and captions in about 60 seconds, from $11.90/mo, first Short free.' },
       { q: 'Why do auto-posted faceless videos sometimes underperform?', a: 'Batch-generated autopilot content tends to repeat itself, and users of scheduling tools report repetitive scripts and visual glitches slipping through. Kineo generates one Short per idea with a hook-first script and matched footage, and you review it before posting.' },
-      { q: 'Faceless.video vs Kineo — which should I use?', a: 'Use Faceless.video if a self-posting channel on a fixed schedule (its plans run roughly $19–$49/mo) is what you want. Use Kineo if you want to pick every topic and get a finished, ready-to-post Short in about 60 seconds for $11.90/mo.' },
+      { q: 'Faceless.video vs Kineo — which should I use?', a: 'Use Faceless.video if a self-posting channel on a fixed schedule (its plans run $15–$45/mo per series) is what you want. Use Kineo if you want to pick every topic and get a finished, ready-to-post Short in about 60 seconds for $11.90/mo.' },
     ],
   },
 }
@@ -826,7 +826,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
             </table>
           </div>
           <p style={{ fontSize: '0.74rem', color: '#6e6e73', textAlign: 'center', margin: '10px 0 0' }}>
-            Comparison reflects each tool’s core product focus as publicly described (June 2026); features and pricing may change.
+            Comparison reflects each tool’s core product focus as publicly described (July 2026); features and pricing may change.
           </p>
         </section>
 
