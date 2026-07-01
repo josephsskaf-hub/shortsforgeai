@@ -98,6 +98,9 @@ const KLP_CSS = `
 .klp .final .fcta{display:flex;justify-content:center;margin-top:30px}
 .klp footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted2);font-size:13.5px;text-align:center}
 .klp footer a:hover{color:var(--muted)}
+.klp .taaft-badge{margin:0 auto 18px;opacity:.8;line-height:0}
+.klp .taaft-badge img{max-width:190px;height:auto;display:inline-block}
+.klp .taaft-badge:hover{opacity:1}
 .klp .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .klp .tcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 22px;transition:.2s;display:flex;flex-direction:column;gap:6px}
 .klp .tcard:hover{border-color:var(--line2);transform:translateY(-3px)}
@@ -277,7 +280,15 @@ export default function KineoLanding({ initialUser }: Props) {
         </div>
       </section>
 
-      <footer><div className="wrap">© 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:hello@usekineo.com">Contact</a></div></footer>
+      {/* Marker: KINEO-TAAFT-BADGE-2026-07-01 (verification embed — homepage only) */}
+      <footer><div className="wrap">
+        <div className="taaft-badge">
+          <a href={"https://theresanaiforthat.com/ai/kineo/?ref=featured&v=11418043"} target="_blank" rel="nofollow noreferrer">
+            <img width={200} src={"https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"} alt="Featured on There's An AI For That" />
+          </a>
+        </div>
+        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:hello@usekineo.com">Contact</a>
+      </div></footer>
       <StickyFreeShortCTA />
     </main>
   )
