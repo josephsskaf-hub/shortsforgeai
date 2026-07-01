@@ -20,19 +20,20 @@ type Currency = 'usd' | 'brl' | 'inr'
 // Hosted payment links (direct, no session needed):
 //   Basic: https://buy.stripe.com/14A28reRf6jtcev48CgjC0r
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
+// KINEO-STRIPE-NAMES-2026-07-01 — checkout line-item names show "Kineo" (era ShortsForgeAI)
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   starter: {
-    name: 'ShortsForgeAI — Starter',
+    name: 'Kineo — Starter',
     description: '50 Fast videos / month (smart stock footage + AI voiceover)',
     credits: 50,
   },
   basic: {
-    name: 'ShortsForgeAI — Creator',
+    name: 'Kineo — Creator',
     description: '8 AI-generated videos / month (Seedance engine)',
     credits: 240,
   },
   pro: {
-    name: 'ShortsForgeAI — Studio',
+    name: 'Kineo — Studio',
     description: '8 cinematic AI videos / month (Kling engine, top quality)',
     credits: 360,
   },
@@ -75,7 +76,7 @@ function resolveCurrency(country: string): Currency {
 // see webhook Path A). No Stripe product needed — inline price_data.
 const STARTER_PACK = {
   credits: 10,
-  name: 'ShortsForgeAI — Starter Pack',
+  name: 'Kineo — Starter Pack',
   description: 'One-time: 10 Fast Shorts (no subscription).',
 }
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
