@@ -19,29 +19,19 @@ html {
    energy. Same var architecture as before. */
 :root {
   --bg: #000000;
-  --bg2: #0F0F10;
-  --bg3: #0F0F10;
   --sidebar-bg: #000000;
   --card: #161618;
   --card2: #1d1d1f;
   --indigo: #2997ff;
   --indigo-light: #2997ff;
-  --indigo-dark: #6d28d9;
   --purple: #2997ff;
   --purple-light: #2997ff;
-  --pink: #A78BFA;
-  --cyan: #22D3EE;
-  --green: #8b5cf6;
-  --amber: #f59e0b;
   --text: #f5f5f7;
   --text2: #f5f5f7;
   --muted: #6e6e73;
   --muted2: #86868b;
   --border: #2a2a2d;
   --border2: #3a3a3d;
-  --glass: rgba(255,255,255,0.03);
-  --glass-border: rgba(255,255,255,0.1);
-  --glow: 0 0 0 transparent;
   --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
 }
 

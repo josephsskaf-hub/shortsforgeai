@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface UpgradeModalProps {
@@ -10,11 +11,23 @@ interface UpgradeModalProps {
 export default function UpgradeModal({ onClose }: UpgradeModalProps) {
   const router = useRouter()
 
+  // Accessibility: close on Escape, reusing the existing onClose handler.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(8,8,15,.88)', backdropFilter: 'blur(20px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Upgrade your plan"
     >
       <div
         className="w-full max-w-md rounded-2xl p-8 animate-fade-in text-center relative"
@@ -27,6 +40,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
         {/* Close */}
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all"
           style={{
             background: 'rgba(255,255,255,.04)',
@@ -34,7 +48,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             color: '#86868b',
           }}
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
 
         {/* Icon */}
@@ -44,6 +58,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             background: '#161618',
             border: '1px solid #2a2a2d',
           }}
+          aria-hidden="true"
         >
           ⚡
         </div>
@@ -56,7 +71,7 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             color: '#2997ff',
           }}
         >
-          🔒 Free Limit Reached
+          <span aria-hidden="true">🔒</span> Free Limit Reached
         </div>
 
         <h2
@@ -85,16 +100,21 @@ export default function UpgradeModal({ onClose }: UpgradeModalProps) {
             '📥 Watermark-free MP4 output',
             '📊 Generation history & analytics',
             '🚀 Priority render queue',
-          ].map((f) => (
-            <div
-              key={f}
-              className="flex items-center gap-2 py-1.5 text-sm"
-              style={{ color: '#f5f5f7' }}
-            >
-              <span style={{ color: '#2997ff', fontSize: '0.8rem' }}>✓</span>
-              {f}
-            </div>
-          ))}
+          ].map((f) => {
+            const spaceIdx = f.indexOf(' ')
+            const emoji = spaceIdx > -1 ? f.slice(0, spaceIdx) : ''
+            const text = spaceIdx > -1 ? f.slice(spaceIdx + 1) : f
+            return (
+              <div
+                key={f}
+                className="flex items-center gap-2 py-1.5 text-sm"
+                style={{ color: '#f5f5f7' }}
+              >
+                <span style={{ color: '#2997ff', fontSize: '0.8rem' }} aria-hidden="true">✓</span>
+                <span aria-hidden="true">{emoji}</span> {text}
+              </div>
+            )
+          })}
         </div>
 
         <button

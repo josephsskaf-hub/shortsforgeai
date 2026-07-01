@@ -373,7 +373,7 @@ export default function GenerateClient() {
   const prevPhaseRef = useRef<Phase>('idle')
   useEffect(() => {
     if (prevPhaseRef.current !== phase) {
-      console.log(`[ux1] PHASE ${prevPhaseRef.current} -> ${phase} @${Date.now()}`)
+      if (process.env.NODE_ENV === 'development') console.log(`[ux1] PHASE ${prevPhaseRef.current} -> ${phase} @${Date.now()}`)
       prevPhaseRef.current = phase
     }
   }, [phase])
@@ -1531,7 +1531,7 @@ export default function GenerateClient() {
         // Creator Mode: show the planning phase, then the VisualDirector.
         setPhase('broll_planning')
         // #358 — instrumentation: timestamp the broll-plan call (Creator path).
-        console.log('[gen-client] broll-plan CALL', { mode: 'creator', ts: Date.now(), niche })
+        if (process.env.NODE_ENV === 'development') console.log('[gen-client] broll-plan CALL', { mode: 'creator', ts: Date.now(), niche })
         try {
           const bpRes = await fetch('/api/generate-broll-plan', {
             method: 'POST',
@@ -1540,7 +1540,7 @@ export default function GenerateClient() {
           })
           if (bpRes.ok) {
             const bpData = await bpRes.json()
-            console.log('[gen-client] broll-plan RESOLVED', { mode: 'creator', ts: Date.now(), degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
+            if (process.env.NODE_ENV === 'development') console.log('[gen-client] broll-plan RESOLVED', { mode: 'creator', ts: Date.now(), degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
             if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
               setBrollPlan(bpData as BrollPlan)
               setPhase('visual_director')
@@ -1558,7 +1558,7 @@ export default function GenerateClient() {
         // handleGenerate can AWAIT it before generate-video-fast (#359 Camera B).
         setPhase('options')
         const bpCallTs = Date.now()
-        console.log('[gen-client] broll-plan CALL', { mode: 'autopilot', ts: bpCallTs, niche, awaited: true })
+        if (process.env.NODE_ENV === 'development') console.log('[gen-client] broll-plan CALL', { mode: 'autopilot', ts: bpCallTs, niche, awaited: true })
         brollPlanPromiseRef.current = (async (): Promise<BrollPlan | null> => {
           try {
             const bpRes = await fetch('/api/generate-broll-plan', {
@@ -1568,7 +1568,7 @@ export default function GenerateClient() {
             })
             if (bpRes.ok) {
               const bpData = await bpRes.json()
-              console.log('[gen-client] broll-plan RESOLVED', { mode: 'autopilot', ts: Date.now(), elapsed_ms: Date.now() - bpCallTs, degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
+              if (process.env.NODE_ENV === 'development') console.log('[gen-client] broll-plan RESOLVED', { mode: 'autopilot', ts: Date.now(), elapsed_ms: Date.now() - bpCallTs, degraded: bpData?.degraded ?? null, scenes_count: Array.isArray(bpData?.scenes) ? bpData.scenes.length : 0 })
               if (bpData.globalStyle && Array.isArray(bpData.scenes)) {
                 setBrollPlan(bpData as BrollPlan)
                 return bpData as BrollPlan
@@ -1711,7 +1711,7 @@ export default function GenerateClient() {
     const key = sp.trim()
     if (autoAnalyzeKeyRef.current === key) return
     autoAnalyzeKeyRef.current = key
-    console.log(`[ux1] autoanalyze-effect -> handleAnalyze() key="${key.slice(0,40)}" phase=${phase} @${Date.now()}`)
+    if (process.env.NODE_ENV === 'development') console.log(`[ux1] autoanalyze-effect -> handleAnalyze() key="${key.slice(0,40)}" phase=${phase} @${Date.now()}`)
     handleAnalyze(sp, { fromTopic: true, skipPreview: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -1771,10 +1771,12 @@ export default function GenerateClient() {
     // flight (synchronous ref) or the UI is in a processing phase. Prevents the
     // duplicate generate-video-fast calls / orphan broll_metrics rows we saw.
     if (generationInFlightRef.current || isProcessingPhase(phase)) {
-      console.log('[gen] #360 handleGenerate ignored — already in flight', {
-        inFlight: generationInFlightRef.current,
-        phase,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[gen] #360 handleGenerate ignored — already in flight', {
+          inFlight: generationInFlightRef.current,
+          phase,
+        })
+      }
       return
     }
     generationInFlightRef.current = true
@@ -1971,13 +1973,15 @@ export default function GenerateClient() {
               scenePurpose: s.scenePurpose,
             }))
           : undefined
-        console.log('[gen-client] generate-video-fast CALL', {
-          ts: Date.now(),
-          broll_plan_ready: !!plan,
-          plan_usable: planUsable,
-          broll_degraded: plan?.degraded ?? null,
-          broll_scenes: plan?.scenes?.length ?? 0,
-        })
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[gen-client] generate-video-fast CALL', {
+            ts: Date.now(),
+            broll_plan_ready: !!plan,
+            plan_usable: planUsable,
+            broll_degraded: plan?.degraded ?? null,
+            broll_scenes: plan?.scenes?.length ?? 0,
+          })
+        }
         const res = await fetch('/api/generate-video-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2581,7 +2585,7 @@ export default function GenerateClient() {
   const selectedCost = (mode === 'fast' || mode === 'creator')
     ? 0
     : mode === 'cinematic_ai'
-    // #402 — Cinematic AI (Kling) costs 45, AI Generated (Seedance) 30.
+    // #402 — Cinematic AI (Kling) costs 60, AI Generated (Seedance) 40.
     ? (aiEngine === 'kling' ? 60 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : 40)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 

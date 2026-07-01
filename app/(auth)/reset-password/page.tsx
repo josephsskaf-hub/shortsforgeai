@@ -102,16 +102,19 @@ export default function ResetPasswordPage() {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
+                  <label htmlFor="reset-password" className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
                     New Password
                   </label>
                   <input
+                    id="reset-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                     placeholder="Min. 6 characters"
+                    aria-describedby={error ? 'reset-error' : undefined}
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={inputStyle}
                     onFocus={(e) => { e.target.style.borderColor = 'rgba(41,151,255,.5)'; e.target.style.background = 'rgba(41,151,255,.04)' }}
@@ -120,15 +123,18 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
+                  <label htmlFor="reset-confirm-password" className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
                     Confirm Password
                   </label>
                   <input
+                    id="reset-confirm-password"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    autoComplete="new-password"
                     placeholder="Repeat your password"
+                    aria-describedby={error ? 'reset-error' : undefined}
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={inputStyle}
                     onFocus={(e) => { e.target.style.borderColor = 'rgba(41,151,255,.5)'; e.target.style.background = 'rgba(41,151,255,.04)' }}
@@ -137,7 +143,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 {error && (
-                  <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171' }}>
+                  <div id="reset-error" role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171' }}>
                     {error}
                   </div>
                 )}

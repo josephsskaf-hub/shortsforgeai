@@ -205,7 +205,7 @@ function TopicCard({ topic, onGenerate }: { topic: ViralTopic; onGenerate: (t: V
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ViralNowClient() {
+export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) {
   const router = useRouter()
   const [topics, setTopics] = useState<ViralTopic[]>([])
   const [loading, setLoading] = useState(true)
@@ -243,9 +243,13 @@ export default function ViralNowClient() {
   }, [])
 
   const handleGenerate = useCallback((topic: ViralTopic) => {
+    if (!isLoggedIn) {
+      router.push('/login?redirect=/viral-now')
+      return
+    }
     const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&duration=${topic.duration}`
     router.push(url)
-  }, [router])
+  }, [router, isLoggedIn])
 
   return (
     <div style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>

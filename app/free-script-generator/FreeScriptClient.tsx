@@ -5,6 +5,7 @@
 // visitor to signup to turn the script into a finished video. No browser storage.
 import { useState } from 'react'
 import Link from 'next/link'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=script-generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
@@ -144,6 +145,7 @@ export default function FreeScriptClient() {
           </p>
         </section>
       </div>
+      <StickyFreeShortCTA />
     </main>
   )
 }

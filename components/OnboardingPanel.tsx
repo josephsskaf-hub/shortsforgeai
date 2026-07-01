@@ -112,7 +112,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
           lineHeight: 1,
         }}
       >
-        ×
+        <span aria-hidden="true">×</span>
       </button>
 
       <div className="mb-4 pr-8">
@@ -159,7 +159,7 @@ export default function OnboardingPanel({ hasNoVideos, onFillPrompt }: Onboardin
               ;(e.currentTarget as HTMLElement).style.borderColor = '#2a2a2d'
             }}
           >
-            {q.label}
+            <span aria-hidden="true">{q.label.slice(0, q.label.indexOf(' '))}</span> {q.label.slice(q.label.indexOf(' ') + 1)}
           </button>
         ))}
       </div>

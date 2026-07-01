@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface AuthModalProps {
@@ -25,6 +25,15 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     setEmailAlreadyExists(false)
     setEmailSent(false)
   }
+
+  // Accessibility: close on Escape, reusing the existing onClose handler.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -126,6 +135,9 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: 'rgba(8,8,15,.92)', backdropFilter: 'blur(24px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-label={tab === 'signup' ? 'Create account' : 'Sign in'}
     >
       <div
         className="w-full max-w-md rounded-2xl relative overflow-hidden"
@@ -154,10 +166,11 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
           {/* Close */}
           <button
             onClick={onClose}
+            aria-label="Close"
             className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all"
             style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--border)', color: 'var(--muted2)', cursor: 'pointer' }}
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
 
           {/* Logo */}
@@ -165,6 +178,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, var(--indigo), var(--purple))', boxShadow: '0 0 24px rgba(16, 185, 129,.45)' }}
+              aria-hidden="true"
             >
               ⚡
             </div>
@@ -181,7 +195,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
           {/* Email sent state */}
           {emailSent ? (
             <div className="text-center py-6">
-              <div className="text-4xl mb-4">✅</div>
+              <div className="text-4xl mb-4" aria-hidden="true">✅</div>
               <h2 className="text-xl font-black mb-2 tracking-tight" style={{ color: 'var(--text)' }}>
                 Check your email!
               </h2>
@@ -206,7 +220,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold mb-5"
                   style={{ background: 'rgba(41,151,255,.07)', border: '1px solid rgba(41,151,255,.18)', color: '#2997ff' }}
                 >
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#2997ff', boxShadow: '0 0 6px rgba(41,151,255,.5)' }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#2997ff', boxShadow: '0 0 6px rgba(41,151,255,.5)' }} aria-hidden="true" />
                   Free tier · 1 AI video credit — no card required
                 </div>
               )}
@@ -225,7 +239,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                       cursor: 'pointer',
                     }}
                   >
-                    {t === 'signup' ? '⚡ Create Account' : '🔑 Sign In'}
+                    <span aria-hidden="true">{t === 'signup' ? '⚡' : '🔑'} </span>{t === 'signup' ? 'Create Account' : 'Sign In'}
                   </button>
                 ))}
               </div>
@@ -315,7 +329,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     className="rounded-xl px-4 py-3 text-xs flex items-center gap-2"
                     style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171' }}
                   >
-                    <span>⚠️</span> {error}
+                    <span aria-hidden="true">⚠️</span> {error}
                   </div>
                 )}
 
@@ -336,7 +350,9 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                       <div className="w-4 h-4 rounded-full border border-white/20" style={{ borderTopColor: 'white', animation: 'spin 0.65s linear infinite' }} />
                       {tab === 'signup' ? 'Creating account...' : 'Signing in...'}
                     </>
-                  ) : tab === 'signup' ? '⚡ Create Free Account' : '🔑 Sign In'}
+                  ) : (
+                    <><span aria-hidden="true">{tab === 'signup' ? '⚡' : '🔑'} </span>{tab === 'signup' ? 'Create Free Account' : 'Sign In'}</>
+                  )}
                 </button>
               </form>
 

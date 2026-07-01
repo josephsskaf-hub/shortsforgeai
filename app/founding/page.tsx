@@ -7,6 +7,7 @@
 'use client'
 
 import { useState } from 'react'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 // Two real, frame-validated Shorts produced by the Fast engine (12/06).
 // These ARE the product output — the strongest possible social proof.
@@ -246,6 +247,7 @@ export default function FoundingPage() {
           Kineo · shortsforgeai.com · Questions? support@shortsforgeai.com
         </footer>
       </div>
+      <StickyFreeShortCTA />
     </main>
   )
 }
@@ -259,7 +261,8 @@ const ctaStyle: React.CSSProperties = {
   borderRadius: 12,
   border: 'none',
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
+  whiteSpace: 'normal',
+  textAlign: 'center',
 }
 
 const ctaSecondaryStyle: React.CSSProperties = {

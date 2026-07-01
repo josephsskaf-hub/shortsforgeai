@@ -616,6 +616,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                         onClick={() => setFaceUrl(f.url)}
                         disabled={busy}
                         title="Use this saved face"
+                        aria-label="Use this saved face"
                         style={{ borderRadius: 999, padding: 2, border: faceUrl === f.url ? '2px solid #2997ff' : '2px solid transparent', background: 'none', cursor: 'pointer' }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}

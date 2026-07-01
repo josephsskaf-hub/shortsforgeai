@@ -86,6 +86,15 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
     track('viral_onboarding_viewed')
   }, [])
 
+  // Accessibility: close on Escape, reusing the existing onClose handler.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const COMMON = { source: 'viral_onboarding', engine: 'fast', is_first_video: true }
 
   function generate(s: Starter, isFeatured: boolean) {
@@ -173,20 +182,20 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
       >
         {isFeatured && (
           <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.02em', marginBottom: 2 }}>
-            🔥 Best Pick Right Now
+            <span aria-hidden="true">🔥</span> Best Pick Right Now
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: 'rgba(245,245,247,0.08)', color: '#86868b', whiteSpace: 'nowrap' }}>{s.label}</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86868b' }}>🔥 {s.score}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86868b' }}><span aria-hidden="true">🔥</span> {s.score}</span>
           <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{s.badge}</span>
         </div>
 
         <p style={{ margin: 0, fontSize: isFeatured ? '1.18rem' : '1.02rem', fontWeight: 900, lineHeight: 1.25, color: '#f5f5f7', letterSpacing: '-0.01em' }}>{s.title}</p>
         <p style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#86868b', lineHeight: 1.45 }}>{s.hook}</p>
         <p style={{ margin: 0, fontSize: '0.74rem', color: '#d2d2d7', fontWeight: 600 }}>
-          🧠 <span style={{ color: '#86868b', fontWeight: 700 }}>Why it works:</span> {s.why}
+          <span aria-hidden="true">🧠</span> <span style={{ color: '#86868b', fontWeight: 700 }}>Why it works:</span> {s.why}
         </p>
         <p style={{ margin: 0, fontSize: '0.7rem', color: '#6e6e73', fontWeight: 700, letterSpacing: '0.01em' }}>
           Output: 60s • 9:16 • Voiceover • Captions • Fast
@@ -276,7 +285,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             color: '#000', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >
-          🎲 Surprise Me — generate my free Short
+          <span aria-hidden="true">🎲</span> Surprise Me — generate my free Short
         </button>
 
         {/* Type your own idea */}

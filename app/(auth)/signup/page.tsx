@@ -403,17 +403,21 @@ export default function SignupPage() {
                 <form onSubmit={handleSignup} className="flex flex-col gap-4">
                   <div>
                     <label
+                      htmlFor="signup-email"
                       className="block text-xs font-bold mb-2 uppercase tracking-wider"
                       style={{ color: 'var(--muted2)' }}
                     >
                       Email
                     </label>
                     <input
+                      id="signup-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      autoComplete="email"
                       placeholder="you@example.com"
+                      aria-describedby={error ? 'signup-error' : undefined}
                       className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                       style={{
                         background: 'rgba(255,255,255,.03)',
@@ -434,6 +438,7 @@ export default function SignupPage() {
 
                   <div>
                     <label
+                      htmlFor="signup-password"
                       className="block text-xs font-bold mb-2 uppercase tracking-wider"
                       style={{ color: 'var(--muted2)' }}
                     >
@@ -441,12 +446,15 @@ export default function SignupPage() {
                     </label>
                     <div className="relative">
                       <input
+                        id="signup-password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         minLength={6}
+                        autoComplete="new-password"
                         placeholder="Min. 6 characters"
+                        aria-describedby={error ? 'signup-error' : undefined}
                         className="w-full rounded-xl px-4 py-3 pr-12 text-sm outline-none transition-all"
                         style={{
                           background: 'rgba(255,255,255,.03)',
@@ -539,6 +547,8 @@ export default function SignupPage() {
 
                   {error && (
                     <div
+                      id="signup-error"
+                      role="alert"
                       className="rounded-xl px-4 py-3 text-sm"
                       style={{
                         background: 'rgba(239,68,68,.08)',

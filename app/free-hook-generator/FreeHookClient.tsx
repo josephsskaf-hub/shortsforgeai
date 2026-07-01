@@ -4,6 +4,7 @@
 // renders 5 hooks, then pushes the visitor to signup to turn one into a video.
 import { useState } from 'react'
 import Link from 'next/link'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=hook-generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
@@ -88,6 +89,7 @@ export default function FreeHookClient() {
           <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in ~60s →</Link></p>
         </section>
       </div>
+      <StickyFreeShortCTA />
     </main>
   )
 }

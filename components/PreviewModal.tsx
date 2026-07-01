@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+
 // Static preview data keyed by niche id
 const NICHE_PREVIEWS: Record<string, { hook: string; title: string; hashtags: string[] }> = {
   mideast: {
@@ -47,11 +49,23 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
     hashtags: ['#viral', '#shorts', '#fyp'],
   }
 
+  // Accessibility: close on Escape, reusing the existing onClose handler.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,.85)', backdropFilter: 'blur(24px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${niche.name} Shorts preview`}
     >
       <div
         className="w-full max-w-lg rounded-[22px] overflow-hidden animate-fade-in relative"
@@ -64,6 +78,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
         {/* Close */}
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all"
           style={{
             background: 'rgba(255,255,255,.04)',
@@ -72,7 +87,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
             cursor: 'pointer',
           }}
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
 
         {/* Header bar */}
@@ -87,6 +102,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 background: '#1d1d1f',
                 border: '1px solid #2a2a2d',
               }}
+              aria-hidden="true"
             >
               {niche.emoji}
             </div>
@@ -116,7 +132,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: '#f5f5f7',
               }}
             >
-              ⚡ Videos in ~60 seconds
+              <span aria-hidden="true">⚡</span> Videos in ~60 seconds
             </div>
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
@@ -126,7 +142,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: 'var(--blue, #2997ff)',
               }}
             >
-              👥 300+ creators use this
+              <span aria-hidden="true">👥</span> 300+ creators use this
             </div>
           </div>
         </div>
@@ -153,7 +169,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 className="text-xs font-black uppercase tracking-widest"
                 style={{ color: 'var(--muted2)' }}
               >
-                🎣 Hook
+                <span aria-hidden="true">🎣</span> Hook
               </span>
               <p
                 className="mt-1.5 font-bold text-sm leading-snug"
@@ -174,7 +190,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 className="text-xs font-black uppercase tracking-widest"
                 style={{ color: 'var(--muted2)' }}
               >
-                🎬 Title
+                <span aria-hidden="true">🎬</span> Title
               </span>
               <p className="mt-1.5 text-sm font-semibold" style={{ color: 'var(--text2)' }}>
                 {preview.title}
@@ -232,7 +248,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
               cursor: 'pointer',
             }}
           >
-            ⚡ Generate 5 Shorts Now
+            <span aria-hidden="true">⚡</span> Generate 5 Shorts Now
           </button>
           <button
             onClick={onClose}

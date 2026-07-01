@@ -21,6 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/youtube-shorts-from-topic', priority: 0.8, freq: 'weekly' },
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
     { path: '/ai-shorts-without-filming', priority: 0.8, freq: 'weekly' },
+    { path: '/alternatives', priority: 0.8, freq: 'weekly' },
     { path: '/signup', priority: 0.7, freq: 'monthly' },
     { path: '/login', priority: 0.4, freq: 'monthly' },
     { path: '/referral', priority: 0.5, freq: 'monthly' },

@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import NavCreditsBadge from '@/components/NavCreditsBadge'
 import HeroGallery from './HeroGallery'
+import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -277,6 +278,7 @@ export default function KineoLanding({ initialUser }: Props) {
       </section>
 
       <footer><div className="wrap">© 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:hello@usekineo.com">Contact</a></div></footer>
+      <StickyFreeShortCTA />
     </main>
   )
 }

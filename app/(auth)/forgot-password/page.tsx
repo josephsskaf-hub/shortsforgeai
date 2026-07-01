@@ -73,15 +73,18 @@ export default function ForgotPasswordPage() {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
+                  <label htmlFor="forgot-email" className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: 'var(--muted2)' }}>
                     Email
                   </label>
                   <input
+                    id="forgot-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                     placeholder="you@example.com"
+                    aria-describedby={error ? 'forgot-error' : undefined}
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                     style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border2)', color: 'var(--text)', fontFamily: 'inherit' }}
                     onFocus={(e) => { e.target.style.borderColor = 'rgba(41,151,255,.5)'; e.target.style.background = 'rgba(41,151,255,.04)' }}
@@ -90,7 +93,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 {error && (
-                  <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171' }}>
+                  <div id="forgot-error" role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#f87171' }}>
                     {error}
                   </div>
                 )}

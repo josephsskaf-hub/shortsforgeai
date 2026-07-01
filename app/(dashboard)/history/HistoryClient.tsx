@@ -474,6 +474,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     onClick={() => handleDownload(video)}
                     disabled={downloadingId === video.id}
                     title="Download MP4"
+                    aria-label="Download MP4"
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -544,6 +545,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     onClick={() => handleSummary(video)}
                     disabled={summaryLoading === video.id}
                     title="YouTube title, description & hashtags"
+                    aria-label="YouTube title, description & hashtags"
                     style={{
                       flex: 1,
                       display: 'flex',

@@ -26,7 +26,7 @@ type Competitor = {
 // Feature claims are about the PRODUCT CATEGORY each tool is built for, kept
 // honest and current as of June 2026. We only quote our own price ($11.90);
 // competitor prices change, so we compare on what each tool fundamentally does.
-const COMPETITORS: Record<string, Competitor> = {
+export const COMPETITORS: Record<string, Competitor> = {
   opusclip: {
     name: 'OpusClip',
     h1: 'The OpusClip Alternative That Builds the Whole Short From One Idea',
@@ -592,6 +592,56 @@ const COMPETITORS: Record<string, Competitor> = {
       { q: 'What is the best D-ID alternative for faceless YouTube Shorts?', a: 'Kineo is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. D-ID is an avatar-generation platform and API centered on animating a talking face.' },
       { q: 'Can I make videos without a talking-head avatar?', a: 'Yes. Kineo never puts an avatar or presenter on screen. It assembles real footage, an AI voiceover and captions into a faceless 9:16 Short from a single idea.' },
       { q: 'Is Kineo an alternative to the D-ID API?', a: 'Kineo is a finished-product tool, not a developer API — you type an idea and get a ready-to-post Short, starting at $11.90/month with a free first Short. D-ID is aimed at developers building avatar video into their own apps.' },
+    ],
+  },
+  // ROBO-SEO-2026-07-01b — SendShort (repurposing + faceless hybrid) / Luma Dream
+  // Machine (generative AI clip model), verified live and active tools as of July 2026.
+  sendshort: {
+    name: 'SendShort',
+    h1: 'The SendShort Alternative Built Around One Idea, Not a Long Video',
+    intro:
+      'SendShort mainly repurposes long videos and YouTube links into short vertical clips with auto-captions, and also offers a separate faceless video generator on its higher tiers. Kineo is built around a single workflow: give it one idea and it writes the script, records the AI voiceover, finds matching footage and captions it into a finished faceless 9:16 Short in about 60 seconds — no long video to upload, no tier to unlock for faceless output.',
+    theyDo: 'SendShort repurposes long videos/YouTube links into short clips, with a faceless AI video option on its Professional/Business plans.',
+    pickThem:
+      'Pick SendShort if you already have long videos to auto-clip and want scheduled auto-posting across platforms. Pick Kineo if you want a faceless Short generated from just an idea, with no source video and no plan tier to unlock that.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: 'Higher tiers only' },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'AI voiceover included', sfa: true, them: true },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: true },
+      { feature: 'Pulls matching footage automatically', sfa: true, them: 'Repurposed clips' },
+      { feature: 'Needs a long video or YouTube link to start', sfa: 'No', them: 'For repurposing mode' },
+      { feature: 'Finished Short in ~60 seconds', sfa: true, them: true },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'From ~$19/mo' },
+    ],
+    faq: [
+      { q: 'What is the best SendShort alternative for faceless YouTube Shorts?', a: 'Kineo is a strong SendShort alternative when you have no source video — it writes the script, adds an AI voice, pulls footage and burns in captions to deliver a faceless 9:16 Short from one idea in about 60 seconds, on every plan.' },
+      { q: 'Does Kineo need a long video or YouTube link like SendShort?', a: 'No. SendShort is primarily built to repurpose a long video or link into clips, with faceless generation as an add-on. Kineo starts from just an idea and writes the script for you, so there is nothing to upload.' },
+      { q: 'Should I use SendShort or Kineo?', a: 'Use SendShort if you already publish long-form video and want it auto-clipped and scheduled across platforms. Use Kineo if you are faceless and starting from an idea, and want the whole Short — script included — from $11.90/mo.' },
+    ],
+  },
+  luma: {
+    name: 'Luma Dream Machine',
+    h1: 'The Luma Dream Machine Alternative That Builds the Whole Faceless Short From One Idea',
+    intro:
+      'Luma Dream Machine (Ray3) is a generative AI video model — you prompt it and it produces short, photorealistic or cinematic clips from text or an image, with fast sampling and HDR rendering. It is built for generating individual AI video clips, not for assembling a complete narrated, captioned Short. Kineo takes one idea and produces the entire faceless YouTube Short — script, AI voice, footage, and captions — in about 60 seconds.',
+    theyDo: 'Luma Dream Machine focuses on generating short, photorealistic AI video clips from a text or image prompt.',
+    pickThem:
+      'Pick Luma Dream Machine when you want to generate a striking standalone AI clip to drop into a larger edit; pick Kineo when you want the whole faceless Short finished end to end.',
+    rows: [
+      { feature: 'Creates the full faceless Short from just an idea', sfa: true, them: false },
+      { feature: 'Writes the script for you', sfa: true, them: false },
+      { feature: 'Adds AI voiceover (narration)', sfa: true, them: false },
+      { feature: 'Auto-captions / subtitles', sfa: true, them: false },
+      { feature: 'Generates photorealistic AI video clips', sfa: 'Stock + AI footage', them: true },
+      { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Clips only' },
+      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Starting price', sfa: 'From $11.90/mo', them: 'From $9.99/mo' },
+    ],
+    faq: [
+      { q: 'What is the best Luma Dream Machine alternative for faceless YouTube Shorts?', a: 'Kineo is the strongest Luma Dream Machine alternative for full faceless Shorts, because it does not just generate a clip — it writes the script, adds the AI voice, pulls the footage, and burns in captions to deliver a finished vertical Short in about 60 seconds.' },
+      { q: 'Can Luma Dream Machine make a complete YouTube Short with voiceover and captions?', a: 'Not on its own — Luma generates short AI video clips, and you would still need to add a script, narration, and captions yourself in a separate editor. Kineo handles that entire pipeline automatically from a single idea.' },
+      { q: 'Is Kineo cheaper than Luma Dream Machine?', a: 'Kineo starts at $11.90/mo and turns one idea into a complete faceless Short. Luma’s paid plans start lower at $9.99/mo, but the scope is different: Luma gives you raw AI clips, Kineo gives you the whole finished Short.' },
     ],
   },
 }

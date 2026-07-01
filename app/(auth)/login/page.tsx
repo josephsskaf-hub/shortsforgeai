@@ -303,17 +303,21 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="flex flex-col gap-4">
               <div>
                 <label
+                  htmlFor="login-email"
                   className="block text-xs font-bold mb-2 uppercase tracking-wider"
                   style={{ color: 'var(--muted2)' }}
                 >
                   Email
                 </label>
                 <input
+                  id="login-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                   placeholder="you@example.com"
+                  aria-describedby={error ? 'login-error' : undefined}
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                   style={{
                     background: 'rgba(255,255,255,.03)',
@@ -335,6 +339,7 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label
+                    htmlFor="login-password"
                     className="block text-xs font-bold uppercase tracking-wider"
                     style={{ color: 'var(--muted2)' }}
                   >
@@ -353,11 +358,14 @@ export default function LoginPage() {
                 </div>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                     placeholder="••••••••"
+                    aria-describedby={error ? 'login-error' : undefined}
                     className="w-full rounded-xl px-4 py-3 pr-12 text-sm outline-none transition-all"
                     style={{
                       background: 'rgba(255,255,255,.03)',
@@ -421,6 +429,8 @@ export default function LoginPage() {
 
               {error && (
                 <div
+                  id="login-error"
+                  role="alert"
                   className="rounded-xl px-4 py-3 text-sm"
                   style={{
                     background: 'rgba(239,68,68,.08)',
