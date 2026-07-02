@@ -8,7 +8,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 // spot the lead in /admin and ask for a manual email — leads that abandoned
 // overnight went cold. This cron runs every 2 hours and sends ONE personal
 // founder-style email per lead (the EMAIL-HOT-LEAD.md template), from
-// support@shortsforgeai.com, asking what got in the way.
+// hello@usekineo.com, asking what got in the way.
 //
 // Guard rails:
 //   - max 1 recovery email per user, ever (recovery_sent_at marks ALL rows)
@@ -23,9 +23,7 @@ export const maxDuration = 60
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 // Push #431 — Joseph's rule: lead-recovery/outreach goes out as the TEAM from
 // hello@ (friendlier, commercial); support@ stays for support-only matters.
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 
 const TIER_LABEL: Record<string, string> = {
@@ -169,7 +167,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [email],
-          reply_to: 'hello@shortsforgeai.com',
+          reply_to: 'hello@usekineo.com',
           subject: 'Quick question about your Kineo checkout',
           text,
           html,

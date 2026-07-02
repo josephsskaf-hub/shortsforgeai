@@ -9,9 +9,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
 
 const VIRAL_IDEAS = [
@@ -70,7 +68,7 @@ usekineo.com`
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [email],
-        reply_to: 'hello@shortsforgeai.com',
+        reply_to: 'hello@usekineo.com',
         subject: 'Your 10 viral Short ideas 🎬',
         text,
         html,

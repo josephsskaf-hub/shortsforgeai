@@ -22,9 +22,7 @@ export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 // Joseph's rule: lead-nurture goes out as the TEAM from hello@ (support@ = support only).
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 const MAX_PER_RUN = 60
@@ -172,7 +170,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [email],
-          reply_to: 'hello@shortsforgeai.com',
+          reply_to: 'hello@usekineo.com',
           subject: 'You made a Short 🎬 — here’s 50% off to make more',
           text,
           html,

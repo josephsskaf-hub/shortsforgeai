@@ -472,9 +472,7 @@ export async function GET(
         // /api/send-welcome.
         try {
           const RESEND_API_KEY = process.env.RESEND_API_KEY
-          // NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend);
-          // only the display name is rebranded until usekineo.com is verified there.
-          const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@shortsforgeai.com>'
+          const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@usekineo.com>'
           if (RESEND_API_KEY && user.email) {
             const safeTopic = (topic || 'your topic').replace(/[<>]/g, '')
             const safeVideoUrl = finalVideoUrl.replace(/"/g, '')

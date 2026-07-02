@@ -3,10 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.usekineo.com'
-// NOTE: the from ADDRESS stays on shortsforgeai.com (the domain verified in
-// Resend). Only the display name is rebranded — do not change the address
-// until usekineo.com is verified in the Resend dashboard.
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@shortsforgeai.com>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@usekineo.com>'
 
 export async function POST(request: NextRequest) {
   try {

@@ -14,9 +14,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Kineo <support@shortsforgeai.com>'
+const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Kineo <support@usekineo.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://usekineo.com'
 
 // Guard: only Vercel Cron or the internal secret can call this route.

@@ -7,9 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 // be signed in and may only target their own email, so this endpoint
 // cannot be turned into a generic spam relay.
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@shortsforgeai.com>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@usekineo.com>'
 
 export async function POST(req: NextRequest) {
   try {

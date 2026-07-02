@@ -27,9 +27,7 @@ const ADMIN_EMAILS = new Set([
   'joseph-test@shortsforgeai.com',
 ])
 
-// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
-// display name is rebranded until usekineo.com is verified there.
-const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
 const SUBJECT = 'Your face. Your script. One click. 🎭'
 
 function emailHtml(): string {
@@ -178,7 +176,7 @@ export async function GET(req: NextRequest) {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: [r.email],
-            reply_to: 'hello@shortsforgeai.com',
+            reply_to: 'hello@usekineo.com',
             subject: SUBJECT,
             html: emailHtml(),
           }),
