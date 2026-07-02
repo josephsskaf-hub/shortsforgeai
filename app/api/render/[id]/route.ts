@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { refundRenderCredits } from '@/lib/credits/refund'
 
 export const maxDuration = 30
 
@@ -113,11 +114,25 @@ export async function GET(
     const status = mapStatus(data.status)
     const progress = progressFromStatus(data.status, data.progress)
 
+    // AUTO-REFUND (TAAFT feedback) — this legacy path debits upfront in
+    // /api/render (ledger key `legacy-<renderId>`); when Creatomate reports
+    // failed/cancelled, give the credit back. Idempotent: the RPC only claims
+    // rows WHERE refunded_at IS NULL, so re-polls can never refund twice.
+    let creditsRefunded = 0
+    if (status === 'failed') {
+      creditsRefunded = await refundRenderCredits(`legacy-${id}`)
+    }
+
     return NextResponse.json({
       status,
       progress,
       url: data.url ?? null,
-      error: status === 'failed' ? data.error_message ?? 'Render failed.' : undefined,
+      creditsRefunded,
+      error:
+        status === 'failed'
+          ? (data.error_message ?? 'Render failed.') +
+            (creditsRefunded > 0 ? ` Your ${creditsRefunded} credit was automatically refunded.` : '')
+          : undefined,
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -3,6 +3,7 @@ import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { pollCreatomateRender } from '@/lib/compose'
 import { persistRenderAssets } from '@/lib/renderAssets'
+import { refundRenderCredits } from '@/lib/credits/refund'
 
 // Push #230 — bumped 30→60 to give the post-render asset migration
 // (download Creatomate video + thumbnail, re-upload to Supabase Storage)
@@ -554,9 +555,21 @@ export async function GET(
     }
 
     if (state.status === 'failed' || state.status === 'cancelled') {
+      // AUTO-REFUND (TAAFT feedback) — if anything was debited for this render
+      // (credit_debits ledger row), give it back. Idempotent + race-safe: the
+      // refund_render_credits RPC only claims rows WHERE refunded_at IS NULL,
+      // so repeated polls of a failed render can never refund twice. On this
+      // pipeline the debit normally only happens on SUCCESS, so this is a
+      // safety net for debit-then-fail edge cases (timeouts, races).
+      const creditsRefunded = await refundRenderCredits(renderId)
       return NextResponse.json({
         phase: 'failed',
-        error: state.error ?? 'Render failed.',
+        error:
+          (state.error ?? 'Render failed.') +
+          (creditsRefunded > 0
+            ? ` Your ${creditsRefunded} credits were automatically refunded.`
+            : ' You were not charged for this video.'),
+        creditsRefunded,
         progress: 0,
       })
     }

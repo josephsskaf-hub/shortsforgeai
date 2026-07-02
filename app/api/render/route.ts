@@ -332,28 +332,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Render service returned no job id.' }, { status: 502 })
     }
 
-    // Deduct credits now that the render is queued. Guarded by `.gte` so
-    // concurrent requests can't drive the balance negative; if the guard
-    // rejects, we still let the render proceed (the user already had enough
-    // credits when the gate above ran), but we log loudly so we can audit.
+    // Deduct credits now that the render is queued — via the atomic
+    // debit_video_credits RPC (ledger row keyed `legacy-<renderId>`) so the
+    // charge is idempotent AND auto-refundable when the render later fails
+    // (see /api/render/[id]). The `legacy-` prefix keeps this path out of the
+    // stuck-render sweep (this pipeline never persists to `videos`, so a
+    // missing videos row is its normal success state). The RPC floors the
+    // balance at 0, replacing the old read→compute→write race.
     try {
-      const { data: profileNow } = await supabase
-        .from('profiles')
-        .select('video_credits')
-        .eq('id', user.id)
-        .single()
-      const balance = profileNow?.video_credits ?? 0
-      const next = Math.max(0, balance - RENDER_COST)
-      const { error: dedErr, data: rows } = await supabase
-        .from('profiles')
-        .update({ video_credits: next })
-        .eq('id', user.id)
-        .gte('video_credits', RENDER_COST)
-        .select('id')
+      const { error: dedErr } = await supabase
+        .rpc('debit_video_credits', { p_render: `legacy-${renderId}`, p_cost: RENDER_COST })
       if (dedErr) {
         console.error('[render] credit deduction error:', dedErr.message)
-      } else if (!rows || rows.length === 0) {
-        console.warn('[render] credit deduction skipped — balance moved out from under us', user.id)
       }
     } catch (err) {
       console.error('[render] credit deduction threw:', err)

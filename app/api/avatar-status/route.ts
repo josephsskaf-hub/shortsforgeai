@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkAvatarJob, type AvatarEngine } from '@/lib/avatar/veed'
+import { refundRenderCredits } from '@/lib/credits/refund'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,10 +36,24 @@ export async function GET(req: NextRequest) {
     if (state.status === 'failed') {
       // Protection rule: a VEED failure never charges the user (checkpoint 1
       // has no billing at all; checkpoint 2's debit only happens on success).
+      //
+      // AUTO-REFUND (TAAFT feedback) — the Animate flow is the exception: it
+      // debits upfront, keyed `animate-<request_id>`. On failure, refund that
+      // exact ledger row. Idempotent (the RPC only claims rows WHERE
+      // refunded_at IS NULL), so repeated polls of a failed job can never
+      // double-refund.
+      let creditsRefunded = 0
+      if (engine === 'animate') {
+        creditsRefunded = await refundRenderCredits(`animate-${requestId}`)
+      }
       return NextResponse.json({
         status: 'failed',
         video_url: null,
-        error: 'Avatar generation failed. You were not charged — please try again.',
+        creditsRefunded,
+        error:
+          creditsRefunded > 0
+            ? `Generation failed. Your ${creditsRefunded} credits were automatically refunded — please try again.`
+            : 'Avatar generation failed. You were not charged — please try again.',
       })
     }
 

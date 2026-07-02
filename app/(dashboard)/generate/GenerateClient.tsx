@@ -3711,7 +3711,7 @@ export default function GenerateClient() {
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
             >
               <div className="font-black text-base mb-2" style={{ color: '#fca5a5' }}>
-                Geração falhou. Tente novamente.
+                Generation failed. Any credits charged were automatically refunded — please try again.
               </div>
               <button
                 onClick={handleGenerate}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sweepStuckRenderDebits } from '@/lib/credits/refund'
 
 // Cron route: fires daily via Vercel Cron (see vercel.json).
 // Finds users who signed up 20–28 hours ago and have no paid plan,
@@ -29,6 +30,19 @@ function isAuthorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // AUTO-REFUND daily sweep (TAAFT feedback) — piggybacked on this existing
+  // daily cron instead of a new vercel.json entry (Vercel Hobby silently
+  // rejects deploys when cron limits are exceeded). Refunds `video` debits
+  // older than 2h that never produced a `videos` row (i.e. charged but the
+  // render never completed). Idempotent per render via refund_render_credits.
+  // Runs BEFORE the RESEND early-return so a missing email key never skips it.
+  try {
+    const sweep = await sweepStuckRenderDebits()
+    console.log('[send-reminders] stuck-render refund sweep:', JSON.stringify(sweep))
+  } catch (e) {
+    console.error('[send-reminders] refund sweep failed:', e instanceof Error ? e.message : String(e))
   }
 
   if (!RESEND_API_KEY) {

@@ -7,14 +7,14 @@
 // client polls /api/avatar-status?engine=animate → fal CDN MP4 delivered
 // directly (no compose — the clip IS the product).
 //
-// Billing v1: ANIMATE_COST video_credits per clip, debited UPFRONT via the
-// atomic debit_video_credits RPC (render_id = animate-<uuid> keeps it
-// idempotent). Upfront because there is no compose/status success hook on
-// this path; the fal failure rate on Kling i2v is low and a retry is free to
-// re-submit manually. Cost basis: ~$0.35 per 5s clip → 10 credits ≈ $1.04
+// Billing v2 (auto-refund): ANIMATE_COST video_credits per clip, debited via
+// the atomic debit_video_credits RPC right after the fal submit succeeds,
+// keyed render_id = animate-<falRequestId> (idempotent). Upfront relative to
+// job completion because there is no compose/status success hook on this
+// path; if the job later FAILS, /api/avatar-status auto-refunds the same
+// ledger row. Cost basis: ~$0.35 per 5s clip → 10 credits ≈ $1.04
 // retail on Creator (~66% margin) / $2.38 on Starter (~85%).
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { submitAnimateJob } from '@/lib/avatar/veed'
 
@@ -63,23 +63,31 @@ export async function POST(req: NextRequest) {
         { status: 402 },
       )
     }
-    const renderId = `animate-${randomUUID()}`
+    // AUTO-REFUND rework (TAAFT feedback): submit FIRST, then debit keyed on
+    // the fal request id (`animate-<requestId>`). Keying the ledger on the id
+    // the client already polls with lets /api/avatar-status derive the exact
+    // debit row on a later job failure and refund it automatically — the old
+    // flow keyed the ledger on a random uuid the client never saw, so a
+    // failed job could only be restored via support. The balance gate above
+    // still runs before fal is touched, and the debit RPC stays atomic +
+    // idempotent by render_id.
+    const requestId = await submitAnimateJob({ imageUrl, prompt, duration })
+    if (!requestId) {
+      // fal refused the job — nothing was debited yet, so nothing to refund.
+      console.error(`[animate-image] fal submit failed (no charge) user=${user.id.slice(0, 8)}`)
+      return NextResponse.json(
+        { error: 'The animation engine could not accept the job. You were not charged — please try again.' },
+        { status: 502 },
+      )
+    }
+
+    const renderId = `animate-${requestId}`
     const { data: newBalance, error: debitErr } = await supabase
       .rpc('debit_video_credits', { p_render: renderId, p_cost: ANIMATE_COST })
     if (debitErr) {
-      console.error('[animate-image] debit RPC error:', debitErr.message)
-      return NextResponse.json({ error: 'Could not reserve credits. Please try again.' }, { status: 502 })
-    }
-
-    const requestId = await submitAnimateJob({ imageUrl, prompt, duration })
-    if (!requestId) {
-      // fal refused the job — note for support; the ledger row records the
-      // attempt (manual re-credit is a single SQL update if needed).
-      console.error(`[animate-image] fal submit failed AFTER debit render=${renderId} user=${user.id.slice(0, 8)}`)
-      return NextResponse.json(
-        { error: 'The animation engine could not accept the job. Contact support@shortsforgeai.com and we will restore your credits.' },
-        { status: 502 },
-      )
+      // Job is already queued on fal — absorb the (rare) failed debit instead
+      // of failing the user's clip; loud log so we can audit free clips.
+      console.error(`[animate-image] debit RPC error AFTER submit render=${renderId} user=${user.id.slice(0, 8)}:`, debitErr.message)
     }
 
     console.log(`[animate-image] submitted user=${user.id.slice(0, 8)} request=${requestId} duration=${duration}s render=${renderId}`)
