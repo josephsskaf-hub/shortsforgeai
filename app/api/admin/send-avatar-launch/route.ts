@@ -27,13 +27,15 @@ const ADMIN_EMAILS = new Set([
   'joseph-test@shortsforgeai.com',
 ])
 
-const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
 const SUBJECT = 'Your face. Your script. One click. 🎭'
 
 function emailHtml(): string {
   return `
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;line-height:1.6">
-  <p>Big one today: <b>AI Avatar Video</b> is live on ShortsForgeAI.</p>
+  <p>Big one today: <b>AI Avatar Video</b> is live on Kineo.</p>
   <p>Upload a photo — yours or anyone's (with permission) — and your next Short shows that person <i>speaking your script</i>, lip-synced in 720p, with footage, captions and music around it.</p>
   <p><b>No camera. No mic. No editing.</b></p>
   <p>Avatar videos are a premium add-on, separate from your plan credits:</p>
@@ -44,9 +46,9 @@ function emailHtml(): string {
   </ul>
   <p>Studio members get <b>15% off</b> automatically.</p>
   <p style="margin:24px 0">
-    <a href="https://shortsforgeai.com/generate?avatar=1&utm_source=launch_email" style="background:#a855f7;color:#ffffff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Try AI Avatar →</a>
+    <a href="https://usekineo.com/generate?avatar=1&utm_source=launch_email" style="background:#2997ff;color:#ffffff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Try AI Avatar →</a>
   </p>
-  <p>— Joseph, founder<br/>ShortsForgeAI · https://shortsforgeai.com</p>
+  <p>— Joseph, founder<br/>Kineo · https://usekineo.com</p>
 </div>`
 }
 

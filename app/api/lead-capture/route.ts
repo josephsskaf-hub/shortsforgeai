@@ -9,8 +9,10 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
 
 const VIRAL_IDEAS = [
   'The island so dangerous it is illegal to visit (Snake Island)',
@@ -38,12 +40,12 @@ Here are your 10 viral Short ideas — pick any one and you have a video in 60 s
 
 ${list}
 
-Want to turn one into a real Short right now? Type it into ShortsForgeAI and the AI writes the script, voiceover, captions and finds the footage. Your first video is free — no card needed.
+Want to turn one into a real Short right now? Type it into Kineo and the AI writes the script, voiceover, captions and finds the footage. Your first video is free — no card needed.
 
 Make your first one free: ${url}
 
-— ShortsForgeAI Team
-shortsforgeai.com`
+— Kineo Team
+usekineo.com`
 
   const ideasHtml = VIRAL_IDEAS.map(
     (idea, i) =>
@@ -54,11 +56,11 @@ shortsforgeai.com`
   <p style="font-size:15px;">Hey,</p>
   <p style="font-size:15px;">Here are your <b>10 viral Short ideas</b> — pick any one and you have a video in 60 seconds:</p>
   ${ideasHtml}
-  <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into ShortsForgeAI — the AI writes the script, voiceover, captions and finds the footage. <b>Your first video is free, no card needed.</b></p>
+  <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into Kineo — the AI writes the script, voiceover, captions and finds the footage. <b>Your first video is free, no card needed.</b></p>
   <p style="margin:20px 0;">
-    <a href="${url}" style="background:#22D3EE;color:#05070D;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Arial,sans-serif;font-size:15px;display:inline-block;">Make my first one free →</a>
+    <a href="${url}" style="background:#2997ff;color:#ffffff;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Arial,sans-serif;font-size:15px;display:inline-block;">Make my first one free →</a>
   </p>
-  <p style="font-size:13px;color:#555;">— ShortsForgeAI Team<br/>shortsforgeai.com</p>
+  <p style="font-size:13px;color:#555;">— Kineo Team<br/>usekineo.com</p>
 </div>`
 
   try {

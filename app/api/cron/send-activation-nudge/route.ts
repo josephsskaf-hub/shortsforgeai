@@ -17,8 +17,10 @@ export const maxDuration = 60
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 // Push #431 — Joseph's rule: no personal name on outbound. Activation nudge is
 // lead-nurture → goes out as the TEAM from hello@ (support@ = support only).
-const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 
 function isTestEmail(email: string): boolean {
@@ -44,7 +46,7 @@ function buildEmail() {
   const url = `${APP_URL}/generate`
   const text = `Hey,
 
-This is the ShortsForgeAI team — welcome!
+This is the Kineo team — welcome!
 
 You created your account a little while ago. Quick heads-up in case you missed it: your account comes loaded with 30 free credits. That's enough for up to 30 Fast videos — or 1 full AI-generated video. No card needed.
 
@@ -54,8 +56,8 @@ Make your free video here: ${url}
 
 If anything is confusing or not working, just reply to this email - a real person reads every message.
 
-ShortsForgeAI Team
-shortsforgeai.com`
+Kineo Team
+usekineo.com`
 
   const html = text
     .split('\n')
@@ -64,7 +66,7 @@ shortsforgeai.com`
         ? '<br/>'
         : `<p style="margin:0 0 2px;font-family:Arial,sans-serif;font-size:14px;color:#111;line-height:1.55;">${
             line.includes(url)
-              ? line.replace(url, `<a href="${url}" style="color:#2563EB;font-weight:bold;">${url}</a>`)
+              ? line.replace(url, `<a href="${url}" style="color:#2997ff;font-weight:bold;">${url}</a>`)
               : line
           }</p>`
     )

@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 // be signed in and may only target their own email, so this endpoint
 // cannot be turned into a generic spam relay.
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <support@shortsforgeai.com>'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@shortsforgeai.com>'
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,14 +51,14 @@ export async function POST(req: NextRequest) {
     const safeVideoUrl = videoUrl.replace(/"/g, '')
 
     const html = `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0a0a1a;color:#fff;padding:32px;border-radius:16px;">
-        <h1 style="color:#34d399;font-size:24px;margin:0 0 8px">Your Short is ready! ⚡</h1>
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#161618;color:#fff;padding:32px;border-radius:16px;">
+        <h1 style="color:#2997ff;font-size:24px;margin:0 0 8px">Your Short is ready! ⚡</h1>
         <p style="color:#94a3b8;margin:0 0 24px">Your AI-generated YouTube Short about "<strong style="color:#fff">${safeTopic}</strong>" is ready to download.</p>
-        <a href="${safeVideoUrl}" style="display:inline-block;background:linear-gradient(135deg,#2563EB,#22D3EE);color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
+        <a href="${safeVideoUrl}" style="display:inline-block;background:#2997ff;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
           ⬇ Download Your Short
         </a>
-        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://shortsforgeai.com/pricing" style="color:#34d399;">Upgrade to Starter — $11.90/mo →</a></p>
-        <p style="color:#475569;font-size:11px;margin:16px 0 0">ShortsForgeAI · <a href="https://shortsforgeai.com" style="color:#475569;">shortsforgeai.com</a></p>
+        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://usekineo.com/pricing" style="color:#2997ff;">Upgrade to Starter — $11.90/mo →</a></p>
+        <p style="color:#475569;font-size:11px;margin:16px 0 0">Kineo · <a href="https://usekineo.com" style="color:#475569;">usekineo.com</a></p>
       </div>
     `
 

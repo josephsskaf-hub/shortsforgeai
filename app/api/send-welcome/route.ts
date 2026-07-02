@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.shortsforgeai.com'
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ShortsForgeAI <support@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.usekineo.com'
+// NOTE: the from ADDRESS stays on shortsforgeai.com (the domain verified in
+// Resend). Only the display name is rebranded — do not change the address
+// until usekineo.com is verified in the Resend dashboard.
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Kineo <support@shortsforgeai.com>'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,30 +41,30 @@ export async function POST(request: NextRequest) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Your 3-day free trial is waiting — ShortsForgeAI</title>
+  <title>Your 3-day free trial is waiting — Kineo</title>
 </head>
-<body style="margin:0;padding:0;background:#0d0d14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d14;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:40px 20px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
           <tr>
             <td align="center" style="padding-bottom:28px;">
               <div style="display:inline-flex;align-items:center;gap:10px;">
-                <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#3B82F6,#2563EB);display:inline-flex;align-items:center;justify-content:center;font-size:18px;text-align:center;">⚡</div>
-                <span style="font-size:20px;font-weight:900;color:#e2e8f0;letter-spacing:-0.5px;">ShortsForge<span style="color:#22D3EE;">AI</span></span>
+                <div style="width:38px;height:38px;border-radius:12px;background:#2997ff;display:inline-flex;align-items:center;justify-content:center;font-size:18px;text-align:center;">⚡</div>
+                <span style="font-size:20px;font-weight:900;color:#f5f5f7;letter-spacing:-0.5px;">Kineo</span>
               </div>
             </td>
           </tr>
           <tr>
-            <td style="background:#13131f;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+            <td style="background:#161618;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
               <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 6px;">${greeting}</p>
               <p style="color:#94a3b8;font-size:15px;margin:0 0 24px;line-height:1.6;">Your account is ready. Here's what you get with a 3-day free trial:</p>
 
               <!-- hero benefit box -->
-              <div style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.28);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
-                <p style="color:#22D3EE;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">3 DAYS FREE — NO CHARGE TODAY</p>
-                <p style="color:#f1f5f9;font-size:28px;font-weight:900;margin:0 0 4px;letter-spacing:-0.5px;">Try ShortsForgeAI Free</p>
+              <div style="background:rgba(41,151,255,0.08);border:1px solid rgba(41,151,255,0.28);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
+                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">3 DAYS FREE — NO CHARGE TODAY</p>
+                <p style="color:#f1f5f9;font-size:28px;font-weight:900;margin:0 0 4px;letter-spacing:-0.5px;">Try Kineo Free</p>
                 <p style="color:#64748b;font-size:13px;margin:0;">Cancel before Day 4 and you pay nothing. Ever.</p>
               </div>
 
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
               <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:12px;">
                 <tr>
                   <td align="center">
-                    <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#3B82F6,#22D3EE);color:#ffffff;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(59,130,246,0.45);">
+                    <a href="${dashboardUrl}" style="display:inline-block;background:#2997ff;color:#ffffff;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(41,151,255,0.45);">
                       Start My Free 3-Day Trial →
                     </a>
                   </td>
@@ -95,8 +98,8 @@ export async function POST(request: NextRequest) {
           <tr>
             <td align="center" style="padding-top:20px;">
               <p style="color:#334155;font-size:12px;margin:0;">
-                — The ShortsForgeAI Team<br />
-                <a href="${APP_URL}" style="color:#4f46e5;text-decoration:none;">shortsforgeai.com</a>
+                — The Kineo Team<br />
+                <a href="${APP_URL}" style="color:#2997ff;text-decoration:none;">usekineo.com</a>
               </p>
             </td>
           </tr>
@@ -109,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     const text = `${greeting}
 
-Welcome to ShortsForgeAI! 🎬
+Welcome to Kineo! 🎬
 
 Pick a plan to start generating Shorts — flat monthly price, cancel anytime.
 Every Short comes with:
@@ -123,8 +126,8 @@ ${dashboardUrl}
 
 Three paid plans, flat monthly price. Starter $11.90/mo (50 Fast videos), Creator $24.90/mo (240 credits — AI Generated engine), Studio $37.90/mo (360 credits — premium Kling engine). 7-day money-back guarantee.
 
-— The ShortsForgeAI Team
-shortsforgeai.com`
+— The Kineo Team
+usekineo.com`
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -135,7 +138,7 @@ shortsforgeai.com`
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [email],
-        subject: '⚡ Your 3-day free trial is waiting — ShortsForgeAI',
+        subject: '⚡ Your 3-day free trial is waiting — Kineo',
         html,
         text,
       }),

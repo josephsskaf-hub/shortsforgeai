@@ -22,8 +22,10 @@ export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 // Joseph's rule: lead-nurture goes out as the TEAM from hello@ (support@ = support only).
-const FROM_EMAIL = 'ShortsForgeAI Team <hello@shortsforgeai.com>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = 'Kineo Team <hello@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
 const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'])
 const MAX_PER_RUN = 60
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -53,7 +55,7 @@ function buildEmail() {
   const makeUrl = `${APP_URL}/generate`
   const text = `Hey,
 
-This is the ShortsForgeAI team.
+This is the Kineo team.
 
 You already did the hard part — you generated a real Short with AI: script, voiceover, captions and footage, all automatic. Nice work.
 
@@ -66,8 +68,8 @@ Or just make another one right now: ${makeUrl}
 
 If something got in the way — price, an idea that didn't land, anything — just reply. A real person reads every message.
 
-ShortsForgeAI Team
-shortsforgeai.com`
+Kineo Team
+usekineo.com`
 
   const html = text
     .split('\n')
@@ -76,7 +78,7 @@ shortsforgeai.com`
         ? '<br/>'
         : `<p style="margin:0 0 2px;font-family:Arial,sans-serif;font-size:14px;color:#111;line-height:1.55;">${line.replace(
             /(https?:\/\/[^\s]+)/g,
-            (m) => `<a href="${m}" style="color:#2563EB;font-weight:bold;">${m}</a>`
+            (m) => `<a href="${m}" style="color:#2997ff;font-weight:bold;">${m}</a>`
           )}</p>`
     )
     .join('')

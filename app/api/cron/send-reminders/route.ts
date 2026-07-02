@@ -13,8 +13,10 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
-const FROM_EMAIL = process.env.FROM_EMAIL ?? 'support@shortsforgeai.com'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+// NOTE: from ADDRESS stays on shortsforgeai.com (verified in Resend); only the
+// display name is rebranded until usekineo.com is verified there.
+const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Kineo <support@shortsforgeai.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://usekineo.com'
 
 // Guard: only Vercel Cron or the internal secret can call this route.
 function isAuthorized(req: NextRequest): boolean {
@@ -73,25 +75,25 @@ export async function GET(req: NextRequest) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Still thinking? 3 days free — ShortsForgeAI</title>
+  <title>Still thinking? 3 days free — Kineo</title>
 </head>
-<body style="margin:0;padding:0;background:#0d0d14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d14;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:40px 20px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
           <tr>
             <td align="center" style="padding-bottom:28px;">
-              <span style="font-size:20px;font-weight:900;color:#e2e8f0;">ShortsForge<span style="color:#22D3EE;">AI</span></span>
+              <span style="font-size:20px;font-weight:900;color:#f5f5f7;">Kineo</span>
             </td>
           </tr>
           <tr>
-            <td style="background:#13131f;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
+            <td style="background:#161618;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
               <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 6px;">${greeting}</p>
               <p style="color:#94a3b8;font-size:15px;margin:0 0 24px;line-height:1.6;">You created your account yesterday but haven't started your free trial yet.</p>
 
-              <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
-                <p style="color:#FBBF24;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⏰ YOUR TRIAL IS STILL AVAILABLE</p>
+              <div style="background:rgba(41,151,255,0.08);border:1px solid rgba(41,151,255,0.3);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
+                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⏰ YOUR TRIAL IS STILL AVAILABLE</p>
                 <p style="color:#f1f5f9;font-size:24px;font-weight:900;margin:0 0 4px;">3 days free. No charge today.</p>
                 <p style="color:#64748b;font-size:13px;margin:0;">Cancel before Day 4 → $0. No questions asked.</p>
               </div>
@@ -103,7 +105,7 @@ export async function GET(req: NextRequest) {
               <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:12px;">
                 <tr>
                   <td align="center">
-                    <a href="${pricingUrl}" style="display:inline-block;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#0a0a0f;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(251,191,36,0.4);">
+                    <a href="${pricingUrl}" style="display:inline-block;background:#2997ff;color:#ffffff;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(41,151,255,0.4);">
                       Start My Free Trial →
                     </a>
                   </td>
@@ -114,7 +116,7 @@ export async function GET(req: NextRequest) {
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:18px;">
                 <p style="color:#475569;font-size:12px;margin:0;text-align:center;line-height:1.6;">
                   Questions? Just reply to this email.<br />
-                  <a href="${APP_URL}" style="color:#4f46e5;text-decoration:none;">shortsforgeai.com</a>
+                  <a href="${APP_URL}" style="color:#2997ff;text-decoration:none;">usekineo.com</a>
                 </p>
               </div>
             </td>
@@ -138,7 +140,7 @@ export async function GET(req: NextRequest) {
           to: [user.email],
           subject: '⏰ Your free 3-day trial is waiting — don\'t miss it',
           html,
-          text: `${greeting}\n\nYou signed up for ShortsForgeAI but haven't started your free trial yet.\n\n3 days free — no charge today. Cancel before Day 4 and you pay nothing.\n\nStart here: ${pricingUrl}\n\n— The ShortsForgeAI Team`,
+          text: `${greeting}\n\nYou signed up for Kineo but haven't started your free trial yet.\n\n3 days free — no charge today. Cancel before Day 4 and you pay nothing.\n\nStart here: ${pricingUrl}\n\n— The Kineo Team`,
         }),
       })
 
