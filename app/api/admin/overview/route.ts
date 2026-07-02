@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { isInternalEmail } from '@/lib/internalAccounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,16 +30,11 @@ const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 
 
 // Push #417 — keep founder/test/throwaway accounts out of every dashboard
 // number so Joseph sees only REAL customers.
+// Push #482 — delegated to lib/internalAccounts (single source of truth; the
+// old inline patterns missed victoriaskaf96@gmail.com and joseph+%@gmail.com,
+// which made internal test subscriptions count as MRR).
 function isTestEmail(email: string): boolean {
-  const e = email.toLowerCase()
-  return (
-    e.startsWith('josephsskaf') || // founder accounts incl. typo'd gmai.com + plus-aliases
-    e.startsWith('josephskaf') || // hotmail variant
-    e.endsWith('@shortsforgeai.com') || // internal accounts (joseph-test, faststest…)
-    e.startsWith('test') ||
-    e.includes('mailinator') ||
-    e.startsWith('smoketest')
-  )
+  return isInternalEmail(email)
 }
 
 export async function GET() {
