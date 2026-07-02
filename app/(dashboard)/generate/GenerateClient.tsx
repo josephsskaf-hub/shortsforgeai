@@ -13,6 +13,7 @@ import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
 import AvatarPaywallModal from '@/components/AvatarPaywallModal'
+import ReferralMiniCard from '@/components/ReferralMiniCard'
 
 interface TaskHandle {
   id: string
@@ -4181,7 +4182,10 @@ export default function GenerateClient() {
                 </div>
               )}
 
-              {/* Referral share box removed — duplicated the top share buttons. */}
+              {/* Referral loop — compact "Give X, get X" invite card at the
+                  win moment. Fetches the user's real link from /api/referral;
+                  renders nothing if the loop is unavailable. */}
+              <ReferralMiniCard />
 
               {/* Push #087 — secondary actions: re-generate the same idea
                   (one click) or jump back to edit the script. Keeps the

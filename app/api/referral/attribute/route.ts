@@ -34,6 +34,14 @@ export async function POST(req: NextRequest) {
     const ref = (body.ref ?? '').trim()
     if (!ref) return NextResponse.json({ ok: false })
 
+    // Harden: codes are 8-char alphanumeric (see /api/referral). Reject
+    // anything else so LIKE wildcards (%, _) can never reach the ilike below
+    // — an underscore pattern could otherwise be used to probe other users'
+    // codes one position at a time.
+    if (!/^[A-Za-z0-9]{4,16}$/.test(ref)) {
+      return NextResponse.json({ ok: false })
+    }
+
     const admin = getAdminClient()
 
     // Already attributed — no-op (first-touch wins, never overwrite).
