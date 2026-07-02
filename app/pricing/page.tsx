@@ -34,6 +34,10 @@ const FAQS: { q: string; a: string }[] = [
     a: 'Yes — both Basic and Pro come with a 7-day money-back guarantee. If you\'re not satisfied, email us within 7 days of your purchase and we\'ll refund 100%. No questions asked.',
   },
   {
+    q: 'What happens if a video fails to generate?',
+    a: 'Your credits are refunded automatically, the moment the render fails — no support ticket needed. You only ever pay for videos you actually receive.',
+  },
+  {
     q: 'What’s the difference between AI Generated and Cinematic AI?',
     a: 'AI Generated uses the Seedance engine (great quality, 40 credits/video) and is available on Creator and Studio. Cinematic AI uses the premium Kling engine for top-tier cinematic motion (60 credits/video) and is exclusive to the Studio plan. Starter uses the Fast engine: smart stock footage, 1 credit/video.',
   },

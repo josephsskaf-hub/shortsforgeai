@@ -267,6 +267,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <div className="qa"><h3>Do I need any editing skills?</h3><p>None. You type one idea and the AI writes the script, records the voice, finds the footage and adds captions. You just download.</p></div>
             <div className="qa"><h3>Is there a watermark?</h3><p>Paid plans export clean, watermark-free MP4s. The free trial adds a small mark so you can test the output first.</p></div>
             <div className="qa"><h3>Can I use my own script?</h3><p>Yes — paste your script and pick &ldquo;Use my script as is&rdquo; and the AI narrates it word for word.</p></div>
+            <div className="qa"><h3>What if a generation fails?</h3><p>Your credits come back automatically the moment a render fails — no support ticket, no waiting. You only pay for videos you actually get.</p></div>
             <div className="qa"><h3>Can I cancel anytime?</h3><p>Anytime, in one click. Plans are month to month and your credits never expire.</p></div>
           </div>
         </div>
