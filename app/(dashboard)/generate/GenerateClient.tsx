@@ -3739,6 +3739,23 @@ export default function GenerateClient() {
                 <p className="text-xs mt-1.5" style={{ color: 'var(--muted)', letterSpacing: '0.04em' }}>
                   {duration}s · YouTube Shorts / TikTok 9:16
                 </p>
+                {/* ROBO-ENTRY-495 — honest credits line at the win moment. AI
+                    Generated (Seedance) costs 40 credits and Fast Mode is free,
+                    so we state both plainly instead of a vague "low credits"
+                    nudge. Renders for any signed-in user; guests (credits null
+                    after 401) see nothing. */}
+                {credits !== null && (
+                  <p className="text-xs mt-2" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                    You have{' '}
+                    <span style={{ color: '#f5f5f7', fontWeight: 700 }}>
+                      {credits} credit{credits === 1 ? '' : 's'}
+                    </span>{' '}
+                    left —{' '}
+                    {credits >= 40
+                      ? `about ${Math.floor(credits / 40)} more AI video${Math.floor(credits / 40) === 1 ? '' : 's'}. Fast Mode is always free.`
+                      : 'not enough for another AI video (each takes 40). Fast Mode is still free.'}
+                  </p>
+                )}
                 {/* Push #065 — show the generated title so the user can see
                     what the AI named the video. Falls back to a generic
                     label so the row never disappears. Clamped to two lines
@@ -4178,6 +4195,42 @@ export default function GenerateClient() {
                     }}
                   >
                     {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $11.90/mo →'}
+                  </button>
+                  {/* ROBO-ENTRY-495 — Starter Pack entry CTA. This block only
+                      renders when credits < 40, i.e. the user can no longer run
+                      another AI Generated video (40 credits each). The $4.90
+                      one-time 10-Shorts pack is the lowest-commitment fix —
+                      same checkout URL as /pricing, the 0-credit modal and the
+                      PostVideoPaywall entry option. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        void fetch('/api/events', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'post_video_success' } }),
+                          keepalive: true,
+                        })
+                      } catch { /* non-blocking */ }
+                      window.location.href = '/api/stripe/checkout?pack=starter'
+                    }}
+                    className="block w-full rounded-xl mt-2.5 px-4 py-3 text-center"
+                    style={{
+                      background: 'rgba(41,151,255,0.06)',
+                      border: '1px dashed rgba(41,151,255,0.4)',
+                      color: '#f5f5f7',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      lineHeight: 1.35,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Not ready for a subscription?{' '}
+                    <span style={{ color: '#2997ff' }}>Get 10 Shorts for $4.90 →</span>
+                    <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
+                      One-time · no subscription · credits never expire
+                    </span>
                   </button>
                 </div>
               )}

@@ -12,6 +12,9 @@
 // kept inline to match the rest of the marketing chrome.
 
 import Link from 'next/link'
+// PROVA-SOCIAL-REAL-2026-07-02 — client badge with real DB counts; self-hides
+// when the numbers are low or the stats API fails, so the footer stays honest.
+import LiveStatsBadge from '@/components/LiveStatsBadge'
 
 const linkStyle: React.CSSProperties = {
   color: '#86868b',
@@ -116,6 +119,10 @@ export default function Footer() {
 
       {/* Legal + contact (preserved) */}
       <div style={{ textAlign: 'center' }}>
+        {/* Real live stats — renders nothing when unavailable/low */}
+        <div style={{ marginBottom: 10 }}>
+          <LiveStatsBadge />
+        </div>
         <div style={{ fontWeight: 600 }}>
           © 2026 Kineo · All rights reserved
         </div>

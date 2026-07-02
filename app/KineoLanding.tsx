@@ -5,6 +5,7 @@ import Link from 'next/link'
 import NavCreditsBadge from '@/components/NavCreditsBadge'
 import HeroGallery from './HeroGallery'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import LiveStatsBadge from '@/components/LiveStatsBadge'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -170,6 +171,10 @@ export default function KineoLanding({ initialUser }: Props) {
               <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
               <button className="btn btn-w cbtn" type="submit">Generate →</button>
             </form>
+            {/* PROVA-SOCIAL-REAL-2026-07-02 — real DB counts; renders nothing if numbers are low/unavailable */}
+            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center' }}>
+              <LiveStatsBadge />
+            </div>
           </div>
           <HeroGallery />
           <p className="gallery-cap">Each one made from a single topic — script, voice, footage and captions, automatically.</p>
