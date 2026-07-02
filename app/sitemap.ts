@@ -6,7 +6,7 @@ import { PT_SLUGS } from './pt/[slug]/page'
 // #458 — SEO: sitemap so Google can discover and index every public page.
 // The site had none, so search engines were barely crawling it — free organic
 // traffic left on the table. Canonical domain = the live www host.
-const BASE = 'https://www.shortsforgeai.com'
+const BASE = 'https://www.usekineo.com'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
@@ -21,7 +21,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/youtube-shorts-from-topic', priority: 0.8, freq: 'weekly' },
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
     { path: '/ai-shorts-without-filming', priority: 0.8, freq: 'weekly' },
+    { path: '/faceless-channel-ideas', priority: 0.8, freq: 'weekly' },
     { path: '/alternatives', priority: 0.8, freq: 'weekly' },
+    // AEO/GEO — citable fact sheet for AI answer engines (linked in public/llms.txt).
+    { path: '/facts', priority: 0.7, freq: 'weekly' },
     { path: '/signup', priority: 0.7, freq: 'monthly' },
     { path: '/login', priority: 0.4, freq: 'monthly' },
     { path: '/referral', priority: 0.5, freq: 'monthly' },

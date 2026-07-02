@@ -25,6 +25,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: '/youtube-shorts-from-topic', label: 'YouTube Shorts from a topic' },
       { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },
+      { href: '/faceless-channel-ideas', label: 'Faceless channel ideas (2026)' },
       { href: '/pricing', label: 'Pricing' },
       { href: '/start', label: 'Start free' },
     ],
