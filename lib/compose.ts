@@ -862,19 +862,25 @@ export function buildCreatomateSource({
   // actual audio, never by an arbitrary integer. We cap at 90s and floor at 5s
   // as a sanity guard, and fall back to the requested duration if the TTS
   // measurement failed or returned an implausible value.
+  const hasAvatar = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
+  // Avatar duration fix (02/07, TAAFT reviewer bug) — in avatar mode a SHORT
+  // measured audio (a one-sentence verbatim line ≈ 3s) is a legitimate value,
+  // not a failed measurement, so the plausibility floor drops 4s → 0.5s and
+  // the timeline floor drops 5s → 3s. Non-avatar modes keep the old guards.
+  const minPlausibleAudio = hasAvatar ? 0.5 : 4
   const masterDuration =
-    realAudioDuration && realAudioDuration > 4 && realAudioDuration < 120
+    realAudioDuration && realAudioDuration > minPlausibleAudio && realAudioDuration < 120
       ? realAudioDuration
       : duration
-  let totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, 5, 90)
+  let totalDuration = clamp(Math.ceil(masterDuration * 10) / 10, hasAvatar ? 3 : 5, 90)
   const cleanClips = clipUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
-  const hasAvatar = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
   // Avatar tail fix (13/06) — in avatar mode the narration IS the master
   // clock: the lip-synced face and the mp3 are the same length, so the
   // timeline must NEVER outlive the audio. This also lets short verbatim
   // videos (e.g. a 5s greeting) end at ~5s instead of being floored to the
   // 45s-era minimums and padded with unrelated clips (Joseph, 13/06).
-  if (hasAvatar && realAudioDuration && realAudioDuration > 2 && realAudioDuration < 120) {
+  // 02/07 — gate loosened 2s → 0.5s so ultra-short lines also cap the tail.
+  if (hasAvatar && realAudioDuration && realAudioDuration > 0.5 && realAudioDuration < 120) {
     totalDuration = Math.min(totalDuration, clamp(Math.ceil((realAudioDuration + 0.4) * 10) / 10, 3, 90))
   }
   // Avatar mode can render with ZERO stock clips (talking head carries the
@@ -1264,8 +1270,10 @@ export function buildCreatomateSource({
   // doesn't pad or truncate the audio file. totalDuration already equals
   // realAudioDuration (see master-duration logic above), so this is a
   // no-op in normal operation; it acts as an explicit guard for edge cases.
+  // 02/07 — guard follows minPlausibleAudio (0.5s in avatar mode) so a short
+  // verbatim mp3 keeps its own length instead of inheriting totalDuration.
   const audioDuration = round3(
-    masterDuration && masterDuration > 4 ? masterDuration : totalDuration
+    masterDuration && masterDuration > minPlausibleAudio ? masterDuration : totalDuration
   )
   elements.push({
     type: 'audio',

@@ -160,9 +160,18 @@ export async function POST(req: NextRequest) {
       : []
 
     const requestedDuration = Number(body.duration) || 45
-    const duration = (SUPPORTED_DURATIONS as readonly number[]).includes(requestedDuration)
-      ? requestedDuration
-      : 45
+    // Avatar duration fix (02/07, TAAFT reviewer bug) — avatar renders follow
+    // the REAL narration length (a 4s verbatim line is a ~4s video), so the
+    // requested duration is only sanity-clamped for them instead of coerced to
+    // the Shorts whitelist. The old coercion turned a short verbatim request
+    // (e.g. duration=4 from AvatarStudioClient) into 45, and combined with the
+    // ">4s" plausibility gate below produced a 45s render where the avatar
+    // speaks for ~4s and the remaining ~40s is black screen.
+    const duration = isAvatarReq
+      ? Math.max(3, Math.min(90, Math.round(requestedDuration)))
+      : (SUPPORTED_DURATIONS as readonly number[]).includes(requestedDuration)
+        ? requestedDuration
+        : 45
 
     const quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
@@ -364,10 +373,16 @@ export async function POST(req: NextRequest) {
     // Push #158 — measure the REAL narration length so captions key to the
     // actual audio, not the requested duration (which assumed 2.5 wps).
     let realAudioDuration = audioBuffer ? estimateMp3DurationSeconds(audioBuffer) : 0
-    if (avatarMode && !(realAudioDuration > 4)) {
+    // Avatar duration fix (02/07) — threshold dropped 4s → 0.5s: a legitimately
+    // SHORT verbatim line (one sentence ≈ 3s of speech) was being treated as a
+    // failed measurement and replaced with the requested duration, so the final
+    // video ballooned to 45s with a black tail after the avatar stopped talking.
+    // 0.5s still catches real measurement failures (estimateMp3DurationSeconds
+    // returns 0 for unparseable buffers).
+    if (avatarMode && !(realAudioDuration > 0.5)) {
       // Avatar fallback chain: measured → value sent by generate-avatar → requested.
       const sent = Number(body.real_audio_duration)
-      realAudioDuration = Number.isFinite(sent) && sent > 4 ? sent : duration
+      realAudioDuration = Number.isFinite(sent) && sent > 0.5 ? sent : duration
     }
     console.log(
       `[compose] estimated TTS duration: ${realAudioDuration.toFixed(1)}s (requested ${duration}s)`,
