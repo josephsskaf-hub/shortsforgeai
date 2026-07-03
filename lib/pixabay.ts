@@ -236,14 +236,21 @@ async function searchPixabay(
 // Ties break toward Pixabay's own relevance order. Same inputs, same fallback
 // behavior (null on no clean candidate) — only the pick among survivors changed.
 
-async function searchAndFilter(
+// Fast Mode v2 (02/07) — candidate type shared by searchAndFilter (best-of-pool
+// single pick) and getPixabayClipsForScene (multi-clip scene pools for rhythm cuts).
+type PixabayCandidate = { url: string; score: number; order: number; id: number }
+
+// Fast Mode v2 (02/07) — collection extracted from searchAndFilter so the new
+// multi-clip scene pool reuses the EXACT same gates + scoring (#483/#484).
+// searchAndFilter's observable behavior is unchanged.
+async function collectCandidates(
   query: string,
   sceneNeedsPeople: boolean,
   category: string | undefined,
   label: string,
   exclude?: Set<string>,
   minDurationSec?: number,
-): Promise<string | null> {
+): Promise<PixabayCandidate[]> {
   // Push #484 (02/07) — pool 7 → 20. The #483 ranker only beats "first clean
   // clip wins" if it has real candidates to rank; 7 hits often left 1-2 clean
   // survivors after the lifestyle/relevance gates. Same single API call.
@@ -255,8 +262,7 @@ async function searchAndFilter(
     ? Math.min(minDurationSec, 15)
     : 6
 
-  type Candidate = { url: string; score: number; order: number; id: number }
-  const candidates: Candidate[] = []
+  const candidates: PixabayCandidate[] = []
 
   for (let order = 0; order < hits.length; order++) {
     const video = hits[order]
@@ -298,6 +304,19 @@ async function searchAndFilter(
       `[pixabay] ${label} candidate id=${video.id} score=${score} (matches=${matches} dur=${video.duration ?? '?'}s/${neededSec}s portrait=${portrait} tooShort=${tooShort}) tags="${video.tags.slice(0, 60)}"`,
     )
   }
+
+  return candidates
+}
+
+async function searchAndFilter(
+  query: string,
+  sceneNeedsPeople: boolean,
+  category: string | undefined,
+  label: string,
+  exclude?: Set<string>,
+  minDurationSec?: number,
+): Promise<string | null> {
+  const candidates = await collectCandidates(query, sceneNeedsPeople, category, label, exclude, minDurationSec)
 
   if (candidates.length === 0) return null
 
@@ -514,4 +533,88 @@ export async function getPixabayVideoForQueries(
       ' — caller uses FALLBACK-A/B',
   )
   return null
+}
+
+// ── Fast Mode v2 (02/07) — multi-clip scene pools ──────────────────────────
+
+// Max queries pooled per scene — each pool query is exactly ONE Pixabay API call
+// (no broadening tiers), so a scene costs at most 3 calls before falling back.
+const SCENE_POOL_QUERY_CAP = 3
+// Earlier queries are more SPECIFIC (BrollPlan orders them that way) — a small
+// score bonus keeps a specific query's clip ahead of a generic query's on ties.
+const SCENE_POOL_PRIORITY_BONUS = 2
+
+/**
+ * Fast Mode v2 (02/07) — return up to `maxClips` RANKED clip URLs for one scene,
+ * strongest first, pooled across the scene's query list.
+ *
+ * Why: one clip per scene forced compose to hold a single static clip for 6-9s.
+ * With 2+ ranked clips per scene, compose can cut every ~2.5-4s INSIDE the scene
+ * (rhythm) — and because the pool is score-sorted, the scene's LEAD clip is the
+ * strongest of its whole candidate pool (the visual hook for scene 1).
+ *
+ * Fallback: if the pooled searches find nothing, delegates to the classic
+ * single-clip chain (getPixabayVideoForQueries, with query broadening) so v2
+ * never sources FEWER clips than v1 did. Never throws.
+ */
+export async function getPixabayClipsForScene(
+  queries: string[],
+  sceneNeedsPeople = false,
+  hint?: string,
+  opts?: {
+    /** true → user hand-picked queries (verbatim mode): never concretize. */
+    exact?: boolean
+    /** URLs already used by other scenes of this video — skip them. */
+    exclude?: Set<string>
+    /** Planned scene duration (s); clips covering it rank higher (#483). */
+    minDurationSec?: number
+    /** How many ranked clips to return (default 2). */
+    maxClips?: number
+  },
+): Promise<string[]> {
+  const rawCleaned = (queries ?? [])
+    .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+    .map((q) => q.trim())
+  const cleaned = opts?.exact ? rawCleaned : concretizeQueries(rawCleaned, hint)
+  if (cleaned.length === 0) return []
+
+  const maxClips = Math.max(1, opts?.maxClips ?? 2)
+  const hintLabel = (hint ?? '').slice(0, 50)
+
+  const pool: PixabayCandidate[] = []
+  // Superset of the caller's exclude set: also blocks intra-pool duplicates.
+  const seenUrls = new Set<string>(opts?.exclude ?? [])
+
+  for (let i = 0; i < Math.min(cleaned.length, SCENE_POOL_QUERY_CAP); i++) {
+    const q = cleaned[i]
+    const cands = await collectCandidates(
+      q,
+      sceneNeedsPeople,
+      inferCategory(q),
+      `pool${i + 1}`,
+      seenUrls,
+      opts?.minDurationSec,
+    )
+    for (const c of cands) {
+      if (seenUrls.has(c.url)) continue
+      seenUrls.add(c.url)
+      pool.push({ ...c, score: c.score + Math.max(0, SCENE_POOL_PRIORITY_BONUS - i) })
+    }
+    // Enough candidates to rank meaningfully — stop spending API calls.
+    if (pool.length >= maxClips + 2) break
+  }
+
+  if (pool.length === 0) {
+    // Pool dry (niche query) — classic chain with broadening finds SOMETHING.
+    const single = await getPixabayVideoForQueries(queries, sceneNeedsPeople, hint, opts)
+    return single ? [single] : []
+  }
+
+  pool.sort((a, b) => b.score - a.score || a.order - b.order)
+  const picked = pool.slice(0, maxClips).map((c) => c.url)
+  console.log(
+    `[pixabay-pool] ${pool.length} candidate(s) → ${picked.length} clip(s), top score=${pool[0].score}` +
+      (hintLabel ? ` for="${hintLabel}"` : ''),
+  )
+  return picked
 }

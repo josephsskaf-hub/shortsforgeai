@@ -19,6 +19,27 @@ const CTA_TAIL_SECONDS = 2.5
 const MUSIC_VOLUME = '18%'
 // Push #064 — yellow used for the per-caption highlight word overlay.
 const HIGHLIGHT_COLOR = '#FFD700'
+
+// ── Fast Mode v2 (02/07) — ALL constants below are GATED to quality==='fast'
+// (free stock pipeline). AI Gen / avatar / legacy modes keep their exact
+// pre-existing pacing, animation and caption behavior. Easy to tune here.
+// (a) RITMO — cut cadence band: each clip slot lasts 2.5–4s (viral edit rhythm).
+const FAST_MIN_CUT_SECONDS = 2.5
+const FAST_MAX_CUT_SECONDS = 4
+// (b) MOVIMENTO — Ken Burns pattern cycled per cut: center push-in, pull-back,
+// then off-center push-ins (anchored left/right) that read as subtle lateral
+// pans. Same proven Creatomate 'scale' animation type as #292, only varied.
+const FAST_KEN_BURNS_PATTERN = [
+  { from: '100%', to: '108%', xAnchor: '50%' }, // push-in, centered
+  { from: '108%', to: '100%', xAnchor: '50%' }, // pull-back, centered
+  { from: '100%', to: '110%', xAnchor: '38%' }, // push-in anchored left → pan-right feel
+  { from: '100%', to: '110%', xAnchor: '62%' }, // push-in anchored right → pan-left feel
+] as const
+// (d) LEGENDAS — caption chunks carrying money/percent/big-number/power words
+// render the WHOLE 3-word line in HIGHLIGHT_COLOR (yellow pop); rest stay white.
+// Whole-line color (not per-word layering) on purpose — see #277 regression note.
+const FAST_EMPHASIS_RE =
+  /(\$[\d.,]+|\d+(\.\d+)?%|\b\d{3,}\b|\b(million|billion|trillion|secret|never|banned|hidden|illegal|forbidden|richest|poorest|deadliest|shocking|insane|free)\b)/i
 // Push #049 — bucket name lives here so we never typo it across the
 // upload + URL-build code paths. If we ever rename the bucket, change
 // this single constant.
@@ -791,11 +812,15 @@ export function buildCaptionElements({
   time,
   duration,
   highlight,
+  emphasize = false,
 }: {
   text: string
   time: number
   duration: number
   highlight?: string | null
+  // Fast Mode v2 (d) — true → whole line renders in HIGHLIGHT_COLOR (yellow
+  // pop for money/number/power-word chunks). Only Fast Mode passes true.
+  emphasize?: boolean
 }): CreatomateElement[] {
   // Push #292 — OpusClip/InVideo quality upgrade:
   //   - UPPERCASE text: standard across all professional Shorts tools
@@ -815,7 +840,9 @@ export function buildCaptionElements({
     font_family: 'Montserrat',
     font_size: 70,
     font_weight: '800',
-    fill_color: '#ffffff',
+    // Fast Mode v2 (d) — emphasized chunks go whole-line yellow (mobile-safe:
+    // same size/stroke/pill, only the fill changes so contrast never drops).
+    fill_color: emphasize ? HIGHLIGHT_COLOR : '#ffffff',
     stroke_color: 'rgba(0,0,0,0.98)',
     stroke_width: 5,
     background_color: 'rgba(0,0,0,0.60)',
@@ -940,6 +967,10 @@ export function buildCreatomateSource({
   // Fast stock keeps the tight 6s cut rhythm.
   const isAiGen =
     quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'basic_ai'
+  // Fast Mode v2 (02/07) — single gate for every v2 upgrade in this builder.
+  // ONLY quality==='fast' (the free stock pipeline) opts in; absent/legacy
+  // quality values keep the exact pre-v2 behavior.
+  const isFastStock = quality === 'fast'
   // Push #446 — Fast 60s repetition fix. Fast (stock) makes ~1 clip per script
   // beat (~6-7 clips). At CLIP_LEN=6 those 6-7 clips only cover 36-42s, so a ~55s
   // 60s video recycled/repeated clips to fill the rest (Joseph's feedback). Keep
@@ -1124,7 +1155,13 @@ export function buildCreatomateSource({
       `[compose] avatar mode v2 (sequential): ${cutStarts.length} cutaway(s), ${cleanClips.length} clip(s), total ${totalDuration}s`,
     )
   } else {
-  const slotLen = Math.min(CLIP_LEN, totalDuration / cleanClips.length)
+  // Fast Mode v2 (a) — RITMO: fast stock cuts every 2.5–4s (generate-video-fast
+  // now sources 2 ranked clips per scene, so total/count lands inside the band;
+  // when few clips resolve, the clamp still forces frequent cuts by cycling).
+  // Non-fast modes keep the exact pre-v2 slot math.
+  const slotLen = isFastStock
+    ? clamp(totalDuration / cleanClips.length, FAST_MIN_CUT_SECONDS, FAST_MAX_CUT_SECONDS)
+    : Math.min(CLIP_LEN, totalDuration / cleanClips.length)
   let cursor = 0
   let i = 0
   while (cursor < totalDuration) {
@@ -1137,6 +1174,10 @@ export function buildCreatomateSource({
     // 8% scale range is subtle enough not to feel fake on stock footage
     // but clearly visible as "alive" motion to the viewer.
     const zoomIn = i % 2 === 0
+    // Fast Mode v2 (b) — MOVIMENTO: cycle a 4-step Ken Burns pattern (center
+    // push/pull + anchored push-ins that read as lateral pans) so consecutive
+    // cuts never repeat the same motion. Fast only; others keep #292 behavior.
+    const kb = isFastStock ? FAST_KEN_BURNS_PATTERN[i % FAST_KEN_BURNS_PATTERN.length] : null
     const elem: CreatomateElement = {
       type: 'video',
       track: 2,
@@ -1152,13 +1193,23 @@ export function buildCreatomateSource({
       height: '100%',
       volume: '0%',
       animations: [
-        {
-          type: 'scale',
-          fade: false,
-          start_scale: zoomIn ? '100%' : '108%',
-          end_scale: zoomIn ? '108%' : '100%',
-          easing: 'linear',
-        },
+        kb
+          ? {
+              type: 'scale',
+              fade: false,
+              start_scale: kb.from,
+              end_scale: kb.to,
+              x_anchor: kb.xAnchor,
+              y_anchor: '50%',
+              easing: 'linear',
+            }
+          : {
+              type: 'scale',
+              fade: false,
+              start_scale: zoomIn ? '100%' : '108%',
+              end_scale: zoomIn ? '108%' : '100%',
+              easing: 'linear',
+            },
       ],
     }
     elements.push(elem)
@@ -1313,6 +1364,8 @@ export function buildCreatomateSource({
         time: cap.time,
         duration: cap.duration,
         highlight: cap.highlight,
+        // Fast Mode v2 (d) — money/number/power-word chunks pop in yellow.
+        emphasize: isFastStock && FAST_EMPHASIS_RE.test(cap.text),
       }))
     }
   } else {
@@ -1341,6 +1394,8 @@ export function buildCreatomateSource({
           time: round3(time),
           duration: round3(slot),
           highlight: segment.highlight,
+          // Fast Mode v2 (d) — same yellow-pop rule as the Whisper path.
+          emphasize: isFastStock && FAST_EMPHASIS_RE.test(segment.text),
         }))
       })
     }

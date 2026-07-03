@@ -6,7 +6,8 @@ import type { Scene } from '@/lib/runway'
 // Push #351 — Pexels import removed. All Pexels API calls disabled.
 // import { getPexelsVideoForScene, getPexelsVideoForExactQuery, getPexelsVideoForQueries } from '@/lib/pexels'
 // Push #353 — Pixabay replaces Pexels as primary B-roll source.
-import { getPixabayVideoForQueries } from '@/lib/pixabay'
+// Fast Mode v2 (02/07) — getPixabayClipsForScene returns a RANKED mini-pool per scene.
+import { getPixabayClipsForScene } from '@/lib/pixabay'
 import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
 // Push #351 — ensureAccessibleUrl removed (was only used for Pexels CDN proxying; Pexels now OFF).
 // import { ensureAccessibleUrl } from '@/lib/videoCache'
@@ -31,6 +32,12 @@ type Duration = (typeof SUPPORTED_DURATIONS)[number]
 // Pexels is free; only TTS + Creatomate cost cents per video. Free-plan Fast
 // videos are watermarked (server-side in /api/compose) so each one markets us.
 const FAST_MODE_CREDIT_COST = 0
+
+// Fast Mode v2 (02/07) — RITMO: source 2 ranked clips per scene so compose can
+// cut every ~2.5-4s inside a scene instead of holding one static clip for 6-9s.
+const FAST_CLIPS_PER_SCENE = 2
+// Sanity cap on total clip elements per video (12 verbatim scenes × 2 = 24 is too many).
+const FAST_MAX_TOTAL_CLIPS = 16
 
 function clipCountForDuration(d: Duration): number {
   // Stock clips are usually >10s, but we still ask for N distinct clips so
@@ -434,7 +441,14 @@ export async function POST(req: NextRequest) {
             scene.description ?? '',
             scene.searchKeywords ?? '',
           )
-          const pixUrl = await getPixabayVideoForQueries(
+          // Fast Mode v2 (02/07) — ranked mini-pool per scene (strongest clip
+          // first, so scene 1's lead clip = the strongest of its whole pool —
+          // the visual hook). Near the total cap we drop back to 1 clip/scene.
+          const clipsWanted = Math.max(
+            1,
+            Math.min(FAST_CLIPS_PER_SCENE, FAST_MAX_TOTAL_CLIPS - clipUrls.length),
+          )
+          const pixUrls = await getPixabayClipsForScene(
             pixQueries,
             sceneNeedsPeople,
             (scene.voiceover ?? '').slice(0, 80),
@@ -443,15 +457,17 @@ export async function POST(req: NextRequest) {
             // scene already took (the same-Dubai-aerial-4x bug).
             // Push #483 — minDurationSec: clips long enough to cover the planned
             // scene duration rank higher (kills freeze/loop padding on short clips).
-            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds },
+            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds, maxClips: clipsWanted },
           )
-          if (pixUrl) {
-            console.log(
-              `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 60)}" source=PIXABAY score=${scoreLabel} url=${pixUrl.slice(0, 60)}`,
-            )
-            clipUrls.push(pixUrl)
-            usedPexelsUrls.add(pixUrl) // (12/06) cross-scene dedup
-            clipSources.push('pixabay') // #355
+          if (pixUrls.length > 0) {
+            for (const pixUrl of pixUrls) {
+              console.log(
+                `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 60)}" source=PIXABAY score=${scoreLabel} url=${pixUrl.slice(0, 60)}`,
+              )
+              clipUrls.push(pixUrl)
+              usedPexelsUrls.add(pixUrl) // (12/06) cross-scene dedup
+              clipSources.push('pixabay') // #355 — one entry per clip; ratios stay valid
+            }
             continue
           }
           console.log(`[clip] scene=${sceneNo} Pixabay miss — falling through to FALLBACK-A/B`)
