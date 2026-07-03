@@ -13,7 +13,11 @@ import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
 // import { ensureAccessibleUrl } from '@/lib/videoCache'
 import { parseUserScript } from '@/lib/scriptParser'
 
-export const maxDuration = 60
+// HOTFIX (02/07) — Fast Mode v2 blew the default 60s budget on 60s scripts
+// (6-9 scenes × multi-pool Pixabay sourcing → Vercel 504 "Task timed out").
+// Account is Pro, so 120s is allowed. Paired with the pool short-circuit in
+// lib/pixabay.ts (getPixabayClipsForScene) that removes the tripled API calls.
+export const maxDuration = 120
 
 // Push #084 — Fast Mode: cheap stock-footage + TTS pipeline.
 //

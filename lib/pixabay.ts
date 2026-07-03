@@ -124,6 +124,15 @@ const RELEVANCE_STOPWORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'over', 'under',
   'video', 'footage', 'clip', 'shot', 'scene', 'cinematic', 'closeup', 'close',
   'aerial', 'drone', 'background', 'vertical', 'style',
+  // 02/07 (validação com vídeo Fast real, logs de prod) — sufixos de ESTILO que o
+  // BrollPlan anexa às queries ("golden hour", "close-up macro", "wide establishing",
+  // "POV", "low angle") estavam contando como matches de RELEVÂNCIA: um clipe
+  // "ocean palm golden hour" (matches=2 em golden+hour) venceu o clipe real de
+  // cratera de enxofre (matches=1 em volcano) na cena do Danakil. Palavras de
+  // enquadramento/luz não são TÓPICO — fora do score; a busca do Pixabay ainda
+  // as usa na query normal.
+  'golden', 'hour', 'macro', 'establishing', 'pov', 'medium', 'wide', 'angle',
+  'low', 'slow', 'motion', 'timelapse', '4k', 'uhd',
 ])
 
 function meaningfulTokens(text: string): string[] {
@@ -600,8 +609,23 @@ export async function getPixabayClipsForScene(
       seenUrls.add(c.url)
       pool.push({ ...c, score: c.score + Math.max(0, SCENE_POOL_PRIORITY_BONUS - i) })
     }
-    // Enough candidates to rank meaningfully — stop spending API calls.
-    if (pool.length >= maxClips + 2) break
+    // HOTFIX (02/07) — SHORT-CIRCUIT: once the pool already holds enough
+    // eligible candidates to fill the scene (>= maxClips, i.e. pool1 alone
+    // when it's healthy), take the top picks from what we have and SKIP the
+    // remaining pool queries. The previous threshold (maxClips + 2) kept
+    // fetching pool2+pool3 per scene even when pool1 returned 19 eligible
+    // candidates — 3x the Pixabay round-trips on 60s scripts (6-9 scenes),
+    // which blew the route's 60s Vercel budget (504). Fallbacks are intact:
+    // pool2/pool3 still run when pool1 comes back thin (< maxClips), and the
+    // classic single-clip chain below still covers a fully dry pool.
+    if (pool.length >= maxClips) {
+      if (i + 1 < Math.min(cleaned.length, SCENE_POOL_QUERY_CAP)) {
+        console.log(
+          `[pixabay-pool] short-circuit after pool${i + 1}: ${pool.length} eligible >= ${maxClips} — skipping remaining pool queries`,
+        )
+      }
+      break
+    }
   }
 
   if (pool.length === 0) {
