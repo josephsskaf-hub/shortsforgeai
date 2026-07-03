@@ -91,10 +91,11 @@ function findPreviousRelevantClip(
 // clipCount scenes (e.g. 5). The old index-by-index lookup
 // (brollSceneMap.get(idx+1)) shifted EVERY query from scene 2 onward — the
 // "1968 drought" scene got its neighbour's "lake aerial view" query.
-// Fix: match each GPT scene to the plan scene whose NARRATION shares the most
-// meaningful tokens with the scene's voiceover. When narration isn't available
-// (older clients), fall back to PROPORTIONAL position mapping — still strictly
-// better than raw-index when the counts differ, and identical when they match.
+// Fix: when plan/scene counts DIFFER, match each GPT scene to the plan scene
+// whose NARRATION shares the most meaningful tokens with the scene's voiceover.
+// When narration isn't available (older clients), fall back to PROPORTIONAL
+// position mapping — still strictly better than raw-index when counts differ.
+// When counts MATCH, the direct 1:1 mapping is kept (happy path unchanged).
 const ALIGN_STOPWORDS = new Set([
   'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'or', 'is', 'are', 'was', 'were',
   'it', 'its', 'this', 'that', 'these', 'those', 'with', 'for', 'from', 'by', 'as', 'but',
@@ -379,11 +380,16 @@ export async function POST(req: NextRequest) {
       const haveNarration = planTokens.some((t) => t.size > 0)
       const sameCount = planEntries.length === scenes.length
       const taken = new Set<number>()
-      const mapLog: string[] = []
+      console.log(
+        `[broll-align] plan=${planEntries.length} scenes=${scenes.length} narration=${haveNarration} mode=${sameCount ? 'direct-1:1' : haveNarration ? 'content' : 'proportional'}`,
+      )
       for (let i = 0; i < scenes.length; i++) {
         let chosen = -1
+        let bestScore = 0
         let method = 'index'
-        if (haveNarration) {
+        // Happy path: when the plan and the route agree on scene count, keep the
+        // direct 1:1 mapping — content matching only runs when counts DIFFER.
+        if (!sameCount && haveNarration) {
           const sceneTok = alignTokens(
             `${scenes[i].voiceover ?? ''} ${scenes[i].description ?? ''}`,
           )
@@ -398,11 +404,14 @@ export async function POST(req: NextRequest) {
               chosen = j
             }
           }
-          if (chosen !== -1) method = 'content'
+          if (chosen !== -1) {
+            method = 'content'
+            bestScore = best
+          }
         }
         if (chosen === -1) {
           // Positional fallback: identical to legacy behavior when counts match,
-          // proportional (no off-by-one drift) when they differ.
+          // proportional (relative position, no off-by-one drift) when they differ.
           chosen = sameCount
             ? i
             : scenes.length > 1
@@ -413,12 +422,11 @@ export async function POST(req: NextRequest) {
         if (chosen >= 0 && chosen < planEntries.length) {
           taken.add(chosen)
           alignedMeta[i] = planEntries[chosen][1]
-          mapLog.push(`${i + 1}→plan${planEntries[chosen][0]}(${method})`)
+          console.log(
+            `[broll-align] scene ${i + 1} ↔ plan ${planEntries[chosen][0]} (score ${bestScore.toFixed(2)}, ${method})`,
+          )
         }
       }
-      console.log(
-        `[broll-align] plan=${planEntries.length} scenes=${scenes.length} narration=${haveNarration} map=[${mapLog.join(', ')}]`,
-      )
     }
 
     const usedPexelsUrls = new Set<string>()

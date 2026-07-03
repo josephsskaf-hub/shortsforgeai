@@ -512,12 +512,14 @@ export async function POST(req: NextRequest) {
       `[compose] caption source: re-segmented scaled script (${scaledScript.split(/\s+/).filter(Boolean).length} words); scene_captions fallback available=${haveSceneCaptions}`,
     )
 
-    // Push #293 — fetch background music. Best-effort: never block the render.
+    // Push #293/#488 — fetch background music. Best-effort: never block the
+    // render. Seeded with the voiceover upload URL (unique per render) so the
+    // track is deterministic per render but rotates across renders.
     let musicUrl: string | null = null
     try {
-      musicUrl = await getBackgroundMusicUrl()
+      musicUrl = await getBackgroundMusicUrl(voiceoverUrl)
     } catch (err) {
-      console.warn('[compose] music fetch failed, continuing without music:', err instanceof Error ? err.message : String(err))
+      console.warn('[compose] music fetch failed, continuing WITHOUT background music:', err instanceof Error ? err.message : String(err))
     }
 
     let source: Record<string, unknown>
