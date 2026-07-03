@@ -144,6 +144,17 @@ function tagsRelevantToQuery(video: PixabayVideo, query: string): boolean {
   return qTokens.some((t) => tagBlob.includes(t))
 }
 
+// Push #483 (02/07) — count HOW MANY meaningful query tokens the clip's tags
+// share with the query. tagsRelevantToQuery is a pass/fail gate (≥1 token);
+// this count feeds the candidate RANKING so a clip matching "volcano"+"lava"
+// +"eruption" beats one matching only "volcano".
+function tagMatchCount(video: PixabayVideo, query: string): number {
+  const qTokens = meaningfulTokens(query)
+  if (qTokens.length === 0) return 0
+  const tagBlob = video.tags.toLowerCase()
+  return qTokens.filter((t) => tagBlob.includes(t)).length
+}
+
 // ── URL picker ─────────────────────────────────────────────────────────────
 // Prefer large (1080p+); fall back down. Returns null if no URL exists.
 
@@ -210,7 +221,20 @@ async function searchPixabay(
 }
 
 // ── searchAndFilter ────────────────────────────────────────────────────────
-// Runs one Pixabay search, rejects lifestyle-polluted clips, returns first clean URL.
+// Runs one Pixabay search, rejects lifestyle-polluted clips, RANKS the clean
+// candidates and returns the best one.
+//
+// Push #483 (02/07) — candidate RANKING replaces "first clean clip wins".
+// Before: we returned the first portrait clip that passed the gates, even if it
+// was 3s long (freeze/loop on an 8s scene) and matched only 1 query word, while
+// a 15s strong-match clip sat 2 positions later. Now every clean candidate is
+// scored and the best wins:
+//   +4 per query token found in the clip's tags   (topic strength dominates)
+//   +3 if clip duration covers the scene           (no freeze/loop padding)
+//   +2 if portrait/vertical                        (native 9:16 — nice-to-have,
+//        NOT a trump card: compose center-crops landscape fine, see #438)
+// Ties break toward Pixabay's own relevance order. Same inputs, same fallback
+// behavior (null on no clean candidate) — only the pick among survivors changed.
 
 async function searchAndFilter(
   query: string,
@@ -218,11 +242,24 @@ async function searchAndFilter(
   category: string | undefined,
   label: string,
   exclude?: Set<string>,
+  minDurationSec?: number,
 ): Promise<string | null> {
-  const hits = await searchPixabay(query, 7, category)
+  // Push #484 (02/07) — pool 7 → 20. The #483 ranker only beats "first clean
+  // clip wins" if it has real candidates to rank; 7 hits often left 1-2 clean
+  // survivors after the lifestyle/relevance gates. Same single API call.
+  const hits = await searchPixabay(query, 20, category)
 
-  let landscapeFallback: string | null = null
-  for (const video of hits) {
+  // Scene coverage target: planned scene duration when known (BrollPlan),
+  // else 6s — a sane floor for Shorts pacing.
+  const neededSec = typeof minDurationSec === 'number' && minDurationSec > 0
+    ? Math.min(minDurationSec, 15)
+    : 6
+
+  type Candidate = { url: string; score: number; order: number; id: number }
+  const candidates: Candidate[] = []
+
+  for (let order = 0; order < hits.length; order++) {
+    const video = hits[order]
     if (hasLifestylePollution(video, sceneNeedsPeople)) {
       console.log(
         `[pixabay] ${label} rejected id=${video.id} tags="${video.tags.slice(0, 60)}" reason=lifestyle`,
@@ -244,17 +281,32 @@ async function searchAndFilter(
       console.log(`[pixabay] ${label} rejected id=${video.id} reason=already_used_in_video`)
       continue
     }
-    if (url) {
-      console.log(
-        `[pixabay] ${label} ACCEPTED id=${video.id} tags="${video.tags.slice(0, 60)}" url="${url.slice(0, 60)}"`,
-      )
-      const rez = video.videos?.large
-      if (rez && rez.height >= rez.width) return url
-      if (!landscapeFallback) landscapeFallback = url
-    }
+    if (!url) continue
+
+    const rez = video.videos?.large
+    const portrait = !!rez && rez.height >= rez.width
+    const coversScene = typeof video.duration === 'number' && video.duration >= neededSec
+    // Push #484 — clips under 3s force a visible freeze/loop on any Short scene;
+    // losing the +3 coverage bonus wasn't enough (a 2s strong-tag clip still won).
+    // Explicit penalty, NOT a reject: on thin queries a short on-topic clip still
+    // beats FALLBACK-A/B repetition.
+    const tooShort = typeof video.duration === 'number' && video.duration > 0 && video.duration < 3
+    const matches = tagMatchCount(video, query)
+    const score = matches * 4 + (coversScene ? 3 : 0) + (portrait ? 2 : 0) - (tooShort ? 2 : 0)
+    candidates.push({ url, score, order, id: video.id })
+    console.log(
+      `[pixabay] ${label} candidate id=${video.id} score=${score} (matches=${matches} dur=${video.duration ?? '?'}s/${neededSec}s portrait=${portrait} tooShort=${tooShort}) tags="${video.tags.slice(0, 60)}"`,
+    )
   }
 
-  return landscapeFallback
+  if (candidates.length === 0) return null
+
+  candidates.sort((a, b) => b.score - a.score || a.order - b.order)
+  const best = candidates[0]
+  console.log(
+    `[pixabay] ${label} ACCEPTED id=${best.id} score=${best.score} of ${candidates.length} candidate(s) url="${best.url.slice(0, 60)}"`,
+  )
+  return best.url
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -267,6 +319,7 @@ export async function getPixabayVideoForExactQuery(
   query: string,
   sceneNeedsPeople = false,
   exclude?: Set<string>,
+  minDurationSec?: number, // Push #483 — planned scene duration for ranking
 ): Promise<string | null> {
   const q = (query ?? '').trim()
   if (!q) return null
@@ -274,13 +327,13 @@ export async function getPixabayVideoForExactQuery(
   const category = inferCategory(q)
 
   // 1) Exact query with inferred category
-  const direct = await searchAndFilter(q, sceneNeedsPeople, category, 'exact', exclude)
+  const direct = await searchAndFilter(q, sceneNeedsPeople, category, 'exact', exclude, minDurationSec)
   if (direct) return direct
 
   // 2) First 3 tokens (broadened) — same semantic topic
   const broad = q.split(/\s+/).slice(0, 3).join(' ')
   if (broad.length > 0 && broad !== q) {
-    const broadUrl = await searchAndFilter(broad, sceneNeedsPeople, category, 'broad', exclude)
+    const broadUrl = await searchAndFilter(broad, sceneNeedsPeople, category, 'broad', exclude, minDurationSec)
     if (broadUrl) return broadUrl
   }
 
@@ -288,13 +341,13 @@ export async function getPixabayVideoForExactQuery(
   // 4-word hand-picked queries like "man reading book penthouse" → "man reading").
   const broad2 = q.split(/\s+/).slice(0, 2).join(' ')
   if (broad2.length > 0 && broad2 !== broad && broad2 !== q) {
-    const broad2Url = await searchAndFilter(broad2, sceneNeedsPeople, category, 'broad2', exclude)
+    const broad2Url = await searchAndFilter(broad2, sceneNeedsPeople, category, 'broad2', exclude, minDurationSec)
     if (broad2Url) return broad2Url
   }
 
   // 3) Remove category constraint — may have been over-narrowing
   if (category) {
-    const noCat = await searchAndFilter(q, sceneNeedsPeople, undefined, 'no_cat', exclude)
+    const noCat = await searchAndFilter(q, sceneNeedsPeople, undefined, 'no_cat', exclude, minDurationSec)
     if (noCat) return noCat
   }
 
@@ -355,6 +408,44 @@ const CONCEPT_VISUAL_MAP: ReadonlyArray<{ test: RegExp; queries: string[] }> = [
     queries: ['city skyline sunrise', 'businessman walking city', 'luxury watch', 'stacking coins money'] },
   { test: /\b(wall street|stock exchange|nasdaq|nyse|market crash)/i,
     queries: ['wall street', 'stock exchange', 'financial district'] },
+  // Push #482 (02/07) — GEO/EXTREME-PLACES concept map. The channel's strongest
+  // vertical (extreme places / geography / mystery) had ZERO entries here, so
+  // niche proper-noun queries ("La Rinconada Peru", "Oymyakon village") missed
+  // Pixabay and the scene fell to FALLBACK-A/B (repeated clip / off-topic
+  // library clip). These map extreme-place concepts to concrete, filmable
+  // queries Pixabay has deep inventory for. Purely additive: boosted queries
+  // are APPENDED after the original ones (see concretizeQueries), so specific
+  // queries still win when they hit.
+  { test: /\b(volcano|volcanic|lava|eruption|magma|crater)/i,
+    queries: ['volcano lava eruption', 'lava flow night', 'volcanic crater aerial'] },
+  { test: /\b(glacier|frozen|arctic|siberia|permafrost|coldest|blizzard|subzero|icy|iceberg)/i,
+    queries: ['glacier aerial', 'frozen landscape winter', 'snowstorm blizzard village', 'ice cave'] },
+  { test: /\b(desert|dunes?|sahara|arid|salt flat|wasteland)/i,
+    queries: ['desert dunes aerial', 'salt flat landscape', 'desert heat haze'] },
+  { test: /\b(mountain|peak|summit|altitude|everest|andes|himalaya|climber|climbing)/i,
+    queries: ['mountain peak aerial', 'snowy mountain summit clouds', 'mountaineer climbing snow'] },
+  { test: /\b(mine|miner|mining|tunnel|cave|cavern|underground)/i,
+    queries: ['mine tunnel underground', 'cave interior dark', 'miner headlamp dark'] },
+  { test: /\b(deep sea|trench|abyss|underwater|seabed|submarine|diver)/i,
+    queries: ['deep ocean underwater dark', 'underwater diver', 'ocean waves storm aerial'] },
+  { test: /\b(jungle|rainforest|amazon|swamp|canopy)/i,
+    queries: ['rainforest aerial', 'jungle canopy mist', 'tropical river aerial'] },
+  { test: /\b(island|archipelago|isolated|remote|uninhabited)/i,
+    queries: ['remote island aerial', 'rocky island ocean waves', 'coastline cliffs aerial'] },
+  { test: /\b(abandoned|ruins?|ghost town|derelict|ancient city|lost city)/i,
+    queries: ['abandoned building interior decay', 'ancient ruins stone', 'empty street fog'] },
+  { test: /\b(mystery|mysterious|unexplained|eerie|haunted|creepy|vanish|disappear)/i,
+    queries: ['dark foggy forest', 'fog night empty street', 'abandoned house eerie'] },
+  { test: /\b(storm|lightning|hurricane|tornado|monsoon|flood)/i,
+    queries: ['lightning storm night', 'storm clouds timelapse', 'huge waves storm ocean'] },
+  { test: /\b(village|town|settlement|inhabitants?|locals)/i,
+    queries: ['mountain village aerial', 'remote village houses', 'small town aerial drone'] },
+  { test: /\b(acid|acidic|toxic|sulfur|sulphur|geothermal|hot spring|geyser)/i,
+    queries: ['geothermal hot spring aerial', 'sulfur volcanic vent steam', 'colorful mineral lake aerial'] },
+  { test: /\b(cliff|ravine|canyon|gorge|dangerous road|winding road)/i,
+    queries: ['mountain road winding aerial', 'cliff edge ocean', 'canyon aerial drone'] },
+  { test: /\b(snake|spider|scorpion|crocodile|shark|predator|venom)/i,
+    queries: ['snake close up', 'crocodile water', 'shark underwater'] },
 ]
 
 function concretizeQueries(originalQueries: string[], hint?: string): string[] {
@@ -384,6 +475,8 @@ export async function getPixabayVideoForQueries(
     exact?: boolean
     /** URLs already used by other scenes of this video — skip them. */
     exclude?: Set<string>
+    /** Push #483 — planned scene duration (s); clips covering it rank higher. */
+    minDurationSec?: number
   },
 ): Promise<string | null> {
   const rawCleaned = (queries ?? [])
@@ -402,7 +495,7 @@ export async function getPixabayVideoForQueries(
 
   for (let i = 0; i < cleaned.length; i++) {
     const q = cleaned[i]
-    const url = await getPixabayVideoForExactQuery(q, sceneNeedsPeople, opts?.exclude)
+    const url = await getPixabayVideoForExactQuery(q, sceneNeedsPeople, opts?.exclude, opts?.minDurationSec)
     if (url) {
       console.log(
         `[pixabay-multi] HIT query[${i + 1}/${cleaned.length}]="${q}"` +

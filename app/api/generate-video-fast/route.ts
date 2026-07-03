@@ -441,7 +441,9 @@ export async function POST(req: NextRequest) {
             // (12/06) exact: user-authored [Pexels: ...] queries are sovereign —
             // no concept-map prepending. exclude: never reuse a clip another
             // scene already took (the same-Dubai-aerial-4x bug).
-            { exact: verbatim, exclude: usedPexelsUrls },
+            // Push #483 — minDurationSec: clips long enough to cover the planned
+            // scene duration rank higher (kills freeze/loop padding on short clips).
+            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds },
           )
           if (pixUrl) {
             console.log(
