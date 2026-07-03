@@ -1,68 +1,111 @@
 /**
  * lib/pixabayMusic.ts
- * Push #294 — Background music for ShortsForgeAI videos.
+ * Push #487 — Background music, now actually working.
  *
- * Strategy:
- *   PRIMARY: Pixabay Music API (requires PIXABAY_API_KEY in Vercel env vars).
- *   Searches for phonk/motivational tracks and picks one randomly so each
- *   video sounds a little different.
+ * HISTORY: Push #294 pointed at `pixabay.com/api/music/`, an endpoint that
+ * DOES NOT EXIST (Pixabay's public API covers images/videos only — confirmed
+ * 03/07/2026: returns HTML 404 even with a valid key). Background music has
+ * therefore never played since #294 shipped ("[music] Pixabay API error: 404"
+ * on every render).
  *
- *   NOTE: Direct CDN hotlinks (cdn.pixabay.com/audio/...) return 403 when
- *   fetched by Creatomate. Only URLs returned by the Pixabay Music API are
- *   authorized for playback. Without a PIXABAY_API_KEY the function returns
- *   null and the video renders without music.
+ * NEW STRATEGY:
+ *   PRIMARY: Openverse Audio API (api.openverse.org) — open API, no key
+ *   needed (anon limits: 20/min, 200/day; we do 1 call per render).
+ *   CC0-only + mp3-only + 30s-4min so tracks are attribution-free and
+ *   Creatomate-compatible. Random query + random pick keeps videos varied.
  *
- * All tracks are from Pixabay's free library (CC0 / Content License).
- * Safe for monetized YouTube content.
+ *   FALLBACK: curated CC0 mp3 tracks (Freesound CDN, hotlink-friendly,
+ *   verified live 03/07/2026) so music still plays if Openverse is down
+ *   or rate-limited.
+ *
+ * All tracks are CC0 (public domain) — safe for monetized YouTube content,
+ * no attribution required.
  */
 
-const PIXABAY_API = 'https://pixabay.com/api/music/'
+const OPENVERSE_API = 'https://api.openverse.org/v1/audio/'
+
+// Dark/cinematic/phonk-adjacent searches matching the channel's style.
+const SEARCH_QUERIES = [
+  'phonk',
+  'dark beat',
+  'dark trap beat',
+  'cinematic tension',
+  'dark ambient loop',
+]
+
+// Verified CC0 mp3 tracks (Freesound CDN previews — public, hotlinkable).
+// Checked 03/07/2026 via Openverse; all 30s+ and loop-friendly.
+const FALLBACK_TRACKS = [
+  // "Phonk Song [preview]" by Seth_Makes_Sounds — 81s
+  'https://cdn.freesound.org/previews/704/704410_13228046-hq.mp3',
+  // "Dark Beat Synth Electro Atmo... Cinematic" by szegvari — 48s
+  'https://cdn.freesound.org/previews/611/611374_2282212-hq.mp3',
+  // "Dark Beat Synth Electro Atmo... Slow Cinematic" by szegvari — 48s
+  'https://cdn.freesound.org/previews/611/611373_2282212-hq.mp3',
+  // "Dark Beat Loop" by BenDerhover — 48s
+  'https://cdn.freesound.org/previews/686/686772_14802701-hq.mp3',
+  // "Black Magick Voodoo Tribal" by memz — 53s
+  'https://cdn.freesound.org/previews/325/325143_819355-hq.mp3',
+]
+
+type OpenverseHit = {
+  url?: string
+  duration?: number // milliseconds
+  category?: string | null
+  title?: string
+}
 
 // ---------------------------------------------------------------------------
-// Pixabay API search (requires PIXABAY_API_KEY in Vercel env vars).
-// Searches for "phonk" in the hip-hop genre, returns a random track URL.
+// Openverse Audio API search — CC0 only, mp3 only, 30s-4min.
 // ---------------------------------------------------------------------------
-async function fetchTrackFromPixabayAPI(): Promise<string | null> {
-  const apiKey = process.env.PIXABAY_API_KEY
-  if (!apiKey || apiKey === 'your_key_here') return null
-
+async function fetchTrackFromOpenverse(): Promise<string | null> {
   try {
-    // Pixabay music API — search phonk, energetic mood, short duration ok
-    const queries = ['phonk', 'motivational phonk', 'dark trap']
-    const query = queries[Math.floor(Math.random() * queries.length)]
-    const url = `${PIXABAY_API}?key=${apiKey}&q=${encodeURIComponent(query)}&genre=hip-hop&per_page=20&order=popular`
+    const query = SEARCH_QUERIES[Math.floor(Math.random() * SEARCH_QUERIES.length)]
+    const url = `${OPENVERSE_API}?q=${encodeURIComponent(query)}&license=cc0&page_size=20`
 
-    const res = await fetch(url, { cache: 'no-store' })
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    })
     if (!res.ok) {
-      console.warn(`[music] Pixabay API error: ${res.status}`)
+      console.warn(`[music] Openverse API error: ${res.status}`)
       return null
     }
 
-    const data = (await res.json()) as {
-      hits?: Array<{ audio: string; duration: number; title: string }>
-    }
+    const data = (await res.json()) as { results?: OpenverseHit[] }
 
-    const hits = (data.hits ?? []).filter(
-      // Prefer tracks between 30s and 3min so they loop nicely on short videos
-      (h) => h.audio && h.duration >= 30 && h.duration <= 180,
+    const hits = (data.results ?? []).filter(
+      (h) =>
+        typeof h.url === 'string' &&
+        /\.mp3(\?|$)/i.test(h.url) && // Creatomate-safe format
+        typeof h.duration === 'number' &&
+        h.duration >= 30_000 &&
+        h.duration <= 240_000 &&
+        h.category !== 'pronunciation', // Openverse indexes speech clips too
     )
 
     if (hits.length === 0) return null
 
-    // Pick a random track from the results
     const picked = hits[Math.floor(Math.random() * hits.length)]
-    console.log(`[music] Pixabay API selected: "${picked.title}" (${picked.duration}s)`)
-    return picked.audio
+    console.log(
+      `[music] Openverse selected: "${picked.title}" (${Math.round((picked.duration ?? 0) / 1000)}s, query "${query}")`,
+    )
+    return picked.url ?? null
   } catch (err) {
-    console.warn('[music] Pixabay API fetch failed:', err instanceof Error ? err.message : String(err))
+    console.warn('[music] Openverse fetch failed:', err instanceof Error ? err.message : String(err))
     return null
   }
 }
 
 // ---------------------------------------------------------------------------
 // Main export — call this once per video render to get a music URL.
-// Returns null when no API key is configured (render continues without music).
+// Never returns null in practice: falls back to a curated CC0 track.
 // ---------------------------------------------------------------------------
 export async function getBackgroundMusicUrl(): Promise<string | null> {
-  return await fetchTrackFromPixabayAPI()
+  const fromApi = await fetchTrackFromOpenverse()
+  if (fromApi) return fromApi
+
+  const fallback = FALLBACK_TRACKS[Math.floor(Math.random() * FALLBACK_TRACKS.length)]
+  console.log(`[music] Using curated CC0 fallback track: ${fallback}`)
+  return fallback
 }
