@@ -152,6 +152,41 @@ const KEYWORD_TO_TAGS: Record<string, string[]> = {
   city: ['city', 'urban'], urban: ['city', 'urban'], street: ['city', 'urban'],
   building: ['city', 'urban'], skyscraper: ['city', 'urban'],
 
+  // GEO / EXTREME PLACES — Push #485 (02/07). The channel's STRONGEST vertical
+  // (extreme places / geography / mystery) had ZERO keywords here, so a scene
+  // like "volcano lava eruption" that missed Pixabay fell to the NEUTRAL pool
+  // (city/business/luxury) and rendered a corporate skyline over a volcano
+  // narration. There are no literal volcano/glacier clips in the pool, so we
+  // route to the closest ON-MOOD buckets (nature / ocean / dark / mystery) —
+  // for a "places that shouldn't exist" video, a dark ocean or wildlife clip
+  // is a far better miss than a business skyline. Mirrors the geo concept map
+  // added to lib/pixabay.ts in #482.
+  volcano: ['nature', 'dark', 'mystery'], volcanic: ['nature', 'dark', 'mystery'],
+  lava: ['nature', 'dark', 'mystery'], eruption: ['nature', 'dark', 'mystery'],
+  crater: ['nature', 'mystery'], geyser: ['nature', 'water'], geothermal: ['nature', 'water'],
+  sulfur: ['nature', 'dark'], acid: ['nature', 'dark', 'mystery'], toxic: ['dark', 'mystery', 'nature'],
+  glacier: ['nature', 'mystery'], ice: ['nature', 'mystery'], frozen: ['nature', 'mystery'],
+  arctic: ['nature', 'mystery'], snow: ['nature'], blizzard: ['nature', 'dark'],
+  permafrost: ['nature', 'mystery'], siberia: ['nature', 'mystery'], coldest: ['nature', 'mystery'],
+  desert: ['nature'], dune: ['nature'], dunes: ['nature'], sahara: ['nature'],
+  wasteland: ['nature', 'dark', 'mystery'], salt: ['nature'],
+  island: ['ocean', 'nature', 'water'], coast: ['ocean', 'water', 'nature'],
+  coastline: ['ocean', 'water', 'nature'], cliff: ['nature', 'ocean'], cliffs: ['nature', 'ocean'],
+  shore: ['ocean', 'water'], reef: ['ocean', 'underwater', 'nature'],
+  cave: ['dark', 'mystery'], cavern: ['dark', 'mystery'], tunnel: ['dark', 'mystery'],
+  underground: ['dark', 'mystery'], mine: ['dark', 'mystery'], crystals: ['dark', 'mystery', 'nature'],
+  storm: ['ocean', 'water', 'dark', 'nature'], lightning: ['dark', 'nature'],
+  hurricane: ['ocean', 'water', 'dark'], tornado: ['dark', 'nature'],
+  tsunami: ['ocean', 'water', 'dark'], flood: ['water', 'dark'], monsoon: ['water', 'nature'],
+  lake: ['nature', 'water'], waterfall: ['nature', 'water'], canyon: ['nature'],
+  gorge: ['nature'], valley: ['nature'], peak: ['nature'], summit: ['nature'],
+  everest: ['nature', 'mystery'], altitude: ['nature'], passage: ['ocean', 'water', 'mystery'],
+  village: ['nature', 'mystery'], remote: ['nature', 'mystery'], isolated: ['nature', 'mystery', 'dark'],
+  snake: ['animal', 'nature', 'wildlife'], snakes: ['animal', 'nature', 'wildlife'],
+  crocodile: ['animal', 'nature', 'wildlife'], shark: ['animal', 'ocean', 'underwater'],
+  spider: ['animal', 'nature'], predator: ['animal', 'wildlife', 'dark'],
+  venom: ['animal', 'dark', 'mystery'], venomous: ['animal', 'dark', 'mystery'],
+
   // Aviation / travel — Push #243. There is no plane clip in the pool, so route
   // aviation/travel queries to the professional city/business/luxury clip
   // (cld-sample-video) instead of letting them fall through to the animal demo
