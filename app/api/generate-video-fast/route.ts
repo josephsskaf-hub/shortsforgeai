@@ -85,6 +85,43 @@ function findPreviousRelevantClip(
   return validClips[currentIdx % validClips.length]
 }
 
+// Push #486 (03/07) — CONTENT-BASED scene↔plan alignment.
+// Bug (confirmed twice in prod runtime logs 01-02/07): the BrollPlan splits the
+// script its own way (e.g. 7 scenes incl. hook) while generateScenes() plans
+// clipCount scenes (e.g. 5). The old index-by-index lookup
+// (brollSceneMap.get(idx+1)) shifted EVERY query from scene 2 onward — the
+// "1968 drought" scene got its neighbour's "lake aerial view" query.
+// Fix: match each GPT scene to the plan scene whose NARRATION shares the most
+// meaningful tokens with the scene's voiceover. When narration isn't available
+// (older clients), fall back to PROPORTIONAL position mapping — still strictly
+// better than raw-index when the counts differ, and identical when they match.
+const ALIGN_STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'or', 'is', 'are', 'was', 'were',
+  'it', 'its', 'this', 'that', 'these', 'those', 'with', 'for', 'from', 'by', 'as', 'but',
+  'not', 'no', 'they', 'their', 'you', 'your', 'he', 'she', 'his', 'her', 'has', 'have',
+  'had', 'be', 'been', 'will', 'would', 'can', 'could', 'into', 'than', 'then', 'there',
+  'here', 'what', 'when', 'where', 'who', 'how', 'why', 'also', 'just', 'still', 'over',
+  'under', 'about', 'after', 'before', 'more', 'most', 'so', 'if', 'we', 'our', 'us',
+  'one', 'two', 'do', 'does', 'did', 'them', 'all', 'out', 'up', 'down', 'only', 'even',
+])
+
+function alignTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((t) => t.length > 2 && !ALIGN_STOPWORDS.has(t)),
+  )
+}
+
+function alignOverlap(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let shared = 0
+  for (const t of a) if (b.has(t)) shared++
+  return shared / Math.min(a.size, b.size)
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -138,6 +175,9 @@ export async function POST(req: NextRequest) {
         durationSeconds?: number
         scenePurpose?: string
         requiresExtension?: boolean
+        // Push #486 — the plan scene's narration text, used for CONTENT-BASED
+        // scene↔plan alignment (see buildAlignedBrollMeta below).
+        narration?: string
       }>
       // #358 — instrumentation: client forwards whether the BrollPlan came back
       // degraded (GPT failed) so we can log/record the reason for VERBATIM.
@@ -180,6 +220,8 @@ export async function POST(req: NextRequest) {
       scenePurpose?: string
       /** When true, skip Pexels entirely and extend the previous relevant clip. */
       requiresExtension?: boolean
+      /** Push #486 — plan scene narration for content-based alignment. */
+      narration?: string
     }
     const brollSceneMap = new Map<number, BrollSceneMeta>()
 
@@ -202,6 +244,7 @@ export async function POST(req: NextRequest) {
           durationSeconds: typeof entry.durationSeconds === 'number' ? entry.durationSeconds : undefined,
           scenePurpose: typeof entry.scenePurpose === 'string' ? entry.scenePurpose : undefined,
           requiresExtension: entry.requiresExtension === true,
+          narration: typeof entry.narration === 'string' && entry.narration.trim() ? entry.narration.trim() : undefined,
         })
         if (single) brollQueryMap.set(entry.sceneNumber, single)
       }
@@ -218,6 +261,12 @@ export async function POST(req: NextRequest) {
           !brollQueryMap.has(entry.sceneNumber)
         ) {
           brollQueryMap.set(entry.sceneNumber, entry.pexelsQuery.trim())
+          // Push #486 — mirror into brollSceneMap so the alignment pass (which
+          // reads only brollSceneMap) also covers brollQueries-only clients.
+          if (!brollSceneMap.has(entry.sceneNumber)) {
+            const q = entry.pexelsQuery.trim()
+            brollSceneMap.set(entry.sceneNumber, { pexelsQuery: q, pexelsQueries: [q] })
+          }
         }
       }
     }
@@ -321,6 +370,57 @@ export async function POST(req: NextRequest) {
     // Fixed: usedPexelsUrls Set tracks every raw Pexels URL already assigned;
     // if a duplicate is returned we skip Pexels and use stockLibrary instead
     // (which uses idx as a seed, so each scene gets a different library clip).
+    // Push #486 — build the scene→plan alignment ONCE, before the clip loop.
+    // alignedMeta[idx] replaces the old brollSceneMap.get(idx+1) lookup.
+    const alignedMeta: (BrollSceneMeta | undefined)[] = new Array(scenes.length).fill(undefined)
+    if (!verbatim && brollSceneMap.size > 0) {
+      const planEntries = Array.from(brollSceneMap.entries()).sort((a, b) => a[0] - b[0])
+      const planTokens = planEntries.map(([, m]) => alignTokens(m.narration ?? ''))
+      const haveNarration = planTokens.some((t) => t.size > 0)
+      const sameCount = planEntries.length === scenes.length
+      const taken = new Set<number>()
+      const mapLog: string[] = []
+      for (let i = 0; i < scenes.length; i++) {
+        let chosen = -1
+        let method = 'index'
+        if (haveNarration) {
+          const sceneTok = alignTokens(
+            `${scenes[i].voiceover ?? ''} ${scenes[i].description ?? ''}`,
+          )
+          // Require meaningful overlap; below the threshold positional mapping
+          // is safer than a weak content match. Small penalty on plan scenes
+          // already taken so distinct route scenes spread across the plan.
+          let best = 0.3
+          for (let j = 0; j < planEntries.length; j++) {
+            const score = alignOverlap(sceneTok, planTokens[j]) - (taken.has(j) ? 0.15 : 0)
+            if (score > best) {
+              best = score
+              chosen = j
+            }
+          }
+          if (chosen !== -1) method = 'content'
+        }
+        if (chosen === -1) {
+          // Positional fallback: identical to legacy behavior when counts match,
+          // proportional (no off-by-one drift) when they differ.
+          chosen = sameCount
+            ? i
+            : scenes.length > 1
+              ? Math.round((i * (planEntries.length - 1)) / (scenes.length - 1))
+              : 0
+          method = sameCount ? 'index' : 'proportional'
+        }
+        if (chosen >= 0 && chosen < planEntries.length) {
+          taken.add(chosen)
+          alignedMeta[i] = planEntries[chosen][1]
+          mapLog.push(`${i + 1}→plan${planEntries[chosen][0]}(${method})`)
+        }
+      }
+      console.log(
+        `[broll-align] plan=${planEntries.length} scenes=${scenes.length} narration=${haveNarration} map=[${mapLog.join(', ')}]`,
+      )
+    }
+
     const usedPexelsUrls = new Set<string>()
     const clipUrls: string[] = []
     // Push #355 — track B-roll source per scene for quality metrics.
@@ -338,12 +438,14 @@ export async function POST(req: NextRequest) {
       // text its own way, so scene numbers don't even align) must NEVER
       // override them. Joseph's gift video #1: "private jet interior luxury"
       // was replaced by a plan query that returned coins-on-dollar-bills.
-      const brollMeta = verbatim ? undefined : brollSceneMap.get(sceneNo)
+      // Push #486 — content-aligned plan meta (was: brollSceneMap.get(sceneNo),
+      // an index lookup that shifted every query when plan/scene counts differ).
+      const brollMeta = verbatim ? undefined : alignedMeta[idx]
       // v3.0 Phase 1: if a BrollPlan provided a specific AI-directed pexelsQuery
       // for this scene, use it as the primary search — it's far more specific
       // (e.g. "Wall Street trading floor 1987 crash") than GPT's generic scene
       // description.
-      const brollOverride = verbatim ? undefined : brollQueryMap.get(sceneNo)
+      const brollOverride = verbatim ? undefined : brollMeta?.pexelsQuery
       const relevanceScore = brollMeta?.relevanceScore
       const purpose = (brollMeta?.scenePurpose ?? scene.scenePurpose ?? '').toString()
       const durationSeconds = brollMeta?.durationSeconds

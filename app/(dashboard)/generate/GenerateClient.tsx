@@ -1972,6 +1972,10 @@ export default function GenerateClient() {
               relevanceScore: s.relevanceScore,
               durationSeconds: s.durationSeconds,
               scenePurpose: s.scenePurpose,
+              // Push #486 — narration enables CONTENT-BASED scene↔plan alignment
+              // server-side (fixes the off-by-one query shift when the plan
+              // splits the script into more scenes than the route's GPT does).
+              narration: s.narration,
             }))
           : undefined
         if (process.env.NODE_ENV === 'development') {

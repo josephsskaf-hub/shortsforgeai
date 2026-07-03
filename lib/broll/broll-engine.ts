@@ -29,6 +29,7 @@ CRITICAL RULES:
 4. Hook scenes: shocking, fast, high contrast
 5. Payoff scenes: confirming, resolving, satisfying
 6. Every visual MUST directly reinforce the exact meaning of the narration
+7. GROUNDING (Push #486): build every pexelsQuery and brollPrompt ONLY from entities, places and objects that appear in THAT scene's narration (plus generic production cues like "aerial"/"macro"). NEVER substitute a different named location, landmark, animal or person than the narration mentions — if the narration is about Lake Karachay, "lake natron flamingos" is WRONG even though both are lakes.
 
 HARD NEGATIVE RULES — never select footage that contradicts the narration:
 - Ancient Rome / history: NO modern skyscrapers, NO contemporary offices
@@ -200,6 +201,7 @@ Lighting: ${globalStyle.lighting}
 
 VISUAL WORLD (aesthetic pack for this niche) — compose EVERY pexelsQuery inside this visual universe. Approved imagery building blocks: ${pack.vocab.join('; ')}.
 HARD NEGATIVE BLACKLIST — NEVER use these visuals (audience-tested rejects): ${[...pack.banned, ...UNIVERSAL_BANNED].join('; ')}.
+GROUNDING RULE — each scene's pexelsQueries/brollPrompt must stay anchored to the entities named in THAT scene's narration. NEVER introduce a different named place, landmark or subject than the narration itself mentions.
 
 Generate the visual layer for these ${scenesWithMeta.length} scenes. For each scene return:
 - sceneNumber (int)
