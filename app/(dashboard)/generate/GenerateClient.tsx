@@ -717,9 +717,19 @@ export default function GenerateClient() {
           if (!cancelled) setCredits(null)
           return
         }
+        // BUGFIX 05/07 (KINEO-CREDITS-FALSE-ZERO) — on a 500/503 (e.g. a transient
+        // avatar_credits/DB blip) the response body has no `credits`, and the old
+        // `: 0` fallback showed paying users (real balance!) as "out of credits"
+        // and popped the upgrade modal mid-session. Treat any error / missing
+        // balance as UNKNOWN (null), never zero: outOfCredits() ignores null, and
+        // the realtime sub + next fetch fill in the true value.
+        if (!res.ok) {
+          if (!cancelled) setCredits(null)
+          return
+        }
         const data = await res.json()
         if (!cancelled) {
-          setCredits(typeof data.credits === 'number' ? data.credits : 0)
+          setCredits(typeof data.credits === 'number' ? data.credits : null)
           // CP2 — avatar add-on balance travels on the same endpoint.
           if (typeof data.avatarCredits === 'number') setAvatarCredits(data.avatarCredits)
           // Face-app wave 1 — saved face for the one-click avatar library.
@@ -738,8 +748,10 @@ export default function GenerateClient() {
             const fromViralNow = searchParams?.get('autoanalyze') === '1'
             if (fromViralNow) { setMode('fast') }
             else if (data.isStarter) { setMode('fast') }
-            else if (data.isStudio) { setMode('cinematic_ai'); setAiEngine('kling') }
-            else { setMode('cinematic_ai'); setAiEngine('seedance') } // Creator + free trial
+            // Fix 03/07 — Studio also defaults to Seedance (40cr): Kling (60cr) kept
+            // pre-selecting itself on every load for Studio accounts (reported 5x),
+            // silently costing +20cr per video. Kling stays one manual click away.
+            else { setMode('cinematic_ai'); setAiEngine('seedance') } // Creator + Studio + free trial
           }
         }
       } catch {
