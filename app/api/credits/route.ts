@@ -41,12 +41,12 @@ export async function GET() {
         // The old catch-all silently told paying users they had 0 avatar
         // credits on any DB/RLS blip. A real error now returns 503 so the
         // client retries instead of rendering a false zero balance.
-        const code = (avErr as { code?: string }).code ?? ''
-        const deployOrderSafe = code === '42703' || code === '42P01'
-        if (!deployOrderSafe) {
-          console.error('[credits] avatar_credits fetch error (503, not a false 0):', avErr.message)
-          return NextResponse.json({ error: 'Balance temporarily unavailable. Please retry.' }, { status: 503 })
-        }
+        // BUGFIX 05/07 (KINEO-CREDITS-503) — a blip on the SECONDARY avatar_credits
+        // balance must NEVER 503 the whole endpoint. Returning no `credits` made the
+        // generator show a false "out of credits" to users with a real video_credits
+        // balance (the modal-with-504-credits bug). Degrade gracefully: keep the main
+        // balance, default the avatar add-on to 0.
+        console.error('[credits] avatar_credits fetch failed (degrading avatar to 0):', avErr.message)
       } else {
         avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
         // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
