@@ -3073,8 +3073,9 @@ export default function GenerateClient() {
               }}
             >
               <span className="text-base">🎉</span>
+              {/* Marker: KINEO-FREE-TIER-FAST-2026-07-05 — free tier = Fast only, no free AI */}
               <span>
-                You&apos;re in. You&apos;ve got <strong>30 free credits</strong> — up to 30 Fast videos or 1 premium AI video — we&apos;ve loaded an idea below to start.
+                You&apos;re in. <strong>Fast videos are free &amp; unlimited</strong> — we&apos;ve loaded an idea below to start. Upgrade anytime for cinematic AI scenes.
               </span>
             </div>
           )}
