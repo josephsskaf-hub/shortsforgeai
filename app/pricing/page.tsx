@@ -549,9 +549,10 @@ export default function PricingPage() {
                     {ctaLabel} →
                   </a>
                 )}
+                {/* Marker: KINEO-CHECKOUT-TRUST-2026-07-05 — trust cues at the buy button (billed by Kineo after Stripe name fix) */}
                 {isPaid && (
                   <p className="mt-2 text-center text-[12px] font-semibold text-[#86868b]">
-                    First Short free, no card · cancel anytime
+                    🔒 Secure Stripe checkout · billed by Kineo · cancel anytime · 7-day money-back
                   </p>
                 )}
               </div>
