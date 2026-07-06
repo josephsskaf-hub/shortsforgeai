@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 // Push #299 — 2 free credits on signup (up from 1). Improves activation rate.
 const DEFAULT_CREDITS = 2
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabase = createClient()
     const {
@@ -17,6 +17,17 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // KINEO-ADMIN-GEO-2026-07-06 — record where this user connects from (IP +
+    // country) so the admin Users page can show it. Fire-and-forget; never blocks
+    // or fails the credits response. Vercel provides these headers per request.
+    try {
+      const ip = (req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? '').trim() || null
+      const country = req.headers.get('x-vercel-ip-country') || null
+      if (ip || country) {
+        void supabase.from('profiles').update({ last_ip: ip, last_country: country }).eq('id', user.id)
+      }
+    } catch { /* non-blocking */ }
 
     const { data, error } = await supabase
       .from('profiles')

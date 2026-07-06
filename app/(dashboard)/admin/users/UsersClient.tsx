@@ -20,7 +20,16 @@ interface AdminUserRow {
   videos_count: number
   last_video_at: string | null
   plan: string | null
+  last_ip: string | null
+  last_country: string | null
   checkout_abandoned: boolean
+}
+
+// KINEO-ADMIN-GEO-2026-07-06 — ISO country code → flag emoji (🇧🇷, 🇺🇸, …).
+function flagEmoji(cc: string | null): string {
+  if (!cc || cc.length !== 2) return ''
+  const A = 0x1f1e6
+  return String.fromCodePoint(...[...cc.toUpperCase()].map((c) => A + c.charCodeAt(0) - 65))
 }
 
 interface Props {
@@ -175,7 +184,7 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
   }
 
   return (
-    <div className="px-4 sm:px-6 py-7 pb-20 max-w-6xl mx-auto">
+    <div className="px-4 sm:px-6 py-7 pb-20 max-w-[1600px] mx-auto">
       <header className="mb-6">
         <div
           className="font-black uppercase tracking-widest mb-1"
@@ -398,6 +407,8 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                 <tr style={{ background: '#1d1d1f' }}>
                   <Th>Email</Th>
                   <Th>Name</Th>
+                  <Th>Country</Th>
+                  <Th>IP</Th>
                   <Th>Joined</Th>
                   <Th align="right">Credits</Th>
                   <Th align="right">Videos</Th>
@@ -414,6 +425,15 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                   >
                     <Td mono>{u.email || '—'}</Td>
                     <Td>{u.name || '—'}</Td>
+                    <Td>
+                      {u.last_country
+                        ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: '1.05rem' }}>{flagEmoji(u.last_country)}</span>
+                            <span>{u.last_country}</span>
+                          </span>
+                        : '—'}
+                    </Td>
+                    <Td mono>{u.last_ip || '—'}</Td>
                     <Td>{fmtDate(u.created_at)}</Td>
                     <Td align="right">{fmt(u.credits)}</Td>
                     <Td align="right">{fmt(u.videos_count)}</Td>

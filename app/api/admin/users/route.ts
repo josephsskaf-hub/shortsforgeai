@@ -26,6 +26,9 @@ interface AdminUserRow {
   videos_count: number
   last_video_at: string | null
   plan: string | null
+  // KINEO-ADMIN-GEO-2026-07-06 — last known connection IP + country (ISO code).
+  last_ip: string | null
+  last_country: string | null
   // Push #274 — true when a Stripe customer record was created but the user
   // never completed checkout (plan is still free/null). These are warm leads.
   checkout_abandoned: boolean
@@ -96,10 +99,12 @@ export async function GET() {
     const credits = new Map<string, number | null>()
     const plans = new Map<string, string | null>()
     const hasStripeCustomer = new Map<string, boolean>()
+    const ips = new Map<string, string | null>()
+    const countries = new Map<string, string | null>()
     try {
       const { data: profs, error: pErr } = await admin
         .from('profiles')
-        .select('id, video_credits, plan, is_pro, stripe_customer_id')
+        .select('id, video_credits, plan, is_pro, stripe_customer_id, last_ip, last_country')
       if (!pErr && Array.isArray(profs)) {
         for (const row of profs as Array<{
           id: string
@@ -107,12 +112,16 @@ export async function GET() {
           plan: string | null
           is_pro: boolean | null
           stripe_customer_id: string | null
+          last_ip: string | null
+          last_country: string | null
         }>) {
           if (typeof row.video_credits === 'number') credits.set(row.id, row.video_credits)
           else credits.set(row.id, null)
           const planLabel = row.plan ?? (row.is_pro ? 'pro' : null)
           plans.set(row.id, planLabel)
           hasStripeCustomer.set(row.id, !!row.stripe_customer_id)
+          ips.set(row.id, row.last_ip ?? null)
+          countries.set(row.id, row.last_country ?? null)
         }
       } else if (pErr) {
         // Retry without optional columns if they're missing
@@ -151,6 +160,8 @@ export async function GET() {
         videos_count: videoCounts.get(u.id) ?? 0,
         last_video_at: lastVideoAt.get(u.id) ?? null,
         plan: plans.get(u.id) ?? null,
+        last_ip: ips.get(u.id) ?? null,
+        last_country: countries.get(u.id) ?? null,
         // checkout_abandoned = has Stripe customer but no paid plan
         checkout_abandoned: (() => {
           const hasCx = hasStripeCustomer.get(u.id) ?? false
