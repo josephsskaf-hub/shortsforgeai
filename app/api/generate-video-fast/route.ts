@@ -538,7 +538,7 @@ export async function POST(req: NextRequest) {
       if (pixabayEnabled) {
         // Build ordered query list for Pixabay: BrollPlan multi-query preferred,
         // then single brollOverride, then stockSearchQuery, then libQuery.
-        const pixQueries: string[] =
+        let pixQueries: string[] =
           brollMeta?.pexelsQueries && brollMeta.pexelsQueries.length > 0
             ? brollMeta.pexelsQueries
             : brollOverride
@@ -548,6 +548,34 @@ export async function POST(req: NextRequest) {
                 : libQuery
                   ? [libQuery]
                   : []
+
+        // Fix 03/07 — HOOK ANTI-OFFTOPIC GUARD (scene 1 only). Scene 1 is the
+        // visual hook; one off-topic clip there kills the video (the "snow clip
+        // on a cave video" bug, 11h20 E2E). If a planned query shares ZERO
+        // content tokens with this scene's own text, it's plan misalignment or
+        // a hallucinated location — drop it and fall back to the scene's own
+        // stockSearchQuery. Other scenes keep the #486 content alignment as-is.
+        if (idx === 0 && pixQueries.length > 0) {
+          const HOOK_STOP = new Set(['the', 'a', 'an', 'of', 'in', 'on', 'at', 'and', 'or', 'to', 'for', 'with', 'this', 'that', 'is', 'are', 'was', 'were', 'it', 'its', 'from', 'by', 'into', 'over', 'under', 'aerial', 'view', 'shot', 'footage', 'cinematic'])
+          const tokensOf = (s: string) =>
+            s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((t) => t.length > 2 && !HOOK_STOP.has(t))
+          const sceneTokens = new Set(
+            tokensOf(`${scene.voiceover ?? ''} ${scene.description ?? ''} ${scene.searchKeywords ?? ''} ${scene.stockSearchQuery ?? ''}`),
+          )
+          const onTopic = pixQueries.filter((q) => tokensOf(q).some((t) => sceneTokens.has(t)))
+          if (onTopic.length < pixQueries.length) {
+            console.log(
+              `[hook-guard] scene=1 dropped ${pixQueries.length - onTopic.length}/${pixQueries.length} off-topic planned queries`,
+            )
+          }
+          if (onTopic.length > 0) {
+            pixQueries = onTopic
+          } else if (scene.stockSearchQuery || libQuery) {
+            // All planned queries off-topic — trust the scene's own text instead.
+            pixQueries = [scene.stockSearchQuery || libQuery]
+            console.log(`[hook-guard] scene=1 all planned queries off-topic — using scene's own query`)
+          }
+        }
 
         if (pixQueries.length > 0) {
           const sceneNeedsPeople = sceneHasPeopleVocabulary(
