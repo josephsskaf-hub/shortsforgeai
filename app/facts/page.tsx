@@ -36,7 +36,7 @@ const FACTS: { fact: string }[] = [
   { fact: 'Kineo is an AI YouTube Shorts generator: it turns one typed idea or topic into a finished faceless vertical video — script, AI voiceover, visuals and captions — in about 60 seconds.' },
   { fact: 'Kineo generates videos from scratch. It is not a re-clipper: unlike OpusClip, Klap or Vizard, it does not need an existing long-form video as input.' },
   { fact: 'Output format is 9:16 vertical MP4, ready for YouTube Shorts, TikTok and Instagram Reels.' },
-  { fact: 'Kineo has three engines: Fast Mode (curated stock footage, 1 credit per video), AI Generated (Seedance text-to-video scenes, 40 credits per video) and Cinematic (Kling premium engine, 60 credits per video).' },
+  { fact: 'Kineo has three engines: Fast Mode (curated stock footage, 1 credit per video), AI Generated (Seedance text-to-video scenes, 40 credits per video) and Cinematic (Kling premium engine, 90 credits per video).' },
   { fact: 'The first Short is free and no credit card is required. The free trial output carries a small watermark; all paid exports are watermark-free.' },
   { fact: 'The Starter Pack costs $4.90 one-time and includes 10 Fast Mode Shorts, with no subscription.' },
   { fact: 'The Starter plan costs $9.90/month for 50 credits — up to 50 Fast Mode videos per month ($99/year on annual billing).' },
@@ -69,7 +69,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'What AI video engines does Kineo use?',
-    a: 'Seedance for AI Generated scenes (40 credits/video) and Kling for Cinematic quality (60 credits/video). Fast Mode uses curated stock footage at 1 credit/video.',
+    a: 'Seedance for AI Generated scenes (40 credits/video) and Kling for Cinematic quality (90 credits/video). Fast Mode uses curated stock footage at 1 credit/video.',
   },
   {
     q: 'Is there a free plan?',

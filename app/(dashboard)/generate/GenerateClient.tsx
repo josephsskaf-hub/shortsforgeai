@@ -2630,7 +2630,7 @@ export default function GenerateClient() {
     ? 0
     : mode === 'cinematic_ai'
     // #402 — Cinematic AI (Kling) costs 60, AI Generated (Seedance) 40.
-    ? (aiEngine === 'kling' ? 60 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : 40)
+    ? (aiEngine === 'kling' ? 90 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : 40)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
@@ -5853,7 +5853,7 @@ function ModeSelector({
                 fal cost is confirmed (margin guard). Veo + Kling are Studio-only. */}
             {([
               { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 180 },
-              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 60 },
+              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 90 },
             ] as { key: 'veo' | 'sora' | 'kling'; label: string; sub: string; cr: number }[]).map((m) => {
               const active = mode === 'cinematic_ai' && aiEngine === m.key
               return (

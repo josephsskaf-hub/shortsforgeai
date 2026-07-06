@@ -16,7 +16,7 @@ export const maxDuration = 60
 // AI Generated (Seedance) = 40 cr, available to all paid plans. Cinematic AI
 // (Kling) = 60 cr, Studio-only (premium). Free trial only ever uses Seedance.
 const SEEDANCE_CREDIT_COST = 40
-const KLING_CREDIT_COST = 60
+const KLING_CREDIT_COST = 90 // KINEO-KLING-90-2026-07-06 — real fal cost $0.07/s×10s×7clips=$4.90/video; 60cr gave only 14% margin. 90cr → ~43%.
 // Push #489/#491 — premium cinematic engines (Veo 3.1 Fast, Sora 2) via fal.
 // Priced for a fat margin: fal ~$0.80/clip × ~6 clips ≈ $4.80 cost/video, so
 // 180/200 credits (~$18–$20 retail at $0.10/cr) ≈ 73–76% margin, under Higgsfield.

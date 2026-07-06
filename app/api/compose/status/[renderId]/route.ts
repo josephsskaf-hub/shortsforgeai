@@ -41,8 +41,9 @@ function creditCostFor(quality: Quality): number {
       // Push #491 — repriced 30 → 40 (Seedance, ~6 clips/video margin).
       return 40
     case 'cinematic_kling':
-      // #402 — Cinematic AI (Kling). Push #491 — repriced 45 → 60.
-      return 60
+      // KINEO-KLING-90-2026-07-06 — 60→90. Real fal cost $0.70/clip (10s) × 7 =
+      // $4.90/video; at 60cr Studio+Kling was only 14% margin. 90cr → ~43%.
+      return 90
     case 'cinematic_veo':
       // #489/#491 — Veo 3.1 Fast premium. Keep in sync with VEO_CREDIT_COST.
       return 180

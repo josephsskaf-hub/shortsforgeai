@@ -39,11 +39,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What’s the difference between AI Generated and Cinematic AI?',
-    a: 'AI Generated uses the Seedance engine (great quality, 40 credits/video) and is available on Creator and Studio. Cinematic AI uses the premium Kling engine for top-tier cinematic motion (60 credits/video) and is exclusive to the Studio plan. Starter uses the Fast engine: smart stock footage, 1 credit/video.',
+    a: 'AI Generated uses the Seedance engine (great quality, 40 credits/video) and is available on Creator and Studio. Cinematic AI uses the premium Kling engine for top-tier cinematic motion (90 credits/video) and is exclusive to the Studio plan. Starter uses the Fast engine: smart stock footage, 1 credit/video.',
   },
   {
     q: 'How do credits work?',
-    a: 'An AI Generated video (Seedance) uses 40 credits. A Cinematic AI video (Kling) uses 60 credits. Creator includes 240 credits/month; Studio includes 400 credits/month and unlocks Cinematic AI. Credits reset each month (no rollover).',
+    a: 'An AI Generated video (Seedance) uses 40 credits. A Cinematic AI video (Kling) uses 90 credits. Creator includes 240 credits/month; Studio includes 400 credits/month and unlocks Cinematic AI. Credits reset each month (no rollover).',
   },
 ]
 
