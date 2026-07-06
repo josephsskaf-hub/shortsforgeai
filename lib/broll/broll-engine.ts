@@ -153,11 +153,37 @@ export async function brollEngine(input: BrollEngineInput): Promise<BrollPlan> {
     throw new Error('broll-engine: script produced no scenes after splitting')
   }
 
+  // Push #489 — SCENE CAP. Long 60s scripts were splitting into 20+ micro
+  // scenes, which (a) blew past max_tokens on the single GPT call (JSON cut
+  // mid-string, finish_reason: length → SyntaxError, seen live 03/07) and
+  // (b) multiplied embedding scoring + regen work until the route 504'd at
+  // its 90s ceiling. 12 scenes on a 60s Short is still a scene every ~5s —
+  // and Fast Mode v2 already cuts WITHIN scenes every 2.5-4s, so nothing is
+  // lost visually. Adjacent segments are merged evenly; the attention curve
+  // downstream re-assigns purpose per position, so hook/payoff stay intact.
+  const MAX_SCENES = 12
+  let segments = rawSegments
+  if (rawSegments.length > MAX_SCENES) {
+    const merged: typeof rawSegments = []
+    const per = rawSegments.length / MAX_SCENES
+    for (let g = 0; g < MAX_SCENES; g++) {
+      const slice = rawSegments.slice(Math.round(g * per), Math.round((g + 1) * per))
+      if (slice.length === 0) continue
+      merged.push({
+        ...slice[0],
+        narration: slice.map((s) => s.narration).join(' '),
+        estimatedDuration: slice.reduce((sum, s) => sum + s.estimatedDuration, 0),
+      })
+    }
+    console.warn(`[broll-engine] scene cap: merged ${rawSegments.length} segments into ${merged.length}`)
+    segments = merged
+  }
+
   // Step 3: Build attention curve
-  const curve = buildAttentionCurve(duration, rawSegments.length)
+  const curve = buildAttentionCurve(duration, segments.length)
 
   // Step 4: Build scene list with attention curve metadata
-  const scenesWithMeta = rawSegments.map((seg, i) => {
+  const scenesWithMeta = segments.map((seg, i) => {
     const beat = curve[i] ?? { purpose: seg.purpose, intensity: 0.7, durationSeconds: seg.estimatedDuration }
     const shotType = pickShotType(i)
     const built = buildScenePrompt(seg.narration, niche, globalStyle, shotType, globalStyle.mood)
@@ -229,6 +255,13 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
   const gptStartTime = Date.now()
   let completion: OpenAI.Chat.Completions.ChatCompletion | undefined
 
+  // Push #489 — max_tokens scales with scene count. The flat 3000 was fine
+  // for ~8 scenes but a 20-scene plan needs ~350 output tokens/scene and was
+  // truncating mid-JSON (finish_reason: length). Capped well under
+  // gpt-4o-mini's 16384 output limit; with the scene cap above this tops out
+  // at 12 * 450 = 5400.
+  const maxTokens = Math.min(12000, Math.max(3000, scenesWithMeta.length * 450))
+
   try {
     completion = await openai.chat.completions.create(
       {
@@ -238,11 +271,22 @@ Return a JSON object with a "scenes" array. No markdown, no code fences.`
           { role: 'user', content: userMsg },
         ],
         temperature: 0.6,
-        max_tokens: 3000,
+        max_tokens: maxTokens,
         response_format: { type: 'json_object' },
       },
       { timeout: 45000, maxRetries: 1 }, // #359 Camera A — calls take 15-26s; 30s timed out intermittently
     )
+
+    // Push #489 — truncation is a distinct, actionable failure: log it before
+    // JSON.parse throws so the runtime logs say WHY (the old logs only showed
+    // a bare SyntaxError from the parse below).
+    if (completion.choices[0]?.finish_reason === 'length') {
+      console.error('[broll-engine] GPT output truncated (finish_reason=length)', {
+        max_tokens_requested: maxTokens,
+        scene_count: scenesWithMeta.length,
+        tokens_used: completion.usage,
+      })
+    }
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? ''
     if (raw) {

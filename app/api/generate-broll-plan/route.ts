@@ -6,7 +6,11 @@ import { scoreAllScenes } from '@/lib/broll/relevance-score'
 import { assignSources } from '@/lib/broll/hybrid-source'
 import type { BrollEngineInput, BrollScene, GlobalVisualStyle } from '@/lib/broll/types'
 
-export const maxDuration = 90 // #359 Camera A — headroom for the slower GPT call + scoring + regen
+// #359 Camera A — headroom for the slower GPT call + scoring + regen.
+// Push #489: 90 → 120 (account is Vercel Pro; the fast route already runs at
+// 120). A 21-scene plan hit exactly 90s live on 03/07 — the scene cap in
+// broll-engine plus this headroom kills the 504.
+export const maxDuration = 120
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -107,6 +111,8 @@ Return JSON with:
 }
 
 export async function POST(req: NextRequest) {
+  // Push #489 — request-start timestamp for the regen time budget below.
+  const routeStart = Date.now()
   try {
     if (!process.env.OPENAI_API_KEY) {
       console.error('[generate-broll-plan] OPENAI_API_KEY is not configured')
@@ -157,7 +163,18 @@ export async function POST(req: NextRequest) {
     const MAX_RETRIES = 2
     const REGEN_THRESHOLD = 70
 
+    // Push #489 — time budget: regeneration is a quality bonus, not worth a
+    // 504. If plan + scoring already burned most of the window, skip further
+    // regen attempts and return the plan we have (relevance gates downstream
+    // still apply). 75s leaves ~45s of the 120s maxDuration for the remaining
+    // scoring + response.
+    const REGEN_TIME_BUDGET_MS = 75_000
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (Date.now() - routeStart > REGEN_TIME_BUDGET_MS) {
+        console.warn('[generate-broll-plan] regen time budget exhausted — returning plan as-is')
+        break
+      }
       const lowSceneIndexes = plan.scenes
         .map((s, i) => ({ scene: s, i }))
         .filter(({ scene }) => (scene.relevanceScore ?? 100) < REGEN_THRESHOLD)
