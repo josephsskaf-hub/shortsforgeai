@@ -46,7 +46,7 @@ function buildEmail() {
 
 This is the Kineo team — welcome!
 
-You created your account a little while ago. Quick heads-up in case you missed it: your account comes loaded with 30 free credits. That's enough for up to 30 Fast videos — or 1 full AI-generated video. No card needed.
+You created your account a little while ago. Quick heads-up in case you missed it: your account comes with 2 free videos to try — no card needed. Make one in about 60 seconds and see how it feels.
 
 Type literally any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. About a minute later you have a ready-to-post Short.
 

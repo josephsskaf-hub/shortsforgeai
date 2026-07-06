@@ -82,6 +82,19 @@ const STARTER_PACK = {
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }
 
+// KINEO-TOPUP-2026-07-06 — AI credit top-ups for EXISTING subscribers who burn
+// through their monthly AI credits before renewal. Priced ABOVE the plan
+// per-credit rate ($0.104/cr Creator) so they never cannibalize a subscription,
+// and sized SMALLER than a full plan so heavy users are nudged to upgrade
+// instead of stacking packs. Seedance costs 40 cr/video. Credited by the webhook
+// via metadata.pack_credits (same Path A as the Starter Pack). Gated to Creator+.
+// Expire automatically at renewal (webhook SETS balance to the plan amount).
+type TopupId = 'topup40' | 'topup120'
+const CREDIT_TOPUPS: Record<TopupId, { credits: number; name: string; description: string; prices: Record<Currency, number> }> = {
+  topup40:  { credits: 40,  name: 'Kineo — +40 credits',  description: 'One-time: 40 credits (1 AI-generated video). No subscription.',  prices: { usd: 590,  brl: 2990, inr: 49900  } },
+  topup120: { credits: 120, name: 'Kineo — +120 credits', description: 'One-time: 120 credits (3 AI-generated videos). No subscription.', prices: { usd: 1290, brl: 6490, inr: 109900 } },
+}
+
 // ─── feature/ai-avatar CP2 — Avatar Credit packs (one-time, USD) ─────────────
 // Fix 2 (12/06) — REPRICED for the Hook Avatar economics (margem Y ≈ 85%):
 // hook render costs ~US$1.20–1.50 in VEED seconds, so $11.90/credit holds
@@ -405,6 +418,100 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
   return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
 }
 
+// ─── KINEO-TOPUP-2026-07-06 — AI credit top-up checkout (mode: 'payment') ─────
+// Gated to Creator+ (basic/pro). Frees a subscriber who ran out of AI credits
+// mid-cycle to buy 1 or 3 more AI videos instead of hitting a wall. Credited by
+// the webhook via metadata.pack_credits.
+async function buildTopupAndRedirect(req: NextRequest, topupId: TopupId, isGet: boolean): Promise<NextResponse> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  function redirectError(msg: string) {
+    return NextResponse.redirect(`${appUrl}/generate?checkout_error=${encodeURIComponent(msg)}`)
+  }
+  function jsonError(msg: string, status: number) {
+    return NextResponse.json({ error: msg }, { status })
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout] STRIPE_SECRET_KEY is not set')
+    return isGet ? redirectError('Payment service is not configured. Please contact support.') : jsonError('Payment service is not configured. Please contact support.', 500)
+  }
+
+  const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+  const currency: Currency = resolveCurrency(country)
+  const topup = CREDIT_TOPUPS[topupId]
+  const unitAmount = topup.prices[currency]
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return isGet ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/generate')}`) : jsonError('You must be signed in to buy credits.', 401)
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, stripe_customer_id, plan')
+    .eq('id', user.id)
+    .single()
+
+  // Gate: AI credit top-ups are a Creator/Studio benefit (the AI engine lives on
+  // those plans). Free/Starter users are sent to /pricing to subscribe instead.
+  const planVal = (profile?.plan ?? 'free').toLowerCase()
+  const isCreatorPlus = planVal === 'basic' || planVal === 'basic_trial' || planVal === 'pro' || planVal === 'pro_trial'
+  if (!isCreatorPlus) {
+    return isGet
+      ? NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent('Credit top-ups are for Creator & Studio plans. Upgrade to unlock the AI engine.')}`)
+      : jsonError('Credit top-ups require a Creator or Studio plan.', 403)
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency,
+          product_data: { name: topup.name, description: topup.description },
+          unit_amount: unitAmount,
+        },
+        quantity: 1,
+      },
+    ],
+    client_reference_id: user.id,
+    success_url: `${appUrl}/generate?success=true&topup=${topupId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/generate`,
+    metadata: {
+      supabase_user_id: user.id,
+      pack: topupId,
+      pack_credits: String(topup.credits),
+    },
+  }
+  if (profile?.stripe_customer_id) sessionParams.customer = profile.stripe_customer_id
+  else sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.toLowerCase().includes('cannot combine currencies')) {
+      delete sessionParams.customer
+      sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+      try {
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } catch (retryErr) {
+        const rmsg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.error('[stripe/checkout] topup retry failed:', rmsg)
+        return isGet ? redirectError(`Payment session failed: ${rmsg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+      }
+    } else {
+      console.error('[stripe/checkout] topup session error:', msg)
+      return isGet ? redirectError(`Payment session failed: ${msg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+    }
+  }
+
+  console.log(`[stripe/checkout] topup session: ${topupId} user=${user.id.slice(0, 8)} amount=${unitAmount}`)
+  return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
+}
+
 // ─── feature/ai-avatar CP2 — Avatar pack checkout (mode: 'payment') ──────────
 // Mirrors buildPackAndRedirect: inline price_data, metadata-driven crediting.
 // Studio (plan 'pro') pays 15% less — the discount is computed SERVER-SIDE from
@@ -515,6 +622,10 @@ export async function GET(req: NextRequest) {
     if (packParam) {
       if (packParam === 'avatar1' || packParam === 'avatar3' || packParam === 'avatar10') {
         return await buildAvatarPackAndRedirect(req, packParam, true)
+      }
+      // KINEO-TOPUP-2026-07-06 — AI credit top-ups (Creator+).
+      if (packParam === 'topup40' || packParam === 'topup120') {
+        return await buildTopupAndRedirect(req, packParam, true)
       }
       return await buildPackAndRedirect(req, true)
     }

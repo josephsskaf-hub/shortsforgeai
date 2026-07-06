@@ -2858,6 +2858,7 @@ export default function GenerateClient() {
       {showUpgradeModal && (
         <UpgradeModal
           reason={upgradeReason}
+          isSubscriber={isCreator || isStudio}
           loading={upgradeLoading}
           onUpgrade={(tier) => {
             // #380 — straight to Stripe via the working GET checkout route.
@@ -6122,11 +6123,13 @@ function UpgradeModal({
   onUpgrade,
   onClose,
   reason = 'credits',
+  isSubscriber = false,
 }: {
   loading: boolean
   onUpgrade: (tier: 'starter' | 'basic' | 'pro') => void
   onClose: () => void
   reason?: 'credits' | 'studio' | 'creator'
+  isSubscriber?: boolean
 }) {
   // #466 — live urgency countdown for the founding 50%-off offer. 15 min from
   // first open, persisted in localStorage so it survives dismiss/reopen/reload.
@@ -6314,9 +6317,48 @@ function UpgradeModal({
           })}
         </div>
 
+        {/* KINEO-TOPUP-2026-07-06 — subscribers who ran out of AI credits mid-cycle
+            get one-click top-ups (buy more AI videos) instead of a dead-end. Free/
+            Starter users see the $4.90 Starter Pack instead (below). */}
+        {isSubscriber && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#86868b', textAlign: 'center' }}>
+              Out of credits mid-month? Top up instantly — expires at renewal:
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { id: 'topup40', label: '+40 credits', sub: '1 AI video', price: '$5.90' },
+                { id: 'topup120', label: '+120 credits', sub: '3 AI videos', price: '$12.90' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => { window.location.href = `/api/stripe/checkout?pack=${t.id}` }}
+                  style={{
+                    flex: 1,
+                    padding: '11px 10px',
+                    borderRadius: 12,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    background: 'rgba(16,185,129,0.08)',
+                    border: '1px solid rgba(16,185,129,0.4)',
+                    color: '#E2E8F0',
+                    textAlign: 'center',
+                  }}
+                >
+                  <span style={{ display: 'block', fontSize: '0.86rem', fontWeight: 900, color: '#34d399' }}>{t.price}</span>
+                  <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700 }}>{t.label}</span>
+                  <span style={{ display: 'block', fontSize: '0.68rem', color: '#86868b' }}>{t.sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* #473 — Starter Pack: low-commitment, one-time entry for users who
             won't commit to a monthly subscription. Making the (hardest) first
             payment turns a bounce into a paying customer we can upsell later. */}
+        {!isSubscriber && (
         <button
           type="button"
           disabled={loading}
@@ -6352,6 +6394,7 @@ function UpgradeModal({
             One-time · no subscription · credits never expire
           </span>
         </button>
+        )}
 
         {/* Push #452 — referral escape hatch. Turns a "won't pay right now"
             bounce into top-of-funnel growth by surfacing the live #443 loop
