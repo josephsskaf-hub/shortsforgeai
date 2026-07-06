@@ -22,8 +22,8 @@ export const PAYPAL_BASE =
 
 // USD prices — MUST mirror TIER_PRICES/ANNUAL_PRICES in api/stripe/checkout.
 export const PAYPAL_TIER_USD: Record<PayPalTier, { monthly: string; annual: string; name: string }> = {
-  starter: { monthly: '11.90', annual: '119.00', name: 'Kineo — Starter' },
-  basic:   { monthly: '24.90', annual: '249.00', name: 'Kineo — Creator' },
+  starter: { monthly: '9.90',  annual: '99.00',  name: 'Kineo — Starter' },
+  basic:   { monthly: '19.90', annual: '199.00', name: 'Kineo — Creator' },
   pro:     { monthly: '37.90', annual: '379.00', name: 'Kineo — Studio' },
 }
 

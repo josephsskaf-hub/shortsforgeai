@@ -1,0 +1,86 @@
+// PAYPAL-2026-07-06 — one-shot setup, admin-gated by CRON_SECRET.
+// Run once in the browser after PAYPAL_CLIENT_ID/SECRET are set on Vercel:
+//   https://www.usekineo.com/api/paypal/setup?key=<CRON_SECRET>
+// Creates (idempotently): 3 products, 6 plans (monthly+annual), 1 webhook —
+// and persists every id in paypal_config. Re-running is safe (no duplicates).
+
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  paypalAdminClient,
+  paypalFetch,
+  ensurePlan,
+  getPaypalConfig,
+  setPaypalConfig,
+} from '@/lib/paypal'
+
+export const dynamic = 'force-dynamic'
+
+const WEBHOOK_EVENTS = [
+  'PAYMENT.CAPTURE.COMPLETED',
+  'PAYMENT.SALE.COMPLETED',
+  'BILLING.SUBSCRIPTION.ACTIVATED',
+  'BILLING.SUBSCRIPTION.CANCELLED',
+  'BILLING.SUBSCRIPTION.SUSPENDED',
+  'BILLING.SUBSCRIPTION.EXPIRED',
+]
+
+export async function GET(req: NextRequest) {
+  const key = req.nextUrl.searchParams.get('key')
+  if (!process.env.CRON_SECRET || key !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    return NextResponse.json(
+      { error: 'PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not set on Vercel yet' },
+      { status: 500 }
+    )
+  }
+
+  const admin = paypalAdminClient()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
+  const summary: Record<string, string> = {}
+
+  try {
+    // 1) Plans (products auto-created inside ensurePlan)
+    for (const tier of ['starter', 'basic', 'pro'] as const) {
+      for (const billing of ['monthly', 'annual'] as const) {
+        summary[`plan_${tier}_${billing}`] = await ensurePlan(admin, tier, billing)
+      }
+    }
+
+    // 2) Webhook
+    let webhookId = await getPaypalConfig(admin, 'webhook_id')
+    if (!webhookId) {
+      const webhookUrl = `${appUrl}/api/paypal/webhook`
+      // Reuse an existing PayPal webhook for this URL if one exists.
+      const list = await paypalFetch('/v1/notifications/webhooks')
+      const existing = ((list?.webhooks ?? []) as Array<Record<string, unknown>>).find(
+        (w) => w.url === webhookUrl
+      )
+      if (existing) {
+        webhookId = String(existing.id)
+      } else {
+        const created = await paypalFetch('/v1/notifications/webhooks', {
+          method: 'POST',
+          body: JSON.stringify({
+            url: webhookUrl,
+            event_types: WEBHOOK_EVENTS.map((name) => ({ name })),
+          }),
+        })
+        webhookId = String(created?.id)
+      }
+      await setPaypalConfig(admin, 'webhook_id', webhookId)
+    }
+    summary.webhook_id = webhookId
+
+    return NextResponse.json({
+      ok: true,
+      env: process.env.PAYPAL_ENV === 'sandbox' ? 'sandbox' : 'live',
+      ...summary,
+      next: 'PayPal is live. Test: /api/paypal/checkout?pack=starter (logged in).',
+    })
+  } catch (err) {
+    console.error('[paypal/setup] failed:', err)
+    return NextResponse.json({ error: String(err).slice(0, 600) }, { status: 500 })
+  }
+}
