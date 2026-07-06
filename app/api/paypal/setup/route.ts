@@ -14,6 +14,9 @@ import {
 } from '@/lib/paypal'
 
 export const dynamic = 'force-dynamic'
+// KINEO-PAYPAL-MAXDUR-2026-07-06 — the setup makes ~10 sequential PayPal API
+// calls; give it room so it finishes in one shot instead of timing out midway.
+export const maxDuration = 60
 
 const WEBHOOK_EVENTS = [
   'PAYMENT.CAPTURE.COMPLETED',
@@ -47,24 +50,17 @@ export async function GET(req: NextRequest) {
   const summary: Record<string, string> = {}
 
   try {
-    // 1) Plans (products auto-created inside ensurePlan)
-    for (const tier of ['starter', 'basic', 'pro'] as const) {
-      for (const billing of ['monthly', 'annual'] as const) {
-        summary[`plan_${tier}_${billing}`] = await ensurePlan(admin, tier, billing)
-      }
-    }
-
-    // 2) Webhook
+    // 1) Webhook FIRST — the critical piece (it credits users after a payment).
+    // Created before plans so a plan hiccup can never block it. Idempotent.
     let webhookId = await getPaypalConfig(admin, 'webhook_id')
     if (!webhookId) {
       const webhookUrl = `${appUrl}/api/paypal/webhook`
-      // Reuse an existing PayPal webhook for this URL if one exists.
       const list = await paypalFetch('/v1/notifications/webhooks')
-      const existing = ((list?.webhooks ?? []) as Array<Record<string, unknown>>).find(
+      const found = ((list?.webhooks ?? []) as Array<Record<string, unknown>>).find(
         (w) => w.url === webhookUrl
       )
-      if (existing) {
-        webhookId = String(existing.id)
+      if (found) {
+        webhookId = String(found.id)
       } else {
         const created = await paypalFetch('/v1/notifications/webhooks', {
           method: 'POST',
@@ -79,6 +75,18 @@ export async function GET(req: NextRequest) {
     }
     summary.webhook_id = webhookId
 
+    // 2) Plans — RESILIENT: each in its own try so one failing plan never blocks
+    // the others or the webhook. Products are auto-created inside ensurePlan.
+    for (const tier of ['starter', 'basic', 'pro'] as const) {
+      for (const billing of ['monthly', 'annual'] as const) {
+        try {
+          summary[`plan_${tier}_${billing}`] = await ensurePlan(admin, tier, billing)
+        } catch (e) {
+          summary[`plan_${tier}_${billing}`] = 'ERR: ' + String((e as Error)?.message ?? e).slice(0, 140)
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       env: process.env.PAYPAL_ENV === 'sandbox' ? 'sandbox' : 'live',
@@ -87,6 +95,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err) {
     console.error('[paypal/setup] failed:', err)
-    return NextResponse.json({ error: String(err).slice(0, 600) }, { status: 500 })
+    return NextResponse.json({ error: String(err).slice(0, 600), ...summary }, { status: 500 })
   }
 }
