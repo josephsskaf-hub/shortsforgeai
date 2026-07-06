@@ -131,8 +131,6 @@ function trackPricingEvent(name: string): void {
 }
 
 export default function PricingPage() {
-  // Push #077 — pricing card selected state. Pro is selected by default.
-  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('pro')
 
   // Push #099 — open FAQ index for the accordion (null = all collapsed). First
   // question is open by default so the section reads as scannable, not empty.
@@ -430,47 +428,24 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
           {buildPricing().map((p) => {
             const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
-            const isSelected = isPaid && selectedPlan === p.tier
-            const ctaLabel = isSelected
-              ? p.tier === 'starter' ? 'Continue with Starter' : p.tier === 'basic' ? 'Continue with Creator' : 'Continue with Studio'
-              : p.cta.label
-            const isExternal = p.cta.href.startsWith('http')
+            // KINEO-2026-07-06 — cleaner pricing UI: identical CTA on every card
+            // (same "Get Started" label + same blue). The card displays; the
+            // button acts. No click-to-select state, no per-card variation.
+            const ctaLabel = p.cta.label
             return (
               <div
                 key={p.tier}
-                role={isPaid ? 'button' : undefined}
-                tabIndex={isPaid ? 0 : undefined}
-                aria-pressed={isPaid ? isSelected : undefined}
-                onClick={() => {
-                  if (isPaid) setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
-                }}
-                onKeyDown={(e) => {
-                  if (!isPaid) return
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
-                  }
-                }}
                 className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-200 ${
-                  // Conversion — Pro always first on all screen sizes.
-                  // buildPricing() already returns Pro first; the order
-                  // class here is a no-op safety net.
-                  ''
-                } ${
-                  isPaid ? 'cursor-pointer' : ''
-                } ${
-                  isSelected
-                    ? 'border-2 border-[#2997ff] bg-[#1d1d1f] shadow-[0_0_28px_rgba(41,151,255,0.3)]'
-                    : p.highlight
-                      ? 'border-[#2997ff] bg-[#161618] shadow-[0_0_30px_rgba(41,151,255,0.15)] hover:border-[#2997ff] hover:bg-[rgba(41,151,255,0.06)] hover:shadow-[0_0_20px_rgba(41,151,255,0.18)]'
-                      : 'border-white/[0.08] bg-[#161618] hover:border-[#2997ff] hover:bg-[rgba(41,151,255,0.06)] hover:shadow-[0_0_20px_rgba(41,151,255,0.18)]'
+                  p.highlight
+                    ? 'border-[#2997ff] bg-[#161618] shadow-[0_0_30px_rgba(41,151,255,0.15)]'
+                    : 'border-white/[0.08] bg-[#161618] hover:border-[#2997ff]/60 hover:bg-[rgba(41,151,255,0.05)]'
                 }`}
               >
                 {/* Push #116 — Pro now carries the amber "MOST POPULAR"
                     flag instead of the blue "Best Value" pill. Popular
                     takes precedence when both are set so we don't paint
                     two stacked badges. */}
-                {p.popular && !isSelected ? (
+                {p.popular ? (
                   <div
                     className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[.12em]"
                     style={{
@@ -482,18 +457,11 @@ export default function PricingPage() {
                   >
                     🔥 Most Popular
                   </div>
-                ) : p.highlight && !isSelected ? (
+                ) : p.highlight ? (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2997ff] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-[0_4px_18px_rgba(41,151,255,.45)]">
                     Best Value
                   </div>
                 ) : null}
-                {isSelected && (
-                  <div className="absolute -top-3 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_4px_14px_rgba(34,197,94,.45)]" aria-label="Selected">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                )}
                 <div className="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                   {p.name}
                 </div>
@@ -524,40 +492,14 @@ export default function PricingPage() {
                     (button + POST) so the route can pick BRL based on
                     x-vercel-ip-country. Free tier keeps the plain anchor
                     to /signup. */}
-                {isPaid ? (
-                  <button
-                    type="button"
-                    disabled={purchasing !== null && purchasing !== p.tier}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedPlan(p.tier as 'starter' | 'basic' | 'pro')
-                      handleBuy(p.tier as 'starter' | 'basic' | 'pro')
-                    }}
-                    className={`mt-auto block w-full rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition disabled:opacity-60 ${
-                      p.highlight || isSelected
-                        ? 'bg-[#2997ff] text-white shadow-[0_8px_24px_rgba(41,151,255,.4)] hover:bg-[#2997ff] hover:shadow-[0_10px_32px_rgba(41,151,255,.4)]'
-                        : 'border border-white/[0.08] text-[#f5f5f7] hover:bg-white/5 hover:border-[#2997ff]/40'
-                    }`}
-                  >
-                    {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
-                  </button>
-                ) : (
-                  <a
-                    href={p.cta.href}
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener noreferrer' : undefined}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                    }}
-                    className={`mt-auto block rounded-xl px-4 py-3 text-center text-[14px] font-extrabold transition ${
-                      isSelected
-                        ? 'bg-[#2997ff] text-white shadow-[0_8px_24px_rgba(41,151,255,.4)] hover:bg-[#2997ff] hover:shadow-[0_10px_32px_rgba(41,151,255,.4)]'
-                        : 'border border-white/[0.08] text-[#f5f5f7] hover:bg-white/5 hover:border-[#2997ff]/40'
-                    }`}
-                  >
-                    {ctaLabel} →
-                  </a>
-                )}
+                <button
+                  type="button"
+                  disabled={purchasing !== null && purchasing !== p.tier}
+                  onClick={() => handleBuy(p.tier as 'starter' | 'basic' | 'pro')}
+                  className="mt-auto block w-full rounded-xl bg-[#2997ff] px-4 py-3 text-center text-[14px] font-extrabold text-white shadow-[0_8px_24px_rgba(41,151,255,.35)] transition hover:bg-[#1f86ee] hover:shadow-[0_10px_30px_rgba(41,151,255,.45)] disabled:opacity-60"
+                >
+                  {purchasing === p.tier ? 'Loading…' : `${ctaLabel} →`}
+                </button>
                 {/* PAYPAL-2026-07-06 — alternate rail for international buyers
                     (US audit 06/07: USD abandoners want a no-card option).
                     Same GET-redirect pattern as handleBuy, zero Stripe changes.
