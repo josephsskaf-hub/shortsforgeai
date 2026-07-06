@@ -428,10 +428,10 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
           {buildPricing().map((p) => {
             const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
-            // KINEO-2026-07-06 — cleaner pricing UI: identical CTA on every card
-            // (same "Get Started" label + same blue). The card displays; the
-            // button acts. No click-to-select state, no per-card variation.
-            const ctaLabel = p.cta.label
+            // KINEO-2026-07-06 — cleaner pricing UI: same blue CTA on every card,
+            // labeled with the plan name ("Choose Starter/Creator/Studio") so the
+            // action is specific. The card displays; the button acts.
+            const ctaLabel = `Choose ${p.name}`
             return (
               <div
                 key={p.tier}
