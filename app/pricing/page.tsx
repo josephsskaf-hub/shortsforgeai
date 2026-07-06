@@ -19,7 +19,7 @@ import ExitIntentOffer from '@/components/ExitIntentOffer'
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to subscribe. You are charged immediately upon signup. Starter is $11.90/month, Creator is $24.90/month, and Studio is $37.90/month.',
+    a: 'Yes, a card is required to subscribe. You are charged immediately upon signup. Starter is $9.90/month, Creator is $19.90/month, and Studio is $37.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -57,7 +57,7 @@ function buildPricing() {
     {
       tier: 'starter',
       name: 'Starter',
-      price: '$11.90',
+      price: '$9.90',
       priceSub: '/ month',
       tagline: '50 videos/month with smart stock footage + AI voiceover.',
       features: [
@@ -73,7 +73,7 @@ function buildPricing() {
     {
       tier: 'basic',
       name: 'Creator',
-      price: '$24.90',
+      price: '$19.90',
       priceSub: '/ month',
       tagline: '240 credits/month — about 6 fully AI-generated videos (Seedance engine).',
       features: [
@@ -157,8 +157,8 @@ export default function PricingPage() {
   // #381 — monthly vs annual billing toggle. Annual ≈ 2 months free.
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const ANNUAL: Record<string, { total: string; perMonth: string }> = {
-    starter: { total: '$119', perMonth: '$9.92' },
-    basic: { total: '$249', perMonth: '$20.75' },
+    starter: { total: '$99', perMonth: '$8.25' },
+    basic: { total: '$199', perMonth: '$16.58' },
     pro: { total: '$379', perMonth: '$31.58' },
   }
 
@@ -260,10 +260,10 @@ export default function PricingPage() {
             Pricing
           </div>
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
-            Simple, credit-based pricing.
+            Real AI video generation from $19.90/mo.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#86868b]">
-            Three plans, flat monthly price. From $11.90/mo — done-for-you Shorts at every level.
+            Not a re-clipper — Kineo generates the whole Short. <span className="text-[#f5f5f7] font-semibold">Creator is $19.90/mo</span> where Revid &amp; StoryShort charge $39+. Or <span className="text-[#f5f5f7] font-semibold">50 videos for $9.90/mo</span>. Flat price, cancel anytime.
           </p>
 
           {/* ROBO1-PRICE-2026-06-28 — honest trust row. Replaced the
@@ -960,7 +960,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'starter' ? 'Loading…' : 'Starter $11.90'}
+            {purchasing === 'starter' ? 'Loading…' : 'Starter $9.90'}
           </button>
           <button
             type="button"
@@ -979,7 +979,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Creator $24.90'}
+            {purchasing === 'basic' ? 'Loading…' : 'Creator $19.90'}
           </button>
           <button
             type="button"

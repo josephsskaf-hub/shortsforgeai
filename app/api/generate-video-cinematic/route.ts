@@ -45,6 +45,42 @@ const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
 // Back-compat: other modules import FAL_MODEL.
 const FAL_MODEL = SEEDANCE_MODEL
 
+// KINEO-FAL-ALARM-2026-07-06 — never break silently on an exhausted fal balance.
+// submitToFal flips this when fal reports "User is locked / exhausted balance";
+// the POST handler then (a) e-mails the founder and (b) returns a soft "queued"
+// response instead of a dead 502. Reset at the top of every POST.
+let FAL_EXHAUSTED = false
+function looksExhausted(e: { status?: number; message?: string; body?: unknown }): boolean {
+  const blob = `${e?.message ?? ''} ${JSON.stringify(e?.body ?? '')}`.toLowerCase()
+  return e?.status === 403 || /exhaust|locked|insufficient|balance|quota|payment/.test(blob)
+}
+// Fire-and-forget founder alert via Resend. Throttled to once per 30 min via a
+// module timestamp so a burst of failures doesn't spam the inbox.
+let LAST_FAL_ALERT = 0
+async function alertFalExhausted(context: string): Promise<void> {
+  try {
+    const key = process.env.RESEND_API_KEY
+    if (!key || key === 'your_resend_api_key_here') return
+    const now = Date.now()
+    if (now - LAST_FAL_ALERT < 30 * 60 * 1000) return
+    LAST_FAL_ALERT = now
+    const from = process.env.RESEND_FROM_EMAIL || 'Kineo <support@usekineo.com>'
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from,
+        to: ['josephsskaf@gmail.com'],
+        subject: '🚨 Kineo: fal.ai balance EXHAUSTED — AI videos are failing',
+        text: `The fal.ai balance is exhausted — AI (Seedance/Kling/Veo) renders are failing RIGHT NOW and users are seeing the "high demand" queue message instead of a video.\n\nContext: ${context}\nTime: ${new Date().toISOString()}\n\nRecharge fal.ai to restore AI generation: https://fal.ai/dashboard/billing`,
+      }),
+    })
+    console.error('[cinematic] FAL BALANCE EXHAUSTED — founder alerted')
+  } catch (e) {
+    console.error('[cinematic] fal alert email failed:', e instanceof Error ? e.message : String(e))
+  }
+}
+
 // KINEO-SEEDANCE-720-CREATOR-2026-07-06 — margin fix. Seedance v1.5 pro at 1080p
 // runs ~$0.62-0.74/clip on fal; a Creator video is 6-9 clips, which breaks the
 // Creator ($24.90/240cr → $0.59/clip break-even). Dropping Seedance to 720p
@@ -65,7 +101,9 @@ function buildFalInput(model: string, prompt: string, hd: boolean = true): Recor
       prompt,
       aspect_ratio: '9:16',
       duration: '8s',
-      resolution: '1080p',
+      // KINEO-VEO-720-2026-07-06 — Veo 3.1 Fast at 720p (~$0.10-0.15/s) instead of
+      // 1080p to keep Studio margin healthy; 9:16 phone Short = imperceptible.
+      resolution: '720p',
       generate_audio: false,
       negative_prompt: 'human face, person, people, crowd, cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
     }
@@ -203,12 +241,16 @@ async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: b
     console.error('[cinematic] fal.ai submit error:', JSON.stringify({
       name: e?.name, status: e?.status, message: e?.message, body: e?.body,
     }))
+    // KINEO-FAL-ALARM-2026-07-06 — flag an exhausted-balance failure so the POST
+    // handler alerts the founder + soft-queues instead of hard-erroring.
+    if (looksExhausted(e)) FAL_EXHAUSTED = true
     return null
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    FAL_EXHAUSTED = false // KINEO-FAL-ALARM — reset per request
     if (!process.env.FAL_KEY) {
       return NextResponse.json(
         { error: 'Cinematic mode is not configured. Please contact support.' },
@@ -276,6 +318,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // KINEO-LADDER-2026-07-06 — Veo 3.1 is a Studio-only premium engine.
+    if (wantsVeo && !isStudio) {
+      return NextResponse.json(
+        { error: 'Veo is a Studio feature. Upgrade to Studio to use it.', upsell: 'studio', balance },
+        { status: 402 },
+      )
+    }
+    // KINEO-SORA-REMOVED-2026-07-06 — Sora is pulled from the menu until its fal
+    // endpoint cost is confirmed (margin guard). Reject any direct/stale call.
+    if (wantsSora) {
+      return NextResponse.json(
+        { error: 'Sora is temporarily unavailable. Use Kling or AI Generated.', balance },
+        { status: 400 },
+      )
+    }
+
     // Push #402 — per-engine cost: Cinematic (Kling) 45, AI Generated (Seedance) 30.
     const cost = wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
@@ -291,11 +349,12 @@ export async function POST(req: NextRequest) {
     // users are upsold to Creator.
     const planVal = (profile?.plan ?? 'free') as string
     const isCreatorPlus = planVal === 'basic' || planVal === 'basic_trial' || isStudio
-    // Push #430 — welcome credits: a free-plan user holding enough credits
-    // (30 on signup) may pay for AI Generated with them. Their render is
-    // watermarked server-side in /api/compose (free plan = watermark).
-    const paysWithCredits = !wantsKling && balance >= (wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST)
-    if (!wantsKling && !isCreatorPlus && !isFreeTrial && !paysWithCredits) {
+    // KINEO-LADDER-2026-07-06 — AI (Seedance) is strictly Creator+. Removed the
+    // old paysWithCredits bypass (#430) that let a Starter/free user with enough
+    // credits sneak an AI video — the ladder is now Fast (free/Starter) → AI
+    // (Creator+) → premium engines (Studio). Kling/Veo already gated to Studio
+    // above; this catches Seedance for any non-Creator+ plan.
+    if (!wantsKling && !wantsVeo && !isCreatorPlus && !isFreeTrial) {
       return NextResponse.json(
         {
           error: 'AI Generated videos are on the Creator & Studio plans. Upgrade to use the AI engine.',
@@ -417,11 +476,11 @@ export async function POST(req: NextRequest) {
     // Seedance video. Single model per generation keeps the status poll simple.
     let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
 
-    // KINEO-SEEDANCE-720-CREATOR-2026-07-06 — only Studio renders Seedance at
-    // 1080p; Creator and credit-payers get 720p (imperceptible on 9:16 phone,
-    // keeps Creator margin healthy). hd is ignored by Kling/Veo/Sora (they set
-    // their own resolution in buildFalInput).
-    const hd = isStudio
+    // KINEO-SEEDANCE-720-ALL-2026-07-06 — Seedance runs 720p on EVERY plan
+    // (~$0.26/clip). 1080p (~$0.62/clip) blew the Studio margin (10 videos =
+    // $43.40 cost > $37.90) so it's retired for Seedance — 1080p now lives only
+    // in Kling, the premium engine. hd stays false; Kling sets its own params.
+    const hd = false
 
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
@@ -454,6 +513,20 @@ export async function POST(req: NextRequest) {
     }
 
     if (validIds.length === 0) {
+      // KINEO-FAL-ALARM-2026-07-06 — if the failure was an exhausted fal balance,
+      // don't show a dead error: alert the founder and return a soft "queued"
+      // message so the user waits calmly instead of thinking the product broke.
+      // No credits are charged (deduction only happens on successful render).
+      if (FAL_EXHAUSTED) {
+        await alertFalExhausted(`user=${user.id.slice(0, 8)} engine=${usedModel}`)
+        return NextResponse.json(
+          {
+            queued: true,
+            error: "We're experiencing high demand right now — your video is queued and we'll have it ready shortly. No credits were used.",
+          },
+          { status: 503 },
+        )
+      }
       return NextResponse.json(
         { error: 'Could not submit clips to AI generator. Please try again.' },
         { status: 502 }

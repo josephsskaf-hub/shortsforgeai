@@ -17,7 +17,7 @@ export const dynamic = 'force-static'
 export const metadata: Metadata = {
   title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
   description:
-    'See how Kineo compares to every major AI video tool — OpusClip, InVideo, HeyGen, Synthesia, CapCut, Runway, Luma and more. Kineo turns one idea into a finished faceless YouTube Short in about 60 seconds, starting at $11.90/mo, first Short free.',
+    'See how Kineo compares to every major AI video tool — OpusClip, InVideo, HeyGen, Synthesia, CapCut, Runway, Luma and more. Kineo turns one idea into a finished faceless YouTube Short in about 60 seconds, starting at $9.90/mo, first Short free.',
   alternates: { canonical: 'https://www.shortsforgeai.com/alternatives' },
   openGraph: {
     title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
@@ -56,7 +56,7 @@ export default function AlternativesIndexPage() {
             Try Kineo free →
           </Link>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
-            First Short free · no credit card · from <b style={{ color: '#2997ff' }}>$11.90/mo</b>
+            First Short free · no credit card · from <b style={{ color: '#2997ff' }}>$9.90/mo</b>
           </p>
         </section>
 

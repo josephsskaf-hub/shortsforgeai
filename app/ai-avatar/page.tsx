@@ -6,19 +6,19 @@ import AvatarLandingClient from '@/components/AvatarLandingClient'
 export const metadata: Metadata = {
   title: 'AI Avatar Video — your face, speaking any script | Kineo',
   description:
-    'Upload one photo and get a 720p lip-synced video of that person speaking your script — with footage, captions and music. No camera, no editing. From $11.90.',
+    'Upload one photo and get a 720p lip-synced video of that person speaking your script — with footage, captions and music. No camera, no editing. From $9.90.',
   alternates: { canonical: 'https://shortsforgeai.com/ai-avatar' },
   openGraph: {
     title: 'AI Avatar Video — your face, speaking any script',
     description:
-      'Upload one photo → a 720p talking video, lip-synced, in about a minute. No camera, no editing. From $11.90.',
+      'Upload one photo → a 720p talking video, lip-synced, in about a minute. No camera, no editing. From $9.90.',
     url: 'https://shortsforgeai.com/ai-avatar',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'AI Avatar Video — your face, speaking any script',
-    description: 'Upload one photo → a 720p talking video in about a minute. From $11.90.',
+    description: 'Upload one photo → a 720p talking video in about a minute. From $9.90.',
   },
 }
 

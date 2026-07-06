@@ -46,16 +46,20 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 // for grandfathered Spark subscribers; not offered to new users.
 // Push #404 — 3-tier pricing. Starter $11.90 (Fast), Creator $24.90 (Seedance),
 // Studio $37.90 (Kling). BRL ≈ USD×5.0, INR ≈ USD×81.
+// KINEO-PRICE-2026-07-06 — competitive repricing: Starter $11.90→$9.90,
+// Creator $24.90→$19.90 (Studio unchanged). Margins recompute ≥45% (Seedance/Veo
+// forced to 720p). BRL≈USD×5, INR≈USD×80.6 (same ratios as before).
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 1190, brl: 5990,  inr: 95900 },
-  basic:   { usd: 2490, brl: 12490, inr: 199900 },
+  starter: { usd: 990,  brl: 4990,  inr: 79900  },
+  basic:   { usd: 1990, brl: 9990,  inr: 159900 },
   pro:     { usd: 3790, brl: 18990, inr: 299900 },
 }
 
 // #381 — Annual prices = 10× the monthly price (≈2 months free). Smallest unit.
+// KINEO-PRICE-2026-07-06 — annual = 10× the new monthly (2 months free).
 const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 11900, brl: 59900,  inr: 959000 },
-  basic:   { usd: 24900, brl: 124900, inr: 1999000 },
+  starter: { usd: 9900,  brl: 49900,  inr: 799000  },
+  basic:   { usd: 19900, brl: 99900,  inr: 1599000 },
   pro:     { usd: 37900, brl: 189900, inr: 2999000 },
 }
 

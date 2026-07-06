@@ -71,7 +71,7 @@ const PLANS = [
   {
     tier: 'starter',
     name: 'Starter',
-    regular: '$11.90',
+    regular: '$9.90',
     founder: '$5.95',
     blurb: '15 Shorts / month',
     bullets: ['Smart stock footage', 'AI voiceover + captions', 'Watermark-free MP4'],
@@ -80,7 +80,7 @@ const PLANS = [
   {
     tier: 'basic',
     name: 'Creator',
-    regular: '$24.90',
+    regular: '$19.90',
     founder: '$12.45',
     blurb: '50 Shorts / month',
     bullets: ['Everything in Starter', 'AI-generated visuals', 'Priority rendering'],

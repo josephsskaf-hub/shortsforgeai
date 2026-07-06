@@ -1939,6 +1939,12 @@ export default function GenerateClient() {
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
+        if (res.status === 503 && data?.queued) {
+          // KINEO-FAL-ALARM-2026-07-06 — fal balance exhausted: show a calm
+          // "high demand, queued" message (no credits used) instead of an error.
+          setError(typeof data?.error === 'string' ? data.error : "We're experiencing high demand — your video is queued and will be ready shortly. No credits were used.")
+          setPhase('failed'); return
+        }
         if (res.status === 402) {
           // #384 — server distinguishes "used your free AI" vs "needs 30 credits".
           // KINEO-PLAN-GATE-MODAL — a 402 carrying `upsell` is a PLAN gate (the
@@ -2763,8 +2769,8 @@ export default function GenerateClient() {
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
               {credits === 0
-                ? 'Upgrade now and keep your momentum. Plans from $11.90/mo.'
-                : 'Use it wisely — or upgrade for more videos from $11.90/mo.'}
+                ? 'Upgrade now and keep your momentum. Plans from $9.90/mo.'
+                : 'Use it wisely — or upgrade for more videos from $9.90/mo.'}
             </span>
           </div>
           <button
@@ -2784,7 +2790,7 @@ export default function GenerateClient() {
               opacity: upgradeLoading ? 0.7 : 1,
             }}
           >
-            {upgradeLoading ? 'Loading…' : 'Upgrade — from $11.90/mo →'}
+            {upgradeLoading ? 'Loading…' : 'Upgrade — from $9.90/mo →'}
           </button>
         </div>
       )}
@@ -4232,7 +4238,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(34,197,94,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $11.90/mo →'}
+                    {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $9.90/mo →'}
                   </button>
                   {/* ROBO-ENTRY-495 — Starter Pack entry CTA. This block only
                       renders when credits < 40, i.e. the user can no longer run
@@ -5280,8 +5286,8 @@ function UpsellSection({
           }}
         >
           {/* Fix 2 (12/06) — copy matches the real tier this modal opens
-              (tier=basic = Creator $24.90/240 credits). Was "Pro $9.90/100". */}
-          Get 240 credits/month — post every day for $24.90/mo
+              (tier=basic = Creator $19.90/240 credits). Was "Pro $9.90/100". */}
+          Get 240 credits/month — post every day for $19.90/mo
         </div>
         <ul
           style={{
@@ -5313,7 +5319,7 @@ function UpsellSection({
             boxShadow: '0 6px 22px rgba(41,151,255,.28)',
           }}
         >
-          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $24.90/mo →'}
+          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $19.90/mo →'}
         </button>
         <div
           style={{
@@ -5843,9 +5849,10 @@ function ModeSelector({
           </div>
           <p className="text-xs mb-2.5" style={{ color: 'var(--muted2)' }}>Pick the model — same idea, a photoreal cinematic Short.</p>
           <div className="flex flex-col gap-1.5">
+            {/* KINEO-SORA-REMOVED-2026-07-06 — Sora pulled from the menu until its
+                fal cost is confirmed (margin guard). Veo + Kling are Studio-only. */}
             {([
               { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 180 },
-              { key: 'sora', label: 'Sora 2', sub: 'OpenAI · top realism', cr: 200 },
               { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 60 },
             ] as { key: 'veo' | 'sora' | 'kling'; label: string; sub: string; cr: number }[]).map((m) => {
               const active = mode === 'cinematic_ai' && aiEngine === m.key
@@ -6565,7 +6572,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$11.90/mo</strong>. Cancel anytime.
+          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$9.90/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -6587,7 +6594,7 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Get Starter — $11.90/mo →'}
+          {loading ? 'Opening checkout…' : 'Get Starter — $9.90/mo →'}
         </button>
         {/* Push #113 — BRL option for BR users. */}
         <button

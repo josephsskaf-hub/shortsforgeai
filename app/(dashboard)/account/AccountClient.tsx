@@ -416,7 +416,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  Upgrade — plans from $11.90/mo →
+                  Upgrade — plans from $9.90/mo →
                 </Link>
               )}
             </div>
@@ -451,7 +451,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                   textDecoration: 'none',
                 }}
               >
-                <span>{(avatarCredits ?? 0) > 0 ? 'Buy more avatar credits — from $11.90/video' : 'Get AI Avatar credits — from $11.90/video'}</span>
+                <span>{(avatarCredits ?? 0) > 0 ? 'Buy more avatar credits — from $9.90/video' : 'Get AI Avatar credits — from $9.90/video'}</span>
                 <span aria-hidden>→</span>
               </Link>
             </div>

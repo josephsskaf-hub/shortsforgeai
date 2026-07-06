@@ -997,8 +997,12 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#9D96B8]">
               Not a long-video re-clipper. Type one topic and ShortsForgeAI builds a finished faceless Short deliberately for that idea — hook, script, AI voice, captions and B-roll, 9:16 · ~60s · English — then you download and post to YouTube, TikTok &amp; Reels.
             </p>
+            {/* ROBO-FOUNDING-50 — honest founding urgency (mirrors /founding's
+                10 seats, 50% off for life) now links to the dedicated /founding
+                conversion page (proof Shorts + auto-applied discount). */}
             <p className="mt-4 text-sm font-bold text-[#A78BFA]">
-              🔑 Founding offer — the first <span className="text-cyan-400">10 members</span> lock 50% off for life
+              🔑 Founding offer — the first <span className="text-cyan-400">10 members</span> lock 50% off for life ·{' '}
+              <Link href="/founding" className="text-cyan-400 underline-offset-2 hover:underline">Claim a seat →</Link>
             </p>
           </div>
 
@@ -1494,7 +1498,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 { feat: 'Auto-writes your YouTube title, description & hashtags', us: '✓', a: '~', b: '—', c: '+$12/mo' },
                 { feat: 'No per-minute caps', us: '✓', a: '—', b: 'credit-based', c: '—' },
                 { feat: 'Try it free — no credit card', us: '✓', a: '✓', b: '✓', c: 'limited' },
-                { feat: 'Starting price', us: '$11.90/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
+                { feat: 'Starting price', us: '$9.90/mo', a: '$15/mo', b: '$29/mo', c: '$14/mo' },
               ].map((row, i) => (
                 <tr key={i} className="border-b border-white/[0.05] last:border-0">
                   <td className="px-4 py-3 font-medium text-[#E2E8F0]">{row.feat}</td>
@@ -1553,7 +1557,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </div>
             <div className="rounded-2xl border border-violet-400/30 bg-violet-400/[0.06] px-5 py-5 text-center shadow-[0_0_24px_rgba(139,92,246,0.12)]">
               <div className="text-[12px] font-extrabold text-[#A78BFA]">ShortsForgeAI</div>
-              <div className="mt-1 text-2xl font-extrabold text-[#A78BFA]">from $11.90</div>
+              <div className="mt-1 text-2xl font-extrabold text-[#A78BFA]">from $9.90</div>
               <div className="mt-1 text-[12px] text-[#94A3B8]">a whole month of Shorts · script, voice &amp; footage included</div>
             </div>
           </div>
@@ -1573,7 +1577,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             Choose a plan
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#94A3B8]">
-            Three plans, from $11.90/month. Real AI-generated Shorts — script, voice, and edit done for you.
+            Three plans, from $9.90/month. Real AI-generated Shorts — script, voice, and edit done for you.
           </p>
         </div>
         {/* #382 — monthly / annual billing toggle (mirrors /pricing) */}

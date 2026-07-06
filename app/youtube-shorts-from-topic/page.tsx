@@ -9,12 +9,12 @@ import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 export const metadata: Metadata = {
   title: 'Make a YouTube Short From a Topic — AI Writes, Voices & Edits It | Kineo',
   description:
-    'Type a topic and get a finished faceless YouTube Short — script, AI voiceover, footage and captions, generated in about 60 seconds. The cheapest way to make Shorts from just an idea, from $11.90/mo.',
+    'Type a topic and get a finished faceless YouTube Short — script, AI voiceover, footage and captions, generated in about 60 seconds. The cheapest way to make Shorts from just an idea, from $9.90/mo.',
   alternates: { canonical: 'https://www.shortsforgeai.com/youtube-shorts-from-topic' },
   openGraph: {
     title: 'Make a YouTube Short From a Topic — generated in 60 seconds',
     description:
-      'One topic in, a ready-to-post 9:16 Short out: script, voiceover, footage and captions. From $11.90/mo.',
+      'One topic in, a ready-to-post 9:16 Short out: script, voiceover, footage and captions. From $9.90/mo.',
     url: 'https://www.shortsforgeai.com/youtube-shorts-from-topic',
     type: 'website',
   },
@@ -29,7 +29,7 @@ const STEPS: { n: string; t: string; d: string }[] = [
 const FAQ: { q: string; a: string }[] = [
   { q: 'Is there an AI that makes a YouTube Short from just a topic?', a: 'Yes. Kineo turns a single topic into a finished faceless Short — it writes the script, records the AI voiceover, finds matching footage and adds captions, then renders a ready-to-post 9:16 video in about 60 seconds. You never film anything.' },
   { q: 'Can I make a YouTube Short from a script, narrated word-for-word?', a: 'Yes. Paste your own script and Kineo narrates it verbatim, matches footage to each line and captions it — no editing or timeline required.' },
-  { q: 'What is the cheapest AI to make YouTube Shorts from an idea?', a: 'Kineo starts at $11.90/month with a 7-day money-back guarantee, and your first Short is free with no credit card. It is built only for faceless short-form, so it undercuts general-purpose AI video tools.' },
+  { q: 'What is the cheapest AI to make YouTube Shorts from an idea?', a: 'Kineo starts at $9.90/month with a 7-day money-back guarantee, and your first Short is free with no credit card. It is built only for faceless short-form, so it undercuts general-purpose AI video tools.' },
   { q: 'How is this different from OpusClip or Submagic?', a: 'OpusClip and Submagic re-clip or caption a long video you already filmed. Kineo generates the entire video from a topic — ideal for faceless creators who start with nothing but an idea.' },
   { q: 'Do I need any editing skills?', a: 'No. There is no timeline to learn. You type a topic (or paste a script) and download a finished 9:16 Short ready to post on YouTube, TikTok and Reels.' },
 ]
@@ -60,7 +60,7 @@ export default function YouTubeShortsFromTopicPage() {
           <Link href="/pricing" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>See pricing</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
-          🎁 First Short free · No credit card · From $11.90/mo · 7-day money-back
+          🎁 First Short free · No credit card · From $9.90/mo · 7-day money-back
         </p>
 
         <h2 style={h2}>From a topic to a Short in 3 steps</h2>

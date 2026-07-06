@@ -941,7 +941,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               </span>
               {(avatarCredits ?? 1) < 1 && (
                 <>
-                  {' '}· <Link href="/generate?avatar=1" style={{ color: '#2997ff' }}>get credits from $11.90</Link>
+                  {' '}· <Link href="/generate?avatar=1" style={{ color: '#2997ff' }}>get credits from $9.90</Link>
                 </>
               )}
             </p>

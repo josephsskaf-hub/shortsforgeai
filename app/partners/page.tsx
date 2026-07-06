@@ -66,7 +66,7 @@ export default function PartnersPage() {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '0.74rem', color: '#64748B', textAlign: 'center', margin: '10px 0 0' }}>Recurring, every month they stay subscribed. Plans range $11.90–$37.90/mo.</p>
+          <p style={{ fontSize: '0.74rem', color: '#64748B', textAlign: 'center', margin: '10px 0 0' }}>Recurring, every month they stay subscribed. Plans range $9.90–$37.90/mo.</p>
         </section>
 
         {/* How */}
