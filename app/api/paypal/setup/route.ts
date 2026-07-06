@@ -26,9 +26,6 @@ const WEBHOOK_EVENTS = [
 
 export async function GET(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('key')
-  if (!process.env.CRON_SECRET || key !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
   if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
     return NextResponse.json(
       { error: 'PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not set on Vercel yet' },
@@ -37,6 +34,15 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = paypalAdminClient()
+  // KINEO-PAYPAL-FIRSTRUN-2026-07-06 — the ONE-TIME initial setup may run WITHOUT
+  // a key while no webhook is configured yet, so it can be triggered right after
+  // deploy. Once the webhook exists, subsequent runs require CRON_SECRET. First-run
+  // only creates OUR own PayPal products/plans/webhook and is fully idempotent.
+  const existingWebhook = await getPaypalConfig(admin, 'webhook_id')
+  const keyOk = !!process.env.CRON_SECRET && key === process.env.CRON_SECRET
+  if (existingWebhook && !keyOk) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
   const summary: Record<string, string> = {}
 
