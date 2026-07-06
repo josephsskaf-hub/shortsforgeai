@@ -591,39 +591,7 @@ export default function PricingPage() {
             featured entry offer above the plans; the duplicate secondary button
             that used to sit here was removed to avoid a repeated adjacent CTA. */}
 
-        {/* Brazilian Pix (Mercado Pago) — one-time credit packs in Real. Runs
-            alongside Stripe; for the BR public (Perrengue Chique). */}
-        <div className="mx-auto mt-4 max-w-2xl">
-          <div
-            className="rounded-2xl px-5 py-4 text-center"
-            style={{ background: 'rgba(41,151,255,0.06)', border: '1px dashed rgba(41,151,255,0.45)' }}
-          >
-            <span className="block text-[14px] font-extrabold text-[#f5f5f7]">
-              🇧🇷 No Brasil? Pague no <span style={{ color: '#2997ff' }}>Pix</span>
-            </span>
-            <span className="mt-1 mb-3 block text-[12px] font-semibold text-[#86868b]">
-              Pagamento único · sem assinatura · créditos não expiram
-            </span>
-            <div className="flex flex-col sm:flex-row justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br50' }}
-                className="rounded-xl px-4 py-3 text-[13px] font-extrabold text-white"
-                style={{ background: '#2997ff', cursor: 'pointer' }}
-              >
-                R$50 = 90 créditos (3 AI Gen) →
-              </button>
-              <button
-                type="button"
-                onClick={() => { trackPricingEvent('mp_pix_checkout_clicked'); window.location.href = '/api/mercadopago/checkout?pack=br90' }}
-                className="rounded-xl px-4 py-3 text-[13px] font-extrabold"
-                style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', color: '#f5f5f7', cursor: 'pointer' }}
-              >
-                R$90 = 180 créditos (6 AI Gen) →
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* KINEO-2026-07-06 — Pix/Mercado Pago (BR) section removed at Joseph's request. */}
 
         {/* Push #114 — surface any checkout error inline so users aren't
             stranded silently when the API rejects the request. */}

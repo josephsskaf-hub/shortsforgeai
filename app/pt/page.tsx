@@ -1,6 +1,6 @@
 // #483 — Landing em português (Brasil). Aproveita as vantagens injustas do
-// projeto no BR: Pix/Mercado Pago já no ar, público de "canal dark com IA", e
-// preço em Real sem IOF. Estática, no sitemap, com canonical + hreflang. CTA
+// projeto no BR: público de "canal dark com IA" e
+// preço em Real. Estática, no sitemap, com canonical + hreflang. CTA
 // para /signup com UTM pt/brazil para o funil atribuir o tráfego brasileiro.
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -9,17 +9,17 @@ export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.shortsforgeai.com'),
-  title: 'Kineo — Crie vídeos para canal dark com IA (em português, Pix)',
+  title: 'Kineo — Crie vídeos para canal dark com IA (em português)',
   description:
-    'Transforme uma ideia em um Short faceless pronto (roteiro + voz IA + imagens + legendas) em ~60s. Em português, pague no Pix em Real (sem IOF). A partir de R$24,90. Primeiro vídeo grátis.',
+    'Transforme uma ideia em um Short faceless pronto (roteiro + voz IA + imagens + legendas) em ~60s. Em português, com preço em Real. A partir de R$24,90. Primeiro vídeo grátis.',
   alternates: {
     canonical: 'https://www.shortsforgeai.com/pt',
     languages: { 'en-US': 'https://www.shortsforgeai.com/', 'pt-BR': 'https://www.shortsforgeai.com/pt' },
   },
   openGraph: {
-    title: 'Crie vídeos para canal dark com IA — em português, com Pix',
+    title: 'Crie vídeos para canal dark com IA — em português',
     description:
-      'Uma ideia vira um Short faceless pronto em ~60s. Roteiro, voz, imagens e legendas no automático. Pague no Pix. Primeiro vídeo grátis.',
+      'Uma ideia vira um Short faceless pronto em ~60s. Roteiro, voz, imagens e legendas no automático. Primeiro vídeo grátis.',
     url: 'https://www.shortsforgeai.com/pt',
     type: 'website',
   },
@@ -35,7 +35,7 @@ const faq = [
   },
   {
     q: 'Preciso pagar em dólar?',
-    a: 'Não. Você paga no Pix, em Real, sem IOF e sem cartão internacional. Pacotes a partir de R$24,90 (one-time) — os créditos não expiram.',
+    a: 'Não. Você paga em Real. Pacotes a partir de R$24,90 (one-time) — os créditos não expiram.',
   },
   {
     q: 'Em quanto tempo o vídeo fica pronto?',
@@ -65,7 +65,7 @@ export default function PtLandingPage() {
         {/* Hero */}
         <section style={{ marginTop: 36, textAlign: 'center' }}>
           <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.12)', borderRadius: 999, padding: '6px 14px' }}>
-            🇧🇷 Em português · pague no Pix
+            🇧🇷 Em português
           </div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5.5vw, 2.7rem)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.12, margin: '16px 0 0', background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Crie vídeos para canal dark com IA — sem aparecer, sem editar
@@ -77,7 +77,7 @@ export default function PtLandingPage() {
             Criar meu primeiro vídeo grátis →
           </Link>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
-            Primeiro vídeo <b style={{ color: '#2997ff' }}>grátis</b> · sem cartão · pague no Pix em Real (sem IOF)
+            Primeiro vídeo <b style={{ color: '#2997ff' }}>grátis</b> · sem cartão · preço em Real
           </p>
         </section>
 
@@ -99,9 +99,9 @@ export default function PtLandingPage() {
           </div>
         </section>
 
-        {/* Pix pricing */}
+        {/* Pricing */}
         <section style={{ marginTop: 48 }}>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.025em', textAlign: 'center', margin: '0 0 6px', color: '#f5f5f7' }}>Pague no Pix, em Real</h2>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.025em', textAlign: 'center', margin: '0 0 6px', color: '#f5f5f7' }}>Preço em Real</h2>
           <p style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem', margin: '0 0 18px' }}>Pagamento único · sem assinatura · créditos não expiram</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             {[
@@ -122,7 +122,7 @@ export default function PtLandingPage() {
         <section style={{ marginTop: 44, ...CARD, borderRadius: 20, padding: '20px 22px' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, letterSpacing: '-0.025em', margin: '0 0 8px', color: '#f5f5f7' }}>Kineo x Opus Clip</h2>
           <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.95rem' }}>
-            O Opus Clip <b>corta</b> vídeos longos que você já gravou e cobra em dólar (com IOF). O Kineo <b>cria o vídeo do zero</b> a partir de uma ideia, 100% faceless, em português, e você paga no Pix. Para canal dark, é a ferramenta certa.
+            O Opus Clip <b>corta</b> vídeos longos que você já gravou e cobra em dólar. O Kineo <b>cria o vídeo do zero</b> a partir de uma ideia, 100% faceless, em português, com preço em Real. Para canal dark, é a ferramenta certa.
           </p>
         </section>
 

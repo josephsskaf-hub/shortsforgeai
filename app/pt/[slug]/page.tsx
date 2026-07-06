@@ -1,7 +1,7 @@
 // #487 — Páginas SEO em português (canal dark com IA). Programáticas sob /pt/.
 // Alvo: buscas BR de alta intenção ("canal dark com IA", "alternativa ao Opus
 // Clip em português", "criar shorts com IA"). Estáticas, no sitemap, FAQ schema,
-// CTA Pix. Copy 100% PT-BR nativo. Vantagem: Pix no ar + produto upstream.
+// Copy 100% PT-BR nativo. Vantagem: produto upstream.
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -15,53 +15,53 @@ type PtPage = { title: string; desc: string; h1: string; intro: string; sections
 const PAGES: Record<string, PtPage> = {
   'canal-dark-com-ia': {
     title: 'Como criar um canal dark com IA (ferramenta que faz o Short inteiro) — Kineo',
-    desc: 'Crie um canal dark com IA sem aparecer e sem editar. O Kineo transforma uma ideia num Short pronto (roteiro + voz + imagens + legendas) em ~60s. Pague no Pix, a partir de R$24,90.',
+    desc: 'Crie um canal dark com IA sem aparecer e sem editar. O Kineo transforma uma ideia num Short pronto (roteiro + voz + imagens + legendas) em ~60s. A partir de R$24,90.',
     h1: 'Canal dark com IA: do zero ao Short pronto em 60 segundos',
     intro:
-      'Montar um canal dark (faceless) trava na produção: roteiro, voz, busca de imagens, edição. O Kineo resolve tudo isso num passo — você digita uma ideia e recebe um Short vertical pronto pra postar no YouTube Shorts, TikTok e Reels. Sem aparecer, sem filmar, sem editar. E você paga no Pix, em Real, sem IOF.',
+      'Montar um canal dark (faceless) trava na produção: roteiro, voz, busca de imagens, edição. O Kineo resolve tudo isso num passo — você digita uma ideia e recebe um Short vertical pronto pra postar no YouTube Shorts, TikTok e Reels. Sem aparecer, sem filmar, sem editar.',
     sections: [
       { h: 'Por que canal dark com IA explodiu', p: 'Canais dark monetizam sem rosto, sem câmera e sem equipe — só conteúdo. A IA derrubou a última barreira: antes você precisava de ChatGPT + ElevenLabs + CapCut + banco de imagens. Agora uma ferramenta só faz o pacote inteiro em ~60s, então dá pra postar todo dia sem virar editor.' },
       { h: 'Como o Kineo faz', p: 'Você dá o tema. A IA escreve o roteiro com gancho viral, grava a narração com voz de IA, busca e encaixa as imagens cena a cena, e adiciona as legendas. Sai um MP4 9:16 pronto. Funciona pra qualquer nicho: finanças, mistério, história, curiosidades, motivação.' },
-      { h: 'Quanto custa (e por que Pix importa)', p: 'Ferramentas gringas cobram em dólar e ainda levam IOF. Aqui você paga no Pix, em Real: pacotes a partir de R$24,90, créditos que não expiram. O primeiro Short é grátis, sem cartão.' },
+      { h: 'Quanto custa', p: 'Em Real: pacotes a partir de R$24,90, créditos que não expiram. O primeiro Short é grátis, sem cartão.' },
     ],
     faq: [
       { q: 'Preciso aparecer ou gravar minha voz?', a: 'Não. É 100% faceless: roteiro, narração com voz de IA, imagens e legendas são gerados automaticamente. Você só escolhe o tema.' },
       { q: 'Funciona pra qualquer nicho de canal dark?', a: 'Sim — finanças, mistério, história, curiosidades, motivação e mais. A IA adapta o roteiro e as imagens ao tema.' },
-      { q: 'Como pago?', a: 'No Pix, em Real, sem IOF. A partir de R$24,90, créditos não expiram. O primeiro vídeo é grátis, sem cartão.' },
+      { q: 'Como pago?', a: 'Em Real, a partir de R$24,90, créditos não expiram. O primeiro vídeo é grátis, sem cartão.' },
     ],
   },
   'alternativa-opusclip-portugues': {
-    title: 'Alternativa ao Opus Clip em português (com Pix) — Kineo',
-    desc: 'Procurando uma alternativa ao Opus Clip em português? O Kineo cria o Short do zero a partir de uma ideia (não só corta vídeo longo), 100% faceless, e você paga no Pix. A partir de R$24,90.',
-    h1: 'A alternativa ao Opus Clip em português — e com Pix',
+    title: 'Alternativa ao Opus Clip em português — Kineo',
+    desc: 'Procurando uma alternativa ao Opus Clip em português? O Kineo cria o Short do zero a partir de uma ideia (não só corta vídeo longo), 100% faceless. A partir de R$24,90.',
+    h1: 'A alternativa ao Opus Clip em português',
     intro:
-      'O Opus Clip é ótimo pra cortar um vídeo longo que você já gravou. Mas se você quer criar um Short faceless do zero, a partir de uma ideia, é outra ferramenta. O Kineo escreve o roteiro, narra com voz de IA, busca as imagens e monta o Short em ~60s — em português de verdade, e com pagamento no Pix.',
+      'O Opus Clip é ótimo pra cortar um vídeo longo que você já gravou. Mas se você quer criar um Short faceless do zero, a partir de uma ideia, é outra ferramenta. O Kineo escreve o roteiro, narra com voz de IA, busca as imagens e monta o Short em ~60s — em português de verdade.',
     sections: [
       { h: 'A diferença que importa', p: 'Opus Clip = reaproveita vídeo longo (precisa do seu material). Kineo = cria o vídeo inteiro a partir de uma ideia, sem você precisar de gravação nenhuma. Para canal dark, é a ferramenta certa: ela produz, não só recorta.' },
-      { h: 'Português nativo + Pix sem IOF', p: 'O Opus Clip cobra em dólar e é fraco em português. Aqui a interface e a narração são em PT, e você paga no Pix, em Real, sem cartão internacional e sem IOF — a partir de R$24,90, créditos que não expiram.' },
+      { h: 'Português nativo', p: 'O Opus Clip cobra em dólar e é fraco em português. Aqui a interface e a narração são em PT, e você paga em Real — a partir de R$24,90, créditos que não expiram.' },
       { h: 'Quando escolher cada um', p: 'Escolha o Opus Clip se você já grava vídeos longos ou podcasts e só quer cortá-los. Escolha o Kineo se quer criar Shorts faceless do zero, em português, sem aparecer.' },
     ],
     faq: [
-      { q: 'Qual a melhor alternativa ao Opus Clip em português?', a: 'O Kineo é a alternativa brasileira: gera o Short completo (roteiro, voz, imagens e legendas) a partir de uma ideia, sem precisar subir vídeo, em PT e com pagamento no Pix a partir de R$24,90.' },
-      { q: 'É mais barato que o Opus Clip pra quem é do Brasil?', a: 'Você paga no Pix em Real, sem IOF e sem cartão internacional — o que costuma sair bem mais em conta do que ferramentas cobradas em dólar. O primeiro Short é grátis.' },
+      { q: 'Qual a melhor alternativa ao Opus Clip em português?', a: 'O Kineo é a alternativa brasileira: gera o Short completo (roteiro, voz, imagens e legendas) a partir de uma ideia, sem precisar subir vídeo, em PT e a partir de R$24,90.' },
+      { q: 'É mais barato que o Opus Clip pra quem é do Brasil?', a: 'Você paga em Real — o que costuma sair bem mais em conta do que ferramentas cobradas em dólar. O primeiro Short é grátis.' },
       { q: 'Preciso ter um vídeo pronto pra usar?', a: 'Não. Diferente do Opus Clip, você só precisa de uma ideia — a IA cria o vídeo do zero.' },
     ],
   },
   'criar-shorts-com-ia': {
     title: 'Criar Shorts com IA em 60 segundos (sem editar) — Kineo',
-    desc: 'Crie Shorts com IA em ~60s: roteiro, voz, imagens e legendas no automático. Sem aparecer, sem editar. Pague no Pix, a partir de R$24,90. Primeiro vídeo grátis.',
+    desc: 'Crie Shorts com IA em ~60s: roteiro, voz, imagens e legendas no automático. Sem aparecer, sem editar. A partir de R$24,90. Primeiro vídeo grátis.',
     h1: 'Criar Shorts com IA em 60 segundos',
     intro:
       'Você digita uma ideia e o Kineo monta o Short inteiro: roteiro com gancho, narração com voz de IA, imagens cena a cena e legendas. Pronto pra postar no YouTube Shorts, TikTok e Reels — sem aparecer, sem editar, em ~60 segundos.',
     sections: [
       { h: 'Uma ideia entra, um Short sai', p: 'Sem prompt complicado, sem timeline pra aprender. Tema → vídeo 9:16 pronto. É a forma mais rápida de postar conteúdo curto todo dia sem montar um estúdio.' },
       { h: 'Tudo no automático', p: 'A IA escreve o roteiro, grava a voz, encaixa as imagens e adiciona as legendas. Você só baixa e posta. Funciona em qualquer nicho.' },
-      { h: 'Pague no Pix', p: 'Pacotes a partir de R$24,90, no Pix, sem IOF, créditos que não expiram. Primeiro Short grátis, sem cartão.' },
+      { h: 'Preço em Real', p: 'Pacotes a partir de R$24,90, créditos que não expiram. Primeiro Short grátis, sem cartão.' },
     ],
     faq: [
       { q: 'Em quanto tempo o Short fica pronto?', a: 'Cerca de 60 segundos, do tema ao vídeo 9:16 pronto pra baixar e postar.' },
       { q: 'Preciso saber editar?', a: 'Não. Não há timeline. Você digita uma ideia e recebe o vídeo finalizado, com voz e legendas.' },
-      { q: 'Como pago?', a: 'No Pix, em Real, a partir de R$24,90. Créditos não expiram e o primeiro vídeo é grátis.' },
+      { q: 'Como pago?', a: 'Em Real, a partir de R$24,90. Créditos não expiram e o primeiro vídeo é grátis.' },
     ],
   },
 }
@@ -105,7 +105,7 @@ export default function PtSeoPage({ params }: { params: { slug: string } }) {
         </div>
 
         <section style={{ marginTop: 36 }}>
-          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.12)', borderRadius: 999, padding: '6px 14px' }}>🇧🇷 Em português · Pix</div>
+          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.12)', borderRadius: 999, padding: '6px 14px' }}>🇧🇷 Em português</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.15, margin: '16px 0 0', background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{pg.h1}</h1>
           <p style={{ fontSize: '1.02rem', color: '#86868b', lineHeight: 1.6, margin: '14px 0 0' }}>{pg.intro}</p>
           <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 20, background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Criar meu primeiro vídeo grátis →</Link>
@@ -132,7 +132,7 @@ export default function PtSeoPage({ params }: { params: { slug: string } }) {
 
         <section style={{ marginTop: 40, textAlign: 'center', ...CARD, borderRadius: 20, padding: '28px 20px' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 600, letterSpacing: '-0.025em', margin: 0, color: '#f5f5f7' }}>Faça seu primeiro Short grátis</h2>
-          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>Uma ideia entra, um Short pronto sai. Pague no Pix, sem cartão.</p>
+          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>Uma ideia entra, um Short pronto sai. Sem cartão.</p>
           <Link href={signupUrl} style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Começar grátis →</Link>
         </section>
 
