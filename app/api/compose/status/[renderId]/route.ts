@@ -27,7 +27,11 @@ function creditCostFor(quality: Quality): number {
   // Pro = 20. Push #315 added 'cinematic_ai' = 3 for fal.ai Wan 2.1.
   switch (quality) {
     case 'fast':
-      return 0 // Push #434 — Fast Mode is free (growth engine); free-plan Fast is watermarked instead
+      // KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit (was 0). Free tier
+      // grants 2 → 2 Fast videos, then the wall forces the $4.90 pack or a plan.
+      // Fast still costs ~$0.02-0.05 to serve, so the charge is pure monetization,
+      // not cost-recovery. Free-plan Fast stays watermarked (see compose route).
+      return 1
     case 'avatar':
       // feature/ai-avatar checkpoint 1 — paid via the SEPARATE avatar-credits
       // add-on (not video_credits). 0 here so nothing touches video_credits;

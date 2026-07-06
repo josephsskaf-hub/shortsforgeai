@@ -250,7 +250,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <div className="plan">
               <div className="pt">Studio</div><div className="nm">Studio</div>
               <div className="pr">$37.90<span>/mo</span></div>
-              <ul><li><span className="ck">✓</span> <b>8 Cinematic AI</b> videos/mo (Kling)</li><li><span className="ck">✓</span> 360 credits/mo (50% more)</li><li><span className="ck">✓</span> Highest visual quality</li><li><span className="ck">✓</span> Everything in Creator</li></ul>
+              <ul><li><span className="ck">✓</span> <b>~6 Cinematic AI</b> videos/mo (Kling)</li><li><span className="ck">✓</span> 400 credits/mo (67% more)</li><li><span className="ck">✓</span> Highest quality + priority queue</li><li><span className="ck">✓</span> Everything in Creator</li></ul>
               <Link className="btn btn-o" href="/signup">Continue with Studio</Link>
             </div>
           </div>

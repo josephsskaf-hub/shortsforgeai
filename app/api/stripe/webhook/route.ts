@@ -227,7 +227,9 @@ export async function POST(req: NextRequest) {
 
           const { error: updateErr } = await supabase
             .from('profiles')
-            .update({ video_credits: next })
+            // KINEO-PACK-NOWM-2026-07-06 — mark buyer as paid so their free-plan
+            // Fast renders come out watermark-free (the point of the $4.90 pack).
+            .update({ video_credits: next, has_paid: true })
             .eq('id', userId)
 
           if (updateErr) {
@@ -252,9 +254,9 @@ export async function POST(req: NextRequest) {
         // can experience the product before paying; full credits are granted
         // by the invoice.payment_succeeded handler on Day 4 first charge.
         const isTrial = session.payment_status === 'no_payment_required'
-        // Push #404/#491 — Studio(pro) 600 (≈3 Veo/Sora premium + extras), Creator(basic)
-        // 240, Starter 50. Studio bumped 360→600 for the premium Veo/Sora engines.
-        const planCredits = tier === 'pro' ? 600 : tier === 'starter' ? 50 : 240
+        // KINEO-STUDIO-400-2026-07-06 — Studio(pro)=400 (aligned with pricing.ts
+        // + UI; was 600 here, 360 there → margin leak). Creator(basic) 240, Starter 50.
+        const planCredits = tier === 'pro' ? 400 : tier === 'starter' ? 50 : 240
         const creditsToGrant = isTrial ? 5 : planCredits
 
         const { data: currentProfile } = await supabase
@@ -278,6 +280,7 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subscriptionId,
             video_credits: next,
             cinematic_tokens: isTrial ? 0 : cinematicTokensForTier,
+            has_paid: true, // KINEO-PACK-NOWM-2026-07-06 — clean output for paid users
           })
           .eq('id', userId)
 
@@ -357,8 +360,9 @@ export async function POST(req: NextRequest) {
 
         const renewalUserId = subscription.metadata?.supabase_user_id
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : subscription.metadata?.tier === 'starter' ? 'starter' : 'basic'
-        // Push #404/#491 — renewal credits: Studio 600, Creator 240, Starter 50.
-        const renewalCredits = renewalTier === 'pro' ? 600 : renewalTier === 'starter' ? 50 : 240
+        // KINEO-STUDIO-400-2026-07-06 — renewal credits: Studio 400, Creator 240,
+        // Starter 50. Set (not added) each cycle → no rollover between months.
+        const renewalCredits = renewalTier === 'pro' ? 400 : renewalTier === 'starter' ? 50 : 240
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,

@@ -248,14 +248,14 @@ export default function SignupPage() {
                     boxShadow: '0 0 6px rgba(41,151,255,.6)',
                   }}
                 />
-                🎁 30 free credits · No credit card
+                🎁 2 free videos · No credit card
               </div>
 
               <ul className="flex flex-col gap-4">
                 {[
                   'AI writes the script in 60 seconds',
                   'Stock footage + voiceover included',
-                  '30 free credits on signup, no credit card',
+                  '2 free videos on signup, no credit card',
                 ].map((line) => (
                   <li
                     key={line}

@@ -121,7 +121,7 @@ Every Short comes with:
 👉 See plans & start:
 ${dashboardUrl}
 
-Three paid plans, flat monthly price. Starter $11.90/mo (50 Fast videos), Creator $24.90/mo (240 credits — AI Generated engine), Studio $37.90/mo (360 credits — premium Kling engine). 7-day money-back guarantee.
+Three paid plans, flat monthly price. Starter $11.90/mo (50 Fast videos), Creator $24.90/mo (240 credits — AI Generated engine), Studio $37.90/mo (400 credits — premium Cinematic AI engine + priority). 7-day money-back guarantee.
 
 — The Kineo Team
 usekineo.com`

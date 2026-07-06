@@ -1235,6 +1235,15 @@ export default function GenerateClient() {
           router.push('/login?redirect=/generate')
           return
         }
+        if (res.status === 402) {
+          // KINEO-FAST-1CR-2026-07-06 — Fast wall: user ran out of credits (free
+          // gets 2). Open the upgrade modal ($4.90 pack / plan) instead of a
+          // dead-end error, turning the wall into the monetization moment.
+          setError(typeof data?.error === 'string' ? data.error : "You've used your free videos.")
+          openOutOfCreditsModal('credits')
+          setPhase('failed')
+          return
+        }
         if (!res.ok) {
           console.error('[generate] compose error:', data?.error)
           setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
@@ -2713,15 +2722,13 @@ export default function GenerateClient() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Push #434 — Fast is free + unlimited now; credits are for AI Generated. */}
+            {/* KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit; free tier = 2.
+                Credit-aware banner replaces the old "free & unlimited" copy. */}
             <span style={{ color: '#34d399', fontWeight: 800, fontSize: 13 }}>
-              ⚡ Fast videos are FREE &amp; unlimited
-              {credits !== null && credits >= 30 ? ' · plus 30 credits for AI Generated' : ''}
+              ⚡ {credits !== null ? `${credits} video credit${credits === 1 ? '' : 's'} left` : 'Fast videos'}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              {credits !== null && credits >= 30
-                ? 'Make all the Fast Shorts you want on us. Want cinematic AI scenes? Your 30 credits cover one full AI-generated video.'
-                : 'Pick a topic, choose Fast Mode and hit Create — unlimited, on us. (Free Fast videos include our watermark.)'}
+              Each Fast video uses 1 credit. Out of credits? Get 10 more Shorts for $4.90, or go unlimited with a plan. (Free videos include our watermark.)
             </span>
           </div>
         </div>
@@ -2958,8 +2965,8 @@ export default function GenerateClient() {
                   "Pro $9.90/100 videos" — a 2-generations-old price that broke
                   trust at the exact moment of purchase. */}
               Upgrade to Studio and never run out of credits.
-              Get <strong style={{ color: '#2997ff' }}>360 credits/month</strong> + the premium
-              Kling engine and keep your channel growing on autopilot.
+              Get <strong style={{ color: '#2997ff' }}>400 credits/month</strong> + the premium
+              Kling engine (1080p) and keep your channel growing on autopilot.
             </p>
             <a
               href="/api/stripe/checkout?tier=pro"
@@ -3088,7 +3095,7 @@ export default function GenerateClient() {
               <span className="text-base">🎉</span>
               {/* Marker: KINEO-FREE-TIER-FAST-2026-07-05 — free tier = Fast only, no free AI */}
               <span>
-                You&apos;re in. <strong>Fast videos are free &amp; unlimited</strong> — we&apos;ve loaded an idea below to start. Upgrade anytime for cinematic AI scenes.
+                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start. Get 10 more for $4.90, or a plan for unlimited.
               </span>
             </div>
           )}

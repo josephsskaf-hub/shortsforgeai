@@ -34,8 +34,8 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   pro: {
     name: 'Kineo — Studio',
-    description: '8 cinematic AI videos / month (Kling engine, top quality)',
-    credits: 360,
+    description: 'Cinematic AI videos / month (Kling engine, 1080p, priority)',
+    credits: 400,
   },
 }
 

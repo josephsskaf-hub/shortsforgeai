@@ -1,8 +1,8 @@
 // Push #404 — current 3-tier pricing.
 // Starter = $11.90/month (50 credits, Fast/stock engine, 1 credit/video)
 // Creator = $24.90/month (240 credits, Seedance AI engine, 40 credits/video → 6 videos)
-// Studio  = $37.90/month (360 credits, Kling premium engine, 60 credits/video → 6 videos,
-//           falls back to Seedance → 9 videos)
+// Studio  = $37.90/month (400 credits, Kling premium engine, 60 credits/video → 6 videos,
+//           falls back to Seedance → 10 videos; 1080p; priority queue)
 //
 // All checkout buttons on every surface link to /api/stripe/checkout?tier=...
 // The server route handles currency detection (BRL for BR users) and creates
@@ -73,7 +73,11 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     price: 37.90,
     priceLabel: '$37.90',
     periodLabel: '/ month',
-    credits: 360,
+    // KINEO-STUDIO-400-2026-07-06 — was inconsistent (360 here vs 600 in the
+    // Stripe/PayPal webhooks). Aligned to 400 everywhere: ~10 Seedance videos
+    // or ~6 Kling, keeps Studio margin safe (break-even ~$0.54/clip, matches
+    // Creator) while still reading as generous. No credit rollover between months.
+    credits: 400,
     cta: 'Go Studio',
     href: '/api/stripe/checkout?tier=pro',
     recommended: true,

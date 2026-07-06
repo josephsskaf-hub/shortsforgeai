@@ -45,8 +45,13 @@ const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
 // Back-compat: other modules import FAL_MODEL.
 const FAL_MODEL = SEEDANCE_MODEL
 
+// KINEO-SEEDANCE-720-CREATOR-2026-07-06 — margin fix. Seedance v1.5 pro at 1080p
+// runs ~$0.62-0.74/clip on fal; a Creator video is 6-9 clips, which breaks the
+// Creator ($24.90/240cr → $0.59/clip break-even). Dropping Seedance to 720p
+// (~$0.26/clip) is imperceptible on a 9:16 phone Short and keeps Creator safely
+// profitable. Studio keeps 1080p as its premium differentiator (hd=true).
 // Build the per-model fal input (params differ between Seedance and Kling).
-function buildFalInput(model: string, prompt: string): Record<string, unknown> {
+function buildFalInput(model: string, prompt: string, hd: boolean = true): Record<string, unknown> {
   if (model === SORA_MODEL) {
     return {
       prompt,
@@ -74,11 +79,12 @@ function buildFalInput(model: string, prompt: string): Record<string, unknown> {
       cfg_scale: 0.6,
     }
   }
-  // Seedance (default)
+  // Seedance (default). KINEO-SEEDANCE-720-CREATOR-2026-07-06: resolution follows
+  // the plan — Studio (hd=true) = 1080p premium, Creator/credit-payers = 720p.
   return {
     prompt,
     aspect_ratio: '9:16',
-    resolution: '1080p',
+    resolution: hd ? '1080p' : '720p',
     duration: '10',
     generate_audio: false,
   }
@@ -179,14 +185,14 @@ function clipCountForDuration(d: number): number {
   return Math.max(2, Math.min(9, Math.ceil(d / 9)))
 }
 
-async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL): Promise<string | null> {
+async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true): Promise<string | null> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return null
 
   try {
     fal.config({ credentials: falKey })
     const { request_id } = await fal.queue.submit(model, {
-      input: buildFalInput(model, prompt),
+      input: buildFalInput(model, prompt, hd),
     })
     return request_id ?? null
   } catch (err) {
@@ -411,6 +417,12 @@ export async function POST(req: NextRequest) {
     // Seedance video. Single model per generation keeps the status poll simple.
     let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
 
+    // KINEO-SEEDANCE-720-CREATOR-2026-07-06 — only Studio renders Seedance at
+    // 1080p; Creator and credit-payers get 720p (imperceptible on 9:16 phone,
+    // keeps Creator margin healthy). hd is ignored by Kling/Veo/Sora (they set
+    // their own resolution in buildFalInput).
+    const hd = isStudio
+
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
       for (const scene of scenes) {
@@ -420,10 +432,10 @@ export async function POST(req: NextRequest) {
         // environment-first b-roll, on-brand for this faceless channel.
         const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
         const cinematic = buildFacelessCinematicPrompt(visualPrompt) + styleSuffix
-        let id = await submitToFal(cinematic, model)
+        let id = await submitToFal(cinematic, model, hd)
         if (!id) {
           await new Promise((r) => setTimeout(r, 800))
-          id = await submitToFal(cinematic, model)
+          id = await submitToFal(cinematic, model, hd)
         }
         ids.push(id)
         await new Promise((r) => setTimeout(r, 450))

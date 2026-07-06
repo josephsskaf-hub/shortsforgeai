@@ -43,7 +43,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How do credits work?',
-    a: 'An AI Generated video (Seedance) uses 40 credits. A Cinematic AI video (Kling) uses 60 credits. Creator includes 240 credits/month; Studio includes 360 credits/month and unlocks Cinematic AI.',
+    a: 'An AI Generated video (Seedance) uses 40 credits. A Cinematic AI video (Kling) uses 60 credits. Creator includes 240 credits/month; Studio includes 400 credits/month and unlocks Cinematic AI. Credits reset each month (no rollover).',
   },
 ]
 
@@ -93,17 +93,15 @@ function buildPricing() {
       name: 'Studio',
       price: '$37.90',
       priceSub: '/ month',
-      // ROBO1-CONV-2026-06-29 — make Studio's extra value explicit so it
-      // visibly justifies the higher price vs Creator: 360 credits (vs
-      // Creator's 240), the exclusive Kling cinematic engine, and the fact
-      // that those extra credits also stretch to more Seedance clips.
-      // Copy/microcopy only — prices and the "Studio includes 360
-      // credits/month" facts are unchanged.
-      tagline: '360 credits/month (vs Creator\'s 240) + unlocks the cinematic Kling engine — about 6 premium videos, or up to 9 with Seedance.',
+      // KINEO-STUDIO-400-2026-07-06 — Studio's extra value: 400 credits (vs
+      // Creator's 240), the exclusive Kling cinematic engine at 1080p, priority
+      // render queue, and premium voices. Copy aligned to the 400-credit grant.
+      tagline: 'Cinematic quality — our best AI engine. 400 credits/month (vs Creator\'s 240) + the cinematic Kling engine at 1080p, priority render queue — about 6 premium videos, or up to 10 with Seedance.',
       features: [
         '🎬 ~6 cinematic AI videos/mo (Kling) — Studio only',
-        '50% more credits than Creator (360 vs 240/mo)',
-        '➕ Or stretch credits to ~9 Seedance videos/mo',
+        '67% more credits than Creator (400 vs 240/mo)',
+        '➕ Or stretch credits to ~10 Seedance videos/mo',
+        '⚡ Priority render queue + premium voices',
         'Highest visual quality + motion',
         'AI writes script + voiceover',
         'Auto-captions pipeline',
@@ -416,6 +414,17 @@ export default function PricingPage() {
               No subscription · credits never expire · the lowest-commitment way to try the engine before picking a monthly plan.
             </span>
           </button>
+          {/* PAYPAL-2026-07-06 — one-time pack via PayPal ($4.90 USD) */}
+          <button
+            type="button"
+            onClick={() => {
+              trackPricingEvent('starter_pack_paypal_checkout_clicked')
+              window.location.href = '/api/paypal/checkout?pack=starter'
+            }}
+            className="mt-2 block w-full rounded-xl border border-white/[0.08] px-4 py-2 text-center text-[12.5px] font-bold text-[#f5f5f7] transition hover:bg-white/5 hover:border-[#2997ff]/40"
+          >
+            or get the 10-Short pack with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> ($4.90)
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
@@ -548,6 +557,24 @@ export default function PricingPage() {
                   >
                     {ctaLabel} →
                   </a>
+                )}
+                {/* PAYPAL-2026-07-06 — alternate rail for international buyers
+                    (US audit 06/07: USD abandoners want a no-card option).
+                    Same GET-redirect pattern as handleBuy, zero Stripe changes.
+                    USD-only — PayPal converts for the buyer. */}
+                {isPaid && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      trackPricingEvent(`${p.tier}_paypal_checkout_clicked`)
+                      const billingParam = billing === 'annual' ? '&billing=annual' : ''
+                      window.location.href = `/api/paypal/checkout?tier=${p.tier}${billingParam}`
+                    }}
+                    className="mt-2 block w-full rounded-xl border border-white/[0.08] px-4 py-2 text-center text-[12.5px] font-bold text-[#f5f5f7] transition hover:bg-white/5 hover:border-[#2997ff]/40"
+                  >
+                    or pay with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> (USD)
+                  </button>
                 )}
                 {/* Marker: KINEO-CHECKOUT-TRUST-2026-07-05 — trust cues at the buy button (billed by Kineo after Stripe name fix) */}
                 {isPaid && (
@@ -745,10 +772,10 @@ export default function PricingPage() {
                   },
                   {
                     label: 'Monthly credits',
-                    free: '30 welcome credits',
+                    free: '2 Fast videos',
                     starter: '50',
                     basic: '240',
-                    pro: '360',
+                    pro: '400',
                   },
                   {
                     label: 'Render time',

@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
     if (quality === 'cinematic_ai' || quality === 'fast') {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('free_ai_generate_used, video_credits, plan')
+        .select('free_ai_generate_used, video_credits, plan, has_paid')
         .eq('id', user.id)
         .single()
       const PAID_PLANS = new Set([
@@ -258,6 +258,29 @@ export async function POST(req: NextRequest) {
         'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
       ])
       const isFreePlan = !PAID_PLANS.has((prof?.plan ?? 'free').toLowerCase())
+      // KINEO-PACK-NOWM-2026-07-06 — the Starter Pack ($4.90) sells watermark-FREE
+      // Fast. A pack buyer stays on the 'free' plan, so we key clean output off a
+      // has_paid flag (set true by the Stripe/PayPal webhook on ANY purchase).
+      // Defensive: undefined column → false → current behavior (free = watermark).
+      const hasPaid = (prof as { has_paid?: boolean } | null)?.has_paid === true
+
+      // KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit. Wall at 0 credits →
+      // 402 BEFORE the (paid) Creatomate render, so the client opens the upgrade
+      // modal ($4.90 pack / plan). Credits are universal, so this applies to every
+      // plan; free users get 2 on signup, then must pay. Deduction itself happens
+      // on success in /api/compose/status via debit_video_credits.
+      if (quality === 'fast' && (prof?.video_credits ?? 0) < 1) {
+        return NextResponse.json(
+          {
+            error: "You've used your free videos. Get 10 more Shorts for $4.90, or upgrade to a plan for unlimited posting.",
+            upsell: 'credits',
+            outOfCredits: true,
+            balance: prof?.video_credits ?? 0,
+            upgrade: '/pricing',
+          },
+          { status: 402 },
+        )
+      }
       // #482 — end card (Option A): free + Starter get the "Made with
       // ShortsForgeAI" end card so every posted video advertises the product.
       // Clean on Creator/Studio (they're not free and not in STARTER_PLANS).
@@ -271,7 +294,10 @@ export async function POST(req: NextRequest) {
         isFreePlanAi = isFreePlan
       } else {
         // quality === 'fast'
-        isFreePlanFast = isFreePlan
+        // KINEO-PACK-NOWM-2026-07-06 — free-plan Fast is watermarked UNLESS the
+        // user has paid (pack or plan). Pack buyers get clean Fast — the whole
+        // point of the $4.90 pack vs the free tier.
+        isFreePlanFast = isFreePlan && !hasPaid
       }
     }
 
