@@ -507,6 +507,11 @@ export default function GenerateClient() {
   // any Generate/Analyze/Generate-Similar CTA while credits <= 0. Routes
   // through /api/stripe/checkout?tier=basic (GET redirect to Stripe).
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  // KINEO-PLAN-GATE-MODAL-2026-07-05 — why the upsell modal opened: 'credits'
+  // (real shortage) vs 'studio'/'creator' (engine needs a higher plan). Drives an
+  // accurate headline instead of a misleading "out of credits" for users who HAVE
+  // credits but picked a plan-gated engine (e.g. Cinematic/Kling on Starter).
+  const [upgradeReason, setUpgradeReason] = useState<'credits' | 'studio' | 'creator'>('credits')
   const [upgradeLoading, setUpgradeLoading] = useState(false)
 
   // Push #109 — stronger urgency variant for free users who just used
@@ -1927,8 +1932,13 @@ export default function GenerateClient() {
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
         if (res.status === 402) {
           // #384 — server distinguishes "used your free AI" vs "needs 30 credits".
-          setError(typeof data?.error === 'string' ? data.error : `Cinematic AI needs 30 credits. You have ${data?.balance ?? 0}.`)
-          openOutOfCreditsModal()
+          // KINEO-PLAN-GATE-MODAL — a 402 carrying `upsell` is a PLAN gate (the
+          // engine needs Creator/Studio), NOT a credit shortage. Show the correct
+          // headline so users who HAVE credits aren't wrongly told they're broke.
+          const gateReason: 'credits' | 'studio' | 'creator' =
+            data?.upsell === 'studio' ? 'studio' : data?.upsell === 'creator' ? 'creator' : 'credits'
+          setError(typeof data?.error === 'string' ? data.error : `This needs more credits. You have ${data?.balance ?? 0}.`)
+          openOutOfCreditsModal(gateReason)
           setPhase('failed'); return
         }
         if (!res.ok) {
@@ -2272,9 +2282,11 @@ export default function GenerateClient() {
   // Push #109 — free users at 0 credits get the urgency modal (with the
   // 10-min countdown); everyone else keeps the standard out-of-credits
   // modal.
-  function openOutOfCreditsModal() {
+  function openOutOfCreditsModal(reason: 'credits' | 'studio' | 'creator' = 'credits') {
     // #380 — unified: every out-of-credits moment now opens the 3-plan upgrade
     // modal (Spark/Basic/Pro) so the user picks a plan at peak intent.
+    // KINEO-PLAN-GATE-MODAL — carry the reason so the headline is accurate.
+    setUpgradeReason(reason)
     setShowUpgradeModal(true)
   }
 
@@ -2838,6 +2850,7 @@ export default function GenerateClient() {
           Analyze / Generate-Similar click when credits <= 0. */}
       {showUpgradeModal && (
         <UpgradeModal
+          reason={upgradeReason}
           loading={upgradeLoading}
           onUpgrade={(tier) => {
             // #380 — straight to Stripe via the working GET checkout route.
@@ -6101,10 +6114,12 @@ function UpgradeModal({
   loading,
   onUpgrade,
   onClose,
+  reason = 'credits',
 }: {
   loading: boolean
   onUpgrade: (tier: 'starter' | 'basic' | 'pro') => void
   onClose: () => void
+  reason?: 'credits' | 'studio' | 'creator'
 }) {
   // #466 — live urgency countdown for the founding 50%-off offer. 15 min from
   // first open, persisted in localStorage so it survives dismiss/reopen/reload.
@@ -6134,6 +6149,24 @@ function UpgradeModal({
     basic: '50 Shorts / month',
     pro: '150 credits · up to 5 AI-generated videos',
   }
+  // KINEO-PLAN-GATE-MODAL — accurate headline per reason: a real credit shortage
+  // vs an engine that needs a higher plan. Users who HAVE credits but picked a
+  // plan-gated engine no longer see a misleading "you're out of credits".
+  const HEAD: Record<string, { title: string; sub: string }> = {
+    credits: {
+      title: "You're out of credits 🎉",
+      sub: 'Keep the momentum going — unlock daily posting and never get stuck mid-idea again. Cancel anytime · 7-day money-back guarantee.',
+    },
+    creator: {
+      title: 'Unlock AI-generated videos 🤖',
+      sub: 'AI-generated videos are on the Creator & Studio plans. Pick a plan below to go from stock footage to full AI scenes. Cancel anytime · 7-day money-back.',
+    },
+    studio: {
+      title: 'Unlock Cinematic AI 🎬',
+      sub: 'The Cinematic (Kling) engine is a Studio feature — our highest visual quality. Upgrade to Studio to use it. Cancel anytime · 7-day money-back.',
+    },
+  }
+  const head = HEAD[reason] ?? HEAD.credits
   return (
     <div
       role="dialog"
@@ -6171,10 +6204,10 @@ function UpgradeModal({
           id="upgrade-modal-title"
           style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1.25, margin: 0, marginBottom: 8 }}
         >
-          You&apos;re out of credits 🎉
+          {head.title}
         </h2>
         <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, marginBottom: 14 }}>
-          Keep the momentum going — unlock daily posting and never get stuck mid-idea again. Cancel anytime · 7-day money-back guarantee.
+          {head.sub}
         </p>
 
         {/* #466 — social proof + live urgency right at the decision point */}
