@@ -225,10 +225,10 @@ export default function ExitIntentOffer() {
         </span>
 
         <h2 id="exit-offer-title" className="text-2xl font-black text-[#f5f5f7] mb-2 text-balance">
-          Wait — get 10 Shorts for <span style={{ color: '#2997ff' }}>$4.90</span>
+          Wait — get 25 Shorts for <span style={{ color: '#2997ff' }}>$4.90</span>
         </h2>
         <p id="exit-offer-desc" className="text-[13.5px] text-[#86868b] mb-5 leading-relaxed">
-          One payment, 10 finished AI Shorts. Credits never expire — try the engine before any monthly plan.
+          One payment, 25 finished AI Shorts. Credits never expire — try the engine before any monthly plan.
         </p>
 
         <button
@@ -243,7 +243,7 @@ export default function ExitIntentOffer() {
             cursor: 'pointer',
           }}
         >
-          {buying ? 'Loading…' : 'Get 10 Shorts — $4.90 →'}
+          {buying ? 'Loading…' : 'Get 25 Shorts — $4.90 →'}
         </button>
 
         {promoApplied ? (

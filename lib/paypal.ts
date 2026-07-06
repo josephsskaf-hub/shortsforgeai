@@ -35,7 +35,8 @@ export const PAYPAL_PLAN_CREDITS: Record<PayPalTier, number> = {
   pro: 400,
 }
 
-export const PAYPAL_PACK = { credits: 10, usd: '4.90', name: 'Kineo — Starter Pack (10 Fast Shorts)' }
+// KINEO-PACK-25-2026-07-06 — 25 Fast Shorts for $4.90 (was 10). ~$1 cost, ~80% margin.
+export const PAYPAL_PACK = { credits: 25, usd: '4.90', name: 'Kineo — Starter Pack (25 Fast Shorts)' }
 
 export function paypalAdminClient() {
   return createSupabaseAdmin(

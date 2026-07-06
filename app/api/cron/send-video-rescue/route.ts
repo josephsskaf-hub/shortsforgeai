@@ -60,7 +60,7 @@ You already did the hard part — you generated a real Short with AI: script, vo
 If you want to keep posting without the hassle, two easy ways to keep going:
 
 - Founding offer: 50% off your first month. Cancel anytime, 7-day money-back: ${upgradeUrl}
-- Not ready for a subscription? Grab 10 more Shorts for $4.90, one-time (no plan): ${packUrl}
+- Not ready for a subscription? Grab 25 more Shorts for $4.90, one-time (no plan): ${packUrl}
 
 Or just make another one right now: ${makeUrl}
 

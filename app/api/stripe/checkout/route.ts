@@ -79,9 +79,12 @@ function resolveCurrency(country: string): Currency {
 // later. Credited by the webhook via metadata.pack_credits (currency-proof,
 // see webhook Path A). No Stripe product needed — inline price_data.
 const STARTER_PACK = {
-  credits: 10,
+  // KINEO-PACK-25-2026-07-06 — bumped 10→25 Fast Shorts for the same $4.90.
+  // Fast costs ~$0.04/video, so 25 videos = ~$1.00 cost vs $4.90 = ~80% margin.
+  // A far stronger entry offer at basically the same cost.
+  credits: 25,
   name: 'Kineo — Starter Pack',
-  description: 'One-time: 10 Fast Shorts (no subscription).',
+  description: 'One-time: 25 Fast Shorts (no subscription).',
 }
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }

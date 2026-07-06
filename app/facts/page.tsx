@@ -38,7 +38,7 @@ const FACTS: { fact: string }[] = [
   { fact: 'Output format is 9:16 vertical MP4, ready for YouTube Shorts, TikTok and Instagram Reels.' },
   { fact: 'Kineo has three engines: Fast Mode (curated stock footage, 1 credit per video), AI Generated (Seedance text-to-video scenes, 40 credits per video) and Cinematic (Kling premium engine, 90 credits per video).' },
   { fact: 'The first Short is free and no credit card is required. The free trial output carries a small watermark; all paid exports are watermark-free.' },
-  { fact: 'The Starter Pack costs $4.90 one-time and includes 10 Fast Mode Shorts, with no subscription.' },
+  { fact: 'The Starter Pack costs $4.90 one-time and includes 25 Fast Mode Shorts, with no subscription.' },
   { fact: 'The Starter plan costs $9.90/month for 50 credits — up to 50 Fast Mode videos per month ($99/year on annual billing).' },
   { fact: 'The Creator plan costs $19.90/month for 240 credits — 6 AI Generated videos per month on the Seedance engine ($199/year on annual billing).' },
   { fact: 'The Studio plan costs $37.90/month for 400 credits — about 4 Cinematic videos on the Kling engine, or up to 10 videos on Seedance ($379/year on annual billing).' },
@@ -57,7 +57,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'How much does Kineo cost?',
-    a: 'From $4.90 (one-time Starter Pack, 10 Shorts). Subscriptions: Starter $9.90/month, Creator $19.90/month, Studio $37.90/month. The first Short is free with no credit card.',
+    a: 'From $4.90 (one-time Starter Pack, 25 Shorts). Subscriptions: Starter $9.90/month, Creator $19.90/month, Studio $37.90/month. The first Short is free with no credit card.',
   },
   {
     q: 'How long does it take to generate a video?',

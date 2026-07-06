@@ -404,9 +404,9 @@ export default function PricingPage() {
             </span>
             <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-[15.5px] font-black text-[#f5f5f7]">
-                Start with 10 Shorts — <span style={{ color: '#2997ff' }}>$4.90</span> one-time
+                Start with 25 Shorts — <span style={{ color: '#2997ff' }}>$4.90</span> one-time
               </span>
-              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Get 10 Shorts →</span>
+              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Get 25 Shorts →</span>
             </span>
             <span className="mt-1.5 block text-[12px] font-semibold text-[#86868b]">
               No subscription · credits never expire · the lowest-commitment way to try the engine before picking a monthly plan.
@@ -421,7 +421,7 @@ export default function PricingPage() {
             }}
             className="mt-2 block w-full rounded-xl border border-white/[0.08] px-4 py-2 text-center text-[12.5px] font-bold text-[#f5f5f7] transition hover:bg-white/5 hover:border-[#2997ff]/40"
           >
-            or get the 10-Short pack with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> ($4.90)
+            or get the 25-Short pack with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> ($4.90)
           </button>
         </div>
 

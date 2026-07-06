@@ -254,7 +254,7 @@ export default function KineoLanding({ initialUser }: Props) {
               <Link className="btn btn-o" href="/signup">Continue with Studio</Link>
             </div>
           </div>
-          <div className="snote">Not ready for a plan? <b>Start with 10 Shorts for $4.90</b> — one-time, no subscription, credits never expire.</div>
+          <div className="snote">Not ready for a plan? <b>Start with 25 Shorts for $4.90</b> — one-time, no subscription, credits never expire.</div>
           <div className="pricing-more"><Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link></div>
         </div>
       </section>

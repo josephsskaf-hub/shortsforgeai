@@ -200,10 +200,10 @@ export async function POST(req: NextRequest) {
           const amount = session.amount_total ?? 0
           let creditsToAdd = metaCredits > 0 ? metaCredits : 0
           if (creditsToAdd === 0) {
-            // Legacy Payment-Link amounts (USD): $9 → 10, $19 → 25, $4.90 → 10.
+            // Legacy Payment-Link amounts (USD): $9 → 10, $19 → 25, $4.90 → 25.
             if (amount === 900) creditsToAdd = 10
             else if (amount === 1900) creditsToAdd = 25
-            else if (amount === 490) creditsToAdd = 10
+            else if (amount === 490) creditsToAdd = 25 // KINEO-PACK-25 — $4.90 pack now 25 Fast Shorts
           }
 
           if (creditsToAdd === 0) {

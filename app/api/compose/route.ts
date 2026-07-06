@@ -272,7 +272,7 @@ export async function POST(req: NextRequest) {
       if (quality === 'fast' && (prof?.video_credits ?? 0) < 1) {
         return NextResponse.json(
           {
-            error: "You've used your free videos. Get 10 more Shorts for $4.90, or upgrade to a plan for unlimited posting.",
+            error: "You've used your free videos. Get 25 more Shorts for $4.90, or upgrade to a plan for unlimited posting.",
             upsell: 'credits',
             outOfCredits: true,
             balance: prof?.video_credits ?? 0,

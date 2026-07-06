@@ -2734,7 +2734,7 @@ export default function GenerateClient() {
               ⚡ {credits !== null ? `${credits} video credit${credits === 1 ? '' : 's'} left` : 'Fast videos'}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              Each Fast video uses 1 credit. Out of credits? Get 10 more Shorts for $4.90, or go unlimited with a plan. (Free videos include our watermark.)
+              Each Fast video uses 1 credit. Out of credits? Get 25 more Shorts for $4.90, or go unlimited with a plan. (Free videos include our watermark.)
             </span>
           </div>
         </div>
@@ -3102,7 +3102,7 @@ export default function GenerateClient() {
               <span className="text-base">🎉</span>
               {/* Marker: KINEO-FREE-TIER-FAST-2026-07-05 — free tier = Fast only, no free AI */}
               <span>
-                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start. Get 10 more for $4.90, or a plan for unlimited.
+                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start. Get 25 more for $4.90, or a plan for unlimited.
               </span>
             </div>
           )}
@@ -4271,7 +4271,7 @@ export default function GenerateClient() {
                     }}
                   >
                     Not ready for a subscription?{' '}
-                    <span style={{ color: '#2997ff' }}>Get 10 Shorts for $4.90 →</span>
+                    <span style={{ color: '#2997ff' }}>Get 25 Shorts for $4.90 →</span>
                     <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
                       One-time · no subscription · credits never expire
                     </span>
@@ -6396,7 +6396,7 @@ function UpgradeModal({
           }}
         >
           Not ready for a subscription?{' '}
-          <span style={{ color: '#2997ff' }}>Start with 10 Shorts for $4.90 →</span>
+          <span style={{ color: '#2997ff' }}>Start with 25 Shorts for $4.90 →</span>
           <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
             One-time · no subscription · credits never expire
           </span>
