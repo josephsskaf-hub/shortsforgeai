@@ -41,7 +41,7 @@ const FACTS: { fact: string }[] = [
   { fact: 'The Starter Pack costs $4.90 one-time and includes 10 Fast Mode Shorts, with no subscription.' },
   { fact: 'The Starter plan costs $9.90/month for 50 credits — up to 50 Fast Mode videos per month ($99/year on annual billing).' },
   { fact: 'The Creator plan costs $19.90/month for 240 credits — 6 AI Generated videos per month on the Seedance engine ($199/year on annual billing).' },
-  { fact: 'The Studio plan costs $37.90/month for 400 credits — about 6 Cinematic videos on the Kling engine, or up to 10 videos on Seedance ($379/year on annual billing).' },
+  { fact: 'The Studio plan costs $37.90/month for 400 credits — about 4 Cinematic videos on the Kling engine, or up to 10 videos on Seedance ($379/year on annual billing).' },
   { fact: 'Credits never expire, plans are month-to-month, and subscriptions can be cancelled anytime in one click.' },
   { fact: 'Users own every video Kineo generates, including full monetization rights on YouTube, TikTok and Instagram.' },
   { fact: 'Users can paste their own script and choose "Use my script as is" — the AI then narrates it word for word without rewriting.' },

@@ -1138,7 +1138,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   onClick={() => { trackHomepageEvent('hero_demo_render_cta'); goToGenerate() }}
                   className="btn-neon px-5 py-3 text-[14px]"
                 >
-                  🎬 Turn this into a video — free (30 credits)
+                  🎬 Turn this into a video — free (40 credits)
                 </button>
                 <button
                   type="button"
@@ -1695,8 +1695,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 {/* Push #276 — per-tier value highlight (paid plans only) */}
                 <p className="mt-3 text-center text-[12px] font-bold text-cyan-400">
                   {plan.tier === 'starter' && '⚡ 50 Fast videos/month'}
-                  {plan.tier === 'basic' && '✨ 8 AI-generated videos/month (Seedance)'}
-                  {plan.tier === 'pro' && '🎬 8 cinematic AI videos/month (Kling)'}
+                  {plan.tier === 'basic' && '✨ 6 AI-generated videos/month (Seedance)'}
+                  {plan.tier === 'pro' && '🎬 ~4 cinematic AI videos/month (Kling)'}
                 </p>
                 <p className="mt-1 text-center text-[11.5px] font-semibold text-[#94A3B8]">
                   7-day money-back guarantee · Cancel anytime
@@ -2331,7 +2331,7 @@ function featureListFor(tier: 'free' | 'starter' | 'basic' | 'pro'): string[] {
   return [
     '🎬 Cinematic AI videos (Kling) — top quality',
     '✨ AI Generated videos (Seedance) included',
-    `${PLANS.pro.credits} credits/month — AI Gen 30 · Cinematic 45`,
+    `${PLANS.pro.credits} credits/month — AI Gen 40 · Cinematic 90`,
     'AI script + neural voiceover pipeline',
     'Auto-captions engine',
     'Watermark-free MP4 output',

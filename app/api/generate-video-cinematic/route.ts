@@ -369,7 +369,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: freeAlreadyUsed
-            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 45' : 'AI Generated needs 30'} credits. You have ${balance}.`
+            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 90' : 'AI Generated needs 40'} credits. You have ${balance}.`
             : `This needs ${cost} credits. You have ${balance}.`,
           needed: cost,
           balance,

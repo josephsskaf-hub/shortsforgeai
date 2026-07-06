@@ -29,7 +29,7 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   basic: {
     name: 'Kineo — Creator',
-    description: '8 AI-generated videos / month (Seedance engine)',
+    description: '6 AI-generated videos / month (Seedance engine)',
     credits: 240,
   },
   pro: {

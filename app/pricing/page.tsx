@@ -96,9 +96,9 @@ function buildPricing() {
       // KINEO-STUDIO-400-2026-07-06 — Studio's extra value: 400 credits (vs
       // Creator's 240), the exclusive Kling cinematic engine at 1080p, priority
       // render queue, and premium voices. Copy aligned to the 400-credit grant.
-      tagline: 'Cinematic quality — our best AI engine. 400 credits/month (vs Creator\'s 240) + the cinematic Kling engine at 1080p, priority render queue — about 6 premium videos, or up to 10 with Seedance.',
+      tagline: 'Cinematic quality — our best AI engine. 400 credits/month (vs Creator\'s 240) + the cinematic Kling engine at 1080p, priority render queue — about 4 premium videos, or up to 10 with Seedance.',
       features: [
-        '🎬 ~6 cinematic AI videos/mo (Kling) — Studio only',
+        '🎬 ~4 cinematic AI videos/mo (Kling) — Studio only',
         '67% more credits than Creator (400 vs 240/mo)',
         '➕ Or stretch credits to ~10 Seedance videos/mo',
         '⚡ Priority render queue + premium voices',
@@ -757,14 +757,14 @@ export default function PricingPage() {
                     pro: '✅',
                   },
                   {
-                    label: 'AI Generated videos (Seedance, 30 cr)',
+                    label: 'AI Generated videos (Seedance, 40 cr)',
                     free: '✅ 1 free',
                     starter: '—',
                     basic: '✅',
                     pro: '✅',
                   },
                   {
-                    label: 'Cinematic AI videos (Kling, 45 cr)',
+                    label: 'Cinematic AI videos (Kling, 90 cr)',
                     free: '—',
                     starter: '—',
                     basic: '—',
