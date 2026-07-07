@@ -42,7 +42,8 @@ function creditCostFor(quality: Quality): number {
       // STANDARD video-credit deduction path (avatar is in the
       // shouldDeductCredits whitelist below), so the old debit_avatar_credit
       // block was removed — there is exactly ONE debit path for avatar.
-      return 120
+      // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video).
+      return 220
     case 'cinematic_ai':
       // Push #491 — repriced 30 → 40 (Seedance, ~6 clips/video margin).
       return 40

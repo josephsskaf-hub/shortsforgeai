@@ -135,7 +135,8 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // KINEO-AVATAR-120-2026-07-06 — this now holds the UNIVERSAL video_credits
   // balance (avatar costs 120 of these, was the separate avatar_credits @ 1).
   // Kept the variable name to minimize churn; it reads `credits` from /api/credits.
-  const AVATAR_COST = 120
+  // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video → ~47% margem Creator)
+  const AVATAR_COST = 220
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)

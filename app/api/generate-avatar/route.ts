@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
     // The 402 matches the universal out-of-credits shape used by Fast/compose
     // (upsell:'credits' → the $4.90 pack / plan upgrade modal), NOT the retired
     // avatar_pack. Voice dry runs (internal, cents of TTS) skip the gate.
-    const AVATAR_CREDIT_COST = 120
+    const AVATAR_CREDIT_COST = 220 // KINEO-AVATAR-220-2026-07-07 (repriced 120->220, custo real ~$9.60)
     if (!dryRun) {
       const { data: avProfile } = await supabase
         .from('profiles')
