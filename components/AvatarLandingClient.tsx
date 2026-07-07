@@ -8,19 +8,18 @@
 import { useState } from 'react'
 import AvatarDemoLoop from '@/components/AvatarDemoLoop'
 
-// Keep in sync with AVATAR_PACKS in app/api/stripe/checkout/route.ts.
-const PACKS = [
-  { id: 'avatar1', videos: 1, usd: 11.9, per: '11.90', tag: null as string | null },
-  { id: 'avatar3', videos: 3, usd: 29.9, per: '9.97', tag: 'Popular' },
-  { id: 'avatar10', videos: 10, usd: 79.9, per: '7.99', tag: 'Best value' },
-]
+// KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — the one-time avatar-pack pricing grid
+// (avatar1/avatar3/avatar10 → ?pack=avatar* checkout) was removed. Those packs
+// sold the now-unspendable avatar_credits balance. AI Avatar videos now cost 120
+// universal video_credits from any plan, so the pricing section is replaced by a
+// CTA into the generator (/generate?avatar=1). PACKS array removed.
 
 const FAQ = [
   { q: 'How real does it look?', a: '720p lip-synced video — the person’s mouth matches your script word for word, with b-roll, captions and music around it.' },
   { q: 'Whose photo can I use?', a: 'Yours, or anyone’s with their permission. One sharp, front-facing photo works best. You confirm you have the right to use it on upload.' },
   { q: 'How long does it take?', a: 'About a minute of your time, a few minutes of rendering. No camera, no mic, no editing.' },
-  { q: 'Do Avatar Credits expire?', a: 'No. They’re a one-time purchase, separate from your plan credits, and never expire.' },
-  { q: 'What if a render fails?', a: 'You’re never charged for a failed render. Your credit stays in your balance.' },
+  { q: 'How much does it cost?', a: 'An AI Avatar video uses 120 credits from your plan — the same universal credits that power every Kineo video. No separate add-on to buy.' },
+  { q: 'What if a render fails?', a: 'You’re never charged for a failed render. Your credits stay in your balance.' },
 ]
 
 export default function AvatarLandingClient() {
@@ -51,7 +50,9 @@ export default function AvatarLandingClient() {
           <a href="/generate?avatar=1&utm_source=avatar_landing" className="rounded-xl px-8 py-4 text-base font-extrabold" style={{ background: 'linear-gradient(135deg,#2997ff,#14b8a6)', color: '#04130d', textDecoration: 'none' }}>
             Make my AI Avatar video →
           </a>
-          <div className="text-xs" style={{ color: '#2997ff', fontWeight: 700 }}>🚀 Founding price live — from $11.90/video</div>
+          {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — was "from $11.90/video" (a
+              retired avatar pack). Avatar videos now use universal plan credits. */}
+          <div className="text-xs" style={{ color: '#2997ff', fontWeight: 700 }}>🚀 Now built into every plan — powered by your universal credits</div>
         </div>
       </section>
 
@@ -73,32 +74,25 @@ export default function AvatarLandingClient() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* Pricing — KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — the one-time avatar-pack
+          grid (?pack=avatar*) was removed. AI Avatar videos now run on the same
+          universal credits as every Kineo video (120 credits per avatar video),
+          so this section drives to the generator / plans instead of a pack sale. */}
       <section className="mx-auto max-w-3xl px-5 py-10">
-        <h2 className="text-center text-2xl font-black" style={{ color: '#a7f3d0' }}>Simple, one-time pricing</h2>
-        <p className="text-center text-xs mt-1 mb-6" style={{ color: '#86868b' }}>No subscription. Credits never expire. Studio members get 15% off.</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {PACKS.map((p) => (
-            <a
-              key={p.id}
-              href={`/api/stripe/checkout?pack=${p.id}`}
-              className="relative rounded-xl p-5 block"
-              style={{
-                background: p.tag === 'Popular' ? 'rgba(41,151,255,0.12)' : 'rgba(255,255,255,0.03)',
-                border: p.tag === 'Popular' ? '1.5px solid rgba(41,151,255,0.65)' : '1.5px solid rgba(255,255,255,0.1)',
-                textDecoration: 'none',
-              }}
-            >
-              {p.tag && (
-                <span className="absolute -top-2.5 left-4 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: '#2997ff', color: '#04130d' }}>{p.tag}</span>
-              )}
-              <div className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{p.videos} avatar video{p.videos > 1 ? 's' : ''}</div>
-              <div className="mt-1 text-3xl font-black" style={{ color: '#2997ff' }}>${p.usd}</div>
-              <div className="mt-1 text-[11px]" style={{ color: '#86868b' }}>${p.per} / video</div>
-              <div className="mt-4 rounded-lg py-2 text-center text-sm font-bold" style={{ background: 'linear-gradient(135deg,#2997ff,#14b8a6)', color: '#04130d' }}>Get started →</div>
-            </a>
-          ))}
+        <h2 className="text-center text-2xl font-black" style={{ color: '#a7f3d0' }}>Included with your plan</h2>
+        <p className="text-center text-xs mt-1 mb-6" style={{ color: '#86868b' }}>No separate add-on. An AI Avatar video uses 120 universal credits — the same credits that power every Kineo video.</p>
+        <div className="flex justify-center">
+          <a
+            href="/generate?avatar=1&utm_source=avatar_landing_pricing"
+            className="rounded-xl px-8 py-4 text-base font-extrabold inline-block"
+            style={{ background: 'linear-gradient(135deg,#2997ff,#14b8a6)', color: '#04130d', textDecoration: 'none' }}
+          >
+            Make my AI Avatar video →
+          </a>
         </div>
+        <p className="text-center text-xs mt-4" style={{ color: '#64748b' }}>
+          Need more credits? <a href="/pricing" style={{ color: '#2997ff', textDecoration: 'none', fontWeight: 700 }}>See plans →</a>
+        </p>
       </section>
 
       {/* FAQ */}

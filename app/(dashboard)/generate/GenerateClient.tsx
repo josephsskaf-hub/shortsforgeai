@@ -12,7 +12,10 @@ import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
-import AvatarPaywallModal from '@/components/AvatarPaywallModal'
+// KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — AvatarPaywallModal import removed.
+// That modal only sold the retired avatar_credits packs (?pack=avatar*). Avatar
+// videos now cost 120 universal credits; the avatar 402 already routes to the
+// universal upgrade modal. The component file is left in place but unused.
 import ReferralMiniCard from '@/components/ReferralMiniCard'
 
 interface TaskHandle {
@@ -441,10 +444,11 @@ export default function GenerateClient() {
   // b-roll carries the rest (same 1 credit, ~85% lower engine cost). Default
   // ON — it's the recommended, margin-friendly mode. 'full' = legacy.
   const [avatarHookMode, setAvatarHookMode] = useState(true)
-  // CP2 — separate avatar-credit balance + paywall modal + home deep-link
-  // (/generate?avatar=1 auto-opens the upload panel).
-  const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
-  const [showAvatarPaywall, setShowAvatarPaywall] = useState(false)
+  // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — the separate avatarCredits balance
+  // state and showAvatarPaywall modal state were removed. The avatar-pack
+  // paywall sold the now-unspendable avatar_credits; avatar videos cost 120
+  // universal credits and the 402 routes to the universal upgrade modal.
+  // /generate?avatar=1 still deep-links to auto-open the upload panel.
   const avatarAutoOpen = searchParams.get('avatar') === '1'
   const avatarComposeRef = useRef<{
     voiceoverUrl: string
@@ -735,8 +739,9 @@ export default function GenerateClient() {
         const data = await res.json()
         if (!cancelled) {
           setCredits(typeof data.credits === 'number' ? data.credits : null)
-          // CP2 — avatar add-on balance travels on the same endpoint.
-          if (typeof data.avatarCredits === 'number') setAvatarCredits(data.avatarCredits)
+          // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — avatarCredits no longer read
+          // into state (paywall retired). The endpoint still returns it for any
+          // legacy balance, but the generate flow ignores it now.
           // Face-app wave 1 — saved face for the one-click avatar library.
           if (typeof data.avatarFaceUrl === 'string' && data.avatarFaceUrl) setSavedFaceUrl(data.avatarFaceUrl)
           // #384 — refresh free-AI-trial availability from the same source.
@@ -2704,14 +2709,10 @@ export default function GenerateClient() {
         .gv-card { animation: fadeUp 0.35s ease both; }
       `}</style>
 
-      {/* CP2 — avatar pack paywall. Rendered at the TOP LEVEL (not inside the
-          step-1 section): the 402 lands while phase==='options', when step 1 is
-          unmounted — a nested modal would never show (CP3 test caught this). */}
-      <AvatarPaywallModal
-        open={showAvatarPaywall}
-        onClose={() => setShowAvatarPaywall(false)}
-        isStudio={isStudio}
-      />
+      {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — <AvatarPaywallModal/> removed.
+          It sold the retired avatar_credits packs. Avatar videos now cost 120
+          universal credits, and a 402 from /api/generate-avatar routes to the
+          universal upgrade modal (handled in the avatar submit path below). */}
 
       {/* Push #415 — ACTIVATION FIX: a brand-new account (no plan, free AI
           video still available) must see a GIFT, not a red out-of-credits

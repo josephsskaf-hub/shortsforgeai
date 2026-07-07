@@ -72,8 +72,11 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
 
   const [fullName, setFullName] = useState('')
   const [credits, setCredits] = useState<number | null>(null)
-  // Settings v3.1 — separate AI Avatar credit balance (the add-on packs).
-  const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
+  // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — the separate avatarCredits state,
+  // its balance rows, and the "Buy avatar credits" link were removed. Avatar
+  // videos now cost 120 universal video_credits; the avatar-credit add-on packs
+  // are retired. The /api/credits endpoint still returns avatarCredits for any
+  // legacy balance, but the account UI no longer surfaces or sells it.
   const [signingOut, setSigningOut] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
@@ -123,10 +126,10 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
       .then((data) => {
         if (cancelled) return
         setCredits(typeof data.credits === 'number' ? data.credits : 0)
-        // Settings v3.1 — same endpoint already carries the avatar balance.
-        setAvatarCredits(typeof data.avatarCredits === 'number' ? data.avatarCredits : 0)
+        // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — avatar credits no longer read
+        // into UI state (the balance rows + buy link were removed).
       })
-      .catch(() => { if (!cancelled) { setCredits(0); setAvatarCredits(null) } })
+      .catch(() => { if (!cancelled) { setCredits(0) } })
     return () => { cancelled = true }
   }, [])
 
@@ -380,7 +383,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <div className="flex flex-col gap-1 mb-5">
                 <ReadOnlyRow label="Current plan" value={planLabel.replace(/^[^ ]+ /, '')} />
                 <ReadOnlyRow label="Video credits" value={credits === null ? '—' : String(credits)} />
-                <ReadOnlyRow label="Avatar credits" value={avatarCredits === null ? '—' : String(avatarCredits)} />
+                {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — "Avatar credits" row removed. */}
                 <ReadOnlyRow label="Member since" value={formatDate(createdAt)} />
               </div>
               {tier !== 'free' ? (
@@ -421,40 +424,10 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               )}
             </div>
 
-            <div
-              className="acc-card rounded-2xl p-6"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
-            >
-              <h2 className="font-bold mb-4" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Add-ons
-              </h2>
-              {/* Settings v3.1 — avatar credit balance, visible at a glance. */}
-              <div
-                className="flex items-center justify-between rounded-xl px-4 py-3 mb-3"
-                style={{ background: 'rgba(0,0,0,.25)', border: '1px solid var(--border)' }}
-              >
-                <span className="text-sm font-semibold" style={{ color: 'var(--text2)' }}>🎭 Avatar credits</span>
-                <span
-                  className="text-lg font-black"
-                  style={{ color: (avatarCredits ?? 0) > 0 ? '#2997ff' : 'var(--muted)' }}
-                >
-                  {avatarCredits === null ? '—' : avatarCredits}
-                </span>
-              </div>
-              <Link
-                href="/avatar"
-                className="acc-row-btn flex items-center justify-between w-full rounded-xl px-4 py-3 text-sm font-bold"
-                style={{
-                  background: 'rgba(41,151,255,.07)',
-                  border: '1px solid rgba(41,151,255,.3)',
-                  color: '#2997ff',
-                  textDecoration: 'none',
-                }}
-              >
-                <span>{(avatarCredits ?? 0) > 0 ? 'Buy more avatar credits — from $9.90/video' : 'Get AI Avatar credits — from $9.90/video'}</span>
-                <span aria-hidden>→</span>
-              </Link>
-            </div>
+            {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — the "Add-ons" card (avatar
+                credit balance + "Buy avatar credits — from $X/video" link to
+                /avatar) was removed. Avatar packs sold the now-unspendable
+                avatar_credits; avatar videos use 120 universal video_credits. */}
 
             <div
               className="rounded-2xl p-5"
@@ -535,15 +508,8 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                       {tier === 'free' ? 'free plan total' : 'monthly included'}
                     </div>
                   </div>
-                  {/* Settings v3.1 — avatar credits, the separate add-on balance. */}
-                  <div>
-                    <div className="font-black text-lg" style={{ color: (avatarCredits ?? 0) > 0 ? '#2997ff' : 'var(--text2)', lineHeight: 1 }}>
-                      {avatarCredits === null ? '—' : avatarCredits}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
-                      🎭 avatar credits · never expire
-                    </div>
-                  </div>
+                  {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — avatar-credit usage
+                      stat removed (packs retired; avatar uses universal credits). */}
                 </div>
               </div>
 
