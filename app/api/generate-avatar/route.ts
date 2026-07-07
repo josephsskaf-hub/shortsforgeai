@@ -206,25 +206,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── CP2 paywall — avatar videos are paid via the SEPARATE avatar_credits
-    // add-on (never plan credits). This is only the upfront balance gate; the
-    // actual 1-credit DEBIT happens on SUCCESS in compose/status, so a failed
-    // VEED/render never charges (protection rule). The client turns this 402
-    // into the avatar pack checkout modal ("paywall claro"). Voice dry runs
-    // (internal, cents of TTS) skip the gate.
+    // KINEO-AVATAR-120-2026-07-06 — avatar videos now cost 120 UNIVERSAL
+    // video_credits (was the separate avatar_credits add-on @ 1/video). This is
+    // only the upfront balance gate; the actual 120-credit DEBIT happens on
+    // SUCCESS in compose/status via debit_video_credits (idempotent by
+    // render_id), so a failed VEED/render never charges (protection rule).
+    // The 402 matches the universal out-of-credits shape used by Fast/compose
+    // (upsell:'credits' → the $4.90 pack / plan upgrade modal), NOT the retired
+    // avatar_pack. Voice dry runs (internal, cents of TTS) skip the gate.
+    const AVATAR_CREDIT_COST = 120
     if (!dryRun) {
       const { data: avProfile } = await supabase
         .from('profiles')
-        .select('avatar_credits')
+        .select('video_credits')
         .eq('id', user.id)
         .single()
-      const avatarBalance = avProfile?.avatar_credits ?? 0
-      if (avatarBalance < 1) {
+      const videoCreditBalance = avProfile?.video_credits ?? 0
+      if (videoCreditBalance < AVATAR_CREDIT_COST) {
         return NextResponse.json(
           {
-            error: 'Avatar videos use Avatar Credits. Grab a pack to render this video.',
-            upsell: 'avatar_pack',
-            balance: avatarBalance,
+            error: `Avatar videos cost ${AVATAR_CREDIT_COST} credits. You have ${videoCreditBalance}. Get 25 more Shorts for $4.90, or upgrade to a plan for unlimited posting.`,
+            upsell: 'credits',
+            outOfCredits: true,
+            balance: videoCreditBalance,
+            upgrade: '/pricing',
           },
           { status: 402 },
         )
@@ -428,9 +433,13 @@ export async function POST(req: NextRequest) {
       duration,
       speed: speed ?? 1.0,
       verbatim,
-      // Cost contract for the UI ("estimated cost BEFORE render"). 1 avatar
-      // video = 1 avatar credit; the USD figure is internal accounting.
-      avatar_credits_needed: 1,
+      // KINEO-AVATAR-120-2026-07-06 — Cost contract for the UI ("estimated cost
+      // BEFORE render"). 1 avatar video = 120 UNIVERSAL video_credits (was 1
+      // separate avatar credit). Key kept as-is for client compatibility but the
+      // value now reflects the 120 universal-credit charge; credits_needed is a
+      // clearer alias reading the same number.
+      avatar_credits_needed: AVATAR_CREDIT_COST,
+      credits_needed: AVATAR_CREDIT_COST,
       estimated_seconds: Math.round(estSeconds),
       estimated_cost_usd: Number((estSeconds * usdPerSecond).toFixed(2)),
     })

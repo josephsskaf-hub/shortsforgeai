@@ -132,6 +132,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [voiceError, setVoiceError] = useState<string | null>(null)
 
   // ── Credits + run state ───────────────────────────────────────────────
+  // KINEO-AVATAR-120-2026-07-06 — this now holds the UNIVERSAL video_credits
+  // balance (avatar costs 120 of these, was the separate avatar_credits @ 1).
+  // Kept the variable name to minimize churn; it reads `credits` from /api/credits.
+  const AVATAR_COST = 120
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -162,7 +166,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       .catch(() => {})
     fetch('/api/credits', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setAvatarCredits(typeof d?.avatarCredits === 'number' ? d.avatarCredits : 0))
+      // KINEO-AVATAR-120-2026-07-06 — read the UNIVERSAL balance (`credits`),
+      // not the retired `avatarCredits` add-on.
+      .then((d) => setAvatarCredits(typeof d?.credits === 'number' ? d.credits : 0))
       .catch(() => {})
     return () => { cancelledRef.current = true }
   }, [isLoggedIn])
@@ -436,7 +442,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       })
       const data = await res.json()
       if (res.status === 402) {
-        setError('You need an Avatar Credit for this video. Grab a pack below — it’s debited only when your video succeeds.')
+        // KINEO-AVATAR-120-2026-07-06 — universal-credit wall (120 credits).
+        setError(typeof data?.error === 'string'
+          ? data.error
+          : `Avatar videos cost ${AVATAR_COST} credits — you’re short. Credits are debited only when your video succeeds.`)
         setPhase('failed')
         return
       }
@@ -541,7 +550,8 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         setProgress(100)
         setPhase('done')
         if (data.creditsDeducted === true) {
-          setAvatarCredits((c) => (typeof c === 'number' ? Math.max(0, c - 1) : c))
+          // KINEO-AVATAR-120-2026-07-06 — 120 universal credits per avatar video.
+          setAvatarCredits((c) => (typeof c === 'number' ? Math.max(0, c - AVATAR_COST) : c))
         }
         try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
         return
@@ -935,13 +945,14 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               {busy ? 'Working…' : '🎭 Generate my avatar video'}
             </button>
             <p className="text-[12px] text-center" style={{ color: 'var(--muted)' }}>
-              1 Avatar Credit · debited only on success ·{' '}
-              <span style={{ color: (avatarCredits ?? 0) > 0 ? '#2997ff' : '#f87171', fontWeight: 700 }}>
+              {/* KINEO-AVATAR-120-2026-07-06 — 120 universal credits per avatar video */}
+              {AVATAR_COST} credits · debited only on success ·{' '}
+              <span style={{ color: (avatarCredits ?? 0) >= AVATAR_COST ? '#2997ff' : '#f87171', fontWeight: 700 }}>
                 you have {avatarCredits === null ? '—' : avatarCredits}
               </span>
-              {(avatarCredits ?? 1) < 1 && (
+              {(avatarCredits ?? AVATAR_COST) < AVATAR_COST && (
                 <>
-                  {' '}· <Link href="/generate?avatar=1" style={{ color: '#2997ff' }}>get credits from $9.90</Link>
+                  {' '}· <Link href="/pricing" style={{ color: '#2997ff' }}>get credits from $4.90</Link>
                 </>
               )}
             </p>

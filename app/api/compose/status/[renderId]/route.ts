@@ -13,10 +13,13 @@ export const maxDuration = 60
 // table; explicit dynamic so Next never tries to prerender it.
 export const dynamic = 'force-dynamic'
 
-// feature/ai-avatar — 'avatar' added. Checkpoint 1: cost 0 and NOT in the
-// shouldDeductCredits whitelist (no billing exists yet). Checkpoint 2 wires
-// the separate avatar-credits debit here (on SUCCESS only — protection rule:
-// a failed render never charges).
+// feature/ai-avatar — 'avatar' added.
+// KINEO-AVATAR-120-2026-07-06 — avatar is now billed like every other engine:
+// 120 UNIVERSAL video_credits, deducted on SUCCESS only through the standard
+// debit_video_credits path (avatar is in the shouldDeductCredits whitelist).
+// The old separate avatar_credits / debit_avatar_credit billing was retired.
+// Protection rule intact: a failed render never charges (debit is success-only,
+// idempotent by render_id).
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'avatar'
 
 function creditCostFor(quality: Quality): number {
@@ -33,10 +36,13 @@ function creditCostFor(quality: Quality): number {
       // not cost-recovery. Free-plan Fast stays watermarked (see compose route).
       return 1
     case 'avatar':
-      // feature/ai-avatar checkpoint 1 — paid via the SEPARATE avatar-credits
-      // add-on (not video_credits). 0 here so nothing touches video_credits;
-      // the avatar-credit debit arrives with checkpoint 2's billing.
-      return 0
+      // KINEO-AVATAR-120-2026-07-06 — AI Avatar folded into the UNIVERSAL
+      // video_credits system (was the separate avatar_credits add-on @ 1/video).
+      // 120 universal credits per avatar video. This value now drives the
+      // STANDARD video-credit deduction path (avatar is in the
+      // shouldDeductCredits whitelist below), so the old debit_avatar_credit
+      // block was removed — there is exactly ONE debit path for avatar.
+      return 120
     case 'cinematic_ai':
       // Push #491 — repriced 30 → 40 (Seedance, ~6 clips/video margin).
       return 40
@@ -246,12 +252,13 @@ export async function GET(
       // cinematic_token consumed upstream in /api/generate-video. Only
       // Fast Mode still draws from the regular credit pool.
       // Push #315 — cinematic_ai also deducts from video_credits (3 credits).
-      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora'
-      // feature/ai-avatar CP2 — avatar renders debit the SEPARATE avatar_credits
-      // balance (1 per finished video), NEVER video_credits. Success-only, so a
-      // failed VEED/render charges nothing (protection rule). Shares the same
-      // render_id idempotency guard below so refresh/multi-tab can't double-debit.
-      const isAvatarRender = quality === 'avatar'
+      // KINEO-AVATAR-120-2026-07-06 — 'avatar' added to the standard
+      // video_credits deduction whitelist. Avatar now charges 120 universal
+      // credits (creditCostFor('avatar')=120) through the SAME atomic
+      // debit_video_credits RPC as the cinematic engines — success-only,
+      // idempotent by render_id. The separate avatar_credits debit block was
+      // deleted below, so there is exactly one debit path (no double-charge).
+      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'avatar'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
@@ -260,8 +267,10 @@ export async function GET(
       // client ref to false, causing a second deduction for the same render.
       // By checking the DB here we prevent double-charging regardless of
       // how many sessions are polling this render concurrently.
+      // KINEO-AVATAR-120-2026-07-06 — avatar is now inside shouldDeductCredits,
+      // so this guard covers it (no separate isAvatarRender term needed).
       let serverAlreadyDeducted = false
-      if ((shouldDeductCredits || isAvatarRender) && !deductedParam) {
+      if (shouldDeductCredits && !deductedParam) {
         try {
           // The videos table is readable by the owner via RLS (SELECT policy).
           // We use render_id + user_id to confirm this exact render was already
@@ -362,22 +371,12 @@ export async function GET(
           } else {
             console.error('[compose/status] credit fetch error:', fetchError.message)
           }
-        } else if (isAvatarRender) {
-          // feature/ai-avatar CP2 — debit exactly 1 avatar credit on success.
-          // Fix 1 (12/06) — ATOMIC + IDEMPOTENT via debit_avatar_credit RPC:
-          // a credit_debits ledger row keyed by render_id guarantees exactly
-          // one charge per render no matter how many tabs/polls race, and the
-          // decrement (floored at 0) happens inside the DB transaction.
-          const { data: avBalance, error: avRpcErr } = await supabase
-            .rpc('debit_avatar_credit', { p_render: renderId })
-          if (!avRpcErr && typeof avBalance === 'number') {
-            creditsDeducted = true
-            creditsRemaining = null // video_credits chip unaffected
-            console.log(`[compose/status] avatar credit debited (atomic): user ${user.id.slice(0, 8)} balance=${avBalance}`)
-          } else {
-            console.error('[compose/status] avatar credit debit RPC error:', avRpcErr?.message ?? 'no balance returned')
-          }
         } else {
+          // KINEO-AVATAR-120-2026-07-06 — the dedicated avatar debit block
+          // (debit_avatar_credit) was REMOVED here. Avatar now flows through
+          // the shouldDeductCredits branch above (120 universal video_credits
+          // via debit_video_credits), so this else only handles the legacy
+          // cinematic-token engines whose token was consumed at job start.
           // Cinematic — token was consumed at job start. Surface this in
           // the response so the client can still update its "credits left"
           // chip from the regular endpoint without double-decrementing.

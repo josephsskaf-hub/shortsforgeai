@@ -1875,9 +1875,14 @@ export default function GenerateClient() {
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
         if (res.status === 402) {
-          // CP2 — no avatar credits: clear paywall with the 3 one-time packs.
-          if (typeof data?.balance === 'number') setAvatarCredits(data.balance)
-          setShowAvatarPaywall(true)
+          // KINEO-AVATAR-120-2026-07-06 — avatar now costs 120 UNIVERSAL
+          // video_credits (was the separate avatar_credits add-on). The 402 is
+          // the standard universal out-of-credits shape (upsell:'credits'), so
+          // route it through the SAME upgrade modal as Fast/cinematic instead of
+          // the retired avatar-pack paywall.
+          if (typeof data?.balance === 'number') setCredits(data.balance)
+          setError(typeof data?.error === 'string' ? data.error : "You've used your credits.")
+          openOutOfCreditsModal('credits')
           setPhase('options') // back to the options screen, nothing was started
           return
         }
@@ -1887,7 +1892,9 @@ export default function GenerateClient() {
           return
         }
         // compose/status reads quality from falQualityRef when falUsedRef=true;
-        // 'avatar' renders cost 0 video_credits (avatar credits land in checkpoint 2).
+        // KINEO-AVATAR-120-2026-07-06 — 'avatar' renders now cost 120 UNIVERSAL
+        // video_credits, debited on success in compose/status (was 0 / separate
+        // avatar_credits add-on).
         falUsedRef.current = true
         falQualityRef.current = 'avatar'
         setQuality('fast') // cosmetic only — falQualityRef wins while falUsedRef=true
