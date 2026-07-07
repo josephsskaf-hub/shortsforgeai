@@ -41,34 +41,32 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 function buildEmail() {
+  // KINEO-ACTIVATION-COPY-2026-07-06 — free plan gives 2 free videos, NOT
+  // "30 credits" (stale copy that misled every signup). Short, founder-to-user
+  // tone, one CTA to the video creator.
   const url = `${APP_URL}/generate`
   const text = `Hey,
 
-This is the Kineo team — welcome!
+It's the team at Kineo. You signed up a little while ago but haven't made your first video yet — so here's a nudge, because the first one is the fun part.
 
-You created your account a little while ago. Quick heads-up in case you missed it: your account comes with 2 free videos to try — no card needed. Make one in about 60 seconds and see how it feels.
+Your first video is free and takes about 60 seconds. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. A minute later you've got a Short that's ready to post.
 
-Type literally any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. About a minute later you have a ready-to-post Short.
+Make your first video here: ${url}
 
-Make your free video here: ${url}
-
-If anything is confusing or not working, just reply to this email - a real person reads every message.
+Stuck on anything? Just reply to this email — a real person reads every message.
 
 Kineo Team
 usekineo.com`
 
-  const html = text
-    .split('\n')
-    .map((line) =>
-      line.trim() === ''
-        ? '<br/>'
-        : `<p style="margin:0 0 2px;font-family:Arial,sans-serif;font-size:14px;color:#111;line-height:1.55;">${
-            line.includes(url)
-              ? line.replace(url, `<a href="${url}" style="color:#2997ff;font-weight:bold;">${url}</a>`)
-              : line
-          }</p>`
-    )
-    .join('')
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#111;line-height:1.6;max-width:480px;">
+  <p style="margin:0 0 14px;">Hey,</p>
+  <p style="margin:0 0 14px;">It's the team at Kineo. You signed up a little while ago but haven't made your first video yet — so here's a nudge, because the first one is the fun part.</p>
+  <p style="margin:0 0 14px;">Your first video is <strong>free</strong> and takes about 60 seconds. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. A minute later you've got a Short that's ready to post.</p>
+  <p style="margin:0 0 24px;"><a href="${url}" style="display:inline-block;background:#2997ff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 26px;border-radius:10px;">Make my first video →</a></p>
+  <p style="margin:0 0 14px;">Stuck on anything? Just reply to this email — a real person reads every message.</p>
+  <p style="margin:0 0 2px;">Kineo Team</p>
+  <p style="margin:0;"><a href="https://www.usekineo.com" style="color:#2997ff;">usekineo.com</a></p>
+</div>`
 
   return { text, html }
 }
@@ -152,7 +150,7 @@ export async function GET(req: NextRequest) {
           from: FROM_EMAIL,
           to: [email],
           reply_to: 'hello@usekineo.com',
-          subject: 'You have 30 free credits waiting — 1 click away',
+          subject: 'Your first video is 60 seconds away',
           text,
           html,
         }),

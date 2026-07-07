@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
 import { trackSignupSource } from '@/lib/analytics'
+import { isDisposableEmail } from '@/lib/emailValidation'
 
 type Strength = { level: 0 | 1 | 2 | 3 | 4; label: string; color: string }
 
@@ -45,6 +46,18 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    // KINEO-DISPOSABLE-BLOCK-2026-07-06 — reject temp-mail signups BEFORE they
+    // hit Supabase. Free plan = 2 real videos, so throwaway inboxes are pure
+    // credit-burning abuse. Only gates the email path — Google/Apple OAuth
+    // identities can't be disposable, so those flows are untouched.
+    if (isDisposableEmail(email)) {
+      setError(
+        "Please use a permanent email address — disposable inboxes aren't allowed."
+      )
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email,
