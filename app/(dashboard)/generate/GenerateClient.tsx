@@ -473,6 +473,30 @@ export default function GenerateClient() {
   const [publicVideoId, setPublicVideoId] = useState<string | null>(null)
   const [sharedPublic, setSharedPublic] = useState(false)
 
+  // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
+  // A free-plan Fast video ships with a burnt-in watermark. Right after the
+  // render we show a "Remove watermark + 25 Shorts for $4.90" CTA. After the
+  // $4.90 pack purchase, Stripe returns to /generate?wm_unlock=1 and we re-render
+  // THIS same Fast video clean (watermark:false) and swap it into the preview.
+  //  - hasPaid: true once the user bought a pack or plan (hides the CTA).
+  //  - wmUnlocking: true while the clean re-render is running post-purchase.
+  //  - lastFastRenderRef: the exact inputs of the just-made Fast video, so the
+  //    clean re-render reproduces the SAME video (not a fresh random one).
+  const [hasPaid, setHasPaid] = useState(false)
+  const [wmUnlocking, setWmUnlocking] = useState(false)
+  const [wmUnlockError, setWmUnlockError] = useState<string | null>(null)
+  const lastFastRenderRef = useRef<{
+    clip_urls: string[]
+    voiceover_script: string
+    scene_captions: string[]
+    duration: number
+    topic: string
+    language: string
+    vertical?: string
+    speed?: number
+  } | null>(null)
+  const wmUnlockRanRef = useRef(false)
+
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
   // result section. Cleared automatically after ~2s.
   const [copied, setCopied] = useState(false)
@@ -746,6 +770,8 @@ export default function GenerateClient() {
           if (typeof data.avatarFaceUrl === 'string' && data.avatarFaceUrl) setSavedFaceUrl(data.avatarFaceUrl)
           // #384 — refresh free-AI-trial availability from the same source.
           if (typeof data.freeAiUsed === 'boolean') setFreeAiUsed(data.freeAiUsed)
+          // KINEO-WM-CHECKOUT-2026-07-07 — paid flag hides the "remove watermark" CTA.
+          if (typeof data.hasPaid === 'boolean') setHasPaid(data.hasPaid)
           // #404 — plan flags + default the engine to the plan's engine once.
           if (typeof data.isStarter === 'boolean') setIsStarter(data.isStarter)
           if (typeof data.isCreator === 'boolean') setIsCreator(data.isCreator)
@@ -794,9 +820,12 @@ export default function GenerateClient() {
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
           (payload) => {
-            const row = payload.new as { video_credits?: number; cinematic_tokens?: number }
+            const row = payload.new as { video_credits?: number; cinematic_tokens?: number; has_paid?: boolean }
             if (typeof row.video_credits === 'number') setCredits(row.video_credits)
             if (typeof row.cinematic_tokens === 'number') setCinematicTokens(Math.max(0, row.cinematic_tokens))
+            // KINEO-WM-CHECKOUT-2026-07-07 — the instant the pack webhook flips
+            // has_paid, hide the "remove watermark" CTA across tabs.
+            if (typeof row.has_paid === 'boolean') setHasPaid(row.has_paid)
           },
         )
         .subscribe()
@@ -1169,6 +1198,108 @@ export default function GenerateClient() {
   }, [phase, avatarRequestId])
 
   // ────────────────────────────────────────────────────────────────────────
+  // KINEO-WM-CHECKOUT-2026-07-07 — return from the $4.90 "remove watermark"
+  // checkout. Re-render the SAME Fast video WITHOUT the watermark and swap it
+  // into the preview. Payment is verified server-side (webhook-independent) by
+  // /api/compose/unlock, which also flips has_paid so future renders stay clean.
+  useEffect(() => {
+    if (wmUnlockRanRef.current) return
+    if (searchParams?.get('wm_unlock') !== '1') return
+    const sessionId = searchParams?.get('session_id') ?? ''
+    wmUnlockRanRef.current = true
+
+    // Strip the unlock params so a manual refresh can't refire the flow.
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('wm_unlock')
+      url.searchParams.delete('session_id')
+      window.history.replaceState({}, '', url.toString())
+    } catch { /* ignore */ }
+
+    // The purchase succeeded — reflect it immediately + pull the real balance.
+    setHasPaid(true)
+    try { window.dispatchEvent(new Event('creditsChanged')) } catch { /* ignore */ }
+
+    let stored: {
+      clip_urls?: string[]
+      voiceover_script?: string
+      scene_captions?: string[]
+      duration?: number
+      topic?: string
+      language?: string
+      vertical?: string
+      speed?: number
+    } | null = null
+    try {
+      const raw = localStorage.getItem('kineo_wm_unlock')
+      if (raw) stored = JSON.parse(raw)
+    } catch { /* ignore */ }
+    try { localStorage.removeItem('kineo_wm_unlock') } catch { /* ignore */ }
+
+    // No captured render (bought from a different browser / cleared storage):
+    // nothing to rebuild here, but the pack is active — every future Fast video
+    // is watermark-free. Degrade silently (no error).
+    if (
+      !stored ||
+      !sessionId ||
+      !Array.isArray(stored.clip_urls) ||
+      stored.clip_urls.length === 0 ||
+      !stored.voiceover_script
+    ) {
+      setWmUnlocking(false)
+      return
+    }
+
+    const inputs = stored
+    setWmUnlocking(true)
+    setWmUnlockError(null)
+    ;(async () => {
+      try {
+        const res = await fetch('/api/compose/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, ...inputs }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok || !data || typeof data.render_id !== 'string') {
+          // Safe degradation: the pack is active; the user can regenerate a clean
+          // Fast video. The (already-downloadable) watermarked video is unaffected.
+          setWmUnlocking(false)
+          setWmUnlockError(
+            typeof data?.error === 'string'
+              ? data.error
+              : "Your pack is active — generate a new Fast video and it'll be watermark-free.",
+          )
+          return
+        }
+        // Reuse the standard composing → done pipeline to swap in the clean video.
+        falUsedRef.current = false
+        deductedRef.current = false
+        composeStartedRef.current = true // block the clips_ready effect from firing
+        if (typeof inputs.duration === 'number') setDuration(inputs.duration as Duration)
+        if (typeof inputs.topic === 'string') setPrompt(inputs.topic)
+        setQuality('fast')
+        setMode('fast')
+        setRenderId(data.render_id)
+        setRenderProgress(5)
+        setPhase('composing')
+      } catch {
+        setWmUnlocking(false)
+        setWmUnlockError(
+          "Your pack is active — generate a new Fast video and it'll be watermark-free.",
+        )
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // KINEO-WM-CHECKOUT-2026-07-07 — clear the "removing watermark…" state once the
+  // clean re-render lands (or if it fails).
+  useEffect(() => {
+    if (phase === 'done' || phase === 'failed') setWmUnlocking(false)
+  }, [phase])
+
+  // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
   // ────────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1200,6 +1331,22 @@ export default function GenerateClient() {
           fastCaptions && fastCaptions.length > 0
             ? fastCaptions
             : buildSceneCaptions(analysis, scenes, duration)
+
+        // KINEO-WM-CHECKOUT-2026-07-07 — remember the exact Fast render inputs so
+        // a post-purchase "remove watermark" can re-render THIS same video clean.
+        // Only for the pure Fast pipeline (not avatar, not the fal/AI engines).
+        if (!avatarComposeRef.current?.avatarVideoUrl && !falUsedRef.current) {
+          lastFastRenderRef.current = {
+            clip_urls: clipUrls,
+            voiceover_script: voiceoverScript,
+            scene_captions: sceneCaptions,
+            duration,
+            topic: prompt,
+            language,
+            vertical: analysis?.niche ?? undefined,
+            speed: ttsSpeed ?? undefined,
+          }
+        }
 
         const res = await fetch('/api/compose', {
           method: 'POST',
@@ -2338,6 +2485,30 @@ export default function GenerateClient() {
   // through VPNs and a few browser configs. The UI now exposes a BRL
   // button on each upgrade surface and passes the currency in directly,
   // so the path is always user-driven.
+  // KINEO-WM-CHECKOUT-2026-07-07 — "remove watermark" CTA. Stash the exact Fast
+  // render inputs so we can rebuild THIS same video clean after the purchase,
+  // then send the user to the $4.90 Starter Pack checkout with ?return=wm so
+  // Stripe returns them to /generate?wm_unlock=1 (handled by the effect below).
+  function handleRemoveWatermark() {
+    try {
+      if (lastFastRenderRef.current) {
+        localStorage.setItem('kineo_wm_unlock', JSON.stringify(lastFastRenderRef.current))
+      }
+    } catch {
+      // Private-mode / storage blocked — degrade to a normal pack purchase; the
+      // buyer still gets clean output on their NEXT Fast video (has_paid=true).
+    }
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'watermark_moment' } }),
+        keepalive: true,
+      })
+    } catch { /* non-blocking */ }
+    window.location.href = '/api/stripe/checkout?pack=starter&return=wm'
+  }
+
   async function handleUpgradeNow(
     tier: 'starter' | 'basic' | 'pro' = 'basic',
     currency: 'usd' | 'brl' = 'usd',
@@ -3679,6 +3850,61 @@ export default function GenerateClient() {
       {/* ── Render / Done / Failed ── */}
       {showRender && (
         <>
+          {/* KINEO-WM-CHECKOUT-2026-07-07 — post-purchase status. Shown while the
+              clean re-render runs, or if the auto-unlock could not start (the pack
+              is still active; the user just makes a new clean Fast video). Fixed at
+              the top so it is visible regardless of the current phase. */}
+          {(wmUnlocking || wmUnlockError) && (
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                position: 'fixed',
+                top: 16,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 60,
+                maxWidth: 'min(520px, 92vw)',
+                padding: '12px 18px',
+                borderRadius: 14,
+                background: wmUnlockError ? 'rgba(30,20,20,0.96)' : 'rgba(11,17,32,0.96)',
+                border: `1px solid ${wmUnlockError ? 'rgba(248,113,113,.5)' : 'rgba(41,151,255,.5)'}`,
+                boxShadow: '0 12px 40px rgba(0,0,0,.45)',
+                color: 'var(--text)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden="true">
+                {wmUnlockError ? '✅' : '✨'}
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, lineHeight: 1.4 }}>
+                {wmUnlockError
+                  ? `Payment received. ${wmUnlockError}`
+                  : 'Removing watermark… your clean video will appear here in a moment.'}
+              </span>
+              {wmUnlockError && (
+                <button
+                  type="button"
+                  onClick={() => setWmUnlockError(null)}
+                  aria-label="Dismiss"
+                  style={{
+                    marginLeft: 4,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    fontSize: 18,
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+
           {(phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing') && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
@@ -3932,6 +4158,54 @@ export default function GenerateClient() {
                   )}
                 </div>
               </div>
+
+              {/* KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" CTA. A free-plan
+                  Fast video ships with a watermark; sell removal + 25 more Shorts
+                  for $4.90 right next to the preview. One click → $4.90 Starter Pack
+                  checkout (?return=wm) → returns and re-renders THIS video clean.
+                  Hidden for paid users (hasPaid) and non-Fast renders. */}
+              {quality === 'fast' && planTier === 'free' && !hasPaid && !wmUnlocking && (
+                <div
+                  className="rounded-2xl px-5 py-5 mt-6 w-full"
+                  style={{
+                    maxWidth: 460,
+                    background: 'linear-gradient(135deg, rgba(41,151,255,.12), rgba(41,151,255,.05))',
+                    border: '1px solid rgba(41,151,255,.5)',
+                    boxShadow: '0 0 28px rgba(41,151,255,.16)',
+                  }}
+                >
+                  <div className="text-center">
+                    <div
+                      className="text-[10px] font-black uppercase tracking-[.18em] mb-1.5"
+                      style={{ color: '#2997ff' }}
+                    >
+                      Remove the watermark
+                    </div>
+                    <h3
+                      className="font-black tracking-tight"
+                      style={{ fontSize: '1.15rem', color: 'var(--text)', lineHeight: 1.25 }}
+                    >
+                      Remove watermark + 25 Shorts for $4.90
+                    </h3>
+                    <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
+                      Unlocks this exact video clean — one-time · no subscription · your credits never expire.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveWatermark}
+                    className="block w-full rounded-xl mt-4 py-3.5 text-sm font-black text-center text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(41,151,255,.34)',
+                    }}
+                  >
+                    Remove watermark — $4.90 →
+                  </button>
+                </div>
+              )}
 
               {/* Push #296 — redesigned action section. Download is the primary
                   CTA (big green button, full width). Secondary actions in a

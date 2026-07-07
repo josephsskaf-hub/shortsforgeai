@@ -40,10 +40,15 @@ export async function GET(req: Request) {
     // where the avatar_credits migration hasn't run yet (deploy-order safety).
     let avatarCredits = 0
     let avatarFaceUrl: string | null = null
+    // KINEO-WM-CHECKOUT-2026-07-07 — surface has_paid so the generator can hide the
+    // "remove watermark" post-render CTA for pack/plan buyers (they stay on the
+    // 'free' plan but get clean Fast output). Read best-effort alongside the avatar
+    // add-on so a missing column on a stale env never breaks the balance response.
+    let hasPaid = false
     {
       const { data: avData, error: avErr } = await supabase
         .from('profiles')
-        .select('avatar_credits, avatar_face_url')
+        .select('avatar_credits, avatar_face_url, has_paid')
         .eq('id', user.id)
         .single()
       if (avErr) {
@@ -63,6 +68,8 @@ export async function GET(req: Request) {
         // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
         const face = (avData as { avatar_face_url?: string | null } | null)?.avatar_face_url
         avatarFaceUrl = typeof face === 'string' && face ? face : null
+        // KINEO-WM-CHECKOUT-2026-07-07 — paid flag (pack or plan). Defaults false.
+        hasPaid = (avData as { has_paid?: boolean } | null)?.has_paid === true
       }
     }
 
@@ -100,6 +107,9 @@ export async function GET(req: Request) {
       // Face-app wave 1 — last approved face photo (avatar library).
       avatarFaceUrl,
       freeAiUsed: data?.free_ai_generate_used === true,
+      // KINEO-WM-CHECKOUT-2026-07-07 — true once the user has paid (pack or plan);
+      // drives hiding the post-render "remove watermark" upsell.
+      hasPaid,
       plan: planVal,
       isStarter,
       isCreator,

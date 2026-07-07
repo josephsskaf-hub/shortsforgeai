@@ -364,6 +364,17 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
     .eq('id', user.id)
     .single()
 
+  // KINEO-WM-CHECKOUT-2026-07-07 — the post-render "remove watermark" CTA sends
+  // ?return=wm so Stripe returns the buyer to /generate?wm_unlock=1 (instead of
+  // /checkout/success). The generator then re-renders the SAME just-made Fast
+  // video WITHOUT the watermark and swaps it into the preview. Any other pack
+  // purchase keeps the normal success page.
+  const returnTo = req.nextUrl.searchParams.get('return')
+  const packSuccessUrl =
+    returnTo === 'wm'
+      ? `${appUrl}/generate?wm_unlock=1&session_id={CHECKOUT_SESSION_ID}`
+      : `${appUrl}/checkout/success?success=true&pack=starter&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`
+
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     line_items: [
@@ -377,7 +388,7 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
       },
     ],
     client_reference_id: user.id,
-    success_url: `${appUrl}/checkout/success?success=true&pack=starter&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: packSuccessUrl,
     cancel_url: `${appUrl}/generate`,
     metadata: {
       supabase_user_id: user.id,
