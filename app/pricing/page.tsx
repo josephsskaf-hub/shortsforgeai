@@ -14,6 +14,12 @@ import React, { useEffect, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import ExitIntentOffer from '@/components/ExitIntentOffer'
 
+// PAYPAL-DISABLED-2026-07-06 — PayPal checkout is hidden on pricing until it's
+// verified working end-to-end (business account still needs verification). All
+// "pay with PayPal" buttons are gated behind this flag. Flip to `true` to
+// re-enable everywhere at once. Stripe checkout is unaffected.
+const PAYPAL_ENABLED = false
+
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
 const FAQS: { q: string; a: string }[] = [
@@ -412,7 +418,9 @@ export default function PricingPage() {
               No subscription · credits never expire · the lowest-commitment way to try the engine before picking a monthly plan.
             </span>
           </button>
-          {/* PAYPAL-2026-07-06 — one-time pack via PayPal ($4.90 USD) */}
+          {/* PAYPAL-2026-07-06 — one-time pack via PayPal ($4.90 USD). Hidden
+              until PayPal is verified working (PAYPAL_ENABLED). */}
+          {PAYPAL_ENABLED && (
           <button
             type="button"
             onClick={() => {
@@ -423,6 +431,7 @@ export default function PricingPage() {
           >
             or get the 25-Short pack with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> ($4.90)
           </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
@@ -503,8 +512,9 @@ export default function PricingPage() {
                 {/* PAYPAL-2026-07-06 — alternate rail for international buyers
                     (US audit 06/07: USD abandoners want a no-card option).
                     Same GET-redirect pattern as handleBuy, zero Stripe changes.
-                    USD-only — PayPal converts for the buyer. */}
-                {isPaid && (
+                    USD-only — PayPal converts for the buyer.
+                    Hidden until verified working (PAYPAL_ENABLED). */}
+                {PAYPAL_ENABLED && isPaid && (
                   <button
                     type="button"
                     onClick={(e) => {
