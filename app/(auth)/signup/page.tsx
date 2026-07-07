@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -11,6 +11,20 @@ import { trackSignupSource } from '@/lib/analytics'
 import { isDisposableEmail } from '@/lib/emailValidation'
 
 type Strength = { level: 0 | 1 | 2 | 3 | 4; label: string; color: string }
+
+// KINEO-CHECKOUT-RESUME-2026-07-07 — honor ?redirect (same-origin paths only) so
+// buyers bounced off checkout resume their purchase after signup. Mirrors the
+// safeRedirect guard in the login page.
+function safeRedirect(raw: string | null): string | null {
+  if (!raw) return null
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
+function getRedirect(): string | null {
+  if (typeof window === 'undefined') return null
+  return safeRedirect(new URLSearchParams(window.location.search).get('redirect'))
+}
 
 function scorePassword(pw: string): Strength {
   if (!pw) return { level: 0, label: '', color: '#475569' }
@@ -39,6 +53,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  // KINEO-CHECKOUT-RESUME-2026-07-07 — query string forwarded to /login so a
+  // pending checkout redirect survives the hop (state avoids SSR mismatch).
+  const [authSearch, setAuthSearch] = useState('')
+  useEffect(() => {
+    setAuthSearch(window.location.search)
+  }, [])
 
   const strength = scorePassword(password)
 
@@ -135,6 +155,13 @@ export default function SignupPage() {
     // #379 — Activation-first onboarding: new email users go straight to
     // /generate (3 free credits) to make their first Short, matching the OAuth
     // flow. ?welcome=1 triggers the pre-filled example + welcome nudge there.
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — unless a checkout redirect is pending:
+    // then resume the purchase (hard navigate so middleware sees fresh cookies).
+    const pendingRedirect = getRedirect()
+    if (pendingRedirect) {
+      window.location.assign(pendingRedirect)
+      return
+    }
     router.push('/generate?welcome=1')
     router.refresh()
   }
@@ -386,7 +413,9 @@ export default function SignupPage() {
                   Free trial, 1 video included.
                 </p>
 
-                <GoogleSignInButton onError={(msg) => setError(msg)} />
+                {/* KINEO-CHECKOUT-RESUME-2026-07-07 — OAuth signups also resume
+                    a pending checkout via the auth callback's ?next param. */}
+                <GoogleSignInButton redirectTo={getRedirect() ?? undefined} onError={(msg) => setError(msg)} />
 
                 {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
                     Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
@@ -594,8 +623,9 @@ export default function SignupPage() {
                   style={{ color: 'var(--muted)' }}
                 >
                   Already have an account?{' '}
+                  {/* KINEO-CHECKOUT-RESUME-2026-07-07 — keep pending checkout alive */}
                   <Link
-                    href="/login"
+                    href={`/login${authSearch}`}
                     className="font-semibold transition-colors"
                     style={{ color: '#2997ff' }}
                   >

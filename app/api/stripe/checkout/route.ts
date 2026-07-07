@@ -149,9 +149,19 @@ async function buildAndRedirect(
 
   if (authError || !user) {
     console.error('[stripe/checkout] Auth error or no user:', authError?.message)
-    return isGet
-      ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/pricing')}`)
-      : jsonError('You must be signed in to upgrade.', 401)
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — 7 buyers hit "Auth session missing" and
+    // the old redirect (/signup?redirect=/pricing) silently DROPPED the purchase
+    // intent (tier/billing/promo) — one user clicked 7× in 3s and gave up. Now we
+    // send them to /login carrying the FULL checkout URL, so after sign-in the
+    // login page navigates straight back here and continues to Stripe. `resumed=1`
+    // is a loop guard: if a resumed request STILL has no session, show a visible
+    // error on /pricing instead of bouncing login↔checkout forever.
+    if (!isGet) return jsonError('You must be signed in to upgrade.', 401)
+    if (req.nextUrl.searchParams.get('resumed') === '1') {
+      return redirectError('We could not confirm your sign-in. Please sign in and try again.')
+    }
+    const resume = `${req.nextUrl.pathname}${req.nextUrl.search}${req.nextUrl.search ? '&' : '?'}resumed=1`
+    return NextResponse.redirect(`${appUrl}/login?reason=checkout&redirect=${encodeURIComponent(resume)}`)
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -353,9 +363,15 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
-    return isGet
-      ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/generate')}`)
-      : jsonError('You must be signed in to buy the Starter Pack.', 401)
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — carry the full pack checkout URL through
+    // login so the purchase resumes automatically after sign-in (see buildAndRedirect).
+    // `resumed=1` = loop guard (visible error instead of login↔checkout forever).
+    if (!isGet) return jsonError('You must be signed in to buy the Starter Pack.', 401)
+    if (req.nextUrl.searchParams.get('resumed') === '1') {
+      return redirectError('We could not confirm your sign-in. Please sign in and try again.')
+    }
+    const resume = `${req.nextUrl.pathname}${req.nextUrl.search}${req.nextUrl.search ? '&' : '?'}resumed=1`
+    return NextResponse.redirect(`${appUrl}/login?reason=checkout&redirect=${encodeURIComponent(resume)}`)
   }
 
   const { data: profile } = await supabase
@@ -453,7 +469,14 @@ async function buildTopupAndRedirect(req: NextRequest, topupId: TopupId, isGet: 
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
-    return isGet ? NextResponse.redirect(`${appUrl}/signup?redirect=${encodeURIComponent('/generate')}`) : jsonError('You must be signed in to buy credits.', 401)
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — resume the top-up checkout after sign-in.
+    // `resumed=1` = loop guard (visible error instead of login↔checkout forever).
+    if (!isGet) return jsonError('You must be signed in to buy credits.', 401)
+    if (req.nextUrl.searchParams.get('resumed') === '1') {
+      return redirectError('We could not confirm your sign-in. Please sign in and try again.')
+    }
+    const resume = `${req.nextUrl.pathname}${req.nextUrl.search}${req.nextUrl.search ? '&' : '?'}resumed=1`
+    return NextResponse.redirect(`${appUrl}/login?reason=checkout&redirect=${encodeURIComponent(resume)}`)
   }
 
   const { data: profile } = await supabase

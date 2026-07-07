@@ -22,6 +22,14 @@ function getRedirect(): string {
   return safeRedirect(params.get('redirect'))
 }
 
+// KINEO-CHECKOUT-RESUME-2026-07-07 — when checkout bounces a buyer here
+// (?reason=checkout), show a "finish your purchase" banner so the redirect
+// doesn't feel like a broken button, and resume checkout after sign-in.
+function isCheckoutResume(): boolean {
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.search).get('reason') === 'checkout'
+}
+
 export default function LoginPage() {
   const supabase = createClient()
 
@@ -30,6 +38,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // KINEO-CHECKOUT-RESUME-2026-07-07 — read once on mount (client-only param).
+  const [checkoutResume, setCheckoutResume] = useState(false)
+  // Query string forwarded to /signup so the pending checkout survives the hop
+  // (state, not inline window read, to avoid an SSR hydration mismatch).
+  const [authSearch, setAuthSearch] = useState('')
+  useEffect(() => {
+    setCheckoutResume(isCheckoutResume())
+    setAuthSearch(window.location.search)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -279,7 +296,24 @@ export default function LoginPage() {
               Sign in to keep creating Shorts.
             </p>
 
-            <GoogleSignInButton onError={(msg) => setError(msg)} />
+            {/* KINEO-CHECKOUT-RESUME-2026-07-07 — buyer bounced off checkout */}
+            {checkoutResume && (
+              <div
+                role="status"
+                className="rounded-xl px-4 py-3 text-sm mb-5"
+                style={{
+                  background: 'rgba(41,151,255,.08)',
+                  border: '1px solid rgba(41,151,255,.3)',
+                  color: '#2997ff',
+                  fontWeight: 600,
+                }}
+              >
+                🔒 Your session expired — sign in and we&apos;ll take you straight
+                back to secure checkout to finish your purchase.
+              </div>
+            )}
+
+            <GoogleSignInButton redirectTo={getRedirect()} onError={(msg) => setError(msg)} />
 
             {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
                 Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
@@ -460,8 +494,10 @@ export default function LoginPage() {
 
             <p className="text-center text-sm mt-6" style={{ color: 'var(--muted)' }}>
               Don&apos;t have an account?{' '}
+              {/* KINEO-CHECKOUT-RESUME-2026-07-07 — carry the pending checkout
+                  redirect into signup so new buyers also resume the purchase. */}
               <Link
-                href="/signup"
+                href={`/signup${authSearch}`}
                 className="font-semibold transition-colors"
                 style={{ color: '#2997ff' }}
               >

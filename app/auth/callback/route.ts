@@ -34,8 +34,17 @@ export async function GET(request: Request) {
       } catch {
         /* ignore */
       }
+      // KINEO-CHECKOUT-RESUME-2026-07-07 — a NEW user whose `next` points at a
+      // checkout endpoint came from a buy click that bounced on auth. Resuming
+      // the purchase beats the activation flow (they're about to PAY); every
+      // other new user keeps the /generate?signup=1 onboarding.
+      const isCheckoutNext =
+        !!rawNext &&
+        rawNext.startsWith('/') &&
+        !rawNext.startsWith('//') &&
+        (rawNext.startsWith('/api/stripe/checkout') || rawNext.startsWith('/api/paypal/checkout'))
       const dest = isNewUser
-        ? `${origin}/generate?signup=1`
+        ? `${origin}${isCheckoutNext ? rawNext : '/generate?signup=1'}`
         : `${origin}${resolveDestination(rawNext, false)}`
       return NextResponse.redirect(dest)
     }

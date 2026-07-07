@@ -52,9 +52,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — honor ?redirect for already-logged-in
+    // users instead of hardcoding /dashboard. Before this, a buyer bounced off
+    // checkout (expired API session) → /login?redirect=... → middleware saw a
+    // session → /dashboard, silently eating the purchase. Same-origin only.
+    const rawRedirect = request.nextUrl.searchParams.get('redirect')
+    const safe =
+      rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+        ? rawRedirect
+        : '/dashboard'
+    const dest = request.nextUrl.clone()
+    const qIdx = safe.indexOf('?')
+    dest.pathname = qIdx === -1 ? safe : safe.slice(0, qIdx)
+    dest.search = qIdx === -1 ? '' : safe.slice(qIdx)
+    return NextResponse.redirect(dest)
   }
 
   return supabaseResponse
