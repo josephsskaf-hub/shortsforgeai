@@ -7,4 +7,4 @@
 //   • /api/stripe/checkout?pack=starter290 returns 410 (SKU disabled),
 //   • /api/credits does not surface the offer fields.
 // The founder flips it to `true` (single line below) to go live. Build-only for now.
-export const OFFER_290_ENABLED = false
+export const OFFER_290_ENABLED = true
