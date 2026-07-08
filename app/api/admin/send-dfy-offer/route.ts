@@ -24,9 +24,10 @@ const ADMIN_EMAILS = new Set([
   'joseph-test@shortsforgeai.com',
 ])
 
-// hello@ = prospecção/resgate de leads (support@ is reserved for support).
-const FROM_EMAIL = 'Joseph at Kineo <hello@usekineo.com>'
-const REPLY_TO = 'hello@usekineo.com'
+// joseph@ is the only real mailbox on usekineo.com (hello@ does NOT exist —
+// confirmed by Joseph 08/07; replies to hello@ may bounce).
+const FROM_EMAIL = 'Joseph at Kineo <joseph@usekineo.com>'
+const REPLY_TO = 'joseph@usekineo.com'
 const SUBJECT = "You don't have to make the videos yourself"
 
 const WINDOW_START = '2026-01-01T00:00:00Z'
