@@ -289,18 +289,30 @@ async function buildAndRedirect(
   // silently skip it (checkout still proceeds at full price — never blocks a
   // sale). NOTE: Stripe forbids combining `discounts` with allow_promotion_codes,
   // and we set neither elsewhere, so this is safe.
+  let discountApplied = false
   if (promo) {
     try {
       const codes = await stripe.promotionCodes.list({ code: promo, active: true, limit: 1 })
       const pc = codes.data[0]
       if (pc) {
         sessionParams.discounts = [{ promotion_code: pc.id }]
+        discountApplied = true
       } else {
         console.warn('[stripe/checkout] promo not found/inactive, skipping:', promo)
       }
     } catch (promoErr) {
       console.warn('[stripe/checkout] promo lookup failed, skipping:', promo, promoErr)
     }
+  }
+
+  // KINEO-PROMO-FIELD-2026-07-08 — manual promo field for loose campaigns.
+  // When we did NOT auto-apply a discount via ?promo=, turn on Stripe's built-in
+  // "Add promotion code" field so someone can type a code (e.g. KINEO20) by hand —
+  // useful for social posts / stories where we can't force the ?promo= link.
+  // Stripe forbids combining `discounts` with allow_promotion_codes, so we enable
+  // it ONLY when no discount was applied above (never both on the same session).
+  if (!discountApplied) {
+    sessionParams.allow_promotion_codes = true
   }
 
   // #481 — Rewardful affiliate attribution. The rewardful_referral cookie is set
