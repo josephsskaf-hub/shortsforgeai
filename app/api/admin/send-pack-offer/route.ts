@@ -31,9 +31,12 @@ const FROM_EMAIL = 'Joseph at Kineo <hello@usekineo.com>'
 const REPLY_TO = 'hello@usekineo.com'
 const SUBJECT = 'Your 25-Short pack — $4.90, no subscription'
 
-// Cohort window: signups on Jul 5–6, 2026 (UTC). Matches the admin funnel.
-const WINDOW_START = '2026-07-05T00:00:00Z'
-const WINDOW_END = '2026-07-07T00:00:00Z'
+// KINEO-PACK-WIDEN-2026-07-08 — widened from the Jul 5–6 cohort to ALL signups
+// (launch onward → end of today) so the $4.90 win-back reaches every unpaid lead
+// who hasn't been offered it yet. Idempotency (profiles.pack_offer_emailed) still
+// guarantees nobody is emailed twice — the 108 already contacted are auto-skipped.
+const WINDOW_START = '2026-01-01T00:00:00Z'
+const WINDOW_END = '2026-07-09T00:00:00Z'
 
 // Ramon already bought the pack — never email him this offer.
 const RAMON = 'ramonwilliamson@gmail.com'
