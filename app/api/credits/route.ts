@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { OFFER_290_ENABLED } from '@/lib/flags'
 
 // Push #299 — 2 free credits on signup (up from 1). Improves activation rate.
 const DEFAULT_CREDITS = 2
@@ -45,10 +46,14 @@ export async function GET(req: Request) {
     // 'free' plan but get clean Fast output). Read best-effort alongside the avatar
     // add-on so a missing column on a stale env never breaks the balance response.
     let hasPaid = false
+    // KINEO-OFFER290-2026-07-07 — surface offer290_used so the first-purchase
+    // banner can enforce its 1-per-account gate on the client. Best-effort:
+    // defaults false if the column isn't deployed yet.
+    let offer290Used = false
     {
       const { data: avData, error: avErr } = await supabase
         .from('profiles')
-        .select('avatar_credits, avatar_face_url, has_paid')
+        .select('avatar_credits, avatar_face_url, has_paid, offer290_used')
         .eq('id', user.id)
         .single()
       if (avErr) {
@@ -70,7 +75,26 @@ export async function GET(req: Request) {
         avatarFaceUrl = typeof face === 'string' && face ? face : null
         // KINEO-WM-CHECKOUT-2026-07-07 — paid flag (pack or plan). Defaults false.
         hasPaid = (avData as { has_paid?: boolean } | null)?.has_paid === true
+        // KINEO-OFFER290-2026-07-07 — one-time offer already claimed?
+        offer290Used = (avData as { offer290_used?: boolean } | null)?.offer290_used === true
       }
+    }
+
+    // KINEO-OFFER290-2026-07-07 — timestamp of the user's FIRST video (min
+    // created_at). The first-purchase banner shows a 24h countdown from this
+    // moment. Only computed when the offer flag is ON (avoids an extra query
+    // otherwise). Best-effort — a failure just leaves first_video_at null and
+    // the banner hides.
+    let firstVideoAt: string | null = null
+    if (OFFER_290_ENABLED) {
+      const { data: firstVid } = await supabase
+        .from('videos')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      firstVideoAt = (firstVid as { created_at?: string } | null)?.created_at ?? null
     }
 
     if (error) {
@@ -110,6 +134,12 @@ export async function GET(req: Request) {
       // KINEO-WM-CHECKOUT-2026-07-07 — true once the user has paid (pack or plan);
       // drives hiding the post-render "remove watermark" upsell.
       hasPaid,
+      // KINEO-OFFER290-2026-07-07 — first-purchase urgency offer inputs. The
+      // <Offer290Banner/> uses offer290Enabled + firstVideoAt + hasPaid +
+      // offer290Used to decide whether to show (and to run the 24h countdown).
+      offer290Enabled: OFFER_290_ENABLED,
+      offer290Used,
+      firstVideoAt,
       plan: planVal,
       isStarter,
       isCreator,

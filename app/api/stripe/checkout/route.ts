@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
+import { OFFER_290_ENABLED } from '@/lib/flags'
 import Stripe from 'stripe'
 
 // Push #175 — force-dynamic so Next.js never tries to statically cache this
@@ -88,6 +89,22 @@ const STARTER_PACK = {
 }
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }
+
+// KINEO-OFFER290-2026-07-07 — first-purchase URGENCY offer. A NEW user in the
+// first 24h after their 1st video sees "$4.90 → $2.90, expires in 24h" with a
+// live countdown. Same mechanics as the Starter Pack (one-time, inline
+// price_data, credited by the webhook via metadata.pack_credits) but a smaller
+// 10-Fast-videos entry at a discounted $2.90 to break the very first payment.
+// LIMITED to 1 per account (profiles.offer290_used + has_paid guards). Gated
+// entirely behind OFFER_290_ENABLED — while that flag is false this SKU returns
+// 410 and never creates a Stripe session.
+const STARTER290_PACK = {
+  credits: 10,
+  name: 'Kineo — First Pack (24h offer)',
+  description: 'One-time launch offer: 10 Fast Shorts. Limited to 1 per account.',
+}
+//   USD $2.90 | BRL R$14.90 | INR ₹249  (same ratios as the plans)
+const PACK290_PRICES: Record<Currency, number> = { usd: 290, brl: 1490, inr: 24900 }
 
 // KINEO-TOPUP-2026-07-06 — AI credit top-ups for EXISTING subscribers who burn
 // through their monthly AI credits before renewal. Priced ABOVE the plan
@@ -443,6 +460,110 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
   return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
 }
 
+// ─── KINEO-OFFER290-2026-07-07 — first-purchase $2.90 offer (mode: 'payment') ─
+// $2.90 (USD) one-time → 10 Fast Shorts. Gated behind OFFER_290_ENABLED and
+// hard-limited to 1 per account: rejects if the user already used the offer
+// (profiles.offer290_used) OR already paid anything (has_paid). Credited by the
+// webhook via metadata.pack_credits (=10); the webhook also sets offer290_used.
+async function buildStarter290AndRedirect(req: NextRequest, isGet: boolean): Promise<NextResponse> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  function redirectError(msg: string) {
+    return NextResponse.redirect(`${appUrl}/generate?checkout_error=${encodeURIComponent(msg)}`)
+  }
+  function jsonError(msg: string, status: number) {
+    return NextResponse.json({ error: msg }, { status })
+  }
+
+  // Feature flag OFF → SKU disabled (410 Gone). Nothing can be purchased.
+  if (!OFFER_290_ENABLED) {
+    return isGet
+      ? redirectError('This offer is not available.')
+      : jsonError('Offer disabled.', 410)
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout] STRIPE_SECRET_KEY is not set')
+    return isGet ? redirectError('Payment service is not configured. Please contact support.') : jsonError('Payment service is not configured. Please contact support.', 500)
+  }
+
+  const country = req.headers.get('x-vercel-ip-country') ?? 'US'
+  const currency: Currency = resolveCurrency(country)
+  const unitAmount = PACK290_PRICES[currency]
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    // KINEO-CHECKOUT-RESUME-2026-07-07 — resume the offer checkout after sign-in.
+    if (!isGet) return jsonError('You must be signed in to claim this offer.', 401)
+    if (req.nextUrl.searchParams.get('resumed') === '1') {
+      return redirectError('We could not confirm your sign-in. Please sign in and try again.')
+    }
+    const resume = `${req.nextUrl.pathname}${req.nextUrl.search}${req.nextUrl.search ? '&' : '?'}resumed=1`
+    return NextResponse.redirect(`${appUrl}/login?reason=checkout&redirect=${encodeURIComponent(resume)}`)
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, stripe_customer_id, has_paid, offer290_used')
+    .eq('id', user.id)
+    .single()
+
+  // Enforce 1-per-account: already claimed the offer, or already paid anything.
+  if (profile?.offer290_used === true || profile?.has_paid === true) {
+    return isGet
+      ? redirectError('You already claimed this one-time offer.')
+      : jsonError('Offer already used.', 409)
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency,
+          product_data: { name: STARTER290_PACK.name, description: STARTER290_PACK.description },
+          unit_amount: unitAmount,
+        },
+        quantity: 1,
+      },
+    ],
+    client_reference_id: user.id,
+    success_url: `${appUrl}/checkout/success?success=true&pack=starter290&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/generate`,
+    metadata: {
+      supabase_user_id: user.id,
+      pack: 'starter290',
+      pack_credits: String(STARTER290_PACK.credits),
+    },
+  }
+  if (profile?.stripe_customer_id) sessionParams.customer = profile.stripe_customer_id
+  else sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.toLowerCase().includes('cannot combine currencies')) {
+      delete sessionParams.customer
+      sessionParams.customer_email = profile?.email ?? user.email ?? undefined
+      try {
+        session = await stripe.checkout.sessions.create(sessionParams)
+      } catch (retryErr) {
+        const rmsg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.error('[stripe/checkout] starter290 retry failed:', rmsg)
+        return isGet ? redirectError(`Payment session failed: ${rmsg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+      }
+    } else {
+      console.error('[stripe/checkout] starter290 session error:', msg)
+      return isGet ? redirectError(`Payment session failed: ${msg || 'Please try again'}`) : jsonError('Payment session failed.', 500)
+    }
+  }
+
+  console.log(`[stripe/checkout] starter290 session: user=${user.id.slice(0, 8)} amount=${unitAmount}`)
+  return isGet ? NextResponse.redirect(session.url!) : NextResponse.json({ url: session.url })
+}
+
 // ─── KINEO-TOPUP-2026-07-06 — AI credit top-up checkout (mode: 'payment') ─────
 // Gated to Creator+ (basic/pro). Frees a subscriber who ran out of AI credits
 // mid-cycle to buy 1 or 3 more AI videos instead of hitting a wall. Credited by
@@ -569,6 +690,10 @@ export async function GET(req: NextRequest) {
       // KINEO-TOPUP-2026-07-06 — AI credit top-ups (Creator+).
       if (packParam === 'topup40' || packParam === 'topup120') {
         return await buildTopupAndRedirect(req, packParam, true)
+      }
+      // KINEO-OFFER290-2026-07-07 — first-purchase $2.90 offer (flag-gated).
+      if (packParam === 'starter290') {
+        return await buildStarter290AndRedirect(req, true)
       }
       return await buildPackAndRedirect(req, true)
     }

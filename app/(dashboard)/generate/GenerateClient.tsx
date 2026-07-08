@@ -17,6 +17,13 @@ import NicheOnboarding from '@/components/NicheOnboarding'
 // videos now cost 120 universal credits; the avatar 402 already routes to the
 // universal upgrade modal. The component file is left in place but unused.
 import ReferralMiniCard from '@/components/ReferralMiniCard'
+// KINEO-OFFER290-2026-07-07 — first-purchase $2.90 urgency banner. Self-gated on
+// OFFER_290_ENABLED (renders null while the flag is off — build-only for now).
+import Offer290Banner from './Offer290Banner'
+// KINEO-LOWCREDITS-UPSELL-2026-07-08 — "running low → go monthly $9.90" banner.
+// Self-gated: only renders for non-subscribers with credits <= 5 (fetches
+// /api/credits itself; renders null otherwise or on fetch failure).
+import LowCreditsUpsell from './LowCreditsUpsell'
 
 interface TaskHandle {
   id: string
@@ -2879,6 +2886,17 @@ export default function GenerateClient() {
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .gv-card { animation: fadeUp 0.35s ease both; }
       `}</style>
+
+      {/* KINEO-OFFER290-2026-07-07 — first-purchase $2.90 urgency banner (24h
+          countdown, 1 per account). Renders nothing until OFFER_290_ENABLED is
+          flipped to true in lib/flags.ts. */}
+      <Offer290Banner />
+
+      {/* KINEO-LOWCREDITS-UPSELL-2026-07-08 — "almost out of videos → go monthly
+          $9.90" banner. Self-gated: shows ONLY for non-subscribers (plan free/
+          null; pack buyers included) with video_credits <= 5, dismissible per
+          session. Renders null when the gate isn't met or the fetch fails. */}
+      <LowCreditsUpsell />
 
       {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — <AvatarPaywallModal/> removed.
           It sold the retired avatar_credits packs. Avatar videos now cost 120

@@ -202,11 +202,20 @@ export async function POST(req: NextRequest) {
           const current = profile?.video_credits ?? 0
           const next = current + creditsToAdd
 
+          // KINEO-OFFER290-2026-07-07 — the first-purchase $2.90 offer is one per
+          // account. When this session is the starter290 offer, also stamp
+          // offer290_used=true so the buyer can never claim it again (checkout
+          // rejects on that flag). Idempotent: this whole block only runs once
+          // per event.id (stripe_events dedupe above).
+          const isOffer290 = session.metadata?.pack === 'starter290'
+          const profileUpdate: Record<string, unknown> = { video_credits: next, has_paid: true }
+          if (isOffer290) profileUpdate.offer290_used = true
+
           const { error: updateErr } = await supabase
             .from('profiles')
             // KINEO-PACK-NOWM-2026-07-06 — mark buyer as paid so their free-plan
             // Fast renders come out watermark-free (the point of the $4.90 pack).
-            .update({ video_credits: next, has_paid: true })
+            .update(profileUpdate)
             .eq('id', userId)
 
           if (updateErr) {
