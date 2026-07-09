@@ -2,7 +2,7 @@
 
 // Push #323 - My Videos: show first frame via preload=metadata; no more black cards
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 interface Video {
@@ -76,6 +76,34 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   // #459 — share the public /v/[id] page (native share on mobile, copy on desktop)
   const [sharedId, setSharedId] = useState<string | null>(null)
+  // KINEO-DL-PAYWALL-2026-07-09 — download gating on My Videos. This page's
+  // green Download button was a full paywall bypass: a free user blocked at
+  // the $4.90 unlock on /generate could just come here and download the same
+  // MP4. Rule mirrors MyVideosClient: locked unless the user has paid
+  // (pack via has_paid, or any plan). FAIL OPEN — if /api/credits errors,
+  // downloads stay unlocked so a DB blip never blocks a paying user.
+  const [downloadLocked, setDownloadLocked] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/credits', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return
+        const paid = d.hasPaid === true || d.isStarter === true || d.isCreator === true || d.isStudio === true
+        setDownloadLocked(!paid)
+      })
+      .catch(() => {/* fail open */})
+    return () => { cancelled = true }
+  }, [])
+
+  function handleUnlockCheckout() {
+    fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'history_download_lock' } }),
+    }).catch(() => {/* tracking must never affect UX */})
+    window.location.href = '/api/stripe/checkout?pack=starter'
+  }
 
   // Push #098 — blob download with a real filename (the video's title). The
   // native <a download> / the player's ⋮ "download" menu both ignore the
@@ -83,6 +111,10 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // the bytes and name them ourselves. controlsList="nodownload" hides the ⋮
   // download path so users always get the correctly-named file.
   async function handleDownload(video: Video) {
+    // KINEO-DL-PAYWALL-2026-07-09 — non-payers go to the $4.90 checkout
+    // instead of the file (defense in depth: the button label already says
+    // Unlock, this guard covers any other path into this handler).
+    if (downloadLocked) { handleUnlockCheckout(); return }
     if (!video.video_url || downloadingId) return
     setDownloadingId(video.id)
     try {
@@ -473,8 +505,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   <button
                     onClick={() => handleDownload(video)}
                     disabled={downloadingId === video.id}
-                    title="Download MP4"
-                    aria-label="Download MP4"
+                    title={downloadLocked ? 'Unlock downloads — $4.90' : 'Download MP4'}
+                    aria-label={downloadLocked ? 'Unlock downloads — $4.90' : 'Download MP4'}
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -491,7 +523,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       cursor: downloadingId === video.id ? 'wait' : 'pointer',
                     }}
                   >
-                    {downloadingId === video.id ? '…' : '⬇'}
+                    {downloadingId === video.id ? '…' : downloadLocked ? '🔒' : '⬇'}
                   </button>
 
                   {/* #459 — share the public /v/[id] page */}
@@ -686,9 +718,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               <button
                 onClick={() => handleDownload(v)}
                 disabled={downloadingId === v.id}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 28px rgba(34,197,94,0.35)' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: downloadLocked ? 'linear-gradient(135deg, #2997ff, #1d6fe0)' : 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: downloadLocked ? '0 8px 28px rgba(41,151,255,0.35)' : '0 8px 28px rgba(34,197,94,0.35)' }}
               >
-                {downloadingId === v.id ? 'Downloading…' : '⬇ Download (MP4)'}
+                {downloadingId === v.id ? 'Downloading…' : downloadLocked ? '🔒 Unlock & Download — $4.90' : '⬇ Download (MP4)'}
               </button>
               <button
                 onClick={() => setLightbox(null)}

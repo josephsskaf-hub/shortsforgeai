@@ -182,7 +182,9 @@ function CreditsBadge({ isPro }: { isPro: boolean }) {
   const isLow = !isZero && credits <= 5 && !isPro
 
   const colors = isZero
-    ? { fg: '#f87171', bg: 'rgba(239,68,68,.10)', border: 'rgba(239,68,68,.35)' }
+    // KINEO-ZERO-SIGNUP follow-up (Joseph 09/07): blue at 0, not red — with
+    // free Fast, 0 credits is the normal free-tier state, not an error.
+    ? { fg: '#2997ff', bg: 'rgba(41,151,255,.10)', border: 'rgba(41,151,255,.35)' }
     : isLow
     ? { fg: '#2997ff', bg: 'rgba(41,151,255,.10)', border: 'rgba(41,151,255,.35)' }
     : { fg: '#f5f5f7', bg: 'rgba(255,255,255,.04)', border: 'rgba(255,255,255,.08)' }

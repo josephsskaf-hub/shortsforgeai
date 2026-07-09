@@ -1395,12 +1395,15 @@ export default function GenerateClient() {
           return
         }
         if (res.status === 402) {
-          // KINEO-FAST-1CR-2026-07-06 — Fast wall: user ran out of credits (free
-          // gets 2). Open the upgrade modal ($4.90 pack / plan) instead of a
-          // dead-end error, turning the wall into the monetization moment.
-          setError(typeof data?.error === 'string' ? data.error : "You've used your free videos.")
+          // KINEO-ZERO-SIGNUP follow-up (09/07) — 402 here now means the DAILY
+          // FREE LIMIT (3 Fast/24h), not a real failure. The old phase('failed')
+          // showed "Generation failed — Retry", which was wrong copy (nothing
+          // failed) and Retry just hit the wall again. Return to the options
+          // screen with the upgrade modal on top — nothing is lost, and closing
+          // the modal leaves the user on their script, not on an error page.
+          setError(typeof data?.error === 'string' ? data.error : "You've hit today's free limit.")
           openOutOfCreditsModal('credits')
-          setPhase('failed')
+          setPhase('options')
           return
         }
         if (!res.ok) {
