@@ -2454,6 +2454,10 @@ export default function GenerateClient() {
   // for a 402. We still allow Cinematic-with-tokens through (Pro users
   // can have 0 credits but a remaining cinematic token).
   function outOfCredits(): boolean {
+    // KINEO-ZERO-SIGNUP-2026-07-09 — Fast renders are FREE (InVideo model):
+    // new signups get 0 credits but can always generate/watch Fast videos.
+    // Monetization happens at the download moment ($4.90 unlock), never here.
+    if (mode === 'fast') return false
     if (credits === null) return false
     if (credits > 0) return false
     if (mode === 'cinematic' && cinematicTokens > 0) return false
@@ -2921,7 +2925,10 @@ export default function GenerateClient() {
           /api/stripe/checkout flow via handleUpgradeNow.
           Push #415 — hidden while the free AI trial is still available
           (the green gift banner above takes its place). */}
-      {planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed !== false && (
+      {/* KINEO-ZERO-SIGNUP-2026-07-09 — hidden on Fast mode: Fast is free, so a
+          0-credit balance is the NORMAL state for new users, not a lockout. The
+          scare copy ("your channel stops here") only applies to paid AI modes. */}
+      {mode !== 'fast' && planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed !== false && (
         <div
           style={{
             background: credits === 0
@@ -3498,7 +3505,8 @@ export default function GenerateClient() {
               )}
               {/* Push #087 — credit-balance awareness right under the CTA.
                   Three states: low (<5), empty (=0), and silent (healthy). */}
-              {credits !== null && (credits === 0 && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
+              {/* KINEO-ZERO-SIGNUP-2026-07-09 — never shown on Fast (it's free). */}
+              {credits !== null && (credits === 0 && mode !== 'fast' && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
                 <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
                   Out of credits. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
                 </p>

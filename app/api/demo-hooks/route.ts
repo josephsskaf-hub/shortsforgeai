@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       'unknown'
     if (limited(ip)) {
       return NextResponse.json(
-        { error: 'Demo limit reached for today — create a free account to keep going (30 free credits).' },
+        { error: 'Demo limit reached for today — create a free account to keep going (make videos free).' },
         { status: 429 },
       )
     }

@@ -644,7 +644,7 @@ export default function DashboardClient({
             🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: '#86868b' }}>
-            2 free videos on signup — just sign in.
+            Create your first video free — just sign in.
           </p>
         </div>
       )}

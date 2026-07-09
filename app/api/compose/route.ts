@@ -264,23 +264,12 @@ export async function POST(req: NextRequest) {
       // Defensive: undefined column → false → current behavior (free = watermark).
       const hasPaid = (prof as { has_paid?: boolean } | null)?.has_paid === true
 
-      // KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit. Wall at 0 credits →
-      // 402 BEFORE the (paid) Creatomate render, so the client opens the upgrade
-      // modal ($4.90 pack / plan). Credits are universal, so this applies to every
-      // plan; free users get 2 on signup, then must pay. Deduction itself happens
-      // on success in /api/compose/status via debit_video_credits.
-      if (quality === 'fast' && (prof?.video_credits ?? 0) < 1) {
-        return NextResponse.json(
-          {
-            error: "You've used your free videos. Get 25 more Shorts for $4.90, or upgrade to a plan for unlimited posting.",
-            upsell: 'credits',
-            outOfCredits: true,
-            balance: prof?.video_credits ?? 0,
-            upgrade: '/pricing',
-          },
-          { status: 402 },
-        )
-      }
+      // KINEO-ZERO-SIGNUP-2026-07-09 — InVideo model: Fast renders are FREE for
+      // everyone (no credit wall). New signups get 0 credits; they can generate
+      // and WATCH Fast videos (watermarked), and monetization happens at the
+      // DOWNLOAD moment ($4.90 unlock — KINEO-DL-PAYWALL-2026-07-09) or via
+      // plans. The old KINEO-FAST-1CR 402 wall was removed here: blocking the
+      // render killed the "wow" moment before the user ever saw their video.
       // #482 — end card (Option A): free + Starter get the "Made with
       // ShortsForgeAI" end card so every posted video advertises the product.
       // Clean on Creator/Studio (they're not free and not in STARTER_PLANS).

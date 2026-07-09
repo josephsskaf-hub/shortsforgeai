@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Kineo — The Smart AI Tool That Turns Any Idea Into a Viral Short',
   description:
-    'AI writes the script, finds footage, adds captions & music. Ready in 60 seconds. 2 free videos on signup, no credit card.',
+    'AI writes the script, finds footage, adds captions & music. Ready in 60 seconds. Create videos free on signup, no credit card.',
   robots: {
     index: false,
     follow: true,

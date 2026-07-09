@@ -30,11 +30,11 @@ function creditCostFor(quality: Quality): number {
   // Pro = 20. Push #315 added 'cinematic_ai' = 3 for fal.ai Wan 2.1.
   switch (quality) {
     case 'fast':
-      // KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit (was 0). Free tier
-      // grants 2 → 2 Fast videos, then the wall forces the $4.90 pack or a plan.
-      // Fast still costs ~$0.02-0.05 to serve, so the charge is pure monetization,
-      // not cost-recovery. Free-plan Fast stays watermarked (see compose route).
-      return 1
+      // KINEO-ZERO-SIGNUP-2026-07-09 — Fast is FREE again (was 1cr since
+      // KINEO-FAST-1CR-2026-07-06). InVideo model: render/watch free with
+      // watermark, pay $4.90 to download (KINEO-DL-PAYWALL). Fast costs
+      // ~$0.02-0.05 to serve — it's the growth engine, not the revenue line.
+      return 0
     case 'avatar':
       // KINEO-AVATAR-120-2026-07-06 — AI Avatar folded into the UNIVERSAL
       // video_credits system (was the separate avatar_credits add-on @ 1/video).
@@ -259,7 +259,9 @@ export async function GET(
       // debit_video_credits RPC as the cinematic engines — success-only,
       // idempotent by render_id. The separate avatar_credits debit block was
       // deleted below, so there is exactly one debit path (no double-charge).
-      const shouldDeductCredits = quality === 'fast' || quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'avatar'
+      // KINEO-ZERO-SIGNUP-2026-07-09 — 'fast' removed from the whitelist: Fast
+      // renders are free (creditCostFor('fast')=0), so there is nothing to debit.
+      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'avatar'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.

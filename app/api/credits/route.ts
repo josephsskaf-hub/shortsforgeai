@@ -5,8 +5,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { OFFER_290_ENABLED } from '@/lib/flags'
 
-// Push #299 — 2 free credits on signup (up from 1). Improves activation rate.
-const DEFAULT_CREDITS = 2
+// KINEO-ZERO-SIGNUP-2026-07-09 — new signups start at 0 credits (InVideo
+// model): Fast renders are free to generate/watch (watermarked) and the money
+// moment is the $4.90 download unlock. Was 2 (Push #299). The DB trigger
+// handle_new_user + the profiles.video_credits column default were updated to
+// 0 in the same change — this constant is only the missing-column fallback.
+const DEFAULT_CREDITS = 0
 
 export async function GET(req: Request) {
   try {
