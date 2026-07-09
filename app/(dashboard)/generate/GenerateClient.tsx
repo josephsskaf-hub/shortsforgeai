@@ -2919,63 +2919,12 @@ export default function GenerateClient() {
           the single source of balance; monetization now happens at the
           download moment, not via banner copy. */}
 
-      {/* Push #103 — sticky low-credits upgrade banner. Sits above every
-          other piece of the page so a free user who's about to be locked
-          out sees the upgrade offer. Hits the existing
-          /api/stripe/checkout flow via handleUpgradeNow.
-          Push #415 — hidden while the free AI trial is still available
-          (the green gift banner above takes its place). */}
-      {/* KINEO-ZERO-SIGNUP-2026-07-09 — hidden on Fast mode: Fast is free, so a
-          0-credit balance is the NORMAL state for new users, not a lockout. The
-          scare copy ("your channel stops here") only applies to paid AI modes. */}
-      {mode !== 'fast' && planTier === 'free' && credits !== null && credits <= 1 && freeAiUsed !== false && (
-        <div
-          style={{
-            background: credits === 0
-              ? 'linear-gradient(90deg, rgba(248,113,113,.14), rgba(239,68,68,.08))'
-              : 'linear-gradient(90deg, rgba(251,191,36,.12), rgba(245,158,11,.08))',
-            border: `1px solid ${credits === 0 ? 'rgba(248,113,113,.4)' : 'rgba(251,191,36,.3)'}`,
-            borderRadius: 12,
-            padding: '12px 16px',
-            marginBottom: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ color: credits === 0 ? '#f87171' : '#fbbf24', fontWeight: 800, fontSize: 13 }}>
-              {credits === 0 ? '🚫 You\'re out of credits — your channel stops here' : '⚡ Last credit remaining'}
-            </span>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              {credits === 0
-                ? 'Upgrade now and keep your momentum. Plans from $9.90/mo.'
-                : 'Use it wisely — or upgrade for more videos from $9.90/mo.'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleUpgradeNow()}
-            disabled={upgradeLoading}
-            style={{
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              border: 'none',
-              borderRadius: 8,
-              padding: '6px 16px',
-              color: '#000',
-              fontWeight: 800,
-              fontSize: 12,
-              cursor: upgradeLoading ? 'wait' : 'pointer',
-              whiteSpace: 'nowrap',
-              opacity: upgradeLoading ? 0.7 : 1,
-            }}
-          >
-            {upgradeLoading ? 'Loading…' : 'Upgrade — from $9.90/mo →'}
-          </button>
-        </div>
-      )}
+      {/* Push #103 sticky low-credits banner REMOVED (KINEO-ZERO-SIGNUP
+          follow-up, Joseph 09/07: "tira esse sem créditos em vermelho, deixa
+          só o de cima"). At 0 credits two banners stacked — the softer
+          "almost out of videos / Go monthly $9.90" banner stays as the single
+          upgrade surface; the red scare copy ("your channel stops here")
+          contradicted the free-Fast model where 0 credits is the normal state. */}
 
       {/* Header — push #047 conversion polish.
           Step 1 uses the "Build Your Viral Short" headline + a credits chip
