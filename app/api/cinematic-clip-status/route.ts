@@ -14,7 +14,9 @@ const KLING_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
 // checkFalClip parses it unchanged — only the allow-list needs the model id.
 const VEO_MODEL = 'fal-ai/veo3.1/fast'
 const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
-const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL])
+// KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro (Hollywood dialogue scenes, native audio).
+const KLING3_MODEL = 'fal-ai/kling-video/v3/pro/text-to-video'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL, KLING3_MODEL])
 
 type ClipStatus = {
   id: string | null
@@ -65,6 +67,22 @@ export async function GET(req: NextRequest) {
     const modelParam = searchParams.get('model') ?? ''
     const model = ALLOWED_MODELS.has(modelParam) ? modelParam : SEEDANCE_MODEL
 
+    // KINEO-HOLLYWOOD-2026-07-09 — optional `models` param: a JSON array
+    // PARALLEL to `ids` (Hollywood routes each scene to a different engine, and
+    // the fal queue is per-model). Absent/invalid → single-model behavior as before.
+    const modelsParam = searchParams.get('models') ?? ''
+    let perClipModels: (string | null)[] = []
+    if (modelsParam) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(modelsParam))
+        if (Array.isArray(parsed)) {
+          perClipModels = parsed.map((m) => (typeof m === 'string' && ALLOWED_MODELS.has(m) ? m : null))
+        }
+      } catch {
+        perClipModels = []
+      }
+    }
+
     if (!idsParam) {
       return NextResponse.json({ error: 'ids parameter is required' }, { status: 400 })
     }
@@ -78,10 +96,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Check each fal.ai request in parallel
+    // KINEO-HOLLYWOOD-2026-07-09 — each clip polls ITS OWN model when the
+    // parallel `models` array is present; otherwise the single shared model.
     const clips: ClipStatus[] = await Promise.all(
-      rawIds.map((id) => {
+      rawIds.map((id, i) => {
         if (!id) return Promise.resolve({ id: null, status: 'failed' as const, url: null })
-        return checkFalClip(id, model)
+        return checkFalClip(id, perClipModels[i] ?? model)
       })
     )
 

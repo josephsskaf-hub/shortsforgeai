@@ -20,7 +20,8 @@ export const dynamic = 'force-dynamic'
 // The old separate avatar_credits / debit_avatar_credit billing was retired.
 // Protection rule intact: a failed render never charges (debit is success-only,
 // idempotent by render_id).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'avatar'
+// KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (260 cr, provisional).
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar'
 
 function creditCostFor(quality: Quality): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
@@ -57,6 +58,11 @@ function creditCostFor(quality: Quality): number {
     case 'cinematic_sora':
       // #491 — Sora 2 premium. Keep in sync with SORA_CREDIT_COST.
       return 200
+    case 'cinematic_hollywood':
+      // KINEO-HOLLYWOOD-2026-07-09 provisional — preço final só após Checkpoint 1
+      // + OK do Joseph. Keep in sync with HOLLYWOOD_CREDIT_COST in
+      // generate-video-cinematic (real fal cost ≈ $6-8/video across Kling3/Veo/Seedance).
+      return 260
     case 'pro':
       return 20
     case 'basic':
@@ -205,8 +211,11 @@ export async function GET(
     // → quality_mode=basic_ai, credits_used=15, and shouldDeductCredits=false
     // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
     // and the fast||cinematic_ai deduction path both fire correctly.
+    // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood accepted (same #361
+    // revenue-leak lesson: an unlisted quality silently collapses to basic_ai
+    // and charges nothing).
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'avatar'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'cinematic_hollywood' || qParam === 'avatar'
         ? (qParam as Quality)
         : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -261,7 +270,10 @@ export async function GET(
       // deleted below, so there is exactly one debit path (no double-charge).
       // KINEO-ZERO-SIGNUP-2026-07-09 — 'fast' removed from the whitelist: Fast
       // renders are free (creditCostFor('fast')=0), so there is nothing to debit.
-      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'avatar'
+      // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood debits like the other
+      // fal engines (success-only, idempotent by render_id; the existing
+      // auto-refund on failure covers it too).
+      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar'
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
