@@ -4048,11 +4048,17 @@ export default function GenerateClient() {
                     the moment the file plays — so a user who navigated away
                     during the render never has to click anything. */}
                 <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  {/* KINEO-DL-GUARD-2026-07-09 — controlsList="nodownload" +
+                      context-menu block: Chrome's native ⋮ menu had a "Download"
+                      item that bypassed the $4.90 unlock entirely (Joseph caught
+                      it live). Paid users download via the real button below. */}
                   <video
                     ref={videoRef}
                     key={finalVideoUrl}
                     src={finalVideoUrl}
                     controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
                     autoPlay
                     playsInline
                     preload="metadata"
@@ -4112,11 +4118,12 @@ export default function GenerateClient() {
                 </div>
               </div>
 
-              {/* KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" CTA. A free-plan
-                  Fast video ships with a watermark; sell removal + 25 more Shorts
-                  for $4.90 right next to the preview. One click → $4.90 Starter Pack
-                  checkout (?return=wm) → returns and re-renders THIS video clean.
-                  Hidden for paid users (hasPaid) and non-Fast renders. */}
+              {/* KINEO-WM-CHECKOUT — SINGLE purchase surface (Joseph 09/07:
+                  "deixa só o azul, 2 formas de compra suja o ambiente").
+                  The gold Unlock button below is hidden for Fast renders;
+                  this blue card (now with the 🔒) is the one CTA. Same
+                  handleRemoveWatermark flow → $4.90 checkout → clean
+                  re-render of THIS video. */}
               {quality === 'fast' && planTier === 'free' && !hasPaid && !wmUnlocking && (
                 <div
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
@@ -4155,7 +4162,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(41,151,255,.34)',
                     }}
                   >
-                    Remove watermark — $4.90 →
+                    🔒 Unlock &amp; Download — $4.90 →
                   </button>
                 </div>
               )}
@@ -4174,7 +4181,12 @@ export default function GenerateClient() {
                     Locked state reuses the existing watermark-moment checkout
                     (handleRemoveWatermark → $4.90 Starter Pack → returns to
                     /generate?wm_unlock=1 → clean re-render of THIS video). */}
+                {/* Joseph 09/07: on Fast renders the blue card above is the ONE
+                    purchase surface — the gold button only appears on non-Fast
+                    free renders (e.g. free AI trial), where the blue card is
+                    hidden, so the user is never shown two $4.90 boxes at once. */}
                 {planTier === 'free' && !hasPaid ? (
+                  quality === 'fast' ? null : (
                   <button
                     type="button"
                     onClick={handleRemoveWatermark}
@@ -4196,6 +4208,7 @@ export default function GenerateClient() {
                       This video watermark-free + 25 Shorts · one-time · no subscription
                     </span>
                   </button>
+                  )
                 ) : (
                 <a
                   href={finalVideoUrl}

@@ -459,15 +459,9 @@ export default function Sidebar({
               onClick={onClose}
               className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
               style={{
-                background: creditsZero
-                  ? 'rgba(239,68,68,0.08)'
-                  : '#131316',
-                border: creditsZero
-                  ? '1px solid rgba(239,68,68,0.32)'
-                  : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: creditsZero
-                  ? '0 0 22px rgba(239,68,68,0.12)'
-                  : '0 0 18px rgba(41,151,255,0.10), inset 0 1px 0 rgba(255,255,255,0.05)',
+                background: '#131316',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 0 18px rgba(41,151,255,0.10), inset 0 1px 0 rgba(255,255,255,0.05)',
                 textDecoration: 'none',
                 transition: 'all 0.18s ease',
               }}
@@ -476,25 +470,21 @@ export default function Sidebar({
                 <div
                   style={{
                     width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: creditsZero
-                      ? 'rgba(239,68,68,0.15)'
-                      : 'rgba(41,151,255,0.12)',
-                    border: creditsZero
-                      ? '1px solid rgba(239,68,68,0.3)'
-                      : '1px solid rgba(41,151,255,0.30)',
+                    background: 'rgba(41,151,255,0.12)',
+                    border: '1px solid rgba(41,151,255,0.30)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: creditsZero ? 'none' : '0 0 12px rgba(41,151,255,0.25)',
+                    boxShadow: '0 0 12px rgba(41,151,255,0.25)',
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill={creditsZero ? '#f87171' : '#2997ff'} />
+                    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" />
                   </svg>
                 </div>
                 {creditsLoading ? (
                   <span style={{ display: 'inline-block', width: 64, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)', animation: 'pulse 1.4s ease-in-out infinite' }} />
                 ) : (
                   <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: creditsZero ? '#f87171' : '#2997ff', lineHeight: 1.1 }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#2997ff', lineHeight: 1.1 }}>
                       {credits ?? 0} {credits === 1 ? 'credit' : 'credits'}
                       {/* Push #088 — Cinematic token badge. Only show when
                           the user has at least 1 token (Pro plan) so the
@@ -513,8 +503,8 @@ export default function Sidebar({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: creditsZero ? 'rgba(248,113,113,0.7)' : '#86868b', marginTop: 1 }}>
-                      {creditsZero ? 'No credits left' : 'available'}
+                    <div style={{ fontSize: '0.6rem', color: '#86868b', marginTop: 1 }}>
+                      {creditsZero ? 'Buy more with +' : 'available'}
                     </div>
                   </div>
                 )}
@@ -522,16 +512,12 @@ export default function Sidebar({
               <div
                 style={{
                   width: 30, height: 30, borderRadius: 9,
-                  background: creditsZero
-                    ? 'rgba(239,68,68,0.18)'
-                    : 'rgba(41,151,255,0.12)',
-                  border: creditsZero
-                    ? '1px solid rgba(239,68,68,0.35)'
-                    : '1px solid rgba(41,151,255,0.30)',
+                  background: 'rgba(41,151,255,0.12)',
+                  border: '1px solid rgba(41,151,255,0.30)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: creditsZero ? '#f87171' : '#2997ff',
+                  color: '#2997ff',
                   fontSize: '1.1rem', fontWeight: 900,
-                  boxShadow: creditsZero ? 'none' : '0 0 10px rgba(41,151,255,0.2)',
+                  boxShadow: '0 0 10px rgba(41,151,255,0.2)',
                 }}
               >
                 +
@@ -554,18 +540,11 @@ export default function Sidebar({
               </button>
             </div>
           </div>
-        ) : creditsZero ? (
-          <div className="px-3 pb-2 flex-shrink-0">
-            <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fca5a5', margin: 0 }}>⚠️ No credits left</p>
-              </div>
-              <Link href="/pricing" onClick={onClose} style={{ flexShrink: 0, borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#0A0A0B', background: '#2997ff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                Buy →
-              </Link>
-            </div>
-          </div>
         ) : null}
+        {/* KINEO-ZERO-SIGNUP follow-up (Joseph 09/07): duplicate "No credits
+            left / Buy →" box REMOVED — the credits chip above (with the +
+            button) is the single purchase surface, and it stays BLUE at 0
+            (red reads as an error; 0 credits is the normal free-tier state). */}
 
         {/* User row + settings menu + small logout */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px', position: 'relative' }}>
