@@ -20,10 +20,8 @@ import ReferralMiniCard from '@/components/ReferralMiniCard'
 // KINEO-OFFER290-2026-07-07 — first-purchase $2.90 urgency banner. Self-gated on
 // OFFER_290_ENABLED (renders null while the flag is off — build-only for now).
 import Offer290Banner from './Offer290Banner'
-// KINEO-LOWCREDITS-UPSELL-2026-07-08 — "running low → go monthly $9.90" banner.
-// Self-gated: only renders for non-subscribers with credits <= 5 (fetches
-// /api/credits itself; renders null otherwise or on fetch failure).
-import LowCreditsUpsell from './LowCreditsUpsell'
+// KINEO-LOWCREDITS-UPSELL import removed 09/07 — banner retired (see note at
+// the old render site; 0 credits is the normal free state now).
 
 interface TaskHandle {
   id: string
@@ -2899,11 +2897,11 @@ export default function GenerateClient() {
           flipped to true in lib/flags.ts. */}
       <Offer290Banner />
 
-      {/* KINEO-LOWCREDITS-UPSELL-2026-07-08 — "almost out of videos → go monthly
-          $9.90" banner. Self-gated: shows ONLY for non-subscribers (plan free/
-          null; pack buyers included) with video_credits <= 5, dismissible per
-          session. Renders null when the gate isn't met or the fetch fails. */}
-      <LowCreditsUpsell />
+      {/* KINEO-LOWCREDITS-UPSELL banner REMOVED (Joseph 09/07: "remove o
+          almost"). With free Fast + 0-credit signups, "almost out of videos"
+          is wrong copy for the normal free state — the page now has ZERO
+          credit-warning banners. Monetization surfaces: the blue 🔒 unlock
+          card on the finished video + the daily-limit modal. */}
 
       {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — <AvatarPaywallModal/> removed.
           It sold the retired avatar_credits packs. Avatar videos now cost 120
