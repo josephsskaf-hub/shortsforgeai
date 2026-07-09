@@ -719,9 +719,22 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                 /* KINEO-UNLOCK-CHOICE-2026-07-09 — same 2-option choice as the
                    generate result card: $4.90 one-time vs $9.90/mo. */
                 <div style={{ display: 'flex', gap: 10 }}>
+                  {/* Both neutral; hover = blue pre-selection (Joseph 09/07). */}
                   <button
                     onClick={handleUnlockCheckout}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: 'rgba(41,151,255,.10)', border: '1px solid rgba(41,151,255,.45)', color: '#9ecbff', fontWeight: 800, fontSize: '0.88rem', transition: 'all 0.15s ease' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
+                      e.currentTarget.style.color = '#fff'
+                      e.currentTarget.style.border = '1px solid transparent'
+                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(41,151,255,0.35)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(41,151,255,.10)'
+                      e.currentTarget.style.color = '#9ecbff'
+                      e.currentTarget.style.border = '1px solid rgba(41,151,255,.45)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   >
                     <span>🔒 Unlock — $4.90</span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>This video + 25 Shorts · one-time</span>

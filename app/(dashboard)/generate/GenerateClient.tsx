@@ -4155,15 +4155,30 @@ export default function GenerateClient() {
                   {/* Joseph 09/07: "a pessoa tem que escolher" — two equal
                       options side by side: one-time $4.90 vs monthly $9.90. */}
                   <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                    {/* Joseph 09/07: both options start NEUTRAL (transparent);
+                        only the hovered one lights up blue = pre-selection. */}
                     <button
                       type="button"
                       onClick={handleRemoveWatermark}
-                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center text-white"
+                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center"
                       style={{
-                        background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
-                        border: 'none',
+                        background: 'rgba(41,151,255,.10)',
+                        border: '1px solid rgba(41,151,255,.45)',
+                        color: '#9ecbff',
                         cursor: 'pointer',
-                        boxShadow: '0 8px 24px rgba(41,151,255,.34)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
+                        e.currentTarget.style.color = '#fff'
+                        e.currentTarget.style.border = '1px solid transparent'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(41,151,255,.34)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(41,151,255,.10)'
+                        e.currentTarget.style.color = '#9ecbff'
+                        e.currentTarget.style.border = '1px solid rgba(41,151,255,.45)'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
                       <span>🔒 Unlock — $4.90</span>
