@@ -4180,6 +4180,19 @@ export default function GenerateClient() {
                         border: '1px solid rgba(129,140,248,.55)',
                         color: '#c7d2fe',
                         cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
+                        e.currentTarget.style.color = '#fff'
+                        e.currentTarget.style.border = '1px solid transparent'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(41,151,255,.34)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(129,140,248,.12)'
+                        e.currentTarget.style.color = '#c7d2fe'
+                        e.currentTarget.style.border = '1px solid rgba(129,140,248,.55)'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
                       <span>📅 Go monthly — $9.90</span>
