@@ -2910,32 +2910,10 @@ export default function GenerateClient() {
       {/* Push #430 — welcome credits: every new signup now starts with 30
           credits (30 Fast videos or 1 premium AI video). Banner shows the
           gift while the user is on free plan and still has credits. */}
-      {planTier === 'free' && credits !== null && (credits > 1 || freeAiUsed === false) && (
-        <div
-          style={{
-            background: 'linear-gradient(90deg, rgba(16,185,129,.16), rgba(16,185,129,.06))',
-            border: '1px solid rgba(16,185,129,.4)',
-            borderRadius: 12,
-            padding: '12px 16px',
-            marginBottom: 16,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* KINEO-FAST-1CR-2026-07-06 — Fast now costs 1 credit; free tier = 2.
-                Credit-aware banner replaces the old "free & unlimited" copy. */}
-            <span style={{ color: '#34d399', fontWeight: 800, fontSize: 13 }}>
-              ⚡ {credits !== null ? `${credits} video credit${credits === 1 ? '' : 's'} left` : 'Fast videos'}
-            </span>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              Each Fast video uses 1 credit. Out of credits? Get 25 more Shorts for $4.90, or go unlimited with a plan. (Free videos include our watermark.)
-            </span>
-          </div>
-        </div>
-      )}
+      {/* KINEO-DL-PAYWALL-2026-07-09 — verbose green credits banner REMOVED
+          (Joseph: "limpa a tela"). The compact credits chip in the top bar is
+          the single source of balance; monetization now happens at the
+          download moment, not via banner copy. */}
 
       {/* Push #103 — sticky low-credits upgrade banner. Sits above every
           other piece of the page so a free user who's about to be locked

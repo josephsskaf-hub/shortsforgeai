@@ -22,6 +22,12 @@ export default function StickyFreeShortCTA({
   cta?: string
 }) {
   const [dismissed, setDismissed] = useState(false)
+  // KINEO-DL-PAYWALL-2026-07-09 — sticky bar DISABLED per Joseph ("bem feio"),
+  // and its "free, no card" promise no longer matches the paid-download model.
+  // Killed at the source (rendered on 10 marketing pages) instead of editing
+  // every page. Flip DISABLED to false to bring it back.
+  const DISABLED = true
+  if (DISABLED) return null
   if (dismissed) return null
 
   return (

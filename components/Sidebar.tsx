@@ -421,9 +421,11 @@ export default function Sidebar({
               emoji tiles. Badge cleanup: every NEW removed per Joseph — the
               ONLY New badge in the product now lives on the AI Avatar entry. */}
           <NavItem href="/generate" icon={NAV_ICONS.generate} label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
-          {/* Avatar Studio (12/06) — the dedicated, focused /avatar page. The
-              one and only NEW badge in the product. */}
-          <NavItem href="/avatar" icon={NAV_ICONS.avatar} label="AI Avatar" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
+          {/* KINEO-DL-PAYWALL-2026-07-09 — "AI Avatar" nav entry removed per
+              Joseph: with universal credits the avatar is just another engine
+              inside Generate, not a separate destination. The /avatar route
+              stays live (linked from the landing toolkit) — only the sidebar
+              entry is gone to keep the app nav clean. */}
           {/* Animate (13/06) — image-to-video: a real photo comes alive. */}
           <NavItem href="/animate" icon={NAV_ICONS.animate} label="Animate a Photo" exact={false} pathname={pathname} onClick={onClose} />
           {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
