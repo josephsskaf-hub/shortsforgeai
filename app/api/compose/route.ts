@@ -270,6 +270,33 @@ export async function POST(req: NextRequest) {
       // DOWNLOAD moment ($4.90 unlock — KINEO-DL-PAYWALL-2026-07-09) or via
       // plans. The old KINEO-FAST-1CR 402 wall was removed here: blocking the
       // render killed the "wow" moment before the user ever saw their video.
+      //
+      // ABUSE GUARD (same push) — free Fast costs us ~$0.02-0.05/render
+      // (Creatomate + TTS), so an unlimited free tier invites bot abuse. Rule:
+      // users who NEVER paid get 3 Fast renders per rolling 24h; ANY payment
+      // (pack or plan) lifts the cap. 3/day is enough to fall in love with the
+      // product and doubles as one more nudge toward the $4.90 unlock.
+      if (quality === 'fast' && isFreePlan && !hasPaid) {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { count, error: cntErr } = await supabase
+          .from('videos')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', since)
+        // Defensive: if the count query fails, let the render through — never
+        // block a legit user because of a transient DB blip.
+        if (!cntErr && (count ?? 0) >= 3) {
+          return NextResponse.json(
+            {
+              error: "You've hit today's free limit (3 videos). Unlock downloads + 25 more Shorts for $4.90, or upgrade for unlimited creation.",
+              upsell: 'credits',
+              outOfCredits: true,
+              upgrade: '/pricing',
+            },
+            { status: 402 },
+          )
+        }
+      }
       // #482 — end card (Option A): free + Starter get the "Made with
       // ShortsForgeAI" end card so every posted video advertises the product.
       // Clean on Creator/Studio (they're not free and not in STARTER_PLANS).
