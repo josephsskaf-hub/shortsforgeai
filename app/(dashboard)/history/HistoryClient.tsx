@@ -111,10 +111,10 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // the bytes and name them ourselves. controlsList="nodownload" hides the ⋮
   // download path so users always get the correctly-named file.
   async function handleDownload(video: Video) {
-    // KINEO-DL-PAYWALL-2026-07-09 — non-payers go to the $4.90 checkout
-    // instead of the file (defense in depth: the button label already says
-    // Unlock, this guard covers any other path into this handler).
-    if (downloadLocked) { handleUnlockCheckout(); return }
+    // KINEO-DL-PAYWALL-2026-07-09 — non-payers never reach the file. From the
+    // grid, open the lightbox instead (that's where the $4.90 / $9.90 choice
+    // lives — KINEO-UNLOCK-CHOICE); the lightbox buttons call checkout directly.
+    if (downloadLocked) { setLightbox(video.id); return }
     if (!video.video_url || downloadingId) return
     setDownloadingId(video.id)
     try {
@@ -715,13 +715,34 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   onError={() => setErrors((prev) => new Set([...prev, v.id]))}
                 />
               </div>
+              {downloadLocked ? (
+                /* KINEO-UNLOCK-CHOICE-2026-07-09 — same 2-option choice as the
+                   generate result card: $4.90 one-time vs $9.90/mo. */
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={handleUnlockCheckout}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
+                  >
+                    <span>🔒 Unlock — $4.90</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>This video + 25 Shorts · one-time</span>
+                  </button>
+                  <button
+                    onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: 'rgba(129,140,248,.12)', border: '1px solid rgba(129,140,248,.55)', color: '#c7d2fe', fontWeight: 800, fontSize: '0.88rem' }}
+                  >
+                    <span>📅 Monthly — $9.90</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>50 videos every month · cancel anytime</span>
+                  </button>
+                </div>
+              ) : (
               <button
                 onClick={() => handleDownload(v)}
                 disabled={downloadingId === v.id}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: downloadLocked ? 'linear-gradient(135deg, #2997ff, #1d6fe0)' : 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: downloadLocked ? '0 8px 28px rgba(41,151,255,0.35)' : '0 8px 28px rgba(34,197,94,0.35)' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 28px rgba(34,197,94,0.35)' }}
               >
-                {downloadingId === v.id ? 'Downloading…' : downloadLocked ? '🔒 Unlock & Download — $4.90' : '⬇ Download (MP4)'}
+                {downloadingId === v.id ? 'Downloading…' : '⬇ Download (MP4)'}
               </button>
+              )}
               <button
                 onClick={() => setLightbox(null)}
                 style={{ width: '100%', padding: '10px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--muted)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
