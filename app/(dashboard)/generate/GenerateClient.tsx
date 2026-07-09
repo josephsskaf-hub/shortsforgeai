@@ -4140,31 +4140,54 @@ export default function GenerateClient() {
                       className="text-[10px] font-black uppercase tracking-[.18em] mb-1.5"
                       style={{ color: '#2997ff' }}
                     >
-                      Remove the watermark
+                      Unlock your video
                     </div>
                     <h3
                       className="font-black tracking-tight"
                       style={{ fontSize: '1.15rem', color: 'var(--text)', lineHeight: 1.25 }}
                     >
-                      Remove watermark + 25 Shorts for $4.90
+                      Download this video watermark-free
                     </h3>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      Unlocks this exact video clean — one-time · no subscription · your credits never expire.
+                      Pick what fits you — both unlock this exact video clean, instantly.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveWatermark}
-                    className="block w-full rounded-xl mt-4 py-3.5 text-sm font-black text-center text-white"
-                    style={{
-                      background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 24px rgba(41,151,255,.34)',
-                    }}
-                  >
-                    🔒 Unlock &amp; Download — $4.90 →
-                  </button>
+                  {/* Joseph 09/07: "a pessoa tem que escolher" — two equal
+                      options side by side: one-time $4.90 vs monthly $9.90. */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                    <button
+                      type="button"
+                      onClick={handleRemoveWatermark}
+                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center text-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 24px rgba(41,151,255,.34)',
+                      }}
+                    >
+                      <span>🔒 Unlock — $4.90</span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
+                        This video + 25 Shorts · one-time
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter' }}
+                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center"
+                      style={{
+                        background: 'rgba(129,140,248,.12)',
+                        border: '1px solid rgba(129,140,248,.55)',
+                        color: '#c7d2fe',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span>📅 Go monthly — $9.90</span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
+                        50 videos every month · cancel anytime
+                      </span>
+                    </button>
+                  </div>
                 </div>
               )}
 
