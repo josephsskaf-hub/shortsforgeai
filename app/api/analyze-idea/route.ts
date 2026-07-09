@@ -293,6 +293,8 @@ QUALITY RULES (non-negotiable):
 - Captions: maximum 6-8 words. Punchy fragments, not full sentences. No periods. Each caption SHOULD include a "highlight" field naming the single most impactful word in the caption (preferred candidates: strange, hidden, vanished, signal, mystery, impossible, forbidden, unknown, discovered, secret, ancient, bizarre, haunted, cursed, lost, found, real). If none of those fit, pick the most striking noun or adjective in the caption.
 - Visual prompts must be EXTREMELY cinematic and specific. Describe camera angle, lighting, color palette, subject, atmosphere, lens feel. BAD: "ocean waves" or "historical ruins". GOOD: "extreme close-up of a sonar screen pulsing with an unknown signal, deep blue glow, underwater facility in soft focus behind, ominous teal atmosphere, slow push-in on the screen". Every visual_prompt should read like a shot list for a cinematographer.
 - Every visual_prompt MUST embed the safe-composition constraints above: keep the main subject centered, fully visible, within the inner 80% of the frame, in the upper 65-75% so the bottom caption strip never covers it. Landmarks must be readable end-to-end without cropping.
+- PERIOD ACCURACY (KINEO-ERA-LOCK-2026-07-09): if the script is set in a specific era or historical event, EVERY visual_prompt must state the year/era and use ONLY period-accurate technology, clothing, weapons and architecture — and must explicitly append "no modern objects, no modern vehicles, no tanks, no modern weapons, no modern clothing" as a constraint inside the prompt. Example for 1815: muskets, bayonets, cavalry horses, shako hats, smoke-covered fields — NEVER tanks, cars, helicopters or modern uniforms.
+- REAL PEOPLE (KINEO-ERA-LOCK-2026-07-09): NEVER prompt a recognizable close-up face of a named real person (historical or living) — AI cannot match likeness and it breaks immersion. Show such figures from behind, in silhouette, at a distance, or imply them through details (a bicorne hat, a hand on a map, boots in mud). Write the visual_prompt so no identifiable face is the focal point.
 - Every scene is visually distinct from the others — different camera angle, different lighting, different subject framing. No two scenes should feel like the same shot.
 - The closing voiceover MUST land a payoff — a comparison, twist, statistic, or definitive conclusion. The voiceover MUST NOT trail off and MUST NOT end on a vague cliffhanger.
 - Output is in English.
@@ -645,7 +647,7 @@ For each scene return a JSON object with exactly:
 - scene_number (int)
 - caption (max 6 words, punchy fragment, no period — summarize the voiceover in 6 words)
 - highlight (the single most striking word in the caption)
-- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content)
+- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content. PERIOD ACCURACY: if the voiceover is set in a specific era, state the year/era and use ONLY period-accurate tech/clothing/weapons, appending "no modern objects, no modern vehicles, no tanks" inside the prompt. REAL PEOPLE: never make a recognizable face of a named real person the focal point — show them from behind, in silhouette, at distance, or via details like a hat or hands)
 - duration_seconds (int)
 
 Also return at the top level:
@@ -762,7 +764,7 @@ For each scene return a JSON object with exactly:
 - scene_number (int)
 - caption (max 6 words, punchy fragment, no period — summarize the voiceover in 6 words)
 - highlight (the single most striking word in the caption)
-- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content)
+- visual_prompt (150-350 chars, cinematic 9:16 vertical, describe camera angle + lighting + subject specific to the voiceover content. PERIOD ACCURACY: if the voiceover is set in a specific era, state the year/era and use ONLY period-accurate tech/clothing/weapons, appending "no modern objects, no modern vehicles, no tanks" inside the prompt. REAL PEOPLE: never make a recognizable face of a named real person the focal point — show them from behind, in silhouette, at distance, or via details like a hat or hands)
 - duration_seconds (int)
 
 Also return at the top level:

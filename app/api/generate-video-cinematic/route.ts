@@ -141,9 +141,41 @@ function buildFalInput(model: string, prompt: string, hd: boolean = true): Recor
 const PERSON_NOUN_RE =
   /\b(?:(?:a|an|the)\s+)?(?:(?:random|generic|young|old|asian|white|black|european|american|middle[-\s]?aged)\s+)*(?:businessman|businesswoman|man|woman|men|women|person|persons|people|guy|guys|boy|boys|girl|girls|lady|ladies|gentleman|ceo|entrepreneur|trader|crowd|family|child|children|kid|kids|student|students)s?\b/gi
 
+// KINEO-ERA-LOCK-2026-07-09 (system-level, not GPT-dependent) — real failure:
+// a Battle of Waterloo (1815) video rendered TANKS on the field and a made-up
+// "Napoleon" face (frame-checked by Joseph, sent to a live Upwork client).
+// Prompt-side instructions in analyze-idea help but the model/GPT can ignore
+// words — so this is enforced IN CODE on every prompt before it reaches fal:
+//  (a) NAMED_FIGURE_RE: titled/famous historical names become a silhouetted
+//      figure seen from behind (AI can never match a real likeness anyway);
+//  (b) eraLockSuffix(): if the script mentions a pre-1940 year or era word,
+//      every scene prompt gets a hard period-accuracy tail (Seedance has no
+//      negative_prompt param, so the positive prompt is the only lever).
+const NAMED_FIGURE_RE =
+  /\b(?:(?:emperor|general|marshal|king|queen|tsar|czar|president|commander|colonel|admiral|captain|duke|lord|sir|kaiser|pharaoh)\s+[A-Z][\w'-]+|napoleon(?:\s+bonaparte)?|bonaparte|wellington|hitler|stalin|churchill|caesar|cleopatra|genghis\s+khan|alexander\s+the\s+great|abraham\s+lincoln|george\s+washington|joan\s+of\s+arc)\b/gi
+
+const ERA_YEAR_RE = /\b1[0-8][0-9]{2}\b|\b19[0-3][0-9]\b/ // years 1000–1939
+const ERA_WORD_RE =
+  /\b(ancient|medieval|middle\s+ages|renaissance|victorian|napoleonic|roman\s+empire|byzantine|colonial\s+era|civil\s+war|revolutionary\s+war|b\.?c\.?e?\b|\d{1,2}(?:st|nd|rd|th)\s+century)\b/i
+
+function eraLockSuffix(context: string): string {
+  const ctx = (context || '').slice(0, 4000)
+  const yearMatch = ctx.match(ERA_YEAR_RE)
+  if (!yearMatch && !ERA_WORD_RE.test(ctx)) return ''
+  const era = yearMatch ? `the year ${yearMatch[0]}` : 'the historical era being narrated'
+  return (
+    `, period piece set strictly in ${era}, only historically accurate clothing, weapons, ` +
+    `vehicles and architecture from that exact time, absolutely no modern objects, no tanks, ` +
+    `no cars, no trucks, no modern military vehicles, no modern weapons, no modern uniforms, ` +
+    `no power lines, no asphalt, no plastic`
+  )
+}
+
 function buildFacelessCinematicPrompt(raw: string): string {
   let s = (raw || '').replace(/\s+/g, ' ').trim()
   s = s
+    // Named historical figures → silhouette from behind (never a face).
+    .replace(NAMED_FIGURE_RE, 'a distant silhouetted figure seen from behind')
     .replace(PERSON_NOUN_RE, ' ')
     .replace(/\s{2,}/g, ' ')
     .replace(/^[\s,.;:–-]+/, '')
@@ -482,6 +514,14 @@ export async function POST(req: NextRequest) {
     // in Kling, the premium engine. hd stays false; Kling sets its own params.
     const hd = false
 
+    // KINEO-ERA-LOCK-2026-07-09 — era detected ONCE from the full narration +
+    // topic, then appended to EVERY scene prompt below (code-enforced; survives
+    // any GPT slip in the per-scene visual prompts).
+    const eraSuffix = eraLockSuffix(
+      `${prompt} ${scenes.map((s) => `${s.voiceover ?? ''} ${s.aiPrompt ?? ''} ${s.description ?? ''}`).join(' ')}`,
+    )
+    if (eraSuffix) console.log('[cinematic] era-lock active for this render')
+
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []
       for (const scene of scenes) {
@@ -490,7 +530,7 @@ export async function POST(req: NextRequest) {
         // buildFacelessCinematicPrompt then strips any person nouns + forces
         // environment-first b-roll, on-brand for this faceless channel.
         const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
-        const cinematic = buildFacelessCinematicPrompt(visualPrompt) + styleSuffix
+        const cinematic = buildFacelessCinematicPrompt(visualPrompt) + eraSuffix + styleSuffix
         let id = await submitToFal(cinematic, model, hd)
         if (!id) {
           await new Promise((r) => setTimeout(r, 800))

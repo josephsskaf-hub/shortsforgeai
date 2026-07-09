@@ -149,11 +149,19 @@ async function fetchTrackFromOpenverse(seed?: string): Promise<string | null> {
 // Never returns null in practice: LAYER 2 is self-hosted and always resolves.
 // ---------------------------------------------------------------------------
 export async function getBackgroundMusicUrl(seed?: string): Promise<string | null> {
-  // LAYER 1 — live API
-  const fromApi = await fetchTrackFromOpenverse(seed)
-  if (fromApi) return fromApi
+  // KINEO-MUSIC-CURATED-2026-07-09 — Openverse (LAYER 1) DISABLED by default.
+  // Real-world failure 09/07: a random Openverse "phonk/dark beat" hit turned
+  // out to be a track that flips into upbeat club music mid-file — the loop
+  // put party music under the last 5s of a Battle of Waterloo video sent to a
+  // client. Random CC0 search = quality roulette; the 8 curated tracks below
+  // are hand-vetted dark/cinematic and always on-brand. Re-enable the live
+  // search only via env flag after adding a genre-consistency check.
+  if (process.env.MUSIC_OPENVERSE_ENABLED === '1') {
+    const fromApi = await fetchTrackFromOpenverse(seed)
+    if (fromApi) return fromApi
+  }
 
-  // LAYER 2 — curated self-hosted CC0 tracks (deterministic rotation)
+  // LAYER 2 (now primary) — curated self-hosted CC0 tracks (deterministic rotation)
   const fallback = FALLBACK_TRACKS[pickIndex(FALLBACK_TRACKS.length, seed, 'fallback')]
   console.log(`[music] Using curated self-hosted CC0 track: ${fallback}`)
   return fallback
