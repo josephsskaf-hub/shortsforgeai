@@ -8,6 +8,10 @@ import type { Scene } from '@/lib/runway'
 // Push #353 — Pixabay replaces Pexels as primary B-roll source.
 // Fast Mode v2 (02/07) — getPixabayClipsForScene returns a RANKED mini-pool per scene.
 import { getPixabayClipsForScene } from '@/lib/pixabay'
+// KINEO-FAST-V4 — self-building clip library: search it before any external API.
+import { searchVault } from '@/lib/clipVault'
+// KINEO-FAST-V4 — AI hook (Seedance) for each account's FIRST video only.
+import { buildHookPrompt, submitAiHook, awaitAiHook, type AiHookHandle } from '@/lib/fastAiHook'
 import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
 // Push #351 — ensureAccessibleUrl removed (was only used for Pexels CDN proxying; Pexels now OFF).
 // import { ensureAccessibleUrl } from '@/lib/videoCache'
@@ -345,6 +349,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // KINEO-FAST-V4 — AI HOOK (first video of the account only). Submitted NOW
+    // so Seedance renders IN PARALLEL with the stock clip loop below; we await
+    // it (capped) after the loop. On any failure/timeout the stock hook stands.
+    let aiHookHandle: AiHookHandle | null = null
+    if (!verbatim && process.env.FAST_AI_HOOK !== 'false') {
+      try {
+        const { count: priorVideos } = await supabase
+          .from('videos')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        if ((priorVideos ?? 0) === 0) {
+          const hookPrompt = buildHookPrompt(scenes[0]?.description ?? '', prompt.slice(0, 120))
+          aiHookHandle = await submitAiHook(hookPrompt)
+          if (aiHookHandle) {
+            console.log(`[generate-fast] FIRST VIDEO for user ${user.id.slice(0, 8)} — AI hook submitted (renders in parallel)`)
+          }
+        }
+      } catch (e) {
+        console.warn('[generate-fast] AI hook gate check failed (non-blocking):', e instanceof Error ? e.message : String(e))
+      }
+    }
+
     // Step 2 — Resolve each scene to a clip URL.
     //
     // Push #215 — Removed STOCKLIB_PRIORITY mode (Push #213/214).
@@ -600,6 +626,30 @@ export async function POST(req: NextRequest) {
             1,
             Math.min(perScene, FAST_MAX_TOTAL_CLIPS - clipUrls.length),
           )
+
+          // KINEO-FAST-V4 — VAULT FIRST. Clips already curated by past videos
+          // (high score at pick time, served from OUR storage) beat a fresh
+          // external search: instant, on-brand, Creatomate-safe. Vault misses
+          // cost one indexed SQL query (~10ms). Skipped in verbatim mode (the
+          // user's hand-picked query deserves a live search).
+          let vaultTaken = 0
+          if (!verbatim) {
+            const vaultHits = await searchVault(pixQueries[0] ?? libQuery ?? '', {
+              exclude: usedPexelsUrls,
+              limit: clipsWanted,
+            })
+            for (const hit of vaultHits) {
+              clipUrls.push(hit.storageUrl)
+              usedPexelsUrls.add(hit.storageUrl)
+              clipSources.push('pixabay') // metrics bucket: vault clips originated from pixabay
+              vaultTaken++
+              console.log(
+                `[clip] scene=${sceneNo} purpose=${purpose} duration=${durLabel}s query="${(pixQueries[0] ?? '').slice(0, 50)}" source=VAULT score=${hit.score} url=${hit.storageUrl.slice(0, 60)}`,
+              )
+            }
+            if (vaultTaken >= clipsWanted) continue
+          }
+
           const pixUrls = await getPixabayClipsForScene(
             pixQueries,
             sceneNeedsPeople,
@@ -609,7 +659,7 @@ export async function POST(req: NextRequest) {
             // scene already took (the same-Dubai-aerial-4x bug).
             // Push #483 — minDurationSec: clips long enough to cover the planned
             // scene duration rank higher (kills freeze/loop padding on short clips).
-            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds, maxClips: clipsWanted, styleCtx },
+            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds, maxClips: clipsWanted - vaultTaken, styleCtx },
           )
           if (pixUrls.length > 0) {
             for (const pixUrl of pixUrls) {
@@ -622,6 +672,9 @@ export async function POST(req: NextRequest) {
             }
             continue
           }
+          // KINEO-FAST-V4 — scene already partially covered by vault clips:
+          // that's enough, don't pad it with a fallback repeat.
+          if (vaultTaken > 0) continue
           console.log(`[clip] scene=${sceneNo} Pixabay miss — falling through to FALLBACK-A/B`)
         }
       }
@@ -652,6 +705,19 @@ export async function POST(req: NextRequest) {
         )
         clipUrls.push('')
         clipSources.push('none') // #355
+      }
+    }
+
+    // KINEO-FAST-V4 — collect the AI hook (submitted before the clip loop, so
+    // most of its render time overlapped the stock sourcing above). Budget: 55s
+    // inside our 120s route allowance. Success → the AI clip LEADS the video
+    // (first frames = Seedance); timeout/failure → stock hook stands untouched.
+    if (aiHookHandle) {
+      const hookUrl = await awaitAiHook(aiHookHandle, 55_000, scenes[0]?.stockSearchQuery ?? prompt.slice(0, 80))
+      if (hookUrl) {
+        clipUrls.unshift(hookUrl)
+        clipSources.unshift('pixabay') // metrics bucket (source detail is in logs)
+        console.log('[generate-fast] AI hook LEADS the timeline 🎬')
       }
     }
 

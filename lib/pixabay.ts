@@ -15,6 +15,9 @@
 // Toggle: set ENABLE_PIXABAY=false to disable and fall straight to FALLBACK-A/B.
 // Never throws — all helpers return null/[] on error so the pipeline stays alive.
 
+// KINEO-FAST-V4 — picked clips are copied into our own library (fire-and-forget).
+import { vaultClipAsync } from './clipVault'
+
 const PIXABAY_API = 'https://pixabay.com/api/videos/'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -305,6 +308,9 @@ type PixabayCandidate = {
   id: number
   /** KINEO-FAST-CINEMA — style tags for the per-video coherence context. */
   styleTags: string[]
+  /** KINEO-FAST-V4 — full provider tags + duration, for the clip vault index. */
+  tags: string
+  durationSec?: number
 }
 
 // Fast Mode v2 (02/07) — collection extracted from searchAndFilter so the new
@@ -378,7 +384,10 @@ async function collectCandidates(
     const score =
       matches * 4 + (coversScene ? 3 : 0) + (portrait ? 2 : 0) - (tooShort ? 2 : 0) +
       cinema + rez2 + cohere
-    candidates.push({ url, score, order, id: video.id, styleTags: sTags })
+    candidates.push({
+      url, score, order, id: video.id, styleTags: sTags,
+      tags: video.tags, durationSec: typeof video.duration === 'number' ? video.duration : undefined,
+    })
     console.log(
       `[pixabay] ${label} candidate id=${video.id} score=${score} (matches=${matches} dur=${video.duration ?? '?'}s/${neededSec}s portrait=${portrait} tooShort=${tooShort} cinema=${cinema} rez=${rez2} cohere=${cohere}) tags="${video.tags.slice(0, 60)}"`,
     )
@@ -709,11 +718,83 @@ export async function getPixabayClipsForScene(
   }
 
   pool.sort((a, b) => b.score - a.score || a.order - b.order)
-  const pickedCands = pool.slice(0, maxClips)
+
+  // KINEO-FAST-V4 — GPT SCENE DIRECTOR. Tag heuristics can't tell that a
+  // "volcano, iceland, tourists" clip is worse than "volcano, lava, night" for
+  // a Darvaza scene — a tiny LLM call can. When the pool has real choice
+  // (4+ candidates), gpt-4o-mini picks the best clips for the NARRATION from
+  // the top 8 by score; on timeout (1.5s) or any error the heuristic order
+  // stands. ~$0.0002 per scene. Toggle: FAST_GPT_DIRECTOR=false.
+  let ranked = pool
+  if (
+    pool.length >= 4 &&
+    (hint ?? '').length > 8 &&
+    process.env.FAST_GPT_DIRECTOR !== 'false' &&
+    process.env.OPENAI_API_KEY
+  ) {
+    try {
+      const finalists = pool.slice(0, 8)
+      const listing = finalists
+        .map((c, i) => `${i + 1}. tags: ${c.tags.slice(0, 90)}`)
+        .join('\n')
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 1500)
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          temperature: 0,
+          max_tokens: 20,
+          messages: [
+            {
+              role: 'user',
+              content: `Narration: "${(hint ?? '').slice(0, 120)}"\nStock clips (by tags):\n${listing}\nReply ONLY with the numbers of the ${Math.min(maxClips, finalists.length)} clips that best match the narration's subject and a dark cinematic documentary look, comma-separated, best first.`,
+            },
+          ],
+        }),
+      })
+      clearTimeout(timer)
+      if (res.ok) {
+        const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> }
+        const nums = (data.choices?.[0]?.message?.content ?? '')
+          .match(/\d+/g)
+          ?.map((n) => parseInt(n, 10) - 1)
+          .filter((n) => n >= 0 && n < finalists.length) ?? []
+        if (nums.length > 0) {
+          const chosen = Array.from(new Set(nums)).map((n) => finalists[n])
+          const rest = pool.filter((c) => !chosen.includes(c))
+          ranked = [...chosen, ...rest]
+          console.log(`[gpt-director] reordered: picks=[${nums.map((n) => n + 1).join(',')}] of ${finalists.length}`)
+        }
+      }
+    } catch {
+      // timeout / API blip — heuristic order stands, zero impact.
+    }
+  }
+
+  const pickedCands = ranked.slice(0, maxClips)
   // KINEO-FAST-CINEMA — feed the picked clips' style tags back into the
   // per-video context so LATER scenes bias toward the same look.
   if (opts?.styleCtx) {
     for (const c of pickedCands) for (const t of c.styleTags) opts.styleCtx.tags.add(t)
+  }
+  // KINEO-FAST-V4 — vault the winners (fire-and-forget: zero added latency).
+  // Every picked clip enriches our own library; future videos on similar
+  // topics hit the vault before any external API.
+  for (const c of pickedCands) {
+    void vaultClipAsync({
+      sourceUrl: c.url,
+      provider: 'pixabay',
+      query: cleaned[0],
+      tags: c.tags,
+      score: c.score,
+      durationSec: c.durationSec,
+    })
   }
   const picked = pickedCands.map((c) => c.url)
   console.log(

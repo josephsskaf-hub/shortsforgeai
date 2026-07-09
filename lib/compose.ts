@@ -1266,8 +1266,19 @@ export function buildCreatomateSource({
   // graded, premium look (the single biggest "make stock look produced" trick),
   // closing the gap toward AI Generated — for free, applied to every Fast video.
   //
-  // (a) Cool teal wash over the whole frame → cohesion + moody cinematic tone.
-  //     Kept subtle (alpha ~0.13) so the footage stays vivid, not muddy.
+  // KINEO-FAST-V4 (10/07) — NICHE-AWARE GRADE. One fixed teal wash made every
+  // niche look the same; real colorists grade money content warm/gold, mystery
+  // deep blue, geography teal/orange. Detected from the narration itself —
+  // zero new params, works for every caller. Unknown niche keeps #436's grade.
+  const gradeText = (voiceoverScript ?? '').toLowerCase()
+  const grade = /\b(billionaire|millionaire|wealth|money|invest|luxur|rich|dollar|business)\b/.test(gradeText)
+    ? { wash: 'rgba(35,26,8,0.15)',  glow: 'rgba(255,190,80,0.07)' }   // wealth: warm gold
+    : /\b(mystery|mysterious|unexplained|vanish|disappear|haunted|secret|creepy)\b/.test(gradeText)
+    ? { wash: 'rgba(8,14,40,0.17)',  glow: 'rgba(120,150,255,0.05)' }  // mystery: deep blue
+    : /\b(volcano|desert|island|mountain|ocean|country|village|glacier|jungle|crater)\b/.test(gradeText)
+    ? { wash: 'rgba(10,32,40,0.14)', glow: 'rgba(255,140,50,0.06)' }   // places: teal/orange doc
+    : { wash: 'rgba(12,34,51,0.13)', glow: 'rgba(255,150,60,0.05)' }   // default (#436 original)
+  // (a) Niche wash over the whole frame → cohesion + moody cinematic tone.
   elements.push({
     type: 'shape',
     track: 3,
@@ -1277,10 +1288,10 @@ export function buildCreatomateSource({
     y: '50%',
     width: '100%',
     height: '100%',
-    fill_color: 'rgba(12,34,51,0.13)',
+    fill_color: grade.wash,
   })
-  // (b) Warm highlight lift in the center → the teal/orange contrast that reads
-  //     as "color graded" instead of just tinted. Very subtle, center-weighted.
+  // (b) Complementary highlight lift in the center → reads as "color graded",
+  //     not just tinted. Very subtle, center-weighted.
   elements.push({
     type: 'shape',
     track: 3,
@@ -1290,7 +1301,7 @@ export function buildCreatomateSource({
     y: '48%',
     width: '70%',
     height: '55%',
-    fill_color: 'rgba(255,150,60,0.05)',
+    fill_color: grade.glow,
   })
   // (c) Side vignette bars (left + right) → completes the frame darkening with
   //     the existing top/bottom letterbox, focusing the eye on the subject.
