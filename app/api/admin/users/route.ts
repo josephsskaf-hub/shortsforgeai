@@ -26,6 +26,12 @@ interface AdminUserRow {
   videos_count: number
   last_video_at: string | null
   plan: string | null
+  // KINEO-ADMIN-DOWNLOADS-2026-07-10 — how many times this user downloaded a
+  // video (events.video_downloaded) + how many times they clicked the $4.90
+  // unlock (starter_pack_checkout_clicked). Together with videos_count these
+  // tell the InVideo-model story: made videos → hit the lock → clicked → paid?
+  downloads_count: number
+  unlock_clicks: number
   // KINEO-ADMIN-GEO-2026-07-06 — last known connection IP + country (ISO code).
   last_ip: string | null
   last_country: string | null
@@ -95,6 +101,30 @@ export async function GET() {
       console.warn('[admin/users] videos query failed:', e)
     }
 
+    // KINEO-ADMIN-DOWNLOADS-2026-07-10 — per-user download + unlock-click
+    // aggregates from public.events. Best-effort: a failure leaves the maps
+    // empty (columns show 0), never breaks the page.
+    const downloadCounts = new Map<string, number>()
+    const unlockClicks = new Map<string, number>()
+    try {
+      const { data: evts, error: eErr } = await admin
+        .from('events')
+        .select('user_id, name')
+        .in('name', ['video_downloaded', 'starter_pack_checkout_clicked'])
+      if (!eErr && Array.isArray(evts)) {
+        for (const row of evts as Array<{ user_id: string | null; name: string | null }>) {
+          if (!row.user_id) continue
+          if (row.name === 'video_downloaded') {
+            downloadCounts.set(row.user_id, (downloadCounts.get(row.user_id) ?? 0) + 1)
+          } else if (row.name === 'starter_pack_checkout_clicked') {
+            unlockClicks.set(row.user_id, (unlockClicks.get(row.user_id) ?? 0) + 1)
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[admin/users] events query failed:', e)
+    }
+
     // Profile metadata (credits + plan + stripe_customer_id). Probe gracefully.
     const credits = new Map<string, number | null>()
     const plans = new Map<string, string | null>()
@@ -160,6 +190,8 @@ export async function GET() {
         videos_count: videoCounts.get(u.id) ?? 0,
         last_video_at: lastVideoAt.get(u.id) ?? null,
         plan: plans.get(u.id) ?? null,
+        downloads_count: downloadCounts.get(u.id) ?? 0,
+        unlock_clicks: unlockClicks.get(u.id) ?? 0,
         last_ip: ips.get(u.id) ?? null,
         last_country: countries.get(u.id) ?? null,
         // checkout_abandoned = has Stripe customer but no paid plan

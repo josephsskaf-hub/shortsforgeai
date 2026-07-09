@@ -20,6 +20,9 @@ interface AdminUserRow {
   videos_count: number
   last_video_at: string | null
   plan: string | null
+  // KINEO-ADMIN-DOWNLOADS-2026-07-10 — funnel depth: downloads + unlock clicks
+  downloads_count: number
+  unlock_clicks: number
   last_ip: string | null
   last_country: string | null
   checkout_abandoned: boolean
@@ -412,6 +415,8 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                   <Th>Joined</Th>
                   <Th align="right">Credits</Th>
                   <Th align="right">Videos</Th>
+                  <Th align="right">Downloads</Th>
+                  <Th align="right">Unlock clicks</Th>
                   <Th align="center">Used Credit</Th>
                   <Th>Last Video</Th>
                   <Th>Plan</Th>
@@ -437,6 +442,8 @@ export default function UsersClient({ viewerEmail, denied }: Props) {
                     <Td>{fmtDate(u.created_at)}</Td>
                     <Td align="right">{fmt(u.credits)}</Td>
                     <Td align="right">{fmt(u.videos_count)}</Td>
+                    <Td align="right">{u.downloads_count > 0 ? `⬇ ${fmt(u.downloads_count)}` : '—'}</Td>
+                    <Td align="right">{u.unlock_clicks > 0 ? `🔓 ${fmt(u.unlock_clicks)}` : '—'}</Td>
                     <Td align="center">{u.videos_count >= 1 ? '✅ Yes' : '❌ No'}</Td>
                     <Td>{fmtDate(u.last_video_at)}</Td>
                     <Td><PlanBadge plan={u.plan} credits={u.credits} /></Td>
