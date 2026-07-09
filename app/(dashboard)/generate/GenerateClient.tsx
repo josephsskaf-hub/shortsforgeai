@@ -4232,7 +4232,36 @@ export default function GenerateClient() {
                 className="mt-7 w-full flex flex-col items-center gap-3"
                 style={{ maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}
               >
-                {/* Primary: big green Download */}
+                {/* Primary: big green Download.
+                    KINEO-DL-PAYWALL-2026-07-09 — InVideo model: free users can
+                    WATCH their finished video (preview stays free — that's the
+                    "aha" that sells) but the DOWNLOAD is the purchase moment.
+                    Locked state reuses the existing watermark-moment checkout
+                    (handleRemoveWatermark → $4.90 Starter Pack → returns to
+                    /generate?wm_unlock=1 → clean re-render of THIS video). */}
+                {planTier === 'free' && !hasPaid ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveWatermark}
+                    className="flex flex-col items-center justify-center gap-0.5 w-full rounded-2xl py-4 text-base font-black text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 28px rgba(245,158,11,.45)',
+                      letterSpacing: '-0.01em',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span style={{ fontSize: '1.15rem' }}>🔓</span>
+                      Unlock &amp; Download — $4.90
+                    </span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.92 }}>
+                      This video watermark-free + 25 Shorts · one-time · no subscription
+                    </span>
+                  </button>
+                ) : (
                 <a
                   href={finalVideoUrl}
                   onClick={handleDownload}
@@ -4251,6 +4280,7 @@ export default function GenerateClient() {
                   <span style={{ fontSize: '1.15rem' }}>⬇</span>
                   Download Your Short ({duration}s · MP4)
                 </a>
+                )}
 
                 {/* Secondary row: preview + copy + whatsapp + more + X */}
                 <div className="flex flex-wrap items-center justify-center gap-2 w-full">
@@ -4428,7 +4458,8 @@ export default function GenerateClient() {
                     <span style={{ color: '#34d399', fontWeight: 800 }}>✓</span>
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
-                      — use the “⬇ Download MP4” button above to save the file to your device.
+                      — use the download button above to save the file to your device
+                      {planTier === 'free' && !hasPaid ? ' (unlocking removes the watermark and includes 25 Shorts for $4.90)' : ''}.
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>

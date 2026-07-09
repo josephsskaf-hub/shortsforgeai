@@ -122,6 +122,45 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   // tapping a new card auto-pauses the previously playing one.
   const [playingId, setPlayingId] = useState<string | null>(null)
 
+  // KINEO-DL-PAYWALL-2026-07-09 — InVideo model: watching is free, downloading
+  // is paid. Free users (no pack, no plan) see "🔓 Unlock — $4.90" instead of
+  // Download; one click goes to the $4.90 Starter Pack checkout. Fails OPEN
+  // (never blocks a paid user if /api/credits hiccups).
+  const [downloadLocked, setDownloadLocked] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    async function fetchPlan() {
+      try {
+        const res = await fetch('/api/credits')
+        if (!res.ok) return
+        const data = await res.json()
+        const paid =
+          data.hasPaid === true || data.isStarter === true || data.isCreator === true || data.isStudio === true
+        if (!cancelled) setDownloadLocked(!paid)
+      } catch {
+        /* fail open */
+      }
+    }
+    fetchPlan()
+    window.addEventListener('creditsChanged', fetchPlan)
+    return () => {
+      cancelled = true
+      window.removeEventListener('creditsChanged', fetchPlan)
+    }
+  }, [])
+
+  function handleUnlockCheckout() {
+    try {
+      void fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'my_videos_download_lock' } }),
+        keepalive: true,
+      })
+    } catch { /* non-blocking */ }
+    window.location.href = '/api/stripe/checkout?pack=starter'
+  }
+
   // Push #153 — auto-refresh while any video is still processing so the
   // user doesn't have to manually reload to see a completed render.
   const router = useRouter()
@@ -265,6 +304,8 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
               onCopy={() => handleCopyLink(v)}
               onDownload={() => handleDownload(v)}
               isDownloading={downloadingId === v.id}
+              downloadLocked={downloadLocked}
+              onUnlock={handleUnlockCheckout}
               isPinned={playingId === v.id}
               onTogglePin={() =>
                 setPlayingId((curr) => (curr === v.id ? null : v.id))
@@ -302,6 +343,8 @@ function VideoCard({
   isDownloading,
   isPinned,
   onTogglePin,
+  downloadLocked,
+  onUnlock,
 }: {
   video: VideoRow
   isCopied: boolean
@@ -310,6 +353,8 @@ function VideoCard({
   isDownloading: boolean
   isPinned: boolean
   onTogglePin: () => void
+  downloadLocked: boolean
+  onUnlock: () => void
 }) {
   const chip = statusChip(v.status)
   const playable = v.status === 'completed' && !!v.video_url
@@ -631,6 +676,26 @@ function VideoCard({
               >
                 ▶ Open
               </a>
+              {/* KINEO-DL-PAYWALL-2026-07-09 — watching is free, downloading is
+                  the purchase moment ($4.90 Starter Pack, 25 Shorts). */}
+              {downloadLocked ? (
+                <button
+                  type="button"
+                  onClick={onUnlock}
+                  title="Unlock downloads — $4.90 (25 Shorts, one-time)"
+                  className="rounded-lg px-3 py-2 text-xs font-black"
+                  style={{
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(245,158,11,.35)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  🔓 Unlock — $4.90
+                </button>
+              ) : (
               <button
                 type="button"
                 onClick={onDownload}
@@ -647,6 +712,7 @@ function VideoCard({
               >
                 {isDownloading ? '…' : '⬇ Download'}
               </button>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
