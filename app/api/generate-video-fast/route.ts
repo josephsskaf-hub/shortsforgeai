@@ -431,6 +431,11 @@ export async function POST(req: NextRequest) {
 
     const usedPexelsUrls = new Set<string>()
     const clipUrls: string[] = []
+    // KINEO-FAST-CINEMA-2026-07-10 — per-video style memory. Every picked clip
+    // deposits its cinematic style tags (aerial/night/fog/...) here; later
+    // scenes get a ranking bonus for matching them, so one video keeps ONE
+    // consistent look (the AI Gen signature) instead of a stock patchwork.
+    const styleCtx = { tags: new Set<string>() }
     // Push #355 — track B-roll source per scene for quality metrics.
     type ClipSource = 'pixabay' | 'fallbackA' | 'stockLibrary' | 'none'
     const clipSources: ClipSource[] = []
@@ -586,9 +591,14 @@ export async function POST(req: NextRequest) {
           // Fast Mode v2 (02/07) — ranked mini-pool per scene (strongest clip
           // first, so scene 1's lead clip = the strongest of its whole pool —
           // the visual hook). Near the total cap we drop back to 1 clip/scene.
+          // KINEO-FAST-CINEMA (10/07) — the HOOK scene gets 3 clips instead of
+          // 2: faster cuts in the first seconds is the AI Gen retention
+          // signature, and scene 1 is where a Fast video wins or loses the
+          // viewer. Same single pool call — just a deeper take from it.
+          const perScene = idx === 0 ? FAST_CLIPS_PER_SCENE + 1 : FAST_CLIPS_PER_SCENE
           const clipsWanted = Math.max(
             1,
-            Math.min(FAST_CLIPS_PER_SCENE, FAST_MAX_TOTAL_CLIPS - clipUrls.length),
+            Math.min(perScene, FAST_MAX_TOTAL_CLIPS - clipUrls.length),
           )
           const pixUrls = await getPixabayClipsForScene(
             pixQueries,
@@ -599,7 +609,7 @@ export async function POST(req: NextRequest) {
             // scene already took (the same-Dubai-aerial-4x bug).
             // Push #483 — minDurationSec: clips long enough to cover the planned
             // scene duration rank higher (kills freeze/loop padding on short clips).
-            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds, maxClips: clipsWanted },
+            { exact: verbatim, exclude: usedPexelsUrls, minDurationSec: durationSeconds, maxClips: clipsWanted, styleCtx },
           )
           if (pixUrls.length > 0) {
             for (const pixUrl of pixUrls) {

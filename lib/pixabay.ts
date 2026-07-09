@@ -164,6 +164,57 @@ function tagMatchCount(video: PixabayVideo, query: string): number {
   return qTokens.filter((t) => tagBlob.includes(t)).length
 }
 
+// ── KINEO-FAST-CINEMA-2026-07-10 — "AI Gen look" ranking signals ────────────
+// Fast Mode is the top-of-funnel demo: the closer its stock picks look to the
+// AI Generated engine (dark, cinematic, aerial, high production value), the
+// higher the free→paid conversion. Three additive ranking signals:
+//
+//   1. CINEMATIC STYLE BONUS — clips tagged aerial/drone/night/fog/storm/etc.
+//      read as "produced" footage; daylight handheld home-video reads cheap.
+//   2. RESOLUTION BONUS/PENALTY — a real 1080p+ "large" rendition crops to
+//      9:16 crisply; clips that only ship small/tiny renditions look soft.
+//   3. STYLE COHERENCE — a per-video style context accumulates the style tags
+//      of clips already picked, and later scenes get a bonus for matching
+//      them. One video stays "night aerial moody" instead of patchworking a
+//      bright beach clip between two night skylines (the single biggest
+//      "stock patchwork" tell vs AI Gen's consistent art direction).
+const CINEMATIC_STYLE_TAGS = [
+  'aerial', 'drone', 'night', 'dark', 'sunset', 'sunrise', 'dusk', 'dawn',
+  'fog', 'mist', 'storm', 'dramatic', 'cinematic', 'slow motion', 'silhouette',
+  'moody', 'rain', 'clouds', 'timelapse', 'time lapse', 'fire', 'neon', 'smoke',
+  'epic', 'skyline',
+] as const
+
+/** Style tags present on a clip (used for both the bonus and the coherence ctx). */
+function styleTagsOf(video: PixabayVideo): string[] {
+  const blob = video.tags.toLowerCase()
+  return CINEMATIC_STYLE_TAGS.filter((t) => blob.includes(t))
+}
+
+/** +1 per cinematic style tag, capped at +3 — style helps, never trumps topic (×4). */
+function cinematicScore(styleTags: string[]): number {
+  return Math.min(3, styleTags.length)
+}
+
+/** +2 true 1080p+ master; -2 when only small/tiny renditions exist (soft crop). */
+function resolutionScore(video: PixabayVideo): number {
+  const large = video.videos?.large
+  if (large?.url && Math.max(large.width || 0, large.height || 0) >= 1920) return 2
+  if (!large?.url && !video.videos?.medium?.url) return -2
+  return 0
+}
+
+/** Per-video style memory — created once per generation by the caller. */
+export type StyleContext = { tags: Set<string> }
+
+/** +1 per style tag shared with clips already picked this video, capped at +2. */
+function coherenceScore(styleTags: string[], ctx?: StyleContext): number {
+  if (!ctx || ctx.tags.size === 0 || styleTags.length === 0) return 0
+  let shared = 0
+  for (const t of styleTags) if (ctx.tags.has(t)) shared++
+  return Math.min(2, shared)
+}
+
 // ── URL picker ─────────────────────────────────────────────────────────────
 // Prefer large (1080p+); fall back down. Returns null if no URL exists.
 
@@ -247,7 +298,14 @@ async function searchPixabay(
 
 // Fast Mode v2 (02/07) — candidate type shared by searchAndFilter (best-of-pool
 // single pick) and getPixabayClipsForScene (multi-clip scene pools for rhythm cuts).
-type PixabayCandidate = { url: string; score: number; order: number; id: number }
+type PixabayCandidate = {
+  url: string
+  score: number
+  order: number
+  id: number
+  /** KINEO-FAST-CINEMA — style tags for the per-video coherence context. */
+  styleTags: string[]
+}
 
 // Fast Mode v2 (02/07) — collection extracted from searchAndFilter so the new
 // multi-clip scene pool reuses the EXACT same gates + scoring (#483/#484).
@@ -259,11 +317,14 @@ async function collectCandidates(
   label: string,
   exclude?: Set<string>,
   minDurationSec?: number,
+  styleCtx?: StyleContext,
 ): Promise<PixabayCandidate[]> {
   // Push #484 (02/07) — pool 7 → 20. The #483 ranker only beats "first clean
   // clip wins" if it has real candidates to rank; 7 hits often left 1-2 clean
   // survivors after the lifestyle/relevance gates. Same single API call.
-  const hits = await searchPixabay(query, 20, category)
+  // KINEO-FAST-CINEMA (10/07) — 20 → 30: the cinematic/resolution/coherence
+  // signals need a deeper pool to find the premium pick. Still ONE API call.
+  const hits = await searchPixabay(query, 30, category)
 
   // Scene coverage target: planned scene duration when known (BrollPlan),
   // else 6s — a sane floor for Shorts pacing.
@@ -307,10 +368,19 @@ async function collectCandidates(
     // beats FALLBACK-A/B repetition.
     const tooShort = typeof video.duration === 'number' && video.duration > 0 && video.duration < 3
     const matches = tagMatchCount(video, query)
-    const score = matches * 4 + (coversScene ? 3 : 0) + (portrait ? 2 : 0) - (tooShort ? 2 : 0)
-    candidates.push({ url, score, order, id: video.id })
+    // KINEO-FAST-CINEMA (10/07) — production-value signals added to the score.
+    // Topic strength (×4) still dominates: style/res/coherence only decide
+    // between clips that are EQUALLY on-topic.
+    const sTags = styleTagsOf(video)
+    const cinema = cinematicScore(sTags)
+    const rez2 = resolutionScore(video)
+    const cohere = coherenceScore(sTags, styleCtx)
+    const score =
+      matches * 4 + (coversScene ? 3 : 0) + (portrait ? 2 : 0) - (tooShort ? 2 : 0) +
+      cinema + rez2 + cohere
+    candidates.push({ url, score, order, id: video.id, styleTags: sTags })
     console.log(
-      `[pixabay] ${label} candidate id=${video.id} score=${score} (matches=${matches} dur=${video.duration ?? '?'}s/${neededSec}s portrait=${portrait} tooShort=${tooShort}) tags="${video.tags.slice(0, 60)}"`,
+      `[pixabay] ${label} candidate id=${video.id} score=${score} (matches=${matches} dur=${video.duration ?? '?'}s/${neededSec}s portrait=${portrait} tooShort=${tooShort} cinema=${cinema} rez=${rez2} cohere=${cohere}) tags="${video.tags.slice(0, 60)}"`,
     )
   }
 
@@ -579,6 +649,9 @@ export async function getPixabayClipsForScene(
     minDurationSec?: number
     /** How many ranked clips to return (default 2). */
     maxClips?: number
+    /** KINEO-FAST-CINEMA — per-video style memory: scenes prefer clips whose
+     *  style tags match what's already in the timeline (visual coherence). */
+    styleCtx?: StyleContext
   },
 ): Promise<string[]> {
   const rawCleaned = (queries ?? [])
@@ -603,6 +676,7 @@ export async function getPixabayClipsForScene(
       `pool${i + 1}`,
       seenUrls,
       opts?.minDurationSec,
+      opts?.styleCtx,
     )
     for (const c of cands) {
       if (seenUrls.has(c.url)) continue
@@ -635,9 +709,16 @@ export async function getPixabayClipsForScene(
   }
 
   pool.sort((a, b) => b.score - a.score || a.order - b.order)
-  const picked = pool.slice(0, maxClips).map((c) => c.url)
+  const pickedCands = pool.slice(0, maxClips)
+  // KINEO-FAST-CINEMA — feed the picked clips' style tags back into the
+  // per-video context so LATER scenes bias toward the same look.
+  if (opts?.styleCtx) {
+    for (const c of pickedCands) for (const t of c.styleTags) opts.styleCtx.tags.add(t)
+  }
+  const picked = pickedCands.map((c) => c.url)
   console.log(
     `[pixabay-pool] ${pool.length} candidate(s) → ${picked.length} clip(s), top score=${pool[0].score}` +
+      (opts?.styleCtx && opts.styleCtx.tags.size > 0 ? ` styleCtx=[${Array.from(opts.styleCtx.tags).slice(0, 6).join(',')}]` : '') +
       (hintLabel ? ` for="${hintLabel}"` : ''),
   )
   return picked
