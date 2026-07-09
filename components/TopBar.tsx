@@ -83,28 +83,11 @@ export default function TopBar({ title, subtitle, onMenuToggle, isPro }: TopBarP
         )}
       </div>
 
-      {/* Right side — AI Avatar shortcut + credits badge + Pro badge. */}
+      {/* Right side — credits badge + Pro badge.
+          KINEO-DL-PAYWALL-2026-07-09 — the "🎭 AI Avatar (New)" top-bar chip
+          was removed on every page per Joseph: the sidebar entry is the single
+          nav home for the Avatar product; the top bar stays clean. */}
       <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-        {/* Face-app (12/06) — AI Avatar entry in every creation environment.
-            Deep-links to /generate with the avatar panel auto-open. */}
-        <Link
-          href="/avatar"
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:scale-[1.03]"
-          style={{
-            background: 'rgba(41,151,255,0.1)',
-            border: '1px solid rgba(41,151,255,0.35)',
-            color: '#2997ff',
-            textDecoration: 'none',
-          }}
-        >
-          🎭 AI Avatar
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
-            style={{ background: 'rgba(41,151,255,0.18)', color: '#2997ff' }}
-          >
-            New
-          </span>
-        </Link>
         {/* Push #098 — header credits badge. Red link to /pricing when 0,
             amber when <=5 and not Pro, neutral otherwise. */}
         <CreditsBadge isPro={isPro} />

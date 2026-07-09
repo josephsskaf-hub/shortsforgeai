@@ -410,40 +410,10 @@ export default function ThumbnailGeneratorClient() {
             </p>
           </div>
 
-          {/* Free tier badge */}
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            {isLimitReached ? (
-              <span
-                style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  color: '#f87171',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  padding: '6px 12px',
-                  borderRadius: 10,
-                  display: 'inline-block',
-                }}
-              >
-                ⚠️ Free limit reached
-              </span>
-            ) : (
-              <span
-                style={{
-                  background: 'rgba(41,151,255,.1)',
-                  border: '1px solid rgba(41,151,255,.28)',
-                  color: '#2997ff',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  padding: '6px 12px',
-                  borderRadius: 10,
-                  display: 'inline-block',
-                }}
-              >
-                ⚡ {remainingFree} free today
-              </span>
-            )}
-          </div>
+          {/* KINEO-DL-PAYWALL-2026-07-09 — "N free today" / "Free limit reached"
+              badges removed per Joseph: the product no longer advertises free
+              usage. The daily free-limit logic itself is untouched server-side;
+              this only cleans the header. */}
         </div>
       </div>
 
