@@ -4283,7 +4283,13 @@ export default function GenerateClient() {
                 )}
 
                 {/* Secondary row: preview + copy + whatsapp + more + X */}
+                {/* KINEO-DL-GUARD follow-up (Joseph 09/07): Preview, Copy link,
+                    WhatsApp and More all expose the RAW MP4 URL — a locked user
+                    could open it in a new tab and download via the ⋮ menu,
+                    bypassing the $4.90 unlock. Hidden for free+unpaid users;
+                    "Share my page" (/v/[id]) and X (no file URL) stay. */}
                 <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                  {!(planTier === 'free' && !hasPaid) && (
                   <a
                     href={finalVideoUrl}
                     target="_blank"
@@ -4299,6 +4305,8 @@ export default function GenerateClient() {
                   >
                     ▶ Preview
                   </a>
+                  )}
+                  {!(planTier === 'free' && !hasPaid) && (
                   <button
                     type="button"
                     onClick={handleCopyUrl}
@@ -4314,6 +4322,7 @@ export default function GenerateClient() {
                   >
                     {copied ? '✓ Copied!' : '🔗 Copy link'}
                   </button>
+                  )}
                   {/* #465 — share the PUBLIC page (/v/[id]) with preview + CTA.
                       This is the growth loop: each share is a landing that brings
                       a new pre-warmed visitor. Copies the link so the WhatsApp
@@ -4336,6 +4345,7 @@ export default function GenerateClient() {
                     </button>
                   )}
                   {/* WhatsApp — great for mobile / creator sharing */}
+                  {!(planTier === 'free' && !hasPaid) && (
                   <a
                     href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A shortsforgeai.com`}
                     target="_blank"
@@ -4351,6 +4361,8 @@ export default function GenerateClient() {
                   >
                     📲 WhatsApp
                   </a>
+                  )}
+                  {!(planTier === 'free' && !hasPaid) && (
                   <button
                     type="button"
                     onClick={handleShare}
@@ -4365,6 +4377,7 @@ export default function GenerateClient() {
                   >
                     📤 More
                   </button>
+                  )}
                   {/* Push #101 — one-click X intent for organic distribution. */}
                   <a
                     href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at shortsforgeai.com %23YouTubeShorts %23AIVideo`}
