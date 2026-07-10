@@ -35,8 +35,11 @@ const STARTER_FEATURES = [
   'My Videos history',
 ]
 
+// KINEO-PRICING-V3B-2026-07-10 — Creator $24.90/150cr: 1 Hollywood film every
+// month included (150 cr), or ~7 AI-generated videos (20 cr each).
 const BASIC_FEATURES = [
-  '6 AI-generated videos/month',
+  '1 Hollywood film every month — included',
+  'Or ~7 AI-generated videos/month',
   'Seedance AI engine (great quality)',
   'AI writes script + voiceover',
   'Auto-captions pipeline',
@@ -45,7 +48,7 @@ const BASIC_FEATURES = [
 ]
 
 // KINEO-REBASE-2026-07-10 — 2:1 credit rebase: Studio 200 credits → ~4 Kling
-// (45 cr) or ~10 Seedance (20 cr) videos. USD unchanged.
+// (50 cr — KINEO-PRICING-V3B-2026-07-10) or ~10 Seedance (20 cr) videos.
 const PRO_FEATURES = [
   '~4 cinematic AI videos/month (or ~10 Seedance)',
   'Kling 2.5 engine (top-tier cinematic)',
@@ -168,8 +171,8 @@ export default function PricingCards() {
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          // KINEO-REBASE-2026-07-10 — 240 → 120 credits (2:1 rebase, USD unchanged).
-          tagline="120 credits/month — 6 AI-generated Shorts on the Seedance engine."
+          // KINEO-PRICING-V3B-2026-07-10 — $24.90/150cr, 1 Hollywood film included.
+          tagline="150 credits/month — 1 Hollywood film every month included."
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}

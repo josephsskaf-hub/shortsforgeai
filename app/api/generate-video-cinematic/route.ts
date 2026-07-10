@@ -35,7 +35,7 @@ export const maxDuration = 60
 // is unchanged because plan credits halved in lockstep (lib/pricing.ts).
 // Free trial only ever uses Seedance.
 const SEEDANCE_CREDIT_COST = 20
-const KLING_CREDIT_COST = 45 // KINEO-KLING-90-2026-07-06 margin math intact — 45 new cr = 90 old cr (KINEO-REBASE-2026-07-10).
+const KLING_CREDIT_COST = 50 // KINEO-PRICING-V3B-2026-07-10 — 45 → 50 cr (margin bump). Keep in sync with creditCostFor('cinematic_kling') in compose/status.
 // Push #489/#491 — premium cinematic engines (Veo 3.1 Fast, Sora 2) via fal.
 // KINEO-REBASE-2026-07-10 — 90/100 new credits = 180/200 old (same USD value).
 const VEO_CREDIT_COST = 90
@@ -441,7 +441,7 @@ export async function POST(req: NextRequest) {
     // script, not the button), so footage always covers the narration.
     let clipCount = clipCountForDuration(duration)
     // Push #402 — explicit engine choice from the UI. 'kling' = Cinematic AI
-    // (Studio-only, 45 cr); anything else = AI Generated (Seedance, 30 cr).
+    // (50 cr); anything else = AI Generated (Seedance, 20 cr).
     const wantsKling = body.engine === 'kling'
     const wantsVeo = body.engine === 'veo'
     const wantsSora = body.engine === 'sora'
@@ -499,8 +499,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Push #402 — per-engine cost. KINEO-REBASE-2026-07-10: Hollywood 150,
-    // Kling 45, Veo 90, Sora 100 (blocked), Seedance 20.
+    // Push #402 — per-engine cost. KINEO-PRICING-V3B-2026-07-10: Hollywood 150,
+    // Kling 50, Veo 90, Sora 100 (blocked), Seedance 20.
     const cost = wantsHollywood ? HOLLYWOOD_CREDIT_COST : wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
     // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
@@ -530,7 +530,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: freeAlreadyUsed
-            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 45' : 'AI Generated needs 20'} credits. You have ${balance}.` // KINEO-REBASE-2026-07-10
+            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 50' : 'AI Generated needs 20'} credits. You have ${balance}.` // KINEO-PRICING-V3B-2026-07-10 — Kling 50
             : `This needs ${cost} credits. You have ${balance}.`,
           needed: cost,
           balance,
@@ -636,7 +636,7 @@ export async function POST(req: NextRequest) {
     // transient reject.
     // Push #402 — engine is the user's explicit choice (Kling already gated to
     // Studio above). If Kling fails entirely, fall back to Seedance AND drop the
-    // charge to the Seedance price so the user is never billed 45 cr for a
+    // charge to the Seedance price so the user is never billed 50 cr for a
     // Seedance video. Single model per generation keeps the status poll simple.
     let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
 

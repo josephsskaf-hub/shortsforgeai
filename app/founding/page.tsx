@@ -80,7 +80,8 @@ const PLANS = [
   {
     tier: 'basic',
     name: 'Creator',
-    regular: '$19.90',
+    // KINEO-PRICING-V3B-2026-07-10 — regular $19.90 → $24.90 ($12.45 = exactly 50% off).
+    regular: '$24.90',
     founder: '$12.45',
     blurb: '50 Shorts / month',
     bullets: ['Everything in Starter', 'AI-generated visuals', 'Priority rendering'],

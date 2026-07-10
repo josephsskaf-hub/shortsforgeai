@@ -677,12 +677,12 @@ function VideoCard({
                 ▶ Open
               </a>
               {/* KINEO-DL-PAYWALL-2026-07-09 — watching is free, downloading is
-                  the purchase moment ($4.90 Starter Pack, 25 Shorts). */}
+                  the purchase moment ($4.90 Starter Pack, 10 videos). */}
               {downloadLocked ? (
                 <button
                   type="button"
                   onClick={onUnlock}
-                  title="Unlock downloads — $4.90 (25 Shorts, one-time)"
+                  title="Unlock downloads — $4.90 (10 videos, one-time)"
                   className="rounded-lg px-3 py-2 text-xs font-black"
                   style={{
                     background: 'linear-gradient(135deg, #f59e0b, #d97706)',

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
                   </td>
                 </tr>
               </table>
-              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">Starter $9.90 · Creator $19.90 · Studio $37.90/mo after trial · Cancel anytime · 7-day money-back guarantee</p>
+              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">Starter $9.90 · Creator $24.90 · Studio $37.90/mo after trial · Cancel anytime · 7-day money-back guarantee</p>
 
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;text-align:center;">
@@ -121,7 +121,7 @@ Every Short comes with:
 👉 See plans & start:
 ${dashboardUrl}
 
-Three paid plans, flat monthly price. Starter $9.90/mo (50 Fast videos), Creator $19.90/mo (240 credits — AI Generated engine), Studio $37.90/mo (400 credits — premium Cinematic AI engine + priority). 7-day money-back guarantee.
+Three paid plans, flat monthly price. Starter $9.90/mo (50 Fast videos), Creator $24.90/mo (150 credits — 1 Hollywood film every month included), Studio $37.90/mo (200 credits — premium Cinematic AI engine + priority). 7-day money-back guarantee.
 
 — The Kineo Team
 usekineo.com`

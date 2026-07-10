@@ -177,10 +177,10 @@ export async function POST(req: NextRequest) {
           const amount = session.amount_total ?? 0
           let creditsToAdd = metaCredits > 0 ? metaCredits : 0
           if (creditsToAdd === 0) {
-            // Legacy Payment-Link amounts (USD): $9 → 10, $19 → 25, $4.90 → 25.
+            // Legacy Payment-Link amounts (USD): $9 → 10, $19 → 25, $4.90 → 10.
             if (amount === 900) creditsToAdd = 10
             else if (amount === 1900) creditsToAdd = 25
-            else if (amount === 490) creditsToAdd = 25 // KINEO-PACK-25 — $4.90 pack now 25 Fast Shorts
+            else if (amount === 490) creditsToAdd = 10 // KINEO-PRICING-V3C-2026-07-10 — $4.90 pack back to 10 (mirrors STARTER_PACK.credits)
           }
 
           if (creditsToAdd === 0) {
@@ -242,7 +242,10 @@ export async function POST(req: NextRequest) {
         const isTrial = session.payment_status === 'no_payment_required'
         // KINEO-STUDIO-400-2026-07-06 — Studio(pro)=400 (aligned with pricing.ts
         // + UI; was 600 here, 360 there → margin leak). Creator(basic) 240, Starter 50.
-        const planCredits = tier === 'pro' ? 400 : tier === 'starter' ? 50 : 240
+        // KINEO-PRICING-V3B-2026-07-10 — Creator $24.90 grants 150 credits
+        // (1 Hollywood film/month included). pro/starter ALINHADOS ao rebase
+        // 2:1 (200/25, iguais ao lib/pricing.ts) — fecha o leak de margem.
+        const planCredits = tier === 'pro' ? 200 : tier === 'starter' ? 25 : 150
         const creditsToGrant = isTrial ? 5 : planCredits
 
         const { data: currentProfile } = await supabase
@@ -348,7 +351,9 @@ export async function POST(req: NextRequest) {
         const renewalTier = subscription.metadata?.tier === 'pro' ? 'pro' : subscription.metadata?.tier === 'starter' ? 'starter' : 'basic'
         // KINEO-STUDIO-400-2026-07-06 — renewal credits: Studio 400, Creator 240,
         // Starter 50. Set (not added) each cycle → no rollover between months.
-        const renewalCredits = renewalTier === 'pro' ? 400 : renewalTier === 'starter' ? 50 : 240
+        // KINEO-PRICING-V3B-2026-07-10 — Creator renewal = 150 credits. pro/starter
+        // ALINHADOS ao rebase 2:1 (200/25) — fecha o leak de margem.
+        const renewalCredits = renewalTier === 'pro' ? 200 : renewalTier === 'starter' ? 25 : 150
         if (!renewalUserId) break
 
         // On renewal we set the balance to the plan amount rather than adding,

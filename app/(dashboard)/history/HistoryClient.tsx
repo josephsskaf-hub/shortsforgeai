@@ -737,7 +737,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     }}
                   >
                     <span>🔒 Unlock — $4.90</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>This video + 25 Shorts · one-time</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>This video + 10 videos · one-time</span>
                   </button>
                   <button
                     onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter' }}

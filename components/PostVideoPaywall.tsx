@@ -172,7 +172,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
         }}
       >
         Not ready for a monthly plan?{' '}
-        <span style={{ color: '#2997ff' }}>Start with 25 Shorts for $4.90 →</span>
+        <span style={{ color: '#2997ff' }}>Start with 10 videos for $4.90 →</span>
         <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
           One-time · no subscription · credits never expire
         </span>

@@ -24,7 +24,7 @@
 //
 // KINEO-REBASE-2026-07-10 — EXIT-INTENT v2 "ESCADA": the single $4.90 rescue
 // is now a two-step ladder shown side by side —
-//   left:  $4.90 one-time · 25 Shorts (same ?pack=starter checkout as before)
+//   left:  $4.90 one-time · 10 videos (same ?pack=starter checkout as before)
 //   right: $9.90/mo Starter (HIGHLIGHTED, "BEST VALUE") — 25 credits every
 //          month + no watermark + cancel anytime (?tier=starter, the same
 //          GET checkout PricingCards uses)
@@ -261,7 +261,7 @@ export default function ExitIntentOffer() {
               $4.90 <span className="text-[12px] font-bold text-[#86868b]">once</span>
             </span>
             <span className="text-[12.5px] text-[#a1a1a6] mt-1 mb-3 leading-relaxed">
-              25 Shorts · credits never expire
+              10 videos · credits never expire
             </span>
             <button
               type="button"
@@ -275,7 +275,7 @@ export default function ExitIntentOffer() {
                 cursor: 'pointer',
               }}
             >
-              {buying === 'pack' ? 'Loading…' : 'Get 25 Shorts →'}
+              {buying === 'pack' ? 'Loading…' : 'Get 10 videos →'}
             </button>
           </div>
 

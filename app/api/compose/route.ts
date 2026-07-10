@@ -310,7 +310,8 @@ export async function POST(req: NextRequest) {
         if (!cntErr && (count ?? 0) >= 3) {
           return NextResponse.json(
             {
-              error: "You've hit today's free limit (3 videos). Unlock downloads + 25 more Shorts for $4.90, or upgrade for unlimited creation.",
+              // KINEO-PRICING-V3C-2026-07-10 — pack copy: 25 → 10 videos.
+              error: "You've hit today's free limit (3 videos). Unlock downloads + 10 more videos for $4.90, or upgrade for unlimited creation.",
               upsell: 'credits',
               outOfCredits: true,
               upgrade: '/pricing',

@@ -30,8 +30,11 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   basic: {
     name: 'Kineo — Creator',
-    description: '6 AI-generated videos / month (Seedance engine)',
-    credits: 240,
+    // KINEO-PRICING-V3B-2026-07-10 — Creator = 150 credits: 1 Hollywood film
+    // every month included (150 cr), or ~7 AI-generated videos. Metadata
+    // plan_credits follows this value.
+    description: '150 credits / month — 1 Hollywood film included (or ~7 AI-generated videos)',
+    credits: 150,
   },
   pro: {
     name: 'Kineo — Studio',
@@ -50,9 +53,13 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 // KINEO-PRICE-2026-07-06 — competitive repricing: Starter $11.90→$9.90,
 // Creator $24.90→$19.90 (Studio unchanged). Margins recompute ≥45% (Seedance/Veo
 // forced to 720p). BRL≈USD×5, INR≈USD×80.6 (same ratios as before).
+// KINEO-PRICING-V3B-2026-07-10 — Creator monthly USD $19.90 → $24.90 (150
+// credits, 1 Hollywood film/month included). BRL/INR and annual left as-is
+// pending founder decision on the local-currency ladder. Existing subscribers
+// are NOT affected (Stripe keeps the price on active subscriptions).
 const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
   starter: { usd: 990,  brl: 4990,  inr: 79900  },
-  basic:   { usd: 1990, brl: 9990,  inr: 159900 },
+  basic:   { usd: 2490, brl: 9990,  inr: 159900 },
   pro:     { usd: 3790, brl: 18990, inr: 299900 },
 }
 
@@ -74,18 +81,19 @@ function resolveCurrency(country: string): Currency {
   return 'usd'
 }
 
-// #473 — Starter Pack: a one-time, low-commitment entry point (10 Fast Shorts).
+// #473 — Starter Pack: a one-time, low-commitment entry point (10 videos).
 // Breaks first-purchase hesitation for users who won't commit to a monthly
 // subscription — they make the (hardest) first payment, then upsell to a plan
 // later. Credited by the webhook via metadata.pack_credits (currency-proof,
 // see webhook Path A). No Stripe product needed — inline price_data.
 const STARTER_PACK = {
   // KINEO-PACK-25-2026-07-06 — bumped 10→25 Fast Shorts for the same $4.90.
-  // Fast costs ~$0.04/video, so 25 videos = ~$1.00 cost vs $4.90 = ~80% margin.
-  // A far stronger entry offer at basically the same cost.
-  credits: 25,
+  // KINEO-PRICING-V3C-2026-07-10 — back to 10 credits. With Fast now costing
+  // 1 credit for paying accounts, the pack reads as "10 videos for $4.90"
+  // (25 was over-generous after the 2:1 rebase: 25 cr ≈ the $9.90 plan).
+  credits: 10,
   name: 'Kineo — Starter Pack',
-  description: 'One-time: 25 Fast Shorts (no subscription).',
+  description: 'One-time: 10 videos (no subscription).',
 }
 //   USD $4.90 | BRL R$24.90 | INR ₹399  (same ratios as the plans)
 const PACK_PRICES: Record<Currency, number> = { usd: 490, brl: 2490, inr: 39900 }

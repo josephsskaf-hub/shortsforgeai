@@ -21,22 +21,27 @@ export const PAYPAL_BASE =
     : 'https://api-m.paypal.com'
 
 // USD prices — MUST mirror TIER_PRICES/ANNUAL_PRICES in api/stripe/checkout.
+// KINEO-PRICING-V3B-2026-07-10 — Creator monthly 19.90 → 24.90 (annual left
+// as-is, mirroring the Stripe ANNUAL_PRICES which was not changed in V3B).
 export const PAYPAL_TIER_USD: Record<PayPalTier, { monthly: string; annual: string; name: string }> = {
   starter: { monthly: '9.90',  annual: '99.00',  name: 'Kineo — Starter' },
-  basic:   { monthly: '19.90', annual: '199.00', name: 'Kineo — Creator' },
+  basic:   { monthly: '24.90', annual: '199.00', name: 'Kineo — Creator' },
   pro:     { monthly: '37.90', annual: '379.00', name: 'Kineo — Studio' },
 }
 
 // Credits granted — MUST mirror the Stripe webhook.
 // KINEO-STUDIO-400-2026-07-06 — pro aligned 600→400 (see pricing.ts + webhook).
+// KINEO-PRICING-V3B-2026-07-10 — Creator = 150 credits (mirrors Stripe webhook).
+// pro/starter alinhados ao rebase 2:1 (200/25) — mesmos valores do webhook Stripe.
 export const PAYPAL_PLAN_CREDITS: Record<PayPalTier, number> = {
-  starter: 50,
-  basic: 240,
-  pro: 400,
+  starter: 25,
+  basic: 150,
+  pro: 200,
 }
 
-// KINEO-PACK-25-2026-07-06 — 25 Fast Shorts for $4.90 (was 10). ~$1 cost, ~80% margin.
-export const PAYPAL_PACK = { credits: 25, usd: '4.90', name: 'Kineo — Starter Pack (25 Fast Shorts)' }
+// KINEO-PACK-25-2026-07-06 — 25 Fast Shorts for $4.90 (was 10).
+// KINEO-PRICING-V3C-2026-07-10 — back to 10 credits (mirrors Stripe STARTER_PACK).
+export const PAYPAL_PACK = { credits: 10, usd: '4.90', name: 'Kineo — Starter Pack (10 videos)' }
 
 export function paypalAdminClient() {
   return createSupabaseAdmin(

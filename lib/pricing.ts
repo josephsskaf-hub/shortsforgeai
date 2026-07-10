@@ -4,7 +4,10 @@
 // halved in lockstep (Seedance 20, Kling 45, Veo 90, Hollywood 150, Avatar 110)
 // so plan purchasing power is identical — just smaller, simpler numbers.
 // Starter = $9.90/month (25 credits)
-// Creator = $19.90/month (120 credits, Seedance AI engine, 20 credits/video → 6 videos)
+// KINEO-PRICING-V3B-2026-07-10 — Creator repriced $19.90/120cr → $24.90/150cr:
+// 150 credits = 1 Hollywood film every month included (150 cr) OR ~7 AI Gen
+// videos (20 cr each). Kling repriced 45 → 50 cr in the same push.
+// Creator = $24.90/month (150 credits — 1 Hollywood film/month included)
 // Studio  = $37.90/month (200 credits, premium engines, ~10 Seedance or ~4 Kling videos;
 //           1080p; priority queue)
 //
@@ -59,13 +62,17 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   },
   // Push #404 — CREATOR: Seedance AI engine. 20 credits/video → 6 videos.
   // KINEO-REBASE-2026-07-10 — 240 → 120 credits (2:1 rebase, USD unchanged).
+  // KINEO-PRICING-V3B-2026-07-10 — $19.90/120cr → $24.90/150cr. Positioning:
+  // 1 Hollywood film every month included (150 cr), or ~7 AI Gen videos.
+  // Existing subscribers keep their old price (Stripe keeps the subscription's
+  // original unit_amount) — this only affects NEW checkouts.
   basic: {
     tier: 'basic',
     name: 'Creator',
-    price: 19.90,
-    priceLabel: '$19.90',
+    price: 24.90,
+    priceLabel: '$24.90',
     periodLabel: '/ month',
-    credits: 120,
+    credits: 150,
     cta: 'Go Creator',
     href: '/api/stripe/checkout?tier=basic',
     annualPriceLabel: '$199',

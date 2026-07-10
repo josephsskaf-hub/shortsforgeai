@@ -278,7 +278,7 @@ export default function GenerateClient() {
   // #404 — once we know the plan, default the mode/engine to that plan's engine.
   const planDefaultedRef = useRef<boolean>(false)
   // #402 — which AI engine the user picked: 'seedance' (AI Generated, 30 cr, all
-  // plans) or 'kling' (Cinematic AI, 45 cr, Studio only).
+  // plans) or 'kling' (Cinematic AI, 50 cr — KINEO-PRICING-V3B-2026-07-10).
   // KINEO-HOLLYWOOD-2026-07-09 — 'hollywood' engine added (per-scene routing).
   const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo' | 'sora' | 'hollywood'>('seedance')
   // feat/ui-polish — picked niche drives the clickable example chips under the
@@ -482,7 +482,7 @@ export default function GenerateClient() {
 
   // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
   // A free-plan Fast video ships with a burnt-in watermark. Right after the
-  // render we show a "Remove watermark + 25 Shorts for $4.90" CTA. After the
+  // render we show a "Remove watermark + 10 videos for $4.90" CTA. After the
   // $4.90 pack purchase, Stripe returns to /generate?wm_unlock=1 and we re-render
   // THIS same Fast video clean (watermark:false) and swap it into the preview.
   //  - hasPaid: true once the user bought a pack or plan (hides the CTA).
@@ -603,7 +603,7 @@ export default function GenerateClient() {
   // generate-video-cinematic response into the ?model= query param.
   const falModelRef = useRef<string>('')
   // #402 — quality returned by the cinematic route ('cinematic_ai' = Seedance/30
-  // or 'cinematic_kling' = Kling/45). Drives the credit cost in compose/status.
+  // or 'cinematic_kling' = Kling/50). Drives the credit cost in compose/status.
   const falQualityRef = useRef<string>('cinematic_ai')
   // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode per-scene metadata from the
   // generate-video-cinematic response. falModelsRef is PARALLEL to the request
@@ -2889,12 +2889,18 @@ export default function GenerateClient() {
   // since #434 made it free+unlimited; the label was stale at 1 ("Generate · 1
   // credit" on the button, though the server already charged 0). Cinematic Mode
   // uses the per-quality cost from QUALITY_OPTIONS.
-  const selectedCost = (mode === 'fast' || mode === 'creator')
+  // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
+  // (mirrors creditCostFor('fast', isPaidUser) server-side). Free users keep
+  // seeing Free/0 — their funnel (watermark + download paywall) is unchanged.
+  const isPaidAccount = hasPaid || (planTier !== null && planTier !== 'free')
+  const selectedCost = mode === 'creator'
     ? 0
+    : mode === 'fast'
+    ? (isPaidAccount ? 1 : 0)
     : mode === 'cinematic_ai'
-    // KINEO-REBASE-2026-07-10 — 2:1 rebase: Kling 45, Veo 90, Sora 100,
+    // KINEO-PRICING-V3B-2026-07-10 — Kling 50, Veo 90, Sora 100,
     // Hollywood 150 (preço FINAL aprovado 10/07), Seedance 20.
-    ? (aiEngine === 'kling' ? 45 : aiEngine === 'veo' ? 90 : aiEngine === 'sora' ? 100 : aiEngine === 'hollywood' ? 150 : 20)
+    ? (aiEngine === 'kling' ? 50 : aiEngine === 'veo' ? 90 : aiEngine === 'sora' ? 100 : aiEngine === 'hollywood' ? 150 : 20)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 8)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
@@ -4253,7 +4259,7 @@ export default function GenerateClient() {
                     >
                       <span>🔒 Unlock — $4.90</span>
                       <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
-                        This video + 25 Shorts · one-time
+                        This video + 10 videos · one-time
                       </span>
                     </button>
                     <button
@@ -4327,7 +4333,7 @@ export default function GenerateClient() {
                       Unlock &amp; Download — $4.90
                     </span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.92 }}>
-                      This video watermark-free + 25 Shorts · one-time · no subscription
+                      This video watermark-free + 10 videos · one-time · no subscription
                     </span>
                   </button>
                   )
@@ -4542,7 +4548,7 @@ export default function GenerateClient() {
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
                       — use the download button above to save the file to your device
-                      {planTier === 'free' && !hasPaid ? ' (unlocking removes the watermark and includes 25 Shorts for $4.90)' : ''}.
+                      {planTier === 'free' && !hasPaid ? ' (unlocking removes the watermark and includes 10 videos for $4.90)' : ''}.
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
@@ -4685,7 +4691,7 @@ export default function GenerateClient() {
                     }}
                   >
                     Not ready for a subscription?{' '}
-                    <span style={{ color: '#2997ff' }}>Get 25 Shorts for $4.90 →</span>
+                    <span style={{ color: '#2997ff' }}>Get 10 videos for $4.90 →</span>
                     <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
                       One-time · no subscription · credits never expire
                     </span>
@@ -5700,8 +5706,8 @@ function UpsellSection({
           }}
         >
           {/* Fix 2 (12/06) — copy matches the real tier this modal opens
-              (tier=basic = Creator $19.90/120 credits — KINEO-REBASE-2026-07-10). */}
-          Get 120 credits/month — post every day for $19.90/mo
+              (tier=basic = Creator $24.90/150 credits — KINEO-PRICING-V3B-2026-07-10). */}
+          Get 150 credits/month — 1 Hollywood film included — for $24.90/mo
         </div>
         <ul
           style={{
@@ -5712,7 +5718,7 @@ function UpsellSection({
             lineHeight: 1.65,
           }}
         >
-          <li>6 AI Generated videos every month (20 credits each)</li>
+          <li>1 Hollywood film every month included — or ~7 AI Generated videos (20 credits each)</li>
           <li>Every scene generated by AI — cinematic feel</li>
           <li>Download MP4 · Captions included · No watermark</li>
         </ul>
@@ -5733,7 +5739,7 @@ function UpsellSection({
             boxShadow: '0 6px 22px rgba(41,151,255,.28)',
           }}
         >
-          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $19.90/mo →'}
+          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $24.90/mo →'}
         </button>
         <div
           style={{
@@ -6181,7 +6187,7 @@ function ModeSelector({
   const seedanceUnlocked =
     anyPaid || (noPlan && freeAiUsed === false) || freeCredits >= 20
   const klingUnlocked = anyPaid
-  const cinematicUnlocked = anyPaid || (credits ?? 0) >= 45
+  const cinematicUnlocked = anyPaid || (credits ?? 0) >= 50 // KINEO-PRICING-V3B-2026-07-10 — Kling 50
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
@@ -6211,8 +6217,15 @@ function ModeSelector({
           quality={1}
           features={fastFeatures}
           badge={
-            /* Push #434 — Fast Mode is free for everyone now. */
-            <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>FREE</span>
+            /* Push #434 — Fast Mode is free for everyone now.
+               KINEO-PRICING-V3C-2026-07-10 — paying accounts now pay 1 credit
+               per Fast video, so their badge says so; free users keep FREE
+               (watermark + download-paywall funnel unchanged). */
+            anyPaid ? (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>1 credit</span>
+            ) : (
+              <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>FREE</span>
+            )
           }
           onClick={() => { setMode('fast') }}
         />
@@ -6276,7 +6289,7 @@ function ModeSelector({
               // paying user (universal gates — no more Studio-only lock).
               { key: 'hollywood', label: 'Hollywood', sub: 'ultra-realistic people & voice', cr: 150 },
               { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 90 },
-              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 45 },
+              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 50 }, // KINEO-PRICING-V3B-2026-07-10
             ] as { key: 'veo' | 'sora' | 'kling' | 'hollywood'; label: string; sub: string; cr: number }[]).map((m) => {
               const active = mode === 'cinematic_ai' && aiEngine === m.key
               return (
@@ -6587,7 +6600,7 @@ function UpgradeModal({
   // KINEO-REBASE-2026-07-10 — post-rebase credit numbers (2:1).
   const unlocks: Record<string, string> = {
     starter: '25 credits / month',
-    basic: '120 credits · 6 AI-generated videos / month',
+    basic: '150 credits · 1 Hollywood film / month included', // KINEO-PRICING-V3B-2026-07-10
     pro: '200 credits · up to 10 AI-generated videos',
   }
   // KINEO-PLAN-GATE-MODAL — accurate headline per reason: a real credit shortage
@@ -6825,7 +6838,7 @@ function UpgradeModal({
           }}
         >
           Not ready for a subscription?{' '}
-          <span style={{ color: '#2997ff' }}>Start with 25 Shorts for $4.90 →</span>
+          <span style={{ color: '#2997ff' }}>Start with 10 videos for $4.90 →</span>
           <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
             One-time · no subscription · credits never expire
           </span>

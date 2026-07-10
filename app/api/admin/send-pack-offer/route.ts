@@ -2,7 +2,7 @@
 //
 // KINEO-PACK-OFFER-2026-07-06 — one-time campaign: email everyone who signed up
 // on Jul 5–6 2026 (the admin-funnel cohort) offering the $4.90 Starter Pack, now
-// 25 Fast Shorts. Excludes Ramon (already bought), internal accounts, paid users,
+// 10 videos (KINEO-PRICING-V3C-2026-07-10; was 25). Excludes Ramon (already bought), internal accounts, paid users,
 // and disposable/throwaway inboxes (they only hurt the young domain's reputation).
 //
 // Modeled on send-avatar-launch: per-recipient flag (profiles.pack_offer_emailed)
@@ -78,14 +78,14 @@ function emailHtml(): string {
   <p>Hey — thanks for trying <b>Kineo</b> 🎬</p>
   <p>You can turn any idea into a finished, faceless YouTube Short in about a minute — footage, voiceover, captions and music, done for you.</p>
   <p>Here's a founder deal to keep the momentum going:</p>
-  <p style="font-size:18px;margin:18px 0"><b>25 Shorts for a one-time $4.90.</b></p>
+  <p style="font-size:18px;margin:18px 0"><b>10 videos for a one-time $4.90.</b></p>
   <ul>
     <li>No subscription</li>
     <li>Watermark-free</li>
     <li>Credits never expire</li>
   </ul>
   <p style="margin:26px 0">
-    <a href="https://usekineo.com/pricing?utm_source=winback_email&utm_campaign=starter25" style="background:#2997ff;color:#ffffff;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:bold">Get 25 Shorts for $4.90 →</a>
+    <a href="https://usekineo.com/pricing?utm_source=winback_email&utm_campaign=starter25" style="background:#2997ff;color:#ffffff;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:bold">Get 10 videos for $4.90 →</a>
   </p>
   <p>Just reply to this email if you need anything — I read every one.</p>
   <p>— Joseph, founder<br/>Kineo · https://usekineo.com</p>

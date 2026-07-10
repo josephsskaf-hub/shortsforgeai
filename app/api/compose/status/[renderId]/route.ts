@@ -23,7 +23,10 @@ export const dynamic = 'force-dynamic'
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (260 cr, provisional).
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar'
 
-function creditCostFor(quality: Quality): number {
+// KINEO-PRICING-V3C-2026-07-10 — creditCostFor now takes isPaidUser so Fast
+// can cost 1 credit for PAYING accounts while staying 0 for free users (the
+// KINEO-ZERO-SIGNUP watch-free funnel is untouched).
+function creditCostFor(quality: Quality, isPaidUser = false): number {
   // Matches the per-quality cost shown to the user on the Generate screen.
   // The UI display lives in app/(dashboard)/generate/GenerateClient.tsx — keep
   // these two in sync when adjusting prices. Push #084 added 'fast' = 1
@@ -35,7 +38,13 @@ function creditCostFor(quality: Quality): number {
       // KINEO-FAST-1CR-2026-07-06). InVideo model: render/watch free with
       // watermark, pay $4.90 to download (KINEO-DL-PAYWALL). Fast costs
       // ~$0.02-0.05 to serve — it's the growth engine, not the revenue line.
-      return 0
+      // KINEO-PRICING-V3C-2026-07-10 — for PAYING accounts (has_paid=true or
+      // any paid plan) Fast now costs 1 credit per video. Free users stay at
+      // 0 (watermarked render + download paywall — funnel unchanged). Product
+      // rule: a paid user with 0 balance still renders fine — the debit is
+      // simply skipped ([fast-credit] skip below); never break a render over
+      // 1 credit.
+      return isPaidUser ? 1 : 0
     case 'avatar':
       // KINEO-AVATAR-120-2026-07-06 — AI Avatar folded into the UNIVERSAL
       // video_credits system (was the separate avatar_credits add-on @ 1/video).
@@ -53,7 +62,9 @@ function creditCostFor(quality: Quality): number {
     case 'cinematic_kling':
       // KINEO-KLING-90-2026-07-06 margin math intact.
       // KINEO-REBASE-2026-07-10 — 90 → 45 (2:1 rebase; same USD value).
-      return 45
+      // KINEO-PRICING-V3B-2026-07-10 — 45 → 50 (margin bump). Keep in sync
+      // with KLING_CREDIT_COST in generate-video-cinematic.
+      return 50
     case 'cinematic_veo':
       // #489/#491 — Veo 3.1 Fast premium. Keep in sync with VEO_CREDIT_COST.
       // KINEO-REBASE-2026-07-10 — 180 → 90.
@@ -255,7 +266,38 @@ export async function GET(
       let creditsDeducted = false
       let creditsRemaining: number | null = null
       let wasFreeAiTrial = false // #384 — true when this render used the free AI trial (0 credits charged)
-      const cost = creditCostFor(quality)
+      // KINEO-PRICING-V3C-2026-07-10 — true when a PAID user's Fast render was
+      // delivered without the 1-credit debit (balance < 1). Fail-open by design.
+      let fastCreditSkipped = false
+
+      // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
+      // only. Resolve paid status server-side from the profile (never trust the
+      // client). Mirrors the PAID_PLANS + has_paid rule in /api/compose (the
+      // watermark decision) so billing and watermark stay keyed to the same
+      // truth. Lookup failure → treated as free (no debit) — fail-open: a DB
+      // blip must never charge or block anyone.
+      let fastIsPaidUser = false
+      if (quality === 'fast' && !deductedParam) {
+        try {
+          const { data: payerProf } = await supabase
+            .from('profiles')
+            .select('has_paid, plan')
+            .eq('id', user.id)
+            .maybeSingle()
+          const PAID_PLANS = new Set([
+            'starter', 'starter_trial', 'basic', 'basic_trial',
+            'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
+          ])
+          const planName = ((payerProf as { plan?: string } | null)?.plan ?? 'free').toLowerCase()
+          fastIsPaidUser =
+            (payerProf as { has_paid?: boolean } | null)?.has_paid === true ||
+            PAID_PLANS.has(planName)
+        } catch (e) {
+          console.warn('[fast-credit] paid-status lookup failed — treating as free (no debit):',
+            e instanceof Error ? e.message : String(e))
+        }
+      }
+      const cost = creditCostFor(quality, fastIsPaidUser)
 
       // Push #230 — URL returned to the client. Defaults to the Creatomate
       // output; upgraded to the permanent Supabase URL after the asset
@@ -278,7 +320,9 @@ export async function GET(
       // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood debits like the other
       // fal engines (success-only, idempotent by render_id; the existing
       // auto-refund on failure covers it too).
-      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar'
+      // KINEO-PRICING-V3C-2026-07-10 — 'fast' is back in the whitelist ONLY for
+      // paying accounts (fastIsPaidUser). Free Fast stays out (nothing to debit).
+      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || (quality === 'fast' && fastIsPaidUser)
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
@@ -335,7 +379,18 @@ export async function GET(
               quality === 'cinematic_ai' &&
               profile?.free_ai_generate_used !== true &&
               current < cost
-            if (isFreeAiTrial) {
+            if (quality === 'fast' && current < cost) {
+              // KINEO-PRICING-V3C-2026-07-10 — PRODUCT DECISION: never break a
+              // Fast render over 1 credit. A paying user with balance 0 still
+              // gets their clean video delivered normally — we just skip the
+              // debit (no watermark fallback, no 402). This branch also keeps
+              // debit_video_credits from ever being called with an
+              // insufficient balance for Fast.
+              fastCreditSkipped = true
+              creditsDeducted = true // settled — polls/refreshes must not retry
+              creditsRemaining = current
+              console.log(`[fast-credit] skip — paid user ${user.id.slice(0, 8)} balance ${current} < cost ${cost}; delivering without debit`)
+            } else if (isFreeAiTrial) {
               // Conditional flip: only the FIRST render to reach here wins, so
               // two near-simultaneous trials can't both go free.
               const { data: claimed, error: claimErr } = await supabase
@@ -476,7 +531,9 @@ export async function GET(
             duration,
             topic,
             // #384 — free AI trial charges 0 credits; reflect that in history.
-            creditsUsed: wasFreeAiTrial ? 0 : cost,
+            // KINEO-PRICING-V3C-2026-07-10 — a skipped Fast debit also
+            // recorded as 0 (nothing was actually charged).
+            creditsUsed: wasFreeAiTrial || fastCreditSkipped ? 0 : cost,
           })
           console.log('[history] persist result:', JSON.stringify(result))
         } catch (e) {
