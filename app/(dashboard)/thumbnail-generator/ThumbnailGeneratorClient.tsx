@@ -2,7 +2,14 @@
 
 // Push #080 — ThumbnailGenerator v2: homepage-quality header, glow style cards, blue gradient CTA
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+
+// KINEO-CHARLOCK-V2-2026-07-10 — saved characters (same face every image).
+interface CharacterChip {
+  id: string
+  name: string
+  image_url: string
+}
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 const FREE_DAILY_LIMIT = 2
@@ -270,6 +277,52 @@ export default function ThumbnailGeneratorClient() {
   const [dailyUsed, setDailyUsed] = useState(() => getDailyUsage())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // KINEO-CHARLOCK-V2 — character lock state. Selecting a character NEVER
+  // touches the prompt (the style buttons overwrite it — known trap; the
+  // character selector must not repeat that bug).
+  const [characters, setCharacters] = useState<CharacterChip[]>([])
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('')
+  const [lockedName, setLockedName] = useState<string>('')
+  const [charSaving, setCharSaving] = useState(false)
+  const [charMsg, setCharMsg] = useState('')
+
+  useEffect(() => {
+    fetch('/api/characters', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { characters: [] }))
+      .then((d) => {
+        if (Array.isArray(d?.characters)) setCharacters(d.characters)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSaveAsCharacter() {
+    const img = images[selectedIdx]
+    if (!img || charSaving) return
+    const name = (window.prompt('Name this character (e.g. "Rick — finance host"):') ?? '').trim()
+    if (!name) return
+    setCharSaving(true)
+    setCharMsg('')
+    try {
+      const res = await fetch('/api/characters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, imageUrl: img, source: 'other' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.character) {
+        setCharMsg(typeof data?.error === 'string' ? data.error : 'Could not save the character.')
+        return
+      }
+      setCharacters((cs) => [data.character, ...cs])
+      setSelectedCharacterId(data.character.id)
+      setCharMsg(`✓ "${name}" saved — every new generation with it will keep this exact face.`)
+    } catch {
+      setCharMsg('Could not save the character. Please try again.')
+    } finally {
+      setCharSaving(false)
+    }
+  }
+
   const remainingFree = Math.max(FREE_DAILY_LIMIT - dailyUsed, 0)
   const isLimitReached = remainingFree <= 0
 
@@ -286,7 +339,9 @@ export default function ThumbnailGeneratorClient() {
       const res = await fetch('/api/generate-thumbnail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt.trim(), style: selectedStyle, count: generateCount }),
+        // KINEO-CHARLOCK-V2 — characterId flips the server to images.EDIT with
+        // the saved anchor (same real face, new scene/angle/outfit).
+        body: JSON.stringify({ prompt: prompt.trim(), style: selectedStyle, count: generateCount, ...(selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
       })
       const data = await res.json()
 
@@ -297,6 +352,7 @@ export default function ThumbnailGeneratorClient() {
 
       setImages(data.images ?? [])
       setOptimizedPrompt(data.optimizedPrompt ?? '')
+      setLockedName(typeof data.lockedTo === 'string' ? data.lockedTo : '')
       setSelectedIdx(0)
 
       // Increment daily usage
@@ -469,6 +525,66 @@ export default function ThumbnailGeneratorClient() {
                 {prompt.length}/400
               </span>
             </div>
+          </div>
+
+          {/* KINEO-CHARLOCK-V2 — character selector. Picking a character only
+              sets the id (NEVER rewrites the prompt — the style buttons do
+              that and it's a known trap). */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: selectedCharacterId ? '1px solid rgba(41,151,255,0.35)' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 14,
+              padding: 20,
+            }}
+          >
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              🎭 Use character <span style={{ textTransform: 'none', fontWeight: 600, color: 'var(--muted)' }}>— same face, new scene</span>
+            </label>
+            {characters.length === 0 ? (
+              <p style={{ fontSize: '0.74rem', color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
+                🔒 Save a character from any generated image (paid plans) and every future thumbnail, angle or outfit keeps the <b style={{ color: 'var(--text2)' }}>exact same face</b>.{' '}
+                <a href="/pricing" style={{ color: '#2997ff', fontWeight: 700 }}>Unlock →</a>
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCharacterId('')}
+                  style={{
+                    borderRadius: 10, padding: '8px 12px', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer',
+                    background: !selectedCharacterId ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: !selectedCharacterId ? '1px solid rgba(41,151,255,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                    color: !selectedCharacterId ? '#2997ff' : 'var(--muted)',
+                  }}
+                >
+                  ✨ No character
+                </button>
+                {characters.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedCharacterId(c.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      borderRadius: 999, padding: '4px 12px 4px 4px', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer',
+                      background: selectedCharacterId === c.id ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.03)',
+                      border: selectedCharacterId === c.id ? '1px solid rgba(41,151,255,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                      color: selectedCharacterId === c.id ? '#2997ff' : 'var(--muted)',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.image_url} alt={c.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedCharacterId && (
+              <p style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 10, marginBottom: 0, lineHeight: 1.5 }}>
+                Describe only the <b style={{ color: 'var(--text2)' }}>change</b> in the prompt — new angle, outfit, scene or expression. The face stays locked.
+              </p>
+            )}
           </div>
 
           {/* Style selector */}
@@ -779,29 +895,59 @@ export default function ThumbnailGeneratorClient() {
               padding: 20,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--muted2)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--muted2)', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8 }}>
                 🖼️ Preview
+                {/* KINEO-CHARLOCK-V2 — identity badge on locked results. */}
+                {lockedName && images.length > 0 && !loading && (
+                  <span style={{ textTransform: 'none', letterSpacing: 0, fontSize: '0.68rem', fontWeight: 800, color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.35)', borderRadius: 999, padding: '3px 10px' }}>
+                    🔒 Locked to {lockedName}
+                  </span>
+                )}
               </span>
               {selectedImage && !loading && (
-                <button
-                  onClick={handleDownloadSelected}
-                  style={{
-                    background: 'linear-gradient(135deg, #2997ff, #2997ff)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '6px 16px',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 0 14px rgba(16, 185, 129,0.35)',
-                  }}
-                >
-                  ⬇ Download HD
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {/* KINEO-CHARLOCK-V2 — save THIS result as a reusable character. */}
+                  <button
+                    onClick={handleSaveAsCharacter}
+                    disabled={charSaving}
+                    style={{
+                      background: 'rgba(41,151,255,0.12)',
+                      color: '#2997ff',
+                      border: '1px solid rgba(41,151,255,0.4)',
+                      borderRadius: 8,
+                      padding: '6px 14px',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      cursor: charSaving ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {charSaving ? '⭐ Saving…' : '⭐ Save as Character'}
+                  </button>
+                  <button
+                    onClick={handleDownloadSelected}
+                    style={{
+                      background: 'linear-gradient(135deg, #2997ff, #2997ff)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 16px',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 0 14px rgba(41,151,255,0.35)',
+                    }}
+                  >
+                    ⬇ Download HD
+                  </button>
+                </div>
               )}
             </div>
+            {charMsg && (
+              <p style={{ fontSize: '0.74rem', fontWeight: 700, color: charMsg.startsWith('✓') ? '#5cb3ff' : '#f87171', margin: '0 0 10px' }}>
+                {charMsg}
+              </p>
+            )}
 
             {/* Loading skeleton */}
             {loading && <Skeleton />}

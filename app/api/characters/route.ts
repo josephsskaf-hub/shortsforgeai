@@ -13,7 +13,9 @@ import {
   characterLimitFor,
   countCharacters,
   deleteCharacter,
+  extractCharacterTraits,
   listCharacters,
+  persistCharacterImage,
   saveCharacter,
 } from '@/lib/characters'
 
@@ -53,36 +55,48 @@ export async function POST(req: NextRequest) {
     if (!name) return NextResponse.json({ error: 'Give your character a name.' }, { status: 400 })
     if (!imageUrl) return NextResponse.json({ error: 'Character image is required.' }, { status: 400 })
 
-    // Per-plan limit (free 1, paid 12) — matches the universal paid gate used
-    // by the engines (has_paid or any plan).
+    // KINEO-CHARLOCK-V2-2026-07-10 — per-plan limits from the paid-job
+    // briefing: FREE = 0 (the locked UI is the upgrade bait), Starter/Creator
+    // = 3, Studio = 10. Counted server-side (never localStorage).
     const { data: profile } = await supabase
       .from('profiles')
       .select('has_paid, plan')
       .eq('id', user.id)
       .single()
-    const isPaid =
-      profile?.has_paid === true ||
-      ['starter', 'basic', 'pro', 'pro_trial'].includes((profile?.plan ?? '').toString())
-    const limit = characterLimitFor(isPaid)
+    const plan = (profile?.plan ?? '').toString()
+    const hasPaid = profile?.has_paid === true
+    const limit = characterLimitFor(plan, hasPaid)
     const current = await countCharacters(user.id)
+    if (limit === 0) {
+      return NextResponse.json(
+        {
+          error: 'Saving characters is a paid feature — lock the SAME face into every video and thumbnail you make. Upgrade to unlock it.',
+          upsell: 'credits',
+          upgrade: '/pricing',
+        },
+        { status: 402 },
+      )
+    }
     if (current >= limit) {
       return NextResponse.json(
         {
-          error: isPaid
-            ? `You reached the ${limit}-character limit — delete one to save a new one.`
-            : 'Free accounts can save 1 character. Upgrade to save up to 12 and lock a consistent presenter for every video.',
-          upsell: isPaid ? undefined : 'credits',
+          error: `You reached your ${limit}-character limit${limit < 10 ? ' — upgrade to Studio for 10 characters, or' : ' —'} delete one to save a new one.`,
           upgrade: '/pricing',
         },
-        { status: isPaid ? 409 : 402 },
+        { status: 409 },
       )
     }
 
     const source = ['upload', 'scene', 'hollywood', 'other'].includes((body.source ?? '').toString())
       ? (body.source as string)
       : 'upload'
-    const character = await saveCharacter({ userId: user.id, name, imageUrl, source })
-    console.log(`[characters] saved user=${user.id.slice(0, 8)} id=${character.id} source=${source}`)
+    // KINEO-CHARLOCK-V2 — persist first, then best-effort trait extraction on
+    // the PERSISTED public URL (vision needs a reachable URL; failure never
+    // blocks the save).
+    const persistedUrl = await persistCharacterImage(user.id, imageUrl)
+    const traits = await extractCharacterTraits(persistedUrl)
+    const character = await saveCharacter({ userId: user.id, name, imageUrl: persistedUrl, source, traits })
+    console.log(`[characters] saved user=${user.id.slice(0, 8)} id=${character.id} source=${source} traits=${traits ? 'yes' : 'no'}`)
     return NextResponse.json({ character })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -25,30 +25,57 @@ export interface SavedCharacter {
   image_url: string
   source: string
   created_at: string
+  // KINEO-CHARLOCK-V2-2026-07-10 — fixed traits injected into images.edit
+  // prompts ("same face, same <traits>") to reduce identity drift.
+  traits?: string | null
 }
 
-/** Per-plan limit: free = 1, any paying account = 12. Characters are a clear
- *  premium surface (Rick wants 3 niches, Storyline360 wants male+female). */
-export function characterLimitFor(isPaid: boolean): number {
-  return isPaid ? 12 : 1
+/** KINEO-CHARLOCK-V2-2026-07-10 — per-plan limits (briefing validated with
+ *  paid jobs): FREE = 0 (locked UI is the upgrade bait), Starter/Creator = 3,
+ *  Studio = 10. Server-side gate — never localStorage (thumbnail-limit lesson). */
+export function characterLimitFor(plan: string, hasPaid: boolean): number {
+  const p = (plan ?? '').toLowerCase()
+  if (p === 'pro' || p === 'pro_trial') return 10
+  if (p === 'basic' || p === 'basic_trial' || p === 'starter' || p === 'starter_trial') return 3
+  return hasPaid ? 3 : 0
 }
 
 const OUR_STORAGE_PREFIX = () =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
 const FAL_CDN = /^https:\/\/([a-z0-9-]+\.)*fal\.(media|run|ai)\//i
+// KINEO-CHARLOCK-V2 — thumbnails come back from OpenAI as azure-blob URLs or
+// data URIs; both are legit "save as character" sources.
+const OPENAI_CDN = /^https:\/\/([a-z0-9-]+\.)*(oaidalleapiprodscus\.blob\.core\.windows\.net|openai\.com)\//i
 
 /**
  * Persist the character image into OUR avatars bucket.
  * - Already our storage → returned as-is (no duplicate copy).
- * - fal CDN (generated portrait/scene) → downloaded and re-uploaded, because
- *   fal files can be garbage-collected and a character must live forever.
+ * - fal CDN / OpenAI CDN (generated images) → downloaded and re-uploaded,
+ *   because those files expire and a character anchor must live forever.
+ * - data:image base64 (thumbnail generator results) → decoded and uploaded.
  * - Anything else → rejected (no SSRF / hot-linking surface).
  */
 export async function persistCharacterImage(userId: string, url: string): Promise<string> {
   const clean = (url ?? '').trim()
   if (!clean) throw new Error('Character image URL is required.')
   if (clean.startsWith(OUR_STORAGE_PREFIX())) return clean
-  if (!FAL_CDN.test(clean)) throw new Error('Character image must be an uploaded photo or a generated image.')
+
+  // data URI (generated thumbnail) → decode straight to buffer.
+  if (clean.startsWith('data:image/')) {
+    const comma = clean.indexOf(',')
+    if (comma < 0 || !clean.slice(0, comma).includes('base64')) {
+      throw new Error('Unsupported image data format.')
+    }
+    const buf = Buffer.from(clean.slice(comma + 1), 'base64')
+    if (buf.length === 0) throw new Error('Character image data was empty.')
+    if (buf.length > 15 * 1024 * 1024) throw new Error('Character image is too large.')
+    const mime: 'image/png' | 'image/jpeg' = clean.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png'
+    return uploadAvatarPhoto(userId, buf, mime)
+  }
+
+  if (!FAL_CDN.test(clean) && !OPENAI_CDN.test(clean)) {
+    throw new Error('Character image must be an uploaded photo or a generated image.')
+  }
   const res = await fetch(clean)
   if (!res.ok) throw new Error(`Could not download the character image (${res.status}).`)
   const contentType = (res.headers.get('content-type') ?? '').toLowerCase()
@@ -59,11 +86,44 @@ export async function persistCharacterImage(userId: string, url: string): Promis
   return uploadAvatarPhoto(userId, buf, mime)
 }
 
+/**
+ * KINEO-CHARLOCK-V2 — best-effort trait extraction (GPT-4o-mini vision).
+ * Returns a short comma-separated list ("bald, white goatee, rimless glasses")
+ * or null on ANY failure — traits improve the lock but must never block a save.
+ */
+export async function extractCharacterTraits(imageUrl: string): Promise<string | null> {
+  try {
+    const { openai } = await import('@/lib/openai')
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      max_tokens: 60,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'List the 3-5 most distinctive FIXED visual traits of this person for re-identification (hair, facial hair, glasses, notable clothing). Reply ONLY with a short comma-separated list, lowercase, no sentences. Example: "bald, white goatee, rimless glasses, black shirt"',
+            },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+    })
+    const traits = (completion.choices[0]?.message?.content ?? '').trim().replace(/^["']|["']$/g, '').slice(0, 200)
+    return traits.length >= 3 ? traits : null
+  } catch (e) {
+    console.warn('[characters] trait extraction failed (non-blocking):', e instanceof Error ? e.message : String(e))
+    return null
+  }
+}
+
 export async function listCharacters(userId: string, limit = 24): Promise<SavedCharacter[]> {
   const admin = getAdminClient()
   const { data, error } = await admin
     .from('characters')
-    .select('id, name, image_url, source, created_at')
+    .select('id, name, image_url, source, traits, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -92,6 +152,7 @@ export async function saveCharacter(args: {
   name: string
   imageUrl: string
   source?: string
+  traits?: string | null
 }): Promise<SavedCharacter> {
   const admin = getAdminClient()
   const persistedUrl = await persistCharacterImage(args.userId, args.imageUrl)
@@ -102,8 +163,9 @@ export async function saveCharacter(args: {
       name: args.name.trim().slice(0, 60),
       image_url: persistedUrl,
       source: args.source ?? 'upload',
+      traits: args.traits ?? null,
     })
-    .select('id, name, image_url, source, created_at')
+    .select('id, name, image_url, source, traits, created_at')
     .single()
   if (error || !data) throw new Error(`Could not save the character: ${error?.message ?? 'unknown error'}`)
   return data as SavedCharacter
@@ -131,4 +193,21 @@ export async function getCharacterImageUrl(userId: string, characterId: string):
     .single()
   if (error || !data?.image_url) return null
   return data.image_url as string
+}
+
+/** KINEO-CHARLOCK-V2 — full character record (anchor + traits + name) for the
+ *  images.edit regeneration path. Ownership enforced. */
+export async function getCharacter(
+  userId: string,
+  characterId: string,
+): Promise<{ name: string; image_url: string; traits: string | null } | null> {
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('characters')
+    .select('name, image_url, traits')
+    .eq('id', characterId)
+    .eq('user_id', userId)
+    .single()
+  if (error || !data?.image_url) return null
+  return data as { name: string; image_url: string; traits: string | null }
 }
