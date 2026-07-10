@@ -9,11 +9,21 @@
 //
 // Gated on OFFER_290_ENABLED (build-only until the founder flips the flag). When
 // the flag is false this returns null immediately — nothing renders, no fetch.
+//
+// KINEO-REBASE-2026-07-10 — POST-EXIT COUNTDOWN: a SECOND eligibility path.
+// When the pricing exit-intent modal is shown and the visitor doesn't
+// convert, ExitIntentOffer writes `kineo_exit_seen_at` (localStorage). On
+// their next visits within 24h of that moment, this same banner arms with
+// the countdown anchored to exit_seen_at + 24h. Everything else is the
+// SAME lock as today: server-side offer290Enabled + hasPaid + offer290Used
+// gates, the flag-gated $2.90 SKU, and the once-ever SEEN_KEY.
 
 import { useEffect, useMemo, useState } from 'react'
 import { OFFER_290_ENABLED } from '@/lib/flags'
 
 const SEEN_KEY = 'kineo_offer290_seen'
+// KINEO-REBASE-2026-07-10 — written by components/ExitIntentOffer.tsx on show.
+const EXIT_SEEN_KEY = 'kineo_exit_seen_at'
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24h
 
 function fmt(ms: number): string {
@@ -32,7 +42,9 @@ export default function Offer290Banner() {
 
   const [eligible, setEligible] = useState(false)
   const [dismissed, setDismissed] = useState(false)
-  const [firstVideoAt, setFirstVideoAt] = useState<string | null>(null)
+  // KINEO-REBASE-2026-07-10 — countdown anchor (ms): first_video_at OR
+  // kineo_exit_seen_at, whichever path armed the banner.
+  const [anchorStart, setAnchorStart] = useState<number | null>(null)
   const [now, setNow] = useState<number>(() => Date.now())
 
   // Load offer inputs from /api/credits (server-side, cookie auth).
@@ -52,18 +64,33 @@ export default function Offer290Banner() {
         if (cancelled) return
         // Server must agree the offer is enabled (defence in depth).
         if (data?.offer290Enabled !== true) return
-        // Non-paying, offer never claimed, and activated (>=1 video).
+        // Non-paying + offer never claimed (server-side truth for both paths).
         if (data?.hasPaid === true) return
         if (data?.offer290Used === true) return
+
+        // Path 1 (original) — activated new user: first_video_at + 24h window.
+        let start: number | null = null
         const fv: string | null = typeof data?.firstVideoAt === 'string' ? data.firstVideoAt : null
-        if (!fv) return
-        const start = new Date(fv).getTime()
-        if (!Number.isFinite(start)) return
-        // Still inside the 24h window?
-        if (Date.now() >= start + WINDOW_MS) return
-        setFirstVideoAt(fv)
+        if (fv) {
+          const t = new Date(fv).getTime()
+          if (Number.isFinite(t) && Date.now() < t + WINDOW_MS) start = t
+        }
+
+        // Path 2 (KINEO-REBASE-2026-07-10) — post-exit-intent: the visitor saw
+        // the exit modal, didn't convert, and is back within 24h. Countdown
+        // anchors to the moment the exit modal was shown.
+        if (start === null) {
+          try {
+            const raw = localStorage.getItem(EXIT_SEEN_KEY)
+            const t = raw ? Number(raw) : NaN
+            if (Number.isFinite(t) && t > 0 && Date.now() < t + WINDOW_MS) start = t
+          } catch { /* ignore storage errors */ }
+        }
+
+        if (start === null) return
+        setAnchorStart(start)
         setEligible(true)
-        // Mark as shown so it only ever appears ONCE.
+        // Mark as shown so it only ever appears ONCE (shared by both paths).
         try { localStorage.setItem(SEEN_KEY, String(Date.now())) } catch { /* ignore */ }
       } catch { /* silent — banner just won't show */ }
     })()
@@ -78,10 +105,9 @@ export default function Offer290Banner() {
   }, [enabled, eligible, dismissed])
 
   const remaining = useMemo(() => {
-    if (!firstVideoAt) return 0
-    const start = new Date(firstVideoAt).getTime()
-    return start + WINDOW_MS - now
-  }, [firstVideoAt, now])
+    if (anchorStart === null) return 0
+    return anchorStart + WINDOW_MS - now
+  }, [anchorStart, now])
 
   if (!enabled || !eligible || dismissed) return null
   // Countdown expired mid-session → hide.

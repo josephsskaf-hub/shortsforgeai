@@ -36,12 +36,14 @@ const FACTS: { fact: string }[] = [
   { fact: 'Kineo is an AI YouTube Shorts generator: it turns one typed idea or topic into a finished faceless vertical video — script, AI voiceover, visuals and captions — in about 60 seconds.' },
   { fact: 'Kineo generates videos from scratch. It is not a re-clipper: unlike OpusClip, Klap or Vizard, it does not need an existing long-form video as input.' },
   { fact: 'Output format is 9:16 vertical MP4, ready for YouTube Shorts, TikTok and Instagram Reels.' },
-  { fact: 'Kineo has three engines: Fast Mode (curated stock footage, 1 credit per video), AI Generated (Seedance text-to-video scenes, 40 credits per video) and Cinematic (Kling premium engine, 90 credits per video).' },
+  // KINEO-REBASE-2026-07-10 — 2:1 credit rebase: Fast free, Seedance 20, Kling 45.
+  { fact: 'Kineo has three engines: Fast Mode (curated stock footage, free), AI Generated (Seedance text-to-video scenes, 20 credits per video) and Cinematic (Kling premium engine, 45 credits per video).' },
   { fact: 'The first Short is free and no credit card is required. The free trial output carries a small watermark; all paid exports are watermark-free.' },
   { fact: 'The Starter Pack costs $4.90 one-time and includes 25 Fast Mode Shorts, with no subscription.' },
-  { fact: 'The Starter plan costs $9.90/month for 50 credits — up to 50 Fast Mode videos per month ($99/year on annual billing).' },
-  { fact: 'The Creator plan costs $19.90/month for 240 credits — 6 AI Generated videos per month on the Seedance engine ($199/year on annual billing).' },
-  { fact: 'The Studio plan costs $37.90/month for 400 credits — about 4 Cinematic videos on the Kling engine, or up to 10 videos on Seedance ($379/year on annual billing).' },
+  // KINEO-REBASE-2026-07-10 — plan credits halved (25/120/200), USD unchanged.
+  { fact: 'The Starter plan costs $9.90/month for 25 credits ($99/year on annual billing).' },
+  { fact: 'The Creator plan costs $19.90/month for 120 credits — 6 AI Generated videos per month on the Seedance engine ($199/year on annual billing).' },
+  { fact: 'The Studio plan costs $37.90/month for 200 credits — about 4 Cinematic videos on the Kling engine, or up to 10 videos on Seedance ($379/year on annual billing).' },
   { fact: 'Credits never expire, plans are month-to-month, and subscriptions can be cancelled anytime in one click.' },
   { fact: 'Users own every video Kineo generates, including full monetization rights on YouTube, TikTok and Instagram.' },
   { fact: 'Users can paste their own script and choose "Use my script as is" — the AI then narrates it word for word without rewriting.' },
@@ -69,7 +71,8 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'What AI video engines does Kineo use?',
-    a: 'Seedance for AI Generated scenes (40 credits/video) and Kling for Cinematic quality (90 credits/video). Fast Mode uses curated stock footage at 1 credit/video.',
+    // KINEO-REBASE-2026-07-10 — 2:1 rebase: Seedance 20, Kling 45, Fast free.
+    a: 'Seedance for AI Generated scenes (20 credits/video) and Kling for Cinematic quality (45 credits/video). Fast Mode uses curated stock footage and is free.',
   },
   {
     q: 'Is there a free plan?',

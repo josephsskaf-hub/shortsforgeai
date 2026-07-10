@@ -11,7 +11,10 @@ import { sweepStuckRenderDebits } from '@/lib/credits/refund'
 // send once. Subsequent cron runs skip them.
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+// KINEO-REBASE-2026-07-10 — 30 → 300 (Vercel Pro): this daily cron now also
+// triggers the abandon-recovery batch (paced ~700ms/send), which can take
+// ~60s on top of the reminder loop.
+export const maxDuration = 300
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Kineo <support@usekineo.com>'
@@ -41,6 +44,30 @@ export async function GET(req: NextRequest) {
     console.log('[send-reminders] stuck-render refund sweep:', JSON.stringify(sweep))
   } catch (e) {
     console.error('[send-reminders] refund sweep failed:', e instanceof Error ? e.message : String(e))
+  }
+
+  // KINEO-REBASE-2026-07-10 — ROBÔ DE ABANDONO NA ROTINA. Piggybacked on this
+  // existing daily cron (NOT a new vercel.json entry): one server-to-server
+  // call to /api/admin/send-abandon-recovery with the CRON_SECRET bearer
+  // (the route accepts it alongside the admin cookie). The endpoint is
+  // idempotent by design — profiles.abandon_emailed is flagged on successful
+  // send only — so the daily run only ever emails NEW checkout-abandoners.
+  // limit=60 keeps the paced batch (~700ms/send) well inside maxDuration and
+  // under Resend's daily cap alongside the other lifecycle emails.
+  try {
+    const cronSecret = process.env.CRON_SECRET
+    if (cronSecret) {
+      const res = await fetch(
+        `${APP_URL}/api/admin/send-abandon-recovery?confirm=SEND&limit=60`,
+        { headers: { authorization: `Bearer ${cronSecret}` }, cache: 'no-store' },
+      )
+      const body = await res.json().catch(() => null)
+      console.log('[send-reminders] abandon-recovery daily batch:', res.status, JSON.stringify(body))
+    } else {
+      console.warn('[send-reminders] CRON_SECRET not set — abandon-recovery batch skipped')
+    }
+  } catch (e) {
+    console.error('[send-reminders] abandon-recovery call failed:', e instanceof Error ? e.message : String(e))
   }
 
   if (!RESEND_API_KEY) {

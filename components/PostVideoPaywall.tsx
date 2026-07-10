@@ -1,7 +1,8 @@
 'use client'
 
 // Push #060 — smart paywall shown right after a successful generation,
-// only when the user's remaining credit balance is at or below 30. Two
+// only when the user's remaining credit balance is at or below 15
+// (KINEO-REBASE-2026-07-10 — was 30 pre-rebase; 2:1 credit rebase). Two
 // Stripe-hosted launch-offer links (same as PricingCards) for Basic and
 // Pro. Dismiss link keeps the result page usable for users who don't
 // want to upgrade yet.
@@ -16,8 +17,8 @@ import { PLANS } from '@/lib/pricing'
 
 interface PostVideoPaywallProps {
   // Current credit balance after the most recent generation. The parent
-  // gates rendering on credits ≤ 30; we still re-check here as a safety
-  // net so the card never shows for healthy balances.
+  // gates rendering on credits ≤ 15 (KINEO-REBASE-2026-07-10); we still
+  // re-check here as a safety net so the card never shows for healthy balances.
   credits: number
 }
 
@@ -61,7 +62,7 @@ export default function PostVideoPaywall({ credits }: PostVideoPaywallProps) {
   }
 
   if (dismissed) return null
-  if (credits > 30) return null
+  if (credits > 15) return null // KINEO-REBASE-2026-07-10 — 30 → 15 (2:1 rebase)
 
   return (
     <section

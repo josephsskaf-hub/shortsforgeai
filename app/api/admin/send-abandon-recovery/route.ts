@@ -6,10 +6,17 @@
 // at the decision moment. Idempotent via profiles.abandon_emailed; only flags on a
 // successful send; paces sends under Resend's free 100/day cap.
 //
-// MODES (all admin-gated, GET):
+// MODES (admin- or cron-gated, GET):
 //   (no params)            → DRY RUN: who would receive it (count + sample).
 //   ?confirm=SEND&limit=N  → send to the next N unflagged recipients (default 90),
 //                            pacing each send, marking the flag on success.
+//
+// KINEO-REBASE-2026-07-10 — ROBÔ NA ROTINA: besides the admin cookie, the
+// route now accepts `Authorization: Bearer ${CRON_SECRET}` so the daily
+// send-reminders cron (10:00 UTC, vercel.json) can call it server-to-server
+// every day. Idempotency is already built in (profiles.abandon_emailed,
+// flagged on SUCCESSFUL send only), so a daily call only ever emails NEW
+// abandoners — nobody gets the offer twice.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
@@ -94,11 +101,20 @@ function adminClient() {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const email = (user?.email ?? '').toLowerCase()
-    if (!user || !ADMIN_EMAILS.has(email)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // KINEO-REBASE-2026-07-10 — cron auth path: the daily send-reminders cron
+    // calls this route with the CRON_SECRET bearer (no admin cookie on a
+    // server-to-server hop). Only honored when CRON_SECRET is actually set.
+    const cronSecret = process.env.CRON_SECRET
+    const isCronCall =
+      !!cronSecret && req.headers.get('authorization') === `Bearer ${cronSecret}`
+
+    if (!isCronCall) {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const email = (user?.email ?? '').toLowerCase()
+      if (!user || !ADMIN_EMAILS.has(email)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 })

@@ -44,8 +44,10 @@ const BASIC_FEATURES = [
   'My Videos history',
 ]
 
+// KINEO-REBASE-2026-07-10 — 2:1 credit rebase: Studio 200 credits → ~4 Kling
+// (45 cr) or ~10 Seedance (20 cr) videos. USD unchanged.
 const PRO_FEATURES = [
-  '6 cinematic AI videos/month',
+  '~4 cinematic AI videos/month (or ~10 Seedance)',
   'Kling 2.5 engine (top-tier cinematic)',
   'AI writes script + voiceover',
   'Auto-captions pipeline',
@@ -166,7 +168,8 @@ export default function PricingCards() {
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          tagline="240 credits/month — 6 AI-generated Shorts on the Seedance engine."
+          // KINEO-REBASE-2026-07-10 — 240 → 120 credits (2:1 rebase, USD unchanged).
+          tagline="120 credits/month — 6 AI-generated Shorts on the Seedance engine."
           features={BASIC_FEATURES}
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
@@ -187,7 +190,8 @@ export default function PricingCards() {
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          tagline="Premium Kling engine + 360 credits — up to 9 AI or 6 cinematic Shorts/month."
+          // KINEO-REBASE-2026-07-10 — 360/400 → 200 credits (2:1 rebase, USD unchanged).
+          tagline="Premium Kling engine + 200 credits — up to 10 AI or ~4 cinematic Shorts/month."
           features={PRO_FEATURES}
           badge="Recommended"
           highlight

@@ -5,6 +5,8 @@ import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MobileNav from '@/components/MobileNav'
 import AvatarLaunchBanner from '@/components/AvatarLaunchBanner'
+// KINEO-REBASE-2026-07-10 — one-time 2:1 credit-rebase notice (self-expires 24/07)
+import CreditRebaseBanner from '@/components/CreditRebaseBanner'
 import { usePathname } from 'next/navigation'
 
 interface DashboardShellProps {
@@ -104,6 +106,9 @@ export default function DashboardShell({
           isPro={isPro}
           onMenuToggle={() => setSidebarOpen((v) => !v)}
         />
+        {/* KINEO-REBASE-2026-07-10 — credit-rebase conversion notice (dismissible,
+            localStorage kineo_rebase_seen, hard-stops after 2026-07-24) */}
+        <CreditRebaseBanner />
         {/* AI Avatar launch banner — dismissible, links to /generate?avatar=1 */}
         <AvatarLaunchBanner />
         <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>

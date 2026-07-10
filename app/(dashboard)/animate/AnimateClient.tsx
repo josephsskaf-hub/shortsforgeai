@@ -237,11 +237,12 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               className="btn-neon w-full px-6 py-4 text-base disabled:opacity-50"
               style={{ cursor: canGenerate ? 'pointer' : 'not-allowed' }}
             >
-              {busy ? PHASE_COPY[phase] : '✨ Bring it to life — 10 credits'}
+              {/* KINEO-REBASE-2026-07-10 — 10 → 5 credits (2:1 rebase; matches ANIMATE_COST) */}
+              {busy ? PHASE_COPY[phase] : '✨ Bring it to life — 5 credits'}
             </button>
             <p className="text-[12px] text-center" style={{ color: 'var(--muted)' }}>
-              10 credits per clip ·{' '}
-              <span style={{ color: (credits ?? 0) >= 10 ? '#2997ff' : '#f87171', fontWeight: 700 }}>
+              5 credits per clip ·{' '}
+              <span style={{ color: (credits ?? 0) >= 5 ? '#2997ff' : '#f87171', fontWeight: 700 }}>
                 you have {credits === null ? '—' : credits}
               </span>
               {!isLoggedIn && (

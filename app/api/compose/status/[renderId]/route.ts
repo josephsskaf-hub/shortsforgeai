@@ -44,31 +44,36 @@ function creditCostFor(quality: Quality): number {
       // shouldDeductCredits whitelist below), so the old debit_avatar_credit
       // block was removed — there is exactly ONE debit path for avatar.
       // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video).
-      return 220
+      // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase; same USD value).
+      return 110
     case 'cinematic_ai':
-      // Push #491 — repriced 30 → 40 (Seedance, ~6 clips/video margin).
-      return 40
+      // KINEO-REBASE-2026-07-10 — 40 → 20 (2:1 rebase). Keep in sync with
+      // SEEDANCE_CREDIT_COST in generate-video-cinematic.
+      return 20
     case 'cinematic_kling':
-      // KINEO-KLING-90-2026-07-06 — 60→90. Real fal cost $0.70/clip (10s) × 7 =
-      // $4.90/video; at 60cr Studio+Kling was only 14% margin. 90cr → ~43%.
-      return 90
+      // KINEO-KLING-90-2026-07-06 margin math intact.
+      // KINEO-REBASE-2026-07-10 — 90 → 45 (2:1 rebase; same USD value).
+      return 45
     case 'cinematic_veo':
       // #489/#491 — Veo 3.1 Fast premium. Keep in sync with VEO_CREDIT_COST.
-      return 180
+      // KINEO-REBASE-2026-07-10 — 180 → 90.
+      return 90
     case 'cinematic_sora':
-      // #491 — Sora 2 premium. Keep in sync with SORA_CREDIT_COST.
-      return 200
+      // #491 — Sora 2 premium (engine still BLOCKED upstream).
+      // KINEO-REBASE-2026-07-10 — 200 → 100.
+      return 100
     case 'cinematic_hollywood':
-      // KINEO-HOLLYWOOD-2026-07-09 provisional — preço final só após Checkpoint 1
-      // + OK do Joseph. Keep in sync with HOLLYWOOD_CREDIT_COST in
-      // generate-video-cinematic (real fal cost ≈ $6-8/video across Kling3/Veo/Seedance).
-      return 260
+      // KINEO-REBASE-2026-07-10 — Hollywood = 150 créditos: preço FINAL aprovado
+      // 10/07. Keep in sync with HOLLYWOOD_CREDIT_COST in generate-video-cinematic.
+      return 150
     case 'pro':
-      return 20
+      // KINEO-REBASE-2026-07-10 — legacy 20 → 10.
+      return 10
     case 'basic':
     case 'basic_ai':
     default:
-      return 15
+      // KINEO-REBASE-2026-07-10 — legacy 15 → 8 (ceil of 15/2).
+      return 8
   }
 }
 

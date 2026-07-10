@@ -30,21 +30,22 @@ import { generateHollywoodAnchors, ANCHORS_USD, type HollywoodAnchors } from '@/
 export const maxDuration = 60
 
 // Push #402 — two user-selectable engines with different credit costs.
-// AI Generated (Seedance) = 40 cr, available to all paid plans. Cinematic AI
-// (Kling) = 60 cr, Studio-only (premium). Free trial only ever uses Seedance.
-const SEEDANCE_CREDIT_COST = 40
-const KLING_CREDIT_COST = 90 // KINEO-KLING-90-2026-07-06 — real fal cost $0.07/s×10s×7clips=$4.90/video; 60cr gave only 14% margin. 90cr → ~43%.
+// KINEO-REBASE-2026-07-10 — CREDIT REBASE 2:1: every engine cost divided by 2
+// (Seedance 40→20, Kling 90→45, Veo 180→90, Sora 200→100). USD value per video
+// is unchanged because plan credits halved in lockstep (lib/pricing.ts).
+// Free trial only ever uses Seedance.
+const SEEDANCE_CREDIT_COST = 20
+const KLING_CREDIT_COST = 45 // KINEO-KLING-90-2026-07-06 margin math intact — 45 new cr = 90 old cr (KINEO-REBASE-2026-07-10).
 // Push #489/#491 — premium cinematic engines (Veo 3.1 Fast, Sora 2) via fal.
-// Priced for a fat margin: fal ~$0.80/clip × ~6 clips ≈ $4.80 cost/video, so
-// 180/200 credits (~$18–$20 retail at $0.10/cr) ≈ 73–76% margin, under Higgsfield.
-const VEO_CREDIT_COST = 180
-const SORA_CREDIT_COST = 200
-// KINEO-HOLLYWOOD-2026-07-09 provisional — preço final só após Checkpoint 1 + OK do Joseph.
-// KINEO-HOLLYWOOD-22-2026-07-10 — custo real subiu: support saiu do Seedance
+// KINEO-REBASE-2026-07-10 — 90/100 new credits = 180/200 old (same USD value).
+const VEO_CREDIT_COST = 90
+const SORA_CREDIT_COST = 100 // Sora segue BLOQUEADO (KINEO-SORA-REMOVED) — valor só por consistência.
+// KINEO-HOLLYWOOD-22-2026-07-10 — custo real: support saiu do Seedance
 // ($0.052/s) e foi pro Kling 3 ($0.168/s) pela coerência visual. Típico 55s
-// ≈ $8.90 (Kling3 $0.168/s dialogue+support + Veo $0.15/s em 1-2 cenas).
-// 260 cr no Studio (~$24.60 de crédito) ainda dá ~64% de margem.
-const HOLLYWOOD_CREDIT_COST = 260
+// ≈ $8.90-10.20 (Hollywood 3.0 i2v).
+// KINEO-REBASE-2026-07-10 — HOLLYWOOD = 150 créditos: preço FINAL aprovado 10/07
+// (equivale a 300 old-credits ≈ $28 de crédito → margem saudável sobre ~$10 de fal).
+const HOLLYWOOD_CREDIT_COST = 150
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
 // #368 — Seedance 1.5 Pro. The earlier 'submit error' (#366) was fal EXHAUSTED
@@ -461,7 +462,7 @@ export async function POST(req: NextRequest) {
     // in compose/status on SUCCESS).
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('video_credits, free_ai_generate_used, plan')
+      .select('video_credits, free_ai_generate_used, plan, has_paid')
       .eq('id', user.id)
       .single()
 
@@ -469,32 +470,23 @@ export async function POST(req: NextRequest) {
       console.error('[cinematic] credit fetch failed:', profileErr.message)
     }
     const balance = profile?.video_credits ?? 0
-    const isStudio = profile?.plan === 'pro' || profile?.plan === 'pro_trial'
 
-    // Push #402 — Cinematic AI (Kling) is a Studio-only feature. The UI also
-    // locks the button; this is the server-side guard against direct calls.
-    if (wantsKling && !isStudio) {
+    // KINEO-REBASE-2026-07-10 — UNIVERSAL ENGINE GATES. The old plan ladder
+    // (Seedance=Creator+, Kling/Veo/Hollywood=Studio) is retired: ANY paying
+    // user (has_paid or any paid plan) can use ANY engine as long as they have
+    // the credit balance. Free stays as today: Fast free + one AI Gen trial.
+    const planVal = (profile?.plan ?? 'free') as string
+    const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial'])
+    const isPaidUser = profile?.has_paid === true || PAID_PLANS.has(planVal)
+
+    // Premium engines (Kling/Veo/Hollywood) need any PAID account — no free trial.
+    if ((wantsKling || wantsVeo || wantsHollywood) && !isPaidUser) {
       return NextResponse.json(
         {
-          error: 'Cinematic AI (Kling) is a Studio feature. Upgrade to Studio to use it.',
-          upsell: 'studio',
+          error: 'Premium engines (Kling, Veo, Hollywood) are available on every paid plan. Upgrade to use them.',
+          upsell: 'creator',
           balance,
         },
-        { status: 402 },
-      )
-    }
-
-    // KINEO-LADDER-2026-07-06 — Veo 3.1 is a Studio-only premium engine.
-    if (wantsVeo && !isStudio) {
-      return NextResponse.json(
-        { error: 'Veo is a Studio feature. Upgrade to Studio to use it.', upsell: 'studio', balance },
-        { status: 402 },
-      )
-    }
-    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood is Studio-only (same gate as Veo).
-    if (wantsHollywood && !isStudio) {
-      return NextResponse.json(
-        { error: 'Hollywood Mode is a Studio feature. Upgrade to Studio to use it.', upsell: 'studio', balance },
         { status: 402 },
       )
     }
@@ -507,8 +499,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Push #402 — per-engine cost: Cinematic (Kling) 45, AI Generated (Seedance) 30.
-    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood = 260 (provisional, see const).
+    // Push #402 — per-engine cost. KINEO-REBASE-2026-07-10: Hollywood 150,
+    // Kling 45, Veo 90, Sora 100 (blocked), Seedance 20.
     const cost = wantsHollywood ? HOLLYWOOD_CREDIT_COST : wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
     // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
@@ -519,21 +511,14 @@ export async function POST(req: NextRequest) {
     // KINEO-HOLLYWOOD-2026-07-09 — the free trial never applies to Hollywood.
     const isFreeTrial = !wantsKling && !wantsVeo && !wantsSora && !wantsHollywood && balance < SEEDANCE_CREDIT_COST && eligibleForFree
 
-    // Push #404 — AI Generated (Seedance) requires a Creator or Studio plan (or
-    // the one-time free trial). Starter (Fast) users and trial-exhausted free
-    // users are upsold to Creator.
-    const planVal = (profile?.plan ?? 'free') as string
-    const isCreatorPlus = planVal === 'basic' || planVal === 'basic_trial' || isStudio
-    // KINEO-LADDER-2026-07-06 — AI (Seedance) is strictly Creator+. Removed the
-    // old paysWithCredits bypass (#430) that let a Starter/free user with enough
-    // credits sneak an AI video — the ladder is now Fast (free/Starter) → AI
-    // (Creator+) → premium engines (Studio). Kling/Veo already gated to Studio
-    // above; this catches Seedance for any non-Creator+ plan.
-    // KINEO-HOLLYWOOD-2026-07-09 — hollywood excluded: it's already Studio-gated above.
-    if (!wantsKling && !wantsVeo && !wantsHollywood && !isCreatorPlus && !isFreeTrial) {
+    // KINEO-REBASE-2026-07-10 — Seedance (AI Generated) now requires ANY paid
+    // account (was Creator+; the KINEO-LADDER plan gating is retired). Free
+    // users keep exactly today's behavior: Fast free + one AI Gen free trial.
+    // Kling/Veo/Hollywood already paid-gated above; this catches Seedance.
+    if (!wantsKling && !wantsVeo && !wantsHollywood && !isPaidUser && !isFreeTrial) {
       return NextResponse.json(
         {
-          error: 'AI Generated videos are on the Creator & Studio plans. Upgrade to use the AI engine.',
+          error: 'AI Generated videos are on the paid plans. Upgrade to use the AI engine.',
           upsell: 'creator',
           balance,
         },
@@ -545,7 +530,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: freeAlreadyUsed
-            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 90' : 'AI Generated needs 40'} credits. You have ${balance}.`
+            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 45' : 'AI Generated needs 20'} credits. You have ${balance}.` // KINEO-REBASE-2026-07-10
             : `This needs ${cost} credits. You have ${balance}.`,
           needed: cost,
           balance,

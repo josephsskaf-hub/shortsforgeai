@@ -18,7 +18,8 @@ const FAQ = [
   { q: 'How real does it look?', a: '720p lip-synced video — the person’s mouth matches your script word for word, with b-roll, captions and music around it.' },
   { q: 'Whose photo can I use?', a: 'Yours, or anyone’s with their permission. One sharp, front-facing photo works best. You confirm you have the right to use it on upload.' },
   { q: 'How long does it take?', a: 'About a minute of your time, a few minutes of rendering. No camera, no mic, no editing.' },
-  { q: 'How much does it cost?', a: 'An AI Avatar video uses 120 credits from your plan — the same universal credits that power every Kineo video. No separate add-on to buy.' },
+  // KINEO-REBASE-2026-07-10 — avatar = 110 credits (220 old, 2:1 rebase; copy said 120, stale).
+  { q: 'How much does it cost?', a: 'An AI Avatar video uses 110 credits from your plan — the same universal credits that power every Kineo video. No separate add-on to buy.' },
   { q: 'What if a render fails?', a: 'You’re never charged for a failed render. Your credits stay in your balance.' },
 ]
 
@@ -80,7 +81,8 @@ export default function AvatarLandingClient() {
           so this section drives to the generator / plans instead of a pack sale. */}
       <section className="mx-auto max-w-3xl px-5 py-10">
         <h2 className="text-center text-2xl font-black" style={{ color: '#a7f3d0' }}>Included with your plan</h2>
-        <p className="text-center text-xs mt-1 mb-6" style={{ color: '#86868b' }}>No separate add-on. An AI Avatar video uses 120 universal credits — the same credits that power every Kineo video.</p>
+        {/* KINEO-REBASE-2026-07-10 — 110 universal credits (was 220; copy said 120, stale) */}
+        <p className="text-center text-xs mt-1 mb-6" style={{ color: '#86868b' }}>No separate add-on. An AI Avatar video uses 110 universal credits — the same credits that power every Kineo video.</p>
         <div className="flex justify-center">
           <a
             href="/generate?avatar=1&utm_source=avatar_landing_pricing"

@@ -21,7 +21,9 @@ import { submitAnimateJob } from '@/lib/avatar/veed'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const ANIMATE_COST = 10 // video_credits per clip (5s or 10s = same Kling call shape)
+// KINEO-REBASE-2026-07-10 — 10 → 5 (2:1 credit rebase; same USD value —
+// ~$0.35 real cost per clip, 5 new credits ≈ 10 old credits retail).
+const ANIMATE_COST = 5 // video_credits per clip (5s or 10s = same Kling call shape)
 
 export async function POST(req: NextRequest) {
   try {

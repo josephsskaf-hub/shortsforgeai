@@ -811,6 +811,11 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
             </Link>
             <Link href={THUMBNAIL_ROUTE} className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Thumbnail</Link>
             <Link href="/viral-now" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Viral Now</Link>
+            {/* KINEO-PUBLIC-VIRALSCORE-2026-07-08 — free grader, top-of-funnel lead magnet. */}
+            <Link href="/viral-score" className="flex items-center gap-1.5 text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">
+              Viral Score
+              <span className="rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">Free</span>
+            </Link>
             <a href="/pricing" className="text-[1rem] font-medium text-[#94A3B8] hover:text-[#F1F5F9] transition">Pricing</a>
           </div>
 
@@ -923,6 +928,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <Link onClick={() => setNavOpen(false)} href="/avatar" className="rounded-md px-3 py-2 text-sm font-bold text-[#A78BFA] hover:bg-violet-400/[.06] hover:text-[#C4B5FD]">🎭 AI Avatar <span className="ml-1 rounded-full bg-violet-400/15 border border-violet-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-violet-300">New</span></Link>
               <Link onClick={() => setNavOpen(false)} href={THUMBNAIL_ROUTE} className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Thumbnail</Link>
               <Link onClick={() => setNavOpen(false)} href="/viral-now" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Viral Now</Link>
+              <Link onClick={() => setNavOpen(false)} href="/viral-score" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Viral Score <span className="ml-1 rounded-full bg-emerald-400/15 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">Free</span></Link>
               <a onClick={() => setNavOpen(false)} href="/pricing" className="rounded-md px-3 py-2 text-sm font-medium text-[#94A3B8] hover:bg-white/[.04] hover:text-[#F1F5F9]">Pricing</a>
 
               <div className="my-2 h-px bg-white/[0.06]" />
@@ -1138,7 +1144,8 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                   onClick={() => { trackHomepageEvent('hero_demo_render_cta'); goToGenerate() }}
                   className="btn-neon px-5 py-3 text-[14px]"
                 >
-                  🎬 Turn this into a video — free (40 credits)
+                  {/* KINEO-REBASE-2026-07-10 — free AI trial is worth 20 credits now (2:1 rebase) */}
+                  🎬 Turn this into a video — free (20 credits)
                 </button>
                 <button
                   type="button"

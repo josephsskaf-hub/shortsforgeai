@@ -136,7 +136,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // balance (avatar costs 120 of these, was the separate avatar_credits @ 1).
   // Kept the variable name to minimize churn; it reads `credits` from /api/credits.
   // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video → ~47% margem Creator)
-  const AVATAR_COST = 220
+  // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase; same USD value).
+  // Keep in sync with creditCostFor('avatar') in compose/status (= 110).
+  const AVATAR_COST = 110
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)

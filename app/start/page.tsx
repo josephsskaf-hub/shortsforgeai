@@ -408,7 +408,8 @@ export default function StartPage() {
               },
               {
                 q: 'Which plan should I pick?',
-                a: 'Starter ($9.90/month) gives you 50 Fast Mode videos — plenty for daily posting. Creator ($19.90/month) unlocks the AI Generated engine with 240 credits, and Studio ($37.90/month) adds the premium Kling engine with 400 credits. All plans come with a 7-day money-back guarantee.',
+                // KINEO-REBASE-2026-07-10 — 2:1 credit rebase (25/120/200), USD unchanged.
+                a: 'Starter ($9.90/month) gives you 25 credits — plus unlimited free Fast Mode videos. Creator ($19.90/month) comes with 120 credits for the AI Generated engine, and Studio ($37.90/month) includes 200 credits for the premium Kling engine. All plans come with a 7-day money-back guarantee.',
               },
               {
                 q: 'Can I cancel anytime?',

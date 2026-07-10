@@ -144,9 +144,10 @@ const QUALITY_OPTIONS: {
   credits: number
   icon: string
 }[] = [
-  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 15, icon: '🎞️' },
-  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 15, icon: '⚡' },
-  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 20, icon: '✨' },
+  // KINEO-REBASE-2026-07-10 — legacy costs halved (15/15/20 → 8/8/10).
+  { key: 'basic',    title: 'Basic',    desc: 'Uses licensed stock media from top providers.',     credits: 8,  icon: '🎞️' },
+  { key: 'basic_ai', title: 'Basic AI', desc: 'Uses our most efficient generative models.',         credits: 8,  icon: '⚡' },
+  { key: 'pro',      title: 'Pro',      desc: 'Uses premium generative models and cinematic look.', credits: 10, icon: '✨' },
 ]
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
@@ -2328,7 +2329,7 @@ export default function GenerateClient() {
       }
 
       if (res.status === 402) {
-        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 15} credit(s).`)
+        setError(`Not enough credits. This generation needs ${QUALITY_OPTIONS.find(q => q.key === quality)?.credits ?? 8} credit(s).`)
         setPhase('failed')
         return
       }
@@ -2891,14 +2892,14 @@ export default function GenerateClient() {
   const selectedCost = (mode === 'fast' || mode === 'creator')
     ? 0
     : mode === 'cinematic_ai'
-    // #402 — Cinematic AI (Kling) costs 60, AI Generated (Seedance) 40.
-    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood 260 (provisional).
-    ? (aiEngine === 'kling' ? 90 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : aiEngine === 'hollywood' ? 260 : 40)
-    : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
+    // KINEO-REBASE-2026-07-10 — 2:1 rebase: Kling 45, Veo 90, Sora 100,
+    // Hollywood 150 (preço FINAL aprovado 10/07), Seedance 20.
+    ? (aiEngine === 'kling' ? 45 : aiEngine === 'veo' ? 90 : aiEngine === 'sora' ? 100 : aiEngine === 'hollywood' ? 150 : 20)
+    : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 8)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
   // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && aiEngine !== 'hollywood' && freeAiUsed === false && (credits ?? 0) < 40
+  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && aiEngine !== 'hollywood' && freeAiUsed === false && (credits ?? 0) < 20 // KINEO-REBASE-2026-07-10 — 40→20
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -3172,7 +3173,7 @@ export default function GenerateClient() {
                   "Pro $9.90/100 videos" — a 2-generations-old price that broke
                   trust at the exact moment of purchase. */}
               Upgrade to Studio and never run out of credits.
-              Get <strong style={{ color: '#2997ff' }}>400 credits/month</strong> + the premium
+              Get <strong style={{ color: '#2997ff' }}>200 credits/month</strong> + the premium
               Kling engine (1080p) and keep your channel growing on autopilot.
             </p>
             <a
@@ -3459,6 +3460,7 @@ export default function GenerateClient() {
             isStarter={isStarter}
             isCreator={isCreator}
             isStudio={isStudio}
+            hasPaid={hasPaid}
             onUpgrade={openOutOfCreditsModal}
           />
           )}
@@ -4040,7 +4042,7 @@ export default function GenerateClient() {
                   {duration}s · YouTube Shorts / TikTok 9:16
                 </p>
                 {/* ROBO-ENTRY-495 — honest credits line at the win moment. AI
-                    Generated (Seedance) costs 40 credits and Fast Mode is free,
+                    Generated (Seedance) costs 20 credits (KINEO-REBASE-2026-07-10) and Fast Mode is free,
                     so we state both plainly instead of a vague "low credits"
                     nudge. Renders for any signed-in user; guests (credits null
                     after 401) see nothing. */}
@@ -4051,9 +4053,9 @@ export default function GenerateClient() {
                       {credits} credit{credits === 1 ? '' : 's'}
                     </span>{' '}
                     left —{' '}
-                    {credits >= 40
-                      ? `about ${Math.floor(credits / 40)} more AI video${Math.floor(credits / 40) === 1 ? '' : 's'}. Fast Mode is always free.`
-                      : 'not enough for another AI video (each takes 40). Fast Mode is still free.'}
+                    {credits >= 20
+                      ? `about ${Math.floor(credits / 20)} more AI video${Math.floor(credits / 20) === 1 ? '' : 's'}. Fast Mode is always free.`
+                      : 'not enough for another AI video (each takes 20). Fast Mode is still free.'}
                   </p>
                 )}
                 {/* Push #065 — show the generated title so the user can see
@@ -4607,10 +4609,10 @@ export default function GenerateClient() {
 
               {/* Push #099 — Post-generation upgrade upsell. Shows under the
                   download/share row for free users only (planTier === 'free'
-                  AND credits < 40, so users who already upgraded don't get
-                  re-pitched). Uses the same /api/stripe/checkout flow as the
-                  out-of-credits modal so attribution stays consistent. */}
-              {planTier === 'free' && credits !== null && credits < 40 && (
+                  AND credits < 20 — KINEO-REBASE-2026-07-10, so users who
+                  already upgraded don't get re-pitched). Uses the same
+                  /api/stripe/checkout flow as the out-of-credits modal. */}
+              {planTier === 'free' && credits !== null && credits < 20 && (
                 <div
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
                   style={{
@@ -4633,7 +4635,7 @@ export default function GenerateClient() {
                       className="text-xs font-semibold"
                       style={{ color: 'var(--muted2)', lineHeight: 1.5 }}
                     >
-                      50 videos/month · HD quality · Fast delivery
+                      25 credits/month · no watermark · cancel anytime
                     </p>
                   </div>
                   <button
@@ -4653,8 +4655,8 @@ export default function GenerateClient() {
                     {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $9.90/mo →'}
                   </button>
                   {/* ROBO-ENTRY-495 — Starter Pack entry CTA. This block only
-                      renders when credits < 40, i.e. the user can no longer run
-                      another AI Generated video (40 credits each). The $4.90
+                      renders when credits < 20, i.e. the user can no longer run
+                      another AI Generated video (20 credits each). The $4.90
                       one-time 10-Shorts pack is the lowest-commitment fix —
                       same checkout URL as /pricing, the 0-credit modal and the
                       PostVideoPaywall entry option. */}
@@ -4772,7 +4774,7 @@ export default function GenerateClient() {
           {phase === 'done' &&
             finalVideoUrl &&
             credits !== null &&
-            credits <= 30 && <PostVideoPaywall credits={credits} />}
+            credits <= 15 && <PostVideoPaywall credits={credits} />}{/* KINEO-REBASE-2026-07-10 — 30→15 */}
 
           {/* Push #047 — ready-to-post text package. Renders after a
               successful generation, alongside the video player above, so
@@ -5698,8 +5700,8 @@ function UpsellSection({
           }}
         >
           {/* Fix 2 (12/06) — copy matches the real tier this modal opens
-              (tier=basic = Creator $19.90/240 credits). Was "Pro $9.90/100". */}
-          Get 240 credits/month — post every day for $19.90/mo
+              (tier=basic = Creator $19.90/120 credits — KINEO-REBASE-2026-07-10). */}
+          Get 120 credits/month — post every day for $19.90/mo
         </div>
         <ul
           style={{
@@ -5710,7 +5712,7 @@ function UpsellSection({
             lineHeight: 1.65,
           }}
         >
-          <li>6 AI Generated videos (or 240 Fast videos)/month</li>
+          <li>6 AI Generated videos every month (20 credits each)</li>
           <li>Every scene generated by AI — cinematic feel</li>
           <li>Download MP4 · Captions included · No watermark</li>
         </ul>
@@ -6141,6 +6143,7 @@ function ModeSelector({
   isStarter,
   isCreator,
   isStudio,
+  hasPaid,
   onUpgrade,
 }: {
   mode: GenerationMode
@@ -6155,29 +6158,30 @@ function ModeSelector({
   isStarter: boolean
   isCreator: boolean
   isStudio: boolean
+  // KINEO-REBASE-2026-07-10 — universal engine gates: any paying account
+  // (pack buyer or any plan) unlocks every engine, balance permitting.
+  hasPaid: boolean
   onUpgrade: () => void
 }) {
   const fastFeatures = ['Smart stock footage (matched per scene)', 'Natural AI voice', 'Ready in ~60 seconds']
   const aiFeatures = ['Every scene generated by AI', 'Great-quality AI visuals (Seedance)', 'Cinematic feel']
   const cinematicFeatures_kling = ['Top-tier cinematic motion', 'Premium one-of-a-kind scenes', 'Our highest quality (Kling)']
 
-  // Push #404 — strict per-plan engine gating. Each plan unlocks ONE engine; the
-  // others render locked and route to the upgrade flow on click.
+  // KINEO-REBASE-2026-07-10 — UNIVERSAL ENGINE GATES. The old per-plan ladder
+  // (Seedance=Creator+, Kling/Veo/Hollywood=Studio) is retired: ANY paying
+  // user unlocks every engine (server still guards the credit balance). Free
+  // stays as today: Fast free + one AI Gen trial.
   const noPlan = !isStarter && !isCreator && !isStudio
-  // Push #405 — ladder model: any paid plan can use Fast (cheaper engine);
-  // Seedance needs Creator+; Kling needs Studio.
-  // Push #430 — welcome credits: free accounts now start with 30 credits, so
-  // Fast (1 cr) and AI Generated (30 cr) unlock for free users while they
-  // still have balance. AI on free plan = watermarked (server-side).
-  const freeCredits = noPlan ? credits ?? 0 : 0
+  const anyPaid = isStarter || isCreator || isStudio || hasPaid
+  const freeCredits = noPlan && !hasPaid ? credits ?? 0 : 0
   // Push #434 — Fast Mode is FREE + unlimited for everyone (growth engine).
   // Free-plan Fast is watermarked server-side; removing the mark + AI engines
   // are the paid upgrades. So Fast is always unlocked.
   const fastUnlocked = true
   const seedanceUnlocked =
-    isCreator || isStudio || (noPlan && freeAiUsed === false) || freeCredits >= 30
-  const klingUnlocked = isStudio
-  const cinematicUnlocked = isCreator || isStudio || (credits ?? 0) >= 60
+    anyPaid || (noPlan && freeAiUsed === false) || freeCredits >= 20
+  const klingUnlocked = anyPaid
+  const cinematicUnlocked = anyPaid || (credits ?? 0) >= 45
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
@@ -6232,7 +6236,7 @@ function ModeSelector({
                summary line under the cards, so the badge slot stays empty. */
             <></>
           ) : seedanceUnlocked ? (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>40 credits</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>20 credits</span>
           ) : (
             <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.15)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>🔒 Creator</span>
           )}
@@ -6263,14 +6267,16 @@ function ModeSelector({
           <p className="text-xs mb-2.5" style={{ color: 'var(--muted2)' }}>Pick the model — same idea, a photoreal cinematic Short.</p>
           <div className="flex flex-col gap-1.5">
             {/* KINEO-SORA-REMOVED-2026-07-06 — Sora pulled from the menu until its
-                fal cost is confirmed (margin guard). Veo + Kling are Studio-only. */}
+                fal cost is confirmed (margin guard). KINEO-REBASE-2026-07-10 —
+                Veo/Kling/Hollywood unlocked for ANY paying user (universal gates). */}
             {([
-              // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0 (per-scene
-              // Kling3/Veo3.1/Seedance routing, native voice). Same visual
-              // pattern + same Studio gate as Veo/Kling.
-              { key: 'hollywood', label: 'Hollywood', sub: 'ultra-realistic people & voice', cr: 260 },
-              { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 180 },
-              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 90 },
+              // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode (per-scene routing,
+              // native voice). KINEO-REBASE-2026-07-10 — costs halved (Hollywood
+              // 150 = preço FINAL aprovado 10/07) + engines unlocked for ANY
+              // paying user (universal gates — no more Studio-only lock).
+              { key: 'hollywood', label: 'Hollywood', sub: 'ultra-realistic people & voice', cr: 150 },
+              { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 90 },
+              { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 45 },
             ] as { key: 'veo' | 'sora' | 'kling' | 'hollywood'; label: string; sub: string; cr: number }[]).map((m) => {
               const active = mode === 'cinematic_ai' && aiEngine === m.key
               return (
@@ -6578,10 +6584,11 @@ function UpgradeModal({
   }, [])
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
   const ss = String(remaining % 60).padStart(2, '0')
+  // KINEO-REBASE-2026-07-10 — post-rebase credit numbers (2:1).
   const unlocks: Record<string, string> = {
-    starter: '15 Shorts / month',
-    basic: '50 Shorts / month',
-    pro: '150 credits · up to 5 AI-generated videos',
+    starter: '25 credits / month',
+    basic: '120 credits · 6 AI-generated videos / month',
+    pro: '200 credits · up to 10 AI-generated videos',
   }
   // KINEO-PLAN-GATE-MODAL — accurate headline per reason: a real credit shortage
   // vs an engine that needs a higher plan. Users who HAVE credits but picked a
@@ -6591,13 +6598,16 @@ function UpgradeModal({
       title: "You're out of credits 🎉",
       sub: 'Keep the momentum going — unlock daily posting and never get stuck mid-idea again. Cancel anytime · 7-day money-back guarantee.',
     },
+    // KINEO-REBASE-2026-07-10 — universal gates: every engine is available on
+    // EVERY paid plan (balance permitting), so both gate messages now sell
+    // "any paid plan" instead of a specific tier.
     creator: {
       title: 'Unlock AI-generated videos 🤖',
-      sub: 'AI-generated videos are on the Creator & Studio plans. Pick a plan below to go from stock footage to full AI scenes. Cancel anytime · 7-day money-back.',
+      sub: 'AI-generated videos are included with every paid plan. Pick any plan below to go from stock footage to full AI scenes. Cancel anytime · 7-day money-back.',
     },
     studio: {
-      title: 'Unlock Cinematic AI 🎬',
-      sub: 'The Cinematic (Kling) engine is a Studio feature — our highest visual quality. Upgrade to Studio to use it. Cancel anytime · 7-day money-back.',
+      title: 'Unlock premium AI engines 🎬',
+      sub: 'Kling, Veo and Hollywood are available on every paid plan — you just need the credits. Pick a plan below. Cancel anytime · 7-day money-back.',
     },
   }
   const head = HEAD[reason] ?? HEAD.credits
@@ -6751,8 +6761,10 @@ function UpgradeModal({
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { id: 'topup40', label: '+40 credits', sub: '1 AI video', price: '$5.90' },
-                { id: 'topup120', label: '+120 credits', sub: '3 AI videos', price: '$12.90' },
+                // KINEO-REBASE-2026-07-10 — top-ups halved with the rebase (USD
+                // unchanged): ids stay topup40/topup120 (checkout SKU keys).
+                { id: 'topup40', label: '+20 credits', sub: '1 AI video', price: '$5.90' },
+                { id: 'topup120', label: '+60 credits', sub: '3 AI videos', price: '$12.90' },
               ].map((t) => (
                 <button
                   key={t.id}
