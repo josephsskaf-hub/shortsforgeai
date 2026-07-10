@@ -198,7 +198,10 @@ function CreditsBadge({ isPro }: { isPro: boolean }) {
         color: colors.fg,
       }}
     >
-      <span aria-hidden="true">⚡</span>
+      {/* KINEO-NAV-REDESIGN-2026-07-10 — brand bolt instead of the emoji. */}
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" fill="#2997ff" />
+      </svg>
       {credits} credit{credits === 1 ? '' : 's'}
     </span>
   )

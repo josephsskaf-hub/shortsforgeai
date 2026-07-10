@@ -76,6 +76,14 @@ const NAV_ICONS: Record<string, JSX.Element> = {
       <path d="M19.5 7.5 21 6M19.5 12h2M19.5 16.5 21 18" />
     </svg>
   ),
+  // KINEO-NAV-REDESIGN-2026-07-10 — Channel Builder (was only on the landing
+  // toolkit; now reachable from the app nav too).
+  channel: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+    </svg>
+  ),
 }
 
 function NavItem({
@@ -115,80 +123,71 @@ function NavItem({
   const isNew = !!badge && /new/i.test(badge)
   const badgeColor = isHot ? '41,151,255' : isNew ? '41,151,255' : '41,151,255'
 
+  // KINEO-NAV-REDESIGN-2026-07-10 (Joseph) — professional/clean pass matching
+  // the landing's language: calmer surfaces, one clear ACTIVE state (soft blue
+  // pill + slim accent bar), neutral hover, no neon glow stacking, icons that
+  // only light up when they mean something.
   return (
     <Link
       href={href}
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 font-semibold relative"
+      className="flex items-center gap-3 relative"
       style={{
-        // Neon redesign (12/06) — active item matches the landing's violet→cyan
-        // gradient language (.neon-card / .btn-neon family).
+        borderRadius: 10,
+        padding: '8px 10px',
+        margin: '1px 0',
         background: active
-          ? 'linear-gradient(90deg, rgba(41,151,255,0.2), rgba(41,151,255,0.07))'
+          ? 'rgba(41,151,255,0.10)'
           : hovered
-          ? 'rgba(41,151,255,0.08)'
+          ? 'rgba(255,255,255,0.045)'
           : 'transparent',
         color: active ? '#f5f5f7' : hovered ? 'var(--text)' : 'var(--muted2)',
-        border: active
-          ? '1px solid rgba(41,151,255,0.35)'
-          : '1px solid transparent',
+        border: active ? '1px solid rgba(41,151,255,0.28)' : '1px solid transparent',
         textDecoration: 'none',
-        fontSize: '0.88rem',
-        boxShadow: active ? '0 0 24px rgba(41,151,255,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
-        transform: hovered && !active ? 'translateX(3px)' : 'translateX(0)',
-        transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+        fontSize: '0.86rem',
+        fontWeight: active ? 700 : 600,
+        transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
       }}
     >
       {active && (
         <span
           className="absolute"
           style={{
-            left: -1,
-            top: '16%',
-            height: '68%',
-            width: 3,
+            left: -10,
+            top: '22%',
+            height: '56%',
+            width: 2.5,
             background: '#2997ff',
             borderRadius: '0 3px 3px 0',
-            boxShadow: '0 0 10px rgba(41,151,255,0.7)',
           }}
         />
       )}
-      {/* Icon tile — gives each item a crisp, premium square that lights up. */}
+      {/* Icon — quiet by default, tinted only on hover/active (clean pass). */}
       <span
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 9,
+          width: 30,
+          height: 30,
+          borderRadius: 8,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '1.05rem',
-          background: active
-            ? 'linear-gradient(135deg, rgba(41,151,255,0.24), rgba(41,151,255,0.12))'
-            : hovered
-            ? 'rgba(41,151,255,0.1)'
-            : 'rgba(255,255,255,0.03)',
-          border: active
-            ? '1px solid rgba(41,151,255,0.5)'
-            : '1px solid rgba(41,151,255,0.1)',
-          boxShadow: active ? '0 0 14px rgba(41,151,255,0.4)' : 'none',
-          filter: active ? 'drop-shadow(0 0 4px rgba(41,151,255,0.35))' : 'none',
-          transition: 'all 0.18s ease',
+          color: active ? '#2997ff' : 'inherit',
+          background: active ? 'rgba(41,151,255,0.14)' : 'transparent',
+          transition: 'background 0.15s ease, color 0.15s ease',
         }}
       >
         {icon}
       </span>
-      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ flex: 1, letterSpacing: '0.01em' }}>{label}</span>
       {badge && (
         <span
           style={{
-            fontSize: '0.56rem', fontWeight: 900, letterSpacing: '0.07em',
-            background: `rgba(${badgeColor},0.16)`, color: `rgb(${badgeColor})`,
-            padding: '3px 7px', borderRadius: 6, border: `1px solid rgba(${badgeColor},0.4)`,
-            boxShadow: `0 0 10px rgba(${badgeColor},0.18)`,
+            fontSize: '0.55rem', fontWeight: 900, letterSpacing: '0.08em',
+            background: `rgba(${badgeColor},0.12)`, color: `rgb(${badgeColor})`,
+            padding: '2.5px 6px', borderRadius: 5, border: `1px solid rgba(${badgeColor},0.3)`,
             textTransform: 'uppercase', flexShrink: 0,
           }}
         >
@@ -196,6 +195,26 @@ function NavItem({
         </span>
       )}
     </Link>
+  )
+}
+
+/** KINEO-NAV-REDESIGN-2026-07-10 — landing-style section kicker (like the
+ *  homepage's uppercase micro-labels) to give the nav a clear hierarchy. */
+function NavSection({ label, first }: { label: string; first?: boolean }) {
+  return (
+    <div
+      style={{
+        padding: first ? '2px 12px 6px' : '16px 12px 6px',
+        fontSize: '0.58rem',
+        fontWeight: 900,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: 'rgba(134,134,139,0.75)',
+        userSelect: 'none',
+      }}
+    >
+      {label}
+    </div>
   )
 }
 
@@ -420,33 +439,23 @@ export default function Sidebar({
           {/* Mono premium (12/06) — refined line icons (NAV_ICONS) replace the
               emoji tiles. Badge cleanup: every NEW removed per Joseph — the
               ONLY New badge in the product now lives on the AI Avatar entry. */}
+          {/* KINEO-NAV-REDESIGN-2026-07-10 (Joseph) — landing-style hierarchy:
+              CREATE (the engines) · GROW (audience tools) · ACCOUNT. */}
+          <NavSection label="Create" first />
           <NavItem href="/generate" icon={NAV_ICONS.generate} label="Generate Video" exact={false} pathname={pathname} onClick={onClose} />
-          {/* KINEO-DL-PAYWALL-2026-07-09 (corrigido) — AI Avatar STAYS in the
-              sidebar (it's still a product); what Joseph wanted removed was the
-              duplicate chip in the TOP BAR on every page. */}
-          <NavItem href="/avatar" icon={NAV_ICONS.avatar} label="AI Avatar" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
-          {/* Animate (13/06) — image-to-video: a real photo comes alive. */}
+          <NavItem href="/avatar" icon={NAV_ICONS.avatar} label="AI Presenter" exact={false} pathname={pathname} onClick={onClose} badge="NEW" />
           <NavItem href="/animate" icon={NAV_ICONS.animate} label="Animate a Photo" exact={false} pathname={pathname} onClick={onClose} />
-          {/* Push #084 — AI Thumbnails elevated to position #2 with a HOT
-              badge. The thumbnail click-through rate is the single biggest
-              lever for Shorts performance, so we surface this tool right
-              after the generator. */}
           <NavItem href="/thumbnail-generator" icon={NAV_ICONS.thumbnails} label="AI Thumbnails" exact={false} pathname={pathname} onClick={onClose} badge="HOT" />
+
+          <NavSection label="Grow" />
           <NavItem href="/viral-now" icon={NAV_ICONS.viral} label="Viral Now" exact={false} pathname={pathname} onClick={onClose} />
+          <NavItem href="/channel" icon={NAV_ICONS.channel} label="Channel Builder" exact={false} pathname={pathname} onClick={onClose} />
           <NavItem href="/history" icon={NAV_ICONS.videos} label="My Videos" exact={false} pathname={pathname} onClick={onClose} />
-          {/* Push #444 — Invite & Earn: referral loop UI on a reachable page.
-              Gated to logged-in users (the reward only applies to accounts). */}
           {isLoggedIn && (
             <NavItem href="/referral" icon={NAV_ICONS.referral} label="Invite & Earn" exact={false} pathname={pathname} onClick={onClose} />
           )}
-          {/* Push #080 — examples removed (demodé). Was:
-              routes to /generate?prompt=…  No auth-gated logic; safe for
-              guests too. */}
-          {/* NavItem href="/examples" removed */}
-          {/* Push #103 — Pricing surfaced inside the dashboard nav so users
-              don't have to leave the app to find the upgrade page. The
-              bottom credits card also links here, but that one is gated on
-              `isLoggedIn` — this stays visible for guests too. */}
+
+          <NavSection label="Account" />
           <NavItem href="/pricing" icon={NAV_ICONS.pricing} label="Pricing" exact={false} pathname={pathname} onClick={onClose} />
 
         </nav>
@@ -459,12 +468,15 @@ export default function Sidebar({
               onClick={onClose}
               className="flex items-center justify-between rounded-xl px-4 py-3 transition-all"
               style={{
+                // KINEO-NAV-REDESIGN-2026-07-10 — landing-card surface (quiet
+                // border, no neon halo) so the column reads clean.
                 background: '#131316',
                 border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 0 18px rgba(41,151,255,0.10), inset 0 1px 0 rgba(255,255,255,0.05)',
                 textDecoration: 'none',
-                transition: 'all 0.18s ease',
+                transition: 'border-color 0.18s ease',
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(41,151,255,0.35)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
             >
               <div className="flex items-center gap-2.5">
                 <div
@@ -473,7 +485,6 @@ export default function Sidebar({
                     background: 'rgba(41,151,255,0.12)',
                     border: '1px solid rgba(41,151,255,0.30)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 0 12px rgba(41,151,255,0.25)',
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -558,15 +569,18 @@ export default function Sidebar({
               <div
                 role="menu"
                 style={{
+                  // KINEO-NAV-REDESIGN-2026-07-10 — quiet, professional menu
+                  // (neutral border, soft shadow) + Sign out lives HERE now,
+                  // so the user row below stays a single clean control.
                   position: 'absolute',
                   bottom: 'calc(100% - 6px)',
                   left: 12,
                   right: 12,
                   zIndex: 61,
-                  background: '#131316',
-                  border: '1px solid rgba(41,151,255,0.3)',
-                  borderRadius: 12,
-                  boxShadow: '0 10px 32px rgba(0,0,0,0.5), 0 0 24px rgba(41,151,255,0.15)',
+                  background: '#161618',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  borderRadius: 14,
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.55)',
                   padding: 6,
                 }}
               >
@@ -622,6 +636,32 @@ export default function Sidebar({
                     <span>{item.label}</span>
                   </Link>
                 ))}
+                {/* KINEO-NAV-REDESIGN-2026-07-10 — Sign out moved INTO the
+                    menu (the old door-emoji button next to the profile row
+                    read cheap and crowded the footer). */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '5px 8px' }} />
+                <button
+                  onClick={() => { setSettingsOpen(false); handleSignOut() }}
+                  role="menuitem"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '9px 10px', borderRadius: 8,
+                    fontSize: '0.8rem', fontWeight: 600,
+                    color: 'var(--text2)', background: 'transparent', border: 'none',
+                    cursor: 'pointer', textAlign: 'left',
+                    transition: 'background 0.12s ease, color 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(239,68,68,0.10)'; el.style.color = '#f87171' }}
+                  onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = 'var(--text2)' }}
+                >
+                  <span style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M9 21H5.5A1.5 1.5 0 0 1 4 19.5v-15A1.5 1.5 0 0 1 5.5 3H9" />
+                      <path d="m15 16.5 4.5-4.5L15 7.5M19.5 12H9" />
+                    </svg>
+                  </span>
+                  <span>Sign out</span>
+                </button>
               </div>
             </>
           )}
@@ -641,8 +681,16 @@ export default function Sidebar({
             <div style={{ flex: 1, minWidth: 0 }}>
               {isLoggedIn ? (
                 <>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {displayName || (userEmail ? userEmail.split('@')[0] : 'Account')}
+                  <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {displayName || (userEmail ? userEmail.split('@')[0] : 'Account')}
+                    </span>
+                    {/* KINEO-NAV-REDESIGN-2026-07-10 — plan chip beside the name. */}
+                    {isPro && (
+                      <span style={{ fontSize: '0.52rem', fontWeight: 900, letterSpacing: '0.08em', color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.3)', borderRadius: 5, padding: '1.5px 5px', textTransform: 'uppercase', flexShrink: 0 }}>
+                        Pro
+                      </span>
+                    )}
                   </div>
                   {userEmail && (
                     <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -662,7 +710,10 @@ export default function Sidebar({
               )}
             </div>
 
-            {isLoggedIn && (
+            {/* KINEO-NAV-REDESIGN-2026-07-10 — one clean control: an SVG gear
+                that opens the account menu (Profile · Billing · Usage · Sign
+                out). The old emoji gear + door-emoji Sign out button are gone. */}
+            {isLoggedIn ? (
               <button
                 onClick={() => setSettingsOpen((v) => !v)}
                 title="Account settings"
@@ -670,35 +721,22 @@ export default function Sidebar({
                 aria-haspopup="menu"
                 aria-expanded={settingsOpen}
                 style={{
-                  background: settingsOpen ? 'rgba(41,151,255,0.2)' : 'transparent',
-                  border: settingsOpen ? '1px solid rgba(41,151,255,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 30, height: 30,
+                  background: settingsOpen ? 'rgba(41,151,255,0.14)' : 'transparent',
+                  border: settingsOpen ? '1px solid rgba(41,151,255,0.35)' : '1px solid rgba(255,255,255,0.10)',
                   borderRadius: 8,
                   color: settingsOpen ? '#2997ff' : 'var(--muted)',
-                  cursor: 'pointer', padding: '5px 7px', fontSize: '0.85rem',
-                  flexShrink: 0, transition: 'all 0.15s',
-                  lineHeight: 1,
-                }}
-              >
-                <span aria-hidden="true">⚙</span>
-              </button>
-            )}
-
-            {isLoggedIn ? (
-              <button
-                onClick={handleSignOut}
-                title="Sign out"
-                aria-label="Sign out"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
-                  color: 'var(--muted)', cursor: 'pointer', padding: '5px 9px', fontSize: '0.75rem',
+                  cursor: 'pointer',
                   flexShrink: 0, transition: 'all 0.15s',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.4)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
+                onMouseEnter={(e) => { if (!settingsOpen) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.22)' }}
+                onMouseLeave={(e) => { if (!settingsOpen) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.10)' }}
               >
-                <span aria-hidden="true">🚪</span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Sign out</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3.2" />
+                  <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.76l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.76-.32 1.6 1.6 0 0 0-.97 1.46V21a2 2 0 1 1-4 0v-.09a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.76.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.46-.97H3a2 2 0 1 1 0-4h.09A1.6 1.6 0 0 0 4.55 9a1.6 1.6 0 0 0-.32-1.76l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.76.32H9a1.6 1.6 0 0 0 .97-1.46V3a2 2 0 1 1 4 0v.09a1.6 1.6 0 0 0 .97 1.46 1.6 1.6 0 0 0 1.76-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.76V9c.2.6.76 1 1.46.97H21a2 2 0 1 1 0 4h-.09a1.6 1.6 0 0 0-1.51 1.03Z" />
+                </svg>
               </button>
             ) : (
               <button
