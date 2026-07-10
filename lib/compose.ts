@@ -1550,6 +1550,12 @@ export interface HollywoodClipInput {
 export interface HollywoodNarrationBlock {
   /** Timeline offset (seconds) where this block's narration starts. */
   time: number
+  /** KINEO-HOLLYWOOD-24-2026-07-10 — hard cut for this narration on the
+   * timeline: end of ITS OWN scene + 0.5s tolerance. Narration is now one mp3
+   * PER SCENE, and it must never bleed into (or displace silence onto) the
+   * next scene. Optional for backward compatibility — absent means the old
+   * behavior (cap only at the next dialogue scene / timeline end). */
+  endCap?: number
   /** Public URL of the block's TTS mp3. */
   url: string
   /** Measured mp3 duration (seconds). */
@@ -1694,6 +1700,10 @@ export function buildHollywoodCreatomateSource({
   // Track 4 — narration blocks. Each block's mp3 starts at its scene offset.
   // The audio is capped so it can never run over the NEXT dialogue scene
   // (native speech must stay clean) nor past the timeline end.
+  // KINEO-HOLLYWOOD-24-2026-07-10 — blocks are now PER SCENE and additionally
+  // capped at their own scene's end (+0.5s tolerance, block.endCap): a short
+  // TTS can no longer pool 10s of leftover silence onto a later scene, and a
+  // long TTS can no longer talk over the following scene's narration.
   const dialogueStarts = cleanClips
     .map((c, i) => (c.engine === 'dialogue' ? sceneStarts[i] : null))
     .filter((v): v is number => v !== null)
@@ -1701,7 +1711,11 @@ export function buildHollywoodCreatomateSource({
   for (const block of narrationBlocks) {
     if (!block.url || !(block.audioDuration > 0)) continue
     const nextDialogue = dialogueStarts.find((t) => t > block.time + 0.05)
-    const hardEnd = Math.min(nextDialogue ?? totalDuration, totalDuration)
+    const hardEnd = Math.min(
+      nextDialogue ?? totalDuration,
+      Number.isFinite(block.endCap) && (block.endCap as number) > block.time ? (block.endCap as number) : totalDuration,
+      totalDuration,
+    )
     const audioDur = round3(Math.max(0.1, Math.min(block.audioDuration, hardEnd - block.time)))
     if (audioDur <= 0.1) continue
     elements.push({

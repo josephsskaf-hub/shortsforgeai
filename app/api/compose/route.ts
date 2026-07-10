@@ -360,11 +360,19 @@ export async function POST(req: NextRequest) {
     // ── KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE compose path ────────────
     // Dedicated pipeline: the clips carry NATIVE audio (Kling3 voice on
     // dialogue scenes, ambience on the rest), so we do NOT run the standard
-    // single-mp3 TTS-over-everything flow. Instead: one TTS mp3 per contiguous
-    // BLOCK of narrated (cinematic/support) scenes, placed at the block's
-    // timeline offset; dialogue scenes are never narrated over; background
-    // music is off. Every step is best-effort — a failed narration block
-    // degrades to native-audio-only, never a dead render.
+    // single-mp3 TTS-over-everything flow.
+    // KINEO-HOLLYWOOD-24-2026-07-10 — one TTS mp3 PER NARRATED SCENE (was: one
+    // per contiguous BLOCK of narrated scenes). With block-level mp3s, a TTS
+    // that came out shorter than the block dumped ALL the leftover silence at
+    // the END of the block — i.e. an entire trailing support scene (~10s of
+    // chart b-roll with no voice, the round-4 defect). Per-scene mp3s pin each
+    // narration to ITS OWN scene offset with a hard cap at that scene's end
+    // (+0.5s tolerance), so residual silence can only ever be that scene's own
+    // tail (<=2-3s), never 10 accumulated seconds. Whisper captions ride the
+    // same per-scene mp3 (offset = scene start). Dialogue scenes are never
+    // narrated over; background music is off. Every step is best-effort — a
+    // failed narration TTS degrades THAT scene to native-audio-only, never a
+    // dead render.
     if (quality === 'cinematic_hollywood') {
       const rawEngines = Array.isArray(body.scene_engines) ? body.scene_engines : []
       const rawNarrations = Array.isArray(body.scene_narrations) ? body.scene_narrations : []
@@ -405,30 +413,34 @@ export async function POST(req: NextRequest) {
       const secondsOf = (c: HollywoodClipInput): number =>
         c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
 
-      // Group contiguous narrated scenes into TTS blocks.
-      const pendingBlocks: Array<{ time: number; text: string }> = []
+      // KINEO-HOLLYWOOD-24-2026-07-10 — one pending TTS entry PER narrated
+      // scene (no more contiguous-block grouping), placed at that scene's own
+      // offset. endCap = end of the SAME scene + 0.5s tolerance: the builder
+      // cuts the mp3 there, so narration can never bleed into the next scene
+      // and short TTS can never pool silence onto a later scene.
+      const pendingBlocks: Array<{ time: number; endCap: number; text: string }> = []
       {
         let cursor = 0
-        let current: { time: number; text: string } | null = null
         hollywoodClips.forEach((c, i) => {
           const narr =
             c.engine !== 'dialogue' && typeof rawNarrations[i] === 'string'
               ? (rawNarrations[i] as string).trim()
               : ''
+          const sec = secondsOf(c)
           if (narr) {
-            if (current) current.text = `${current.text} ${narr}`
-            else current = { time: cursor, text: narr }
-          } else if (current) {
-            pendingBlocks.push(current)
-            current = null
+            pendingBlocks.push({
+              time: cursor,
+              endCap: Math.round((cursor + sec + 0.5) * 1000) / 1000,
+              text: narr,
+            })
           }
-          cursor = Math.round((cursor + secondsOf(c)) * 1000) / 1000
+          cursor = Math.round((cursor + sec) * 1000) / 1000
         })
-        if (current) pendingBlocks.push(current)
       }
 
-      // One TTS + upload + Whisper per block (sequential — 1-3 blocks typical).
-      // If NO scene carries narration, TTS is skipped entirely (native audio only).
+      // One TTS + upload + Whisper per narrated SCENE (sequential — 2-4
+      // scenes typical, still cheap). If NO scene carries narration, TTS is
+      // skipped entirely (native audio only).
       const narrationBlocks: HollywoodNarrationBlock[] = []
       for (const blk of pendingBlocks) {
         try {
@@ -442,19 +454,21 @@ export async function POST(req: NextRequest) {
           ])
           narrationBlocks.push({
             time: blk.time,
+            endCap: blk.endCap,
             url,
             audioDuration: dur,
             text: blk.text,
             words: Array.isArray(words) && words.length > 0 ? words : undefined,
           })
         } catch (blockErr) {
-          // Best-effort: the scene still has native ambient audio + caption.
-          console.warn('[compose] hollywood narration block failed — continuing without it:',
+          // Best-effort: THAT scene degrades to native ambient audio + caption
+          // (per-scene TTS means one failure no longer mutes neighbor scenes).
+          console.warn('[compose] hollywood scene narration failed — continuing without it:',
             blockErr instanceof Error ? blockErr.message : String(blockErr))
         }
       }
       console.log(
-        `[compose] hollywood: ${hollywoodClips.length} scenes (${hollywoodClips.map((c) => c.engine[0]).join('')}), ${narrationBlocks.length}/${pendingBlocks.length} narration block(s)`,
+        `[compose] hollywood: ${hollywoodClips.length} scenes (${hollywoodClips.map((c) => c.engine[0]).join('')}), ${narrationBlocks.length}/${pendingBlocks.length} per-scene narration mp3(s)`,
       )
 
       // Watermark / end card: hollywood users are paying Studio users, so only

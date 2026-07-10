@@ -23,6 +23,19 @@
 //       "level horizon, no dutch angle" suffix (the final Manhattan shot came
 //       out tilted).
 //
+// KINEO-HOLLYWOOD-24-2026-07-10 — round 4 (score ~8.5; one defect left: a 10s
+// support scene of chart b-roll with NO audible narration — the real TTS came
+// out shorter than the planned block and the leftover silence landed there):
+//   (i) SUPPORT SIZED BY NARRATION — support scenes get their seconds from the
+//       FINAL voiceover word count (<16 words → 5s, ≥16 → 10s), applied AFTER
+//       the v2.3 narration fallback; the clip never outlasts its words.
+//       Cinematic stays fixed at 8s (Veo).
+//   (j) MAX 1 LONG B-ROLL IN A ROW — two adjacent non-dialogue scenes must not
+//       BOTH be 10s (a >10s wall of b-roll kills retention); the second drops
+//       to 5s and its narration is trimmed to fit, whole sentences first.
+//   (compose side: one TTS mp3 PER narrated SCENE instead of per block — see
+//    app/api/compose/route.ts + buildHollywoodCreatomateSource endCap.)
+//
 // The four keys to realism enforced by the planner prompt AND by code:
 //   (1) NATIVE AUDIO   — dialogue lines live INSIDE the prompt (quoted); never TTS
 //                        over a talking face.
@@ -210,6 +223,32 @@ function splitIntoNarrationSentences(text: string): string[] {
     .filter((s) => s.split(/\s+/).filter(Boolean).length >= 4)
 }
 
+/** KINEO-HOLLYWOOD-24-2026-07-10 — trim a narration line down to ~maxWords,
+ * keeping COMPLETE sentences when possible (drops whole trailing sentences
+ * first; only hard-cuts mid-sentence when even the first sentence blows the
+ * budget). Never returns empty for non-empty input. */
+function trimNarrationToWords(text: string, maxWords: number): string {
+  const clean = String(text ?? '').replace(/\s+/g, ' ').trim()
+  const words = clean.split(' ').filter(Boolean)
+  if (words.length <= maxWords) return clean
+  const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? []
+  const kept: string[] = []
+  let count = 0
+  for (const raw of sentences) {
+    const sen = raw.trim()
+    if (!sen) continue
+    const w = sen.split(/\s+/).filter(Boolean).length
+    if (count > 0 && count + w > maxWords) break
+    kept.push(sen)
+    count += w
+    if (count >= maxWords) break
+  }
+  const out = kept.join(' ').trim()
+  // Small tolerance so one complete sentence beats a mid-sentence chop.
+  if (out && count <= maxWords + 4) return out
+  return words.slice(0, maxWords).join(' ')
+}
+
 // ── Planner ──────────────────────────────────────────────────────────────────
 export async function planHollywoodScenes(args: {
   idea: string
@@ -230,7 +269,7 @@ export async function planHollywoodScenes(args: {
 You route each scene to one of three engine types:
 - "dialogue": a fictional person speaks ON CAMERA. 5 or 10 seconds. The EXACT spoken line (English) MUST appear inside the scene prompt wrapped in double quotes, e.g.: she looks into the lens and says: "Nobody tells you this about money." The line must FILL the entire clip: the person speaks continuously and energetically for the entire shot, no dead air. Line-length rule (strict): a 10-second scene needs a 22-30 word line; a 5-second scene needs a 10-14 word line. The engine generates the voice and lip sync natively. NEVER plan external narration (TTS) over a person speaking in close-up.
 - "cinematic": an EPIC LANDSCAPE or AERIAL shot only (sweeping vista, drone reveal, vast environment). 8 seconds. MUST carry an external narration line ("voiceover" — see NARRATION rule below). USE SPARINGLY: at most 1-2 "cinematic" scenes per video, and ONLY when the story truly needs an epic wide — every other non-dialogue scene is "support". Write its prompt with the SAME styleSheet look as everything else.
-- "support": a simpler establishing/detail b-roll shot (ambient sound only, nobody speaks on camera). 5 or 10 seconds. MUST carry a "voiceover" narration line (see NARRATION rule below). Composition: support scenes are classic, stable inserts — level horizon, well-composed tripod or slow-dolly shot, NEVER a tilted or dutch angle.
+- "support": a simpler establishing/detail b-roll shot (ambient sound only, nobody speaks on camera). 5 or 10 seconds. MUST carry a "voiceover" narration line (see NARRATION rule below). Size the scene to its narration, same rule as dialogue: a voiceover under 16 words → 5 seconds; 16 words or more → 10 seconds — the clip must never outlast its words. Composition: support scenes are classic, stable inserts — level horizon, well-composed tripod or slow-dolly shot, NEVER a tilted or dutch angle.
 
 NARRATION (mandatory — ZERO silent seconds): EVERY "cinematic" and "support" scene MUST have a "voiceover". The narration continues the story OVER the b-roll — there must not be a single second of the video without spoken words, and each voiceover must PICK UP exactly where the previous spoken line (dialogue or narration) left off (content continuity, no resets, no filler). Size the voiceover to the scene: ~2.3 words per second — a 10-second scene needs 20-24 words, an 8-second scene 16-20 words, a 5-second scene 10-12 words.
 
@@ -259,6 +298,7 @@ OTHER HARD RULES:
 - 9:16 vertical framing in every prompt.
 - ZERO readable text in any shot: no phone/computer screens with content, no signs, no billboards, no labels. If a phone appears, its screen is off or blurred.
 - Scene 1 = the HOOK beat (usually a dialogue scene looking straight into the lens, speaking from the very first frame).
+- MAX 1 LONG B-ROLL IN A ROW: never place two adjacent non-dialogue scenes (cinematic/support) that are BOTH 10 seconds — more than ~10 straight seconds of b-roll kills retention. Break b-roll walls with a dialogue scene, or make the second insert 5 seconds.
 - Total duration 45-60 seconds. 4 to 6 scenes. Zero dead frames — every second earns attention.
 - ALL text in English regardless of the input language${language && language !== 'en' ? ` (the input may be in "${language}")` : ''}.
 - NEVER name or depict a real person (no celebrities, politicians, athletes, historical figures). People are always fictional and generic.
@@ -479,6 +519,46 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
         sc.voiceover = sanitizeRealPeople(parts.join(' ')).slice(0, 400)
       }
       sc.needsNarration = true // non-dialogue => ALWAYS narrated (KINEO-HOLLYWOOD-23)
+    }
+  }
+
+  // KINEO-HOLLYWOOD-24-2026-07-10 (i) — support scenes SIZED BY THEIR FINAL
+  // narration (post-fallback), same rule as dialogue lines: <16 words → 5s,
+  // ≥16 → 10s (Kling 3 only renders 5s/10s; cinematic stays fixed at 8s/Veo).
+  // Round-4 defect: a 10s support scene whose narration ran out ended as chart
+  // b-roll with no voice — the clip must never outlast its words.
+  for (const sc of outScenes) {
+    if (sc.type !== 'support') continue
+    const words = (sc.voiceover ?? '').split(/\s+/).filter(Boolean).length
+    sc.seconds = words < 16 ? 5 : 10
+  }
+
+  // KINEO-HOLLYWOOD-24-2026-07-10 (j) — MAX 1 long b-roll in a row, code-
+  // enforced (the prompt asks too, but never trust GPT): two adjacent
+  // non-dialogue scenes must not BOTH be 10s. The SECOND drops to 5s and its
+  // narration is trimmed to ~5s of words, whole sentences kept when possible.
+  const SHORT_SUPPORT_WORDS = Math.round(5 * NARRATION_WORDS_PER_SECOND) // ≈12
+  for (let i = 1; i < outScenes.length; i++) {
+    const prev = outScenes[i - 1]
+    const cur = outScenes[i]
+    if (prev.type === 'dialogue' || cur.type === 'dialogue') continue
+    if (prev.seconds < 10 || cur.seconds < 10) continue
+    cur.seconds = 5
+    if (cur.voiceover) cur.voiceover = trimNarrationToWords(cur.voiceover, SHORT_SUPPORT_WORDS)
+  }
+
+  // Re-fit ≤60s after the resizes above (a 5s→10s support upsize can
+  // overflow the earlier fit): shrink trailing 10s support scenes to 5s
+  // (trimming their narration to match) until the timeline fits — never
+  // drop a whole beat at this stage.
+  {
+    let fitted = outScenes.reduce((s, sc) => s + sc.seconds, 0)
+    for (let i = outScenes.length - 1; i >= 0 && fitted > 60; i--) {
+      const sc = outScenes[i]
+      if (sc.type !== 'support' || sc.seconds <= 5) continue
+      sc.seconds = 5
+      if (sc.voiceover) sc.voiceover = trimNarrationToWords(sc.voiceover, SHORT_SUPPORT_WORDS)
+      fitted = outScenes.reduce((s, x) => s + x.seconds, 0)
     }
   }
 
