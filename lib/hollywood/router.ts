@@ -63,6 +63,20 @@ export const HOLLYWOOD_MODELS = {
   support: 'fal-ai/kling-video/v3/pro/text-to-video',
 } as const
 
+// KINEO-HOLLYWOOD-30-2026-07-10 — HOLLYWOOD 3.0 "UM MUNDO": when the two image
+// anchors exist (lib/hollywood/anchors.ts), EVERY scene renders on Kling O3
+// Pro IMAGE-to-video instead of the per-type t2v models above: dialogue scenes
+// are seeded with the canonical presenter PORTRAIT (same face every scene) and
+// support/cinematic scenes with the empty ENVIRONMENT still (same world every
+// cut). HOLLYWOOD_MODELS stays as the fail-open t2v fallback path (v2.4).
+// Confirmed params: { image_url, prompt, duration: '3'..'15' (string),
+// generate_audio: true } — it is `image_url`, NOT `start_image_url`.
+export const KLING3_I2V_MODEL = 'fal-ai/kling-video/o3/pro/image-to-video'
+// fal pricing jul/2026: Kling O3 Pro i2v audio-on $0.168/s (same rate as the
+// t2v dialogue/support scenes — the anchored look costs nothing extra per
+// second; only the ~$0.10 anchor images are added on top).
+export const KLING3_I2V_USD_PER_SECOND = 0.168
+
 export type HollywoodSceneType = keyof typeof HOLLYWOOD_MODELS
 
 // KINEO-HOLLYWOOD-22-2026-07-10 — fal pricing, jul/2026: Kling 3 Pro audio-on
@@ -570,14 +584,30 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
 }
 
 // ── Cost logging ─────────────────────────────────────────────────────────────
-export function logHollywoodCost(generationId: string, scenes: HollywoodScene[]): void {
+// KINEO-HOLLYWOOD-30-2026-07-10 — optional per-scene `models` (parallel to
+// `scenes`) + flat `anchorsUsd`: on the anchored 3.0 path every scene runs on
+// KLING3_I2V_MODEL ($0.168/s regardless of type) and the two anchor images add
+// ~$0.10 to the TOTAL. Both optional → v2.4 callers stay byte-identical.
+export function logHollywoodCost(
+  generationId: string,
+  scenes: HollywoodScene[],
+  opts?: { models?: string[]; anchorsUsd?: number },
+): void {
   let total = 0
-  for (const s of scenes) {
-    const usd = s.seconds * HOLLYWOOD_USD_PER_SECOND[s.type]
+  for (let i = 0; i < scenes.length; i++) {
+    const s = scenes[i]
+    const model = opts?.models?.[i] ?? HOLLYWOOD_MODELS[s.type]
+    const perSecond = model === KLING3_I2V_MODEL ? KLING3_I2V_USD_PER_SECOND : HOLLYWOOD_USD_PER_SECOND[s.type]
+    const usd = s.seconds * perSecond
     total += usd
     console.log(
-      `[hollywood-cost] gen=${generationId} scene=${s.index} type=${s.type} beat=${s.beat} model=${HOLLYWOOD_MODELS[s.type]} sec=${s.seconds} usd=${usd.toFixed(2)}`,
+      `[hollywood-cost] gen=${generationId} scene=${s.index} type=${s.type} beat=${s.beat} model=${model} sec=${s.seconds} usd=${usd.toFixed(2)}`,
     )
+  }
+  const anchorsUsd = opts?.anchorsUsd ?? 0
+  if (anchorsUsd > 0) {
+    total += anchorsUsd
+    console.log(`[hollywood-cost] gen=${generationId} anchors usd=${anchorsUsd.toFixed(2)}`)
   }
   console.log(`[hollywood-cost] gen=${generationId} TOTAL usd=${total.toFixed(2)}`)
 }

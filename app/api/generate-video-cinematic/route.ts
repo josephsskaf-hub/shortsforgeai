@@ -12,13 +12,20 @@ import { fal } from '@fal-ai/client'
 // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0: per-scene engine routing
 // with native audio. KINEO-HOLLYWOOD-22-2026-07-10: Kling3 dialogue+support /
 // Veo3.1 cinematic (1-2 epic shots max) — Seedance is OUT (visual coherence).
+// KINEO-HOLLYWOOD-30-2026-07-10 — HOLLYWOOD 3.0 "UM MUNDO": two image anchors
+// (canonical presenter portrait + empty environment still) generated BEFORE
+// the scenes; every scene then runs Kling O3 Pro IMAGE-to-video seeded with
+// its anchor → same face + same world across every cut. Fail-open: no anchors
+// → the v2.4 t2v path below runs unchanged.
 import {
   HOLLYWOOD_MODELS,
+  KLING3_I2V_MODEL,
   mentionsRealPerson,
   planHollywoodScenes,
   logHollywoodCost,
   type HollywoodPlan,
 } from '@/lib/hollywood/router'
+import { generateHollywoodAnchors, ANCHORS_USD, type HollywoodAnchors } from '@/lib/hollywood/anchors'
 
 export const maxDuration = 60
 
@@ -110,13 +117,35 @@ async function alertFalExhausted(context: string): Promise<void> {
 // carry NATIVE audio (voice/ambience) instead of being silent for TTS-over.
 // `seconds` = planned scene length (support scenes only; dialogue/cinematic are
 // fixed at 10s/8s by their engines). Defaults keep every existing call intact.
+// KINEO-HOLLYWOOD-30-2026-07-10 — `imageUrl` (optional): the anchor image for
+// the Kling O3 Pro image-to-video branch (Hollywood 3.0). Unused by every
+// other model — all existing calls stay byte-identical.
 function buildFalInput(
   model: string,
   prompt: string,
   hd: boolean = true,
   hollywood: boolean = false,
   seconds?: number,
+  imageUrl?: string,
 ): Record<string, unknown> {
+  // KINEO-HOLLYWOOD-30-2026-07-10 — HOLLYWOOD 3.0 anchored scenes. Kling O3
+  // Pro image-to-video: `image_url` (confirmed — NOT `start_image_url`) is the
+  // canonical portrait (dialogue) or the environment still (support/
+  // cinematic); duration is a STRING '3'..'15' (scene seconds are 5/8/10, all
+  // in range — passed EXACTLY, no 5|10 snap: i2v bills per second, $0.168/s
+  // audio-on); generate_audio true (dialogue speaks its quoted line natively,
+  // b-roll gets ambience). Aspect follows the 9:16 anchor image, so no
+  // aspect_ratio param. Only the confirmed params are sent (no negative_prompt
+  // — the zero-readable-text rule rides in the prompt suffix from the router).
+  if (model === KLING3_I2V_MODEL) {
+    const sec = Math.max(3, Math.min(15, Math.round(typeof seconds === 'number' && seconds > 0 ? seconds : 10)))
+    return {
+      image_url: imageUrl,
+      prompt,
+      duration: String(sec),
+      generate_audio: true,
+    }
+  }
   // KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro dialogue scenes: 9:16, native
   // audio ON (the model generates the character's voice + lip sync from the
   // quoted line inside the prompt). No people-banning negative prompt here —
@@ -344,14 +373,16 @@ function clipCountForDuration(d: number): number {
 
 // KINEO-HOLLYWOOD-2026-07-09 — `hollywood`/`seconds` forwarded to buildFalInput
 // (audio-on variants); defaults keep every existing call byte-identical.
-async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true, hollywood: boolean = false, seconds?: number): Promise<string | null> {
+// KINEO-HOLLYWOOD-30-2026-07-10 — `imageUrl` forwarded to buildFalInput (Kling
+// O3 i2v anchor); default keeps every existing call byte-identical.
+async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true, hollywood: boolean = false, seconds?: number, imageUrl?: string): Promise<string | null> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return null
 
   try {
     fal.config({ credentials: falKey })
     const { request_id } = await fal.queue.submit(model, {
-      input: buildFalInput(model, prompt, hd, hollywood, seconds),
+      input: buildFalInput(model, prompt, hd, hollywood, seconds, imageUrl),
     })
     return request_id ?? null
   } catch (err) {
@@ -669,18 +700,47 @@ export async function POST(req: NextRequest) {
         )
       }
 
+      // KINEO-HOLLYWOOD-30-2026-07-10 — HOLLYWOOD 3.0 "UM MUNDO": generate the
+      // two image anchors from the plan's sheets (portrait + environment
+      // still, ~$0.10, synchronous — flux/schnell is fast). FAIL-OPEN: null →
+      // every scene falls back to the v2.4 t2v engines below; the render
+      // never dies because of anchors.
+      let anchors: HollywoodAnchors | null = null
+      try {
+        anchors = await generateHollywoodAnchors({
+          characterSheet: plan.characterSheet,
+          environmentSheet: plan.environmentSheet,
+          styleSheet: plan.styleSheet,
+        })
+      } catch (e) {
+        console.error('[cinematic] hollywood anchors threw (falling back to t2v):', e instanceof Error ? e.message : String(e))
+        anchors = null
+      }
+      if (!anchors) console.warn('[cinematic] hollywood 3.0 anchors unavailable — using v2.4 t2v path')
+
       // Submit each scene to ITS engine — same stagger/retry as the classic
       // path, but the model is per scene (no single-model fallback here: a
       // partially-failed submit still composes from the scenes that made it).
+      // KINEO-HOLLYWOOD-30-2026-07-10 — with anchors, EVERY scene goes to
+      // Kling O3 Pro image-to-video: dialogue seeded with the PORTRAIT (same
+      // face every scene), support/cinematic with the ENVIRONMENT still (same
+      // world every cut). Concurrency note: the shared fal-ai/kling-video-v3
+      // alias allows 1 in-flight request per user — the existing SEQUENTIAL
+      // submit with stagger already respects that; do NOT parallelize.
       const hRequestIds: (string | null)[] = []
       const hModels: string[] = []
       for (const hs of plan.scenes) {
-        const model = HOLLYWOOD_MODELS[hs.type]
+        const model = anchors ? KLING3_I2V_MODEL : HOLLYWOOD_MODELS[hs.type]
+        const anchorUrl = anchors
+          ? hs.type === 'dialogue'
+            ? anchors.portraitUrl
+            : anchors.environmentUrl
+          : undefined
         const scenePrompt = hs.prompt + eraSuffix
-        let id = await submitToFal(scenePrompt, model, false, true, hs.seconds)
+        let id = await submitToFal(scenePrompt, model, false, true, hs.seconds, anchorUrl)
         if (!id) {
           await new Promise((r) => setTimeout(r, 800))
-          id = await submitToFal(scenePrompt, model, false, true, hs.seconds)
+          id = await submitToFal(scenePrompt, model, false, true, hs.seconds, anchorUrl)
         }
         hRequestIds.push(id)
         hModels.push(model)
@@ -706,9 +766,14 @@ export async function POST(req: NextRequest) {
       }
 
       const generationId = randomUUID()
-      logHollywoodCost(generationId, plan.scenes)
+      // KINEO-HOLLYWOOD-30-2026-07-10 — per-scene models (i2v when anchored)
+      // + the anchors' ~$0.10 included in the logged TOTAL.
+      logHollywoodCost(generationId, plan.scenes, {
+        models: hModels,
+        anchorsUsd: anchors ? ANCHORS_USD : 0,
+      })
       console.log(
-        `[cinematic] hollywood submitted ${hValid.length}/${plan.scenes.length} clips user=${user.id.slice(0, 8)} generationId=${generationId} est=$${plan.estimatedCostUsd.toFixed(2)}`,
+        `[cinematic] hollywood submitted ${hValid.length}/${plan.scenes.length} clips user=${user.id.slice(0, 8)} generationId=${generationId} anchored=${anchors ? 'yes' : 'no'} est=$${plan.estimatedCostUsd.toFixed(2)}`,
       )
 
       const hNarrations = plan.scenes.map((s) => (s.needsNarration && s.voiceover ? s.voiceover : null))

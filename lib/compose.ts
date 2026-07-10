@@ -1623,6 +1623,18 @@ export function buildHollywoodCreatomateSource({
   const elements: CreatomateElement[] = []
   const CLIP_GAP_OVERLAP = 0.06 // same #256 micro-overlap as the standard builder
 
+  // KINEO-HOLLYWOOD-30-2026-07-10 — subtle 250ms crossfade between hollywood
+  // scene clips ("UM MUNDO": the anchored scenes share one face + one world;
+  // the crossfade makes the cuts read as one continuous film instead of hard
+  // engine cuts). Mechanics: each non-last clip EXTENDS 0.25s under the next
+  // clip (real footage under the blend — the standard builder's #202 fade was
+  // removed exactly because non-overlapping clips faded in from the black
+  // track-1 background), and each clip after the first fades in over 0.25s
+  // via enter_transition (same property the caption 'pop' already uses).
+  // Gate: flip HOLLYWOOD_CROSSFADE to false to kill the effect instantly.
+  const HOLLYWOOD_CROSSFADE = true
+  const HOLLYWOOD_CROSSFADE_SECONDS = 0.25
+
   // Track 1 — solid background (never show a transparent gap).
   elements.push({
     type: 'shape', track: 1, time: 0, duration: totalDuration,
@@ -1634,16 +1646,23 @@ export function buildHollywoodCreatomateSource({
   // first spoken word. loop:true fills the slot if an engine returned a clip
   // slightly shorter than planned (robustness, zero dead frames).
   cleanClips.forEach((clip, i) => {
+    const isLast = i === cleanClips.length - 1
+    // Non-last clips run long enough to sit under the next clip's fade-in;
+    // the last clip keeps the classic micro-overlap (nothing follows it).
+    const overlap = HOLLYWOOD_CROSSFADE && !isLast ? HOLLYWOOD_CROSSFADE_SECONDS : CLIP_GAP_OVERLAP
     elements.push({
       type: 'video',
       track: 2,
       time: sceneStarts[i],
-      duration: round3(Math.min(durations[i], totalDuration - sceneStarts[i]) + CLIP_GAP_OVERLAP),
+      duration: round3(Math.min(durations[i], totalDuration - sceneStarts[i]) + overlap),
       source: clip.url,
       fit: 'cover',
       loop: true,
       x: '50%', y: '50%', width: '100%', height: '100%',
       volume: HOLLYWOOD_CLIP_VOLUME[clip.engine] ?? '35%',
+      ...(HOLLYWOOD_CROSSFADE && i > 0
+        ? { enter_transition: { type: 'fade', duration: HOLLYWOOD_CROSSFADE_SECONDS } }
+        : {}),
     })
   })
 

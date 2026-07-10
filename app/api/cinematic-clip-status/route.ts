@@ -16,7 +16,11 @@ const VEO_MODEL = 'fal-ai/veo3.1/fast'
 const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
 // KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro (Hollywood dialogue scenes, native audio).
 const KLING3_MODEL = 'fal-ai/kling-video/v3/pro/text-to-video'
-const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL, KLING3_MODEL])
+// KINEO-HOLLYWOOD-30-2026-07-10 — Kling O3 Pro image-to-video: Hollywood 3.0
+// anchored scenes (portrait/environment-still image_url). Same { video: { url } }
+// output, so checkFalClip parses it unchanged — only the allow-list needs the id.
+const KLING3_I2V_MODEL = 'fal-ai/kling-video/o3/pro/image-to-video'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL, KLING3_MODEL, KLING3_I2V_MODEL])
 
 type ClipStatus = {
   id: string | null
