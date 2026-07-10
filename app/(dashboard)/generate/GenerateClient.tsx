@@ -3217,7 +3217,7 @@ export default function GenerateClient() {
                 fontWeight: 900,
                 fontSize: '0.95rem',
                 textDecoration: 'none',
-                boxShadow: '0 8px 24px rgba(5,150,105,.4)',
+                boxShadow: '0 8px 24px rgba(41,151,255,.4)',
                 marginBottom: 10,
               }}
             >
@@ -3325,7 +3325,7 @@ export default function GenerateClient() {
               style={{
                 background: 'rgba(41,151,255,0.10)',
                 border: '1px solid rgba(41,151,255,0.40)',
-                color: '#A7F3D0',
+                color: '#8ec8ff',
               }}
             >
               <span className="text-base">🎉</span>
@@ -3390,12 +3390,12 @@ export default function GenerateClient() {
                 onClick={() => setScriptMode('ai')}
                 className="text-left px-4 py-3 rounded-xl transition-all"
                 style={{
-                  background: scriptMode === 'ai' ? 'rgba(5,150,105,.10)' : 'rgba(255,255,255,.03)',
-                  border: scriptMode === 'ai' ? '1.5px solid rgba(5,150,105,.55)' : '1.5px solid var(--border)',
+                  background: scriptMode === 'ai' ? 'rgba(41,151,255,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'ai' ? '1.5px solid rgba(41,151,255,.55)' : '1.5px solid var(--border)',
                   cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div className="text-sm font-bold" style={{ color: scriptMode === 'ai' ? '#6ee7b7' : 'var(--text)' }}>
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'ai' ? '#5cb3ff' : 'var(--text)' }}>
                   ✨ Let AI structure my text {scriptMode === 'ai' && <span style={{ fontSize: '0.65rem' }}>· Recommended</span>}
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
@@ -3408,12 +3408,12 @@ export default function GenerateClient() {
                 onClick={() => setScriptMode('verbatim')}
                 className="text-left px-4 py-3 rounded-xl transition-all"
                 style={{
-                  background: scriptMode === 'verbatim' ? 'rgba(5,150,105,.10)' : 'rgba(255,255,255,.03)',
-                  border: scriptMode === 'verbatim' ? '1.5px solid rgba(5,150,105,.55)' : '1.5px solid var(--border)',
+                  background: scriptMode === 'verbatim' ? 'rgba(41,151,255,.10)' : 'rgba(255,255,255,.03)',
+                  border: scriptMode === 'verbatim' ? '1.5px solid rgba(41,151,255,.55)' : '1.5px solid var(--border)',
                   cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                 }}
               >
-                <div className="text-sm font-bold" style={{ color: scriptMode === 'verbatim' ? '#6ee7b7' : 'var(--text)' }}>
+                <div className="text-sm font-bold" style={{ color: scriptMode === 'verbatim' ? '#5cb3ff' : 'var(--text)' }}>
                   📝 Use my script as is
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--muted2)' }}>
@@ -3791,9 +3791,9 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(5,150,105,.12)',
-                  border: '1px solid rgba(5,150,105,.3)',
-                  color: '#6ee7b7',
+                  background: 'rgba(41,151,255,.12)',
+                  border: '1px solid rgba(41,151,255,.3)',
+                  color: '#5cb3ff',
                 }}
               >
                 Niche · {analysis.niche || 'General'}
@@ -3830,8 +3830,8 @@ export default function GenerateClient() {
                 <p
                   className="text-sm font-bold rounded-lg px-3 py-2"
                   style={{
-                    background: 'rgba(5,150,105,.08)',
-                    border: '1px solid rgba(5,150,105,.25)',
+                    background: 'rgba(41,151,255,.08)',
+                    border: '1px solid rgba(41,151,255,.25)',
                     color: 'var(--text)',
                     lineHeight: 1.5,
                   }}
@@ -3875,7 +3875,7 @@ export default function GenerateClient() {
                 <ol className="space-y-1.5 text-xs" style={{ color: 'var(--muted2)', paddingLeft: 20 }}>
                   {analysis.scenePlan.map((s, i) => (
                     <li key={i}>
-                      <span style={{ color: '#6ee7b7', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
+                      <span style={{ color: '#5cb3ff', fontWeight: 700 }}>Scene {i + 1}.</span> {s}
                     </li>
                   ))}
                 </ol>
@@ -4030,7 +4030,7 @@ export default function GenerateClient() {
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span aria-hidden="true">⚡</span>
-                  <span className="font-bold" style={{ color: '#6ee7b7' }}>
+                  <span className="font-bold" style={{ color: '#5cb3ff' }}>
                     Kineo rendering engine
                   </span>
                 </div>
@@ -4060,7 +4060,7 @@ export default function GenerateClient() {
                   >
                     {scenes.map((s, i) => (
                       <li key={i}>
-                        <span style={{ color: '#6ee7b7', fontWeight: 700 }}>#{i + 1}</span> {s}
+                        <span style={{ color: '#5cb3ff', fontWeight: 700 }}>#{i + 1}</span> {s}
                       </li>
                     ))}
                   </ol>
@@ -4081,7 +4081,7 @@ export default function GenerateClient() {
                 onClick={handleGenerate}
                 className="rounded-xl px-5 py-2.5 text-sm font-bold text-white mt-2"
                 style={{
-                  background: 'linear-gradient(135deg, #2997ff, #047857)',
+                  background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                   border: 'none',
                   cursor: 'pointer',
                 }}
@@ -4154,8 +4154,8 @@ export default function GenerateClient() {
                   aspectRatio: '9 / 16',
                   marginLeft: 'auto',
                   marginRight: 'auto',
-                  border: '1px solid rgba(5,150,105,.45)',
-                  boxShadow: '0 18px 60px rgba(5,150,105,.22)',
+                  border: '1px solid rgba(41,151,255,.45)',
+                  boxShadow: '0 18px 60px rgba(41,151,255,.22)',
                   background: '#000',
                 }}
               >
@@ -4233,7 +4233,7 @@ export default function GenerateClient() {
                         onClick={() => { setPlayerFailed(false); playerRetryAttemptRef.current = 0 }}
                         style={{
                           marginTop: '4px',
-                          background: 'linear-gradient(135deg, #2997ff, #047857)',
+                          background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                           border: 'none',
                           color: '#fff',
                           fontWeight: 700,
@@ -4241,7 +4241,7 @@ export default function GenerateClient() {
                           padding: '10px 22px',
                           borderRadius: '12px',
                           cursor: 'pointer',
-                          boxShadow: '0 6px 22px rgba(5,150,105,.32)',
+                          boxShadow: '0 6px 22px rgba(41,151,255,.32)',
                         }}
                       >
                         Refresh now
@@ -4770,9 +4770,9 @@ export default function GenerateClient() {
                   disabled={!prompt.trim()}
                   className="rounded-xl px-4 py-2 text-xs font-bold"
                   style={{
-                    background: 'rgba(5,150,105,.10)',
-                    border: '1px solid rgba(5,150,105,.35)',
-                    color: '#6ee7b7',
+                    background: 'rgba(41,151,255,.10)',
+                    border: '1px solid rgba(41,151,255,.35)',
+                    color: '#5cb3ff',
                     cursor: !prompt.trim() ? 'not-allowed' : 'pointer',
                     opacity: !prompt.trim() ? 0.5 : 1,
                   }}
@@ -4818,7 +4818,7 @@ export default function GenerateClient() {
                 </span>
               </div>
 
-              <p className="text-xs mt-4 text-center" style={{ color: '#6ee7b7', maxWidth: 480, lineHeight: 1.55 }}>
+              <p className="text-xs mt-4 text-center" style={{ color: '#5cb3ff', maxWidth: 480, lineHeight: 1.55 }}>
                 💡 Tip: Post within 2 hours for max algorithm boost.
               </p>
 
@@ -4991,7 +4991,7 @@ function RecentVideoThumb({ video }: { video: RecentVideo }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ color: 'rgba(110,231,183,.55)', fontSize: '1.8rem' }}
+      style={{ color: 'rgba(92,179,255,.55)', fontSize: '1.8rem' }}
     >
       🎬
     </div>
@@ -5077,7 +5077,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
           // legacy /history Shorts Packs page.
           href="/my-videos"
           className="text-xs font-bold"
-          style={{ color: '#6ee7b7', textDecoration: 'none' }}
+          style={{ color: '#5cb3ff', textDecoration: 'none' }}
         >
           View all →
         </a>
@@ -5101,7 +5101,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
               <div
                 className="rv-thumb"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(5,150,105,.18), rgba(5, 150, 105,.12))',
+                  background: 'linear-gradient(135deg, rgba(41,151,255,.18), rgba(41,151,255,.12))',
                   aspectRatio: '9 / 16',
                   position: 'relative',
                   overflow: 'hidden',
@@ -5168,7 +5168,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
                     target="_blank"
                     rel="noreferrer"
                     className="text-[11px] font-bold mt-1"
-                    style={{ color: '#6ee7b7', textDecoration: 'none' }}
+                    style={{ color: '#5cb3ff', textDecoration: 'none' }}
                   >
                     Open ↗
                   </a>
@@ -5277,16 +5277,16 @@ function PipelineStages({
       {stages.map((s, i) => {
         const isDone = s.status === 'done'
         const isActive = s.status === 'active'
-        const color = isDone ? '#5cb3ff' : isActive ? '#6ee7b7' : 'var(--muted)'
+        const color = isDone ? '#5cb3ff' : isActive ? '#5cb3ff' : 'var(--muted)'
         const ring = isDone
           ? '1px solid rgba(41,151,255,.45)'
           : isActive
-          ? '1px solid rgba(110,231,183,.45)'
+          ? '1px solid rgba(92,179,255,.45)'
           : '1px solid var(--border)'
         const bg = isDone
           ? 'rgba(41,151,255,.08)'
           : isActive
-          ? 'rgba(5,150,105,.08)'
+          ? 'rgba(41,151,255,.08)'
           : 'rgba(255,255,255,.03)'
         return (
           <li
@@ -5308,9 +5308,9 @@ function PipelineStages({
                 border: isDone
                   ? '1px solid rgba(41,151,255,.55)'
                   : isActive
-                  ? '2px solid rgba(110,231,183,.55)'
+                  ? '2px solid rgba(92,179,255,.55)'
                   : '1px solid var(--border)',
-                borderTopColor: isActive ? '#6ee7b7' : undefined,
+                borderTopColor: isActive ? '#5cb3ff' : undefined,
                 animation: isActive ? 'spin 0.9s linear infinite' : undefined,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -5599,10 +5599,10 @@ function ShortPackageSection({
             background:
               copiedSection === 'package'
                 ? 'linear-gradient(135deg, #2997ff, #2997ff)'
-                : 'linear-gradient(135deg, #2997ff, #047857)',
+                : 'linear-gradient(135deg, #2997ff, #2997ff)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 6px 22px rgba(5,150,105,.32)',
+            boxShadow: '0 6px 22px rgba(41,151,255,.32)',
           }}
         >
           {copiedSection === 'package' ? '✓ Copied' : '📋 Copy Full Short Package'}
@@ -5628,7 +5628,7 @@ function ShortPackageSection({
               <div className="flex items-center justify-between gap-2">
                 <div
                   className="text-xs font-black uppercase tracking-widest"
-                  style={{ color: '#6ee7b7' }}
+                  style={{ color: '#5cb3ff' }}
                 >
                   {c.label}
                 </div>
@@ -5843,7 +5843,7 @@ function NextActionSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
       style={{
-        background: 'linear-gradient(135deg, rgba(41,151,255,.10), rgba(5, 150, 105,.06))',
+        background: 'linear-gradient(135deg, rgba(41,151,255,.10), rgba(41,151,255,.06))',
         border: '1px solid rgba(41,151,255,.28)',
       }}
     >
@@ -5952,8 +5952,8 @@ function Spinner() {
       style={{
         width: 22,
         height: 22,
-        border: '2px solid rgba(5,150,105,.25)',
-        borderTopColor: '#6ee7b7',
+        border: '2px solid rgba(41,151,255,.25)',
+        borderTopColor: '#5cb3ff',
         animation: 'spin 0.9s linear infinite',
       }}
     />
@@ -5970,7 +5970,7 @@ function ProgressBar({ progress }: { progress: number }) {
         className="h-full"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(5,150,105,.85), rgba(41,151,255,1))',
+          background: 'linear-gradient(90deg, rgba(41,151,255,.85), rgba(41,151,255,1))',
           transition: 'width 600ms ease',
         }}
       />
@@ -6014,7 +6014,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
         <div style={{
           position: 'absolute', inset: 0, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 800, color: '#6ee7b7',
+          fontSize: 13, fontWeight: 800, color: '#5cb3ff',
         }}>
           {pct}%
         </div>
@@ -6265,7 +6265,7 @@ function ModeSelector({
           selected={fastSelected}
           unlocked={fastUnlocked}
           accent="5,150,105"
-          accentText="#6ee7b7"
+          accentText="#5cb3ff"
           icon="⚡"
           name="Fast Mode"
           engineTag="Starter engine"
@@ -6390,7 +6390,7 @@ function ModeSelector({
               <span className="text-base">🎬</span>
               <span
                 className="text-sm font-black"
-                style={{ color: mode === 'cinematic' ? '#6ee7b7' : 'var(--text)' }}
+                style={{ color: mode === 'cinematic' ? '#5cb3ff' : 'var(--text)' }}
               >
                 Cinematic
               </span>
@@ -6399,7 +6399,7 @@ function ModeSelector({
                   className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
                   style={{
                     background: 'rgba(41,151,255,.15)',
-                    color: '#6ee7b7',
+                    color: '#5cb3ff',
                     border: '1px solid rgba(41,151,255,.25)',
                   }}
                 >
@@ -6409,7 +6409,7 @@ function ModeSelector({
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{
                     background: 'rgba(41,151,255,.18)',
-                    color: '#6ee7b7',
+                    color: '#5cb3ff',
                     border: '1px solid rgba(41,151,255,.3)',
                   }}
                 >
@@ -6421,7 +6421,7 @@ function ModeSelector({
             <ul className="space-y-1">
               {cinematicFeatures.map((f) => (
                 <li key={f} className="flex items-center gap-1.5">
-                  <span style={{ color: '#6ee7b7', fontSize: '0.6rem' }}>●</span>
+                  <span style={{ color: '#5cb3ff', fontSize: '0.6rem' }}>●</span>
                   <span className="text-xs" style={{ color: 'var(--muted2)' }}>{f}</span>
                 </li>
               ))}
@@ -6504,7 +6504,7 @@ function ModeSelector({
             <a
               href="/pricing"
               className="inline-flex items-center gap-1 text-xs font-bold"
-              style={{ color: '#6ee7b7', textDecoration: 'none' }}
+              style={{ color: '#5cb3ff', textDecoration: 'none' }}
             >
               Unlock with Pro →
             </a>
@@ -6542,16 +6542,16 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
       {STEPS.map((s, i) => {
         const isDone = phase === 'done' || step > i
         const isActive = !isDone && step === i
-        const color = isDone ? '#5cb3ff' : isActive ? '#6ee7b7' : 'var(--muted)'
+        const color = isDone ? '#5cb3ff' : isActive ? '#5cb3ff' : 'var(--muted)'
         const ring = isDone
           ? '1px solid rgba(41,151,255,.45)'
           : isActive
-          ? '1px solid rgba(110,231,183,.45)'
+          ? '1px solid rgba(92,179,255,.45)'
           : '1px solid var(--border)'
         const bg = isDone
           ? 'rgba(41,151,255,.08)'
           : isActive
-          ? 'rgba(5,150,105,.08)'
+          ? 'rgba(41,151,255,.08)'
           : 'rgba(255,255,255,.03)'
         return (
           <li
@@ -6573,9 +6573,9 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
                 border: isDone
                   ? '1px solid rgba(41,151,255,.55)'
                   : isActive
-                  ? '2px solid rgba(110,231,183,.55)'
+                  ? '2px solid rgba(92,179,255,.55)'
                   : '1px solid var(--border)',
-                borderTopColor: isActive ? '#6ee7b7' : undefined,
+                borderTopColor: isActive ? '#5cb3ff' : undefined,
                 animation: isActive ? 'spin 0.9s linear infinite' : undefined,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -7202,7 +7202,7 @@ function GenerationProgressSteps({ step }: { step: number }) {
       {items.map((it, i) => {
         const isActive = i === step
         const isDone = i < step
-        const color = isActive ? '#5cb3ff' : isDone ? '#6ee7b7' : 'var(--muted)'
+        const color = isActive ? '#5cb3ff' : isDone ? '#5cb3ff' : 'var(--muted)'
         return (
           <li
             key={i}
@@ -7231,7 +7231,7 @@ function GenerationProgressSteps({ step }: { step: number }) {
             {isDone && (
               <span
                 aria-hidden="true"
-                style={{ marginLeft: 'auto', color: '#6ee7b7', fontSize: '0.85rem' }}
+                style={{ marginLeft: 'auto', color: '#5cb3ff', fontSize: '0.85rem' }}
               >
                 ✓
               </span>
