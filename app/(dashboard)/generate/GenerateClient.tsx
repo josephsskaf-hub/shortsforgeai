@@ -613,6 +613,10 @@ export default function GenerateClient() {
   const sceneEnginesRef = useRef<string[]>([])
   const sceneNarrationsRef = useRef<(string | null)[]>([])
   const sceneSecondsRef = useRef<number[]>([])
+  // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line per dialogue
+  // scene (null for the rest), parallel to the other scene refs. Rides to
+  // /api/compose so dialogue captions show the REAL speech, not a generic caption.
+  const sceneDialoguesRef = useRef<(string | null)[]>([])
   // #362 — holds the full structured script (with [Pexels:]/HOOK markers) so the
   // editable textarea can show a CLEAN, marker-free preview while submission still
   // uses the marked-up version the verbatim pipeline needs. Cleared on manual edit.
@@ -1153,6 +1157,9 @@ export default function GenerateClient() {
             sceneEnginesRef.current = doneIdx.map((i) => sceneEnginesRef.current[i] ?? 'support')
             sceneNarrationsRef.current = doneIdx.map((i) => sceneNarrationsRef.current[i] ?? null)
             sceneSecondsRef.current = doneIdx.map((i) => sceneSecondsRef.current[i] ?? 10)
+            // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — keep the dialogue lines
+            // parallel to the surviving clips too.
+            sceneDialoguesRef.current = doneIdx.map((i) => sceneDialoguesRef.current[i] ?? null)
             // Captions ride to compose as scene_captions — keep them parallel too.
             setFastCaptions((prev) => (prev ? doneIdx.map((i) => prev[i] ?? '') : prev))
           }
@@ -1399,6 +1406,9 @@ export default function GenerateClient() {
                   scene_engines: sceneEnginesRef.current,
                   scene_narrations: sceneNarrationsRef.current,
                   scene_seconds: sceneSecondsRef.current,
+                  // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — real spoken line
+                  // per dialogue scene, for speech-matching captions.
+                  scene_dialogues: sceneDialoguesRef.current,
                 }
               : {}),
             language,
@@ -1613,9 +1623,21 @@ export default function GenerateClient() {
     // Programmatic pre-written scripts (Viral Now cards, which pass skipPreview)
     // are always used verbatim so curated scripts are never rewritten.
     let source = rawSource
-    const needsStructuring = opts?.skipPreview ? false : scriptMode === 'ai'
+    // KINEO-HOLLYWOOD-21-2026-07-10 (bug c) — Hollywood SKIPS auto-structure
+    // (#310) and the "Your Script is Ready" review screen entirely. The
+    // Hollywood planner is the screenwriter and needs the user's RAW idea
+    // (interview quotes, facts, numbers); /api/generate-script rewrote it into
+    // third-person narration, which turned the dialogue lines into generic
+    // filler ("digital age reshapes possibilities"). The raw idea flows through
+    // analyze/generate untouched and reaches /api/generate-video-cinematic as
+    // body.prompt.
+    const isHollywoodRaw = mode === 'cinematic_ai' && aiEngine === 'hollywood'
+    const needsStructuring = opts?.skipPreview || isHollywoodRaw ? false : scriptMode === 'ai'
 
-    if (needsStructuring) {
+    if (isHollywoodRaw) {
+      // Keep the raw idea as the submission source; do NOT rewrite the textarea.
+      structuredScriptRef.current = rawSource
+    } else if (needsStructuring) {
       // Push #311 — show scripting phase so the user knows something is happening
       setPhase('scripting')
       try {
@@ -2174,6 +2196,8 @@ export default function GenerateClient() {
         sceneEnginesRef.current = Array.isArray(data.scene_engines) ? data.scene_engines.filter((e: unknown): e is string => typeof e === 'string') : []
         sceneNarrationsRef.current = Array.isArray(data.scene_narrations) ? data.scene_narrations.map((n: unknown) => (typeof n === 'string' ? n : null)) : []
         sceneSecondsRef.current = Array.isArray(data.scene_seconds) ? data.scene_seconds.map((s: unknown) => (typeof s === 'number' ? s : 10)) : []
+        // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — real dialogue line per scene.
+        sceneDialoguesRef.current = Array.isArray(data.scene_dialogues) ? data.scene_dialogues.map((d: unknown) => (typeof d === 'string' ? d : null)) : []
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)

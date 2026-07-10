@@ -1526,9 +1526,13 @@ export function buildCreatomateSource({
 //    narrated scenes), each placed at its block's timeline offset. Dialogue
 //    scenes never get narration over them.
 //  - Captions: narrated blocks use the Whisper words of THAT block's mp3
-//    shifted by the block offset (drift-free); dialogue scenes get a simple
-//    static caption (the scene caption) — robust, zero dead frames.
+//    shifted by the block offset (drift-free); dialogue scenes show the REAL
+//    spoken line in ~3-word chunks spread across the scene
+//    (KINEO-HOLLYWOOD-21-2026-07-10, bug b), falling back to the old static
+//    scene caption when the line is unavailable.
 //  - Background music is OFF (the native audio IS the realism).
+//  - KINEO-HOLLYWOOD-22-2026-07-10: the niche-aware color grade IS applied
+//    (slightly stronger than AI Gen) — it unifies the look across engines.
 //  - CTA / end card / watermark follow the exact same rules as everywhere else.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1537,6 +1541,10 @@ export interface HollywoodClipInput {
   engine: 'dialogue' | 'cinematic' | 'support'
   seconds: number
   caption: string
+  // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line of a
+  // dialogue scene (undefined for cinematic/support). Captions chunk THIS
+  // text so the on-screen words match what the person actually says.
+  dialogueLine?: string
 }
 
 export interface HollywoodNarrationBlock {
@@ -1574,11 +1582,12 @@ export function buildHollywoodCreatomateSource({
     throw new Error('No video clips provided to compose (hollywood).')
   }
 
-  // Per-scene durations are engine-fixed (dialogue 10, cinematic 8) with the
-  // support seconds coming from the plan. Trim the LAST scene so the total
-  // closes at ≤ 60s; floor the timeline at 8s as a sanity guard.
+  // Per-scene durations: cinematic fixed at 8s; dialogue follows the plan
+  // (KINEO-HOLLYWOOD-21-2026-07-10, bug a: 5s or 10s, sized to the spoken
+  // line — default 10); support seconds come from the plan. Trim the LAST
+  // scene so the total closes at ≤ 60s; floor the timeline at 8s as a guard.
   const secondsFor = (c: HollywoodClipInput): number =>
-    c.engine === 'dialogue' ? 10 : c.engine === 'cinematic' ? 8 :
+    c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 :
     Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(10, Math.max(2, c.seconds)) : 10
 
   const durations = cleanClips.map(secondsFor)
@@ -1632,8 +1641,7 @@ export function buildHollywoodCreatomateSource({
     })
   })
 
-  // Track 3 — readability overlays (same as the standard builder; the niche
-  // color-grade wash is intentionally skipped — realism wants untinted footage).
+  // Track 3 — readability overlays (same as the standard builder).
   elements.push({
     type: 'shape', track: 3, time: 0, duration: totalDuration,
     x: '50%', y: '50%', width: '100%', height: '100%', fill_color: 'rgba(0,0,0,0.22)',
@@ -1645,6 +1653,40 @@ export function buildHollywoodCreatomateSource({
   elements.push({
     type: 'shape', track: 3, time: 0, duration: totalDuration,
     x: '50%', y: '90%', width: '100%', height: '20%', fill_color: 'rgba(0,0,0,0.55)',
+  })
+
+  // KINEO-HOLLYWOOD-22-2026-07-10 — UNIFIED COLOR GRADE. The hollywood branch
+  // used to SKIP the niche grade on purpose ("realism wants untinted footage").
+  // Founder feedback on the 3 real renders overruled that: "é muito visível
+  // que está trocando os motores — a qualidade salta entre cenas". Kling 3 and
+  // Veo each have their own color science, so a hard cut between engines reads
+  // as a quality jump. DECISION: apply the SAME niche-aware grade scheme as
+  // AI Gen (#436 + KINEO-FAST-V4) over ALL clips, uniformly (time 0 → total),
+  // with the wash ~+0.05 opacity vs AI Gen — strong enough to mask the
+  // per-engine look difference, subtle enough to keep the realism. Works with
+  // the router's styleSheet (prompt-side); this is the compose-side half.
+  // Niche is detected from the video's own words (narration + dialogue lines),
+  // since this builder receives no voiceoverScript param.
+  const gradeText = [
+    ...narrationBlocks.map((b) => b.text ?? ''),
+    ...cleanClips.map((c) => `${c.dialogueLine ?? ''} ${c.caption ?? ''}`),
+  ]
+    .join(' ')
+    .toLowerCase()
+  const grade = /\b(billionaire|millionaire|wealth|money|invest|luxur|rich|dollar|business)\b/.test(gradeText)
+    ? { wash: 'rgba(35,26,8,0.20)',  glow: 'rgba(255,190,80,0.07)' }   // wealth: warm gold
+    : /\b(mystery|mysterious|unexplained|vanish|disappear|haunted|secret|creepy)\b/.test(gradeText)
+    ? { wash: 'rgba(8,14,40,0.22)',  glow: 'rgba(120,150,255,0.05)' }  // mystery: deep blue
+    : /\b(volcano|desert|island|mountain|ocean|country|village|glacier|jungle|crater)\b/.test(gradeText)
+    ? { wash: 'rgba(10,32,40,0.19)', glow: 'rgba(255,140,50,0.06)' }   // places: teal/orange doc
+    : { wash: 'rgba(12,34,51,0.18)', glow: 'rgba(255,150,60,0.05)' }   // default (#436 palette, +0.05)
+  elements.push({
+    type: 'shape', track: 3, time: 0, duration: totalDuration,
+    x: '50%', y: '50%', width: '100%', height: '100%', fill_color: grade.wash,
+  })
+  elements.push({
+    type: 'shape', track: 3, time: 0, duration: totalDuration,
+    x: '50%', y: '48%', width: '70%', height: '55%', fill_color: grade.glow,
   })
 
   const captionWindowEnd = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
@@ -1697,14 +1739,37 @@ export function buildHollywoodCreatomateSource({
     }
   }
 
-  // Track 5 — static captions on DIALOGUE scenes (the person's own voice
-  // carries the audio; the caption is a simple on-brand text of the line).
+  // Track 5 — captions on DIALOGUE scenes (the person's own voice carries the
+  // audio). KINEO-HOLLYWOOD-21-2026-07-10 (bug b): the caption is the REAL
+  // spoken line, in ~3-word chunks distributed uniformly across the scene
+  // window [start + 0.3s, end - 0.4s] — same visual style as the whisper
+  // captions (buildCaptionElements). Fallback when the line is unavailable:
+  // the old static scene caption (previous behavior).
   cleanClips.forEach((clip, i) => {
     if (clip.engine !== 'dialogue') return
-    const text = (clip.caption ?? '').trim()
-    if (!text) return
     const t = sceneStarts[i]
     if (t >= captionWindowEnd) return
+
+    const line = (clip.dialogueLine ?? '').trim()
+    if (line) {
+      const winStart = round3(t + 0.3)
+      const winEnd = round3(Math.min(t + durations[i] - 0.4, captionWindowEnd))
+      const window = winEnd - winStart
+      const segments = buildCaptionSegments(line, 3)
+      if (window > 0.5 && segments.length > 0) {
+        const slot = window / segments.length
+        segments.forEach((seg, k) => {
+          const st = round3(winStart + k * slot)
+          if (st >= captionWindowEnd) return
+          const d = round3(Math.max(0.1, Math.min(slot, captionWindowEnd - st)))
+          elements.push(...buildCaptionElements({ text: seg.text, time: st, duration: d, highlight: seg.highlight }))
+        })
+        return
+      }
+    }
+
+    const text = (clip.caption ?? '').trim()
+    if (!text) return
     const d = round3(Math.max(0.5, Math.min(durations[i] - 0.2, captionWindowEnd - t)))
     elements.push(...buildCaptionElements({ text, time: round3(t), duration: d, highlight: null }))
   })

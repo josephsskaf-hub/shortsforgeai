@@ -10,7 +10,8 @@ import { parseUserScript } from '@/lib/scriptParser'
 import { openai } from '@/lib/openai'
 import { fal } from '@fal-ai/client'
 // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0: per-scene engine routing
-// (Kling3 dialogue / Veo3.1 cinematic / Seedance support) with native audio.
+// with native audio. KINEO-HOLLYWOOD-22-2026-07-10: Kling3 dialogue+support /
+// Veo3.1 cinematic (1-2 epic shots max) — Seedance is OUT (visual coherence).
 import {
   HOLLYWOOD_MODELS,
   mentionsRealPerson,
@@ -32,8 +33,10 @@ const KLING_CREDIT_COST = 90 // KINEO-KLING-90-2026-07-06 — real fal cost $0.0
 const VEO_CREDIT_COST = 180
 const SORA_CREDIT_COST = 200
 // KINEO-HOLLYWOOD-2026-07-09 provisional — preço final só após Checkpoint 1 + OK do Joseph.
-// Real fal cost ≈ $6-8/video (Kling3 $0.168/s dialogue + Veo $0.15/s + Seedance $0.052/s);
-// 260 cr keeps margin above Veo's while we validate quality.
+// KINEO-HOLLYWOOD-22-2026-07-10 — custo real subiu: support saiu do Seedance
+// ($0.052/s) e foi pro Kling 3 ($0.168/s) pela coerência visual. Típico 55s
+// ≈ $8.90 (Kling3 $0.168/s dialogue+support + Veo $0.15/s em 1-2 cenas).
+// 260 cr no Studio (~$24.60 de crédito) ainda dá ~64% de margem.
 const HOLLYWOOD_CREDIT_COST = 260
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
@@ -114,17 +117,27 @@ function buildFalInput(
   hollywood: boolean = false,
   seconds?: number,
 ): Record<string, unknown> {
-  // KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro dialogue scenes: 10s, 9:16,
-  // native audio ON (the model generates the character's voice + lip sync
-  // from the quoted line inside the prompt). No people-banning negative
-  // prompt here — fictional people are the POINT of Hollywood Mode.
+  // KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro dialogue scenes: 9:16, native
+  // audio ON (the model generates the character's voice + lip sync from the
+  // quoted line inside the prompt). No people-banning negative prompt here —
+  // fictional people are the POINT of Hollywood Mode.
+  // KINEO-HOLLYWOOD-21-2026-07-10 (bug a) — duration follows the planned scene
+  // seconds (5 or 10, sized to the dialogue line by the router; default 10) so
+  // a short line never leaves the person mute for half the clip.
+  // KINEO-HOLLYWOOD-21-2026-07-10 (bug d) — anti-Chinese-text terms appended to
+  // the EXISTING negative_prompt (Kling 3 is a Chinese model; on-screen text
+  // renders in Chinese).
+  // KINEO-HOLLYWOOD-22-2026-07-10 — this branch now ALSO serves hollywood
+  // 'support' scenes (Seedance is out): same model, prompt is visual-only (no
+  // quoted line), so generate_audio:true yields ambient sound, not speech.
+  // Duration snap ≤6s→'5' covers both dialogue (exact 5|10) and support.
   if (model === KLING3_MODEL) {
     return {
       prompt,
-      duration: '10',
+      duration: typeof seconds === 'number' && seconds <= 6 ? '5' : '10',
       aspect_ratio: '9:16',
       generate_audio: true,
-      negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
+      negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption, chinese text, foreign text, on-screen text, readable signs, subtitles, captions, phone screen with text',
     }
   }
   if (model === SORA_MODEL) {
@@ -140,13 +153,15 @@ function buildFalInput(
     // audio ON, and NO people ban in the negative prompt (fictional people are
     // allowed in Hollywood Mode). The classic faceless Veo path is unchanged.
     if (hollywood) {
+      // KINEO-HOLLYWOOD-21-2026-07-10 (bug d) — anti-on-screen-text terms
+      // appended to the existing negative_prompt.
       return {
         prompt,
         aspect_ratio: '9:16',
         duration: '8s',
         resolution: '720p',
         generate_audio: true,
-        negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
+        negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption, chinese text, foreign text, on-screen text, readable signs, subtitles, captions, phone screen with text',
       }
     }
     return {
@@ -173,7 +188,14 @@ function buildFalInput(
   // ambient audio ON + duration follows the planned scene length (Seedance
   // accepts 5s/10s — round down to 5 only for short closers). Classic path below
   // is untouched.
+  // KINEO-HOLLYWOOD-22-2026-07-10 — UNREACHABLE for hollywood since support
+  // moved to Kling 3 (KLING3_MODEL branch above). Kept as-is in case support
+  // ever needs to fall back to Seedance for cost reasons.
   if (hollywood) {
+    // KINEO-HOLLYWOOD-21-2026-07-10 (bug d) — Seedance v1.5 pro has NO
+    // negative_prompt param (verified against the fal schema in #440; adding
+    // one risks a 422). The zero-readable-text rule rides in the POSITIVE
+    // prompt suffix the router appends to every scene.
     return {
       prompt,
       aspect_ratio: '9:16',
@@ -618,8 +640,9 @@ export async function POST(req: NextRequest) {
 
     // ── KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE 2.0 ─────────────────────
     // Dedicated path: GPT plans dialogue/cinematic/support scenes with ONE
-    // fictional character + ONE environment, each scene is submitted to ITS
-    // engine (Kling3 / Veo3.1 / Seedance) with NATIVE AUDIO ON, and the
+    // fictional character + ONE environment + ONE styleSheet (KINEO-HOLLYWOOD-22),
+    // each scene is submitted to ITS engine (Kling3 dialogue+support / Veo3.1
+    // cinematic — Seedance out since 22) with NATIVE AUDIO ON, and the
     // response carries the per-scene metadata compose needs (engines,
     // narrations, seconds). buildFacelessCinematicPrompt / PERSON_NOUN_RE are
     // intentionally NOT applied — fictional people are the point here. The
@@ -709,6 +732,10 @@ export async function POST(req: NextRequest) {
         scene_engines: plan.scenes.map((s) => s.type), // 'dialogue' | 'cinematic' | 'support'
         scene_narrations: hNarrations, // TTS text per scene (null = native audio only)
         scene_seconds: plan.scenes.map((s) => s.seconds),
+        // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line per
+        // dialogue scene (null for the rest), parallel to fal_request_ids.
+        // Compose uses it to caption dialogue scenes with the REAL speech.
+        scene_dialogues: plan.scenes.map((s) => (s.type === 'dialogue' && s.dialogueLine ? s.dialogueLine : null)),
         cost_estimate_usd: plan.estimatedCostUsd,
         quality: 'cinematic_hollywood',
         verbatim,

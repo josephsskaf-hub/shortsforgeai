@@ -91,6 +91,10 @@ interface ComposeBody {
   scene_engines?: string[]
   scene_narrations?: (string | null)[]
   scene_seconds?: number[]
+  // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line per dialogue
+  // scene (null for cinematic/support), parallel to clip_urls. Captions on
+  // dialogue scenes chunk THIS text so they match the actual speech.
+  scene_dialogues?: (string | null)[]
 }
 
 export async function POST(req: NextRequest) {
@@ -365,6 +369,8 @@ export async function POST(req: NextRequest) {
       const rawEngines = Array.isArray(body.scene_engines) ? body.scene_engines : []
       const rawNarrations = Array.isArray(body.scene_narrations) ? body.scene_narrations : []
       const rawSeconds = Array.isArray(body.scene_seconds) ? body.scene_seconds : []
+      // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — real spoken line per scene.
+      const rawDialogues = Array.isArray(body.scene_dialogues) ? body.scene_dialogues : []
 
       // Defensive alignment: arrays are parallel to clip_urls; anything
       // missing/misaligned degrades that scene to a silent-ish support scene.
@@ -373,6 +379,11 @@ export async function POST(req: NextRequest) {
         const engine: HollywoodClipInput['engine'] =
           e === 'dialogue' || e === 'cinematic' || e === 'support' ? e : 'support'
         const sec = Number(rawSeconds[i])
+        // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — dialogue scenes carry their
+        // real spoken line (sanitized at the boundary like every script text).
+        const dlg = engine === 'dialogue' && typeof rawDialogues[i] === 'string'
+          ? (rawDialogues[i] as string).trim()
+          : ''
         return {
           url,
           engine,
@@ -382,13 +393,17 @@ export async function POST(req: NextRequest) {
           caption: (Array.isArray(body.scene_captions) && typeof body.scene_captions[i] === 'string'
             ? body.scene_captions[i]
             : '').trim(),
+          ...(dlg ? { dialogueLine: dlg } : {}),
         }
       })
 
       // Timeline offsets (pre-trim — only the LAST scene is ever trimmed by
       // the builder, which never moves earlier offsets).
+      // KINEO-HOLLYWOOD-21-2026-07-10 (bug a) — dialogue can now be 5s or 10s
+      // (sized to the line); MUST mirror secondsFor in buildHollywoodCreatomateSource
+      // or the narration-block offsets drift from the real timeline.
       const secondsOf = (c: HollywoodClipInput): number =>
-        c.engine === 'dialogue' ? 10 : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
+        c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
 
       // Group contiguous narrated scenes into TTS blocks.
       const pendingBlocks: Array<{ time: number; text: string }> = []
