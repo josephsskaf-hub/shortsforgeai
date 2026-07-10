@@ -278,9 +278,8 @@ export default function PricingPage() {
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
             Real AI video generation from $24.90/mo.
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-[14px] text-[#86868b]">
-            Not a re-clipper — Kineo generates the whole Short: AI scenes, talking presenters, even product ads. <span className="text-[#f5f5f7] font-semibold">Creator is $24.90/mo with 1 Hollywood film included</span> where Revid &amp; StoryShort charge $39+. Or <span className="text-[#f5f5f7] font-semibold">start at $9.90/mo</span>. Flat price, cancel anytime.
-          </p>
+          {/* KINEO-SHOWCASE-2026-07-10 — Joseph: parágrafo comparativo removido
+              ("texto sujo") — os CARDS de preço são a estrela do hero. */}
 
           {/* ROBO1-PRICE-2026-06-28 — honest trust row. Replaced the
               unverifiable "300+ Shorts created" + "4.8 / 5 average rating"

@@ -199,7 +199,18 @@ export async function submitAvatarJob(args: {
     args.engine === 'lipsync'
       ? { video_url: args.videoUrl, audio_url: args.audioUrl }
       : args.engine === 'presenter'
-        ? { image_url: args.imageUrl, audio_url: args.audioUrl }
+        ? {
+            image_url: args.imageUrl,
+            audio_url: args.audioUrl,
+            // KINEO-PRESENTER-MOTION-2026-07-10 — Joseph's feedback on the
+            // first prod render: the body stayed FROZEN (only lips moved).
+            // Kling AI Avatar v2 accepts an optional `prompt` (default ".")
+            // that directs the performance — this makes the presenter move
+            // like a real host: hands, posture, head, energy following the
+            // speech instead of a static portrait with moving lips.
+            prompt:
+              'the person speaks directly to the camera like a charismatic presenter: natural expressive hand gestures emphasizing key words, subtle head and shoulder movement, engaged body language that matches the rhythm of the speech, realistic natural motion',
+          }
         : {
             image_url: args.imageUrl,
             audio_url: args.audioUrl,

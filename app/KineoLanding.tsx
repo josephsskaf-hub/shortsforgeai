@@ -264,7 +264,8 @@ export default function KineoLanding({ initialUser }: Props) {
             <div className="plan">
               <div className="pt">Starter</div><div className="nm">Starter</div>
               <div className="pr">$9.90<span>/mo</span></div>
-              <ul><li><span className="ck">✓</span> <b>50 Fast videos</b>/month</li><li><span className="ck">✓</span> AI script + neural voiceover</li><li><span className="ck">✓</span> Auto-captions</li><li><span className="ck">✓</span> Watermark-free MP4</li></ul>
+              {/* KINEO-SHOWCASE-2026-07-10 — V3C: 25 credits, Fast = 1 credit. */}
+              <ul><li><span className="ck">✓</span> <b>25 credits</b>/month (Fast = 1 cr)</li><li><span className="ck">✓</span> AI script + neural voiceover</li><li><span className="ck">✓</span> Auto-captions</li><li><span className="ck">✓</span> Watermark-free MP4</li></ul>
               <Link className="btn btn-o" href="/signup">Get started</Link>
             </div>
             <div className="plan pop">
