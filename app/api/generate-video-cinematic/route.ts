@@ -9,6 +9,15 @@ import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import { parseUserScript } from '@/lib/scriptParser'
 import { openai } from '@/lib/openai'
 import { fal } from '@fal-ai/client'
+// KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0: per-scene engine routing
+// (Kling3 dialogue / Veo3.1 cinematic / Seedance support) with native audio.
+import {
+  HOLLYWOOD_MODELS,
+  mentionsRealPerson,
+  planHollywoodScenes,
+  logHollywoodCost,
+  type HollywoodPlan,
+} from '@/lib/hollywood/router'
 
 export const maxDuration = 60
 
@@ -22,6 +31,10 @@ const KLING_CREDIT_COST = 90 // KINEO-KLING-90-2026-07-06 — real fal cost $0.0
 // 180/200 credits (~$18–$20 retail at $0.10/cr) ≈ 73–76% margin, under Higgsfield.
 const VEO_CREDIT_COST = 180
 const SORA_CREDIT_COST = 200
+// KINEO-HOLLYWOOD-2026-07-09 provisional — preço final só após Checkpoint 1 + OK do Joseph.
+// Real fal cost ≈ $6-8/video (Kling3 $0.168/s dialogue + Veo $0.15/s + Seedance $0.052/s);
+// 260 cr keeps margin above Veo's while we validate quality.
+const HOLLYWOOD_CREDIT_COST = 260
 
 // fal.ai model — Wan 2.5 text-to-video (commercial, supports 9:16, $0.05/s).
 // #368 — Seedance 1.5 Pro. The earlier 'submit error' (#366) was fal EXHAUSTED
@@ -42,6 +55,9 @@ const VEO_MODEL = 'fal-ai/veo3.1/fast'
 // output + fal.queue pattern. Has native audio, but compose mutes every clip
 // track (volume 0%), so the TTS narration stays the only audio.
 const SORA_MODEL = 'fal-ai/sora-2/text-to-video'
+// KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro (native voice + lip sync) drives
+// the Hollywood dialogue scenes. Same { video: { url } } output + fal.queue.
+const KLING3_MODEL = HOLLYWOOD_MODELS.dialogue
 // Back-compat: other modules import FAL_MODEL.
 const FAL_MODEL = SEEDANCE_MODEL
 
@@ -87,7 +103,30 @@ async function alertFalExhausted(context: string): Promise<void> {
 // (~$0.26/clip) is imperceptible on a 9:16 phone Short and keeps Creator safely
 // profitable. Studio keeps 1080p as its premium differentiator (hd=true).
 // Build the per-model fal input (params differ between Seedance and Kling).
-function buildFalInput(model: string, prompt: string, hd: boolean = true): Record<string, unknown> {
+// KINEO-HOLLYWOOD-2026-07-09 — `hollywood` flips the audio-on variants: clips
+// carry NATIVE audio (voice/ambience) instead of being silent for TTS-over.
+// `seconds` = planned scene length (support scenes only; dialogue/cinematic are
+// fixed at 10s/8s by their engines). Defaults keep every existing call intact.
+function buildFalInput(
+  model: string,
+  prompt: string,
+  hd: boolean = true,
+  hollywood: boolean = false,
+  seconds?: number,
+): Record<string, unknown> {
+  // KINEO-HOLLYWOOD-2026-07-09 — Kling 3 Pro dialogue scenes: 10s, 9:16,
+  // native audio ON (the model generates the character's voice + lip sync
+  // from the quoted line inside the prompt). No people-banning negative
+  // prompt here — fictional people are the POINT of Hollywood Mode.
+  if (model === KLING3_MODEL) {
+    return {
+      prompt,
+      duration: '10',
+      aspect_ratio: '9:16',
+      generate_audio: true,
+      negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
+    }
+  }
   if (model === SORA_MODEL) {
     return {
       prompt,
@@ -97,6 +136,19 @@ function buildFalInput(model: string, prompt: string, hd: boolean = true): Recor
     }
   }
   if (model === VEO_MODEL) {
+    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood cinematic scenes: native ambient
+    // audio ON, and NO people ban in the negative prompt (fictional people are
+    // allowed in Hollywood Mode). The classic faceless Veo path is unchanged.
+    if (hollywood) {
+      return {
+        prompt,
+        aspect_ratio: '9:16',
+        duration: '8s',
+        resolution: '720p',
+        generate_audio: true,
+        negative_prompt: 'cartoon, anime, illustration, 3d render, blur, distort, low quality, watermark, text, logo, caption',
+      }
+    }
     return {
       prompt,
       aspect_ratio: '9:16',
@@ -115,6 +167,19 @@ function buildFalInput(model: string, prompt: string, hd: boolean = true): Recor
       aspect_ratio: '9:16',
       negative_prompt: 'people, person, human, face, crowd, logo, caption, blur, distort, low quality, watermark, text',
       cfg_scale: 0.6,
+    }
+  }
+  // KINEO-HOLLYWOOD-2026-07-09 — Hollywood support scenes on Seedance: native
+  // ambient audio ON + duration follows the planned scene length (Seedance
+  // accepts 5s/10s — round down to 5 only for short closers). Classic path below
+  // is untouched.
+  if (hollywood) {
+    return {
+      prompt,
+      aspect_ratio: '9:16',
+      resolution: '720p',
+      duration: typeof seconds === 'number' && seconds <= 6 ? '5' : '10',
+      generate_audio: true,
     }
   }
   // Seedance (default). KINEO-SEEDANCE-720-CREATOR-2026-07-06: resolution follows
@@ -255,14 +320,16 @@ function clipCountForDuration(d: number): number {
   return Math.max(2, Math.min(9, Math.ceil(d / 9)))
 }
 
-async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true): Promise<string | null> {
+// KINEO-HOLLYWOOD-2026-07-09 — `hollywood`/`seconds` forwarded to buildFalInput
+// (audio-on variants); defaults keep every existing call byte-identical.
+async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true, hollywood: boolean = false, seconds?: number): Promise<string | null> {
   const falKey = process.env.FAL_KEY
   if (!falKey) return null
 
   try {
     fal.config({ credentials: falKey })
     const { request_id } = await fal.queue.submit(model, {
-      input: buildFalInput(model, prompt, hd),
+      input: buildFalInput(model, prompt, hd, hollywood, seconds),
     })
     return request_id ?? null
   } catch (err) {
@@ -296,7 +363,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
 
-    let body: { prompt?: string; duration?: number; engine?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
+    // KINEO-HOLLYWOOD-2026-07-09 — `language` accepted (already sent by the
+    // client) so the Hollywood planner knows the input language.
+    let body: { prompt?: string; duration?: number; engine?: string; language?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
     try {
       body = await req.json()
     } catch {
@@ -322,6 +391,18 @@ export async function POST(req: NextRequest) {
     const wantsKling = body.engine === 'kling'
     const wantsVeo = body.engine === 'veo'
     const wantsSora = body.engine === 'sora'
+    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0 (per-scene engine routing).
+    const wantsHollywood = body.engine === 'hollywood'
+
+    // KINEO-HOLLYWOOD-2026-07-09 — anti-deepfake gate. Hollywood renders REAL
+    // fictional people with native voice, so a prompt naming a real person is
+    // blocked outright (cheap check, before any credit/plan work).
+    if (wantsHollywood && mentionsRealPerson(prompt)) {
+      return NextResponse.json(
+        { error: "Hollywood Mode can't depict real people. Describe a fictional person instead." },
+        { status: 400 },
+      )
+    }
 
     // Upfront balance + free-trial eligibility check (deduction/flag-flip happens
     // in compose/status on SUCCESS).
@@ -357,6 +438,13 @@ export async function POST(req: NextRequest) {
         { status: 402 },
       )
     }
+    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood is Studio-only (same gate as Veo).
+    if (wantsHollywood && !isStudio) {
+      return NextResponse.json(
+        { error: 'Hollywood Mode is a Studio feature. Upgrade to Studio to use it.', upsell: 'studio', balance },
+        { status: 402 },
+      )
+    }
     // KINEO-SORA-REMOVED-2026-07-06 — Sora is pulled from the menu until its fal
     // endpoint cost is confirmed (margin guard). Reject any direct/stale call.
     if (wantsSora) {
@@ -367,14 +455,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Push #402 — per-engine cost: Cinematic (Kling) 45, AI Generated (Seedance) 30.
-    const cost = wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
+    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood = 260 (provisional, see const).
+    const cost = wantsHollywood ? HOLLYWOOD_CREDIT_COST : wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
     // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
     // email confirmation. The free trial ALWAYS uses Seedance (never Kling).
     const emailConfirmed = !!user.email_confirmed_at
     const freeAlreadyUsed = profile?.free_ai_generate_used === true
     const eligibleForFree = !freeAlreadyUsed && emailConfirmed
-    const isFreeTrial = !wantsKling && !wantsVeo && !wantsSora && balance < SEEDANCE_CREDIT_COST && eligibleForFree
+    // KINEO-HOLLYWOOD-2026-07-09 — the free trial never applies to Hollywood.
+    const isFreeTrial = !wantsKling && !wantsVeo && !wantsSora && !wantsHollywood && balance < SEEDANCE_CREDIT_COST && eligibleForFree
 
     // Push #404 — AI Generated (Seedance) requires a Creator or Studio plan (or
     // the one-time free trial). Starter (Fast) users and trial-exhausted free
@@ -386,7 +476,8 @@ export async function POST(req: NextRequest) {
     // credits sneak an AI video — the ladder is now Fast (free/Starter) → AI
     // (Creator+) → premium engines (Studio). Kling/Veo already gated to Studio
     // above; this catches Seedance for any non-Creator+ plan.
-    if (!wantsKling && !wantsVeo && !isCreatorPlus && !isFreeTrial) {
+    // KINEO-HOLLYWOOD-2026-07-09 — hollywood excluded: it's already Studio-gated above.
+    if (!wantsKling && !wantsVeo && !wantsHollywood && !isCreatorPlus && !isFreeTrial) {
       return NextResponse.json(
         {
           error: 'AI Generated videos are on the Creator & Studio plans. Upgrade to use the AI engine.',
@@ -482,7 +573,10 @@ export async function POST(req: NextRequest) {
     // query). Generate a real faceless shot description per scene from the
     // narration so Seedance gets a shot to direct, not keyword soup. Best-effort:
     // on failure each scene falls back to its stock query in submitAllScenes.
-    if (verbatim && planScenes.length === 0) {
+    // KINEO-HOLLYWOOD-2026-07-09 — skipped for hollywood: planHollywoodScenes
+    // writes its own per-scene prompts (people allowed), so the faceless
+    // description pass would be wasted work.
+    if (verbatim && planScenes.length === 0 && !wantsHollywood) {
       try {
         const aiPrompts = await generateCinematicDescriptions(scenes, prompt)
         scenes = scenes.map((s, i) => ({
@@ -521,6 +615,107 @@ export async function POST(req: NextRequest) {
       `${prompt} ${scenes.map((s) => `${s.voiceover ?? ''} ${s.aiPrompt ?? ''} ${s.description ?? ''}`).join(' ')}`,
     )
     if (eraSuffix) console.log('[cinematic] era-lock active for this render')
+
+    // ── KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE 2.0 ─────────────────────
+    // Dedicated path: GPT plans dialogue/cinematic/support scenes with ONE
+    // fictional character + ONE environment, each scene is submitted to ITS
+    // engine (Kling3 / Veo3.1 / Seedance) with NATIVE AUDIO ON, and the
+    // response carries the per-scene metadata compose needs (engines,
+    // narrations, seconds). buildFacelessCinematicPrompt / PERSON_NOUN_RE are
+    // intentionally NOT applied — fictional people are the point here. The
+    // era-lock suffix IS kept (period accuracy still matters).
+    if (wantsHollywood) {
+      const hollywoodVoiceover = verbatim && parsedScript.narration
+        ? parsedScript.narration
+        : scenes.map((s) => s.voiceover).filter(Boolean).join(' ')
+
+      let plan: HollywoodPlan
+      try {
+        plan = await planHollywoodScenes({
+          idea: prompt,
+          voiceoverScript: hollywoodVoiceover || undefined,
+          scenes: scenes.map((s) => ({ voiceover: s.voiceover, description: s.aiPrompt || s.description })),
+          durationSeconds: duration,
+          language: body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en',
+        })
+      } catch (e) {
+        console.error('[cinematic] hollywood planner failed:', e instanceof Error ? e.message : String(e))
+        return NextResponse.json(
+          { error: 'Hollywood scene planning failed. Please try again.' },
+          { status: 502 },
+        )
+      }
+
+      // Submit each scene to ITS engine — same stagger/retry as the classic
+      // path, but the model is per scene (no single-model fallback here: a
+      // partially-failed submit still composes from the scenes that made it).
+      const hRequestIds: (string | null)[] = []
+      const hModels: string[] = []
+      for (const hs of plan.scenes) {
+        const model = HOLLYWOOD_MODELS[hs.type]
+        const scenePrompt = hs.prompt + eraSuffix
+        let id = await submitToFal(scenePrompt, model, false, true, hs.seconds)
+        if (!id) {
+          await new Promise((r) => setTimeout(r, 800))
+          id = await submitToFal(scenePrompt, model, false, true, hs.seconds)
+        }
+        hRequestIds.push(id)
+        hModels.push(model)
+        await new Promise((r) => setTimeout(r, 450))
+      }
+
+      const hValid = hRequestIds.filter((id): id is string => id !== null)
+      if (hValid.length === 0) {
+        if (FAL_EXHAUSTED) {
+          await alertFalExhausted(`user=${user.id.slice(0, 8)} engine=hollywood`)
+          return NextResponse.json(
+            {
+              queued: true,
+              error: "We're experiencing high demand right now — your video is queued and we'll have it ready shortly. No credits were used.",
+            },
+            { status: 503 },
+          )
+        }
+        return NextResponse.json(
+          { error: 'Could not submit clips to AI generator. Please try again.' },
+          { status: 502 },
+        )
+      }
+
+      const generationId = randomUUID()
+      logHollywoodCost(generationId, plan.scenes)
+      console.log(
+        `[cinematic] hollywood submitted ${hValid.length}/${plan.scenes.length} clips user=${user.id.slice(0, 8)} generationId=${generationId} est=$${plan.estimatedCostUsd.toFixed(2)}`,
+      )
+
+      const hNarrations = plan.scenes.map((s) => (s.needsNarration && s.voiceover ? s.voiceover : null))
+      const hVoiceoverScript =
+        hNarrations.filter(Boolean).join(' ') ||
+        plan.scenes.map((s) => s.dialogueLine ?? '').filter(Boolean).join(' ') ||
+        prompt
+
+      return NextResponse.json({
+        mode: 'cinematic_ai',
+        freeTrial: false,
+        generationId,
+        prompt,
+        duration,
+        scenes: plan.scenes.map((s) => s.prompt),
+        scene_captions: plan.scenes.map((s) => s.caption),
+        voiceover_script: hVoiceoverScript,
+        fal_request_ids: hRequestIds, // null for failed submissions
+        fal_model: hModels[0] ?? HOLLYWOOD_MODELS.dialogue, // back-compat: scene-1 model
+        fal_models: hModels, // parallel to fal_request_ids
+        scene_engines: plan.scenes.map((s) => s.type), // 'dialogue' | 'cinematic' | 'support'
+        scene_narrations: hNarrations, // TTS text per scene (null = native audio only)
+        scene_seconds: plan.scenes.map((s) => s.seconds),
+        cost_estimate_usd: plan.estimatedCostUsd,
+        quality: 'cinematic_hollywood',
+        verbatim,
+        speed: parsedScript.speed,
+      })
+    }
+    // ── end KINEO-HOLLYWOOD-2026-07-09 ──────────────────────────────────────
 
     async function submitAllScenes(model: string): Promise<(string | null)[]> {
       const ids: (string | null)[] = []

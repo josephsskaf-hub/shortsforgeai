@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   buildCreatomateSource,
+  // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode source builder + types.
+  buildHollywoodCreatomateSource,
   estimateMp3DurationSeconds,
   generateTTS,
   pollCreatomateRender,
@@ -10,6 +12,8 @@ import {
   targetWordCount,
   transcribeTTSWithTimestamps,
   uploadVoiceoverToSupabase,
+  type HollywoodClipInput,
+  type HollywoodNarrationBlock,
   type WhisperWord,
 } from '@/lib/compose'
 import { stripScriptMarkers } from '@/lib/scriptParser'
@@ -42,7 +46,9 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 const DURATION_TOLERANCE_SECONDS = 3
 // feature/ai-avatar — 'avatar' = premium talking-head render (VEED Fabric).
 // Checkpoint 1: no credit cost wired yet (billing lands in checkpoint 2).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'avatar'
+// KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (per-scene engines,
+// native audio, block TTS).
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar'
 
 interface ComposeBody {
   generationId?: string
@@ -77,6 +83,14 @@ interface ComposeBody {
   // Face-app wave 1 (12/06) — Hook Avatar: the avatar MP4 only covers the
   // first ~N seconds; b-roll tiles the rest. Forwarded to buildCreatomateSource.
   avatar_hook_seconds?: number
+  // KINEO-HOLLYWOOD-2026-07-09 — per-scene metadata, PARALLEL to clip_urls
+  // (quality === 'cinematic_hollywood' only). scene_engines routes the per-clip
+  // volume (dialogue 100% / cinematic 55% / support 35%); scene_narrations is
+  // the TTS text per scene (null = native audio only — NEVER TTS over a
+  // dialogue scene); scene_seconds is each scene's planned timeline length.
+  scene_engines?: string[]
+  scene_narrations?: (string | null)[]
+  scene_seconds?: number[]
 }
 
 export async function POST(req: NextRequest) {
@@ -179,7 +193,8 @@ export async function POST(req: NextRequest) {
       // feature/ai-avatar — 'avatar' accepted ONLY when the request actually
       // carries an avatar payload (validated above).
       if (q === 'avatar') return isAvatarReq ? 'avatar' : 'basic_ai'
-      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' || q === 'cinematic_veo' || q === 'cinematic_sora' ? q : 'basic_ai'
+      // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood accepted.
+      return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' || q === 'cinematic_veo' || q === 'cinematic_sora' || q === 'cinematic_hollywood' ? q : 'basic_ai'
     })()
 
     // Push #316 — output language. OpenAI TTS auto-detects from the script text.
@@ -193,7 +208,7 @@ export async function POST(req: NextRequest) {
       : undefined
     // Map render quality → narration tier so premium/cinematic users get better personas.
     const narrationTier: 'free' | 'premium' | 'cinematic' =
-      quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
+      quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' ? 'cinematic' : quality === 'pro' ? 'premium' : 'free'
 
     // Push #235 — explicit user speed. When supplied (verbatim mode), the
     // narration is the user's exact text spoken at this rate; we don't rewrite
@@ -216,7 +231,10 @@ export async function POST(req: NextRequest) {
     // Only the old Runway-based modes (basic, basic_ai, pro) require Pro.
     // feature/ai-avatar — 'avatar' is exempt from the Pro gate: it is paid via
     // the separate avatar-credits add-on (checkpoint 2), never the Pro plan.
-    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'cinematic_veo' && quality !== 'cinematic_sora' && quality !== 'avatar') {
+    // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood is credit-based (Studio
+    // gate enforced upstream in generate-video-cinematic), so it's exempt here
+    // like the other fal engines.
+    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'cinematic_veo' && quality !== 'cinematic_sora' && quality !== 'cinematic_hollywood' && quality !== 'avatar') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(
@@ -334,6 +352,150 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid avatar video URL.' }, { status: 400 })
       }
     }
+
+    // ── KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE compose path ────────────
+    // Dedicated pipeline: the clips carry NATIVE audio (Kling3 voice on
+    // dialogue scenes, ambience on the rest), so we do NOT run the standard
+    // single-mp3 TTS-over-everything flow. Instead: one TTS mp3 per contiguous
+    // BLOCK of narrated (cinematic/support) scenes, placed at the block's
+    // timeline offset; dialogue scenes are never narrated over; background
+    // music is off. Every step is best-effort — a failed narration block
+    // degrades to native-audio-only, never a dead render.
+    if (quality === 'cinematic_hollywood') {
+      const rawEngines = Array.isArray(body.scene_engines) ? body.scene_engines : []
+      const rawNarrations = Array.isArray(body.scene_narrations) ? body.scene_narrations : []
+      const rawSeconds = Array.isArray(body.scene_seconds) ? body.scene_seconds : []
+
+      // Defensive alignment: arrays are parallel to clip_urls; anything
+      // missing/misaligned degrades that scene to a silent-ish support scene.
+      const hollywoodClips: HollywoodClipInput[] = clipUrls.map((url, i) => {
+        const e = typeof rawEngines[i] === 'string' ? rawEngines[i] : 'support'
+        const engine: HollywoodClipInput['engine'] =
+          e === 'dialogue' || e === 'cinematic' || e === 'support' ? e : 'support'
+        const sec = Number(rawSeconds[i])
+        return {
+          url,
+          engine,
+          seconds: Number.isFinite(sec) && sec > 0 ? sec : engine === 'cinematic' ? 8 : 10,
+          // Raw body array (NOT the filtered sceneCaptions — filtering empties
+          // would shift indices and misalign captions with scenes).
+          caption: (Array.isArray(body.scene_captions) && typeof body.scene_captions[i] === 'string'
+            ? body.scene_captions[i]
+            : '').trim(),
+        }
+      })
+
+      // Timeline offsets (pre-trim — only the LAST scene is ever trimmed by
+      // the builder, which never moves earlier offsets).
+      const secondsOf = (c: HollywoodClipInput): number =>
+        c.engine === 'dialogue' ? 10 : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
+
+      // Group contiguous narrated scenes into TTS blocks.
+      const pendingBlocks: Array<{ time: number; text: string }> = []
+      {
+        let cursor = 0
+        let current: { time: number; text: string } | null = null
+        hollywoodClips.forEach((c, i) => {
+          const narr =
+            c.engine !== 'dialogue' && typeof rawNarrations[i] === 'string'
+              ? (rawNarrations[i] as string).trim()
+              : ''
+          if (narr) {
+            if (current) current.text = `${current.text} ${narr}`
+            else current = { time: cursor, text: narr }
+          } else if (current) {
+            pendingBlocks.push(current)
+            current = null
+          }
+          cursor = Math.round((cursor + secondsOf(c)) * 1000) / 1000
+        })
+        if (current) pendingBlocks.push(current)
+      }
+
+      // One TTS + upload + Whisper per block (sequential — 1-3 blocks typical).
+      // If NO scene carries narration, TTS is skipped entirely (native audio only).
+      const narrationBlocks: HollywoodNarrationBlock[] = []
+      for (const blk of pendingBlocks) {
+        try {
+          const buf = await generateTTS(blk.text, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+          if (!buf || buf.length === 0) continue
+          const dur = estimateMp3DurationSeconds(buf)
+          if (!(dur > 0.3)) continue
+          const [words, url] = await Promise.all([
+            transcribeTTSWithTimestamps(buf).catch(() => [] as WhisperWord[]),
+            uploadVoiceoverToSupabase(user.id, buf),
+          ])
+          narrationBlocks.push({
+            time: blk.time,
+            url,
+            audioDuration: dur,
+            text: blk.text,
+            words: Array.isArray(words) && words.length > 0 ? words : undefined,
+          })
+        } catch (blockErr) {
+          // Best-effort: the scene still has native ambient audio + caption.
+          console.warn('[compose] hollywood narration block failed — continuing without it:',
+            blockErr instanceof Error ? blockErr.message : String(blockErr))
+        }
+      }
+      console.log(
+        `[compose] hollywood: ${hollywoodClips.length} scenes (${hollywoodClips.map((c) => c.engine[0]).join('')}), ${narrationBlocks.length}/${pendingBlocks.length} narration block(s)`,
+      )
+
+      // Watermark / end card: hollywood users are paying Studio users, so only
+      // the FORCE list (Joseph's self-promo accounts) applies — same behavior
+      // as the other premium fal engines.
+      const forced = FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase())
+
+      let hollywoodSource: Record<string, unknown>
+      try {
+        hollywoodSource = buildHollywoodCreatomateSource({
+          clips: hollywoodClips,
+          narrationBlocks,
+          watermark: forced,
+          endCard: forced,
+        })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[compose] hollywood source build failed:', msg)
+        return NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 })
+      }
+
+      // Submit with the same one-retry protection as the standard path.
+      let hollywoodRenderId: string
+      try {
+        hollywoodRenderId = await submitCreatomateRender(hollywoodSource)
+      } catch (firstErr) {
+        console.warn('[compose] hollywood Creatomate submit failed — retrying once in 1.5s:',
+          firstErr instanceof Error ? firstErr.message : String(firstErr))
+        await new Promise((r) => setTimeout(r, 1500))
+        try {
+          hollywoodRenderId = await submitCreatomateRender(hollywoodSource)
+        } catch (err) {
+          console.error('[compose] hollywood Creatomate submit failed (after retry):',
+            err instanceof Error ? err.message : String(err))
+          return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
+        }
+      }
+
+      // Same best-effort broll_metrics link as the standard path.
+      if (body.generationId) {
+        try {
+          await supabase
+            .from('broll_metrics')
+            .update({ render_id: hollywoodRenderId, vertical: vertical ?? null, submitted_at: new Date().toISOString() })
+            .eq('generation_id', body.generationId)
+        } catch { /* best-effort */ }
+      }
+
+      return NextResponse.json({
+        render_id: hollywoodRenderId,
+        quality,
+        duration,
+        voiceover_url: narrationBlocks[0]?.url ?? '',
+      })
+    }
+    // ── end KINEO-HOLLYWOOD-2026-07-09 ──────────────────────────────────────
 
     // Step 1 — Scale the voiceover script to the right word count.
     // Push #235 — verbatim mode (explicit speed) skips scaling entirely: the

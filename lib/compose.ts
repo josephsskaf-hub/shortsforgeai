@@ -965,8 +965,11 @@ export function buildCreatomateSource({
   // visible repetition (Joseph's 60s feedback). For AI Gen we let each clip fill
   // up to 10s (its real length), so 6–9 clips cover a 60–90s video with no repeat.
   // Fast stock keeps the tight 6s cut rhythm.
+  // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood included for safety (its
+  // renders normally go through buildHollywoodCreatomateSource, but if one ever
+  // lands here it must get AI-clip pacing, never Fast's 6s recycling).
   const isAiGen =
-    quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'basic_ai'
+    quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'basic_ai'
   // Fast Mode v2 (02/07) — single gate for every v2 upgrade in this builder.
   // ONLY quality==='fast' (the free stock pipeline) opts in; absent/legacy
   // quality values keep the exact pre-v2 behavior.
@@ -1508,6 +1511,247 @@ export function buildCreatomateSource({
     elements,
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE 2.0 source builder.
+//
+// Differences vs buildCreatomateSource (which stays 100% untouched):
+//  - Clips are NOT muted. The engines generated NATIVE audio (Kling3 voice +
+//    lip sync on dialogue scenes, ambient sound on the rest). Volume per scene
+//    type: dialogue 100%, cinematic 55%, support 35%.
+//  - Timeline = the planned per-scene durations (dialogue 10s / cinematic 8s /
+//    support = planned seconds), tiled sequentially, last scene trimmed to
+//    close the 45-60s target. NOT audio-length driven.
+//  - TTS narration comes in per-BLOCK mp3s (one mp3 per contiguous run of
+//    narrated scenes), each placed at its block's timeline offset. Dialogue
+//    scenes never get narration over them.
+//  - Captions: narrated blocks use the Whisper words of THAT block's mp3
+//    shifted by the block offset (drift-free); dialogue scenes get a simple
+//    static caption (the scene caption) — robust, zero dead frames.
+//  - Background music is OFF (the native audio IS the realism).
+//  - CTA / end card / watermark follow the exact same rules as everywhere else.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HollywoodClipInput {
+  url: string
+  engine: 'dialogue' | 'cinematic' | 'support'
+  seconds: number
+  caption: string
+}
+
+export interface HollywoodNarrationBlock {
+  /** Timeline offset (seconds) where this block's narration starts. */
+  time: number
+  /** Public URL of the block's TTS mp3. */
+  url: string
+  /** Measured mp3 duration (seconds). */
+  audioDuration: number
+  /** The narration text (caption fallback when Whisper is unavailable). */
+  text: string
+  /** Whisper word timestamps for THIS block's mp3 (relative to the mp3). */
+  words?: WhisperWord[]
+}
+
+const HOLLYWOOD_CLIP_VOLUME: Record<HollywoodClipInput['engine'], string> = {
+  dialogue: '100%',
+  cinematic: '55%',
+  support: '35%',
+}
+
+export function buildHollywoodCreatomateSource({
+  clips,
+  narrationBlocks,
+  watermark = false,
+  endCard = false,
+}: {
+  clips: HollywoodClipInput[]
+  narrationBlocks: HollywoodNarrationBlock[]
+  watermark?: boolean
+  endCard?: boolean
+}): Record<string, unknown> {
+  const cleanClips = clips.filter((c) => typeof c.url === 'string' && c.url.trim().length > 0)
+  if (cleanClips.length === 0) {
+    throw new Error('No video clips provided to compose (hollywood).')
+  }
+
+  // Per-scene durations are engine-fixed (dialogue 10, cinematic 8) with the
+  // support seconds coming from the plan. Trim the LAST scene so the total
+  // closes at ≤ 60s; floor the timeline at 8s as a sanity guard.
+  const secondsFor = (c: HollywoodClipInput): number =>
+    c.engine === 'dialogue' ? 10 : c.engine === 'cinematic' ? 8 :
+    Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(10, Math.max(2, c.seconds)) : 10
+
+  const durations = cleanClips.map(secondsFor)
+  let total = durations.reduce((s, d) => s + d, 0)
+  while (total > 60 && durations.length > 0) {
+    const overflow = total - 60
+    const lastIdx = durations.length - 1
+    const trimmable = durations[lastIdx] - 2 // never below 2s
+    if (trimmable <= 0) break
+    const trim = Math.min(overflow, trimmable)
+    durations[lastIdx] = round3(durations[lastIdx] - trim)
+    total = round3(total - trim)
+    if (trim < overflow) break // last scene can't absorb more — accept slight overflow
+  }
+  const totalDuration = clamp(round3(total), 8, 90)
+
+  // Scene start offsets (cumulative).
+  const sceneStarts: number[] = []
+  {
+    let cursor = 0
+    for (const d of durations) {
+      sceneStarts.push(round3(cursor))
+      cursor = round3(cursor + d)
+    }
+  }
+
+  const elements: CreatomateElement[] = []
+  const CLIP_GAP_OVERLAP = 0.06 // same #256 micro-overlap as the standard builder
+
+  // Track 1 — solid background (never show a transparent gap).
+  elements.push({
+    type: 'shape', track: 1, time: 0, duration: totalDuration,
+    x: '50%', y: '50%', width: '100%', height: '100%', fill_color: '#08080f',
+  })
+
+  // Track 2 — scenes tiled sequentially, NATIVE AUDIO ON (volume per engine).
+  // trim_start intentionally 0: trimming a dialogue clip's head would eat the
+  // first spoken word. loop:true fills the slot if an engine returned a clip
+  // slightly shorter than planned (robustness, zero dead frames).
+  cleanClips.forEach((clip, i) => {
+    elements.push({
+      type: 'video',
+      track: 2,
+      time: sceneStarts[i],
+      duration: round3(Math.min(durations[i], totalDuration - sceneStarts[i]) + CLIP_GAP_OVERLAP),
+      source: clip.url,
+      fit: 'cover',
+      loop: true,
+      x: '50%', y: '50%', width: '100%', height: '100%',
+      volume: HOLLYWOOD_CLIP_VOLUME[clip.engine] ?? '35%',
+    })
+  })
+
+  // Track 3 — readability overlays (same as the standard builder; the niche
+  // color-grade wash is intentionally skipped — realism wants untinted footage).
+  elements.push({
+    type: 'shape', track: 3, time: 0, duration: totalDuration,
+    x: '50%', y: '50%', width: '100%', height: '100%', fill_color: 'rgba(0,0,0,0.22)',
+  })
+  elements.push({
+    type: 'shape', track: 3, time: 0, duration: totalDuration,
+    x: '50%', y: '10%', width: '100%', height: '20%', fill_color: 'rgba(0,0,0,0.55)',
+  })
+  elements.push({
+    type: 'shape', track: 3, time: 0, duration: totalDuration,
+    x: '50%', y: '90%', width: '100%', height: '20%', fill_color: 'rgba(0,0,0,0.55)',
+  })
+
+  const captionWindowEnd = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
+
+  // Track 4 — narration blocks. Each block's mp3 starts at its scene offset.
+  // The audio is capped so it can never run over the NEXT dialogue scene
+  // (native speech must stay clean) nor past the timeline end.
+  const dialogueStarts = cleanClips
+    .map((c, i) => (c.engine === 'dialogue' ? sceneStarts[i] : null))
+    .filter((v): v is number => v !== null)
+
+  for (const block of narrationBlocks) {
+    if (!block.url || !(block.audioDuration > 0)) continue
+    const nextDialogue = dialogueStarts.find((t) => t > block.time + 0.05)
+    const hardEnd = Math.min(nextDialogue ?? totalDuration, totalDuration)
+    const audioDur = round3(Math.max(0.1, Math.min(block.audioDuration, hardEnd - block.time)))
+    if (audioDur <= 0.1) continue
+    elements.push({
+      type: 'audio', track: 4, time: round3(block.time), duration: audioDur,
+      source: block.url, volume: '100%',
+    })
+
+    // Track 5 — captions for this narrated block.
+    if (Array.isArray(block.words) && block.words.length > 0) {
+      // Whisper path: timings are relative to the block mp3 → shift by offset.
+      const caps = buildCaptionsFromWhisperWords(block.words, block.audioDuration, 0, 3)
+      for (const cap of caps) {
+        const t = round3(block.time + cap.time)
+        if (t >= captionWindowEnd) continue
+        const d = round3(Math.max(0.1, Math.min(cap.duration, captionWindowEnd - t)))
+        elements.push(...buildCaptionElements({ text: cap.text, time: t, duration: d, highlight: cap.highlight }))
+      }
+    } else if (block.text && block.text.trim()) {
+      // Proportional fallback within the block window.
+      const segments = buildCaptionSegments(block.text, 3)
+      const totalWords = segments.reduce((s, seg) => s + Math.max(1, wordCount(seg.text)), 0) || 1
+      let elapsed = block.time
+      const window = Math.max(1, Math.min(audioDur, captionWindowEnd - block.time))
+      for (const seg of segments) {
+        const slot = Math.max(0.1, (Math.max(1, wordCount(seg.text)) / totalWords) * window)
+        if (elapsed >= captionWindowEnd) break
+        elements.push(...buildCaptionElements({
+          text: seg.text,
+          time: round3(elapsed),
+          duration: round3(Math.min(slot, captionWindowEnd - elapsed)),
+          highlight: seg.highlight,
+        }))
+        elapsed = round3(elapsed + slot)
+      }
+    }
+  }
+
+  // Track 5 — static captions on DIALOGUE scenes (the person's own voice
+  // carries the audio; the caption is a simple on-brand text of the line).
+  cleanClips.forEach((clip, i) => {
+    if (clip.engine !== 'dialogue') return
+    const text = (clip.caption ?? '').trim()
+    if (!text) return
+    const t = sceneStarts[i]
+    if (t >= captionWindowEnd) return
+    const d = round3(Math.max(0.5, Math.min(durations[i] - 0.2, captionWindowEnd - t)))
+    elements.push(...buildCaptionElements({ text, time: round3(t), duration: d, highlight: null }))
+  })
+
+  // Track 6 — CTA in the final window (identical to the standard builder).
+  const ctaTime = Math.max(0, totalDuration - CTA_TAIL_SECONDS)
+  elements.push({
+    type: 'text', track: 6, time: round3(ctaTime), duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
+    text: CTA_TEXT, x: '50%', y: '90%', width: '80%',
+    font_family: 'Montserrat', font_size: 30, font_weight: '700',
+    fill_color: '#ffffff', stroke_color: 'rgba(99,102,241,0.9)', stroke_width: 2,
+  })
+
+  // Track 7 — end card (same rule as the standard builder).
+  if (endCard) {
+    elements.push({
+      type: 'text', track: 7, time: round3(ctaTime), duration: Math.min(CTA_TAIL_SECONDS, totalDuration),
+      text: 'Made with Kineo', x: '50%', y: '80%', width: '86%',
+      font_family: 'Montserrat', font_size: 44, font_weight: '800',
+      fill_color: '#ffffff', stroke_color: 'rgba(99,102,241,0.95)', stroke_width: 3,
+      background_color: 'rgba(13,13,20,0.55)',
+    })
+  }
+
+  // Track 8 — background music intentionally OMITTED: the engines' native
+  // audio (voice + ambience) IS the realism; music on top breaks it.
+
+  // Track 9 — watermark (same rule as the standard builder).
+  if (watermark) {
+    elements.push({
+      type: 'text', track: 9, time: 0, duration: totalDuration,
+      text: 'usekineo.com', x: '50%', y: '5%', width: '80%',
+      font_family: 'Montserrat', font_size: 28, font_weight: '700',
+      fill_color: 'rgba(255,255,255,0.6)', stroke_color: 'rgba(0,0,0,0.35)', stroke_width: 1,
+    })
+  }
+
+  return {
+    output_format: 'mp4',
+    width: 1080,
+    height: 1920,
+    frame_rate: 30,
+    duration: totalDuration,
+    elements,
+  }
+}
+// ── end KINEO-HOLLYWOOD-2026-07-09 ───────────────────────────────────────────
 
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
   const key = process.env.CREATOMATE_API_KEY

@@ -278,7 +278,8 @@ export default function GenerateClient() {
   const planDefaultedRef = useRef<boolean>(false)
   // #402 — which AI engine the user picked: 'seedance' (AI Generated, 30 cr, all
   // plans) or 'kling' (Cinematic AI, 45 cr, Studio only).
-  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo' | 'sora'>('seedance')
+  // KINEO-HOLLYWOOD-2026-07-09 — 'hollywood' engine added (per-scene routing).
+  const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo' | 'sora' | 'hollywood'>('seedance')
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -603,6 +604,15 @@ export default function GenerateClient() {
   // #402 — quality returned by the cinematic route ('cinematic_ai' = Seedance/30
   // or 'cinematic_kling' = Kling/45). Drives the credit cost in compose/status.
   const falQualityRef = useRef<string>('cinematic_ai')
+  // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode per-scene metadata from the
+  // generate-video-cinematic response. falModelsRef is PARALLEL to the request
+  // ids (each scene polls its own fal endpoint via &models=); the other three
+  // ride along to /api/compose (per-clip volume + block TTS). Empty for every
+  // non-hollywood generation, which keeps the classic single-model poll intact.
+  const falModelsRef = useRef<string[]>([])
+  const sceneEnginesRef = useRef<string[]>([])
+  const sceneNarrationsRef = useRef<(string | null)[]>([])
+  const sceneSecondsRef = useRef<number[]>([])
   // #362 — holds the full structured script (with [Pexels:]/HOOK markers) so the
   // editable textarea can show a CLEAN, marker-free preview while submission still
   // uses the marked-up version the verbatim pipeline needs. Cleared on manual edit.
@@ -1098,7 +1108,10 @@ export default function GenerateClient() {
       try {
         const idsEncoded = encodeURIComponent(JSON.stringify(falRequestIds))
         const modelQ = falModelRef.current ? `&model=${encodeURIComponent(falModelRef.current)}` : ''
-        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}${modelQ}`, { cache: 'no-store' })
+        // KINEO-HOLLYWOOD-2026-07-09 — Hollywood generations carry one fal model
+        // PER SCENE; the status route polls each clip on its own endpoint.
+        const modelsQ = falModelsRef.current.length > 0 ? `&models=${encodeURIComponent(JSON.stringify(falModelsRef.current))}` : ''
+        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}${modelQ}${modelsQ}`, { cache: 'no-store' })
         const data = await res.json()
         if (cancelled) return
 
@@ -1128,6 +1141,20 @@ export default function GenerateClient() {
             setError('All AI clips failed to generate. Please try again.')
             setPhase('failed')
             return
+          }
+
+          // KINEO-HOLLYWOOD-2026-07-09 — keep the per-scene metadata PARALLEL
+          // to the surviving clip URLs: if a scene's clip failed, drop its
+          // engine/narration/seconds entry too (compose relies on alignment).
+          if (sceneEnginesRef.current.length > 0) {
+            const doneIdx: number[] = (data.clips ?? [])
+              .map((c: { status: string; url: string | null }, i: number) => (c.status === 'done' && c.url ? i : -1))
+              .filter((i: number) => i >= 0)
+            sceneEnginesRef.current = doneIdx.map((i) => sceneEnginesRef.current[i] ?? 'support')
+            sceneNarrationsRef.current = doneIdx.map((i) => sceneNarrationsRef.current[i] ?? null)
+            sceneSecondsRef.current = doneIdx.map((i) => sceneSecondsRef.current[i] ?? 10)
+            // Captions ride to compose as scene_captions — keep them parallel too.
+            setFastCaptions((prev) => (prev ? doneIdx.map((i) => prev[i] ?? '') : prev))
           }
 
           setClipUrls(urls)
@@ -1364,6 +1391,16 @@ export default function GenerateClient() {
             duration,
             topic: prompt,
             quality: falUsedRef.current ? falQualityRef.current : quality,
+            // KINEO-HOLLYWOOD-2026-07-09 — per-scene metadata (parallel to
+            // clip_urls) so compose routes native-audio volume + block TTS.
+            // Only sent for hollywood renders; every other mode is unchanged.
+            ...(falUsedRef.current && falQualityRef.current === 'cinematic_hollywood' && sceneEnginesRef.current.length > 0
+              ? {
+                  scene_engines: sceneEnginesRef.current,
+                  scene_narrations: sceneNarrationsRef.current,
+                  scene_seconds: sceneSecondsRef.current,
+                }
+              : {}),
             language,
             // Narration Engine (Phase 1) — pass the detected niche as vertical
             // so compose auto-selects the best AI voice persona for the content.
@@ -2130,7 +2167,13 @@ export default function GenerateClient() {
         setQuality('cinematic_ai')
         falUsedRef.current = true
         falModelRef.current = typeof data.fal_model === 'string' ? data.fal_model : ''
-        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : data.quality === 'cinematic_veo' ? 'cinematic_veo' : data.quality === 'cinematic_sora' ? 'cinematic_sora' : 'cinematic_ai'
+        falQualityRef.current = data.quality === 'cinematic_kling' ? 'cinematic_kling' : data.quality === 'cinematic_veo' ? 'cinematic_veo' : data.quality === 'cinematic_sora' ? 'cinematic_sora' : data.quality === 'cinematic_hollywood' ? 'cinematic_hollywood' : 'cinematic_ai'
+        // KINEO-HOLLYWOOD-2026-07-09 — per-scene metadata (empty arrays for
+        // every non-hollywood engine, which keeps the classic behavior).
+        falModelsRef.current = Array.isArray(data.fal_models) ? data.fal_models.filter((m: unknown): m is string => typeof m === 'string') : []
+        sceneEnginesRef.current = Array.isArray(data.scene_engines) ? data.scene_engines.filter((e: unknown): e is string => typeof e === 'string') : []
+        sceneNarrationsRef.current = Array.isArray(data.scene_narrations) ? data.scene_narrations.map((n: unknown) => (typeof n === 'string' ? n : null)) : []
+        sceneSecondsRef.current = Array.isArray(data.scene_seconds) ? data.scene_seconds.map((s: unknown) => (typeof s === 'number' ? s : 10)) : []
         setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
@@ -2825,12 +2868,13 @@ export default function GenerateClient() {
     ? 0
     : mode === 'cinematic_ai'
     // #402 — Cinematic AI (Kling) costs 60, AI Generated (Seedance) 40.
-    ? (aiEngine === 'kling' ? 90 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : 40)
+    // KINEO-HOLLYWOOD-2026-07-09 — Hollywood 260 (provisional).
+    ? (aiEngine === 'kling' ? 90 : aiEngine === 'veo' ? 180 : aiEngine === 'sora' ? 200 : aiEngine === 'hollywood' ? 260 : 40)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 15)
 
   // #384 — the free AI trial applies on the AI Generate mode when the account
   // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && freeAiUsed === false && (credits ?? 0) < 40
+  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && aiEngine !== 'hollywood' && freeAiUsed === false && (credits ?? 0) < 40
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -6081,8 +6125,9 @@ function ModeSelector({
   cinematicTokens: number
   credits: number | null
   freeAiUsed: boolean | null
-  aiEngine: 'seedance' | 'kling' | 'veo' | 'sora'
-  setAiEngine: (e: 'seedance' | 'kling' | 'veo' | 'sora') => void
+  // KINEO-HOLLYWOOD-2026-07-09 — 'hollywood' added.
+  aiEngine: 'seedance' | 'kling' | 'veo' | 'sora' | 'hollywood'
+  setAiEngine: (e: 'seedance' | 'kling' | 'veo' | 'sora' | 'hollywood') => void
   isStarter: boolean
   isCreator: boolean
   isStudio: boolean
@@ -6112,7 +6157,7 @@ function ModeSelector({
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
-  const cinematicSelected = mode === 'cinematic_ai' && (aiEngine === 'kling' || aiEngine === 'veo' || aiEngine === 'sora')
+  const cinematicSelected = mode === 'cinematic_ai' && (aiEngine === 'kling' || aiEngine === 'veo' || aiEngine === 'sora' || aiEngine === 'hollywood')
   const freeTrialBadge = noPlan && freeAiUsed === false
 
   return (
@@ -6196,9 +6241,13 @@ function ModeSelector({
             {/* KINEO-SORA-REMOVED-2026-07-06 — Sora pulled from the menu until its
                 fal cost is confirmed (margin guard). Veo + Kling are Studio-only. */}
             {([
+              // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0 (per-scene
+              // Kling3/Veo3.1/Seedance routing, native voice). Same visual
+              // pattern + same Studio gate as Veo/Kling.
+              { key: 'hollywood', label: 'Hollywood', sub: 'ultra-realistic people & voice', cr: 260 },
               { key: 'veo', label: 'Veo 3.1', sub: 'Google · best motion', cr: 180 },
               { key: 'kling', label: 'Kling', sub: 'cinematic motion', cr: 90 },
-            ] as { key: 'veo' | 'sora' | 'kling'; label: string; sub: string; cr: number }[]).map((m) => {
+            ] as { key: 'veo' | 'sora' | 'kling' | 'hollywood'; label: string; sub: string; cr: number }[]).map((m) => {
               const active = mode === 'cinematic_ai' && aiEngine === m.key
               return (
                 <button
