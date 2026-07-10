@@ -7,6 +7,9 @@
 // this resolves successfully. We retry ONCE automatically before failing, and
 // throw on failure so the route can skip the debit + tell the user.
 import { fal } from '@fal-ai/client'
+// KINEO-FAL-ALERT-LIB-2026-07-10 — founder alarm when fal balance is exhausted
+// (incident 10/07: avatar engines failed silently while fal was at $0).
+import { alertFalExhausted, looksExhausted } from '@/lib/falAlert'
 
 // fal model id for VEED Fabric 1.0 (https://fal.ai/models/veed/fabric-1.0).
 // `veed/fabric-1.0` is the standard model; `veed/fabric-1.0/fast` is the 2.5x
@@ -82,6 +85,7 @@ export async function submitAnimateJob(args: {
     } catch (err) {
       const e = err as { status?: number; message?: string }
       console.error(`[animate] queue submit attempt ${attempt} failed:`, JSON.stringify({ status: e?.status, message: e?.message }))
+      if (looksExhausted(e)) void alertFalExhausted('animate submit')
       if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
     }
   }
@@ -210,6 +214,8 @@ export async function submitAvatarJob(args: {
       console.error(`[avatar/veed] queue submit attempt ${attempt} (${model}) failed:`, JSON.stringify({
         name: e?.name, status: e?.status, message: e?.message, body: e?.body,
       }))
+      // KINEO-FAL-ALERT-LIB-2026-07-10 — exhausted balance → e-mail the founder.
+      if (looksExhausted(e)) void alertFalExhausted(`avatar submit model=${model}`)
       if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
     }
   }
@@ -246,6 +252,7 @@ export async function submitMatteJob(videoUrl: string): Promise<string | null> {
     } catch (err) {
       const e = err as { status?: number; message?: string }
       console.error(`[gesture/matte] queue submit attempt ${attempt} failed:`, JSON.stringify({ status: e?.status, message: e?.message }))
+      if (looksExhausted(e)) void alertFalExhausted('gesture matte submit')
       if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
     }
   }

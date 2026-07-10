@@ -201,19 +201,45 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <section id="toolkit">
         <div className="wrap">
-          <div className="sec-h"><h2>One idea — or a whole toolkit.</h2><p>Kineo isn&apos;t just topic-to-Short. Bring your own photo, catch what&apos;s trending, or find your next niche.</p></div>
+          {/* KINEO-SHOWCASE-2026-07-10 — toolkit expanded to 8 cards (2 rows):
+              the 4 new avatar-suite features on top, evergreen tools below. */}
+          <div className="sec-h"><h2>One idea — or a whole toolkit.</h2><p>Talking presenters, reusable characters, transparent clips, product ads — plus everything to find and ride a trend.</p></div>
           <div className="tools">
             <Link href="/avatar" className="tcard">
+              <span className="ti">🎬</span>
+              <h3>AI Presenter <span className="badge">New</span></h3>
+              <p>One photo + your script — a talking video with studio-grade lip-sync, HeyGen-style.</p>
+              <span className="tlink">Try AI Presenter →</span>
+            </Link>
+            <Link href="/avatar" className="tcard">
               <span className="ti">🎭</span>
-              <h3>AI Avatar <span className="badge">New</span></h3>
-              <p>Upload one photo and script — get a lip-synced talking video in about a minute.</p>
-              <span className="tlink">Try AI Avatar →</span>
+              <h3>Character Lock <span className="badge">New</span></h3>
+              <p>Save a character once — the exact same face in every video and thumbnail you make.</p>
+              <span className="tlink">Lock a character →</span>
+            </Link>
+            <Link href="/avatar" className="tcard">
+              <span className="ti">🫥</span>
+              <h3>Transparent Clips <span className="badge">New</span></h3>
+              <p>Presenter gestures — wave, point, present — as WebM with a real transparent background.</p>
+              <span className="tlink">Make a clip →</span>
+            </Link>
+            <Link href="/avatar" className="tcard">
+              <span className="ti">📦</span>
+              <h3>UGC Product Ads <span className="badge">New</span></h3>
+              <p>Paste any product — get a 15-30s creator-style ad, scripted and spoken for you.</p>
+              <span className="tlink">Make an ad →</span>
             </Link>
             <Link href="/animate" className="tcard">
               <span className="ti">🌀</span>
               <h3>Animate a Photo</h3>
               <p>Bring any still photo to life as a moving, postable video.</p>
               <span className="tlink">Animate a photo →</span>
+            </Link>
+            <Link href="/thumbnail-generator" className="tcard">
+              <span className="ti">🖼️</span>
+              <h3>AI Thumbnails</h3>
+              <p>Click-worthy thumbnails in the style of the biggest channels — from a prompt.</p>
+              <span className="tlink">Make a thumbnail →</span>
             </Link>
             <Link href="/viral-now" className="tcard">
               <span className="ti">🔥</span>
@@ -295,7 +321,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <img width={200} src={"https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"} alt="Featured on There's An AI For That" />
           </a>
         </div>
-        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:hello@usekineo.com">Contact</a>
+        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:support@shortsforgeai.com">Contact</a>
       </div></footer>
       <StickyFreeShortCTA />
     </main>
