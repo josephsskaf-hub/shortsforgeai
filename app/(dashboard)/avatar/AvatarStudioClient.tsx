@@ -84,7 +84,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // ── Script + options ──────────────────────────────────────────────────
   const [script, setScript] = useState('')
   const [hookMode, setHookMode] = useState(true)
-  const [engine, setEngine] = useState<'fabric' | 'omnihuman'>('fabric')
+  // KINEO-PRESENTER-2026-07-10 — 'presenter' (Kling AI Avatar v2) is the new
+  // DEFAULT: best lip-sync quality per dollar (60 credits vs 110 legacy).
+  const [engine, setEngine] = useState<'presenter' | 'fabric' | 'omnihuman'>('presenter')
   // Verbatim fix (13/06) — 'verbatim' speaks EXACTLY the typed text (no GPT
   // expansion / no 45s padding); 'expand' turns an idea into a full Short
   // script. Auto-suggested from length until the user picks manually.
@@ -138,7 +140,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video → ~47% margem Creator)
   // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase; same USD value).
   // Keep in sync with creditCostFor('avatar') in compose/status (= 110).
-  const AVATAR_COST = 110
+  // KINEO-PRESENTER-2026-07-10 — per-engine: presenter = 60 credits (Kling AI
+  // Avatar v2, keep in sync with creditCostFor('presenter')); legacy engines
+  // (fabric/omnihuman/video lipsync) stay at 110.
+  const AVATAR_COST = sourceKind === 'photo' && engine === 'presenter' ? 70 : 110
   const [avatarCredits, setAvatarCredits] = useState<number | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -156,6 +161,138 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   } | null>(null)
   const cancelledRef = useRef(false)
 
+  // KINEO-CHARACTER-LOCK-2026-07-10 — My Characters (named, persisted faces
+  // reusable across Presenter/Avatar/Hollywood; Feature 2).
+  const [myCharacters, setMyCharacters] = useState<{ id: string; name: string; image_url: string }[]>([])
+  const [charSaving, setCharSaving] = useState(false)
+  const [charMsg, setCharMsg] = useState<string | null>(null)
+
+  async function handleSaveCharacter() {
+    const imageUrl = (fidelity === 'scene' && sceneImageUrl) ? sceneImageUrl : faceUrl
+    if (!imageUrl || charSaving) return
+    const name = (window.prompt('Name this character (e.g. "Hope — advisor"):') ?? '').trim()
+    if (!name) return
+    setCharSaving(true)
+    setCharMsg(null)
+    try {
+      const res = await fetch('/api/characters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, imageUrl, source: sceneImageUrl ? 'scene' : 'upload' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.character) {
+        setCharMsg(typeof data?.error === 'string' ? data.error : 'Could not save the character.')
+        return
+      }
+      setMyCharacters((cs) => [data.character, ...cs])
+      setCharMsg(`✓ "${name}" saved — reuse it in any future video (including Hollywood).`)
+    } catch {
+      setCharMsg('Could not save the character. Please try again.')
+    } finally {
+      setCharSaving(false)
+    }
+  }
+
+  // KINEO-GESTURE-2026-07-10 — transparent gesture clips (Feature 3).
+  const [gesture, setGesture] = useState<'wave' | 'point' | 'thumbs_up' | 'hold_tablet' | 'nod' | 'explain'>('wave')
+  const [gestureDuration, setGestureDuration] = useState<'5' | '10'>('5')
+  const [gestureBusy, setGestureBusy] = useState(false)
+  const [gestureUrl, setGestureUrl] = useState<string | null>(null)
+  const [gestureRawUrl, setGestureRawUrl] = useState<string | null>(null)
+  const [gestureError, setGestureError] = useState<string | null>(null)
+  const gestureRunRef = useRef<{ id: string; stage: string; matteId: string | null } | null>(null)
+
+  async function pollGesture() {
+    const run = gestureRunRef.current
+    if (!run || cancelledRef.current) return
+    try {
+      const params = new URLSearchParams({ request_id: run.id, stage: run.stage })
+      if (run.matteId) params.set('matte_id', run.matteId)
+      const res = await fetch(`/api/gesture-clip-status?${params.toString()}`, { cache: 'no-store' })
+      const data = await res.json()
+      if (cancelledRef.current) return
+      if (typeof data.stage === 'string') run.stage = data.stage
+      if (typeof data.matte_request_id === 'string') run.matteId = data.matte_request_id
+      if (typeof data.raw_video_url === 'string') setGestureRawUrl(data.raw_video_url)
+      if (data.status === 'done' && typeof data.video_url === 'string') {
+        setGestureUrl(data.video_url)
+        setGestureBusy(false)
+        try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
+        return
+      }
+      if (data.status === 'failed') {
+        setGestureError(typeof data.error === 'string' ? data.error : 'Clip generation failed.')
+        setGestureBusy(false)
+        return
+      }
+      setTimeout(pollGesture, 5000)
+    } catch {
+      setTimeout(pollGesture, 7000)
+    }
+  }
+
+  async function handleGesture() {
+    if (!faceUrl || gestureBusy) return
+    setGestureBusy(true)
+    setGestureError(null)
+    setGestureUrl(null)
+    setGestureRawUrl(null)
+    try {
+      const res = await fetch('/api/gesture-clip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: (fidelity === 'scene' && sceneImageUrl) ? sceneImageUrl : faceUrl, gesture, duration: gestureDuration }),
+      })
+      const data = await res.json()
+      if (!res.ok || typeof data?.request_id !== 'string') {
+        setGestureError(typeof data?.error === 'string' ? data.error : 'Could not start the clip.')
+        setGestureBusy(false)
+        return
+      }
+      gestureRunRef.current = { id: data.request_id, stage: 'animate', matteId: null }
+      setAvatarCredits((c) => (typeof c === 'number' && typeof data.credits_charged === 'number' ? Math.max(0, c - data.credits_charged) : c))
+      void pollGesture()
+    } catch {
+      setGestureError('Could not start the clip. Please try again.')
+      setGestureBusy(false)
+    }
+  }
+
+  // KINEO-UGC-AD-2026-07-10 — Product Ad mode (Feature 4): product info →
+  // 15-30s UGC ad script dropped straight into the script box (verbatim).
+  const [adOpen, setAdOpen] = useState(false)
+  const [adProduct, setAdProduct] = useState('')
+  const [adAudience, setAdAudience] = useState('')
+  const [adOffer, setAdOffer] = useState('')
+  const [adLoading, setAdLoading] = useState(false)
+  const [adError, setAdError] = useState<string | null>(null)
+
+  async function handleAdScript() {
+    if (!adProduct.trim() || adLoading) return
+    setAdLoading(true)
+    setAdError(null)
+    try {
+      const res = await fetch('/api/ad-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: adProduct.trim(), audience: adAudience.trim(), offer: adOffer.trim(), language }),
+      })
+      const data = await res.json()
+      if (!res.ok || typeof data?.script !== 'string') {
+        setAdError(typeof data?.error === 'string' ? data.error : 'Could not write the ad script.')
+        return
+      }
+      setScript(data.script)
+      userPickedModeRef.current = true
+      setScriptMode('verbatim')
+    } catch {
+      setAdError('Could not write the ad script. Please try again.')
+    } finally {
+      setAdLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn) return
     fetch('/api/avatar/list', { cache: 'no-store' })
@@ -165,6 +302,13 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           setSavedFaces(d.avatars as SavedFace[])
           if (d.avatars[0]?.url) setFaceUrl(d.avatars[0].url as string)
         }
+      })
+      .catch(() => {})
+    // KINEO-CHARACTER-LOCK-2026-07-10 — load the character library.
+    fetch('/api/characters', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { characters: [] }))
+      .then((d) => {
+        if (Array.isArray(d?.characters)) setMyCharacters(d.characters)
       })
       .catch(() => {})
     fetch('/api/credits', { cache: 'no-store' })
@@ -520,7 +664,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           // the fallback, so never send a 52s fallback for a 5s verbatim line.
           duration: run.realAudioDuration != null ? Math.max(3, Math.ceil(run.realAudioDuration)) : requestDuration,
           topic: script.trim().slice(0, 200),
-          quality: 'avatar',
+          // KINEO-PRESENTER-2026-07-10 — presenter renders debit 60 credits via
+          // their own quality; everything else stays on 'avatar' (110).
+          quality: run.engine === 'presenter' ? 'presenter' : 'avatar',
           language: 'en',
           avatar_url: avatarVideoUrl,
           voiceover_url: run.voiceoverUrl,
@@ -545,7 +691,14 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
 
   async function pollRender(renderId: string, deducted: boolean) {
     try {
-      const res = await fetch(`/api/compose/status/${encodeURIComponent(renderId)}?deducted=${deducted ? 1 : 0}`, { cache: 'no-store' })
+      // KINEO-AVATAR-DEBIT-FIX-2026-07-10 — REVENUE-LEAK FIX: this poll never
+      // sent `quality`, so compose/status collapsed every avatar render to
+      // 'basic_ai' → shouldDeductCredits=false → avatar videos (real VEED cost
+      // ~$9.60) were NEVER debited (confirmed in prod: videos rows with
+      // quality_mode=basic_ai and no credit_debits row). Same class of bug as
+      // push #361. Now the engine that ran drives the quality param.
+      const pollQuality = runRef.current?.engine === 'presenter' ? 'presenter' : 'avatar'
+      const res = await fetch(`/api/compose/status/${encodeURIComponent(renderId)}?deducted=${deducted ? 1 : 0}&quality=${pollQuality}`, { cache: 'no-store' })
       const data = await res.json()
       if (cancelledRef.current) return
       if (data.phase === 'done' && typeof data.final_video_url === 'string') {
@@ -553,8 +706,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         setProgress(100)
         setPhase('done')
         if (data.creditsDeducted === true) {
-          // KINEO-AVATAR-120-2026-07-06 — 120 universal credits per avatar video.
-          setAvatarCredits((c) => (typeof c === 'number' ? Math.max(0, c - AVATAR_COST) : c))
+          // KINEO-PRESENTER-2026-07-10 — decrement by the cost of the engine
+          // that actually RAN (runRef), not the currently selected one.
+          const ranCost = runRef.current?.engine === 'presenter' ? 70 : 110
+          setAvatarCredits((c) => (typeof c === 'number' ? Math.max(0, c - ranCost) : c))
         }
         try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
         return
@@ -620,6 +775,29 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
 
             {sourceKind === 'photo' ? (
               <>
+                {/* KINEO-CHARACTER-LOCK-2026-07-10 — My Characters: named,
+                    persisted presenters (one click = identical face again). */}
+                {myCharacters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {myCharacters.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setFaceUrl(c.image_url)}
+                        disabled={busy}
+                        title={`Use character "${c.name}"`}
+                        aria-label={`Use character ${c.name}`}
+                        className="flex items-center gap-1.5 rounded-full pr-2.5"
+                        style={{ padding: 2, paddingRight: 10, border: faceUrl === c.image_url ? '2px solid #2997ff' : '2px solid var(--border)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer' }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={c.image_url} alt={c.name} className="h-9 w-9 rounded-full object-cover" />
+                        <span className="text-[11px] font-bold" style={{ color: faceUrl === c.image_url ? '#2997ff' : 'var(--muted2)' }}>{c.name}</span>
+                      </button>
+                    ))}
+                    <span className="text-[11px]" style={{ color: 'var(--muted)' }}>🎭 your characters</span>
+                  </div>
+                )}
                 {savedFaces.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     {savedFaces.map((f) => (
@@ -750,6 +928,23 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   {sceneError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>{sceneError}</p>}
                 </>
               )}
+              {/* KINEO-CHARACTER-LOCK-2026-07-10 — save the current face/scene
+                  as a NAMED character, reusable in every future video (incl.
+                  Hollywood dialogue anchor). Upwork-validated demand. */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleSaveCharacter}
+                  disabled={busy || charSaving}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.45)', color: '#2997ff', cursor: busy || charSaving ? 'not-allowed' : 'pointer' }}
+                >
+                  {charSaving ? '💾 Saving character…' : '💾 Save as character — same face in every video'}
+                </button>
+                {charMsg && (
+                  <span className="text-[11px] font-bold" style={{ color: charMsg.startsWith('✓') ? '#7cc0ff' : '#f87171' }}>{charMsg}</span>
+                )}
+              </div>
             </section>
           )}
 
@@ -823,6 +1018,67 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 ? `Spoken word for word — nothing added. ~${requestDuration}s of video.`
                 : 'AI builds a full 45–60s script around your idea (hook, build, payoff).'}
             </p>
+
+            {/* KINEO-UGC-AD-2026-07-10 — Product Ad mode (Feature 4): paste
+                product info → UGC ad script (hook/benefits/CTA) fills the box. */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setAdOpen((o) => !o)}
+                disabled={busy}
+                className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                style={{ background: adOpen ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: adOpen ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: adOpen ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+              >
+                📦 Product Ad mode — sell a product UGC-style <span style={{ fontSize: 8 }}>NEW</span>
+              </button>
+              {adOpen && (
+                <div className="mt-2.5 flex flex-col gap-2">
+                  <textarea
+                    value={adProduct}
+                    onChange={(e) => setAdProduct(e.target.value)}
+                    disabled={busy || adLoading}
+                    maxLength={1200}
+                    rows={3}
+                    placeholder={'Paste the product name + description (or the product page text) — e.g. "GlowUp LED face mask, 3 light modes, reduces fine lines, $49"'}
+                    className="w-full rounded-xl px-3.5 py-3 text-sm leading-relaxed resize-none"
+                    style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      value={adAudience}
+                      onChange={(e) => setAdAudience(e.target.value)}
+                      disabled={busy || adLoading}
+                      maxLength={300}
+                      placeholder="Target audience (e.g. women 25-40 into skincare)"
+                      className="flex-1 min-w-[200px] rounded-xl px-3.5 py-2.5 text-sm"
+                      style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+                    />
+                    <input
+                      value={adOffer}
+                      onChange={(e) => setAdOffer(e.target.value)}
+                      disabled={busy || adLoading}
+                      maxLength={200}
+                      placeholder="Offer/CTA (e.g. 40% off this week, link in bio)"
+                      className="flex-1 min-w-[200px] rounded-xl px-3.5 py-2.5 text-sm"
+                      style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleAdScript}
+                      disabled={busy || adLoading || !adProduct.trim()}
+                      className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                      style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.45)', color: '#2997ff', cursor: busy || adLoading || !adProduct.trim() ? 'not-allowed' : 'pointer' }}
+                    >
+                      {adLoading ? '📦 Writing your ad…' : '📦 Write my ad script (15–30s)'}
+                    </button>
+                    <span className="text-[11px]" style={{ color: 'var(--muted)' }}>Free — fills the script box above, then generate with your presenter.</span>
+                  </div>
+                  {adError && <p className="text-xs font-semibold" style={{ color: '#f87171' }}>⚠️ {adError}</p>}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3 mt-3 flex-wrap">
               <button
                 type="button"
@@ -916,12 +1172,21 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
               <div className="flex flex-wrap gap-2 mt-2.5">
                 <button
                   type="button"
+                  onClick={() => setEngine('presenter')}
+                  disabled={busy}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: engine === 'presenter' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'presenter' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'presenter' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                >
+                  🎬 AI Presenter — best lip-sync · 70 cr <span style={{ fontSize: 8 }}>NEW</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setEngine('fabric')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
                   style={{ background: engine === 'fabric' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'fabric' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'fabric' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
                 >
-                  🎙️ Standard — talking head
+                  🎙️ Standard — talking head · 110 cr
                 </button>
                 <button
                   type="button"
@@ -966,6 +1231,71 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
             )}
             {error && <p className="text-sm font-semibold rounded-xl px-4 py-3" style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }} role="alert">⚠️ {error}</p>}
           </section>
+
+          {/* KINEO-GESTURE-2026-07-10 — 5 · Transparent gesture clips (Feature
+              3). E-learning/corporate deliverable: WebM with embedded alpha. */}
+          {sourceKind === 'photo' && faceUrl && (
+            <section className="neon-card p-5">
+              <h2 className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted2)' }}>
+                5 · Gesture clips — transparent background <span style={{ fontSize: 8 }}>NEW</span>
+              </h2>
+              <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>
+                Short clips of your presenter waving, pointing, presenting — delivered as WebM with a REAL transparent background. Drop them straight into Storyline, Premiere, CapCut or any slide. No green screen, no keying.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2.5">
+                {([['wave', '👋 Wave'], ['point', '👉 Point'], ['thumbs_up', '👍 Thumbs up'], ['hold_tablet', '📱 Hold tablet'], ['nod', '🙂 Nod'], ['explain', '🗣️ Explain']] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setGesture(k)}
+                    disabled={gestureBusy}
+                    className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                    style={{ background: gesture === k ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: gesture === k ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: gesture === k ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {(['5', '10'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setGestureDuration(d)}
+                    disabled={gestureBusy}
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                    style={{ background: gestureDuration === d ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: gestureDuration === d ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: gestureDuration === d ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                  >
+                    {d}s · {d === '5' ? 15 : 25} credits
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleGesture}
+                  disabled={gestureBusy || !faceUrl || !isLoggedIn}
+                  className="rounded-lg px-4 py-2.5 text-[13px] font-bold"
+                  style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.45)', color: '#2997ff', cursor: gestureBusy || !faceUrl ? 'not-allowed' : 'pointer' }}
+                >
+                  {gestureBusy ? '🫥 Making it transparent…' : '🫥 Generate transparent clip'}
+                </button>
+                <span className="text-[11px]" style={{ color: 'var(--muted)' }}>auto-refunded if it fails</span>
+              </div>
+              {gestureError && <p className="text-xs mt-2 font-semibold" style={{ color: '#f87171' }}>⚠️ {gestureError}</p>}
+              {gestureUrl && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <video src={gestureUrl} controls loop autoPlay muted playsInline style={{ width: 200, borderRadius: 12, background: 'repeating-conic-gradient(#2a2a2e 0% 25%, #1a1a1d 0% 50%) 50% / 20px 20px' }} />
+                  <div className="flex flex-wrap gap-3">
+                    <a href={gestureUrl} download className="text-[12px] font-bold underline" style={{ color: '#2997ff' }}>⬇️ Download transparent WebM</a>
+                    {gestureRawUrl && (
+                      <a href={gestureRawUrl} download className="text-[12px] font-bold underline" style={{ color: 'var(--muted2)' }}>⬇️ Original MP4 (with background)</a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         {/* ── RIGHT: live phone preview + status ── */}

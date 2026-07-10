@@ -66,6 +66,9 @@ export async function refundRenderCredits(renderId: string): Promise<number> {
  *               /api/avatar-status instead.
  *   legacy-%  — same reason: the legacy /api/render path never persists to
  *               `videos`. Its failures are refunded live by /api/render/[id].
+ *   gesture-% — KINEO-GESTURE-2026-07-10: transparent gesture clips never
+ *               persist to `videos` (the WebM IS the product, no compose).
+ *               Their failures are refunded live by /api/gesture-clip-status.
  */
 export async function sweepStuckRenderDebits(): Promise<{
   scanned: number
@@ -85,6 +88,9 @@ export async function sweepStuckRenderDebits(): Promise<{
     .lt('created_at', cutoff)
     .not('render_id', 'like', 'animate-%')
     .not('render_id', 'like', 'legacy-%')
+    // KINEO-GESTURE-2026-07-10 — success = no videos row (normal); live
+    // failure refunds happen in /api/gesture-clip-status.
+    .not('render_id', 'like', 'gesture-%')
     .order('created_at', { ascending: false })
     .limit(200)
 

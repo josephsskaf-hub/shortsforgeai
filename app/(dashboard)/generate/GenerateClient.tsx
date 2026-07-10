@@ -281,6 +281,22 @@ export default function GenerateClient() {
   // plans) or 'kling' (Cinematic AI, 50 cr — KINEO-PRICING-V3B-2026-07-10).
   // KINEO-HOLLYWOOD-2026-07-09 — 'hollywood' engine added (per-scene routing).
   const [aiEngine, setAiEngine] = useState<'seedance' | 'kling' | 'veo' | 'sora' | 'hollywood'>('seedance')
+  // KINEO-CHARACTER-LOCK-2026-07-10 — My Characters: saved presenters the user
+  // can lock into Hollywood renders (same face across every video). Loaded
+  // lazily the first time the hollywood engine is selected.
+  const [characters, setCharacters] = useState<{ id: string; name: string; image_url: string }[]>([])
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('')
+  const charactersLoadedRef = useRef(false)
+  useEffect(() => {
+    if (aiEngine !== 'hollywood' || charactersLoadedRef.current) return
+    charactersLoadedRef.current = true
+    fetch('/api/characters', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { characters: [] }))
+      .then((d) => {
+        if (Array.isArray(d?.characters)) setCharacters(d.characters)
+      })
+      .catch(() => {})
+  }, [aiEngine])
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -2162,7 +2178,9 @@ export default function GenerateClient() {
         const res = await fetch('/api/generate-video-cinematic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined }),
+          // KINEO-CHARACTER-LOCK-2026-07-10 — lock a saved character into
+          // Hollywood renders (server resolves id → portrait anchor).
+          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined, ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }
@@ -3469,6 +3487,40 @@ export default function GenerateClient() {
             hasPaid={hasPaid}
             onUpgrade={openOutOfCreditsModal}
           />
+          )}
+
+          {/* KINEO-CHARACTER-LOCK-2026-07-10 — Hollywood character picker.
+              Only rendered when the hollywood engine is selected AND the user
+              has saved characters (Avatar Studio → "Save as character"). */}
+          {mode === 'cinematic_ai' && aiEngine === 'hollywood' && characters.length > 0 && (
+            <div className="mt-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+                🎭 Lock a character <span style={{ textTransform: 'none', fontWeight: 600 }}>— same face in every video</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCharacterId('')}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: !selectedCharacterId ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: !selectedCharacterId ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: !selectedCharacterId ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                >
+                  ✨ New face each video
+                </button>
+                {characters.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedCharacterId(c.id)}
+                    className="rounded-lg px-2 py-1.5 text-[12px] font-bold flex items-center gap-2"
+                    style={{ background: selectedCharacterId === c.id ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: selectedCharacterId === c.id ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: selectedCharacterId === c.id ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.image_url} alt={c.name} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Push #034: duration + quality selectors moved here from the

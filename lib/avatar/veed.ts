@@ -31,13 +31,23 @@ const LIPSYNC_MODEL = 'fal-ai/sync-lipsync'
 // ~$0.07/s (~$0.35 per 5s clip).
 const ANIMATE_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'
 
-/** Which model animates the avatar. 'fabric' = talking head from a photo
- *  (default); 'omnihuman' = full-figure body & gestures from a photo ("Pro");
- *  'lipsync' = re-voice a real VIDEO of the person (Avatar Studio);
- *  'animate' = image-to-video motion (no narration — photo comes alive). */
-export type AvatarEngine = 'fabric' | 'omnihuman' | 'lipsync' | 'animate'
+// KINEO-PRESENTER-2026-07-10 — AI Presenter engine: Kling AI Avatar v2
+// Standard (https://fal.ai/models/fal-ai/kling-video/ai-avatar/v2/standard).
+// Photo + audio → realistic talking human with native lip-sync, at $0.0562/s
+// — ~1/3 of VEED Fabric's $0.15/s ($3.37 vs $9.00 per 60s video). Input is
+// { image_url, audio_url } (NO resolution param); output { video: { url } }.
+// Validated demand: the #1 recurring ask across Upwork AI-video jobs (09-10/07).
+const PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
+
+/** Which model animates the avatar. 'presenter' = Kling AI Avatar v2 talking
+ *  human (best lip-sync per dollar, KINEO-PRESENTER); 'fabric' = VEED talking
+ *  head from a photo (legacy default); 'omnihuman' = full-figure body &
+ *  gestures from a photo ("Pro"); 'lipsync' = re-voice a real VIDEO of the
+ *  person (Avatar Studio); 'animate' = image-to-video motion (no narration). */
+export type AvatarEngine = 'presenter' | 'fabric' | 'omnihuman' | 'lipsync' | 'animate'
 
 function modelFor(engine: AvatarEngine | undefined): string {
+  if (engine === 'presenter') return PRESENTER_MODEL
   if (engine === 'omnihuman') return OMNIHUMAN_MODEL
   if (engine === 'lipsync') return LIPSYNC_MODEL
   if (engine === 'animate') return ANIMATE_MODEL
@@ -145,6 +155,8 @@ export const VEED_720P_USD_PER_SECOND = 0.15
 export const VEED_480P_USD_PER_SECOND = 0.08
 // OmniHuman v1.5 @720p — slightly above Fabric; surfaced in the cost estimate.
 export const OMNIHUMAN_720P_USD_PER_SECOND = 0.16
+// KINEO-PRESENTER-2026-07-10 — Kling AI Avatar v2 Standard ($0.0562/s on fal).
+export const PRESENTER_USD_PER_SECOND = 0.0562
 
 // ── Queue mode (used by /api/generate-avatar + /api/avatar-status) ──────────
 // VEED takes minutes for a 45-60s talking head, far beyond a Vercel function
@@ -176,16 +188,19 @@ export async function submitAvatarJob(args: {
 }): Promise<string | null> {
   if (!configureFal()) return null
   const model = modelFor(args.engine)
-  // lipsync re-voices a video (video_url + audio_url); the photo engines
-  // animate a still (image_url + audio_url + resolution).
+  // lipsync re-voices a video (video_url + audio_url); presenter (Kling AI
+  // Avatar v2) takes image_url + audio_url with NO resolution param; the
+  // legacy photo engines animate a still (image_url + audio_url + resolution).
   const input: Record<string, unknown> =
     args.engine === 'lipsync'
       ? { video_url: args.videoUrl, audio_url: args.audioUrl }
-      : {
-          image_url: args.imageUrl,
-          audio_url: args.audioUrl,
-          resolution: args.resolution ?? '720p',
-        }
+      : args.engine === 'presenter'
+        ? { image_url: args.imageUrl, audio_url: args.audioUrl }
+        : {
+            image_url: args.imageUrl,
+            audio_url: args.audioUrl,
+            resolution: args.resolution ?? '720p',
+          }
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const { request_id } = await fal.queue.submit(model, { input })
@@ -204,6 +219,64 @@ export async function submitAvatarJob(args: {
 export type AvatarJobState = {
   status: 'pending' | 'processing' | 'done' | 'failed'
   videoUrl: string | null
+}
+
+// ── KINEO-GESTURE-2026-07-10 — transparent gesture clips (Feature 3) ────────
+// Stage 2 of the gesture pipeline: VEED video background removal on fal
+// (https://fal.ai/models/veed/video-background-removal/fast). Input
+// { video_url, output_codec:'vp9' } → WebM with EMBEDDED ALPHA channel — the
+// e-learning deliverable (Articulate Storyline etc.) clients pay $100+/pack
+// for on Upwork. No green screen needed (person auto-matted).
+const MATTE_MODEL = 'veed/video-background-removal/fast'
+
+/** Submit the background-removal job for a finished gesture clip. */
+export async function submitMatteJob(videoUrl: string): Promise<string | null> {
+  if (!configureFal()) return null
+  const model: string = MATTE_MODEL
+  const input: Record<string, unknown> = {
+    video_url: videoUrl,
+    output_codec: 'vp9', // single WebM with embedded alpha
+    refine_foreground_edges: true,
+    subject_is_person: true,
+  }
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { request_id } = await fal.queue.submit(model, { input })
+      if (request_id) return request_id
+    } catch (err) {
+      const e = err as { status?: number; message?: string }
+      console.error(`[gesture/matte] queue submit attempt ${attempt} failed:`, JSON.stringify({ status: e?.status, message: e?.message }))
+      if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
+    }
+  }
+  return null
+}
+
+/** Poll the matte job. Output shape: { video: [{ url, content_type }] }. */
+export async function checkMatteJob(requestId: string): Promise<AvatarJobState> {
+  if (!configureFal()) return { status: 'failed', videoUrl: null }
+  try {
+    const st = await fal.queue.status(MATTE_MODEL, { requestId })
+    const s = (st as { status?: string }).status
+    if (s === 'IN_QUEUE') return { status: 'pending', videoUrl: null }
+    if (s === 'IN_PROGRESS') return { status: 'processing', videoUrl: null }
+    if (s === 'COMPLETED') {
+      const res = await fal.queue.result(MATTE_MODEL, { requestId })
+      const data = ((res as { data?: unknown }).data ?? res) as {
+        video?: Array<{ url?: string }> | { url?: string }
+      }
+      const url = Array.isArray(data?.video)
+        ? data.video[0]?.url ?? null
+        : (data?.video as { url?: string } | undefined)?.url ?? null
+      if (url) return { status: 'done', videoUrl: url }
+      console.error(`[gesture/matte] job ${requestId} completed but returned no video URL`)
+      return { status: 'failed', videoUrl: null }
+    }
+    return { status: 'failed', videoUrl: null }
+  } catch (err) {
+    console.error(`[gesture/matte] status check failed for ${requestId}:`, err instanceof Error ? err.message : String(err))
+    return { status: 'failed', videoUrl: null }
+  }
 }
 
 /** Poll the fal queue for the avatar job (mirrors cinematic-clip-status). */

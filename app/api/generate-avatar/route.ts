@@ -39,6 +39,7 @@ import {
   submitAvatarJob,
   VEED_720P_USD_PER_SECOND,
   OMNIHUMAN_720P_USD_PER_SECOND,
+  PRESENTER_USD_PER_SECOND,
   type AvatarEngine,
 } from '@/lib/avatar/veed'
 import { synthesizeWithVoice } from '@/lib/avatar/voice'
@@ -178,9 +179,12 @@ export async function POST(req: NextRequest) {
     // Avatar Studio — video source takes precedence and forces the lipsync engine.
     const avatarSourceVideoUrl = (body.avatarSourceVideoUrl ?? '').trim()
     const videoMode = avatarSourceVideoUrl.length > 0
+    // KINEO-PRESENTER-2026-07-10 — 'presenter' (Kling AI Avatar v2) accepted.
     const engine: AvatarEngine = videoMode
       ? 'lipsync'
-      : body.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
+      : body.engine === 'omnihuman' ? 'omnihuman'
+      : body.engine === 'presenter' ? 'presenter'
+      : 'fabric'
     if (!dryRun && videoMode && !avatarSourceVideoUrl.startsWith(storagePrefix)) {
       return NextResponse.json({ error: 'Please upload your video first.' }, { status: 400 })
     }
@@ -214,7 +218,15 @@ export async function POST(req: NextRequest) {
     // The 402 matches the universal out-of-credits shape used by Fast/compose
     // (upsell:'credits' → the $4.90 pack / plan upgrade modal), NOT the retired
     // avatar_pack. Voice dry runs (internal, cents of TTS) skip the gate.
-    const AVATAR_CREDIT_COST = 220 // KINEO-AVATAR-220-2026-07-07 (repriced 120->220, custo real ~$9.60)
+    // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase). This gate was
+    // missed in the rebase push and stayed at 220 while compose/status debits
+    // 110 — users with 110-219 credits were wrongly blocked. Fixed here.
+    // KINEO-PRESENTER-2026-07-10 — per-engine cost: 'presenter' (Kling AI
+    // Avatar v2 Standard, $0.0562/s → ~$3.37/60s real cost) charges 70
+    // credits (~71% margin on Creator $/cr; Joseph subiu 60→70 em 10/07); the
+    // VEED/OmniHuman engines stay at 110 (real cost ~$9-9.60/60s). Keep in
+    // sync with creditCostFor() in compose/status ('presenter' → 70).
+    const AVATAR_CREDIT_COST = engine === 'presenter' ? 70 : 110
     if (!dryRun) {
       const { data: avProfile } = await supabase
         .from('profiles')
@@ -414,7 +426,10 @@ export async function POST(req: NextRequest) {
       ? avatarHookSeconds
       : realAudioDuration > 4 ? realAudioDuration : duration
     const generationId = randomUUID()
-    const usdPerSecond = engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND : VEED_720P_USD_PER_SECOND
+    const usdPerSecond =
+      engine === 'presenter' ? PRESENTER_USD_PER_SECOND
+      : engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND
+      : VEED_720P_USD_PER_SECOND
     console.log(
       `[generate-avatar] submitted user=${user.id.slice(0, 8)} engine=${engine} request=${requestId} audio=${estSeconds.toFixed(1)}s clips=${clipUrls.length} generationId=${generationId}`,
     )

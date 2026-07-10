@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 // Protection rule intact: a failed render never charges (debit is success-only,
 // idempotent by render_id).
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (260 cr, provisional).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar' | 'presenter'
 
 // KINEO-PRICING-V3C-2026-07-10 — creditCostFor now takes isPaidUser so Fast
 // can cost 1 credit for PAYING accounts while staying 0 for free users (the
@@ -55,6 +55,12 @@ function creditCostFor(quality: Quality, isPaidUser = false): number {
       // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video).
       // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase; same USD value).
       return 110
+    case 'presenter':
+      // KINEO-PRESENTER-2026-07-10 — AI Presenter (Kling AI Avatar v2 Standard,
+      // $0.0562/s → ~$3.37 per 60s). 70 credits ≈ $11.62 of Creator credit
+      // value → ~71% margin (Joseph subiu 60→70 em 10/07). Keep in sync with
+      // AVATAR_CREDIT_COST in generate-avatar.
+      return 70
     case 'cinematic_ai':
       // KINEO-REBASE-2026-07-10 — 40 → 20 (2:1 rebase). Keep in sync with
       // SEEDANCE_CREDIT_COST in generate-video-cinematic.
@@ -231,7 +237,7 @@ export async function GET(
     // revenue-leak lesson: an unlisted quality silently collapses to basic_ai
     // and charges nothing).
     const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'cinematic_hollywood' || qParam === 'avatar'
+      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'cinematic_hollywood' || qParam === 'avatar' || qParam === 'presenter'
         ? (qParam as Quality)
         : 'basic_ai'
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -322,7 +328,7 @@ export async function GET(
       // auto-refund on failure covers it too).
       // KINEO-PRICING-V3C-2026-07-10 — 'fast' is back in the whitelist ONLY for
       // paying accounts (fastIsPaidUser). Free Fast stays out (nothing to debit).
-      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || (quality === 'fast' && fastIsPaidUser)
+      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || quality === 'presenter' || (quality === 'fast' && fastIsPaidUser)
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.

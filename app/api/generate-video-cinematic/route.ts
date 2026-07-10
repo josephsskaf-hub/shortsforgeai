@@ -419,7 +419,10 @@ export async function POST(req: NextRequest) {
 
     // KINEO-HOLLYWOOD-2026-07-09 — `language` accepted (already sent by the
     // client) so the Hollywood planner knows the input language.
-    let body: { prompt?: string; duration?: number; engine?: string; language?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
+    // KINEO-CHARACTER-LOCK-2026-07-10 — characterId: a saved character (My
+    // Characters) whose portrait replaces the generated Hollywood PORTRAIT
+    // anchor → the SAME person appears across every video the user makes.
+    let body: { prompt?: string; duration?: number; engine?: string; language?: string; characterId?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
     try {
       body = await req.json()
     } catch {
@@ -702,6 +705,34 @@ export async function POST(req: NextRequest) {
         anchors = null
       }
       if (!anchors) console.warn('[cinematic] hollywood 3.0 anchors unavailable — using v2.4 t2v path')
+
+      // KINEO-CHARACTER-LOCK-2026-07-10 — a saved character OVERRIDES the
+      // generated portrait anchor: dialogue scenes are seeded with the user's
+      // character image, so the presenter is the SAME person in every video.
+      // Server-side ownership lookup (id → url); the client never injects raw
+      // URLs. Fail-open: an invalid id just falls back to the generated portrait.
+      const characterIdRaw = (body.characterId ?? '').toString().trim()
+      if (characterIdRaw) {
+        try {
+          const { getCharacterImageUrl } = await import('@/lib/characters')
+          const charUrl = await getCharacterImageUrl(user.id, characterIdRaw)
+          if (charUrl) {
+            if (anchors) {
+              anchors = { ...anchors, portraitUrl: charUrl }
+            } else {
+              // No generated anchors (flux hiccup) — still lock the character
+              // for dialogue scenes; support scenes use the same image as a
+              // world reference rather than dropping the lock entirely.
+              anchors = { portraitUrl: charUrl, environmentUrl: charUrl }
+            }
+            console.log(`[cinematic] hollywood character-lock active char=${characterIdRaw.slice(0, 8)}`)
+          } else {
+            console.warn('[cinematic] character-lock id not found/owned — using generated portrait')
+          }
+        } catch (e) {
+          console.warn('[cinematic] character-lock lookup failed (fail-open):', e instanceof Error ? e.message : String(e))
+        }
+      }
 
       // Submit each scene to ITS engine — same stagger/retry as the classic
       // path, but the model is per scene (no single-model fallback here: a

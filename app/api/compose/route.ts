@@ -48,7 +48,7 @@ const DURATION_TOLERANCE_SECONDS = 3
 // Checkpoint 1: no credit cost wired yet (billing lands in checkpoint 2).
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (per-scene engines,
 // native audio, block TTS).
-type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar'
+type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar' | 'presenter'
 
 interface ComposeBody {
   generationId?: string
@@ -147,8 +147,10 @@ export async function POST(req: NextRequest) {
     // feature/ai-avatar — avatar requests are validated below (quality parse +
     // URL allow-list); they may legitimately carry ZERO stock clips because
     // the talking head fills the whole timeline.
+    // KINEO-PRESENTER-2026-07-10 — 'presenter' (Kling AI Avatar v2, 60cr) is
+    // an avatar-shaped request: same payload contract, cheaper engine.
     const isAvatarReq =
-      (body.quality ?? '').toString() === 'avatar' &&
+      ((body.quality ?? '').toString() === 'avatar' || (body.quality ?? '').toString() === 'presenter') &&
       typeof body.avatar_url === 'string' &&
       body.avatar_url.trim().length > 0
 
@@ -197,6 +199,10 @@ export async function POST(req: NextRequest) {
       // feature/ai-avatar — 'avatar' accepted ONLY when the request actually
       // carries an avatar payload (validated above).
       if (q === 'avatar') return isAvatarReq ? 'avatar' : 'basic_ai'
+      // KINEO-PRESENTER-2026-07-10 — 'presenter' accepted with the same
+      // avatar-payload validation (unlisted quality would collapse to
+      // basic_ai and silently undercharge — the #315 revenue-leak lesson).
+      if (q === 'presenter') return isAvatarReq ? 'presenter' : 'basic_ai'
       // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood accepted.
       return q === 'fast' || q === 'basic' || q === 'pro' || q === 'cinematic_ai' || q === 'cinematic_kling' || q === 'cinematic_veo' || q === 'cinematic_sora' || q === 'cinematic_hollywood' ? q : 'basic_ai'
     })()
@@ -238,7 +244,7 @@ export async function POST(req: NextRequest) {
     // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood is credit-based (Studio
     // gate enforced upstream in generate-video-cinematic), so it's exempt here
     // like the other fal engines.
-    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'cinematic_veo' && quality !== 'cinematic_sora' && quality !== 'cinematic_hollywood' && quality !== 'avatar') {
+    if (quality !== 'fast' && quality !== 'cinematic_ai' && quality !== 'cinematic_kling' && quality !== 'cinematic_veo' && quality !== 'cinematic_sora' && quality !== 'cinematic_hollywood' && quality !== 'avatar' && quality !== 'presenter') {
       const plan = await fetchUserPlan(supabase, user.id)
       if (!plan.isPro) {
         return NextResponse.json(
@@ -344,7 +350,8 @@ export async function POST(req: NextRequest) {
     // voiceover_url must be OUR public storage object (it was uploaded by
     // /api/generate-avatar); avatar_url must be the fal CDN output or our
     // storage. Anything else is rejected — no arbitrary-URL render surface.
-    const avatarMode = quality === 'avatar'
+    // KINEO-PRESENTER-2026-07-10 — presenter renders through the same avatar path.
+    const avatarMode = quality === 'avatar' || quality === 'presenter'
     const avatarUrlBody = (body.avatar_url ?? '').trim()
     const voiceoverUrlBody = (body.voiceover_url ?? '').trim()
     if (avatarMode) {
