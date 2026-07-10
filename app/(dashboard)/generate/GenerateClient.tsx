@@ -6264,7 +6264,7 @@ function ModeSelector({
         <EngineCard
           selected={fastSelected}
           unlocked={fastUnlocked}
-          accent="5,150,105"
+          accent="41,151,255"
           accentText="#5cb3ff"
           icon="⚡"
           name="Fast Mode"
