@@ -2978,7 +2978,11 @@ export default function GenerateClient() {
   })()
 
   return (
-    <main className="px-4 sm:px-6 py-8 max-w-4xl mx-auto">
+    // KINEO-CONTENT-REDESIGN-2026-07-10 (Joseph) — the "miolo": wider canvas
+    // (max-w-5xl) + more vertical air, landing-neutral card surfaces (#131316)
+    // and ONE accent color — every legacy green/navy token was swapped for the
+    // brand blue so the page reads like the homepage.
+    <main className="px-4 sm:px-6 lg:px-10 py-10 max-w-5xl mx-auto">
       <style jsx>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -3031,9 +3035,9 @@ export default function GenerateClient() {
               <span
                 className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded"
                 style={{
-                  background: 'rgba(16, 185, 129,.10)',
-                  border: '1px solid rgba(16, 185, 129,.35)',
-                  color: '#10B981',
+                  background: 'rgba(41,151,255,.10)',
+                  border: '1px solid rgba(41,151,255,.35)',
+                  color: '#2997ff',
                 }}
               >
                 {showStep1 ? 'Step 1 · Your idea' : showScriptPreview ? 'Step 2 · Review' : (showBrollPlanning || showVisualDirector) ? 'Step 3 · Visuals' : showStep2 ? 'Step 3 · Brief' : 'Step 4 · Generate'}
@@ -3149,8 +3153,8 @@ export default function GenerateClient() {
               width: '100%',
               borderRadius: 20,
               background: 'linear-gradient(145deg, #161618 0%, #161618 100%)',
-              border: '1px solid rgba(16,185,129,0.4)',
-              boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(16,185,129,.15)',
+              border: '1px solid rgba(41,151,255,0.4)',
+              boxShadow: '0 24px 64px rgba(0,0,0,.6), 0 0 40px rgba(41,151,255,.15)',
               padding: '32px 28px 28px',
               textAlign: 'center',
             }}
@@ -3208,7 +3212,7 @@ export default function GenerateClient() {
                 width: '100%',
                 padding: '14px 20px',
                 borderRadius: 12,
-                background: 'linear-gradient(90deg, #059669, #06B6D4)',
+                background: 'linear-gradient(90deg, #2997ff, #06B6D4)',
                 color: '#fff',
                 fontWeight: 900,
                 fontSize: '0.95rem',
@@ -3225,7 +3229,7 @@ export default function GenerateClient() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#64748B',
+                color: 'var(--muted)',
                 fontSize: '0.8rem',
                 cursor: 'pointer',
                 textDecoration: 'underline',
@@ -3245,7 +3249,7 @@ export default function GenerateClient() {
       {showStep1 && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: '#131316', border: '1px solid var(--border)' }}
         >
           {/* Push #047 — only show the "already loaded" helper line when the
               prompt arrived from the homepage's sessionStorage bridge. The
@@ -3255,9 +3259,9 @@ export default function GenerateClient() {
             <div
               className="rounded-lg px-3 py-2 mb-3 flex items-center gap-2 text-xs font-bold"
               style={{
-                background: 'rgba(52,211,153,.08)',
-                border: '1px solid rgba(52,211,153,.28)',
-                color: '#34d399',
+                background: 'rgba(41,151,255,.08)',
+                border: '1px solid rgba(41,151,255,.28)',
+                color: '#5cb3ff',
               }}
             >
               <span aria-hidden="true">✓</span>
@@ -3293,7 +3297,7 @@ export default function GenerateClient() {
                   style={{
                     background:
                       pickedNiche === t.key
-                        ? 'linear-gradient(135deg, #059669, #2997ff)'
+                        ? 'linear-gradient(135deg, #2997ff, #2997ff)'
                         : 'rgba(255,255,255,0.04)',
                     border: `1px solid ${
                       pickedNiche === t.key ? 'rgba(41,151,255,0.75)' : 'var(--border)'
@@ -3319,8 +3323,8 @@ export default function GenerateClient() {
             <div
               className="mb-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
               style={{
-                background: 'rgba(16,185,129,0.10)',
-                border: '1px solid rgba(16,185,129,0.40)',
+                background: 'rgba(41,151,255,0.10)',
+                border: '1px solid rgba(41,151,255,0.40)',
                 color: '#A7F3D0',
               }}
             >
@@ -3436,8 +3440,8 @@ export default function GenerateClient() {
                   onClick={() => { setPrompt(ex); if (fromHome) setFromHome(false) }}
                   className="text-left px-3 py-2 rounded-lg text-xs transition-all"
                   style={{
-                    background: 'rgba(16,185,129,0.06)',
-                    border: '1px solid rgba(16,185,129,0.20)',
+                    background: 'rgba(41,151,255,0.06)',
+                    border: '1px solid rgba(41,151,255,0.20)',
                     color: 'var(--text2)',
                     cursor: phase === 'analyzing' ? 'not-allowed' : 'pointer',
                     maxWidth: 360,
@@ -3541,8 +3545,8 @@ export default function GenerateClient() {
                   onClick={() => setDuration(opt.value)}
                   className="rounded-full px-4 py-1.5 text-sm font-bold"
                   style={{
-                    background: duration === opt.value ? '#10B981' : 'rgba(255,255,255,.04)',
-                    border: duration === opt.value ? '1px solid rgba(16, 185, 129,.65)' : '1px solid var(--border)',
+                    background: duration === opt.value ? '#2997ff' : 'rgba(255,255,255,.04)',
+                    border: duration === opt.value ? '1px solid rgba(41,151,255,.65)' : '1px solid var(--border)',
                     color: duration === opt.value ? '#FFFFFF' : 'var(--muted)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -3606,7 +3610,7 @@ export default function GenerateClient() {
                 background:
                   phase === 'analyzing' || !prompt.trim()
                     ? 'rgba(255,255,255,.04)'
-                    : 'linear-gradient(135deg, #10B981, #2997ff)',
+                    : 'linear-gradient(135deg, #2997ff, #2997ff)',
                 border: 'none',
                 cursor: phase === 'analyzing' || !prompt.trim() ? 'not-allowed' : 'pointer',
                 color: phase === 'analyzing' || !prompt.trim() ? 'var(--muted)' : '#FFFFFF',
@@ -3645,7 +3649,7 @@ export default function GenerateClient() {
       {phase === 'scripting' && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: '#131316', border: '1px solid var(--border)' }}
         >
           <Spinner />
           <div>
@@ -3662,7 +3666,7 @@ export default function GenerateClient() {
       {phase === 'analyzing' && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: '#131316', border: '1px solid var(--border)' }}
         >
           <Spinner />
           <div>
@@ -3680,7 +3684,7 @@ export default function GenerateClient() {
       {showScriptPreview && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: '#131316', border: '1px solid var(--border)' }}
         >
           <div className="flex items-center gap-2 mb-4">
             <span style={{ fontSize: 20 }}>✍️</span>
@@ -3709,11 +3713,11 @@ export default function GenerateClient() {
               onClick={outOfCredits() ? openOutOfCreditsModal : handleConfirmScript}
               className="rounded-xl px-6 py-3 font-black text-sm"
               style={{
-                background: 'linear-gradient(135deg, #10B981, #059669)',
+                background: 'linear-gradient(135deg, #2997ff, #2997ff)',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(16,185,129,.35)',
+                boxShadow: '0 4px 16px rgba(41,151,255,.35)',
               }}
             >
               Looks good — create my Short
@@ -3739,14 +3743,14 @@ export default function GenerateClient() {
       {showBrollPlanning && (
         <section
           className="gv-card rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-4"
-          style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+          style={{ background: '#131316', border: '1px solid var(--border)' }}
         >
           <div
             style={{
               width: 32,
               height: 32,
               borderRadius: '50%',
-              border: '3px solid rgba(16,185,129,0.2)',
+              border: '3px solid rgba(41,151,255,0.2)',
               borderTopColor: 'rgb(16,185,129)',
               animation: 'spin 0.8s linear infinite',
               flexShrink: 0,
@@ -3781,7 +3785,7 @@ export default function GenerateClient() {
         <>
           <section
             className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
-            style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+            style={{ background: '#131316', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <span
@@ -3897,7 +3901,7 @@ export default function GenerateClient() {
               and kicks off the actual generation. */}
           <section
             className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-            style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+            style={{ background: '#131316', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs" style={{ color: 'var(--muted2)' }}>
@@ -3910,12 +3914,12 @@ export default function GenerateClient() {
                 disabled={isProcessingPhase(phase)}
                 className="rounded-xl px-6 py-3 text-sm font-black flex items-center gap-2"
                 style={{
-                  background: isProcessingPhase(phase) ? '#1E3A8A' : '#10B981',
+                  background: isProcessingPhase(phase) ? '#1E3A8A' : '#2997ff',
                   color: '#FFFFFF',
                   border: 'none',
                   cursor: isProcessingPhase(phase) ? 'not-allowed' : 'pointer',
                   opacity: isProcessingPhase(phase) ? 0.7 : 1,
-                  boxShadow: '0 8px 28px rgba(16, 185, 129,.35)',
+                  boxShadow: '0 8px 28px rgba(41,151,255,.35)',
                 }}
               >
                 {isProcessingPhase(phase)
@@ -3949,7 +3953,7 @@ export default function GenerateClient() {
                 maxWidth: 'min(520px, 92vw)',
                 padding: '12px 18px',
                 borderRadius: 14,
-                background: wmUnlockError ? 'rgba(30,20,20,0.96)' : 'rgba(11,17,32,0.96)',
+                background: wmUnlockError ? 'rgba(30,20,20,0.96)' : '#131316',
                 border: `1px solid ${wmUnlockError ? 'rgba(248,113,113,.5)' : 'rgba(41,151,255,.5)'}`,
                 boxShadow: '0 12px 40px rgba(0,0,0,.45)',
                 color: 'var(--text)',
@@ -3990,7 +3994,7 @@ export default function GenerateClient() {
           {(phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing') && (
             <section
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+              style={{ background: '#131316', border: '1px solid var(--border)' }}
             >
               {/* Push #047 — staged-pipeline message. The rotating copy lives
                   in `LOADER_MESSAGES` and is driven by `loaderTick`; the
@@ -4018,8 +4022,8 @@ export default function GenerateClient() {
               <div
                 className="rounded-xl px-3 py-2 mt-4 text-xs"
                 style={{
-                  background: 'rgba(16, 185, 129,.06)',
-                  border: '1px solid rgba(16, 185, 129,.20)',
+                  background: 'rgba(41,151,255,.06)',
+                  border: '1px solid rgba(41,151,255,.20)',
                   color: 'var(--muted2)',
                   lineHeight: 1.55,
                 }}
@@ -4077,7 +4081,7 @@ export default function GenerateClient() {
                 onClick={handleGenerate}
                 className="rounded-xl px-5 py-2.5 text-sm font-bold text-white mt-2"
                 style={{
-                  background: 'linear-gradient(135deg, #059669, #047857)',
+                  background: 'linear-gradient(135deg, #2997ff, #047857)',
                   border: 'none',
                   cursor: 'pointer',
                 }}
@@ -4090,7 +4094,7 @@ export default function GenerateClient() {
           {phase === 'done' && finalVideoUrl && (
             <section
               className="gv-card rounded-2xl px-5 sm:px-8 py-8 sm:py-10 mb-6 flex flex-col items-center"
-              style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+              style={{ background: '#131316', border: '1px solid var(--border)' }}
             >
               <div className="text-center">
                 <h2 className="font-black tracking-tight" style={{ fontSize: '1.5rem', color: 'var(--text)', lineHeight: 1.2 }}>
@@ -4229,7 +4233,7 @@ export default function GenerateClient() {
                         onClick={() => { setPlayerFailed(false); playerRetryAttemptRef.current = 0 }}
                         style={{
                           marginTop: '4px',
-                          background: 'linear-gradient(135deg, #059669, #047857)',
+                          background: 'linear-gradient(135deg, #2997ff, #047857)',
                           border: 'none',
                           color: '#fff',
                           fontWeight: 700,
@@ -4400,7 +4404,7 @@ export default function GenerateClient() {
                   style={{
                     background: 'linear-gradient(135deg, #22C55E, #15803D)',
                     textDecoration: 'none',
-                    boxShadow: '0 8px 28px rgba(34,197,94,.45)',
+                    boxShadow: '0 8px 28px rgba(41,151,255,.45)',
                     letterSpacing: '-0.01em',
                     fontSize: '1rem',
                   }}
@@ -4440,9 +4444,9 @@ export default function GenerateClient() {
                     onClick={handleCopyUrl}
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                     style={{
-                      background: copied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.06)',
-                      border: copied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
-                      color: copied ? '#34d399' : 'var(--text)',
+                      background: copied ? 'rgba(41,151,255,.12)' : 'rgba(255,255,255,.06)',
+                      border: copied ? '1px solid rgba(41,151,255,.45)' : '1px solid var(--border)',
+                      color: copied ? '#5cb3ff' : 'var(--text)',
                       cursor: 'pointer',
                       transition: 'all 0.15s',
                       whiteSpace: 'nowrap',
@@ -4461,9 +4465,9 @@ export default function GenerateClient() {
                       onClick={handleSharePublic}
                       className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                       style={{
-                        background: sharedPublic ? 'rgba(52,211,153,.12)' : 'rgba(41,151,255,.12)',
-                        border: sharedPublic ? '1px solid rgba(52,211,153,.45)' : '1px solid rgba(41,151,255,.45)',
-                        color: sharedPublic ? '#34d399' : '#2997ff',
+                        background: sharedPublic ? 'rgba(41,151,255,.12)' : 'rgba(41,151,255,.12)',
+                        border: sharedPublic ? '1px solid rgba(41,151,255,.45)' : '1px solid rgba(41,151,255,.45)',
+                        color: sharedPublic ? '#5cb3ff' : '#2997ff',
                         cursor: 'pointer',
                         transition: 'all 0.15s',
                         whiteSpace: 'nowrap',
@@ -4533,9 +4537,9 @@ export default function GenerateClient() {
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold"
                     style={{
-                      background: 'rgba(34,197,94,.10)',
-                      border: '1px solid rgba(34,197,94,.40)',
-                      color: '#4ade80',
+                      background: 'rgba(41,151,255,.10)',
+                      border: '1px solid rgba(41,151,255,.40)',
+                      color: '#5cb3ff',
                       textDecoration: 'none',
                     }}
                   >
@@ -4596,7 +4600,7 @@ export default function GenerateClient() {
                 </summary>
                 <div className="px-5 pb-5 pt-1 flex flex-col gap-3">
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                    <span style={{ color: '#34d399', fontWeight: 800 }}>✓</span>
+                    <span style={{ color: '#5cb3ff', fontWeight: 800 }}>✓</span>
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
                       — use the download button above to save the file to your device
@@ -4647,13 +4651,13 @@ export default function GenerateClient() {
                         style={{
                           background:
                             copiedSection === 'next-steps-desc'
-                              ? 'rgba(52,211,153,.12)'
+                              ? 'rgba(41,151,255,.12)'
                               : 'rgba(41,151,255,.10)',
                           border:
                             copiedSection === 'next-steps-desc'
-                              ? '1px solid rgba(52,211,153,.45)'
+                              ? '1px solid rgba(41,151,255,.45)'
                               : '1px solid rgba(41,151,255,.45)',
-                          color: copiedSection === 'next-steps-desc' ? '#34d399' : '#2997ff',
+                          color: copiedSection === 'next-steps-desc' ? '#5cb3ff' : '#2997ff',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
                         }}
@@ -4676,16 +4680,16 @@ export default function GenerateClient() {
                   style={{
                     maxWidth: 480,
                     background:
-                      'linear-gradient(135deg, rgba(34,197,94,.10), rgba(16,185,129,.06))',
-                    border: '1px solid rgba(34,197,94,.45)',
+                      'linear-gradient(135deg, rgba(41,151,255,.10), rgba(41,151,255,.06))',
+                    border: '1px solid rgba(41,151,255,.45)',
                     boxShadow:
-                      '0 0 28px rgba(34,197,94,.16), inset 0 1px 0 rgba(255,255,255,.04)',
+                      '0 0 28px rgba(41,151,255,.16), inset 0 1px 0 rgba(255,255,255,.04)',
                   }}
                 >
                   <div className="text-center">
                     <div
                       className="text-[11px] font-black uppercase tracking-[.16em] mb-1.5"
-                      style={{ color: '#34d399' }}
+                      style={{ color: '#5cb3ff' }}
                     >
                       🚀 Loved your Short? Make more.
                     </div>
@@ -4703,11 +4707,11 @@ export default function GenerateClient() {
                     className="block w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
                     style={{
                       background: upgradeLoading
-                        ? 'rgba(34,197,94,.6)'
+                        ? 'rgba(41,151,255,.6)'
                         : 'linear-gradient(135deg, #22C55E, #16A34A)',
                       border: 'none',
                       cursor: upgradeLoading ? 'wait' : 'pointer',
-                      boxShadow: '0 8px 24px rgba(34,197,94,.32)',
+                      boxShadow: '0 8px 24px rgba(41,151,255,.32)',
                     }}
                   >
                     {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $9.90/mo →'}
@@ -4809,7 +4813,7 @@ export default function GenerateClient() {
                     : `${selectedCost === 0 ? 'Free' : `${selectedCost} credit${selectedCost === 1 ? '' : 's'} used`}`}
                 </span>
                 <span>·</span>
-                <span style={{ color: mode === 'fast' ? '#34d399' : mode === 'cinematic_ai' ? '#2997ff' : '#2997ff', fontWeight: 700 }}>
+                <span style={{ color: mode === 'fast' ? '#5cb3ff' : mode === 'cinematic_ai' ? '#2997ff' : '#2997ff', fontWeight: 700 }}>
                   {mode === 'fast' ? 'Fast Mode ⚡' : mode === 'cinematic_ai' ? 'AI Video 🤖' : 'Cinematic 🎬'}
                 </span>
               </div>
@@ -4853,14 +4857,14 @@ export default function GenerateClient() {
             <div
               className="gv-card rounded-2xl p-4 mb-6"
               style={{
-                background: 'rgba(16,185,129,.06)',
-                border: '1px solid rgba(16,185,129,.25)',
+                background: 'rgba(41,151,255,.06)',
+                border: '1px solid rgba(41,151,255,.25)',
               }}
             >
               <div className="flex items-start gap-3">
                 <span style={{ fontSize: 20, lineHeight: 1 }}>📊</span>
                 <div>
-                  <div className="font-black text-sm mb-1" style={{ color: '#34d399' }}>
+                  <div className="font-black text-sm mb-1" style={{ color: '#5cb3ff' }}>
                     Track this video after you post
                   </div>
                   <div className="text-xs leading-relaxed mb-3" style={{ color: 'var(--muted2)' }}>
@@ -4877,9 +4881,9 @@ export default function GenerateClient() {
                     }}
                     className="rounded-lg px-4 py-2 text-xs font-bold"
                     style={{
-                      background: 'rgba(16,185,129,.15)',
-                      border: '1px solid rgba(16,185,129,.35)',
-                      color: '#34d399',
+                      background: 'rgba(41,151,255,.15)',
+                      border: '1px solid rgba(41,151,255,.35)',
+                      color: '#5cb3ff',
                       cursor: 'pointer',
                     }}
                   >
@@ -5000,7 +5004,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
     return (
       <section
         className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: '#131316', border: '1px solid var(--border)' }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
           Recent Videos
@@ -5016,7 +5020,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
     return (
       <section
         className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
-        style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+        style={{ background: '#131316', border: '1px solid var(--border)' }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
           Recent Videos
@@ -5033,7 +5037,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
 
   function statusChip(s: RecentVideo['status']) {
     if (s === 'completed')
-      return { label: 'Completed', fg: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)' }
+      return { label: 'Completed', fg: '#5cb3ff', bg: 'rgba(41,151,255,.10)', border: 'rgba(41,151,255,.32)' }
     if (s === 'failed' || s === 'cancelled')
       return { label: 'Failed', fg: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)' }
     return { label: 'Processing', fg: '#2997ff', bg: 'rgba(41, 151, 255,.10)', border: 'rgba(41, 151, 255,.32)' }
@@ -5057,7 +5061,7 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+      style={{ background: '#131316', border: '1px solid var(--border)' }}
     >
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div>
@@ -5273,14 +5277,14 @@ function PipelineStages({
       {stages.map((s, i) => {
         const isDone = s.status === 'done'
         const isActive = s.status === 'active'
-        const color = isDone ? '#34d399' : isActive ? '#6ee7b7' : 'var(--muted)'
+        const color = isDone ? '#5cb3ff' : isActive ? '#6ee7b7' : 'var(--muted)'
         const ring = isDone
-          ? '1px solid rgba(52,211,153,.45)'
+          ? '1px solid rgba(41,151,255,.45)'
           : isActive
           ? '1px solid rgba(110,231,183,.45)'
           : '1px solid var(--border)'
         const bg = isDone
-          ? 'rgba(52,211,153,.08)'
+          ? 'rgba(41,151,255,.08)'
           : isActive
           ? 'rgba(5,150,105,.08)'
           : 'rgba(255,255,255,.03)'
@@ -5297,12 +5301,12 @@ function PipelineStages({
                 height: 22,
                 borderRadius: '50%',
                 background: isDone
-                  ? 'rgba(52,211,153,.18)'
+                  ? 'rgba(41,151,255,.18)'
                   : isActive
                   ? 'transparent'
                   : 'rgba(255,255,255,.04)',
                 border: isDone
-                  ? '1px solid rgba(52,211,153,.55)'
+                  ? '1px solid rgba(41,151,255,.55)'
                   : isActive
                   ? '2px solid rgba(110,231,183,.55)'
                   : '1px solid var(--border)',
@@ -5357,7 +5361,7 @@ function ViralIntelligencePanel({
   const { viralScore, improvementSuggestions } = vi
   const accent =
     viralScore >= 75
-      ? { color: '#34d399', bg: 'rgba(52,211,153,.10)', border: 'rgba(52,211,153,.32)', label: 'Strong' }
+      ? { color: '#5cb3ff', bg: 'rgba(41,151,255,.10)', border: 'rgba(41,151,255,.32)', label: 'Strong' }
       : viralScore >= 50
       ? { color: '#2997ff', bg: 'rgba(41, 151, 255,.10)', border: 'rgba(41, 151, 255,.32)', label: 'Good' }
       : { color: '#f87171', bg: 'rgba(248,113,113,.10)', border: 'rgba(248,113,113,.32)', label: 'Needs work' }
@@ -5368,7 +5372,7 @@ function ViralIntelligencePanel({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-4"
       style={{
-        background: 'rgba(11,17,32,0.85)',
+        background: '#131316',
         border: `1px solid ${accent.border}`,
         boxShadow: `0 0 28px ${accent.bg}`,
       }}
@@ -5501,9 +5505,9 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
       <div
         className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
         style={{
-          background: low ? 'rgba(41, 151, 255,.10)' : 'rgba(52,211,153,.08)',
-          border: low ? '1px solid rgba(41, 151, 255,.35)' : '1px solid rgba(52,211,153,.30)',
-          color: low ? '#2997ff' : '#34d399',
+          background: low ? 'rgba(41, 151, 255,.10)' : 'rgba(41,151,255,.08)',
+          border: low ? '1px solid rgba(41, 151, 255,.35)' : '1px solid rgba(41,151,255,.30)',
+          color: low ? '#2997ff' : '#5cb3ff',
         }}
       >
         <span
@@ -5512,8 +5516,8 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: low ? '#2997ff' : '#34d399',
-            boxShadow: low ? '0 0 8px rgba(41, 151, 255,.5)' : '0 0 8px rgba(52,211,153,.5)',
+            background: low ? '#2997ff' : '#5cb3ff',
+            boxShadow: low ? '0 0 8px rgba(41, 151, 255,.5)' : '0 0 8px rgba(41,151,255,.5)',
             display: 'inline-block',
           }}
         />
@@ -5573,7 +5577,7 @@ function ShortPackageSection({
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
-      style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}
+      style={{ background: '#131316', border: '1px solid var(--border)' }}
     >
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div>
@@ -5594,8 +5598,8 @@ function ShortPackageSection({
           style={{
             background:
               copiedSection === 'package'
-                ? 'linear-gradient(135deg, #10b981, #059669)'
-                : 'linear-gradient(135deg, #059669, #047857)',
+                ? 'linear-gradient(135deg, #2997ff, #2997ff)'
+                : 'linear-gradient(135deg, #2997ff, #047857)',
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 6px 22px rgba(5,150,105,.32)',
@@ -5633,9 +5637,9 @@ function ShortPackageSection({
                   onClick={() => onCopy(c.key, c.body)}
                   className="rounded-lg px-2.5 py-1 text-xs font-bold"
                   style={{
-                    background: isCopied ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.04)',
-                    border: isCopied ? '1px solid rgba(52,211,153,.45)' : '1px solid var(--border)',
-                    color: isCopied ? '#34d399' : 'var(--muted2)',
+                    background: isCopied ? 'rgba(41,151,255,.12)' : 'rgba(255,255,255,.04)',
+                    border: isCopied ? '1px solid rgba(41,151,255,.45)' : '1px solid var(--border)',
+                    color: isCopied ? '#5cb3ff' : 'var(--muted2)',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
@@ -5695,7 +5699,7 @@ function UpsellSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
       style={{
-        background: 'linear-gradient(135deg, rgba(41,151,255,.04), rgba(16,185,129,.04))',
+        background: 'linear-gradient(135deg, rgba(41,151,255,.04), rgba(41,151,255,.04))',
         border: '1px solid rgba(255,255,255,.08)',
       }}
     >
@@ -5704,7 +5708,7 @@ function UpsellSection({
         style={{
           fontSize: '0.95rem',
           fontWeight: 800,
-          color: '#34D399',
+          color: '#5cb3ff',
           marginBottom: 10,
           letterSpacing: '-0.01em',
         }}
@@ -5839,8 +5843,8 @@ function NextActionSection({
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6 text-center"
       style={{
-        background: 'linear-gradient(135deg, rgba(16, 185, 129,.10), rgba(5, 150, 105,.06))',
-        border: '1px solid rgba(16, 185, 129,.28)',
+        background: 'linear-gradient(135deg, rgba(41,151,255,.10), rgba(5, 150, 105,.06))',
+        border: '1px solid rgba(41,151,255,.28)',
       }}
     >
       <h3 className="font-black text-lg sm:text-xl mb-2" style={{ color: 'var(--text)' }}>
@@ -5855,10 +5859,10 @@ function NextActionSection({
           onClick={onAnother}
           className="rounded-xl px-5 py-3 text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, #059669 0%, #059669 55%, #2997ff 100%)',
+            background: 'linear-gradient(135deg, #2997ff 0%, #2997ff 55%, #2997ff 100%)',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 6px 22px rgba(16, 185, 129,.4)',
+            boxShadow: '0 6px 22px rgba(41,151,255,.4)',
           }}
         >
           ⚡ Generate Another Short
@@ -5966,7 +5970,7 @@ function ProgressBar({ progress }: { progress: number }) {
         className="h-full"
         style={{
           width: `${Math.min(100, Math.max(0, progress))}%`,
-          background: 'linear-gradient(90deg, rgba(5,150,105,.85), rgba(16,185,129,1))',
+          background: 'linear-gradient(90deg, rgba(5,150,105,.85), rgba(41,151,255,1))',
           transition: 'width 600ms ease',
         }}
       />
@@ -6000,7 +6004,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
           <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="5" />
           <circle
             cx="36" cy="36" r={r} fill="none"
-            stroke="#10B981"
+            stroke="#2997ff"
             strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={`${dash} ${gap}`}
@@ -6023,7 +6027,7 @@ function RenderHeader({ progress, message }: { progress: number; message: string
         <div style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{
             display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-            background: '#10B981', animation: 'pulse 1.5s ease-in-out infinite',
+            background: '#2997ff', animation: 'pulse 1.5s ease-in-out infinite',
           }} />
           <span>Rendering · {timeStr}</span>
         </div>
@@ -6274,9 +6278,9 @@ function ModeSelector({
                per Fast video, so their badge says so; free users keep FREE
                (watermark + download-paywall funnel unchanged). */
             anyPaid ? (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>1 credit</span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#5cb3ff', border: '1px solid rgba(41,151,255,.4)' }}>1 credit</span>
             ) : (
-              <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,.18)', color: '#34d399', border: '1px solid rgba(16,185,129,.4)' }}>FREE</span>
+              <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#5cb3ff', border: '1px solid rgba(41,151,255,.4)' }}>FREE</span>
             )
           }
           onClick={() => { setMode('fast') }}
@@ -6374,11 +6378,11 @@ function ModeSelector({
             onClick={() => setMode('cinematic')}
             className="rounded-xl p-4 text-left"
             style={{
-              background: mode === 'cinematic' ? 'rgba(16,185,129,.10)' : 'rgba(255,255,255,.03)',
-              border: mode === 'cinematic' ? '1.5px solid rgba(16,185,129,.55)' : '1.5px solid var(--border)',
+              background: mode === 'cinematic' ? 'rgba(41,151,255,.10)' : 'rgba(255,255,255,.03)',
+              border: mode === 'cinematic' ? '1.5px solid rgba(41,151,255,.55)' : '1.5px solid var(--border)',
               cursor: 'pointer',
               transition: 'all 0.15s',
-              boxShadow: mode === 'cinematic' ? '0 0 28px rgba(16,185,129,.15)' : 'none',
+              boxShadow: mode === 'cinematic' ? '0 0 28px rgba(41,151,255,.15)' : 'none',
             }}
           >
             {/* Header row */}
@@ -6394,9 +6398,9 @@ function ModeSelector({
                 <span
                   className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
                   style={{
-                    background: 'rgba(16,185,129,.15)',
+                    background: 'rgba(41,151,255,.15)',
                     color: '#6ee7b7',
-                    border: '1px solid rgba(16,185,129,.25)',
+                    border: '1px solid rgba(41,151,255,.25)',
                   }}
                 >
                   Pro
@@ -6404,9 +6408,9 @@ function ModeSelector({
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{
-                    background: 'rgba(16,185,129,.18)',
+                    background: 'rgba(41,151,255,.18)',
                     color: '#6ee7b7',
-                    border: '1px solid rgba(16,185,129,.3)',
+                    border: '1px solid rgba(41,151,255,.3)',
                   }}
                 >
                   {cinematicTokens} token{cinematicTokens === 1 ? '' : 's'}
@@ -6428,8 +6432,8 @@ function ModeSelector({
           <div
             className="rounded-xl p-4"
             style={{
-              background: 'rgba(16,185,129,.04)',
-              border: '1.5px solid rgba(16,185,129,.18)',
+              background: 'rgba(41,151,255,.04)',
+              border: '1.5px solid rgba(41,151,255,.18)',
               opacity: 0.7,
               cursor: 'not-allowed',
             }}
@@ -6461,8 +6465,8 @@ function ModeSelector({
           <div
             className="rounded-xl p-4"
             style={{
-              background: 'rgba(16,185,129,.04)',
-              border: '1.5px solid rgba(16,185,129,.18)',
+              background: 'rgba(41,151,255,.04)',
+              border: '1.5px solid rgba(41,151,255,.18)',
               cursor: 'not-allowed',
             }}
           >
@@ -6474,7 +6478,7 @@ function ModeSelector({
               <div className="ml-auto">
                 <span
                   style={{
-                    background: 'linear-gradient(135deg,#059669,#059669)',
+                    background: 'linear-gradient(135deg,#2997ff,#2997ff)',
                     color: '#fff',
                     fontSize: '0.62rem',
                     fontWeight: 900,
@@ -6538,14 +6542,14 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
       {STEPS.map((s, i) => {
         const isDone = phase === 'done' || step > i
         const isActive = !isDone && step === i
-        const color = isDone ? '#34d399' : isActive ? '#6ee7b7' : 'var(--muted)'
+        const color = isDone ? '#5cb3ff' : isActive ? '#6ee7b7' : 'var(--muted)'
         const ring = isDone
-          ? '1px solid rgba(52,211,153,.45)'
+          ? '1px solid rgba(41,151,255,.45)'
           : isActive
           ? '1px solid rgba(110,231,183,.45)'
           : '1px solid var(--border)'
         const bg = isDone
-          ? 'rgba(52,211,153,.08)'
+          ? 'rgba(41,151,255,.08)'
           : isActive
           ? 'rgba(5,150,105,.08)'
           : 'rgba(255,255,255,.03)'
@@ -6562,12 +6566,12 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
                 height: 22,
                 borderRadius: '50%',
                 background: isDone
-                  ? 'rgba(52,211,153,.18)'
+                  ? 'rgba(41,151,255,.18)'
                   : isActive
                   ? 'transparent'
                   : 'rgba(255,255,255,.04)',
                 border: isDone
-                  ? '1px solid rgba(52,211,153,.55)'
+                  ? '1px solid rgba(41,151,255,.55)'
                   : isActive
                   ? '2px solid rgba(110,231,183,.55)'
                   : '1px solid var(--border)',
@@ -6702,11 +6706,11 @@ function UpgradeModal({
           width: '100%',
           maxWidth: 460,
           background: '#161618',
-          border: '1px solid rgba(52,211,153,0.35)',
+          border: '1px solid rgba(41,151,255,0.35)',
           borderRadius: 20,
           padding: '28px 24px',
           textAlign: 'center',
-          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(52,211,153,0.18)',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(41,151,255,0.18)',
         }}
       >
         <h2
@@ -6756,8 +6760,8 @@ function UpgradeModal({
                   padding: '14px 16px',
                   borderRadius: 14,
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  background: recommended ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.04)',
-                  border: recommended ? '1.5px solid rgba(16,185,129,0.6)' : '1px solid rgba(255,255,255,0.12)',
+                  background: recommended ? 'rgba(41,151,255,0.10)' : 'rgba(255,255,255,0.04)',
+                  border: recommended ? '1.5px solid rgba(41,151,255,0.6)' : '1px solid rgba(255,255,255,0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -6772,7 +6776,7 @@ function UpgradeModal({
                       position: 'absolute',
                       top: -9,
                       left: 14,
-                      background: '#10b981',
+                      background: '#2997ff',
                       color: '#04210f',
                       fontSize: '0.6rem',
                       fontWeight: 900,
@@ -6787,7 +6791,7 @@ function UpgradeModal({
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: 'block', fontWeight: 900, color: '#F1F5F9', fontSize: '0.98rem' }}>
                     {plan.name}{' '}
-                    <span style={{ color: recommended ? '#34d399' : '#86868b', fontWeight: 800 }}>
+                    <span style={{ color: recommended ? '#5cb3ff' : '#86868b', fontWeight: 800 }}>
                       {plan.priceLabel}
                       <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>{plan.periodLabel}</span>
                     </span>
@@ -6805,7 +6809,7 @@ function UpgradeModal({
                     fontWeight: 900,
                     color: '#fff',
                     background: recommended
-                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      ? 'linear-gradient(135deg, #2997ff, #2997ff)'
                       : 'rgba(255,255,255,0.10)',
                   }}
                 >
@@ -6841,13 +6845,13 @@ function UpgradeModal({
                     padding: '11px 10px',
                     borderRadius: 12,
                     cursor: loading ? 'not-allowed' : 'pointer',
-                    background: 'rgba(16,185,129,0.08)',
-                    border: '1px solid rgba(16,185,129,0.4)',
+                    background: 'rgba(41,151,255,0.08)',
+                    border: '1px solid rgba(41,151,255,0.4)',
                     color: '#E2E8F0',
                     textAlign: 'center',
                   }}
                 >
-                  <span style={{ display: 'block', fontSize: '0.86rem', fontWeight: 900, color: '#34d399' }}>{t.price}</span>
+                  <span style={{ display: 'block', fontSize: '0.86rem', fontWeight: 900, color: '#5cb3ff' }}>{t.price}</span>
                   <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700 }}>{t.label}</span>
                   <span style={{ display: 'block', fontSize: '0.68rem', color: '#86868b' }}>{t.sub}</span>
                 </button>
@@ -7048,7 +7052,7 @@ function UrgencyModal({
               fontVariantNumeric: 'tabular-nums',
               fontSize: '2.6rem',
               fontWeight: 900,
-              color: '#34d399',
+              color: '#5cb3ff',
               letterSpacing: '0.04em',
               marginBottom: 20,
               animation: 'sf-urgency-pulse 1.4s ease-in-out infinite',
@@ -7066,7 +7070,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#34d399' }}>$9.90/mo</strong>. Cancel anytime.
+          50 Fast Mode videos/month for just <strong style={{ color: '#5cb3ff' }}>$9.90/mo</strong>. Cancel anytime.
         </p>
         <button
           type="button"
@@ -7078,13 +7082,13 @@ function UrgencyModal({
             borderRadius: 12,
             border: 'none',
             background: loading
-              ? 'rgba(52,211,153,0.5)'
-              : 'linear-gradient(135deg, #10b981, #059669)',
+              ? 'rgba(41,151,255,0.5)'
+              : 'linear-gradient(135deg, #2997ff, #2997ff)',
             color: '#fff',
             fontSize: '1rem',
             fontWeight: 900,
             cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: '0 10px 30px rgba(16,185,129,0.4)',
+            boxShadow: '0 10px 30px rgba(41,151,255,0.4)',
             letterSpacing: '-0.01em',
           }}
         >
@@ -7138,9 +7142,9 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       role="status"
       className="rounded-xl px-4 py-3 mb-6 flex items-center gap-3"
       style={{
-        background: 'rgba(52,211,153,0.10)',
-        border: '1px solid rgba(52,211,153,0.35)',
-        color: '#34d399',
+        background: 'rgba(41,151,255,0.10)',
+        border: '1px solid rgba(41,151,255,0.35)',
+        color: '#5cb3ff',
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
@@ -7152,9 +7156,9 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
         aria-label="Dismiss welcome message"
         style={{
           background: 'transparent',
-          border: '1px solid rgba(52,211,153,0.35)',
+          border: '1px solid rgba(41,151,255,0.35)',
           borderRadius: 8,
-          color: '#34d399',
+          color: '#5cb3ff',
           width: 28,
           height: 28,
           display: 'flex',
@@ -7198,7 +7202,7 @@ function GenerationProgressSteps({ step }: { step: number }) {
       {items.map((it, i) => {
         const isActive = i === step
         const isDone = i < step
-        const color = isActive ? '#34d399' : isDone ? '#6ee7b7' : 'var(--muted)'
+        const color = isActive ? '#5cb3ff' : isDone ? '#6ee7b7' : 'var(--muted)'
         return (
           <li
             key={i}
