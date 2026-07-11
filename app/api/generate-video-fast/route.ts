@@ -183,6 +183,10 @@ export async function POST(req: NextRequest) {
         // Push #486 — the plan scene's narration text, used for CONTENT-BASED
         // scene↔plan alignment (see buildAlignedBrollMeta below).
         narration?: string
+        // KINEO-USER-FOOTAGE-2026-07-10 — the user's OWN clip/photo (public
+        // user-footage storage URL) pinned to this scene. When present it
+        // short-circuits the whole vault/Pixabay resolution for the scene.
+        userFootageUrl?: string
       }>
       // #358 — instrumentation: client forwards whether the BrollPlan came back
       // degraded (GPT failed) so we can log/record the reason for VERBATIM.
@@ -227,8 +231,17 @@ export async function POST(req: NextRequest) {
       requiresExtension?: boolean
       /** Push #486 — plan scene narration for content-based alignment. */
       narration?: string
+      /** KINEO-USER-FOOTAGE — user's own clip pinned to this scene. */
+      userFootageUrl?: string
     }
     const brollSceneMap = new Map<number, BrollSceneMeta>()
+
+    // KINEO-USER-FOOTAGE-2026-07-10 — only THIS user's folder inside our
+    // public user-footage bucket is accepted as a scene override (review
+    // catch: the bucket-wide prefix let anyone reference another user's
+    // clips and let free accounts consume footage they can't upload —
+    // scoping to ${user.id}/ makes upload gating the real authorization).
+    const FOOTAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/user-footage/${user.id}/`
 
     if (Array.isArray(body.brollScenes)) {
       for (const entry of body.brollScenes) {
@@ -250,6 +263,11 @@ export async function POST(req: NextRequest) {
           scenePurpose: typeof entry.scenePurpose === 'string' ? entry.scenePurpose : undefined,
           requiresExtension: entry.requiresExtension === true,
           narration: typeof entry.narration === 'string' && entry.narration.trim() ? entry.narration.trim() : undefined,
+          // KINEO-USER-FOOTAGE — accept ONLY our public user-footage URLs.
+          userFootageUrl:
+            typeof entry.userFootageUrl === 'string' && entry.userFootageUrl.startsWith(FOOTAGE_PREFIX)
+              ? entry.userFootageUrl
+              : undefined,
         })
         if (single) brollQueryMap.set(entry.sceneNumber, single)
       }
@@ -463,7 +481,8 @@ export async function POST(req: NextRequest) {
     // consistent look (the AI Gen signature) instead of a stock patchwork.
     const styleCtx = { tags: new Set<string>() }
     // Push #355 — track B-roll source per scene for quality metrics.
-    type ClipSource = 'pixabay' | 'fallbackA' | 'stockLibrary' | 'none'
+    // KINEO-USER-FOOTAGE-2026-07-10 — 'user' = the user's own uploaded clip.
+    type ClipSource = 'pixabay' | 'fallbackA' | 'stockLibrary' | 'none' | 'user'
     const clipSources: ClipSource[] = []
 
     for (let idx = 0; idx < scenes.length; idx++) {
@@ -480,6 +499,21 @@ export async function POST(req: NextRequest) {
       // Push #486 — content-aligned plan meta (was: brollSceneMap.get(sceneNo),
       // an index lookup that shifted every query when plan/scene counts differ).
       const brollMeta = verbatim ? undefined : alignedMeta[idx]
+
+      // KINEO-USER-FOOTAGE-2026-07-10 (Prioridade 2, cliente $200/mês) — the
+      // user's OWN clip pinned to this scene beats EVERYTHING: no vault, no
+      // Pixabay, no fallback. URL was validated against our user-footage
+      // bucket prefix at parse time. Scenes without user footage fall through
+      // to the normal hierarchy (the "Pexels fills the gaps" MVP contract).
+      if (brollMeta?.userFootageUrl) {
+        clipUrls.push(brollMeta.userFootageUrl)
+        clipSources.push('user')
+        console.log(
+          `[clip] scene=${sceneNo} source=USER-FOOTAGE url=${brollMeta.userFootageUrl.slice(0, 80)}`,
+        )
+        continue
+      }
+
       // v3.0 Phase 1: if a BrollPlan provided a specific AI-directed pexelsQuery
       // for this scene, use it as the primary search — it's far more specific
       // (e.g. "Wall Street trading floor 1987 crash") than GPT's generic scene

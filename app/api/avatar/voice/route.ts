@@ -74,6 +74,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // KINEO-OWN-VOICE-2026-07-10 — persist the clone on the PROFILE (migration
+    // 016): clone once in Avatar Studio → every Fast/AI generation can narrate
+    // with the user's voice. Best-effort: a failed update never fails the clone.
+    try {
+      await supabase.from('profiles').update({ voice_clone_id: cloneRes.voiceId }).eq('id', user.id)
+    } catch (e) {
+      console.warn('[avatar/voice] voice_clone_id persist failed (non-blocking):', e instanceof Error ? e.message : String(e))
+    }
+
     console.log(`[avatar/voice] cloned user=${user.id.slice(0, 8)} voice=${cloneRes.voiceId}`)
     return NextResponse.json({ voiceId: cloneRes.voiceId })
   } catch (err) {

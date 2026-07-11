@@ -95,6 +95,14 @@ interface ComposeBody {
   // scene (null for cinematic/support), parallel to clip_urls. Captions on
   // dialogue scenes chunk THIS text so they match the actual speech.
   scene_dialogues?: (string | null)[]
+  // KINEO-OWN-VOICE-2026-07-10 (Prioridade 3, cliente $200/mês) —
+  // Level A: the user's OWN pre-recorded narration (our public storage URL).
+  // Compose skips TTS entirely and captions come from Whisper transcription
+  // of the real audio instead of the script text.
+  user_voiceover_url?: string
+  // Level B: narrate with the user's CLONED voice (profiles.voice_clone_id,
+  // created in Avatar Studio). Falls back to default TTS on any failure.
+  use_cloned_voice?: boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -365,6 +373,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // KINEO-OWN-VOICE-2026-07-10 — Level A: the user's OWN narration audio.
+    // Must be OUR public storage (uploaded via /api/footage — no arbitrary
+    // URLs). Behaves like avatar mode for every AUDIO decision: no scaling,
+    // no TTS, no corrective pass, reuse the stored file, Whisper captions.
+    const userVoiceUrlBody = (body.user_voiceover_url ?? '').trim()
+    const hasUserVoice = !avatarMode && userVoiceUrlBody.length > 0
+    if (hasUserVoice) {
+      const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+      if (!userVoiceUrlBody.startsWith(storagePrefix)) {
+        return NextResponse.json({ error: 'Invalid voiceover URL.' }, { status: 400 })
+      }
+    }
+    // The pre-existing audio file (avatar lip-synced mp3 OR user upload).
+    const externalVoiceUrl = avatarMode ? voiceoverUrlBody : hasUserVoice ? userVoiceUrlBody : ''
+    const useClonedVoice = body.use_cloned_voice === true && !avatarMode && !hasUserVoice
+
     // ── KINEO-HOLLYWOOD-2026-07-09 — HOLLYWOOD MODE compose path ────────────
     // Dedicated pipeline: the clips carry NATIVE audio (Kling3 voice on
     // dialogue scenes, ambience on the rest), so we do NOT run the standard
@@ -542,9 +566,9 @@ export async function POST(req: NextRequest) {
     // feature/ai-avatar — avatar mode also skips scaling: the script passed in
     // is EXACTLY what the already-rendered mp3 narrates (captions derive from it).
     let scaledScript: string
-    if (avatarMode) {
+    if (avatarMode || hasUserVoice) {
       scaledScript = voiceoverScript
-      console.log('[compose] avatar mode — narration already synthesized, skipping scaling')
+      console.log(`[compose] ${avatarMode ? 'avatar mode' : 'user voiceover'} — narration audio already exists, skipping scaling`)
     } else if (explicitSpeed != null) {
       scaledScript = voiceoverScript
       console.log(
@@ -569,26 +593,60 @@ export async function POST(req: NextRequest) {
     // timing and desync the lips. We re-download the mp3 only to measure its
     // duration + run Whisper for drift-free captions (both best-effort).
     let audioBuffer: Buffer | null = null
-    if (avatarMode) {
+    // KINEO-OWN-VOICE — tracks whether the mp3 came from the user's CLONED
+    // voice (the corrective re-synthesis pass must not overwrite it with the
+    // default TTS voice).
+    let clonedVoiceUsed = false
+    if (avatarMode || hasUserVoice) {
       try {
-        const audioRes = await fetch(voiceoverUrlBody)
+        const audioRes = await fetch(externalVoiceUrl)
         if (audioRes.ok) {
           audioBuffer = Buffer.from(await audioRes.arrayBuffer())
-          console.log(`[compose] avatar voiceover fetched for analysis: ${audioBuffer.length} bytes`)
+          console.log(`[compose] ${avatarMode ? 'avatar' : 'user'} voiceover fetched for analysis: ${audioBuffer.length} bytes`)
         } else {
-          console.warn(`[compose] avatar voiceover fetch HTTP ${audioRes.status} — proportional captions fallback`)
+          console.warn(`[compose] external voiceover fetch HTTP ${audioRes.status} — proportional captions fallback`)
         }
       } catch (err) {
-        console.warn('[compose] avatar voiceover fetch failed — proportional captions fallback:', err instanceof Error ? err.message : String(err))
+        console.warn('[compose] external voiceover fetch failed — proportional captions fallback:', err instanceof Error ? err.message : String(err))
+      }
+      // Level A hard requirement: a USER voiceover that can't be fetched must
+      // fail loudly (there is no TTS to fall back to — the audio IS the video).
+      if (hasUserVoice && (!audioBuffer || audioBuffer.length === 0)) {
+        return NextResponse.json({ error: 'Could not load your voiceover file. Please re-upload it.' }, { status: 502 })
       }
     } else {
       console.log(
         `[compose] voiceover generation started: user=${user.id.slice(0, 8)} script_words=${scaledScript.split(/\s+/).filter(Boolean).length} duration=${duration}s language=${language}`,
       )
+      // KINEO-OWN-VOICE — Level B: narrate with the user's cloned voice
+      // (profiles.voice_clone_id, MiniMax). ANY failure falls back to the
+      // default TTS so a render never dies because of the clone.
+      if (useClonedVoice) {
+        try {
+          const { data: voiceProfile } = await supabase
+            .from('profiles')
+            .select('voice_clone_id')
+            .eq('id', user.id)
+            .single()
+          const voiceId = (voiceProfile?.voice_clone_id ?? '').toString().trim()
+          if (voiceId) {
+            const { synthesizeWithVoice } = await import('@/lib/avatar/voice')
+            audioBuffer = await synthesizeWithVoice({ voiceId, text: scaledScript, language })
+            clonedVoiceUsed = !!audioBuffer && audioBuffer.length > 0
+            if (clonedVoiceUsed) console.log(`[compose] cloned-voice narration: ${audioBuffer!.length} bytes voice=${voiceId.slice(0, 10)}`)
+          } else {
+            console.warn('[compose] use_cloned_voice=true but no voice_clone_id on profile — default TTS')
+          }
+        } catch (cloneErr) {
+          console.warn('[compose] cloned voice failed — falling back to default TTS:', cloneErr instanceof Error ? cloneErr.message : String(cloneErr))
+        }
+      }
       try {
-        audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+        if (!audioBuffer || audioBuffer.length === 0) {
+          audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+        }
         console.log(
-          `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0}`,
+          `[compose] TTS response received: bytes=${audioBuffer.length} mime=audio/mpeg speed=${explicitSpeed ?? 1.0} cloned=${clonedVoiceUsed}`,
         )
       } catch (err) {
         // Surface the FULL error object so OpenAI-side issues (rate limit,
@@ -620,8 +678,8 @@ export async function POST(req: NextRequest) {
     // video ballooned to 45s with a black tail after the avatar stopped talking.
     // 0.5s still catches real measurement failures (estimateMp3DurationSeconds
     // returns 0 for unparseable buffers).
-    if (avatarMode && !(realAudioDuration > 0.5)) {
-      // Avatar fallback chain: measured → value sent by generate-avatar → requested.
+    if ((avatarMode || hasUserVoice) && !(realAudioDuration > 0.5)) {
+      // External-audio fallback chain: measured → value sent by caller → requested.
       const sent = Number(body.real_audio_duration)
       realAudioDuration = Number.isFinite(sent) && sent > 0.5 ? sent : duration
     }
@@ -638,6 +696,8 @@ export async function POST(req: NextRequest) {
     // actually closer, keeps the original audio so compose never regresses.
     if (
       !avatarMode && // feature/ai-avatar — never re-synthesize the lip-synced mp3
+      !hasUserVoice && // KINEO-OWN-VOICE — the user's file IS the narration
+      !clonedVoiceUsed && // never replace the cloned voice with the default one
       explicitSpeed == null &&
       realAudioDuration > 4 &&
       Math.abs(realAudioDuration - duration) > DURATION_TOLERANCE_SECONDS
@@ -697,8 +757,8 @@ export async function POST(req: NextRequest) {
           })
       : Promise.resolve(undefined)
 
-    const uploadPromise: Promise<{ url: string } | { uploadError: unknown }> = avatarMode
-      ? Promise.resolve({ url: voiceoverUrlBody })
+    const uploadPromise: Promise<{ url: string } | { uploadError: unknown }> = (avatarMode || hasUserVoice)
+      ? Promise.resolve({ url: externalVoiceUrl })
       : uploadVoiceoverToSupabase(user.id, audioBuffer as Buffer)
           .then((url) => {
             console.log(`[compose] voiceover stored at: ${url}`)

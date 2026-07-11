@@ -297,6 +297,101 @@ export default function GenerateClient() {
       })
       .catch(() => {})
   }, [aiEngine])
+
+  // KINEO-USER-FOOTAGE + KINEO-OWN-VOICE (2026-07-10, Prioridade 2/3 do
+  // briefing — pedidos literais do cliente $200/mês): a biblioteca "My
+  // footage" (clipes/fotos do usuário viram B-roll) e a narração própria
+  // (upload de voiceover OU voz clonada do perfil).
+  type FootageItem = { id: string; url: string; kind: string; size_bytes: number }
+  const [footageItems, setFootageItems] = useState<FootageItem[]>([])
+  const [selectedFootageIds, setSelectedFootageIds] = useState<string[]>([])
+  const [footageUploading, setFootageUploading] = useState(false)
+  const [footageMsg, setFootageMsg] = useState('')
+  const [myVoiceUrl, setMyVoiceUrl] = useState('')
+  const [useClonedVoice, setUseClonedVoice] = useState(false)
+  const [voiceUploading, setVoiceUploading] = useState(false)
+  const footageInputRef = useRef<HTMLInputElement | null>(null)
+  const voiceInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    fetch('/api/footage', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => {
+        if (Array.isArray(d?.items)) setFootageItems(d.items)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Signed-URL upload: POST upload-url → browser PUTs straight to storage
+  // (bypasses Vercel's body cap) → POST confirm registers the row.
+  async function uploadUserFile(file: File): Promise<FootageItem | null> {
+    const startRes = await fetch('/api/footage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'upload-url', contentType: file.type, sizeBytes: file.size }),
+    })
+    const start = await startRes.json()
+    if (!startRes.ok || typeof start?.signedUrl !== 'string') {
+      throw new Error(typeof start?.error === 'string' ? start.error : 'Could not start the upload.')
+    }
+    const putRes = await fetch(start.signedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type, 'x-upsert': 'false' },
+      body: file,
+    })
+    if (!putRes.ok) throw new Error('Upload failed — please try again.')
+    const confirmRes = await fetch('/api/footage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm', path: start.path, kind: start.kind, sizeBytes: file.size }),
+    })
+    const confirm = await confirmRes.json()
+    if (!confirmRes.ok || !confirm?.item) {
+      throw new Error(typeof confirm?.error === 'string' ? confirm.error : 'Could not register the upload.')
+    }
+    return confirm.item as FootageItem
+  }
+
+  async function handleFootageFiles(files: FileList | null) {
+    if (!files || files.length === 0 || footageUploading) return
+    setFootageUploading(true)
+    setFootageMsg('')
+    try {
+      for (const file of Array.from(files).slice(0, 8)) {
+        const item = await uploadUserFile(file)
+        if (item) {
+          setFootageItems((cur) => [item, ...cur])
+          setSelectedFootageIds((cur) => [...cur, item.id])
+        }
+      }
+      setFootageMsg('✓ Uploaded — your clips will fill the first scenes; stock fills the rest.')
+    } catch (e) {
+      setFootageMsg(e instanceof Error ? e.message : 'Upload failed.')
+    } finally {
+      setFootageUploading(false)
+      if (footageInputRef.current) footageInputRef.current.value = ''
+    }
+  }
+
+  async function handleVoiceFile(files: FileList | null) {
+    const file = files?.[0]
+    if (!file || voiceUploading) return
+    setVoiceUploading(true)
+    setFootageMsg('')
+    try {
+      const item = await uploadUserFile(file)
+      if (item) {
+        setMyVoiceUrl(item.url)
+        setUseClonedVoice(false)
+        setFootageMsg('✓ Voiceover ready — TTS will be skipped and captions come from your audio.')
+      }
+    } catch (e) {
+      setFootageMsg(e instanceof Error ? e.message : 'Voice upload failed.')
+    } finally {
+      setVoiceUploading(false)
+      if (voiceInputRef.current) voiceInputRef.current.value = ''
+    }
+  }
   // feat/ui-polish — picked niche drives the clickable example chips under the
   // textarea so new users never face a blank page (activation booster).
   const [pickedNiche, setPickedNiche] = useState<string>('billionaire')
@@ -1433,6 +1528,10 @@ export default function GenerateClient() {
             // so compose auto-selects the best AI voice persona for the content.
             vertical: analysis?.niche ?? undefined,
             ...(ttsSpeed != null ? { speed: ttsSpeed } : {}),
+            // KINEO-OWN-VOICE-2026-07-10 — Level A: the user's own narration
+            // mp3 replaces TTS (captions from Whisper); Level B: narrate with
+            // the cloned voice from the profile. Never both.
+            ...(myVoiceUrl ? { user_voiceover_url: myVoiceUrl } : useClonedVoice ? { use_cloned_voice: true } : {}),
             // feature/ai-avatar — avatar render: pass the finished talking head
             // + the EXACT mp3 VEED lip-synced (compose skips TTS in this mode).
             ...(avatarComposeRef.current?.avatarVideoUrl
@@ -2254,8 +2353,13 @@ export default function GenerateClient() {
         const brollQueries = planUsable
           ? plan!.scenes.map((s) => ({ sceneNumber: s.sceneNumber, pexelsQuery: s.pexelsQuery }))
           : undefined
+        // KINEO-USER-FOOTAGE-2026-07-10 — distribute the user's selected clips
+        // across the plan scenes IN ORDER (clip 1 → scene 1, clip 2 → scene 2,
+        // ...); scenes beyond the user's clips fall back to Pexels/vault
+        // server-side. Simple, predictable MVP of the "GPT director" idea.
+        const selectedFootage = footageItems.filter((f) => selectedFootageIds.includes(f.id) && f.kind !== 'audio')
         const brollScenes = planUsable
-          ? plan!.scenes.map((s) => ({
+          ? plan!.scenes.map((s, sceneIdx) => ({
               sceneNumber: s.sceneNumber,
               pexelsQuery: s.pexelsQuery,
               pexelsQueries: s.pexelsQueries,
@@ -2266,6 +2370,7 @@ export default function GenerateClient() {
               // server-side (fixes the off-by-one query shift when the plan
               // splits the script into more scenes than the route's GPT does).
               narration: s.narration,
+              ...(selectedFootage[sceneIdx] ? { userFootageUrl: selectedFootage[sceneIdx].url } : {}),
             }))
           : undefined
         if (process.env.NODE_ENV === 'development') {
@@ -3375,6 +3480,100 @@ export default function GenerateClient() {
           {/* AI Avatar removed from the Short flow (16/06) — Avatar and Short are
               separate flows. The Avatar Studio lives on its own page (/avatar),
               reachable from the top menu. */}
+
+          {/* KINEO-USER-FOOTAGE-2026-07-10 (Prioridade 2) — "My footage": the
+              user's own clips/photos become per-scene B-roll (stock fills the
+              gaps). Paid feature — the server 402s free accounts on upload. */}
+          <div className="mt-4" style={{ maxWidth: 830 }}>
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+              🎬 My footage <span style={{ textTransform: 'none', fontWeight: 600 }}>— use your own clips &amp; photos</span>
+            </div>
+            <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: selectedFootageIds.length > 0 ? '1px solid rgba(41,151,255,0.35)' : '1px solid var(--border)' }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => footageInputRef.current?.click()}
+                  disabled={footageUploading}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff', cursor: footageUploading ? 'not-allowed' : 'pointer' }}
+                >
+                  {footageUploading ? '📤 Uploading…' : '📤 Upload clips / photos'}
+                </button>
+                <input ref={footageInputRef} type="file" multiple accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png" className="hidden" onChange={(e) => handleFootageFiles(e.target.files)} />
+                <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                  MP4/MOV/JPG · up to 50 MB each · your clips fill the first scenes, stock fills the rest
+                </span>
+              </div>
+              {footageItems.filter((f) => f.kind !== 'audio').length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {footageItems.filter((f) => f.kind !== 'audio').map((f) => {
+                    const on = selectedFootageIds.includes(f.id)
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setSelectedFootageIds((cur) => (on ? cur.filter((x) => x !== f.id) : [...cur, f.id]))}
+                        title={on ? 'Click to exclude from this video' : 'Click to use in this video'}
+                        style={{ borderRadius: 10, padding: 2, border: on ? '2px solid #2997ff' : '2px solid var(--border)', background: 'rgba(0,0,0,0.3)', cursor: 'pointer', position: 'relative' }}
+                      >
+                        {f.kind === 'video' ? (
+                          <video src={f.url} muted playsInline style={{ width: 74, height: 46, objectFit: 'cover', borderRadius: 8, opacity: on ? 1 : 0.5 }} />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={f.url} alt="footage" style={{ width: 74, height: 46, objectFit: 'cover', borderRadius: 8, opacity: on ? 1 : 0.5 }} />
+                        )}
+                        {on && (
+                          <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: '#2997ff', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {selectedFootageIds.indexOf(f.id) + 1}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* KINEO-OWN-VOICE-2026-07-10 (Prioridade 3) — narração própria:
+              upload de voiceover (pula TTS, captions por Whisper) ou voz
+              clonada do perfil (clonagem feita na página do AI Presenter). */}
+          <div className="mt-3" style={{ maxWidth: 830 }}>
+            <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>
+              🎙️ My voice <span style={{ textTransform: 'none', fontWeight: 600 }}>— replace the AI narrator</span>
+            </div>
+            <div className="rounded-xl p-3 flex flex-wrap items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: (myVoiceUrl || useClonedVoice) ? '1px solid rgba(41,151,255,0.35)' : '1px solid var(--border)' }}>
+              <button
+                type="button"
+                onClick={() => voiceInputRef.current?.click()}
+                disabled={voiceUploading}
+                className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                style={{ background: myVoiceUrl ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: myVoiceUrl ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: myVoiceUrl ? '#2997ff' : 'var(--muted2)', cursor: voiceUploading ? 'not-allowed' : 'pointer' }}
+              >
+                {voiceUploading ? '🎙️ Uploading…' : myVoiceUrl ? '✓ My voiceover loaded' : '🎙️ Upload my voiceover (MP3/WAV)'}
+              </button>
+              <input ref={voiceInputRef} type="file" accept="audio/mpeg,audio/wav,audio/mp4,audio/x-m4a" className="hidden" onChange={(e) => handleVoiceFile(e.target.files)} />
+              {myVoiceUrl && (
+                <button type="button" onClick={() => setMyVoiceUrl('')} className="text-[11px] underline" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  remove
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setUseClonedVoice((v) => !v); if (!useClonedVoice) setMyVoiceUrl('') }}
+                className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                style={{ background: useClonedVoice ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: useClonedVoice ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: useClonedVoice ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+              >
+                🧬 Use my cloned voice
+              </button>
+              <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                No clone yet? <a href="/avatar" style={{ color: '#2997ff', fontWeight: 700 }}>Record one in AI Presenter →</a>
+              </span>
+            </div>
+            {footageMsg && (
+              <p className="text-[11px] font-bold mt-1.5" style={{ color: footageMsg.startsWith('✓') ? '#5cb3ff' : '#f87171' }}>{footageMsg}</p>
+            )}
+          </div>
 
           {/* #383c — explicit script handling. Default = let the AI structure the
               text; advanced = use the pasted script verbatim. Replaces the old

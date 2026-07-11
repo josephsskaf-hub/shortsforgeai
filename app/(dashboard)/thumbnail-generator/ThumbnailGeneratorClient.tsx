@@ -363,7 +363,10 @@ export default function ThumbnailGeneratorClient() {
     } finally {
       setLoading(false)
     }
-  }, [prompt, selectedStyle, generateCount, isLimitReached])
+    // KINEO-CHARLOCK-V2 fix — selectedCharacterId MUST be a dep: without it
+    // the memoized callback kept a stale '' and silently dropped the lock
+    // whenever the character was picked after the prompt (review catch).
+  }, [prompt, selectedStyle, generateCount, isLimitReached, selectedCharacterId])
 
   async function handleDownloadSelected() {
     const url = images[selectedIdx]
