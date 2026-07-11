@@ -295,6 +295,24 @@ export default function ThumbnailGeneratorClient() {
       .catch(() => {})
   }, [])
 
+  // KINEO-THUMB-PAID-UNLIMITED-2026-07-10 — o limite diário (localStorage,
+  // 2/dia) pegava até PAGANTE: durante o teste do Character Lock a conta
+  // Studio do Joseph viu "Upgrade for unlimited". Pagante = ilimitado, como o
+  // /pricing promete. (Gate free continua client-side como sempre foi.)
+  const [isPaidUser, setIsPaidUser] = useState(false)
+  useEffect(() => {
+    fetch('/api/me/plan', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        // /api/me/plan → { plan: tier, isPro, cinematic_tokens }
+        const plan = (d?.plan ?? '').toString().toLowerCase()
+        const paid = d?.isPro === true ||
+          ['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial'].includes(plan)
+        if (paid) setIsPaidUser(true)
+      })
+      .catch(() => {})
+  }, [])
+
   async function handleSaveAsCharacter() {
     const img = images[selectedIdx]
     if (!img || charSaving) return
@@ -324,7 +342,8 @@ export default function ThumbnailGeneratorClient() {
   }
 
   const remainingFree = Math.max(FREE_DAILY_LIMIT - dailyUsed, 0)
-  const isLimitReached = remainingFree <= 0
+  // KINEO-THUMB-PAID-UNLIMITED — pagante nunca bate no limite diário.
+  const isLimitReached = !isPaidUser && remainingFree <= 0
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) { setError('Enter a prompt first.'); return }

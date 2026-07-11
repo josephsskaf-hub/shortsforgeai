@@ -20,6 +20,12 @@ import { stripScriptMarkers } from '@/lib/scriptParser'
 import { fetchUserPlan } from '@/lib/plan'
 import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
 import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
+// KINEO-CREDIT-INTENT-2026-07-11 — record the authoritative engine + intended
+// cost for every render, keyed by render_id, the moment it is created. This is
+// the trusted source /api/compose/status bills from (instead of the client's
+// ?quality / ?deducted query params). creditCostFor is the shared price table.
+import { creditCostFor } from '@/lib/credits/engineCost'
+import { recordRenderIntent } from '@/lib/credits/renderIntent'
 
 export const maxDuration = 300
 
@@ -549,6 +555,17 @@ export async function POST(req: NextRequest) {
         } catch { /* best-effort */ }
       }
 
+      // KINEO-CREDIT-INTENT-2026-07-11 — pin the engine + intended cost to this
+      // render_id BEFORE the client can poll status. Hollywood = 150 credits,
+      // charged on SUCCESS in /api/compose/status from THIS record (never the
+      // client ?quality param). Best-effort (never throws), loud on failure.
+      await recordRenderIntent({
+        renderId: hollywoodRenderId,
+        userId: user.id,
+        quality,
+        cost: creditCostFor(quality),
+      })
+
       return NextResponse.json({
         render_id: hollywoodRenderId,
         quality,
@@ -920,6 +937,19 @@ export async function POST(req: NextRequest) {
         console.warn('[broll_metrics] compose update threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
       }
     }
+
+    // KINEO-CREDIT-INTENT-2026-07-11 — pin the engine + intended cost to this
+    // render_id BEFORE the client can poll status, so the billing decision in
+    // /api/compose/status reads the ENGINE from here and ignores the client's
+    // ?quality / ?deducted params. For Fast, the intended cost mirrors the
+    // watermark decision's paid-user resolution (isFreePlanFast): paid → 1,
+    // free → 0. Premium engines are deterministic. Best-effort, never throws.
+    await recordRenderIntent({
+      renderId,
+      userId: user.id,
+      quality,
+      cost: creditCostFor(quality, quality === 'fast' ? !isFreePlanFast : false),
+    })
 
     return NextResponse.json({
       render_id: renderId,

@@ -4,6 +4,12 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { pollCreatomateRender } from '@/lib/compose'
 import { persistRenderAssets } from '@/lib/renderAssets'
 import { refundRenderCredits } from '@/lib/credits/refund'
+// KINEO-CREDIT-INTENT-2026-07-11 — the billing decision now reads the engine
+// (and price) from the server-side render_jobs intent row, NEVER from the
+// client's ?quality / ?deducted query params. creditCostFor is the single
+// shared price table (was a local copy here).
+import { creditCostFor, normalizeQuality } from '@/lib/credits/engineCost'
+import { getRenderIntent } from '@/lib/credits/renderIntent'
 
 // Push #230 — bumped 30→60 to give the post-render asset migration
 // (download Creatomate video + thumbnail, re-upload to Supabase Storage)
@@ -23,76 +29,10 @@ export const dynamic = 'force-dynamic'
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (260 cr, provisional).
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar' | 'presenter'
 
-// KINEO-PRICING-V3C-2026-07-10 — creditCostFor now takes isPaidUser so Fast
-// can cost 1 credit for PAYING accounts while staying 0 for free users (the
-// KINEO-ZERO-SIGNUP watch-free funnel is untouched).
-function creditCostFor(quality: Quality, isPaidUser = false): number {
-  // Matches the per-quality cost shown to the user on the Generate screen.
-  // The UI display lives in app/(dashboard)/generate/GenerateClient.tsx — keep
-  // these two in sync when adjusting prices. Push #084 added 'fast' = 1
-  // credit for the Pexels + TTS Fast Mode pipeline. Basic / Basic AI = 15,
-  // Pro = 20. Push #315 added 'cinematic_ai' = 3 for fal.ai Wan 2.1.
-  switch (quality) {
-    case 'fast':
-      // KINEO-ZERO-SIGNUP-2026-07-09 — Fast is FREE again (was 1cr since
-      // KINEO-FAST-1CR-2026-07-06). InVideo model: render/watch free with
-      // watermark, pay $4.90 to download (KINEO-DL-PAYWALL). Fast costs
-      // ~$0.02-0.05 to serve — it's the growth engine, not the revenue line.
-      // KINEO-PRICING-V3C-2026-07-10 — for PAYING accounts (has_paid=true or
-      // any paid plan) Fast now costs 1 credit per video. Free users stay at
-      // 0 (watermarked render + download paywall — funnel unchanged). Product
-      // rule: a paid user with 0 balance still renders fine — the debit is
-      // simply skipped ([fast-credit] skip below); never break a render over
-      // 1 credit.
-      return isPaidUser ? 1 : 0
-    case 'avatar':
-      // KINEO-AVATAR-120-2026-07-06 — AI Avatar folded into the UNIVERSAL
-      // video_credits system (was the separate avatar_credits add-on @ 1/video).
-      // 120 universal credits per avatar video. This value now drives the
-      // STANDARD video-credit deduction path (avatar is in the
-      // shouldDeductCredits whitelist below), so the old debit_avatar_credit
-      // block was removed — there is exactly ONE debit path for avatar.
-      // KINEO-AVATAR-220-2026-07-07 — repriced 120→220 (real VEED cost ~$9.60/video).
-      // KINEO-REBASE-2026-07-10 — 220 → 110 (2:1 credit rebase; same USD value).
-      return 110
-    case 'presenter':
-      // KINEO-PRESENTER-2026-07-10 — AI Presenter (Kling AI Avatar v2 Standard,
-      // $0.0562/s → ~$3.37 per 60s). 70 credits ≈ $11.62 of Creator credit
-      // value → ~71% margin (Joseph subiu 60→70 em 10/07). Keep in sync with
-      // AVATAR_CREDIT_COST in generate-avatar.
-      return 70
-    case 'cinematic_ai':
-      // KINEO-REBASE-2026-07-10 — 40 → 20 (2:1 rebase). Keep in sync with
-      // SEEDANCE_CREDIT_COST in generate-video-cinematic.
-      return 20
-    case 'cinematic_kling':
-      // KINEO-KLING-90-2026-07-06 margin math intact.
-      // KINEO-REBASE-2026-07-10 — 90 → 45 (2:1 rebase; same USD value).
-      // KINEO-PRICING-V3B-2026-07-10 — 45 → 50 (margin bump). Keep in sync
-      // with KLING_CREDIT_COST in generate-video-cinematic.
-      return 50
-    case 'cinematic_veo':
-      // #489/#491 — Veo 3.1 Fast premium. Keep in sync with VEO_CREDIT_COST.
-      // KINEO-REBASE-2026-07-10 — 180 → 90.
-      return 90
-    case 'cinematic_sora':
-      // #491 — Sora 2 premium (engine still BLOCKED upstream).
-      // KINEO-REBASE-2026-07-10 — 200 → 100.
-      return 100
-    case 'cinematic_hollywood':
-      // KINEO-REBASE-2026-07-10 — Hollywood = 150 créditos: preço FINAL aprovado
-      // 10/07. Keep in sync with HOLLYWOOD_CREDIT_COST in generate-video-cinematic.
-      return 150
-    case 'pro':
-      // KINEO-REBASE-2026-07-10 — legacy 20 → 10.
-      return 10
-    case 'basic':
-    case 'basic_ai':
-    default:
-      // KINEO-REBASE-2026-07-10 — legacy 15 → 8 (ceil of 15/2).
-      return 8
-  }
-}
+// KINEO-CREDIT-INTENT-2026-07-11 — creditCostFor moved to
+// lib/credits/engineCost.ts so the render-BIRTH route (/api/compose) and this
+// render-SETTLE route price every engine from the SAME table (no drift). The
+// isPaidUser arg still lets Fast cost 1 credit for paying accounts / 0 for free.
 
 // Push #050 — persist the finished video to `videos` so it appears in
 // Visual History on the Generate page and on /history. Writes through
@@ -227,20 +167,41 @@ export async function GET(
       return NextResponse.json({ error: 'renderId is required.' }, { status: 400 })
     }
 
+    // ── KINEO-CREDIT-INTENT-2026-07-11 — AUTHORITATIVE ENGINE FROM THE SERVER ──
+    // The billing decision must NEVER trust the client. /api/compose recorded
+    // the real engine + intended cost in render_jobs, keyed by render_id, at
+    // render BIRTH. We read it here and it WINS over the ?quality query param.
+    // Forging ?quality=fast (to make a 110-credit Avatar settle as a free Fast
+    // video) no longer works — the recurrence of "avatar nunca debitava por
+    // quality ausente" is closed.
+    const intent = await getRenderIntent(renderId)
+    const hasServerIntent = !!intent && intent.userId === user.id
+    if (intent && intent.userId !== user.id) {
+      // A render_id that belongs to a different user should never be polled here
+      // in normal flow. Don't use its intent; fall back to legacy handling and
+      // log — any charge always lands on the authenticated poller anyway.
+      console.warn(`[compose/status] intent user mismatch render=${renderId} — ignoring intent row`)
+    }
+
+    // Legacy fallback (no intent row = a render created before this deploy, or a
+    // path that didn't record intent): keep the historical client-param parse.
     const qParam = (req.nextUrl.searchParams.get('quality') ?? 'basic_ai').toString()
-    // Push #361 — REVENUE-LEAK FIX: 'cinematic_ai' was missing from this
-    // whitelist, so every AI Generated render silently collapsed to 'basic_ai'
-    // → quality_mode=basic_ai, credits_used=15, and shouldDeductCredits=false
-    // (so NOTHING was charged). Accept cinematic_ai here so creditCostFor()=30
-    // and the fast||cinematic_ai deduction path both fire correctly.
-    // KINEO-HOLLYWOOD-2026-07-09 — cinematic_hollywood accepted (same #361
-    // revenue-leak lesson: an unlisted quality silently collapses to basic_ai
-    // and charges nothing).
-    const quality: Quality =
-      qParam === 'fast' || qParam === 'basic' || qParam === 'pro' || qParam === 'cinematic_ai' || qParam === 'cinematic_kling' || qParam === 'cinematic_veo' || qParam === 'cinematic_sora' || qParam === 'cinematic_hollywood' || qParam === 'avatar' || qParam === 'presenter'
-        ? (qParam as Quality)
-        : 'basic_ai'
+    // Push #361 — REVENUE-LEAK FIX: an unlisted quality silently collapses to
+    // 'basic_ai' (which charges nothing). normalizeQuality applies that same
+    // defensive default to BOTH the intent value and the legacy query param.
+    const clientQuality: Quality = normalizeQuality(qParam)
+    const quality: Quality = hasServerIntent ? normalizeQuality(intent!.quality) : clientQuality
+
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
+    // KINEO-CREDIT-INTENT — when we have server-side intent, the client's
+    // "deducted=1" claim is IGNORED. Double-charge is still prevented server-side
+    // by (a) debit_video_credits idempotency (PK render_id) and (b) the
+    // videos-row guard below. The client bypass only survives for legacy
+    // (no-intent) renders, where behavior is unchanged.
+    const skipClientDeducted = hasServerIntent ? false : deductedParam
+    if (hasServerIntent && quality !== clientQuality) {
+      console.log(`[compose/status] intent override render=${renderId}: client sent '${clientQuality}', charging as '${quality}'`)
+    }
 
     // Push #050 — topic + duration travel as query params so we can record
     // them in the videos history row on success. Both are optional: the
@@ -283,7 +244,7 @@ export async function GET(
       // truth. Lookup failure → treated as free (no debit) — fail-open: a DB
       // blip must never charge or block anyone.
       let fastIsPaidUser = false
-      if (quality === 'fast' && !deductedParam) {
+      if (quality === 'fast' && !skipClientDeducted) {
         try {
           const { data: payerProf } = await supabase
             .from('profiles')
@@ -340,7 +301,7 @@ export async function GET(
       // KINEO-AVATAR-120-2026-07-06 — avatar is now inside shouldDeductCredits,
       // so this guard covers it (no separate isAvatarRender term needed).
       let serverAlreadyDeducted = false
-      if (shouldDeductCredits && !deductedParam) {
+      if (shouldDeductCredits && !skipClientDeducted) {
         try {
           // The videos table is readable by the owner via RLS (SELECT policy).
           // We use render_id + user_id to confirm this exact render was already
@@ -362,12 +323,17 @@ export async function GET(
         }
       }
 
-      // Idempotency: the client tells us whether it has already seen a "done"
-      // for this render. If so, we skip deduction so refresh / multi-tab polls
-      // don't double-charge. Server-side guard above handles the cross-session
-      // case (refresh, mobile browser, multi-tab).
-      if (!deductedParam && !serverAlreadyDeducted) {
+      // Idempotency: the server guard above (videos row) + debit_video_credits
+      // idempotency (PK render_id) prevent double-charging across refresh /
+      // multi-tab / multi-session polls. The client's "deducted=1" is honored
+      // ONLY as a legacy fallback (no intent row); with intent it is ignored.
+      // KINEO-CREDIT-INTENT — deductionAttempted marks that we entered the
+      // paid-debit path, so a FAILED premium debit is caught below (clean
+      // premium video withheld) without mis-firing on the free / legacy paths.
+      let deductionAttempted = false
+      if (!skipClientDeducted && !serverAlreadyDeducted) {
         if (shouldDeductCredits) {
+          deductionAttempted = true
           const { data: profile, error: fetchError } = await supabase
             .from('profiles')
             .select('video_credits, free_ai_generate_used')
@@ -463,6 +429,37 @@ export async function GET(
           // chip from the regular endpoint without double-decrementing.
           creditsDeducted = true
           creditsRemaining = null
+        }
+
+        // ── KINEO-CREDIT-INTENT-2026-07-11 — NEVER hand out a PAID premium
+        // render for free. If we ATTEMPTED to charge a premium engine and the
+        // debit did NOT settle (RPC error / insufficient balance), STOP here:
+        // do not migrate assets, persist Visual History, email, or return a
+        // clean final_video_url. The user is told they were NOT charged and can
+        // retry (the idempotent RPC self-heals a transient blip on the next
+        // poll). Fast is exempt — the product rule "never break a Fast render
+        // over 1 credit" already fail-opens above (fastCreditSkipped). A free AI
+        // trial (wasFreeAiTrial) and an upstream-token cinematic (the
+        // non-shouldDeductCredits else branch) both set creditsDeducted=true, so
+        // they legitimately pass through.
+        const isPremiumPaid = shouldDeductCredits && quality !== 'fast'
+        if (isPremiumPaid && deductionAttempted && !creditsDeducted) {
+          console.error('[compose/status] PREMIUM-DEBIT-FAILED — refusing to deliver clean premium video (no charge settled):', JSON.stringify({
+            render_id: renderId,
+            user_id_prefix: user.id.slice(0, 8),
+            quality,
+            cost,
+          }))
+          return NextResponse.json({
+            phase: 'failed',
+            reconcile: true,
+            error:
+              "We couldn't confirm the credits for this premium video, so it wasn't delivered. " +
+              'You have NOT been charged — please check your balance and try again.',
+            creditsDeducted: false,
+            creditsRemaining,
+            progress: 0,
+          })
         }
 
         // Push #050 — persist the completed video for Visual History.

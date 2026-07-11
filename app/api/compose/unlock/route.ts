@@ -15,6 +15,11 @@ import {
 } from '@/lib/compose'
 import { stripScriptMarkers } from '@/lib/scriptParser'
 import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
+// KINEO-CREDIT-INTENT-2026-07-11 — record the engine + intended cost for the
+// clean re-render so /api/compose/status bills it from the server-side intent
+// (not the client ?quality param), exactly like /api/compose does.
+import { creditCostFor } from '@/lib/credits/engineCost'
+import { recordRenderIntent } from '@/lib/credits/renderIntent'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -254,6 +259,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
       }
     }
+
+    // KINEO-CREDIT-INTENT-2026-07-11 — this is a Fast render for a user who just
+    // paid (has_paid=true above), so the intended cost is 1 credit. The debit in
+    // /api/compose/status fail-opens if the pack credits haven't landed yet
+    // (balance < 1 → delivered without debit), preserving the documented
+    // "clean re-render is covered / safe degradation" behavior.
+    await recordRenderIntent({
+      renderId,
+      userId: user.id,
+      quality: 'fast',
+      cost: creditCostFor('fast', true),
+    })
 
     console.log(`[compose/unlock] clean re-render started user=${user.id.slice(0, 8)} render=${renderId} duration=${duration}s`)
     return NextResponse.json({ render_id: renderId, quality: 'fast', duration })
