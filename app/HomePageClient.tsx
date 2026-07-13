@@ -1974,7 +1974,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
           <Link href="/privacy" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Privacy Policy</Link>
           <span aria-hidden className="text-[11.5px] text-[#94A3B8] opacity-40">·</span>
-          <a href="mailto:support@shortsforgeai.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
+          <a href="mailto:support@usekineo.com" className="text-[11.5px] font-medium text-[#94A3B8] hover:text-[#F1F5F9]">Contact</a>
         </div>
       </footer>
     </div>

@@ -245,7 +245,7 @@ export default function FoundingPage() {
         </section>
 
         <footer className="py-10 text-xs" style={{ color: 'rgba(255,255,255,.4)' }}>
-          Kineo · shortsforgeai.com · Questions? support@shortsforgeai.com
+          Kineo · usekineo.com · Questions? support@usekineo.com
         </footer>
       </div>
       <StickyFreeShortCTA />

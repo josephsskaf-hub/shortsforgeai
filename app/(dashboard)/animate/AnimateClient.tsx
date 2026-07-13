@@ -136,7 +136,7 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         return
       }
       if (data.status === 'failed') {
-        setError('Animation failed. Email support@shortsforgeai.com and we will restore your credits.')
+        setError('Animation failed. Email support@usekineo.com and we will restore your credits.')
         setPhase('failed')
         return
       }

@@ -147,7 +147,7 @@ export default function Footer() {
           <span aria-hidden style={{ opacity: 0.4 }}>
             ·
           </span>
-          <a href="mailto:support@shortsforgeai.com" style={linkStyle}>
+          <a href="mailto:support@usekineo.com" style={linkStyle}>
             Contact
           </a>
         </div>

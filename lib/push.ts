@@ -15,7 +15,7 @@ import crypto from 'crypto'
 export const VAPID_PUBLIC_KEY =
   'BGOZTjCZhKc3qWvh18exh1bus37T9KsoqzUTDH4ZaDyp9j54ItfzTr9VEZKv_8uoCGxuCRhT-rt-j1KDOKHpe9k'
 
-const VAPID_SUBJECT = 'mailto:support@shortsforgeai.com'
+const VAPID_SUBJECT = 'mailto:support@usekineo.com'
 
 function b64url(buf: Buffer): string {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')

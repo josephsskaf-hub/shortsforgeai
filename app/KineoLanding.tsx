@@ -322,7 +322,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <img width={200} src={"https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"} alt="Featured on There's An AI For That" />
           </a>
         </div>
-        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:support@shortsforgeai.com">Contact</a>
+        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:support@usekineo.com">Contact</a>
       </div></footer>
       <StickyFreeShortCTA />
     </main>

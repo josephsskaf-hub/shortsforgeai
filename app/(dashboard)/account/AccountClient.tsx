@@ -438,7 +438,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </h2>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
                 To delete your account and all data, email{' '}
-                <a href="mailto:support@shortsforgeai.com" style={{ color: '#fca5a5' }}>support@shortsforgeai.com</a>
+                <a href="mailto:support@usekineo.com" style={{ color: '#fca5a5' }}>support@usekineo.com</a>
                 {' '}— we process deletions within 48h.
               </p>
             </div>

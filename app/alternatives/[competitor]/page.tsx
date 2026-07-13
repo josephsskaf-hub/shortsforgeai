@@ -126,36 +126,40 @@ export const COMPETITORS: Record<string, Competitor> = {
       },
     ],
   },
+  // KINEO-SEO-COMPARE-2026-07-11 — REPOSICIONADA: desde o AI Presenter
+  // (10/07) o Kineo TEM avatar falante; a página antiga dizia o contrário e
+  // subvendia. Novo ângulo: "the presenter AND the finished video, cheaper".
   heygen: {
     name: 'HeyGen',
-    h1: 'The HeyGen Alternative for Truly Faceless Videos — No Avatar Needed',
+    h1: 'The HeyGen Alternative That Delivers the Presenter AND the Finished Short',
     intro:
-      'HeyGen is built around AI avatars and talking heads — there’s a face on screen. Kineo is the opposite: it makes fully faceless Shorts with cinematic footage, AI voiceover and captions, from one idea, in about 60 seconds. No avatar to set up, no face on camera, starting at $9.90/mo.',
-    theyDo: 'HeyGen creates AI-avatar / talking-head videos (a face on screen).',
+      'HeyGen gives you a talking avatar clip. Kineo gives you the talking AI Presenter — one photo + your script, studio-grade lip-sync — PLUS the whole Short built around it: viral script, AI scenes or your own footage, captions and your own voice. Lock one character and keep the exact same face in every video. From $9.90/mo where HeyGen starts around $29.',
+    theyDo: 'HeyGen creates AI-avatar / talking-head clips and enterprise avatar video workflows.',
     pickThem:
-      'Pick HeyGen if you specifically want an on-screen AI presenter or spokesperson. Pick Kineo if you want classic faceless Shorts — footage + voiceover + captions, no face at all.',
+      'Pick HeyGen if you need enterprise avatar libraries, translation at scale or corporate workflows. Pick Kineo if you are a creator shipping Shorts daily and want the presenter, script, scenes and captions to come out of ONE prompt — at creator pricing.',
     rows: [
-      { feature: 'Fully faceless (no avatar, no face)', sfa: true, them: false },
-      { feature: 'Creates the full Short from just an idea', sfa: true, them: 'Script → avatar' },
-      { feature: 'Writes the script for you', sfa: true, them: false },
-      { feature: 'AI voiceover included', sfa: true, them: true },
-      { feature: 'Cinematic B-roll footage matched per scene', sfa: true, them: 'Avatar-centric' },
-      { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: true },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
-      { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
+      { feature: 'Talking AI presenter with lip-sync (photo + script)', sfa: true, them: true },
+      { feature: 'Creates the FULL Short from just an idea', sfa: true, them: 'Avatar clip only' },
+      { feature: 'Same face across every video (Character Lock)', sfa: true, them: 'Custom avatar' },
+      { feature: 'Use your own footage as scenes', sfa: true, them: false },
+      { feature: 'Use your own voice (upload or clone)', sfa: 'Both', them: 'Clone' },
+      { feature: 'Transparent gesture clips (WebM alpha) for courses/slides', sfa: true, them: false },
+      { feature: 'Viral-structure scripts (hook → payoff) built-in', sfa: true, them: false },
+      { feature: 'Also does fully faceless Shorts (no avatar at all)', sfa: true, them: false },
+      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: '$29/mo+' },
     ],
     faq: [
       {
-        q: 'What is the best HeyGen alternative for faceless content?',
-        a: 'Kineo is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. HeyGen is centered on AI avatars and talking heads.',
+        q: 'What is the best HeyGen alternative for YouTube Shorts creators?',
+        a: 'Kineo — it has a talking AI Presenter with studio lip-sync like HeyGen, but it also writes the viral script, generates the scenes (or uses your footage), adds captions and can narrate in your cloned voice. You get the finished 9:16 Short, not just an avatar clip, from $9.90/mo.',
       },
       {
-        q: 'Can I make videos without an AI avatar?',
-        a: 'Yes. Kineo never uses an on-screen presenter. It assembles real footage, voiceover and captions into a faceless 9:16 Short.',
+        q: 'Does Kineo have an AI avatar like HeyGen?',
+        a: 'Yes. Kineo’s AI Presenter turns one photo + your script into a talking video with perfect lip-sync, and Character Lock keeps the exact same face across every video and thumbnail you make.',
       },
       {
-        q: 'How much does it cost?',
-        a: 'Plans start at $9.90/month with a 7-day money-back guarantee, and your first Short is free with no credit card.',
+        q: 'Is Kineo cheaper than HeyGen?',
+        a: 'Yes — Kineo plans start at $9.90/month (HeyGen starts around $29), there’s a $4.90 one-time pack, your first Short is free with no credit card, and every plan has a 7-day money-back guarantee.',
       },
     ],
   },
@@ -446,28 +450,30 @@ export const COMPETITORS: Record<string, Competitor> = {
     ],
   },
   // ROBO-SEO-2026-06-30 — Synthesia (avatar) / Canva (design editor) / Kapwing (browser editor)
+  // KINEO-SEO-COMPARE-2026-07-11 — reposicionada pós-AI Presenter (mesma
+  // correção da página do HeyGen: agora temos avatar E o vídeo completo).
   synthesia: {
     name: 'Synthesia',
-    h1: 'The Synthesia Alternative for Faceless Shorts — No AI Avatar on Screen',
+    h1: 'The Synthesia Alternative for Creators — Presenter Included, Short Included',
     intro:
-      'Synthesia is the leading AI-avatar platform: you pick a digital presenter, type a script and it generates a talking-head video in 140+ languages — great for training, explainers and corporate comms. But there is always a face on screen. Kineo is the opposite: fully faceless Shorts built from cinematic footage, AI voiceover and captions, generated from one idea in about 60 seconds, starting at $9.90/mo.',
+      'Synthesia is the leading corporate AI-avatar platform: pick a digital presenter, type a script, get a talking-head video. Kineo brings that to creators — an AI Presenter with studio lip-sync from one photo — and then finishes the job: viral script, AI scenes or your own footage, captions and your own voice, delivered as a ready-to-post 9:16 Short. From $9.90/mo.',
     theyDo: 'Synthesia creates AI-avatar / talking-head videos with a digital presenter on screen, in 140+ languages.',
     pickThem:
-      'Pick Synthesia if you want a polished on-screen AI presenter for training, explainers or multilingual corporate video. Pick Kineo if you want classic faceless Shorts — footage + voiceover + captions, no avatar and no face at all.',
+      'Pick Synthesia for corporate training and multilingual explainers at enterprise scale. Pick Kineo if you are a creator: the presenter, the script, the scenes and the captions come out of one prompt, at a price an individual can pay.',
     rows: [
-      { feature: 'Fully faceless (no avatar, no face)', sfa: true, them: false },
-      { feature: 'Creates the full Short from just an idea', sfa: true, them: 'Script → avatar' },
-      { feature: 'Writes the script for you', sfa: true, them: false },
-      { feature: 'AI voiceover included', sfa: true, them: true },
-      { feature: 'Cinematic B-roll footage matched per scene', sfa: true, them: 'Avatar-centric' },
+      { feature: 'Talking AI presenter with lip-sync', sfa: true, them: true },
+      { feature: 'Creates the FULL Short from just an idea', sfa: true, them: 'Script → avatar' },
+      { feature: 'Same face across every video (Character Lock)', sfa: true, them: 'Avatar library' },
+      { feature: 'Writes the viral script for you', sfa: true, them: false },
+      { feature: 'Use your own footage as scenes', sfa: true, them: false },
+      { feature: 'Also does fully faceless Shorts (no avatar at all)', sfa: true, them: false },
       { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'Corporate / training' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
-      { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
+      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
     ],
     faq: [
-      { q: 'What is the best Synthesia alternative for faceless YouTube Shorts?', a: 'Kineo is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. Synthesia is centered on AI-avatar presenters for training and corporate video.' },
-      { q: 'Can I make videos without an AI avatar or presenter?', a: 'Yes. Kineo never puts a presenter on screen. It assembles real footage, an AI voiceover and captions into a faceless 9:16 Short from a single idea.' },
-      { q: 'Is Kineo cheaper than Synthesia?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card. Synthesia pricing changes over time, so check their site, but the bigger difference is scope: Synthesia makes avatar videos, Kineo makes faceless Shorts.' },
+      { q: 'What is the best Synthesia alternative for YouTube Shorts?', a: 'Kineo — it gives creators a talking AI Presenter with studio lip-sync AND the finished Short: viral script, AI scenes or your own footage, captions and your own cloned voice, from $9.90/mo.' },
+      { q: 'Does Kineo have an AI presenter like Synthesia?', a: 'Yes. Kineo’s AI Presenter animates one photo into a talking video with perfect lip-sync, and Character Lock keeps the same face across every video — ideal for a channel host or brand persona.' },
+      { q: 'Is Kineo cheaper than Synthesia?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card, plus a $4.90 one-time pack. The bigger difference is scope: Synthesia makes the avatar video, Kineo delivers the whole ready-to-post Short.' },
     ],
   },
   canva: {
@@ -546,52 +552,54 @@ export const COMPETITORS: Record<string, Competitor> = {
   },
   // ROBO-SEO-2026-07-01 — Synthesys (avatar) / D-ID (avatar API), same category
   // pattern as the existing Synthesia/HeyGen entries: avatar/talking-head vs faceless.
+  // KINEO-SEO-COMPARE-2026-07-11 — reposicionada pós-AI Presenter.
   synthesys: {
     name: 'Synthesys',
-    h1: 'The Synthesys Alternative for Faceless Shorts — No AI Avatar on Screen',
+    h1: 'The Synthesys Alternative With the Presenter AND the Finished Short',
     intro:
-      'Synthesys is an AI avatar and voice platform: you pick a digital presenter or clone a voice, type a script and it generates a talking-head video or voiceover track. It is built around a spokesperson on screen. Kineo is the opposite: fully faceless Shorts built from cinematic footage, AI voiceover and captions, generated from one idea in about 60 seconds, starting at $9.90/mo.',
+      'Synthesys gives you an AI presenter or a cloned voice — and stops there. Kineo has both (AI Presenter with studio lip-sync from one photo, your own voice uploaded or cloned) and then finishes the video: viral script, AI scenes or your own footage, captions, ready-to-post 9:16. Lock one character and keep the same face forever. From $9.90/mo.',
     theyDo: 'Synthesys creates AI-avatar / talking-head videos and AI voiceovers, with a digital presenter on screen.',
     pickThem:
-      'Pick Synthesys if you specifically want an on-screen AI presenter or a cloned voice for talking-head content. Pick Kineo if you want classic faceless Shorts — footage + voiceover + captions, no avatar and no face at all.',
+      'Pick Synthesys if you only need a spokesperson clip or a voice track. Pick Kineo if you want the presenter, the script, the scenes and the captions delivered as one finished Short — plus fully faceless mode when you don’t want a face at all.',
     rows: [
-      { feature: 'Fully faceless (no avatar, no face)', sfa: true, them: false },
-      { feature: 'Creates the full Short from just an idea', sfa: true, them: 'Script → avatar' },
-      { feature: 'Writes the script for you', sfa: true, them: false },
-      { feature: 'AI voiceover included', sfa: true, them: true },
-      { feature: 'Cinematic B-roll footage matched per scene', sfa: true, them: 'Avatar-centric' },
+      { feature: 'Talking AI presenter with lip-sync', sfa: true, them: true },
+      { feature: 'Voice cloning (narrate with YOUR voice)', sfa: true, them: true },
+      { feature: 'Creates the FULL Short from just an idea', sfa: true, them: 'Script → avatar' },
+      { feature: 'Same face across every video (Character Lock)', sfa: true, them: false },
+      { feature: 'Use your own footage as scenes', sfa: true, them: false },
+      { feature: 'Also does fully faceless Shorts', sfa: true, them: false },
       { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'Talking-head focus' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
-      { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
+      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
     ],
     faq: [
-      { q: 'What is the best Synthesys alternative for faceless YouTube Shorts?', a: 'Kineo is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. Synthesys is centered on AI-avatar presenters and voice cloning.' },
-      { q: 'Can I make videos without an AI avatar or presenter?', a: 'Yes. Kineo never puts a presenter on screen. It assembles real footage, an AI voiceover and captions into a faceless 9:16 Short from a single idea.' },
-      { q: 'Is Kineo cheaper than Synthesys?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card. Synthesys pricing changes over time, so check their site, but the bigger difference is scope: Synthesys makes avatar videos, Kineo makes faceless Shorts.' },
+      { q: 'What is the best Synthesys alternative for YouTube Shorts?', a: 'Kineo — AI Presenter with studio lip-sync, voice cloning, Character Lock for a consistent host, plus the whole Short (script, scenes, captions) generated from one idea. From $9.90/mo.' },
+      { q: 'Does Kineo do voice cloning like Synthesys?', a: 'Yes — record about a minute of audio and every video can be narrated in your cloned voice. You can also upload a ready voiceover and Kineo syncs the captions to it.' },
+      { q: 'Is Kineo cheaper than Synthesys?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card, plus a $4.90 one-time pack. And you get the finished Short, not just the avatar or the voice.' },
     ],
   },
+  // KINEO-SEO-COMPARE-2026-07-11 — reposicionada pós-AI Presenter.
   'd-id': {
     name: 'D-ID',
-    h1: 'The D-ID Alternative for Faceless Shorts — No Talking-Head Avatar Needed',
+    h1: 'The D-ID Alternative That Ships the Talking Video — Not Just the Avatar API',
     intro:
-      'D-ID is a developer-focused platform and API for generating AI talking-head avatars — upload a photo or pick a presenter, add a script, and it animates a face speaking the words. It is built for avatar video at the API level, not for assembling a finished, narrated Short. Kineo takes one idea and produces the entire faceless YouTube Short — script, AI voice, footage, and captions — in about 60 seconds, no avatar involved.',
+      'D-ID animates a face from a photo — at the API level, for developers. Kineo does the same trick as a finished product: upload one photo, paste your script, and the AI Presenter delivers a talking video with studio lip-sync — wrapped in a complete Short with viral script, scenes, captions and your own voice if you want it. No code, from $9.90/mo.',
     theyDo: 'D-ID provides AI talking-head avatar generation (including an API), animating a face to speak a script.',
     pickThem:
-      'Pick D-ID if you specifically need an animated talking-head avatar, or want to build avatar video into your own app via API. Pick Kineo if you want a finished faceless Short — footage, voiceover and captions — from one idea, with no face on screen.',
+      'Pick D-ID if you are a developer building avatar video into your own app. Pick Kineo if you want the result, not the API: a talking presenter and a ready-to-post 9:16 Short from one prompt.',
     rows: [
-      { feature: 'Fully faceless (no avatar, no face)', sfa: true, them: false },
-      { feature: 'Creates the full Short from just an idea', sfa: true, them: 'Script → avatar' },
-      { feature: 'Writes the script for you', sfa: true, them: false },
-      { feature: 'AI voiceover included', sfa: true, them: true },
-      { feature: 'Cinematic B-roll footage matched per scene', sfa: true, them: 'Avatar-centric' },
-      { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'API / developer tool' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: 'Needs your own pipeline' },
-      { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
+      { feature: 'Photo + script → talking video with lip-sync', sfa: true, them: true },
+      { feature: 'No code needed (finished product)', sfa: true, them: 'API / developer tool' },
+      { feature: 'Creates the FULL Short from just an idea', sfa: true, them: false },
+      { feature: 'Same face across every video (Character Lock)', sfa: true, them: 'Your implementation' },
+      { feature: 'Writes the viral script for you', sfa: true, them: false },
+      { feature: 'Also does fully faceless Shorts', sfa: true, them: false },
+      { feature: 'Ready-to-post 9:16 in minutes', sfa: true, them: 'Needs your own pipeline' },
+      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
     ],
     faq: [
-      { q: 'What is the best D-ID alternative for faceless YouTube Shorts?', a: 'Kineo is built for fully faceless Shorts — cinematic footage, AI voiceover and captions from one idea, with no avatar and no face on screen. D-ID is an avatar-generation platform and API centered on animating a talking face.' },
-      { q: 'Can I make videos without a talking-head avatar?', a: 'Yes. Kineo never puts an avatar or presenter on screen. It assembles real footage, an AI voiceover and captions into a faceless 9:16 Short from a single idea.' },
-      { q: 'Is Kineo an alternative to the D-ID API?', a: 'Kineo is a finished-product tool, not a developer API — you type an idea and get a ready-to-post Short, starting at $9.90/month with a free first Short. D-ID is aimed at developers building avatar video into their own apps.' },
+      { q: 'What is the best D-ID alternative for creators (no coding)?', a: 'Kineo — the AI Presenter turns one photo + your script into a talking video with studio lip-sync, and the platform finishes the whole Short around it: script, scenes, captions, your own voice. No API, no code.' },
+      { q: 'Can Kineo animate a photo into a talking video like D-ID?', a: 'Yes — that is exactly what the AI Presenter does, and Character Lock keeps that same face consistent across every video and thumbnail you make.' },
+      { q: 'Is Kineo an alternative to the D-ID API?', a: 'For developers who need an API, D-ID fits better. For creators and businesses who just want the finished talking video, Kineo delivers it from $9.90/month — first Short free, no credit card.' },
     ],
   },
   // ROBO-SEO-2026-07-01b — SendShort (repurposing + faceless hybrid) / Luma Dream

@@ -827,7 +827,7 @@ export default function PricingPage() {
           <p className="mt-5 text-center text-[12.5px] text-[#86868b]">
             Still have questions?{' '}
             <a
-              href="mailto:support@shortsforgeai.com"
+              href="mailto:support@usekineo.com"
               className="font-bold text-[#2997ff] hover:text-[#2997ff]"
             >
               Email us →
@@ -981,7 +981,7 @@ export default function PricingPage() {
           <span aria-hidden className="text-[11.5px] text-[#86868b] opacity-40">·</span>
           <Link href="/privacy" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Privacy Policy</Link>
           <span aria-hidden className="text-[11.5px] text-[#86868b] opacity-40">·</span>
-          <a href="mailto:support@shortsforgeai.com" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Contact</a>
+          <a href="mailto:support@usekineo.com" className="text-[11.5px] font-medium text-[#86868b] hover:text-[#f5f5f7]">Contact</a>
         </div>
       </footer>
     </div>
