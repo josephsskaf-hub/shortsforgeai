@@ -68,7 +68,7 @@ function trackEvent(name: string): void {
 
 export default function ExitIntentOffer() {
   const [open, setOpen] = useState(false)
-  const [buying, setBuying] = useState<'pack' | 'starter' | null>(null)
+  const [buying, setBuying] = useState<'pack' | 'starter' | 'creator' | null>(null)
   const shownRef = useRef(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
@@ -180,27 +180,33 @@ export default function ExitIntentOffer() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open])
 
-  // Left CTA — EXACT same flow as the featured Starter Pack button on
-  // /pricing: same event name, same GET checkout endpoint (server-side 302
-  // to Stripe; no fetch so iOS Safari keeps the user-gesture chain).
+  // KINEO-INTRO-MONTH-2026-07-13 — EXIT-INTENT v3 "RECORRÊNCIA": os dois
+  // cards agora são ASSINATURAS com 1º mês de entrada ($4.90 Starter /
+  // $9.90 Creator). O pack one-time não some — vira o link discreto de
+  // último recurso abaixo dos cards ("prefer no subscription?"). Mesma
+  // mecânica GET (302 servidor, gesture-chain do iOS preservada).
+  function handleIntroStarter() {
+    if (buying) return
+    setBuying('starter')
+    trackEvent('starter_checkout_clicked')
+    trackEvent('exit_intent_intro_starter_clicked')
+    window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
+  }
+
+  function handleIntroCreator() {
+    if (buying) return
+    setBuying('creator')
+    trackEvent('basic_checkout_clicked')
+    trackEvent('exit_intent_intro_creator_clicked')
+    window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+  }
+
   function handleStarterPack() {
     if (buying) return
     setBuying('pack')
     trackEvent('starter_pack_checkout_clicked')
     trackEvent('exit_intent_starter_pack_clicked')
     window.location.href = '/api/stripe/checkout?pack=starter'
-  }
-
-  // Right CTA (KINEO-REBASE-2026-07-10) — the Starter SUBSCRIPTION, reusing
-  // the exact GET checkout PricingCards/handleBuy uses (?tier=starter). Same
-  // abandon-recovery event family (starter_checkout_clicked) + the new
-  // exit-intent-specific event.
-  function handleStarterMonthly() {
-    if (buying) return
-    setBuying('starter')
-    trackEvent('starter_checkout_clicked')
-    trackEvent('exit_intent_starter_monthly_clicked')
-    window.location.href = '/api/stripe/checkout?tier=starter'
   }
 
   if (!open) return null
@@ -243,10 +249,10 @@ export default function ExitIntentOffer() {
           Try it once, or get fresh credits every month. Both take one click.
         </p>
 
-        {/* KINEO-REBASE-2026-07-10 — the v2 ladder: one-time pack (left) vs
-            Starter subscription (right, highlighted BEST VALUE). */}
+        {/* KINEO-INTRO-MONTH-2026-07-13 — v3 ladder: intro Starter (left) vs
+            intro Creator (right, highlighted). Ambos assinaturas → MRR. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-left">
-          {/* Left — $4.90 one-time pack (existing ?pack=starter checkout) */}
+          {/* Left — Starter: first month $4.90, then $9.90/mo */}
           <div
             className="rounded-xl p-4 flex flex-col"
             style={{
@@ -255,17 +261,17 @@ export default function ExitIntentOffer() {
             }}
           >
             <span className="text-[10px] font-black uppercase tracking-[.12em] text-[#86868b] mb-1.5">
-              One-time · no subscription
+              Starter · 25 credits/mo
             </span>
             <span className="text-xl font-black text-[#f5f5f7]">
-              $4.90 <span className="text-[12px] font-bold text-[#86868b]">once</span>
+              $4.90 <span className="text-[12px] font-bold text-[#86868b]">first month</span>
             </span>
             <span className="text-[12.5px] text-[#a1a1a6] mt-1 mb-3 leading-relaxed">
-              10 videos · credits never expire
+              then $9.90/mo · no watermark · cancel anytime
             </span>
             <button
               type="button"
-              onClick={handleStarterPack}
+              onClick={handleIntroStarter}
               disabled={buying !== null}
               className="mt-auto w-full rounded-lg py-2.5 text-[13.5px] font-extrabold text-[#f5f5f7] transition hover:bg-white/[.10] disabled:opacity-60"
               style={{
@@ -275,11 +281,11 @@ export default function ExitIntentOffer() {
                 cursor: 'pointer',
               }}
             >
-              {buying === 'pack' ? 'Loading…' : 'Get 10 videos →'}
+              {buying === 'starter' ? 'Loading…' : 'Start for $4.90 →'}
             </button>
           </div>
 
-          {/* Right — Starter $9.90/mo (HIGHLIGHTED, best value) */}
+          {/* Right — Creator: first month $9.90, then $24.90/mo (HIGHLIGHTED) */}
           <div
             className="relative rounded-xl p-4 flex flex-col"
             style={{
@@ -295,17 +301,17 @@ export default function ExitIntentOffer() {
               Best value
             </span>
             <span className="text-[10px] font-black uppercase tracking-[.12em] mb-1.5" style={{ color: '#7cc0ff' }}>
-              Starter plan
+              Creator · 150 credits/mo
             </span>
             <span className="text-xl font-black text-[#f5f5f7]">
-              $9.90 <span className="text-[12px] font-bold text-[#86868b]">/mo</span>
+              $9.90 <span className="text-[12px] font-bold text-[#86868b]">first month</span>
             </span>
             <span className="text-[12.5px] text-[#cfe7ff] mt-1 mb-3 leading-relaxed">
-              25 credits every month + no watermark + cancel anytime
+              then $24.90/mo · 1 Hollywood film included · AI Presenter
             </span>
             <button
               type="button"
-              onClick={handleStarterMonthly}
+              onClick={handleIntroCreator}
               disabled={buying !== null}
               className="mt-auto w-full rounded-lg py-2.5 text-[13.5px] font-extrabold text-white transition disabled:opacity-60"
               style={{
@@ -315,13 +321,22 @@ export default function ExitIntentOffer() {
                 cursor: 'pointer',
               }}
             >
-              {buying === 'starter' ? 'Loading…' : 'Start for $9.90/mo →'}
+              {buying === 'creator' ? 'Loading…' : 'Start for $9.90 →'}
             </button>
           </div>
         </div>
 
         <p className="text-[11px] text-[#6e6e73]">
-          7-day money-back guarantee · cancel anytime
+          7-day money-back guarantee · cancel anytime ·{' '}
+          <button
+            type="button"
+            onClick={handleStarterPack}
+            disabled={buying !== null}
+            className="underline hover:text-[#a1a1a6] disabled:opacity-60"
+            style={{ color: '#6e6e73', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }}
+          >
+            {buying === 'pack' ? 'loading…' : 'prefer no subscription? 10 videos for $4.90 once'}
+          </button>
         </p>
       </div>
     </div>

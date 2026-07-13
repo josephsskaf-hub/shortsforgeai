@@ -33,7 +33,11 @@ const ADMIN_EMAILS = new Set([
 // hello@ = prospecção/resgate de leads (support@ is reserved for support).
 const FROM_EMAIL = 'Joseph at Kineo <hello@usekineo.com>'
 const REPLY_TO = 'hello@usekineo.com'
-const SUBJECT = 'Still thinking it over? Here is 20% off'
+// KINEO-INTRO-MONTH-2026-07-13 — oferta trocada: 20% off (KINEO20) → 1º mês
+// do Starter por $4.90. Desconto mais fundo (50% vs 20%) E recorrente por
+// design: quem resgata vira assinatura, não cupom avulso. O link vai direto
+// pro checkout com ?intro=1 (o servidor aplica o cupom e valida 1-por-conta).
+const SUBJECT = 'Still thinking it over? First month $4.90'
 
 // The checkout-click events fired across pricing, homepage, and the watermark moment.
 const CHECKOUT_EVENTS = [
@@ -81,11 +85,11 @@ function emailHtml(): string {
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;line-height:1.6">
   <p>Hey — Joseph here, founder of <b>Kineo</b> 🎬</p>
   <p>I noticed you got as far as checkout but didn't finish. No pressure — but if price was the thing holding you back, let me help.</p>
-  <p style="font-size:18px;margin:18px 0"><b>Here's 20% off any plan.</b></p>
+  <p style="font-size:18px;margin:18px 0"><b>Your first month for $4.90</b> — half price. 25 credits, watermark-free videos, cancel anytime.</p>
   <p style="margin:26px 0">
-    <a href="https://usekineo.com/pricing?promo=KINEO20&utm_source=abandon_email&utm_campaign=recovery20" style="background:#2997ff;color:#ffffff;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:bold">Claim 20% off &rarr;</a>
+    <a href="https://usekineo.com/api/stripe/checkout?tier=starter&intro=1" style="background:#2997ff;color:#ffffff;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:bold">Start for $4.90 &rarr;</a>
   </p>
-  <p style="color:#475569;font-size:14px">The discount applies automatically at checkout (code <b>KINEO20</b>). Cancel anytime · 7-day money-back guarantee.</p>
+  <p style="color:#475569;font-size:14px">Renews at $9.90/mo after the first month — cancel anytime with two clicks · 7-day money-back guarantee. Want more power? The Creator plan (150 credits + 1 Hollywood film/month) is also half off: <a href="https://usekineo.com/api/stripe/checkout?tier=basic&intro=1" style="color:#2997ff">first month $9.90</a>.</p>
   <p>If something else held you back — a feature or a question — just reply to this email. It comes straight to me.</p>
   <p>— Joseph, founder<br/>Kineo · https://usekineo.com</p>
 </div>`

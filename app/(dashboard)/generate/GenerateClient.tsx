@@ -4517,9 +4517,13 @@ export default function GenerateClient() {
                         This video + 10 videos · one-time
                       </span>
                     </button>
+                    {/* KINEO-INTRO-MONTH-2026-07-13 — o botão "monthly" agora usa
+                        o 1º mês $4.90 (mesmo preço do unlock ao lado, mas
+                        RECORRENTE — o comprador vira MRR e não one-time). Copy
+                        "50 videos" era stale do pré-rebase → 25 credits. */}
                     <button
                       type="button"
-                      onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter' }}
+                      onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter&intro=1' }}
                       className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center"
                       style={{
                         background: 'rgba(129,140,248,.12)',
@@ -4541,9 +4545,9 @@ export default function GenerateClient() {
                         e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
-                      <span>📅 Go monthly — $9.90</span>
+                      <span>📅 Go monthly — $4.90 first month</span>
                       <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
-                        50 videos every month · cancel anytime
+                        then $9.90/mo · 25 credits every month · cancel anytime
                       </span>
                     </button>
                   </div>
@@ -7059,9 +7063,11 @@ function UpgradeModal({
           </div>
         )}
 
-        {/* #473 — Starter Pack: low-commitment, one-time entry for users who
-            won't commit to a monthly subscription. Making the (hardest) first
-            payment turns a bounce into a paying customer we can upsell later. */}
+        {/* KINEO-INTRO-MONTH-2026-07-13 — o botão de escape do modal de 0
+            créditos era o pack one-time (beco sem saída: compra, gasta, some).
+            Mesmo $4.90 de entrada, novo destino: 1º mês do Starter → MRR.
+            Serve TAMBÉM como upsell de exaustão pros donos de pack antigos
+            (hasPaid && !isSubscriber caem exatamente aqui ao zerar créditos). */}
         {!isSubscriber && (
         <button
           type="button"
@@ -7071,11 +7077,11 @@ function UpgradeModal({
               void fetch('/api/events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'upgrade_modal' } }),
+                body: JSON.stringify({ name: 'intro_month_starter_clicked', metadata: { source: 'upgrade_modal' } }),
                 keepalive: true,
               })
             } catch { /* non-blocking */ }
-            window.location.href = '/api/stripe/checkout?pack=starter'
+            window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
           }}
           style={{
             width: '100%',
@@ -7092,10 +7098,10 @@ function UpgradeModal({
             textAlign: 'center',
           }}
         >
-          Not ready for a subscription?{' '}
-          <span style={{ color: '#2997ff' }}>Start with 10 videos for $4.90 →</span>
+          Keep creating —{' '}
+          <span style={{ color: '#2997ff' }}>first month just $4.90 →</span>
           <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
-            One-time · no subscription · credits never expire
+            25 credits every month · then $9.90/mo · cancel anytime
           </span>
         </button>
         )}

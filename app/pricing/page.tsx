@@ -24,8 +24,12 @@ const PAYPAL_ENABLED = false
 // content array so the accordion renders from one source of truth.
 const FAQS: { q: string; a: string }[] = [
   {
+    // KINEO-FAQ-NOCARD-2026-07-13 — a resposta antiga ("Yes, a card is
+    // required... charged immediately") CONTRADIZIA o selo "First Short
+    // free — no card" três telas acima. Conversion-killer clássico: o FAQ
+    // é onde o indeciso vai tirar a última dúvida antes de clicar.
     q: 'Do I need a credit card to start?',
-    a: 'Yes, a card is required to subscribe. You are charged immediately upon signup. Starter is $9.90/month, Creator is $24.90/month, and Studio is $37.90/month.',
+    a: 'No — your first Short is completely free and no card is asked. You only add a card if you decide to subscribe afterwards: Starter is $9.90/month, Creator $24.90/month, Studio $37.90/month, or a one-time $4.90 pack.',
   },
   {
     q: 'How fast are videos generated?',
@@ -201,7 +205,11 @@ export default function PricingPage() {
     // win-back emails) into checkout so the discount auto-applies on plan click.
     const promo = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('promo') : null
     const promoParam = promo ? `&promo=${encodeURIComponent(promo)}` : ''
-    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}${promoParam}`
+    // KINEO-INTRO-MONTH-2026-07-13 — Starter/Creator monthly levam o 1º mês
+    // com desconto ($4.90/$9.90). O servidor valida elegibilidade (1 por
+    // cliente) e ignora o param em annual/pro — aqui só pedimos.
+    const introParam = billing === 'monthly' && (tier === 'starter' || tier === 'basic') ? '&intro=1' : ''
+    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}${promoParam}${introParam}`
   }
 
   // Push #173 — read checkout_error / already_subscribed from URL params
@@ -401,17 +409,18 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* ROBO-ENTRY-490 (Joseph aprovou 30/06) — $4.90 one-time Starter Pack
-            featured as the lowest-commitment ENTRY OFFER above the monthly
-            plans, to win a cheaper first "yes". Position/emphasis only — same
-            /api/stripe/checkout?pack=starter and price as the 0-credit modal.
-            "No subscription" framing keeps it from cannibalizing the subs. */}
+        {/* KINEO-INTRO-MONTH-2026-07-13 — ROTA DE RECORRÊNCIA. O strip de
+            entrada era o pack $4.90 one-time: nossa oferta mais clicada
+            TERMINAVA a relação (compra, gasta, some — 0 assinaturas). Mesmo
+            preço de entrada, novo destino: 1º mês do Starter por $4.90,
+            renova $9.90, cancela quando quiser. O pack one-time continua
+            existindo como downsell no exit-intent (não some — desce). */}
         <div className="mx-auto mb-7 max-w-2xl">
           <button
             type="button"
             onClick={() => {
-              trackPricingEvent('starter_pack_checkout_clicked')
-              window.location.href = '/api/stripe/checkout?pack=starter'
+              trackPricingEvent('intro_month_starter_clicked')
+              window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
             }}
             className="block w-full rounded-2xl px-5 py-4 text-left transition hover:bg-[rgba(41,151,255,0.10)]"
             style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.5)', boxShadow: '0 0 28px rgba(41,151,255,0.10)', cursor: 'pointer' }}
@@ -421,12 +430,12 @@ export default function PricingPage() {
             </span>
             <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-[15.5px] font-black text-[#f5f5f7]">
-                Start with 10 videos — <span style={{ color: '#2997ff' }}>$4.90</span> one-time
+                First month <span style={{ color: '#2997ff' }}>$4.90</span> — then $9.90/mo
               </span>
-              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Get 10 videos →</span>
+              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Start for $4.90 →</span>
             </span>
             <span className="mt-1.5 block text-[12px] font-semibold text-[#86868b]">
-              No subscription · credits never expire · the lowest-commitment way to try the engine before picking a monthly plan.
+              25 credits every month · watermark-free MP4s · cancel anytime — half price to see if it earns its keep.
             </span>
           </button>
           {/* PAYPAL-2026-07-06 — one-time pack via PayPal ($4.90 USD). Hidden
@@ -495,6 +504,17 @@ export default function PricingPage() {
                     ? `/ month · billed annually (${ANNUAL[p.tier].total}/yr)`
                     : p.priceSub}
                 </div>
+                {/* KINEO-INTRO-MONTH-2026-07-13 — badge do 1º mês com desconto
+                    (monthly only). Starter $4.90 / Creator $9.90 na 1ª fatura;
+                    o checkout aplica via ?intro=1 (handleBuy). */}
+                {billing === 'monthly' && (p.tier === 'starter' || p.tier === 'basic') && (
+                  <div
+                    className="mt-2 inline-block rounded-full px-2.5 py-1 text-[11px] font-black"
+                    style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}
+                  >
+                    🎁 First month {p.tier === 'starter' ? '$4.90' : '$9.90'} — applied at checkout
+                  </div>
+                )}
                 {'tagline' in p && p.tagline && (
                   <p className="mt-2 text-[12px] text-[#86868b] leading-snug">
                     {p.tagline}

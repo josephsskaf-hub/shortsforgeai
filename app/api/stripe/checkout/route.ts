@@ -73,6 +73,58 @@ const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
 
 type Billing = 'monthly' | 'annual'
 
+// KINEO-INTRO-MONTH-2026-07-13 — ROTA DE RECORRÊNCIA. O pack one-time $4.90
+// era o beco sem saída do funil: quem pagava, comprava ISSO, gastava e sumia
+// (5 pagantes, ~0 assinaturas). Agora os preços de entrada viram o 1º MÊS do
+// plano de cima — mesmo "sim" barato, mas o default é recorrente:
+//   $4.90 (ex-pack)   → 1º mês do Starter (renova $9.90)
+//   $9.90 (ex-Starter)→ 1º mês do Creator (renova $24.90)
+// Os valores por moeda REUSAM a escada existente (PACK_PRICES / TIER_PRICES),
+// então o desconto fecha exato em USD/BRL/INR. Cupom Stripe amount_off,
+// duration 'once' (só a 1ª fatura), criado IDEMPOTENTE em runtime por
+// tier+moeda — zero setup manual no dashboard. Fail-safe: qualquer erro de
+// cupom segue o checkout a preço cheio (nunca bloqueia venda).
+// Anti-abuso: 1 intro por cliente — recusa se o customer já teve QUALQUER
+// assinatura com metadata.intro='1' (cancelar/reassinar não repete o desconto).
+type IntroTier = 'starter' | 'basic'
+const INTRO_PRICES: Record<IntroTier, Record<Currency, number>> = {
+  starter: { usd: 490, brl: 2490, inr: 39900 },  // = PACK_PRICES (o antigo one-time)
+  basic:   { usd: 990, brl: 4990, inr: 79900 },  // = TIER_PRICES.starter (degrau de baixo)
+}
+
+async function ensureIntroCoupon(
+  tier: IntroTier,
+  currency: Currency,
+  amountOff: number,
+): Promise<string | null> {
+  const id = `KINEO_INTRO_${tier.toUpperCase()}_${currency.toUpperCase()}`
+  try {
+    await stripe.coupons.retrieve(id)
+    return id
+  } catch {
+    try {
+      await stripe.coupons.create({
+        id,
+        amount_off: amountOff,
+        currency,
+        duration: 'once',
+        name: `Kineo — first month intro (${tier}/${currency.toUpperCase()})`,
+      })
+      return id
+    } catch (createErr) {
+      // Corrida entre requests: outro request pode ter criado entre o retrieve
+      // e o create. Confere de novo antes de desistir.
+      try {
+        await stripe.coupons.retrieve(id)
+        return id
+      } catch {
+        console.warn('[stripe/checkout] intro coupon unavailable — full price:', id, createErr)
+        return null
+      }
+    }
+  }
+}
+
 // Map Vercel IP-country header → billing currency.
 // Everyone not explicitly mapped gets USD.
 function resolveCurrency(country: string): Currency {
@@ -144,6 +196,9 @@ async function buildAndRedirect(
   isGet: boolean,
   billing: Billing = 'monthly',
   promo?: string,
+  // KINEO-INTRO-MONTH-2026-07-13 — ?intro=1 pede o desconto de 1º mês
+  // (starter/basic, monthly only). Ignorado silenciosamente fora disso.
+  intro = false,
 ): Promise<NextResponse> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
 
@@ -291,14 +346,44 @@ async function buildAndRedirect(
     },
   }
 
+  let discountApplied = false
+
+  // KINEO-INTRO-MONTH-2026-07-13 — desconto de 1º mês (vence o ?promo=: o
+  // intro é mais fundo que 20%). Só monthly, só starter/basic, 1 por cliente.
+  if (intro && !isAnnual && (tier === 'starter' || tier === 'basic')) {
+    let introAlreadyUsed = false
+    try {
+      const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 })
+      introAlreadyUsed = subs.data.some((s) => s.metadata?.intro === '1')
+    } catch (listErr) {
+      // Se a listagem falhar, seguimos: o cupom é 'once' e o dano máximo é
+      // um 1º mês barato repetido — melhor que bloquear a venda.
+      console.warn('[stripe/checkout] intro eligibility check failed, allowing:', listErr)
+    }
+    if (!introAlreadyUsed) {
+      const amountOff = TIER_PRICES[tier][currency] - INTRO_PRICES[tier][currency]
+      if (amountOff > 0) {
+        const couponId = await ensureIntroCoupon(tier, currency, amountOff)
+        if (couponId) {
+          sessionParams.discounts = [{ coupon: couponId }]
+          discountApplied = true
+          // Marca a assinatura: é assim que o anti-abuso acima reconhece
+          // "este cliente já usou o intro" sem precisar de migração no DB.
+          sessionParams.subscription_data!.metadata!.intro = '1'
+          // Success page mostra o valor realmente cobrado hoje.
+          sessionParams.success_url = `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${INTRO_PRICES[tier][currency]}&intro=1&session_id={CHECKOUT_SESSION_ID}`
+        }
+      }
+    }
+  }
+
   // Push #453 — auto-apply a promotion code (e.g. FOUNDING50) when ?promo= is
   // present, so win-back / founding links give the discount with ZERO typing.
   // Looked up by its human-facing code; if it doesn't exist or is inactive we
   // silently skip it (checkout still proceeds at full price — never blocks a
   // sale). NOTE: Stripe forbids combining `discounts` with allow_promotion_codes,
   // and we set neither elsewhere, so this is safe.
-  let discountApplied = false
-  if (promo) {
+  if (!discountApplied && promo) {
     try {
       const codes = await stripe.promotionCodes.list({ code: promo, active: true, limit: 1 })
       const pc = codes.data[0]
@@ -721,7 +806,9 @@ export async function GET(req: NextRequest) {
     const tier: Tier = tierParam === 'pro' ? 'pro' : tierParam === 'starter' ? 'starter' : 'basic'
     const billing: Billing = req.nextUrl.searchParams.get('billing') === 'annual' ? 'annual' : 'monthly'
     const promo = req.nextUrl.searchParams.get('promo') ?? undefined
-    return await buildAndRedirect(req, tier, true, billing, promo)
+    // KINEO-INTRO-MONTH-2026-07-13 — ?intro=1 → 1º mês com desconto.
+    const intro = req.nextUrl.searchParams.get('intro') === '1'
+    return await buildAndRedirect(req, tier, true, billing, promo, intro)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/checkout GET] Unexpected error:', msg)
