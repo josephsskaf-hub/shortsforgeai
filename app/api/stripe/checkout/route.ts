@@ -22,11 +22,16 @@ type Currency = 'usd' | 'brl' | 'inr'
 //   Basic: https://buy.stripe.com/14A28reRf6jtcev48CgjC0r
 //   Pro:   https://buy.stripe.com/00w9AT5gF8rBa6ndJcgjC0q
 // KINEO-STRIPE-NAMES-2026-07-01 — checkout line-item names show "Kineo" (era ShortsForgeAI)
+// KINEO-INTRO-MONTH-2026-07-13 — Starter/Studio ainda tinham copy+credits
+// PRÉ-rebase ("50 Fast videos", 50/400) na TELA DE PAGAMENTO do Stripe — o
+// comprador via uma promessa dobrada no momento mais sensível. O webhook
+// nunca leu esses valores (usa a própria tabela 25/150/200), então era só
+// copy/metadata — mas copy errada no checkout é trust-killer. Agora: 25/150/200.
 const TIERS: Record<Tier, { name: string; description: string; credits: number }> = {
   starter: {
     name: 'Kineo — Starter',
-    description: '50 Fast videos / month (smart stock footage + AI voiceover)',
-    credits: 50,
+    description: '25 credits / month — Fast videos (smart stock footage + AI voiceover), watermark-free',
+    credits: 25,
   },
   basic: {
     name: 'Kineo — Creator',
@@ -38,8 +43,8 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
   },
   pro: {
     name: 'Kineo — Studio',
-    description: 'Cinematic AI videos / month (Kling engine, 1080p, priority)',
-    credits: 400,
+    description: '200 credits / month — cinematic Kling engine at 1080p, priority render queue',
+    credits: 200,
   },
 }
 
