@@ -46,8 +46,26 @@
 //
 // Anti-deepfake: prompts naming real contemporary people are BLOCKED at the API
 // boundary (HTTP 400) and SANITIZED out of generated prompts.
+//
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — HOLLYWOOD HOST MODE v3.5 (3 upgrades):
+//   (1) ONE HOST VOICE — anchored dialogue scenes render on Kling AI Avatar v2
+//       (portrait anchor + OUR TTS of the line) instead of O3 native audio,
+//       killing the random-voice-per-scene defect. Lives in the route +
+//       lib/hollywood/hostVoice.ts; here only the cost log learns the model.
+//   (2) DEMO/SHOWCASE BEAT — when the topic is a product/site/app/tool, the
+//       planner adds 1-2 'support' scenes that DEMONSTRATE the subject in use
+//       (hands/interface b-roll, no readable text). Flagged `isDemo` so the
+//       route can swap in the user's own clips once compose supports it.
+//   (3) HOOK & PAYOFF ON CAMERA — code-enforced after planning: the first
+//       (HOOK) and last (PAYOFF) scenes MUST be dialogue (host speaking to
+//       the lens); other types are converted, narration becomes the line.
 
 import { openai } from '@/lib/openai'
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — the host-scene engine (Kling AI Avatar
+// v2, $0.0562/s — ~1/3 of O3's $0.168/s) so logHollywoodCost prices anchored
+// dialogue scenes correctly. lib→lib import, no cycle (veed.ts imports only
+// the fal client + falAlert).
+import { PRESENTER_MODEL, PRESENTER_USD_PER_SECOND } from '@/lib/avatar/veed'
 
 // ── Engines ─────────────────────────────────────────────────────────────────
 // KINEO-HOLLYWOOD-22-2026-07-10 — Seedance is OUT of Hollywood Mode. On the
@@ -176,6 +194,12 @@ export type HollywoodScene = {
   voiceover?: string // TTS narration — MANDATORY on cinematic/support (code-guaranteed, KINEO-HOLLYWOOD-23); never on dialogue
   needsNarration: boolean // dialogue => false ALWAYS; non-dialogue => true ALWAYS (KINEO-HOLLYWOOD-23)
   caption: string
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 2) — TRUE when this is a DEMO/
+  // SHOWCASE support scene (product/app/site shown in use). Same render path
+  // as any support scene; the flag lets the route prefer the user's own
+  // footage for this scene once compose-side splicing lands. Optional →
+  // every existing consumer is untouched.
+  isDemo?: boolean
 }
 
 export type HollywoodPlan = {
@@ -211,6 +235,14 @@ const NO_TEXT_SUFFIX =
 // prompt (rides with styleSheet/NO_TEXT_SUFFIX; never trust GPT to carry it).
 const STABLE_SHOT_SUFFIX =
   ' Level horizon, stable well-composed shot (tripod or slow dolly), no tilted or dutch angles.'
+
+// KINEO-HOLLYWOOD-HOST-2026-07-13 (item 2) — code-enforced direction for DEMO
+// scenes (never trust GPT to carry it): the shot must read as "the product in
+// use" through ACTION and FRAMING, never through readable UI — Kling renders
+// on-screen text in Chinese (KINEO-HOLLYWOOD-21 bug d), so screens stay
+// stylized/blurred and the NO_TEXT rule keeps its last-position authority.
+const DEMO_SHOT_SUFFIX =
+  ' Product demonstration insert: close on hands actively using the product/device, over-the-shoulder or macro framing of the interaction, screens and interfaces rendered as soft glowing abstract shapes (blurred, stylized, unreadable).'
 
 // KINEO-HOLLYWOOD-23-2026-07-10 (bug g) — helpers for the mandatory-narration
 // fallback: deterministic, zero extra GPT calls.
@@ -293,6 +325,9 @@ VIRAL STRUCTURE (mandatory — the house timeline, every video follows it):
 - ESCALATION (8-20s, then 20-35s): each escalation raises the stakes with a STRONGER, more surprising fact than the scene before it.
 - PAYOFF (35-50s): the final scene RESOLVES the open question the hook planted + lands a memorable closing line.
 Label EVERY scene with its "beat": "HOOK" | "MICRO_REWARD" | "ESCALATION" | "PAYOFF". Scene 1 MUST have beat "HOOK"; the LAST scene MUST have beat "PAYOFF". The dialogue lines and narration lines EXECUTE these beats — they carry the hook, the reward, the escalations and the payoff in the actual spoken words.
+HOOK AND PAYOFF ON CAMERA (mandatory): the HOOK scene (scene 1) and the PAYOFF scene (the last scene) are ALWAYS "dialogue" — the host speaks them straight into the lens. B-roll belongs in the middle of the video, never at its first or last words.
+
+DEMO / SHOWCASE (only when the topic IS a specific product, app, website, tool or service — e.g. "explain Kineo", "why everyone uses this app"): include 1-2 "support" scenes that DEMONSTRATE the subject in use while the narration continues — close-up of hands actively using the device or product, over-the-shoulder shot of someone mid-interaction, macro details of the experience. The demonstration reads through ACTION and FRAMING only: screens/interfaces appear as soft glowing abstract shapes, blurred and unreadable (the zero-readable-text rule still applies). Mark these scenes with "demo": true. Demo scenes follow every other "support" rule (voiceover, sizing, stable composition). For any topic that is NOT a product/app/site/tool, output NO demo scenes.
 
 CINEMATOGRAPHY ("styleSheet" — mandatory): output ONE ~30-word photography description shared by the WHOLE film — color palette, light, lens, grain, mood (e.g. "shot on 35mm, teal-orange grade, soft golden backlight, shallow depth of field, light film grain"). It is appended to every scene prompt so ALL engines render the exact same look.
 
@@ -318,8 +353,8 @@ OTHER HARD RULES:
 - NEVER name or depict a real person (no celebrities, politicians, athletes, historical figures). People are always fictional and generic.
 - Each scene gets a short on-screen "caption" (max 6 words, punchy).
 
-Output JSON shape:
-{"characterSheet":"...","environmentSheet":"...","styleSheet":"...","scenes":[{"index":1,"type":"dialogue","beat":"HOOK","seconds":10,"prompt":"...","dialogueLine":"...","caption":"..."},{"index":2,"type":"support","beat":"MICRO_REWARD","seconds":10,"prompt":"...","voiceover":"...","caption":"..."}]}`
+Output JSON shape ("demo" is optional, only on demo/showcase support scenes):
+{"characterSheet":"...","environmentSheet":"...","styleSheet":"...","scenes":[{"index":1,"type":"dialogue","beat":"HOOK","seconds":10,"prompt":"...","dialogueLine":"...","caption":"..."},{"index":2,"type":"support","beat":"MICRO_REWARD","seconds":10,"prompt":"...","voiceover":"...","caption":"...","demo":true}]}`
 
   const userMsg = `Idea/topic: ${String(idea ?? '').slice(0, 600)}
 
@@ -427,6 +462,11 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
             ? 5
             : 10
 
+    // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 2) — DEMO scene flag. Only valid
+    // on 'support' (demo IS a support scene, just with demonstration framing);
+    // a stray "demo":true on dialogue/cinematic is ignored (fail-open).
+    const isDemo = type === 'support' && rs.demo === true
+
     // KINEO-HOLLYWOOD-21-2026-07-10 (bug d) — zero readable text, code-enforced
     // on EVERY scene prompt (Kling 3 renders on-screen text in Chinese).
     // KINEO-HOLLYWOOD-22-2026-07-10 — the shared styleSheet rides VERBATIM at
@@ -434,7 +474,10 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
     // same photography; the NO_TEXT rule stays LAST (strongest position).
     // KINEO-HOLLYWOOD-23-2026-07-10 (bug h) — non-dialogue inserts additionally
     // get the stable-composition suffix (no dutch angles), code-enforced.
-    prompt = `${prompt} Cinematography (match exactly): ${styleSheet}.${type !== 'dialogue' ? STABLE_SHOT_SUFFIX : ''}${NO_TEXT_SUFFIX}`
+    // KINEO-HOLLYWOOD-HOST-2026-07-13 — demo scenes get the demonstration
+    // direction suffix (code-enforced; rides BEFORE the NO_TEXT rule so the
+    // "screens are abstract/unreadable" instruction keeps final authority).
+    prompt = `${prompt} Cinematography (match exactly): ${styleSheet}.${type !== 'dialogue' ? STABLE_SHOT_SUFFIX : ''}${isDemo ? DEMO_SHOT_SUFFIX : ''}${NO_TEXT_SUFFIX}`
 
     const caption =
       (typeof rs.caption === 'string' && rs.caption.trim()
@@ -452,6 +495,7 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
       ...(voiceover ? { voiceover } : {}),
       needsNarration: type !== 'dialogue' && !!voiceover, // dialogue => false ALWAYS
       caption,
+      ...(isDemo ? { isDemo: true } : {}), // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 2)
     })
   }
   if (outScenes.length < 2) throw new Error('Hollywood planner produced too few usable scenes')
@@ -536,6 +580,50 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
     }
   }
 
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 3) — HOOK AND PAYOFF ON CAMERA,
+  // code-enforced (the prompt asks too, but never trust GPT): the FIRST scene
+  // (beat HOOK, guaranteed by the beat validation above) and the LAST scene
+  // (beat PAYOFF, same guarantee) must be 'dialogue' — the host opens and
+  // closes the video speaking straight into the lens. When the planner routed
+  // either one to support/cinematic, we convert it HERE: its narration becomes
+  // the host's spoken line (trimmed to the 30-word dialogue ceiling, whole
+  // sentences first), seconds re-follow the line-length rule (≤14 words → 5s,
+  // else 10s), and the prompt is rebuilt as an on-camera host shot from the
+  // plan's own sheets. Placed AFTER the narration fallback on purpose — every
+  // non-dialogue scene is GUARANTEED a voiceover by then, so the conversion
+  // always has real words to put in the host's mouth. Fail-open: a scene
+  // whose narration is too thin to speak (<4 words) keeps its original type.
+  {
+    const forceHostOnCamera = (sc: HollywoodScene): void => {
+      if (sc.type === 'dialogue') return
+      const source = (sc.voiceover ?? '').trim() || (sc.caption ?? '').trim()
+      const line = trimNarrationToWords(source, 30).slice(0, 220)
+      const lineWords = line.split(/\s+/).filter(Boolean).length
+      if (lineWords < 4) {
+        console.warn(
+          `[hollywood-planner] KINEO-HOLLYWOOD-HOST — scene ${sc.index} (beat=${sc.beat}) kept as ${sc.type}: narration too thin to convert to dialogue`,
+        )
+        return
+      }
+      const prevType = sc.type
+      sc.type = 'dialogue'
+      sc.dialogueLine = line
+      sc.seconds = lineWords <= 14 ? 5 : 10
+      sc.voiceover = undefined
+      sc.needsNarration = false // dialogue => false ALWAYS (KINEO-HOLLYWOOD-23)
+      // Rebuilt from the plan's own sanitized sheets — same skeleton as a
+      // planner-native dialogue prompt (sheets first, quoted line, realism
+      // directives, styleSheet, NO_TEXT last). No STABLE_SHOT/DEMO suffixes:
+      // this is now a person shot, not an insert.
+      sc.prompt = `${characterSheet}. Standing in: ${environmentSheet}. Medium shot, 9:16 vertical framing — looking straight into the lens, the person says: "${sc.dialogueLine}" The person speaks continuously and energetically for the entire shot, no dead air, ${REALISM_DIRECTIVES}. Cinematography (match exactly): ${styleSheet}.${NO_TEXT_SUFFIX}`
+      console.log(
+        `[hollywood-planner] KINEO-HOLLYWOOD-HOST — scene ${sc.index} (beat=${sc.beat}) converted ${prevType} → dialogue (host on camera, ${lineWords} words → ${sc.seconds}s)`,
+      )
+    }
+    forceHostOnCamera(outScenes[0])
+    forceHostOnCamera(outScenes[outScenes.length - 1])
+  }
+
   // KINEO-HOLLYWOOD-24-2026-07-10 (i) — support scenes SIZED BY THEIR FINAL
   // narration (post-fallback), same rule as dialogue lines: <16 words → 5s,
   // ≥16 → 10s (Kling 3 only renders 5s/10s; cinematic stays fixed at 8s/Veo).
@@ -588,6 +676,11 @@ Target total duration: ${Math.max(45, Math.min(60, Math.round(durationSeconds ||
 // `scenes`) + flat `anchorsUsd`: on the anchored 3.0 path every scene runs on
 // KLING3_I2V_MODEL ($0.168/s regardless of type) and the two anchor images add
 // ~$0.10 to the TOTAL. Both optional → v2.4 callers stay byte-identical.
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — host scenes run on Kling AI Avatar v2
+// ($0.0562/s, ~1/3 of O3) + one flat TTS/upload cost per line (~pennies,
+// covered by the anchorsUsd-style rounding); the per-scene lookup prices the
+// presenter model so the [hollywood-cost] TOTAL reflects the real per-scene
+// engine mix instead of assuming O3 everywhere.
 export function logHollywoodCost(
   generationId: string,
   scenes: HollywoodScene[],
@@ -597,7 +690,12 @@ export function logHollywoodCost(
   for (let i = 0; i < scenes.length; i++) {
     const s = scenes[i]
     const model = opts?.models?.[i] ?? HOLLYWOOD_MODELS[s.type]
-    const perSecond = model === KLING3_I2V_MODEL ? KLING3_I2V_USD_PER_SECOND : HOLLYWOOD_USD_PER_SECOND[s.type]
+    const perSecond =
+      model === PRESENTER_MODEL
+        ? PRESENTER_USD_PER_SECOND
+        : model === KLING3_I2V_MODEL
+          ? KLING3_I2V_USD_PER_SECOND
+          : HOLLYWOOD_USD_PER_SECOND[s.type]
     const usd = s.seconds * perSecond
     total += usd
     console.log(

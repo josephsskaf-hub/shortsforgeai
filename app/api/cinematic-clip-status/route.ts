@@ -20,7 +20,15 @@ const KLING3_MODEL = 'fal-ai/kling-video/v3/pro/text-to-video'
 // anchored scenes (portrait/environment-still image_url). Same { video: { url } }
 // output, so checkFalClip parses it unchanged — only the allow-list needs the id.
 const KLING3_I2V_MODEL = 'fal-ai/kling-video/o3/pro/image-to-video'
-const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL, KLING3_MODEL, KLING3_I2V_MODEL])
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — Kling AI Avatar v2: Hollywood Host Mode
+// v3.5 renders anchored DIALOGUE scenes on the AI Presenter engine (portrait
+// anchor + our TTS of the line → one voice for the whole video). Same
+// { video: { url } } output shape (verified against checkAvatarJob in
+// lib/avatar/veed.ts), so checkFalClip parses it unchanged — only the
+// allow-list needs the id. Without this entry the client's per-scene `models`
+// array would null out host clips and poll them on the WRONG (default) queue.
+const HOST_PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
+const ALLOWED_MODELS = new Set([SEEDANCE_MODEL, KLING_MODEL, VEO_MODEL, SORA_MODEL, KLING3_MODEL, KLING3_I2V_MODEL, HOST_PRESENTER_MODEL])
 
 type ClipStatus = {
   id: string | null

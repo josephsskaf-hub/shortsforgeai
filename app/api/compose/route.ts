@@ -26,6 +26,12 @@ import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 // ?quality / ?deducted query params). creditCostFor is the shared price table.
 import { creditCostFor } from '@/lib/credits/engineCost'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — HOLLYWOOD HOST MODE v3.5: the hollywood
+// narration blocks are synthesized with ONE pinned voice, resolved from the
+// full voiceover_script — the SAME resolution the cinematic route ran for the
+// host lines, so host speech and b-roll narration share a single narrator.
+// Fail-open: any failure falls back to the per-block generateTTS below.
+import { resolveHollywoodVoice, synthesizeHostSpeech, type HollywoodVoice } from '@/lib/hollywood/hostVoice'
 
 export const maxDuration = 300
 
@@ -94,6 +100,11 @@ interface ComposeBody {
   // volume (dialogue 100% / cinematic 55% / support 35%); scene_narrations is
   // the TTS text per scene (null = native audio only — NEVER TTS over a
   // dialogue scene); scene_seconds is each scene's planned timeline length.
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' accepted in scene_engines: an
+  // anchored dialogue scene rendered on Kling AI Avatar v2 with our TTS baked
+  // in (one voice for the whole video). Treated like dialogue for volume/
+  // narration/captions, but its scene_seconds are the MEASURED audio length
+  // and are honored exactly (no 5|10 snap).
   scene_engines?: string[]
   scene_narrations?: (string | null)[]
   scene_seconds?: number[]
@@ -420,14 +431,17 @@ export async function POST(req: NextRequest) {
 
       // Defensive alignment: arrays are parallel to clip_urls; anything
       // missing/misaligned degrades that scene to a silent-ish support scene.
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' accepted (presenter-rendered
+      // dialogue scene, speech baked in, seconds = measured audio length).
       const hollywoodClips: HollywoodClipInput[] = clipUrls.map((url, i) => {
         const e = typeof rawEngines[i] === 'string' ? rawEngines[i] : 'support'
         const engine: HollywoodClipInput['engine'] =
-          e === 'dialogue' || e === 'cinematic' || e === 'support' ? e : 'support'
+          e === 'dialogue' || e === 'cinematic' || e === 'support' || e === 'host' ? e : 'support'
         const sec = Number(rawSeconds[i])
         // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — dialogue scenes carry their
         // real spoken line (sanitized at the boundary like every script text).
-        const dlg = engine === 'dialogue' && typeof rawDialogues[i] === 'string'
+        // KINEO-HOLLYWOOD-HOST-2026-07-13 — host scenes speak a real line too.
+        const dlg = (engine === 'dialogue' || engine === 'host') && typeof rawDialogues[i] === 'string'
           ? (rawDialogues[i] as string).trim()
           : ''
         return {
@@ -448,8 +462,13 @@ export async function POST(req: NextRequest) {
       // KINEO-HOLLYWOOD-21-2026-07-10 (bug a) — dialogue can now be 5s or 10s
       // (sized to the line); MUST mirror secondsFor in buildHollywoodCreatomateSource
       // or the narration-block offsets drift from the real timeline.
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — host scenes use their MEASURED audio
+      // seconds exactly (clamp 2..20, mirrors the builder — snapping would
+      // re-introduce the silence/cut-speech defect the host path removes).
       const secondsOf = (c: HollywoodClipInput): number =>
-        c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
+        c.engine === 'host'
+          ? (Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(20, Math.max(2, c.seconds)) : 10)
+          : c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 : Math.min(10, Math.max(2, c.seconds))
 
       // KINEO-HOLLYWOOD-24-2026-07-10 — one pending TTS entry PER narrated
       // scene (no more contiguous-block grouping), placed at that scene's own
@@ -460,8 +479,10 @@ export async function POST(req: NextRequest) {
       {
         let cursor = 0
         hollywoodClips.forEach((c, i) => {
+          // KINEO-HOLLYWOOD-HOST-2026-07-13 — never narrate over 'host'
+          // scenes either: their clip audio IS the speech (our TTS).
           const narr =
-            c.engine !== 'dialogue' && typeof rawNarrations[i] === 'string'
+            c.engine !== 'dialogue' && c.engine !== 'host' && typeof rawNarrations[i] === 'string'
               ? (rawNarrations[i] as string).trim()
               : ''
           const sec = secondsOf(c)
@@ -476,13 +497,54 @@ export async function POST(req: NextRequest) {
         })
       }
 
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — ONE NARRATOR VOICE. generateTTS
+      // re-selects a persona per call by keyword-scanning the text it gets,
+      // so two narration blocks could land on two different voices — and none
+      // of them was guaranteed to match the HOST voice the cinematic route
+      // synthesized at submit time. Resolution is pinned HERE from the full
+      // voiceoverScript (the identical string the route resolved from —
+      // stripScriptMarkers is idempotent and runs on both sides), with the
+      // same vertical/language, so host speech and narration share one voice.
+      // Fail-open: a null pin (or a pinned-synth failure per block) falls
+      // back to the exact pre-v3.5 generateTTS call.
+      let hollywoodPinnedVoice: HollywoodVoice | null = null
+      if (pendingBlocks.length > 0) {
+        try {
+          hollywoodPinnedVoice = resolveHollywoodVoice(voiceoverScript, language, vertical)
+          console.log(
+            `[compose] hollywood pinned narration voice: persona=${hollywoodPinnedVoice.personaId} voice=${hollywoodPinnedVoice.voice}`,
+          )
+        } catch (e) {
+          console.warn('[compose] hollywood voice pin failed — per-block persona fallback:', e instanceof Error ? e.message : String(e))
+          hollywoodPinnedVoice = null
+        }
+      }
+
       // One TTS + upload + Whisper per narrated SCENE (sequential — 2-4
       // scenes typical, still cheap). If NO scene carries narration, TTS is
       // skipped entirely (native audio only).
       const narrationBlocks: HollywoodNarrationBlock[] = []
       for (const blk of pendingBlocks) {
         try {
-          const buf = await generateTTS(blk.text, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+          // KINEO-HOLLYWOOD-HOST-2026-07-13 — pinned voice first (persona
+          // pace × user speed, same formula generateTTS applies internally);
+          // any failure degrades to the pre-v3.5 per-block generateTTS.
+          let buf: Buffer | null = null
+          if (hollywoodPinnedVoice) {
+            try {
+              buf = await synthesizeHostSpeech({
+                text: blk.text,
+                voice: hollywoodPinnedVoice.voice,
+                speed: hollywoodPinnedVoice.defaultSpeed * (explicitSpeed ?? 1.0),
+              })
+            } catch (pinErr) {
+              console.warn('[compose] hollywood pinned-voice TTS failed — generateTTS fallback:', pinErr instanceof Error ? pinErr.message : String(pinErr))
+              buf = null
+            }
+          }
+          if (!buf || buf.length === 0) {
+            buf = await generateTTS(blk.text, explicitSpeed ?? 1.0, vertical, narrationTier, language)
+          }
           if (!buf || buf.length === 0) continue
           const dur = estimateMp3DurationSeconds(buf)
           if (!(dur > 0.3)) continue

@@ -2273,13 +2273,22 @@ export default function GenerateClient() {
         let cinePlan: BrollPlan | null = brollPlan
         if (!cinePlan && brollPlanPromiseRef.current) { try { cinePlan = await brollPlanPromiseRef.current } catch { cinePlan = null } }
         const cineUsable = !!cinePlan && cinePlan.degraded !== true && Array.isArray(cinePlan.scenes) && cinePlan.scenes.length > 0
-        const cineBrollScenes = cineUsable ? cinePlan!.scenes.map((s) => ({ sceneNumber: s.sceneNumber, brollPrompt: s.brollPrompt, shotType: s.shotType, negativePrompt: s.negativePrompt })) : undefined
+        // KINEO-HOLLYWOOD-HOST-2026-07-13 — thread the user's selected My
+        // Footage clips into the cinematic call too (same in-order mapping the
+        // Fast path uses). Today the server uses them as the demo-scene hook
+        // (validated + logged); ignored by every non-hollywood engine.
+        const cineFootage = footageItems.filter((f) => selectedFootageIds.includes(f.id) && f.kind !== 'audio')
+        const cineBrollScenes = cineUsable ? cinePlan!.scenes.map((s, sceneIdx) => ({ sceneNumber: s.sceneNumber, brollPrompt: s.brollPrompt, shotType: s.shotType, negativePrompt: s.negativePrompt, ...(cineFootage[sceneIdx] ? { userFootageUrl: cineFootage[sceneIdx].url } : {}) })) : undefined
         const res = await fetch('/api/generate-video-cinematic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           // KINEO-CHARACTER-LOCK-2026-07-10 — lock a saved character into
           // Hollywood renders (server resolves id → portrait anchor).
-          body: JSON.stringify({ prompt: trimmed, duration, language, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined, ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
+          // KINEO-HOLLYWOOD-HOST-2026-07-13 — `vertical` (analyze-idea niche)
+          // forwarded so the server pins the SAME narrator persona for the
+          // host lines that /api/compose pins for the b-roll narration (this
+          // component already sends the same value to /api/compose below).
+          body: JSON.stringify({ prompt: trimmed, duration, language, vertical: analysis?.niche ?? undefined, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined, ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
         })
         const data = await res.json()
         if (res.status === 401) { router.push('/login?redirect=/generate'); return }

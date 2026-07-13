@@ -1538,7 +1538,13 @@ export function buildCreatomateSource({
 
 export interface HollywoodClipInput {
   url: string
-  engine: 'dialogue' | 'cinematic' | 'support'
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' added: an anchored dialogue
+  // scene rendered on Kling AI Avatar v2 (our TTS baked into the clip, one
+  // voice for the whole video). Behaves like 'dialogue' for volume (100%),
+  // narration (never TTS over it) and captions (chunks the real line), but
+  // its `seconds` are the MEASURED audio duration and are honored EXACTLY
+  // (no 5|10 snap) so the montage neither pools silence nor cuts speech.
+  engine: 'dialogue' | 'cinematic' | 'support' | 'host'
   seconds: number
   caption: string
   // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line of a
@@ -1570,6 +1576,9 @@ const HOLLYWOOD_CLIP_VOLUME: Record<HollywoodClipInput['engine'], string> = {
   dialogue: '100%',
   cinematic: '55%',
   support: '35%',
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — the host clip's audio IS the speech
+  // (our TTS lip-synced by Kling Avatar v2): full volume, like dialogue.
+  host: '100%',
 }
 
 export function buildHollywoodCreatomateSource({
@@ -1592,13 +1601,30 @@ export function buildHollywoodCreatomateSource({
   // (KINEO-HOLLYWOOD-21-2026-07-10, bug a: 5s or 10s, sized to the spoken
   // line — default 10); support seconds come from the plan. Trim the LAST
   // scene so the total closes at ≤ 60s; floor the timeline at 8s as a guard.
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' scenes use their seconds EXACTLY
+  // (the route measured the real TTS audio length; snapping to 5|10 here
+  // would re-create the very silence/cut-speech defect the host path kills).
+  // Clamp 2..20s: a hollywood line is ≤220 chars ≈ ≤13s of speech, so 20 is
+  // pure safety. MUST mirror secondsOf in app/api/compose/route.ts or the
+  // narration-block offsets drift from the real timeline.
   const secondsFor = (c: HollywoodClipInput): number =>
-    c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 :
-    Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(10, Math.max(2, c.seconds)) : 10
+    c.engine === 'host'
+      ? (Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(20, Math.max(2, c.seconds)) : 10)
+      : c.engine === 'dialogue' ? (c.seconds === 5 ? 5 : 10) : c.engine === 'cinematic' ? 8 :
+        Number.isFinite(c.seconds) && c.seconds > 0 ? Math.min(10, Math.max(2, c.seconds)) : 10
 
   const durations = cleanClips.map(secondsFor)
   let total = durations.reduce((s, d) => s + d, 0)
-  while (total > 60 && durations.length > 0) {
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — NEVER trim a trailing 'host' clip to fit
+  // 60s: its duration IS its speech (the PAYOFF line, after the HOOK/PAYOFF-
+  // on-camera rule, usually closes the video), and cutting it mid-word is the
+  // worst possible ending. When host lines run the timeline slightly past 60s
+  // we ACCEPT the overflow instead (totalDuration is already clamped to ≤90s
+  // below, and 61-65s is fine for Shorts — TikTok Creator Rewards even wants
+  // >60s). Middle scenes can't be trimmed here either: their narration mp3s
+  // were placed at offsets computed from the UNtrimmed durations in
+  // app/api/compose/route.ts, and moving earlier scenes would desync them.
+  while (total > 60 && durations.length > 0 && cleanClips[durations.length - 1].engine !== 'host') {
     const overflow = total - 60
     const lastIdx = durations.length - 1
     const trimmable = durations[lastIdx] - 2 // never below 2s
@@ -1645,6 +1671,10 @@ export function buildHollywoodCreatomateSource({
   // trim_start intentionally 0: trimming a dialogue clip's head would eat the
   // first spoken word. loop:true fills the slot if an engine returned a clip
   // slightly shorter than planned (robustness, zero dead frames).
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — EXCEPT 'host' clips: their audio is the
+  // baked-in speech, so looping would REPLAY the first words. loop:false — if
+  // the presenter clip runs a hair short of its slot, the dark track-1
+  // background covers the sub-second gap (invisible next to repeated speech).
   cleanClips.forEach((clip, i) => {
     const isLast = i === cleanClips.length - 1
     // Non-last clips run long enough to sit under the next clip's fade-in;
@@ -1657,7 +1687,7 @@ export function buildHollywoodCreatomateSource({
       duration: round3(Math.min(durations[i], totalDuration - sceneStarts[i]) + overlap),
       source: clip.url,
       fit: 'cover',
-      loop: true,
+      loop: clip.engine !== 'host',
       x: '50%', y: '50%', width: '100%', height: '100%',
       volume: HOLLYWOOD_CLIP_VOLUME[clip.engine] ?? '35%',
       ...(HOLLYWOOD_CROSSFADE && i > 0
@@ -1723,8 +1753,10 @@ export function buildHollywoodCreatomateSource({
   // capped at their own scene's end (+0.5s tolerance, block.endCap): a short
   // TTS can no longer pool 10s of leftover silence onto a later scene, and a
   // long TTS can no longer talk over the following scene's narration.
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' scenes carry baked-in speech
+  // exactly like dialogue: narration must never run over either of them.
   const dialogueStarts = cleanClips
-    .map((c, i) => (c.engine === 'dialogue' ? sceneStarts[i] : null))
+    .map((c, i) => (c.engine === 'dialogue' || c.engine === 'host' ? sceneStarts[i] : null))
     .filter((v): v is number => v !== null)
 
   for (const block of narrationBlocks) {
@@ -1778,8 +1810,12 @@ export function buildHollywoodCreatomateSource({
   // window [start + 0.3s, end - 0.4s] — same visual style as the whisper
   // captions (buildCaptionElements). Fallback when the line is unavailable:
   // the old static scene caption (previous behavior).
+  // KINEO-HOLLYWOOD-HOST-2026-07-13 — 'host' scenes caption identically: the
+  // clip speaks its dialogueLine (our TTS), so the same chunking applies and,
+  // because host slots equal the real audio length, the uniform spread tracks
+  // the speech even more closely than on native-audio dialogue scenes.
   cleanClips.forEach((clip, i) => {
-    if (clip.engine !== 'dialogue') return
+    if (clip.engine !== 'dialogue' && clip.engine !== 'host') return
     const t = sceneStarts[i]
     if (t >= captionWindowEnd) return
 

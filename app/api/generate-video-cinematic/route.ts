@@ -26,6 +26,20 @@ import {
   type HollywoodPlan,
 } from '@/lib/hollywood/router'
 import { generateHollywoodAnchors, ANCHORS_USD, type HollywoodAnchors } from '@/lib/hollywood/anchors'
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — HOLLYWOOD HOST MODE v3.5: anchored
+// dialogue scenes get ONE voice. The scene's line is synthesized with OUR TTS
+// (same persona the compose narration resolves — see lib/hollywood/hostVoice)
+// and lip-synced onto the canonical portrait via Kling AI Avatar v2 (the AI
+// Presenter engine, $0.0562/s vs O3's $0.168/s). ANY failure on this path
+// falls back per-scene to the O3 i2v native-audio submit below (v3.0).
+import {
+  buildHostPerformancePrompt,
+  resolveHollywoodVoice,
+  synthesizeHostSpeech,
+  type HollywoodVoice,
+} from '@/lib/hollywood/hostVoice'
+import { PRESENTER_MODEL as HOST_PRESENTER_MODEL, submitAvatarJob } from '@/lib/avatar/veed'
+import { estimateMp3DurationSeconds, uploadVoiceoverToSupabase } from '@/lib/compose'
 
 export const maxDuration = 60
 
@@ -422,7 +436,13 @@ export async function POST(req: NextRequest) {
     // KINEO-CHARACTER-LOCK-2026-07-10 — characterId: a saved character (My
     // Characters) whose portrait replaces the generated Hollywood PORTRAIT
     // anchor → the SAME person appears across every video the user makes.
-    let body: { prompt?: string; duration?: number; engine?: string; language?: string; characterId?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
+    // KINEO-HOLLYWOOD-HOST-2026-07-13 — two new OPTIONAL fields (absent →
+    // byte-identical behavior): `vertical` (the analyze-idea niche, forwarded
+    // by the client) pins the SAME narrator persona here and in /api/compose;
+    // `brollScenes[].userFootageUrl` (My Footage, same contract as
+    // generate-video-fast) is the prepared hook for demo scenes using the
+    // user's own clips.
+    let body: { prompt?: string; duration?: number; engine?: string; language?: string; vertical?: string; characterId?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string; userFootageUrl?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
     try {
       body = await req.json()
     } catch {
@@ -671,6 +691,14 @@ export async function POST(req: NextRequest) {
         ? parsedScript.narration
         : scenes.map((s) => s.voiceover).filter(Boolean).join(' ')
 
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — language/vertical hoisted (the host
+      // voice resolution below needs both; the same `vertical` reaches
+      // /api/compose from the client, so both routes pin the same persona).
+      const hollywoodLanguage: 'en' | 'pt' | 'es' =
+        body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
+      const hollywoodVertical =
+        typeof body.vertical === 'string' && body.vertical.trim() ? body.vertical.trim().toLowerCase() : undefined
+
       let plan: HollywoodPlan
       try {
         plan = await planHollywoodScenes({
@@ -678,7 +706,7 @@ export async function POST(req: NextRequest) {
           voiceoverScript: hollywoodVoiceover || undefined,
           scenes: scenes.map((s) => ({ voiceover: s.voiceover, description: s.aiPrompt || s.description })),
           durationSeconds: duration,
-          language: body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en',
+          language: hollywoodLanguage,
         })
       } catch (e) {
         console.error('[cinematic] hollywood planner failed:', e instanceof Error ? e.message : String(e))
@@ -734,6 +762,61 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 2, prepared hook) — the user's
+      // OWN clips for demo scenes. Same authorization contract as
+      // generate-video-fast (KINEO-USER-FOOTAGE): only URLs inside THIS
+      // user's folder of our public user-footage bucket are accepted, so
+      // upload gating stays the real authorization. NOT spliced into the
+      // render yet: hollywood clip URLs travel client-side exclusively via
+      // the fal poll (cinematic-clip-status), so a pre-existing URL has no
+      // lane to compose today. When compose grows a per-scene clip-override
+      // param, demo scenes should consume `demoUserFootage` in order instead
+      // of generating. Until then we log availability and generate demo
+      // b-roll (fail-open, zero behavior change).
+      const footagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/user-footage/${user.id}/`
+      const demoUserFootage = planScenes
+        .map((s) => (typeof s.userFootageUrl === 'string' && s.userFootageUrl.startsWith(footagePrefix) ? s.userFootageUrl : null))
+        .filter((u): u is string => !!u)
+      const demoSceneCount = plan.scenes.filter((s) => s.isDemo === true).length
+      if (demoSceneCount > 0) {
+        console.log(
+          `[cinematic] hollywood demo beat: ${demoSceneCount} demo scene(s) planned${demoUserFootage.length > 0 ? ` — ${demoUserFootage.length} user clip(s) available (inline splicing pending compose hook; generating demo b-roll)` : ''}`,
+        )
+      }
+
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 (item 1) — narration metadata hoisted
+      // ABOVE the submit loop: hVoiceoverScript is the exact voiceover_script
+      // string compose receives back from the client, and BOTH routes resolve
+      // the narrator persona from it (lib/hollywood/hostVoice) — that's what
+      // guarantees the host lines and the b-roll narration share ONE voice.
+      const hNarrations = plan.scenes.map((s) => (s.needsNarration && s.voiceover ? s.voiceover : null))
+      const hVoiceoverScript =
+        hNarrations.filter(Boolean).join(' ') ||
+        plan.scenes.map((s) => s.dialogueLine ?? '').filter(Boolean).join(' ') ||
+        prompt
+
+      // One voice for the whole video. Only meaningful on the anchored path
+      // (the presenter engine needs the portrait anchor); resolution is pure
+      // and can only fail on truly broken input — fail-open to null → every
+      // dialogue scene takes the v3.0 O3 native-audio path unchanged.
+      let hostVoice: HollywoodVoice | null = null
+      if (anchors) {
+        try {
+          hostVoice = resolveHollywoodVoice(hVoiceoverScript, hollywoodLanguage, hollywoodVertical)
+          console.log(
+            `[cinematic] hollywood host voice pinned: persona=${hostVoice.personaId} voice=${hostVoice.voice} speed=${hostVoice.defaultSpeed}`,
+          )
+        } catch (e) {
+          console.warn('[cinematic] hollywood host voice resolution failed (falling back to O3 native audio):', e instanceof Error ? e.message : String(e))
+          hostVoice = null
+        }
+      }
+      const hostPerformancePrompt = buildHostPerformancePrompt(plan.characterSheet, plan.styleSheet)
+      // Verbatim scripts may carry an explicit `speed:` directive — apply it
+      // to the host lines exactly like compose applies it to the narration
+      // (persona pace × user speed, clamped inside synthesizeHostSpeech).
+      const hostUserSpeed = typeof parsedScript.speed === 'number' && parsedScript.speed > 0 ? parsedScript.speed : 1.0
+
       // Submit each scene to ITS engine — same stagger/retry as the classic
       // path, but the model is per scene (no single-model fallback here: a
       // partially-failed submit still composes from the scenes that made it).
@@ -743,23 +826,82 @@ export async function POST(req: NextRequest) {
       // world every cut). Concurrency note: the shared fal-ai/kling-video-v3
       // alias allows 1 in-flight request per user — the existing SEQUENTIAL
       // submit with stagger already respects that; do NOT parallelize.
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — anchored DIALOGUE scenes try the
+      // HOST path first: TTS the line with the pinned voice → upload mp3 →
+      // Kling AI Avatar v2 (portrait + audio + performance prompt). The clip's
+      // real length follows the AUDIO, so the scene's timeline seconds are
+      // overwritten with the measured TTS duration (compose/builder honor the
+      // exact value for 'host' scenes — no 5|10 snap, no leftover silence, no
+      // cut speech). ANY failure (TTS, measure, upload, submit) logs the
+      // reason and falls back to the O3 i2v native-audio submit for THAT
+      // scene only. `hEngines` is the per-scene RENDER engine sent to compose
+      // ('host' | 'dialogue' | 'cinematic' | 'support').
       const hRequestIds: (string | null)[] = []
       const hModels: string[] = []
+      const hEngines: string[] = []
       for (const hs of plan.scenes) {
-        const model = anchors ? KLING3_I2V_MODEL : HOLLYWOOD_MODELS[hs.type]
-        const anchorUrl = anchors
-          ? hs.type === 'dialogue'
-            ? anchors.portraitUrl
-            : anchors.environmentUrl
-          : undefined
-        const scenePrompt = hs.prompt + eraSuffix
-        let id = await submitToFal(scenePrompt, model, false, true, hs.seconds, anchorUrl)
+        // `sceneModel`/`sceneEngine` (NOT `usedModel` — that name belongs to
+        // the classic single-model path below and must not be shadowed).
+        let sceneModel: string = anchors ? KLING3_I2V_MODEL : HOLLYWOOD_MODELS[hs.type]
+        let sceneEngine: string = hs.type
+        let id: string | null = null
+
+        if (anchors && hostVoice && hs.type === 'dialogue' && hs.dialogueLine && hs.dialogueLine.trim()) {
+          try {
+            const speechBuf = await synthesizeHostSpeech({
+              text: hs.dialogueLine,
+              voice: hostVoice.voice,
+              speed: hostVoice.defaultSpeed * hostUserSpeed,
+            })
+            const audioDur = estimateMp3DurationSeconds(speechBuf)
+            if (!(audioDur > 0.5)) throw new Error(`host TTS unmeasurable/too short (${audioDur.toFixed(2)}s)`)
+            const audioUrl = await uploadVoiceoverToSupabase(user.id, speechBuf)
+            const reqId = await submitAvatarJob({
+              imageUrl: anchors.portraitUrl,
+              audioUrl,
+              engine: 'presenter',
+              performancePrompt: hostPerformancePrompt,
+            })
+            if (!reqId) throw new Error('presenter queue submit returned no request id')
+            id = reqId
+            sceneModel = HOST_PRESENTER_MODEL
+            sceneEngine = 'host'
+            // The montage must follow the REAL audio length, not the planned
+            // 5|10s block — this is what kills both the trailing silence and
+            // the cut-off last word (0.1s precision is enough for Creatomate).
+            hs.seconds = Math.max(2, Math.round(audioDur * 10) / 10)
+            console.log(
+              `[cinematic] hollywood host scene ${hs.index}: TTS ${audioDur.toFixed(1)}s voice=${hostVoice.voice} → presenter submitted`,
+            )
+          } catch (e) {
+            console.warn(
+              `[cinematic] hollywood host scene ${hs.index} failed — falling back to O3 native audio:`,
+              e instanceof Error ? e.message : String(e),
+            )
+            id = null
+            sceneModel = anchors ? KLING3_I2V_MODEL : HOLLYWOOD_MODELS[hs.type]
+            sceneEngine = hs.type
+          }
+        }
+
         if (!id) {
-          await new Promise((r) => setTimeout(r, 800))
-          id = await submitToFal(scenePrompt, model, false, true, hs.seconds, anchorUrl)
+          // v3.0 path — byte-identical to before v3.5 (and the per-scene
+          // fallback when the host path above failed).
+          const anchorUrl = anchors
+            ? hs.type === 'dialogue'
+              ? anchors.portraitUrl
+              : anchors.environmentUrl
+            : undefined
+          const scenePrompt = hs.prompt + eraSuffix
+          id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
+          if (!id) {
+            await new Promise((r) => setTimeout(r, 800))
+            id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
+          }
         }
         hRequestIds.push(id)
-        hModels.push(model)
+        hModels.push(sceneModel)
+        hEngines.push(sceneEngine)
         await new Promise((r) => setTimeout(r, 450))
       }
 
@@ -792,11 +934,8 @@ export async function POST(req: NextRequest) {
         `[cinematic] hollywood submitted ${hValid.length}/${plan.scenes.length} clips user=${user.id.slice(0, 8)} generationId=${generationId} anchored=${anchors ? 'yes' : 'no'} est=$${plan.estimatedCostUsd.toFixed(2)}`,
       )
 
-      const hNarrations = plan.scenes.map((s) => (s.needsNarration && s.voiceover ? s.voiceover : null))
-      const hVoiceoverScript =
-        hNarrations.filter(Boolean).join(' ') ||
-        plan.scenes.map((s) => s.dialogueLine ?? '').filter(Boolean).join(' ') ||
-        prompt
+      // KINEO-HOLLYWOOD-HOST-2026-07-13 — hNarrations/hVoiceoverScript moved
+      // ABOVE the submit loop (the host voice is resolved from them).
 
       return NextResponse.json({
         mode: 'cinematic_ai',
@@ -810,8 +949,14 @@ export async function POST(req: NextRequest) {
         fal_request_ids: hRequestIds, // null for failed submissions
         fal_model: hModels[0] ?? HOLLYWOOD_MODELS.dialogue, // back-compat: scene-1 model
         fal_models: hModels, // parallel to fal_request_ids
-        scene_engines: plan.scenes.map((s) => s.type), // 'dialogue' | 'cinematic' | 'support'
+        // KINEO-HOLLYWOOD-HOST-2026-07-13 — the RENDER engine per scene:
+        // 'host' (presenter clip, speech baked in, timeline follows the real
+        // audio seconds) | 'dialogue' | 'cinematic' | 'support'. Compose keys
+        // volume/narration/caption/duration decisions off this.
+        scene_engines: hEngines,
         scene_narrations: hNarrations, // TTS text per scene (null = native audio only)
+        // For host scenes these are the MEASURED TTS seconds (0.1s precision),
+        // overwritten in the submit loop — not the planner's 5|10 estimate.
         scene_seconds: plan.scenes.map((s) => s.seconds),
         // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — the EXACT spoken line per
         // dialogue scene (null for the rest), parallel to fal_request_ids.

@@ -40,7 +40,21 @@ const ANIMATE_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'
 // — ~1/3 of VEED Fabric's $0.15/s ($3.37 vs $9.00 per 60s video). Input is
 // { image_url, audio_url } (NO resolution param); output { video: { url } }.
 // Validated demand: the #1 recurring ask across Upwork AI-video jobs (09-10/07).
-const PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — now EXPORTED: Hollywood Host Mode v3.5
+// renders anchored dialogue scenes on this same engine (portrait anchor +
+// our TTS of the spoken line) so the host keeps ONE voice across every scene.
+export const PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
+
+// KINEO-PRESENTER-MOTION-2026-07-10 — Joseph's feedback on the first prod
+// render: the body stayed FROZEN (only lips moved). Kling AI Avatar v2
+// accepts an optional `prompt` (default ".") that directs the performance —
+// this makes the presenter move like a real host: hands, posture, head,
+// energy following the speech instead of a static portrait with moving lips.
+// KINEO-HOLLYWOOD-HOST-2026-07-13 — extracted to an exported const so the
+// Hollywood host scenes reuse the exact same production-validated direction
+// (lib/hollywood/hostVoice.ts appends the plan's character/style sheets).
+export const PRESENTER_PERFORMANCE_PROMPT =
+  'the person speaks directly to the camera like a charismatic presenter: natural expressive hand gestures emphasizing key words, subtle head and shoulder movement, engaged body language that matches the rhythm of the speech, realistic natural motion'
 
 /** Which model animates the avatar. 'presenter' = Kling AI Avatar v2 talking
  *  human (best lip-sync per dollar, KINEO-PRESENTER); 'fabric' = VEED talking
@@ -189,6 +203,12 @@ export async function submitAvatarJob(args: {
   audioUrl: string
   resolution?: '480p' | '720p'
   engine?: AvatarEngine
+  /** KINEO-HOLLYWOOD-HOST-2026-07-13 — optional performance direction for the
+   * 'presenter' engine only. Hollywood host scenes pass the gesture prompt
+   * PLUS the plan's characterSheet/styleSheet so the avatar clip matches the
+   * anchored look. Absent/empty → the production default below (every
+   * existing caller stays byte-identical). Ignored by the other engines. */
+  performancePrompt?: string
 }): Promise<string | null> {
   if (!configureFal()) return null
   const model = modelFor(args.engine)
@@ -202,14 +222,12 @@ export async function submitAvatarJob(args: {
         ? {
             image_url: args.imageUrl,
             audio_url: args.audioUrl,
-            // KINEO-PRESENTER-MOTION-2026-07-10 — Joseph's feedback on the
-            // first prod render: the body stayed FROZEN (only lips moved).
-            // Kling AI Avatar v2 accepts an optional `prompt` (default ".")
-            // that directs the performance — this makes the presenter move
-            // like a real host: hands, posture, head, energy following the
-            // speech instead of a static portrait with moving lips.
-            prompt:
-              'the person speaks directly to the camera like a charismatic presenter: natural expressive hand gestures emphasizing key words, subtle head and shoulder movement, engaged body language that matches the rhythm of the speech, realistic natural motion',
+            // KINEO-PRESENTER-MOTION-2026-07-10 — performance direction (see
+            // the exported const above for the full rationale).
+            // KINEO-HOLLYWOOD-HOST-2026-07-13 — callers may override with an
+            // enriched prompt (host scenes add character/style sheets);
+            // default keeps every existing presenter render identical.
+            prompt: args.performancePrompt?.trim() || PRESENTER_PERFORMANCE_PROMPT,
           }
         : {
             image_url: args.imageUrl,
