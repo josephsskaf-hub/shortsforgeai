@@ -18,7 +18,9 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ plan: 'free', isPro: false, cinematic_tokens: 0 })
+      // KINEO-TAAFT-REVIEW-2026-07-14 — signup_utm_source added to every
+      // response shape so client parsing never sees an undefined key.
+      return NextResponse.json({ plan: 'free', isPro: false, cinematic_tokens: 0, signup_utm_source: null })
     }
 
     const info = await fetchUserPlan(supabase, user.id)
@@ -40,13 +42,34 @@ export async function GET() {
       console.warn('[me/plan] cinematic_tokens read failed:', e instanceof Error ? e.message : String(e))
     }
 
+    // KINEO-TAAFT-REVIEW-2026-07-14 — TAAFT is our #1 signup channel (~72%)
+    // but our listing rating is the growth lever, so the Generate page needs
+    // to know WHERE this user signed up from to show the post-render review
+    // ask. Read in its OWN try/catch + separate query so a missing column on
+    // a stale env can never break the cinematic_tokens read above — we just
+    // degrade to null and the review card silently never renders.
+    let signupUtmSource: string | null = null
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('signup_utm_source')
+        .eq('id', user.id)
+        .single()
+      if (!error && data && typeof data.signup_utm_source === 'string' && data.signup_utm_source) {
+        signupUtmSource = data.signup_utm_source
+      }
+    } catch (e) {
+      console.warn('[me/plan] signup_utm_source read failed:', e instanceof Error ? e.message : String(e))
+    }
+
     return NextResponse.json({
       plan: info.tier,
       isPro: info.isPro,
       cinematic_tokens: cinematicTokens,
+      signup_utm_source: signupUtmSource,
     })
   } catch (err) {
     console.error('[me/plan] unexpected:', err)
-    return NextResponse.json({ plan: 'free', isPro: false, cinematic_tokens: 0 })
+    return NextResponse.json({ plan: 'free', isPro: false, cinematic_tokens: 0, signup_utm_source: null })
   }
 }

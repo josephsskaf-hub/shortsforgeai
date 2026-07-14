@@ -17,6 +17,11 @@ import NicheOnboarding from '@/components/NicheOnboarding'
 // videos now cost 120 universal credits; the avatar 402 already routes to the
 // universal upgrade modal. The component file is left in place but unused.
 import ReferralMiniCard from '@/components/ReferralMiniCard'
+// KINEO-TAAFT-REVIEW-2026-07-14 — post-render TAAFT review ask. Fully
+// self-contained (source gate via /api/me/plan, once-per-browser localStorage
+// flag, analytics) and degrades to null on any failure, mirroring
+// ReferralMiniCard so it can never break the success screen.
+import TaaftReviewAsk from '@/components/TaaftReviewAsk'
 // KINEO-OFFER290-2026-07-07 — first-purchase $2.90 urgency banner. Self-gated on
 // OFFER_290_ENABLED (renders null while the flag is off — build-only for now).
 import Offer290Banner from './Offer290Banner'
@@ -644,6 +649,10 @@ export default function GenerateClient() {
   // everyone else = 0. We render a separate "no tokens left, resets
   // monthly" state when the user IS pro but has spent their token.
   const [cinematicTokens, setCinematicTokens] = useState<number>(0)
+  // KINEO-TAAFT-REVIEW-2026-07-14 — the post-render TAAFT review ask that
+  // used to be wired here (signup-source state + localStorage gate + shown
+  // event) moved wholesale into <TaaftReviewAsk/> so the gating logic lives
+  // next to the card it gates; see the render site in the success branch.
   // Fast-mode-specific staged progress index (0..3). The real backend is
   // a single roundtrip; this drives a 4-step visual that auto-advances on
   // a timer so the wait feels intentional.
@@ -4971,6 +4980,19 @@ export default function GenerateClient() {
                   win moment. Fetches the user's real link from /api/referral;
                   renders nothing if the loop is unavailable. */}
               <ReferralMiniCard />
+
+              {/* KINEO-TAAFT-REVIEW-2026-07-14 — TAAFT review ask at the win
+                  moment. TAAFT drives ~72% of signups but our listing sits at
+                  3.0 stars (2 reviews), so one honest review is the highest-
+                  leverage ask we can make — and the only fair moment to ask
+                  is right after a successful render (this branch only renders
+                  when phase === 'done' && finalVideoUrl). ALL gating lives
+                  inside the component: signup source must be 'taaft' (via
+                  /api/me/plan, module-cached) and the once-per-browser
+                  localStorage flag must be absent (set at SHOW time). Any
+                  failure anywhere in that chain → the component renders null
+                  and this screen looks exactly as before. */}
+              <TaaftReviewAsk />
 
               {/* Push #087 — secondary actions: re-generate the same idea
                   (one click) or jump back to edit the script. Keeps the
