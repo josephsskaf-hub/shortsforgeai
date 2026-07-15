@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
 import { OFFER_290_ENABLED } from '@/lib/flags'
 import Stripe from 'stripe'
@@ -11,6 +12,35 @@ export const dynamic = 'force-dynamic'
 
 type Tier = 'starter' | 'basic' | 'pro'
 type Currency = 'usd' | 'brl' | 'inr'
+
+// KINEO-RECOVERY-2026-07-15 — checkout telemetry is written server-side so
+// the immediate navigation to Stripe cannot cancel it. This also records the
+// anonymous auth wall, which client-only click tracking could never see.
+async function recordCheckoutEvent(
+  name: 'checkout_attempted' | 'checkout_auth_required' | 'checkout_started' | 'checkout_failed',
+  userId: string | null,
+  metadata: Record<string, unknown>,
+  sessionId?: string,
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return
+  try {
+    const admin = createAdminClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { error } = await admin.from('events').insert({
+      name,
+      user_id: userId,
+      path: '/api/stripe/checkout',
+      session_id: sessionId ?? null,
+      metadata,
+    })
+    if (error) console.error('[stripe/checkout] event insert failed:', name, error.code, error.message)
+  } catch (error) {
+    console.error('[stripe/checkout] event insert threw:', name, error)
+  }
+}
 
 // Push #273 — multi-currency support.
 //   Starter: $2.90 / month  (USD)  |  R$14.90 / month  (BRL)  |  ₹249 / month  (INR)
@@ -205,7 +235,10 @@ async function buildAndRedirect(
   // (starter/basic, monthly only). Ignorado silenciosamente fora disso.
   intro = false,
 ): Promise<NextResponse> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  // Always return to the hostname the buyer actually used. The legacy env can
+  // still point at shortsforgeai.vercel.app; trusting it adds an unnecessary
+  // cross-domain hop and can drop auth/attribution cookies.
+  const appUrl = req.nextUrl.origin
 
   function redirectError(msg: string) {
     return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
@@ -228,17 +261,28 @@ async function buildAndRedirect(
   const isAnnual = billing === 'annual'
   const unitAmount = isAnnual ? ANNUAL_PRICES[tier][currency] : TIER_PRICES[tier][currency]
   const interval: 'month' | 'year' = isAnnual ? 'year' : 'month'
+  const returnToWatermark = req.nextUrl.searchParams.get('return') === 'wm'
+  const checkoutMetadata = {
+    tier,
+    billing,
+    currency,
+    intro_requested: intro,
+    return_to: returnToWatermark ? 'watermark_moment' : 'checkout_success',
+  }
 
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
+  await recordCheckoutEvent('checkout_attempted', user?.id ?? null, checkoutMetadata)
 
   if (authError || !user) {
+    await recordCheckoutEvent('checkout_auth_required', null, checkoutMetadata)
     console.error('[stripe/checkout] Auth error or no user:', authError?.message)
     // KINEO-CHECKOUT-RESUME-2026-07-07 — 7 buyers hit "Auth session missing" and
     // the old redirect (/signup?redirect=/pricing) silently DROPPED the purchase
     // intent (tier/billing/promo) — one user clicked 7× in 3s and gave up. Now we
-    // send them to /login carrying the FULL checkout URL, so after sign-in the
-    // login page navigates straight back here and continues to Stripe. `resumed=1`
+    // send them to the create-account screen carrying the FULL checkout URL.
+    // Google OAuth works for both new and returning users there, while the email
+    // login link preserves the same query. `resumed=1`
     // is a loop guard: if a resumed request STILL has no session, show a visible
     // error on /pricing instead of bouncing login↔checkout forever.
     if (!isGet) return jsonError('You must be signed in to upgrade.', 401)
@@ -246,7 +290,7 @@ async function buildAndRedirect(
       return redirectError('We could not confirm your sign-in. Please sign in and try again.')
     }
     const resume = `${req.nextUrl.pathname}${req.nextUrl.search}${req.nextUrl.search ? '&' : '?'}resumed=1`
-    return NextResponse.redirect(`${appUrl}/login?reason=checkout&redirect=${encodeURIComponent(resume)}`)
+    return NextResponse.redirect(`${appUrl}/signup?reason=checkout&redirect=${encodeURIComponent(resume)}`)
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -259,11 +303,11 @@ async function buildAndRedirect(
     console.error('[stripe/checkout] Profile fetch error:', profileError.message, profileError.code)
   }
 
-  // Push #166 — allow repeat purchases to stack credits.
-  // Users with an active subscription can buy again; the webhook's
-  // additive (current + planCredits) logic will add credits on top.
-  // We still clear stale is_pro flags so the DB stays consistent.
-  if (profile?.is_pro) {
+  // KINEO-RECOVERY-2026-07-15 — never create a second recurring subscription
+  // for an already-active customer. It causes duplicate billing and inflates
+  // subscriber counts; credit top-ups remain available through their own route.
+  // Stale flags are still repaired so a genuinely lapsed user can subscribe.
+  if (profile?.is_pro || profile?.stripe_subscription_id) {
     const subId = profile.stripe_subscription_id as string | null
     let isActuallyActive = false
     if (subId) {
@@ -281,9 +325,9 @@ async function buildAndRedirect(
         .from('profiles')
         .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
         .eq('id', user.id)
+    } else {
+      return redirectError('You already have an active Kineo plan. Use a credit top-up instead of starting a second subscription.')
     }
-    // Active subscribers fall through to create a new checkout session —
-    // credits are added additively by the webhook (current + planCredits).
   }
 
   let customerId = profile?.stripe_customer_id
@@ -335,7 +379,7 @@ async function buildAndRedirect(
     ],
     mode: 'subscription',
     success_url: `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/checkout/cancelled`,
+    cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}${intro ? '&intro=1' : ''}${returnToWatermark ? '&return=wm' : ''}`,
     metadata: {
       supabase_user_id: user.id,
       tier,
@@ -416,6 +460,13 @@ async function buildAndRedirect(
     sessionParams.allow_promotion_codes = true
   }
 
+  // The payment page may need its normal amount copy, but a successful
+  // post-video purchase must return to the exact saved render for a clean
+  // re-composition. Apply this last so intro/promo branches cannot overwrite it.
+  if (returnToWatermark) {
+    sessionParams.success_url = `${appUrl}/generate?wm_unlock=1&session_id={CHECKOUT_SESSION_ID}`
+  }
+
   // #481 — Rewardful affiliate attribution. The rewardful_referral cookie is set
   // client-side (root layout) when a visitor arrives via an affiliate link. Pass it
   // as client_reference_id so Rewardful attributes the subscription to the affiliate.
@@ -461,6 +512,13 @@ async function buildAndRedirect(
     }
   }
 
+  await recordCheckoutEvent(
+    'checkout_started',
+    user.id,
+    { ...checkoutMetadata, intro_applied: discountApplied && intro },
+    session.id,
+  )
+
   return isGet
     ? NextResponse.redirect(session.url!)
     : NextResponse.json({ url: session.url })
@@ -471,7 +529,7 @@ async function buildAndRedirect(
 // inline price_data + metadata.pack_credits that the webhook reads to grant
 // credits (currency-proof). client_reference_id kept for the legacy webhook path.
 async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<NextResponse> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  const appUrl = req.nextUrl.origin
   function redirectError(msg: string) {
     return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
   }
@@ -579,7 +637,7 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
 // (profiles.offer290_used) OR already paid anything (has_paid). Credited by the
 // webhook via metadata.pack_credits (=10); the webhook also sets offer290_used.
 async function buildStarter290AndRedirect(req: NextRequest, isGet: boolean): Promise<NextResponse> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  const appUrl = req.nextUrl.origin
   function redirectError(msg: string) {
     return NextResponse.redirect(`${appUrl}/generate?checkout_error=${encodeURIComponent(msg)}`)
   }
@@ -682,7 +740,7 @@ async function buildStarter290AndRedirect(req: NextRequest, isGet: boolean): Pro
 // mid-cycle to buy 1 or 3 more AI videos instead of hitting a wall. Credited by
 // the webhook via metadata.pack_credits.
 async function buildTopupAndRedirect(req: NextRequest, topupId: TopupId, isGet: boolean): Promise<NextResponse> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  const appUrl = req.nextUrl.origin
   function redirectError(msg: string) {
     return NextResponse.redirect(`${appUrl}/generate?checkout_error=${encodeURIComponent(msg)}`)
   }
@@ -820,7 +878,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/checkout GET] Unexpected error:', msg)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+    const appUrl = req.nextUrl.origin
     return NextResponse.redirect(
       `${appUrl}/pricing?checkout_error=${encodeURIComponent('An unexpected error occurred. Please try again.')}`
     )

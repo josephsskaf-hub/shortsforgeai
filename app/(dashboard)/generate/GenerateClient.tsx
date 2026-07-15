@@ -221,7 +221,11 @@ const VIRAL_STARTER_TOPICS = [
 export default function GenerateClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const initialPrompt = searchParams.get('prompt') ?? ''
+  // KINEO-RECOVERY-2026-07-15 — accept the legacy `topic` key as a safety
+  // net, but standardise every current entry point on `prompt`. The homepage
+  // previously submitted `topic` while this screen read only `prompt`, so the
+  // visitor's exact idea disappeared at the highest-intent first step.
+  const initialPrompt = searchParams.get('prompt') ?? searchParams.get('topic') ?? ''
 
   const [prompt, setPrompt] = useState(initialPrompt)
 
@@ -602,13 +606,13 @@ export default function GenerateClient() {
   const [sharedPublic, setSharedPublic] = useState(false)
 
   // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
-  // A free-plan Fast video ships with a burnt-in watermark. Right after the
-  // render we show a "Remove watermark + 10 videos for $4.90" CTA. After the
-  // $4.90 pack purchase, Stripe returns to /generate?wm_unlock=1 and we re-render
-  // THIS same Fast video clean (watermark:false) and swap it into the preview.
+  // A free-plan video ships with a burnt-in watermark. Right after the render
+  // we offer one recurring Starter path. After checkout, Stripe returns to
+  // /generate?wm_unlock=1 and we re-render THIS same video clean
+  // (watermark:false), then swap it into the preview.
   //  - hasPaid: true once the user bought a pack or plan (hides the CTA).
   //  - wmUnlocking: true while the clean re-render is running post-purchase.
-  //  - lastFastRenderRef: the exact inputs of the just-made Fast video, so the
+  //  - lastFastRenderRef: the exact inputs of the just-made non-avatar video, so the
   //    clean re-render reproduces the SAME video (not a fresh random one).
   const [hasPaid, setHasPaid] = useState(false)
   const [wmUnlocking, setWmUnlocking] = useState(false)
@@ -1409,7 +1413,7 @@ export default function GenerateClient() {
     try { localStorage.removeItem('kineo_wm_unlock') } catch { /* ignore */ }
 
     // No captured render (bought from a different browser / cleared storage):
-    // nothing to rebuild here, but the pack is active — every future Fast video
+    // nothing to rebuild here, but the plan is active — future paid renders
     // is watermark-free. Degrade silently (no error).
     if (
       !stored ||
@@ -1434,13 +1438,13 @@ export default function GenerateClient() {
         })
         const data = await res.json().catch(() => null)
         if (!res.ok || !data || typeof data.render_id !== 'string') {
-          // Safe degradation: the pack is active; the user can regenerate a clean
-          // Fast video. The (already-downloadable) watermarked video is unaffected.
+          // Safe degradation: the plan is active; the user can regenerate a clean
+          // video. The existing watermarked preview is unaffected.
           setWmUnlocking(false)
           setWmUnlockError(
             typeof data?.error === 'string'
               ? data.error
-              : "Your pack is active — generate a new Fast video and it'll be watermark-free.",
+              : "Your Starter plan is active — generate again and the new video will be watermark-free.",
           )
           return
         }
@@ -1458,7 +1462,7 @@ export default function GenerateClient() {
       } catch {
         setWmUnlocking(false)
         setWmUnlockError(
-          "Your pack is active — generate a new Fast video and it'll be watermark-free.",
+          "Your Starter plan is active — generate again and the new video will be watermark-free.",
         )
       }
     })()
@@ -1525,10 +1529,11 @@ export default function GenerateClient() {
             ? fastCaptions
             : buildSceneCaptions(analysis, scenes, duration)
 
-        // KINEO-WM-CHECKOUT-2026-07-07 — remember the exact Fast render inputs so
-        // a post-purchase "remove watermark" can re-render THIS same video clean.
-        // Only for the pure Fast pipeline (not avatar, not the fal/AI engines).
-        if (!avatarComposeRef.current?.avatarVideoUrl && !falUsedRef.current) {
+        // KINEO-RECOVERY-2026-07-15 — remember the exact compositing inputs for
+        // every non-avatar render, including generated AI scenes. The old Fast-
+        // only guard made the default AI trial promise "unlock this video" even
+        // though checkout could not reproduce it clean.
+        if (!avatarComposeRef.current?.avatarVideoUrl) {
           lastFastRenderRef.current = {
             clip_urls: clipUrls,
             voiceover_script: voiceoverScript,
@@ -2558,7 +2563,7 @@ export default function GenerateClient() {
   async function handleDownload(e: React.MouseEvent<HTMLAnchorElement>) {
     if (!finalVideoUrl) return
     const slug = slugifyTitle(analysis?.title)
-    const filename = slug ? `${slug}.mp4` : `shortsforgeai-${duration}s.mp4`
+    const filename = slug ? `${slug}.mp4` : `kineo-${duration}s.mp4`
     e.preventDefault()
     try {
       const res = await fetch(finalVideoUrl)
@@ -2739,28 +2744,20 @@ export default function GenerateClient() {
   // through VPNs and a few browser configs. The UI now exposes a BRL
   // button on each upgrade surface and passes the currency in directly,
   // so the path is always user-driven.
-  // KINEO-WM-CHECKOUT-2026-07-07 — "remove watermark" CTA. Stash the exact Fast
-  // render inputs so we can rebuild THIS same video clean after the purchase,
-  // then send the user to the $4.90 Starter Pack checkout with ?return=wm so
-  // Stripe returns them to /generate?wm_unlock=1 (handled by the effect below).
+  // KINEO-RECOVERY-2026-07-15 — one post-video decision: Starter at $4.90 for
+  // the first month. Stash the exact render inputs, preserve `return=wm`, and
+  // rebuild this same video clean after the recurring checkout succeeds.
   function handleRemoveWatermark() {
     try {
       if (lastFastRenderRef.current) {
         localStorage.setItem('kineo_wm_unlock', JSON.stringify(lastFastRenderRef.current))
       }
     } catch {
-      // Private-mode / storage blocked — degrade to a normal pack purchase; the
-      // buyer still gets clean output on their NEXT Fast video (has_paid=true).
+      // Private-mode / storage blocked — the subscription still activates; the
+      // exact-video re-render simply cannot resume in this browser.
     }
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'watermark_moment' } }),
-        keepalive: true,
-      })
-    } catch { /* non-blocking */ }
-    window.location.href = '/api/stripe/checkout?pack=starter&return=wm'
+    trackCheckoutClick('starter')
+    window.location.href = '/api/stripe/checkout?tier=starter&intro=1&return=wm'
   }
 
   async function handleUpgradeNow(
@@ -4521,13 +4518,11 @@ export default function GenerateClient() {
                 </div>
               </div>
 
-              {/* KINEO-WM-CHECKOUT — SINGLE purchase surface (Joseph 09/07:
-                  "deixa só o azul, 2 formas de compra suja o ambiente").
-                  The gold Unlock button below is hidden for Fast renders;
-                  this blue card (now with the 🔒) is the one CTA. Same
-                  handleRemoveWatermark flow → $4.90 checkout → clean
-                  re-render of THIS video. */}
-              {quality === 'fast' && planTier === 'free' && !hasPaid && !wmUnlocking && (
+              {/* KINEO-RECOVERY-2026-07-15 — the finished video is the strongest
+                  purchase moment. Show one recurring offer, not a one-time pack
+                  beside a subscription at the same price. The exact render is
+                  restored after checkout whenever compositing inputs exist. */}
+              {planTier === 'free' && !hasPaid && !wmUnlocking && lastFastRenderRef.current && (
                 <div
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
                   style={{
@@ -4542,86 +4537,37 @@ export default function GenerateClient() {
                       className="text-[10px] font-black uppercase tracking-[.18em] mb-1.5"
                       style={{ color: '#2997ff' }}
                     >
-                      Unlock your video
+                      Your video is ready
                     </div>
                     <h3
                       className="font-black tracking-tight"
                       style={{ fontSize: '1.15rem', color: 'var(--text)', lineHeight: 1.25 }}
                     >
-                      Download this video watermark-free
+                      Unlock this video + keep creating
                     </h3>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      Pick what fits you — both unlock this exact video clean, instantly.
+                      Download this exact video watermark-free and get 25 credits every month.
                     </p>
                   </div>
-                  {/* Joseph 09/07: "a pessoa tem que escolher" — two equal
-                      options side by side: one-time $4.90 vs monthly $9.90. */}
-                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                    {/* Joseph 09/07: both options start NEUTRAL (transparent);
-                        only the hovered one lights up blue = pre-selection. */}
-                    <button
-                      type="button"
-                      onClick={handleRemoveWatermark}
-                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center"
-                      style={{
-                        background: 'rgba(41,151,255,.10)',
-                        border: '1px solid rgba(41,151,255,.45)',
-                        color: '#9ecbff',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
-                        e.currentTarget.style.color = '#fff'
-                        e.currentTarget.style.border = '1px solid transparent'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(41,151,255,.34)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(41,151,255,.10)'
-                        e.currentTarget.style.color = '#9ecbff'
-                        e.currentTarget.style.border = '1px solid rgba(41,151,255,.45)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    >
-                      <span>🔒 Unlock — $4.90</span>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
-                        This video + 10 videos · one-time
-                      </span>
-                    </button>
-                    {/* KINEO-INTRO-MONTH-2026-07-13 — o botão "monthly" agora usa
-                        o 1º mês $4.90 (mesmo preço do unlock ao lado, mas
-                        RECORRENTE — o comprador vira MRR e não one-time). Copy
-                        "50 videos" era stale do pré-rebase → 25 credits. */}
-                    <button
-                      type="button"
-                      onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter&intro=1' }}
-                      className="flex flex-col items-center justify-center flex-1 rounded-xl py-3 px-3 text-sm font-black text-center"
-                      style={{
-                        background: 'rgba(129,140,248,.12)',
-                        border: '1px solid rgba(129,140,248,.55)',
-                        color: '#c7d2fe',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
-                        e.currentTarget.style.color = '#fff'
-                        e.currentTarget.style.border = '1px solid transparent'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(41,151,255,.34)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(129,140,248,.12)'
-                        e.currentTarget.style.color = '#c7d2fe'
-                        e.currentTarget.style.border = '1px solid rgba(129,140,248,.55)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    >
-                      <span>📅 Go monthly — $4.90 first month</span>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
-                        then $9.90/mo · 25 credits every month · cancel anytime
-                      </span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveWatermark}
+                    className="flex flex-col items-center justify-center w-full rounded-xl mt-4 py-3 px-3 text-sm font-black text-center text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(41,151,255,.34)',
+                    }}
+                  >
+                    <span>Unlock + Start Starter — $4.90 today →</span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.92, marginTop: 3 }}>
+                      Renews at $9.90/month in 30 days · cancel anytime
+                    </span>
+                  </button>
+                  <p className="text-center mt-2" style={{ color: 'var(--muted2)', fontSize: '0.7rem', lineHeight: 1.45 }}>
+                    Secure checkout · no hidden fees · your saved videos stay yours
+                  </p>
                 </div>
               )}
 
@@ -4632,46 +4578,14 @@ export default function GenerateClient() {
                 className="mt-7 w-full flex flex-col items-center gap-3"
                 style={{ maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}
               >
-                {/* Primary: big green Download.
-                    KINEO-DL-PAYWALL-2026-07-09 — InVideo model: free users can
-                    WATCH their finished video (preview stays free — that's the
-                    "aha" that sells) but the DOWNLOAD is the purchase moment.
-                    Locked state reuses the existing watermark-moment checkout
-                    (handleRemoveWatermark → $4.90 Starter Pack → returns to
-                    /generate?wm_unlock=1 → clean re-render of THIS video). */}
-                {/* Joseph 09/07: on Fast renders the blue card above is the ONE
-                    purchase surface — the gold button only appears on non-Fast
-                    free renders (e.g. free AI trial), where the blue card is
-                    hidden, so the user is never shown two $4.90 boxes at once. */}
-                {planTier === 'free' && !hasPaid ? (
-                  quality === 'fast' ? null : (
-                  <button
-                    type="button"
-                    onClick={handleRemoveWatermark}
-                    className="flex flex-col items-center justify-center gap-0.5 w-full rounded-2xl py-4 text-base font-black text-white"
-                    style={{
-                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 28px rgba(245,158,11,.45)',
-                      letterSpacing: '-0.01em',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span style={{ fontSize: '1.15rem' }}>🔓</span>
-                      Unlock &amp; Download — $4.90
-                    </span>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.92 }}>
-                      This video watermark-free + 10 videos · one-time · no subscription
-                    </span>
-                  </button>
-                  )
-                ) : (
+                {/* Paid users get the file action. Free users already have the
+                    single Starter offer immediately above; duplicating a second
+                    purchase button here reduced clarity and favoured the old pack. */}
+                {planTier === 'free' && !hasPaid ? null : (
                 <a
                   href={finalVideoUrl}
                   onClick={handleDownload}
-                  download={`${slugifyTitle(analysis?.title) || `shortsforgeai-${duration}s`}.mp4`}
+                  download={`${slugifyTitle(analysis?.title) || `kineo-${duration}s`}.mp4`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
@@ -4753,7 +4667,7 @@ export default function GenerateClient() {
                   {/* WhatsApp — great for mobile / creator sharing */}
                   {!(planTier === 'free' && !hasPaid) && (
                   <a
-                    href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A shortsforgeai.com`}
+                    href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A usekineo.com`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
@@ -4786,7 +4700,7 @@ export default function GenerateClient() {
                   )}
                   {/* Push #101 — one-click X intent for organic distribution. */}
                   <a
-                    href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at shortsforgeai.com %23YouTubeShorts %23AIVideo`}
+                    href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at usekineo.com %23YouTubeShorts %23AIVideo`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
@@ -4959,13 +4873,15 @@ export default function GenerateClient() {
                   KINEO-SPRINT-OFFER-2026-07-14 — SINGLE OFFER rebuild: one
                   primary path (intro Creator $9.90 first month — the plan that
                   unlocks AI scenes + AI Presenter) + intro Starter $4.90 as
-                  the quieter secondary. The one-time pack CTA is GONE from
-                  this screen (it ended the relationship at $4.90; ?pack=starter
-                  survives only in the watermark return=wm flow above). Both
-                  buttons use the GET checkout (the old primary POSTed to
+                  the quieter secondary. This block now appears only to legacy
+                  pack buyers; unpaid users see the single contextual Starter
+                  offer beside their finished video. Both buttons use GET (the old primary POSTed to
                   /api/stripe/checkout, which has NO POST handler — every click
                   silently fell back to /pricing). Green gradient → brand blue. */}
-              {planTier === 'free' && credits !== null && credits < 20 && (
+              {/* Legacy pack buyers have paid but remain on the free plan; this
+                  is their recurring upgrade path. Unpaid users already saw one
+                  contextual offer above, so do not show a second ladder here. */}
+              {planTier === 'free' && hasPaid && credits !== null && credits < 20 && (
                 <div
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
                   style={{
@@ -5189,7 +5105,7 @@ export default function GenerateClient() {
             // pitches Pro by name and shows a credit-urgency line when
             // they're at ≤1. Paid users keep the lighter
             // NextActionSection (their main action is "make another one").
-            planTier === 'free' ? (
+            planTier === 'free' && (hasPaid || !lastFastRenderRef.current) ? (
               // KINEO-SPRINT-OFFER-2026-07-14 — BUG FIX: the button said
               // "Upgrade to Creator — $24.90/mo" but passed tier 'pro'
               // (Studio $37.90) to handleUpgradeNow — and handleUpgradeNow
@@ -5205,9 +5121,9 @@ export default function GenerateClient() {
                 upgradeLoading={upgradeLoading}
                 creditsLeft={credits ?? 0}
               />
-            ) : (
+            ) : planTier !== 'free' ? (
               <NextActionSection onAnother={handleReset} onUpgrade={() => router.push('/pricing')} />
-            )
+            ) : null
           ) : (
             <>
               <div className="flex items-center justify-center gap-2 flex-wrap mb-6">

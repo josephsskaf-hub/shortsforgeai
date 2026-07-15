@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
+const LIFECYCLE_EMAILS_ENABLED = process.env.KINEO_LIFECYCLE_EMAILS_ENABLED === 'true'
 // Push #431 — Joseph's rule: no personal name on outbound. Activation nudge is
 // lead-nurture → goes out as the TEAM from hello@ (support@ = support only).
 const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
@@ -74,6 +75,10 @@ usekineo.com`
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  // Keep every non-approved segment untouched during the Lote 1 micro-test.
+  if (!LIFECYCLE_EMAILS_ENABLED) {
+    return NextResponse.json({ paused: true, sent: 0, reason: 'lifecycle_email_gate' })
   }
   if (!RESEND_API_KEY) {
     console.error('[send-activation-nudge] RESEND_API_KEY not set')

@@ -54,7 +54,7 @@ const FAQS: { q: string; a: string }[] = [
     q: 'What’s the difference between AI Generated and Cinematic AI?',
     // KINEO-REBASE-2026-07-10 — 2:1 rebase (Seedance 20, Kling 45) + universal
     // engines: every engine is on every paid plan now (no Studio exclusivity).
-    a: 'AI Generated uses the Seedance engine (great quality, 20 credits/video). Cinematic AI uses the premium Kling engine for top-tier cinematic motion (50 credits/video). Every AI engine is available on every paid plan — you just need the credits. Fast Mode (smart stock footage) is free.',
+    a: 'AI Generated uses the Seedance engine (great quality, 20 credits/video). Cinematic AI uses the premium Kling engine for top-tier cinematic motion (50 credits/video). Every paid plan can access every engine once its balance covers the full cost; you can add extra credits when needed. Fast Mode uses smart stock footage.',
   },
   {
     q: 'How do credits work?',
@@ -78,7 +78,7 @@ function buildPricing() {
       // KINEO-REBASE-2026-07-10 — 50 → 25 credits (2:1 rebase, USD unchanged).
       // KINEO-SHOWCASE-2026-07-10 — V3C wording: Fast = 1 credit per video for
       // paid accounts (25 credits ≈ 25 Fast videos), engines universal.
-      tagline: '25 credits/month — up to 25 Fast videos with smart stock footage + AI voiceover, or mix in any AI engine.',
+      tagline: '25 credits/month — up to 25 Fast videos, or 1 AI Generated video (20 cr). Kling and AI Presenter require extra credits.',
       features: [
         '⚡ 25 credits/month (Fast videos = 1 credit)',
         'Smart stock footage matched per scene',
@@ -291,7 +291,7 @@ export default function PricingPage() {
             Pricing
           </div>
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
-            Real AI video generation from $24.90/mo.
+            Real AI video generation from $9.90/mo.
           </h1>
           {/* KINEO-SHOWCASE-2026-07-10 — Joseph: parágrafo comparativo removido
               ("texto sujo") — os CARDS de preço são a estrela do hero. */}
@@ -645,21 +645,21 @@ export default function PricingPage() {
                   {
                     label: 'Cinematic AI videos (Kling, 50 cr)',
                     free: '—',
-                    starter: '✅',
+                    starter: 'Needs +25 cr',
                     basic: '✅',
                     pro: '✅ 1080p',
                   },
                   {
                     label: '🎬 AI Presenter — talking avatar (70 cr)',
                     free: '—',
-                    starter: '✅',
+                    starter: 'Needs +45 cr',
                     basic: '✅',
                     pro: '✅',
                   },
                   {
                     label: '🎥 Hollywood film (150 cr)',
                     free: '—',
-                    starter: '—',
+                    starter: 'Needs +125 cr',
                     basic: '✅ 1/mo included',
                     pro: '✅',
                   },
@@ -712,7 +712,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#86868b]">
-            ⚡ Every paid plan unlocks EVERY engine — Fast, AI Generated, Kling, AI Presenter, transparent gesture clips and UGC product ads. Credits are universal: spend them on whichever engine you want.
+            ⚡ Every paid plan can access every engine, but your balance must cover its full credit cost. Starter&apos;s 25 monthly credits cover Fast videos or 1 Seedance video; Kling, AI Presenter and Hollywood require extra credits.
           </p>
         </div>
 

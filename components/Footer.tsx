@@ -30,7 +30,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
       { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },
       { href: '/faceless-channel-ideas', label: 'Faceless channel ideas (2026)' },
       { href: '/pricing', label: 'Pricing' },
-      { href: '/start', label: 'Start free' },
+      { href: '/signup', label: 'Start free' },
     ],
   },
   {

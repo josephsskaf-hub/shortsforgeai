@@ -8,7 +8,7 @@ import { createMpPreference, mpConfigured, MP_PACKS } from '@/lib/mercadopago'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+  const appUrl = req.nextUrl.origin
   const redirectError = (msg: string) =>
     NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
 

@@ -10,12 +10,12 @@ export const metadata: Metadata = {
   title: 'Make a YouTube Short From a Topic — AI Writes, Voices & Edits It | Kineo',
   description:
     'Type a topic and get a finished faceless YouTube Short — script, AI voiceover, footage and captions, generated in about 60 seconds. The cheapest way to make Shorts from just an idea, from $9.90/mo.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/youtube-shorts-from-topic' },
+  alternates: { canonical: 'https://www.usekineo.com/youtube-shorts-from-topic' },
   openGraph: {
     title: 'Make a YouTube Short From a Topic — generated in 60 seconds',
     description:
       'One topic in, a ready-to-post 9:16 Short out: script, voiceover, footage and captions. From $9.90/mo.',
-    url: 'https://www.shortsforgeai.com/youtube-shorts-from-topic',
+    url: 'https://www.usekineo.com/youtube-shorts-from-topic',
     type: 'website',
   },
 }

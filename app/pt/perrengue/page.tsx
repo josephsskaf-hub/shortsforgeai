@@ -9,7 +9,7 @@ export const dynamic = 'force-static'
 
 // Dormente: não indexar até o lançamento.
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.shortsforgeai.com'),
+  metadataBase: new URL('https://www.usekineo.com'),
   title: 'Kineo x Perrengue Chique',
   description: 'A ferramenta que o Perrengue Chique usa pra criar Shorts faceless com IA em 60s. Primeiro vídeo grátis, sem cartão.',
   robots: { index: false, follow: false },

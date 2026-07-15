@@ -9,16 +9,16 @@ import type { Metadata } from 'next'
 import FreeScriptClient from './FreeScriptClient'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.shortsforgeai.com'),
+  metadataBase: new URL('https://www.usekineo.com'),
   title: 'Free YouTube Short Script Generator (AI, No Signup) — Kineo',
   description:
     'Generate a viral, hook-driven YouTube Short script free with AI — no signup. Type a topic, get a 45-60s faceless script (hook, facts, payoff) instantly. Then turn it into a finished video in 60s.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/free-script-generator' },
+  alternates: { canonical: 'https://www.usekineo.com/free-script-generator' },
   openGraph: {
     title: 'Free AI YouTube Short Script Generator — No Signup',
     description:
       'Type a topic, get a viral faceless Short script (hook → facts → payoff) free, instantly. Then make it a finished video in 60s.',
-    url: 'https://www.shortsforgeai.com/free-script-generator',
+    url: 'https://www.usekineo.com/free-script-generator',
     type: 'website',
   },
 }

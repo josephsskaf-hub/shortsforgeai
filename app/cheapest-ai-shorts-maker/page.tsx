@@ -14,12 +14,12 @@ export const metadata: Metadata = {
   title: 'Cheapest AI Shorts Maker — Make YouTube Shorts Cheap, First One Free | Kineo',
   description:
     'The cheapest AI YouTube Shorts generator that builds a faceless Short from a single idea — script, AI voiceover, footage and captions in about 60 seconds. AI Gen (Seedance) is the lowest-cost AI engine at 20 credits per video. First Short free, no credit card.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/cheapest-ai-shorts-maker' },
+  alternates: { canonical: 'https://www.usekineo.com/cheapest-ai-shorts-maker' },
   openGraph: {
     title: 'Cheapest AI Shorts Maker — make AI YouTube Shorts cheap',
     description:
       'Make affordable faceless Shorts from just an idea: script, voiceover, footage and captions. AI Gen (Seedance) is the cheapest engine at 20 credits/video. First Short free, no card.',
-    url: 'https://www.shortsforgeai.com/cheapest-ai-shorts-maker',
+    url: 'https://www.usekineo.com/cheapest-ai-shorts-maker',
     type: 'website',
   },
 }

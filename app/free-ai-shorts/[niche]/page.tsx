@@ -208,9 +208,9 @@ export function generateMetadata({ params }: { params: { niche: string } }): Met
   if (!n) return {}
   const title = `${n.h1} — Kineo`
   const description = `${n.intro} Your first Short is free, no credit card required.`
-  const url = `https://www.shortsforgeai.com/free-ai-shorts/${params.niche}`
+  const url = `https://www.usekineo.com/free-ai-shorts/${params.niche}`
   return {
-    metadataBase: new URL('https://www.shortsforgeai.com'),
+    metadataBase: new URL('https://www.usekineo.com'),
     title,
     description,
     alternates: { canonical: url },

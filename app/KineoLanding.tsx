@@ -174,8 +174,9 @@ export default function KineoLanding({ initialUser }: Props) {
                 line at the clamp's 5.8rem max inside the 760px container. */}
             <h1 className="gtxt">Launch your<br />AI Shorts show.</h1>
             <p className="sub">Same face, same voice, same style — every episode. Script, voice, captions and scenes in ~60 seconds.</p>
-            <form className="composer" action="/generate" method="get">
-              <textarea className="ci" name="topic" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
+            <form className="composer" action={initialUser ? '/generate' : '/signup'} method="get">
+              <textarea className="ci" name="prompt" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
+              {!initialUser && <input type="hidden" name="utm_source" value="homepage" />}
               <button className="btn btn-w cbtn" type="submit">Generate →</button>
             </form>
             {/* PROVA-SOCIAL-REAL-2026-07-02 — real DB counts; renders nothing if numbers are low/unavailable */}

@@ -21,6 +21,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
+const LIFECYCLE_EMAILS_ENABLED = process.env.KINEO_LIFECYCLE_EMAILS_ENABLED === 'true'
 // Push #431 — Joseph's rule: lead-recovery/outreach goes out as the TEAM from
 // hello@ (friendlier, commercial); support@ stays for support-only matters.
 const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
@@ -83,6 +84,12 @@ usekineo.com`
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  // Paused by default: this sequence overlaps the abandonment batch and its
+  // copy still references a retired 30-credit promise. Re-enable only after
+  // the sequence, audience and idempotency have founder approval.
+  if (!LIFECYCLE_EMAILS_ENABLED) {
+    return NextResponse.json({ paused: true, sent: 0, reason: 'lifecycle_email_gate' })
   }
   if (!RESEND_API_KEY) {
     console.error('[send-recovery] RESEND_API_KEY not set')

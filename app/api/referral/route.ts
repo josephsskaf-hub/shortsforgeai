@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 // ── Referral config (easy to change) ─────────────────────────────────────
 // Credits each side earns — kept in sync with app/api/referral/qualify.
 const REFERRAL_REWARD_CREDITS = 30
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://shortsforgeai.com'
+const APP_URL = 'https://www.usekineo.com'
 // 8-char uppercase alphanumeric code. Ambiguous chars (0/O/1/I) are removed
 // so codes are easy to read aloud and type.
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

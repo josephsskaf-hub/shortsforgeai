@@ -16,12 +16,12 @@ export const metadata: Metadata = {
   title: '50 Faceless YouTube Channel Ideas for 2026 (High RPM) | Kineo',
   description:
     '50 faceless YouTube channel ideas for 2026, organized by niche with real RPM data — finance, mystery, extreme places, luxury, history and more. No camera, no face, no editing. Start yours today: first Short free, no credit card.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/faceless-channel-ideas' },
+  alternates: { canonical: 'https://www.usekineo.com/faceless-channel-ideas' },
   openGraph: {
     title: '50 Faceless YouTube Channel Ideas for 2026 (Ranked by Niche & RPM)',
     description:
       '50 proven faceless channel ideas across the highest-paying 2026 niches — finance, mystery, geography, luxury, history. Each with a concrete angle. First Short free, no card.',
-    url: 'https://www.shortsforgeai.com/faceless-channel-ideas',
+    url: 'https://www.usekineo.com/faceless-channel-ideas',
     type: 'website',
   },
 }

@@ -22,7 +22,7 @@ function admin() {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+  const appUrl = req.nextUrl.origin
   const code = (params.code ?? '').trim().toUpperCase().slice(0, 32)
   if (!code) return NextResponse.redirect(appUrl)
 

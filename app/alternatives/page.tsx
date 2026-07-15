@@ -18,12 +18,12 @@ export const metadata: Metadata = {
   title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
   description:
     'See how Kineo compares to every major AI video tool — OpusClip, InVideo, HeyGen, Synthesia, CapCut, Runway, Luma and more. Kineo turns one idea into a finished faceless YouTube Short in about 60 seconds, starting at $9.90/mo, first Short free.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/alternatives' },
+  alternates: { canonical: 'https://www.usekineo.com/alternatives' },
   openGraph: {
     title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
     description:
       'Honest, feature-by-feature comparisons between Kineo and the other AI video/Shorts tools — repurposing tools, avatar generators, text-to-video and generative clip models.',
-    url: 'https://www.shortsforgeai.com/alternatives',
+    url: 'https://www.usekineo.com/alternatives',
     type: 'website',
   },
 }

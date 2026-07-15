@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   // generated, always-valid 1200x630 card). We don't set images here anymore —
   // the static fallback didn't exist, which broke every link preview.
   return {
-    metadataBase: new URL('https://www.shortsforgeai.com'),
+    metadataBase: new URL('https://www.usekineo.com'),
     title: `${title} · Kineo`,
     description: desc,
     openGraph: {

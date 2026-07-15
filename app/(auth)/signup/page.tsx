@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
@@ -21,9 +20,17 @@ function safeRedirect(raw: string | null): string | null {
   return raw
 }
 
-function getRedirect(): string | null {
-  if (typeof window === 'undefined') return null
-  return safeRedirect(new URLSearchParams(window.location.search).get('redirect'))
+function activationRedirectFromSearch(search: string): string {
+  const params = new URLSearchParams(search)
+  const explicitRedirect = safeRedirect(params.get('redirect'))
+  if (explicitRedirect) return explicitRedirect
+
+  // Carry the homepage idea through auth on a local activation URL only.
+  // URLSearchParams handles encoding; the cap avoids unbounded callback URLs.
+  const activationParams = new URLSearchParams({ welcome: '1' })
+  const prompt = (params.get('prompt') ?? '').trim().slice(0, 1000)
+  if (prompt) activationParams.set('prompt', prompt)
+  return `/generate?${activationParams.toString()}`
 }
 
 function scorePassword(pw: string): Strength {
@@ -44,7 +51,6 @@ function scorePassword(pw: string): Strength {
 }
 
 export default function SignupPage() {
-  const router = useRouter()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -56,16 +62,40 @@ export default function SignupPage() {
   // KINEO-CHECKOUT-RESUME-2026-07-07 — query string forwarded to /login so a
   // pending checkout redirect survives the hop (state avoids SSR mismatch).
   const [authSearch, setAuthSearch] = useState('')
+  const [activationRedirect, setActivationRedirect] = useState('/generate?welcome=1')
   useEffect(() => {
     setAuthSearch(window.location.search)
+    setActivationRedirect(activationRedirectFromSearch(window.location.search))
+
+    // KINEO-RECOVERY-2026-07-15 — the landing form is a plain GET for maximum
+    // resilience. Count its arrival here, once per browser navigation, so the
+    // hero → signup rate is measurable without risking a blocked submit.
+    const params = new URLSearchParams(window.location.search)
+    const prompt = (params.get('prompt') ?? '').trim()
+    if (params.get('utm_source') === 'homepage' && prompt) {
+      const marker = `kineo_hero_submit:${prompt.slice(0, 120)}`
+      try {
+        if (!sessionStorage.getItem(marker)) {
+          sessionStorage.setItem(marker, '1')
+          void fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'hero_submit', path: '/', metadata: { destination: 'signup' } }),
+            keepalive: true,
+          }).catch(() => {})
+        }
+      } catch { /* analytics must never block signup */ }
+    }
   }, [])
 
   const strength = scorePassword(password)
+  const isCheckoutResume = new URLSearchParams(authSearch).get('reason') === 'checkout'
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    const nextDestination = activationRedirectFromSearch(window.location.search)
 
     // KINEO-DISPOSABLE-BLOCK-2026-07-06 — reject temp-mail signups BEFORE they
     // hit Supabase. Free plan = 2 real videos, so throwaway inboxes are pure
@@ -83,9 +113,9 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        // Push #281 — redirect new users to /pricing after email confirmation
-        // so they see the plans before trying to generate (0 credits at signup).
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'}/pricing`,
+        // Confirm through the PKCE callback, then resume the exact activation
+        // target (homepage prompt or a pending checkout).
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDestination)}`,
       },
     })
 
@@ -117,7 +147,7 @@ export default function SignupPage() {
     fetch('/api/send-welcome', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, activationPath: nextDestination }),
     }).catch(() => {
       /* non-blocking */
     })
@@ -152,18 +182,9 @@ export default function SignupPage() {
     // forget; never awaited, never throws — cannot block or break the signup.
     trackSignupSource()
 
-    // #379 — Activation-first onboarding: new email users go straight to
-    // /generate (3 free credits) to make their first Short, matching the OAuth
-    // flow. ?welcome=1 triggers the pre-filled example + welcome nudge there.
-    // KINEO-CHECKOUT-RESUME-2026-07-07 — unless a checkout redirect is pending:
-    // then resume the purchase (hard navigate so middleware sees fresh cookies).
-    const pendingRedirect = getRedirect()
-    if (pendingRedirect) {
-      window.location.assign(pendingRedirect)
-      return
-    }
-    router.push('/generate?welcome=1')
-    router.refresh()
+    // Activation-first onboarding: resume the homepage prompt in /generate.
+    // A validated explicit redirect still takes priority for pending checkout.
+    window.location.assign(nextDestination)
   }
 
   return (
@@ -407,21 +428,23 @@ export default function SignupPage() {
                   className="text-2xl font-black mb-1 tracking-tight"
                   style={{ color: 'var(--text)' }}
                 >
-                  Create your AI Short
+                  {isCheckoutResume ? 'Create your account to continue' : 'Create your AI Short'}
                 </h1>
                 <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-                  Free trial, 1 video included.
+                  {isCheckoutResume
+                    ? 'Your selected plan and intro price are saved. Continue securely below.'
+                    : 'Free trial, 1 video included.'}
                 </p>
 
                 {/* KINEO-CHECKOUT-RESUME-2026-07-07 — OAuth signups also resume
                     a pending checkout via the auth callback's ?next param. */}
-                <GoogleSignInButton redirectTo={getRedirect() ?? undefined} onError={(msg) => setError(msg)} />
+                <GoogleSignInButton redirectTo={activationRedirect} onError={(msg) => setError(msg)} />
 
                 {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
                     Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
                 {process.env.NEXT_PUBLIC_ENABLE_APPLE === 'true' && (
                   <div className="mt-3">
-                    <AppleSignInButton onError={(msg) => setError(msg)} />
+                    <AppleSignInButton redirectTo={activationRedirect} onError={(msg) => setError(msg)} />
                   </div>
                 )}
 

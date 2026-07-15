@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setError(null)
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.shortsforgeai.com'
+    const appUrl = window.location.origin
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${appUrl}/reset-password`,

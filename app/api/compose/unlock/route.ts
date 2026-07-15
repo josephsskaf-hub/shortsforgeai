@@ -26,24 +26,25 @@ export const dynamic = 'force-dynamic'
 
 // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline unlock.
 //
-// When a FREE-plan user's Fast video finishes it carries a burnt-in watermark
+// When a FREE-plan user's video finishes it carries a burnt-in watermark
 // (see /api/compose → buildCreatomateSource, track 9 — it is baked into the MP4,
 // so removing it REQUIRES a fresh render). The post-render CTA sells the $4.90
-// Starter Pack (25 Fast Shorts, sets profiles.has_paid=true). On return, the
-// client calls THIS route with the EXACT inputs of the just-made Fast video.
+// recurring Starter intro (25 credits/month, sets profiles.has_paid=true). On
+// return, the client calls THIS route with the EXACT compositing inputs. Legacy
+// paid Starter Pack sessions remain valid so existing buyers do not break.
 //
 // This route:
 //   1. Verifies the Stripe Checkout Session is PAID and belongs to this user.
 //      It talks to Stripe directly, so it works even before the async webhook
 //      lands (and in staging where the webhook may not be wired). No credits are
-//      granted here — the webhook remains the single grantor of the 25 pack
+//      granted here — the webhook remains the single grantor of plan/pack
 //      credits (so there is zero double-credit risk).
 //   2. Sets profiles.has_paid=true (idempotent safety net; the webhook does too).
 //   3. Re-renders the SAME video with watermark:false and returns render_id.
 //      The client then polls the normal /api/compose/status pipeline, which
 //      migrates the asset to permanent storage + writes Visual History exactly
-//      like any Fast render. (A Fast render costs 1 credit; the user just bought
-//      25, so the clean re-render is effectively covered. If the webhook credit
+//      like any Fast render. (The clean composition costs 1 credit; Starter has
+//      25/month, so it is covered. If the webhook credit
 //      grant hasn't landed yet, the debit RPC simply no-ops and the clean video
 //      is still delivered — safe degradation.)
 //
@@ -118,12 +119,16 @@ export async function POST(req: NextRequest) {
       const session = await stripe.checkout.sessions.retrieve(sessionId)
       const belongsToUser =
         session.metadata?.supabase_user_id === user.id || session.client_reference_id === user.id
-      const isPack = session.metadata?.pack === 'starter10'
+      const isPack =
+        session.mode === 'payment' && session.metadata?.pack === 'starter10'
+      const subscriptionTier = session.metadata?.tier
+      const isEligibleSubscription =
+        session.mode === 'subscription' &&
+        (subscriptionTier === 'starter' || subscriptionTier === 'basic' || subscriptionTier === 'pro')
       paidOk =
-        session.mode === 'payment' &&
         session.payment_status === 'paid' &&
         belongsToUser &&
-        isPack
+        (isPack || isEligibleSubscription)
       if (!paidOk) {
         console.warn('[compose/unlock] session not eligible', {
           id: sessionId.slice(0, 12),
@@ -131,6 +136,7 @@ export async function POST(req: NextRequest) {
           payment_status: session.payment_status,
           belongsToUser,
           isPack,
+          isEligibleSubscription,
         })
       }
     } catch (err) {

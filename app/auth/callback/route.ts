@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 // free Short (3 free credits) — product value BEFORE the paywall. The Google
 // Ads registration conversion still fires via ?signup=1 (handled in
 // GenerateClient). Returning users go to /generate (or an explicit `next`).
-function resolveDestination(rawNext: string | null, isNewUser: boolean): string {
-  if (isNewUser) return '/generate'
+function resolveDestination(rawNext: string | null): string {
   if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//')) return '/generate'
   return rawNext
 }
@@ -38,14 +37,19 @@ export async function GET(request: Request) {
       // checkout endpoint came from a buy click that bounced on auth. Resuming
       // the purchase beats the activation flow (they're about to PAY); every
       // other new user keeps the /generate?signup=1 onboarding.
+      const safeNext = resolveDestination(rawNext)
       const isCheckoutNext =
-        !!rawNext &&
-        rawNext.startsWith('/') &&
-        !rawNext.startsWith('//') &&
-        (rawNext.startsWith('/api/stripe/checkout') || rawNext.startsWith('/api/paypal/checkout'))
-      const dest = isNewUser
-        ? `${origin}${isCheckoutNext ? rawNext : '/generate?signup=1'}`
-        : `${origin}${resolveDestination(rawNext, false)}`
+        safeNext.startsWith('/api/stripe/checkout') || safeNext.startsWith('/api/paypal/checkout')
+      let destinationPath = safeNext
+      if (isNewUser && !isCheckoutNext) {
+        // KINEO-RECOVERY-2026-07-15 — keep the exact homepage idea through a
+        // brand-new Google/Apple OAuth account. The old branch discarded every
+        // non-checkout `next`, turning a high-intent prompt into a blank screen.
+        const destination = new URL(safeNext, origin)
+        destination.searchParams.set('signup', '1')
+        destinationPath = `${destination.pathname}${destination.search}`
+      }
+      const dest = `${origin}${destinationPath}`
       return NextResponse.redirect(dest)
     }
   }

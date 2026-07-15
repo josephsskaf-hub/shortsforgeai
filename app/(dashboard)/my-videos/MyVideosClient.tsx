@@ -19,6 +19,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { trackCheckoutClick } from '@/lib/trackClick'
 
 export interface VideoRow {
   id: string
@@ -123,8 +124,8 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   const [playingId, setPlayingId] = useState<string | null>(null)
 
   // KINEO-DL-PAYWALL-2026-07-09 — InVideo model: watching is free, downloading
-  // is paid. Free users (no pack, no plan) see "🔓 Unlock — $4.90" instead of
-  // Download; one click goes to the $4.90 Starter Pack checkout. Fails OPEN
+  // is paid. Free users (no pack, no plan) see the Starter intro offer instead
+  // of Download; one click starts recurring checkout. Fails OPEN
   // (never blocks a paid user if /api/credits hiccups).
   const [downloadLocked, setDownloadLocked] = useState(false)
   useEffect(() => {
@@ -149,16 +150,9 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
     }
   }, [])
 
-  function handleUnlockCheckout() {
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'my_videos_download_lock' } }),
-        keepalive: true,
-      })
-    } catch { /* non-blocking */ }
-    window.location.href = '/api/stripe/checkout?pack=starter'
+  function handleStarterCheckout() {
+    trackCheckoutClick('starter')
+    window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
   }
 
   // Push #153 — auto-refresh while any video is still processing so the
@@ -305,7 +299,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
               onDownload={() => handleDownload(v)}
               isDownloading={downloadingId === v.id}
               downloadLocked={downloadLocked}
-              onUnlock={handleUnlockCheckout}
+              onUnlock={handleStarterCheckout}
               isPinned={playingId === v.id}
               onTogglePin={() =>
                 setPlayingId((curr) => (curr === v.id ? null : v.id))
@@ -676,14 +670,14 @@ function VideoCard({
               >
                 ▶ Open
               </a>
-              {/* KINEO-DL-PAYWALL-2026-07-09 — watching is free, downloading is
-                  the purchase moment ($4.90 Starter Pack, 10 videos). */}
+              {/* Watching remains free; the download gate presents one honest
+                  recurring Starter intro offer. */}
               {downloadLocked ? (
                 <button
                   type="button"
                   onClick={onUnlock}
-                  title="Unlock downloads — $4.90 (10 videos, one-time)"
-                  className="rounded-lg px-3 py-2 text-xs font-black"
+                  title="Starter: $4.90 first month, then $9.90/month"
+                  className="rounded-lg px-3 py-2 text-xs font-black flex flex-col items-center"
                   style={{
                     background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                     border: 'none',
@@ -693,7 +687,8 @@ function VideoCard({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  🔓 Unlock — $4.90
+                  <span>Starter — $4.90</span>
+                  <span style={{ fontSize: '0.58rem', opacity: 0.9 }}>then $9.90/mo</span>
                 </button>
               ) : (
               <button

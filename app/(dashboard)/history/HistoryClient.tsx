@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { trackCheckoutClick } from '@/lib/trackClick'
 
 interface Video {
   id: string
@@ -96,13 +97,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
     return () => { cancelled = true }
   }, [])
 
-  function handleUnlockCheckout() {
-    fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'history_download_lock' } }),
-    }).catch(() => {/* tracking must never affect UX */})
-    window.location.href = '/api/stripe/checkout?pack=starter'
+  function handleStarterCheckout() {
+    trackCheckoutClick('starter')
+    window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
   }
 
   // Push #098 — blob download with a real filename (the video's title). The
@@ -112,8 +109,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // download path so users always get the correctly-named file.
   async function handleDownload(video: Video) {
     // KINEO-DL-PAYWALL-2026-07-09 — non-payers never reach the file. From the
-    // grid, open the lightbox instead (that's where the $4.90 / $9.90 choice
-    // lives — KINEO-UNLOCK-CHOICE); the lightbox buttons call checkout directly.
+    // grid, open the lightbox instead; it presents one clear recurring Starter
+    // offer before checkout.
     if (downloadLocked) { setLightbox(video.id); return }
     if (!video.video_url || downloadingId) return
     setDownloadingId(video.id)
@@ -505,8 +502,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   <button
                     onClick={() => handleDownload(video)}
                     disabled={downloadingId === video.id}
-                    title={downloadLocked ? 'Unlock downloads — $4.90' : 'Download MP4'}
-                    aria-label={downloadLocked ? 'Unlock downloads — $4.90' : 'Download MP4'}
+                    title={downloadLocked ? 'Start Starter — $4.90 first month' : 'Download MP4'}
+                    aria-label={downloadLocked ? 'Start Starter — $4.90 first month' : 'Download MP4'}
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -716,49 +713,13 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                 />
               </div>
               {downloadLocked ? (
-                /* KINEO-UNLOCK-CHOICE-2026-07-09 — same 2-option choice as the
-                   generate result card: $4.90 one-time vs $9.90/mo. */
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {/* Both neutral; hover = blue pre-selection (Joseph 09/07). */}
-                  <button
-                    onClick={handleUnlockCheckout}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: 'rgba(41,151,255,.10)', border: '1px solid rgba(41,151,255,.45)', color: '#9ecbff', fontWeight: 800, fontSize: '0.88rem', transition: 'all 0.15s ease' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
-                      e.currentTarget.style.color = '#fff'
-                      e.currentTarget.style.border = '1px solid transparent'
-                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(41,151,255,0.35)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(41,151,255,.10)'
-                      e.currentTarget.style.color = '#9ecbff'
-                      e.currentTarget.style.border = '1px solid rgba(41,151,255,.45)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    <span>🔒 Unlock — $4.90</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>This video + 10 videos · one-time</span>
-                  </button>
-                  <button
-                    onClick={() => { window.location.href = '/api/stripe/checkout?tier=starter' }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: 'rgba(129,140,248,.12)', border: '1px solid rgba(129,140,248,.55)', color: '#c7d2fe', fontWeight: 800, fontSize: '0.88rem', transition: 'all 0.15s ease' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #2997ff, #1d6fe0)'
-                      e.currentTarget.style.color = '#fff'
-                      e.currentTarget.style.border = '1px solid transparent'
-                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(41,151,255,0.35)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(129,140,248,.12)'
-                      e.currentTarget.style.color = '#c7d2fe'
-                      e.currentTarget.style.border = '1px solid rgba(129,140,248,.55)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    <span>📅 Monthly — $9.90</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, opacity: 0.9 }}>50 videos every month · cancel anytime</span>
-                  </button>
-                </div>
+                <button
+                  onClick={handleStarterCheckout}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', padding: '13px 10px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', border: '1px solid transparent', color: '#fff', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
+                >
+                  <span>Start Starter — $4.90 today</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.9 }}>Then $9.90/month · 25 credits/month · cancel anytime</span>
+                </button>
               ) : (
               <button
                 onClick={() => handleDownload(v)}

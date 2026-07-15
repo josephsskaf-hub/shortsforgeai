@@ -9,7 +9,7 @@
 //
 // Thresholds (why): with <500 lifetime Shorts the video count reads as
 // "nobody uses this", so we lead with total Shorts only past 500. Below
-// that, the creator count (signups) is the honest metric that already
+// that, the account count (signups) is the honest metric that already
 // impresses, shown alone once past 200. Weekly volume only appears once
 // it clears 100 — "12 this week" would undermine, not persuade.
 
@@ -43,16 +43,16 @@ export default function LiveStatsBadge({ style }: { style?: React.CSSProperties 
 
         const videos = stats.totalVideos ?? 0
         const weekly = stats.videosLast7Days ?? 0
-        const creators = stats.totalCreators ?? 0
+        const accounts = stats.totalCreators ?? 0
 
         const parts: string[] = []
         if (videos >= MIN_TOTAL_VIDEOS) {
           parts.push(`${fmt(videos)} Shorts created`)
           if (weekly >= MIN_WEEKLY) parts.push(`${fmt(weekly)} this week`)
-          if (creators >= MIN_CREATORS) parts.push(`${fmt(creators)} creators`)
-        } else if (creators >= MIN_CREATORS) {
+          if (accounts >= MIN_CREATORS) parts.push(`${fmt(accounts)} accounts joined`)
+        } else if (accounts >= MIN_CREATORS) {
           // Video count not impressive yet — show only the signup base.
-          parts.push(`${fmt(creators)} creators on Kineo`)
+          parts.push(`${fmt(accounts)} accounts joined`)
         }
 
         if (parts.length > 0) setLabel(parts.join(' · '))

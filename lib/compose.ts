@@ -102,13 +102,13 @@ export interface ComposeInputs {
    */
   musicUrl?: string | null
   /**
-   * #384 — when true, burn a "ShortsForgeAI" watermark into the final render.
+   * #384 — when true, burn a "Kineo" watermark into the final render.
    * Used ONLY for the free AI-Generate trial; paid renders pass false/undefined.
    * The decision is made server-side in /api/compose (never trusts the client).
    */
   watermark?: boolean
   /**
-   * #482 — when true, append a "Made with ShortsForgeAI" end card in the final
+   * #482 — when true, append a "Made with Kineo" end card in the final
    * CTA window. Option A: shown on FREE + Starter renders (every posted video
    * becomes an ad — the Loom/CapCut viral loop); clean on Creator/Studio.
    * Decision made server-side in /api/compose (never trusts the client).
@@ -1434,7 +1434,7 @@ export function buildCreatomateSource({
     stroke_width: 2,
   })
 
-  // Track 7 — #482 "Made with ShortsForgeAI" end card (free + Starter only).
+  // Track 7 — #482 "Made with Kineo" end card (free + Starter only).
   // Sits just above the URL CTA in the final CTA window (no captions there —
   // they stop before the CTA tail), so every video those users post becomes an
   // ad for the product (the Loom/CapCut viral loop). Clean on Creator/Studio.
@@ -1476,7 +1476,7 @@ export function buildCreatomateSource({
   }
 
   // Track 9 — #384 free-trial watermark, burned into the final MP4 so it can't
-  // be stripped. Text = "shortsforgeai.com" (one consistent brand across the
+  // be stripped. Text = "usekineo.com" (one consistent brand across the
   // app; the same domain shown in the end CTA). Placed at the TOP so it never
   // collides with the bottom CTA (track 6, last ~2.5s, y:90%). Full duration,
   // semi-transparent. ONLY added when watermark:true (server free-AI-trial decision).

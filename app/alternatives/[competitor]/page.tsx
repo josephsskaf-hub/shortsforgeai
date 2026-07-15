@@ -743,9 +743,9 @@ export function generateMetadata({ params }: { params: { competitor: string } })
   if (!c) return {}
   const title = `${c.name} Alternative for Faceless Creators — Kineo`
   const description = `Looking for a ${c.name} alternative? Kineo turns one idea into a finished faceless YouTube Short — script, voiceover, footage & captions — in ~60s. From $9.90/mo, first Short free.`
-  const url = `https://www.shortsforgeai.com/alternatives/${params.competitor}`
+  const url = `https://www.usekineo.com/alternatives/${params.competitor}`
   return {
-    metadataBase: new URL('https://www.shortsforgeai.com'),
+    metadataBase: new URL('https://www.usekineo.com'),
     title,
     description,
     alternates: { canonical: url },

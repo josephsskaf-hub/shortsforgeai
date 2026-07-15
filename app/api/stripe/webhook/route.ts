@@ -24,20 +24,32 @@ const PROTECTED_EMAILS = new Set([
 
 type AdminClient = ReturnType<typeof getAdminClient>
 
+class RetryableEntitlementError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'RetryableEntitlementError'
+  }
+}
+
 async function isProtectedProfile(
   supabase: AdminClient,
   filter: { userId?: string; customerId?: string }
 ): Promise<boolean> {
-  try {
-    let query = supabase.from('profiles').select('email').limit(1)
-    if (filter.userId) query = query.eq('id', filter.userId)
-    else if (filter.customerId) query = query.eq('stripe_customer_id', filter.customerId)
-    else return false
-    const { data } = await query.single()
-    return PROTECTED_EMAILS.has((data?.email ?? '').toLowerCase())
-  } catch {
-    return false
+  let query = supabase.from('profiles').select('email').limit(1)
+  if (filter.userId) query = query.eq('id', filter.userId)
+  else if (filter.customerId) query = query.eq('stripe_customer_id', filter.customerId)
+  else return false
+
+  const { data, error } = await query.single()
+  if (error) {
+    // No matching profile means the account is simply not protected; retain
+    // the previous behavior while propagating actual database failures.
+    if (error.code === 'PGRST116') return false
+    throw new RetryableEntitlementError(
+      `Failed to check protected profile: ${error.code ?? 'unknown'} ${error.message}`
+    )
   }
+  return PROTECTED_EMAILS.has((data?.email ?? '').toLowerCase())
 }
 
 // #480 — Affiliate commission. If the paying user was attributed to an affiliate
@@ -103,6 +115,19 @@ async function recordPaymentSuccess(
   session: Stripe.Checkout.Session
 ): Promise<void> {
   if (session.payment_status !== 'paid') return
+
+  // Entitlement failures intentionally release the stripe_events guard so
+  // Stripe can retry. Keep this analytics row idempotent across that retry.
+  const { data: existingRows, error: existingError } = await supabase
+    .from('events')
+    .select('id')
+    .eq('name', 'payment_success')
+    .eq('session_id', session.id)
+    .limit(1)
+  if (!existingError && existingRows && existingRows.length > 0) return
+  if (existingError) {
+    console.error('[stripe webhook] payment_success dedupe lookup error:', existingError.code, existingError.message)
+  }
 
   const userId = session.metadata?.supabase_user_id ?? session.client_reference_id ?? null
   const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null
@@ -176,6 +201,9 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getAdminClient()
+  let dedupeRowAcquired = false
+  let entitlementPending = false
+  let entitlementConfirmed = false
 
   // Idempotency guard. Stripe retries the same event on 5xx (or if our
   // response is slow), and this handler has read-modify-write paths that
@@ -190,7 +218,9 @@ export async function POST(req: NextRequest) {
     const { error: dedupeErr } = await supabase
       .from('stripe_events')
       .insert({ id: event.id })
-    if (dedupeErr) {
+    if (!dedupeErr) {
+      dedupeRowAcquired = true
+    } else {
       // 23505 = unique_violation — we've already processed this event.
       if (dedupeErr.code === '23505') {
         return NextResponse.json({ received: true, duplicate: true })
@@ -213,7 +243,13 @@ export async function POST(req: NextRequest) {
 
         // Canonical conversion tracking happens before entitlement updates, so
         // a paid checkout remains visible even if a later profile write fails.
-        await recordPaymentSuccess(supabase, event.id, session)
+        // Tracking is ancillary: a temporary analytics failure must never stop
+        // the paid user from receiving their entitlement.
+        try {
+          await recordPaymentSuccess(supabase, event.id, session)
+        } catch (trackingError) {
+          console.error('[stripe webhook] payment_success tracking threw:', trackingError)
+        }
 
         // ── Path A: Legacy one-time credit-pack purchase via Payment Link ──
         // Push #020 moved off Payment Links onto Stripe Checkout subscriptions,
@@ -252,6 +288,7 @@ export async function POST(req: NextRequest) {
             break
           }
 
+          entitlementPending = true
           const { data: profile, error: fetchErr } = await supabase
             .from('profiles')
             .select('video_credits')
@@ -259,8 +296,9 @@ export async function POST(req: NextRequest) {
             .single()
 
           if (fetchErr) {
-            console.error('[stripe webhook] failed to fetch profile for credit top-up:', fetchErr.message, userId)
-            break
+            throw new RetryableEntitlementError(
+              `Failed to fetch profile for credit top-up (${userId}): ${fetchErr.message}`
+            )
           }
 
           const current = profile?.video_credits ?? 0
@@ -283,8 +321,12 @@ export async function POST(req: NextRequest) {
             .eq('id', userId)
 
           if (updateErr) {
-            console.error('[stripe webhook] failed to add credits:', updateErr.message, userId)
+            throw new RetryableEntitlementError(
+              `Failed to add credits (${userId}): ${updateErr.message}`
+            )
           } else {
+            entitlementConfirmed = true
+            entitlementPending = false
             console.log(`[stripe webhook] +${creditsToAdd} credits → user ${userId} (now ${next})`)
           }
           await recordAffiliateCommission(supabase, { userId, externalId: session.id, amountGross: session.amount_total ?? 0, currency: session.currency ?? 'usd', type: 'initial' })
@@ -312,11 +354,18 @@ export async function POST(req: NextRequest) {
         const planCredits = tier === 'pro' ? 200 : tier === 'starter' ? 25 : 150
         const creditsToGrant = isTrial ? 5 : planCredits
 
-        const { data: currentProfile } = await supabase
+        entitlementPending = true
+        const { data: currentProfile, error: currentProfileErr } = await supabase
           .from('profiles')
           .select('video_credits')
           .eq('id', userId)
           .single()
+
+        if (currentProfileErr) {
+          throw new RetryableEntitlementError(
+            `Failed to read subscription profile (${userId}): ${currentProfileErr.message}`
+          )
+        }
 
         const current = currentProfile?.video_credits ?? 0
         const next = current + creditsToGrant
@@ -338,8 +387,12 @@ export async function POST(req: NextRequest) {
           .eq('id', userId)
 
         if (subUpdErr) {
-          console.error('[stripe webhook] subscription credit grant failed:', subUpdErr.message, userId)
+          throw new RetryableEntitlementError(
+            `Subscription credit grant failed (${userId}): ${subUpdErr.message}`
+          )
         } else {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log(`[stripe webhook] ${isTrial ? 'TRIAL' : 'subscription'} start: ${tier} (+${creditsToGrant} credits) → user ${userId} (now ${next})`)
         }
 
@@ -402,13 +455,15 @@ export async function POST(req: NextRequest) {
         const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null
         if (!subscriptionId) break
 
+        entitlementPending = true
         let subscription: Stripe.Subscription
         try {
           subscription = await stripe.subscriptions.retrieve(subscriptionId)
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
-          console.error('[stripe webhook] failed to load subscription for renewal:', msg, subscriptionId)
-          break
+          throw new RetryableEntitlementError(
+            `Failed to load subscription for renewal (${subscriptionId}): ${msg}`
+          )
         }
 
         const renewalUserId = subscription.metadata?.supabase_user_id
@@ -418,7 +473,10 @@ export async function POST(req: NextRequest) {
         // KINEO-PRICING-V3B-2026-07-10 — Creator renewal = 150 credits. pro/starter
         // ALINHADOS ao rebase 2:1 (200/25) — fecha o leak de margem.
         const renewalCredits = renewalTier === 'pro' ? 200 : renewalTier === 'starter' ? 25 : 150
-        if (!renewalUserId) break
+        if (!renewalUserId) {
+          entitlementPending = false
+          break
+        }
 
         // On renewal we set the balance to the plan amount rather than adding,
         // so unused credits from the prior cycle don't pile up indefinitely.
@@ -429,6 +487,8 @@ export async function POST(req: NextRequest) {
         // Push #416 — never let a legacy subscription renewal overwrite a
         // manually-managed admin account.
         if (await isProtectedProfile(supabase, { userId: renewalUserId })) {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log('[stripe webhook] renewal skipped for protected admin account:', renewalUserId)
           break
         }
@@ -443,8 +503,12 @@ export async function POST(req: NextRequest) {
           .eq('id', renewalUserId)
 
         if (renewErr) {
-          console.error('[stripe webhook] renewal credit refill failed:', renewErr.message, renewalUserId)
+          throw new RetryableEntitlementError(
+            `Renewal credit refill failed (${renewalUserId}): ${renewErr.message}`
+          )
         } else {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log(`[stripe webhook] renewal: ${renewalTier} (${renewalCredits}, cin=${renewalCinematicTokens}) → user ${renewalUserId}`)
         }
 
@@ -459,19 +523,30 @@ export async function POST(req: NextRequest) {
         const isActive =
           subscription.status === 'active' || subscription.status === 'trialing'
 
+        entitlementPending = true
         // Push #416 — protected admin accounts are managed manually.
         if (await isProtectedProfile(supabase, { customerId })) {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log('[stripe webhook] subscription.updated skipped for protected admin:', customerId)
           break
         }
 
-        await supabase
+        const { error: subscriptionUpdateErr } = await supabase
           .from('profiles')
           .update({
             is_pro: isActive,
             stripe_subscription_id: subscription.id,
           })
           .eq('stripe_customer_id', customerId)
+
+        if (subscriptionUpdateErr) {
+          throw new RetryableEntitlementError(
+            `Failed to apply subscription update (${customerId}): ${subscriptionUpdateErr.message}`
+          )
+        }
+        entitlementConfirmed = true
+        entitlementPending = false
 
         break
       }
@@ -480,8 +555,11 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
 
+        entitlementPending = true
         // Push #416 — protected admin accounts are managed manually.
         if (await isProtectedProfile(supabase, { customerId })) {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log('[stripe webhook] subscription.deleted skipped for protected admin:', customerId)
           break
         }
@@ -489,7 +567,7 @@ export async function POST(req: NextRequest) {
         // Push #088 — wipe cinematic_tokens on cancellation so a former
         // Pro user can't keep a stranded Runway token after their plan
         // lapses. Regular credits stay (they were already paid for).
-        await supabase
+        const { error: subscriptionDeleteErr } = await supabase
           .from('profiles')
           .update({
             is_pro: false,
@@ -498,6 +576,14 @@ export async function POST(req: NextRequest) {
             cinematic_tokens: 0,
           })
           .eq('stripe_customer_id', customerId)
+
+        if (subscriptionDeleteErr) {
+          throw new RetryableEntitlementError(
+            `Failed to revoke deleted subscription (${customerId}): ${subscriptionDeleteErr.message}`
+          )
+        }
+        entitlementConfirmed = true
+        entitlementPending = false
 
         break
       }
@@ -511,8 +597,11 @@ export async function POST(req: NextRequest) {
           break
         }
 
+        entitlementPending = true
         // Push #416 — protected admin accounts are managed manually.
         if (await isProtectedProfile(supabase, { customerId })) {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log('[stripe webhook] payment_failed skipped for protected admin:', customerId)
           break
         }
@@ -523,8 +612,12 @@ export async function POST(req: NextRequest) {
           .eq('stripe_customer_id', customerId)
 
         if (revokeErr) {
-          console.error('[stripe webhook] failed to revoke access on payment_failed:', revokeErr.message, customerId)
+          throw new RetryableEntitlementError(
+            `Failed to revoke access on payment_failed (${customerId}): ${revokeErr.message}`
+          )
         } else {
+          entitlementConfirmed = true
+          entitlementPending = false
           console.log('[stripe webhook] revoked access for customer:', customerId)
         }
         break
@@ -537,6 +630,34 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true })
   } catch (error) {
+    const shouldRetryEntitlement =
+      error instanceof RetryableEntitlementError &&
+      entitlementPending &&
+      !entitlementConfirmed
+
+    if (shouldRetryEntitlement && dedupeRowAcquired) {
+      try {
+        const { error: releaseError } = await supabase
+          .from('stripe_events')
+          .delete()
+          .eq('id', event.id)
+
+        if (releaseError) {
+          console.error(
+            '[stripe webhook] failed to release dedupe row for retry:',
+            releaseError.code,
+            releaseError.message,
+            event.id
+          )
+        } else {
+          dedupeRowAcquired = false
+          console.warn('[stripe webhook] released dedupe row; Stripe retry required:', event.id)
+        }
+      } catch (releaseThrown) {
+        console.error('[stripe webhook] dedupe release threw:', releaseThrown, event.id)
+      }
+    }
+
     console.error('Webhook handler error:', error)
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }

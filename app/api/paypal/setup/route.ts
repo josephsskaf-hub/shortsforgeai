@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   if (existingWebhook && !keyOk) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
+  const appUrl = 'https://www.usekineo.com'
   const summary: Record<string, string> = {}
 
   try {

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
 const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
+const APP_URL = 'https://www.usekineo.com'
 
 const VIRAL_IDEAS = [
   'The island so dangerous it is illegal to visit (Snake Island)',

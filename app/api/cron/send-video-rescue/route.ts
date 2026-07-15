@@ -21,6 +21,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
+const LIFECYCLE_EMAILS_ENABLED = process.env.KINEO_LIFECYCLE_EMAILS_ENABLED === 'true'
 // Joseph's rule: lead-nurture goes out as the TEAM from hello@ (support@ = support only).
 const FROM_EMAIL = 'Kineo Team <hello@usekineo.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
@@ -87,6 +88,12 @@ usekineo.com`
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  // KINEO-RECOVERY-2026-07-15 — outbound is paused by default while the
+  // founder-approved four-person micro-test is measured. This legacy sequence
+  // still contains retired offers and had repeated a recipient across days.
+  if (!LIFECYCLE_EMAILS_ENABLED) {
+    return NextResponse.json({ paused: true, sent: 0, reason: 'lifecycle_email_gate' })
   }
   if (!RESEND_API_KEY) {
     console.error('[send-video-rescue] RESEND_API_KEY not set')

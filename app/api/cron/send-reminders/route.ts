@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? ''
+const LIFECYCLE_EMAILS_ENABLED = process.env.KINEO_LIFECYCLE_EMAILS_ENABLED === 'true'
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Kineo <support@usekineo.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://usekineo.com'
 
@@ -44,6 +45,13 @@ export async function GET(req: NextRequest) {
     console.log('[send-reminders] stuck-render refund sweep:', JSON.stringify(sweep))
   } catch (e) {
     console.error('[send-reminders] refund sweep failed:', e instanceof Error ? e.message : String(e))
+  }
+
+  // The credit-refund sweep above remains live. All outbound below is paused
+  // by default because it overlaps other recovery jobs and still carries a
+  // retired three-day-trial offer. Explicit opt-in is required to resume it.
+  if (!LIFECYCLE_EMAILS_ENABLED) {
+    return NextResponse.json({ paused: true, sent: 0, refunds_checked: true, reason: 'lifecycle_email_gate' })
   }
 
   // KINEO-REBASE-2026-07-10 — ROBÔ DE ABANDONO NA ROTINA. Piggybacked on this

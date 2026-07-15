@@ -14,12 +14,12 @@ export const metadata: Metadata = {
   title: 'Make YouTube Shorts Without Filming — Faceless AI Shorts, No Camera | Kineo',
   description:
     'Make faceless YouTube Shorts without filming anything. Type one idea and get a finished 9:16 Short — script, AI voiceover, footage and captions — in about 60 seconds. No camera, no face, no recording. First Short free, no credit card.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/ai-shorts-without-filming' },
+  alternates: { canonical: 'https://www.usekineo.com/ai-shorts-without-filming' },
   openGraph: {
     title: 'Make YouTube Shorts without filming — faceless AI, no camera',
     description:
       'Turn one idea into a finished faceless Short: script, AI voiceover, footage and captions. No camera, no face, no recording. First Short free, no card.',
-    url: 'https://www.shortsforgeai.com/ai-shorts-without-filming',
+    url: 'https://www.usekineo.com/ai-shorts-without-filming',
     type: 'website',
   },
 }

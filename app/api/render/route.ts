@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
       track: 6,
       time: Math.round(ctaTime * 1000) / 1000,
       duration: Math.min(2.5, finalDur),
-      text: 'shortsforgeai.com',
+      text: 'usekineo.com',
       x: '50%',
       y: '90%',
       width: '80%',

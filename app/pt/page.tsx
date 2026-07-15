@@ -8,19 +8,19 @@ import Link from 'next/link'
 export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.shortsforgeai.com'),
+  metadataBase: new URL('https://www.usekineo.com'),
   title: 'Kineo — Crie vídeos para canal dark com IA (em português)',
   description:
     'Transforme uma ideia em um Short faceless pronto (roteiro + voz IA + imagens + legendas) em ~60s. Em português, com preço em Real. A partir de R$24,90. Primeiro vídeo grátis.',
   alternates: {
-    canonical: 'https://www.shortsforgeai.com/pt',
-    languages: { 'en-US': 'https://www.shortsforgeai.com/', 'pt-BR': 'https://www.shortsforgeai.com/pt' },
+    canonical: 'https://www.usekineo.com/pt',
+    languages: { 'en-US': 'https://www.usekineo.com/', 'pt-BR': 'https://www.usekineo.com/pt' },
   },
   openGraph: {
     title: 'Crie vídeos para canal dark com IA — em português',
     description:
       'Uma ideia vira um Short faceless pronto em ~60s. Roteiro, voz, imagens e legendas no automático. Primeiro vídeo grátis.',
-    url: 'https://www.shortsforgeai.com/pt',
+    url: 'https://www.usekineo.com/pt',
     type: 'website',
   },
 }

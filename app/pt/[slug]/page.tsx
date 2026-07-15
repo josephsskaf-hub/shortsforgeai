@@ -75,9 +75,9 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const pg = PAGES[params.slug]
   if (!pg) return {}
-  const url = `https://www.shortsforgeai.com/pt/${params.slug}`
+  const url = `https://www.usekineo.com/pt/${params.slug}`
   return {
-    metadataBase: new URL('https://www.shortsforgeai.com'),
+    metadataBase: new URL('https://www.usekineo.com'),
     title: pg.title,
     description: pg.desc,
     alternates: { canonical: url },

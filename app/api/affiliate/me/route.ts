@@ -107,7 +107,7 @@ export async function GET() {
         commission_rate: affiliate.commission_rate,
         coupon_code: affiliate.coupon_code,
       },
-      link: 'https://shortsforgeai.com/a/' + affiliate.code,
+      link: 'https://www.usekineo.com/a/' + affiliate.code,
       stats: {
         clicks: clicks ?? 0,
         signups: signups ?? 0,

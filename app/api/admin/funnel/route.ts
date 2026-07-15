@@ -1,7 +1,7 @@
 // Admin Funnel API — real-data growth dashboard.
 //
-// public.events does NOT exist in production, so everything here is computed
-// from live tables: auth.users + profiles + videos + click_events +
+// Everything here is computed from live tables plus verified Stripe state:
+// auth.users + profiles + videos + events + click_events +
 // checkout_abandoned + the Stripe API.
 //
 // #475 — extended the original Push #254 dashboard (realStats / rates /
@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -34,6 +35,8 @@ export interface FunnelData {
     newThisMonth: number
     proUsers: number
     basicUsers: number
+    starterUsers?: number
+    unknownPaidUsers?: number
     freeUsers: number
     usersWithVideos: number
     totalVideos: number
@@ -64,6 +67,9 @@ export interface FunnelData {
     pricing_view: number
     basic_checkout_clicked: number
     pro_checkout_clicked: number
+    starter_checkout_clicked?: number
+    checkout_attempted?: number
+    checkout_started?: number
     payment_success: number
     checkout_cancelled: number
   }
@@ -134,10 +140,46 @@ function maxIso(rows: Array<string | null | undefined>): string | null {
 
 type ProfileRow = {
   id: string; email: string | null; created_at: string | null; is_pro: boolean | null
-  plan: string | null; stripe_subscription_id: string | null; video_credits: number | null
-  utm_source: string | null; signup_country: string | null
+  plan: string | null; stripe_subscription_id: string | null; stripe_customer_id: string | null
+  video_credits: number | null; utm_source: string | null; signup_utm_source: string | null
+  signup_referrer: string | null; signup_country: string | null
 }
 type VideoRow = { user_id: string | null; status: string | null; quality_mode: string | null; topic: string | null; niche: string | null; created_at: string | null }
+type EventRow = {
+  name: string
+  user_id: string | null
+  created_at: string | null
+  session_id: string | null
+  metadata: Record<string, unknown> | null
+}
+
+type PaidTier = 'starter' | 'basic' | 'pro' | 'unknown'
+
+function normalizeTier(raw: unknown): PaidTier {
+  const value = typeof raw === 'string' ? raw.toLowerCase().replace(/_trial$/, '') : ''
+  if (value === 'starter') return 'starter'
+  if (value === 'basic' || value === 'creator') return 'basic'
+  if (value === 'pro' || value === 'studio') return 'pro'
+  return 'unknown'
+}
+
+function sourceForProfile(profile: ProfileRow): string {
+  const explicit = (profile.signup_utm_source || profile.utm_source || '').trim().toLowerCase()
+  if (explicit) return explicit
+
+  const referrer = (profile.signup_referrer || '').trim()
+  if (!referrer) return 'direct'
+  try {
+    return new URL(referrer).hostname.replace(/^www\./, '').toLowerCase() || 'direct'
+  } catch {
+    return referrer.slice(0, 80).toLowerCase()
+  }
+}
+
+function objectId(value: string | { id: string } | null): string | null {
+  if (typeof value === 'string') return value
+  return value?.id ?? null
+}
 
 export async function GET(req: Request) {
   try {
@@ -178,25 +220,16 @@ export async function GET(req: Request) {
     const totalUsers = authUsers.length
 
     // ── profiles (plans + cohort) ──────────────────────────────────────────
-    let proUsers = 0, basicUsers = 0, paidNoCredits = 0
     let allProfiles: ProfileRow[] = []
     try {
       const { data: profs } = await admin
         .from('profiles')
-        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,video_credits,utm_source,signup_country')
+        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,stripe_customer_id,video_credits,utm_source,signup_utm_source,signup_referrer,signup_country')
         .limit(5000)
       if (Array.isArray(profs)) {
         allProfiles = profs as ProfileRow[]
-        for (const row of allProfiles) {
-          const p = (row.plan ?? (row.is_pro ? 'pro' : null) ?? '').toLowerCase()
-          if (p === 'pro') proUsers++
-          else if (p === 'basic') basicUsers++
-          if ((p === 'pro' || p === 'basic') && (!row.video_credits || row.video_credits <= 0)) paidNoCredits++
-        }
       }
     } catch { /* ignore */ }
-    const freeUsers = totalUsers - proUsers - basicUsers
-    const paidUsers = proUsers + basicUsers
 
     // ── videos ──────────────────────────────────────────────────────────────
     let totalVideos = 0, videosThisWeek = 0
@@ -218,13 +251,6 @@ export async function GET(req: Request) {
     } catch { /* ignore */ }
     const usersWithVideos = userWithVideoSet.size
 
-    const rates = {
-      signupToVideo: pct(usersWithVideos, totalUsers),
-      signupToPaid: pct(paidUsers, totalUsers),
-      videoToPaid: pct(paidUsers, usersWithVideos),
-      basicToPro: pct(proUsers, paidUsers),
-    }
-
     // ── click_events + checkout_abandoned (cohort signals) ──────────────────
     let allClicks: Array<{ user_id: string | null; created_at: string | null }> = []
     let allAbandoned: Array<{ user_id: string | null; expired_at: string | null }> = []
@@ -236,6 +262,153 @@ export async function GET(req: Request) {
       const { data } = await admin.from('checkout_abandoned').select('user_id,expired_at').limit(5000)
       if (Array.isArray(data)) allAbandoned = data as typeof allAbandoned
     } catch { /* ignore */ }
+
+    // public.events is live in production. Exact per-name counts avoid the
+    // PostgREST 1,000-row response cap, while the smaller identity query is
+    // used to join checkout/payment activity back to cohort users.
+    const trackedEventNames = [
+      'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
+      'generate_started', 'video_generation_started',
+      'generate_completed', 'video_generation_completed',
+      'generate_failed', 'video_generation_failed',
+      'pricing_view', 'basic_checkout_clicked', 'checkout_basic_click',
+      'pro_checkout_clicked', 'checkout_pro_click', 'starter_checkout_clicked',
+      'starter_pack_checkout_clicked', 'checkout_attempted', 'checkout_started',
+      'payment_success', 'checkout_cancelled', 'checkout_canceled',
+    ]
+    const identityEventNames = [
+      'basic_checkout_clicked', 'checkout_basic_click', 'pro_checkout_clicked',
+      'checkout_pro_click', 'starter_checkout_clicked', 'starter_pack_checkout_clicked',
+      'checkout_attempted', 'checkout_started', 'payment_success',
+    ]
+    let eventsAvailable = false
+    let eventRows: EventRow[] = []
+    const eventCounts = new Map<string, number>()
+    try {
+      const probe = await admin.from('events').select('id', { head: true, count: 'exact' }).limit(1)
+      eventsAvailable = !probe.error
+      if (eventsAvailable) {
+        const periodIso = days === 'all' ? null : new Date(cohortCutoff).toISOString()
+        const countResults = await Promise.all(trackedEventNames.map(async (name) => {
+          let query = admin.from('events').select('id', { head: true, count: 'exact' }).eq('name', name)
+          if (periodIso) query = query.gte('created_at', periodIso)
+          const result = await query
+          return { name, count: result.error ? 0 : (result.count ?? 0) }
+        }))
+        for (const row of countResults) eventCounts.set(row.name, row.count)
+
+        const identities = await admin
+          .from('events')
+          .select('name,user_id,created_at,session_id,metadata')
+          .in('name', identityEventNames)
+          .order('created_at', { ascending: false })
+          .limit(5000)
+        if (!identities.error && Array.isArray(identities.data)) {
+          eventRows = identities.data as unknown as EventRow[]
+        }
+      }
+    } catch {
+      eventsAvailable = false
+    }
+
+    const profileById = new Map(allProfiles.map((p) => [p.id, p]))
+    const profileBySubscriptionId = new Map(
+      allProfiles.filter((p) => p.stripe_subscription_id).map((p) => [p.stripe_subscription_id as string, p])
+    )
+    const profileByCustomerId = new Map(
+      allProfiles.filter((p) => p.stripe_customer_id).map((p) => [p.stripe_customer_id as string, p])
+    )
+
+    // Stripe is the source of truth for current subscribers and completed
+    // checkouts. A profile flag or a stored subscription id is never enough.
+    let stripeSessionsAvailable = false
+    let stripeSubscriptionsAvailable = false
+    let stripeSessions: Stripe.Checkout.Session[] = []
+    let stripeSubscriptions: Stripe.Subscription[] = []
+    let recentFailedPayments = 0
+    if (process.env.STRIPE_SECRET_KEY) {
+      try {
+        let startingAfter: string | undefined
+        for (let page = 0; page < 50; page++) {
+          const params: Stripe.Checkout.SessionListParams = { limit: 100 }
+          if (days !== 'all') params.created = { gte: Math.floor(cohortCutoff / 1000) }
+          if (startingAfter) params.starting_after = startingAfter
+          const batch = await stripe.checkout.sessions.list(params)
+          stripeSessions.push(...batch.data)
+          if (!batch.has_more || batch.data.length === 0) break
+          startingAfter = batch.data[batch.data.length - 1].id
+        }
+        stripeSessionsAvailable = true
+      } catch (stripeErr) {
+        console.warn('[admin/funnel] Stripe sessions query failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr))
+      }
+      try {
+        let startingAfter: string | undefined
+        for (let page = 0; page < 50; page++) {
+          const batch = await stripe.subscriptions.list({ status: 'all', limit: 100, ...(startingAfter ? { starting_after: startingAfter } : {}) })
+          stripeSubscriptions.push(...batch.data)
+          if (!batch.has_more || batch.data.length === 0) break
+          startingAfter = batch.data[batch.data.length - 1].id
+        }
+        stripeSubscriptionsAvailable = true
+      } catch (stripeErr) {
+        console.warn('[admin/funnel] Stripe subscriptions query failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr))
+      }
+      try {
+        const failedInvoices = await stripe.invoices.list({ limit: 100, status: 'uncollectible' })
+        recentFailedPayments = failedInvoices.data.filter((inv) => inv.created * 1000 >= monthAgo).length
+      } catch { /* ignore */ }
+    }
+
+    const userIdForSession = (session: Stripe.Checkout.Session): string | null => {
+      const metadataId = session.metadata?.supabase_user_id
+      if (metadataId && profileById.has(metadataId)) return metadataId
+      const customerId = objectId(session.customer)
+      return customerId ? profileByCustomerId.get(customerId)?.id ?? null : null
+    }
+    const activeTierByUser = new Map<string, PaidTier>()
+    const tierRank: Record<PaidTier, number> = { unknown: 0, starter: 1, basic: 2, pro: 3 }
+    for (const subscription of stripeSubscriptions) {
+      if (subscription.status !== 'active' && subscription.status !== 'trialing') continue
+      const customerId = objectId(subscription.customer)
+      const profile = profileBySubscriptionId.get(subscription.id) || (customerId ? profileByCustomerId.get(customerId) : undefined)
+      const userId = subscription.metadata?.supabase_user_id || profile?.id || null
+      if (!userId || !profileById.has(userId)) continue
+      const tier = normalizeTier(subscription.metadata?.tier || profile?.plan)
+      const previous = activeTierByUser.get(userId)
+      if (!previous || tierRank[tier] > tierRank[previous]) activeTierByUser.set(userId, tier)
+    }
+    const activePaidUserSet = new Set(activeTierByUser.keys())
+    let starterUsers = 0, basicUsers = 0, proUsers = 0, unknownPaidUsers = 0, paidNoCredits = 0
+    for (const [userId, tier] of activeTierByUser) {
+      if (tier === 'starter') starterUsers++
+      else if (tier === 'basic') basicUsers++
+      else if (tier === 'pro') proUsers++
+      else unknownPaidUsers++
+      const profile = profileById.get(userId)
+      if (!profile?.video_credits || profile.video_credits <= 0) paidNoCredits++
+    }
+    const paidUsers = activePaidUserSet.size
+    const freeUsers = Math.max(0, totalUsers - paidUsers)
+    const rates = {
+      signupToVideo: pct(usersWithVideos, totalUsers),
+      signupToPaid: pct(paidUsers, totalUsers),
+      videoToPaid: pct(paidUsers, usersWithVideos),
+      basicToPro: pct(proUsers, proUsers + basicUsers),
+    }
+
+    let checkoutCreated = 0, checkoutCompleted = 0, checkoutAbandoned = 0, checkoutOpen = 0
+    for (const session of stripeSessions) {
+      checkoutCreated++
+      if (session.status === 'complete') checkoutCompleted++
+      else if (session.status === 'expired') checkoutAbandoned++
+      else if (session.status === 'open') checkoutOpen++
+    }
+    const stripePayments = {
+      checkoutCreated, checkoutCompleted, checkoutAbandoned, checkoutOpen,
+      conversionRate: pct(checkoutCompleted, checkoutCompleted + checkoutAbandoned),
+      recentFailedPayments,
+    }
 
     // ── COHORT (signups in period, excluding admin/test) ────────────────────
     const cohort = allProfiles.filter((p) => {
@@ -256,11 +429,33 @@ export async function GET(req: Request) {
     }
     const clickUserSet = new Set<string>()
     for (const c of allClicks) if (c.user_id && cohortIds.has(c.user_id)) clickUserSet.add(c.user_id)
+    for (const event of eventRows) {
+      if (event.name === 'payment_success') continue
+      if (event.user_id && cohortIds.has(event.user_id)) clickUserSet.add(event.user_id)
+    }
     const abandonedUserSet = new Set<string>()
     for (const a of allAbandoned) if (a.user_id && cohortIds.has(a.user_id)) abandonedUserSet.add(a.user_id)
-    const isPaid = (p: ProfileRow) => p.is_pro === true || (p.plan != null && p.plan !== 'free') || p.stripe_subscription_id != null
     const paidUserSet = new Set<string>()
-    for (const p of cohort) if (isPaid(p)) paidUserSet.add(p.id)
+    for (const id of activePaidUserSet) if (cohortIds.has(id)) paidUserSet.add(id)
+    for (const event of eventRows) {
+      if (event.name !== 'payment_success') continue
+      const metadata = event.metadata ?? {}
+      const isSubscription = metadata.checkout_mode === 'subscription' ||
+        (typeof metadata.stripe_subscription_id === 'string' && metadata.stripe_subscription_id.length > 0) ||
+        (typeof metadata.tier === 'string' && !metadata.pack)
+      if (!isSubscription) continue
+      const eventUserId = event.user_id || (typeof metadata.supabase_user_id === 'string' ? metadata.supabase_user_id : null)
+      if (eventUserId && cohortIds.has(eventUserId)) paidUserSet.add(eventUserId)
+    }
+    for (const session of stripeSessions) {
+      if (session.mode !== 'subscription' || session.status !== 'complete') continue
+      if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') continue
+      const sessionUserId = userIdForSession(session)
+      if (sessionUserId && cohortIds.has(sessionUserId)) paidUserSet.add(sessionUserId)
+    }
+    // A verified payment necessarily reached checkout, even if an older
+    // client-side click beacon was lost during navigation.
+    for (const id of paidUserSet) clickUserSet.add(id)
 
     const signups = cohort.length
     let createdVideo = 0, completedVideo = 0
@@ -317,7 +512,7 @@ export async function GET(req: Request) {
     const revenueLeaks = [
       { label: 'Signed up, no video', count: signedNoVideo, action: 'Send activation email' },
       { label: 'Created video, no checkout click', count: createdNoCheckout, action: 'Show stronger post-video paywall' },
-      { label: 'Checkout clicked, not paid', count: clickedNotPaid, action: 'Send FOUNDING50 offer' },
+      { label: 'Checkout clicked, not paid', count: clickedNotPaid, action: 'Send transparent checkout recovery' },
       { label: 'Abandoned checkout, not paid', count: abandonedNotPaid, action: 'Send checkout recovery' },
       { label: 'Created 2+ videos, not paid', count: powerNotPaid, action: 'Manual founder message' },
     ]
@@ -333,7 +528,7 @@ export async function GET(req: Request) {
         return {
           email: p.email ?? '—', score, status: classify(score), videos: vids,
           checkoutClicked: hasClick, abandoned: isAban,
-          source: p.utm_source || 'direct', country: p.signup_country || '—',
+          source: sourceForProfile(p), country: p.signup_country || '—',
         }
       })
       .sort((a, b) => b.score - a.score)
@@ -341,7 +536,7 @@ export async function GET(req: Request) {
 
     const srcMap = new Map<string, { source: string; signups: number; activated: number; paid: number }>()
     for (const p of cohort) {
-      const src = p.utm_source || 'direct'
+      const src = sourceForProfile(p)
       let agg = srcMap.get(src)
       if (!agg) { agg = { source: src, signups: 0, activated: 0, paid: 0 }; srcMap.set(src, agg) }
       agg.signups++
@@ -379,48 +574,41 @@ export async function GET(req: Request) {
       .sort((a, b) => b.total - a.total)
 
     const trackingHealth = {
-      eventsTableMissing: true,
-      note: 'public.events is not in production — granular event steps (onboarding viewed, paywall viewed) are not tracked yet. This dashboard is computed from profiles/videos/click_events/checkout_abandoned.',
+      eventsTableMissing: !eventsAvailable,
+      note: eventsAvailable
+        ? (stripeSubscriptionsAvailable
+            ? 'Events are live; subscriber counts are verified against active/trialing Stripe subscriptions.'
+            : 'Events are live, but Stripe subscription verification is temporarily unavailable.')
+        : 'public.events could not be queried; granular event counts are temporarily unavailable.',
       lastVideoAt: maxIso(allVideos.map((v) => v.created_at)),
-      lastClickAt: maxIso(allClicks.map((c) => c.created_at)),
+      lastClickAt: maxIso([...allClicks.map((c) => c.created_at), ...eventRows.map((event) => event.created_at)]),
       lastAbandonedAt: maxIso(allAbandoned.map((a) => a.expired_at)),
     }
 
-    // ── Stripe checkout funnel (all-time, real Stripe API) ──────────────────
-    let checkoutCreated = 0, checkoutCompleted = 0, checkoutAbandoned = 0, checkoutOpen = 0, recentFailedPayments = 0
-    try {
-      if (process.env.STRIPE_SECRET_KEY) {
-        const sessions = await stripe.checkout.sessions.list({ limit: 100 })
-        for (const s of sessions.data) {
-          checkoutCreated++
-          if (s.status === 'complete') checkoutCompleted++
-          else if (s.status === 'expired') checkoutAbandoned++
-          else if (s.status === 'open') checkoutOpen++
-        }
-        try {
-          const failedInvoices = await stripe.invoices.list({ limit: 100, status: 'uncollectible' })
-          recentFailedPayments = failedInvoices.data.filter((inv) => inv.created * 1000 >= monthAgo).length
-        } catch { /* ignore */ }
-      }
-    } catch (stripeErr) {
-      console.warn('[admin/funnel] Stripe query failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr))
-    }
-    const stripePayments = {
-      checkoutCreated, checkoutCompleted, checkoutAbandoned, checkoutOpen,
-      conversionRate: pct(checkoutCompleted, checkoutCompleted + checkoutAbandoned),
-      recentFailedPayments,
-    }
-
+    // Stripe checkout funnel is already range-filtered by the selected period.
     const data: FunnelData = {
-      eventsAvailable: false,
+      eventsAvailable,
       period: days,
-      realStats: { totalUsers, newThisWeek, newThisMonth, proUsers, basicUsers, freeUsers, usersWithVideos, totalVideos, videosThisWeek, paidNoCredits },
+      realStats: { totalUsers, newThisWeek, newThisMonth, proUsers, basicUsers, starterUsers, unknownPaidUsers, freeUsers, usersWithVideos, totalVideos, videosThisWeek, paidNoCredits },
       rates,
       stripePayments,
       counts: {
-        homepage_view: 0, generate_page_view: 0, analyze_idea_clicked: 0,
-        video_generation_started: 0, video_generation_completed: 0, video_generation_failed: 0,
-        pricing_view: 0, basic_checkout_clicked: 0, pro_checkout_clicked: 0, payment_success: 0, checkout_cancelled: 0,
+        homepage_view: eventCounts.get('homepage_view') ?? 0,
+        generate_page_view: eventCounts.get('generate_page_view') ?? 0,
+        analyze_idea_clicked: eventCounts.get('analyze_idea_clicked') ?? 0,
+        // Both aliases are emitted together today; max avoids double-counting
+        // while retaining history from either instrumentation generation.
+        video_generation_started: Math.max(eventCounts.get('generate_started') ?? 0, eventCounts.get('video_generation_started') ?? 0),
+        video_generation_completed: Math.max(eventCounts.get('generate_completed') ?? 0, eventCounts.get('video_generation_completed') ?? 0),
+        video_generation_failed: Math.max(eventCounts.get('generate_failed') ?? 0, eventCounts.get('video_generation_failed') ?? 0),
+        pricing_view: eventCounts.get('pricing_view') ?? 0,
+        basic_checkout_clicked: (eventCounts.get('basic_checkout_clicked') ?? 0) + (eventCounts.get('checkout_basic_click') ?? 0),
+        pro_checkout_clicked: (eventCounts.get('pro_checkout_clicked') ?? 0) + (eventCounts.get('checkout_pro_click') ?? 0),
+        starter_checkout_clicked: (eventCounts.get('starter_checkout_clicked') ?? 0) + (eventCounts.get('starter_pack_checkout_clicked') ?? 0),
+        checkout_attempted: eventCounts.get('checkout_attempted') ?? 0,
+        checkout_started: eventCounts.get('checkout_started') ?? 0,
+        payment_success: stripeSessionsAvailable ? checkoutCompleted : (eventCounts.get('payment_success') ?? 0),
+        checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
       funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, topicPerformance, renderHealth, trackingHealth,

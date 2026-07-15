@@ -19,7 +19,7 @@ import {
 export const dynamic = 'force-dynamic'
 
 function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.usekineo.com'
+  return 'https://www.usekineo.com'
 }
 
 export async function GET(req: NextRequest) {

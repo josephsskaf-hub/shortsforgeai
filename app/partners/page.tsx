@@ -8,21 +8,21 @@ import Link from 'next/link'
 export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.shortsforgeai.com'),
+  metadataBase: new URL('https://www.usekineo.com'),
   title: 'Affiliate Program — Earn 40% Recurring | Kineo',
   description:
     'Promote Kineo and earn 40% recurring commission, forever, with a 60-day cookie. Free account included. The AI tool that turns one idea into a finished faceless Short in 60s.',
-  alternates: { canonical: 'https://www.shortsforgeai.com/partners' },
+  alternates: { canonical: 'https://www.usekineo.com/partners' },
   openGraph: {
     title: 'Earn 40% recurring promoting Kineo',
     description: 'Send creators a tool that makes a faceless Short in 60s. Earn 40% recurring, forever. Free account included.',
-    url: 'https://www.shortsforgeai.com/partners',
+    url: 'https://www.usekineo.com/partners',
     type: 'website',
   },
 }
 
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
-const APPLY = 'mailto:hello@shortsforgeai.com?subject=Affiliate%20application%20-%20Kineo&body=Hi!%20I%27d%20like%20to%20join%20the%20affiliate%20program.%0A%0AMy%20channel%2Faudience%3A%20%0ANiche%3A%20%0AAudience%20size%3A%20'
+const APPLY = 'mailto:hello@usekineo.com?subject=Affiliate%20application%20-%20Kineo&body=Hi!%20I%27d%20like%20to%20join%20the%20affiliate%20program.%0A%0AMy%20channel%2Faudience%3A%20%0ANiche%3A%20%0AAudience%20size%3A%20'
 
 export default function PartnersPage() {
   const faq = [
