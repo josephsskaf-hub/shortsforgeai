@@ -12,15 +12,30 @@ export default function CheckoutSuccessPage() {
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
-    // Internal analytics event
+    const sp = new URLSearchParams(window.location.search)
+    const sessionId = sp.get('session_id') || ''
+    const purchaseCurrency = (sp.get('currency') ?? 'usd').toUpperCase()
+    const purchaseAmountTotal = Number(sp.get('amount') ?? 490)
+    const purchaseValue = purchaseAmountTotal / 100
+
+    // KINEO-PAYMENT-EVENT-2026-07-15 — `payment_success` is now written once
+    // by the verified Stripe webhook. This client event only measures whether
+    // the buyer actually saw the success page, so refreshes cannot inflate
+    // canonical payment counts.
     try {
       void fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event_name: 'payment_success',
-          name: 'payment_success',
+          event_name: 'checkout_success_viewed',
+          name: 'checkout_success_viewed',
           path: window.location?.pathname,
+          session_id: sessionId,
+          metadata: {
+            stripe_session_id: sessionId,
+            amount_total: purchaseAmountTotal,
+            currency: purchaseCurrency.toLowerCase(),
+          },
         }),
         keepalive: true,
       }).catch(() => {})
@@ -31,18 +46,14 @@ export default function CheckoutSuccessPage() {
     // #376 — read Stripe checkout_session_id from the URL and use it as the
     // transaction_id so Google Ads + TikTok DEDUPLICATE the purchase if the
     // user refreshes the success page (same session_id = same conversion).
-    const sp = new URLSearchParams(window.location.search)
-    const sessionId = sp.get('session_id') || ''
-    const purchaseCurrency = (sp.get('currency') ?? 'usd').toUpperCase()
-    const purchaseValue = Number(sp.get('amount') ?? 490) / 100
-
     // Google Ads purchase conversion — fires once per checkout session.
     // currency and amount come from the Stripe checkout route via URL params
     // so the value is always correct (USD for international, BRL for Brazil).
     // transaction_id (Stripe session id) makes Google dedup refreshes.
     try {
-      if (typeof (window as Window & { gtag?: Function }).gtag === 'function') {
-        ;(window as Window & { gtag: Function }).gtag('event', 'conversion', {
+      const gtag = (window as unknown as { gtag?: Function }).gtag
+      if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
           send_to: 'AW-18156258081/NL4bCKXEwa4cEKGGytFD',
           value: purchaseValue,
           currency: purchaseCurrency,

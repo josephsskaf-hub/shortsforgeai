@@ -187,6 +187,12 @@ export default function PricingPage() {
   // (components/ExitIntentOffer.tsx): Starter Pack rescue offer, once per
   // session, desktop mouseleave + mobile inactivity/scroll-up triggers.
 
+  // KINEO-PRICING-VIEW-2026-07-15 — admin/funnel and admin/metrics already
+  // query this event; the pricing page simply never emitted it before.
+  useEffect(() => {
+    trackPricingEvent('pricing_view')
+  }, [])
+
   // Push #173 — iOS Safari blocks window.location.href inside async/await
   // (user gesture chain is severed after the first await). Fix: navigate
   // directly to the GET checkout endpoint which does a server-side 302

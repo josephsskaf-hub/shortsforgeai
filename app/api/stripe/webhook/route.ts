@@ -93,6 +93,66 @@ async function recordAffiliateCommission(
   }
 }
 
+// KINEO-PAYMENT-EVENT-2026-07-15 — the checkout success page used to be the
+// only writer of `payment_success`. Buyers who closed that tab were invisible
+// to the funnel, while refreshes could create duplicates. Stripe is the source
+// of truth: one verified, deduped webhook event now writes the canonical row.
+async function recordPaymentSuccess(
+  supabase: AdminClient,
+  stripeEventId: string,
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  if (session.payment_status !== 'paid') return
+
+  const userId = session.metadata?.supabase_user_id ?? session.client_reference_id ?? null
+  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id ?? null
+  const row = {
+    name: 'payment_success',
+    user_id: userId,
+    path: '/api/stripe/webhook',
+    session_id: session.id,
+    metadata: {
+      source: 'stripe_webhook',
+      stripe_event_id: stripeEventId,
+      stripe_session_id: session.id,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      checkout_mode: session.mode,
+      tier: session.metadata?.tier ?? null,
+      billing: session.metadata?.billing ?? null,
+      pack: session.metadata?.pack ?? null,
+      intro: session.metadata?.intro === '1',
+      amount_total: session.amount_total ?? 0,
+      currency: session.currency ?? 'usd',
+    },
+  }
+
+  const { error } = await supabase.from('events').insert(row)
+  if (!error) return
+
+  // A deleted auth user should not make us lose the revenue event. If the
+  // user_id foreign key rejects the row, preserve the payment with user=null.
+  if (userId && error.code === '23503') {
+    const { error: anonymousError } = await supabase
+      .from('events')
+      .insert({ ...row, user_id: null })
+    if (!anonymousError) return
+    console.error('[stripe webhook] payment_success fallback insert error:', anonymousError.code, anonymousError.message)
+    return
+  }
+
+  console.error('[stripe webhook] payment_success insert error:', error.code, error.message)
+}
+
+// KINEO-SPRINT-EVENTS-2026-07-15 — payment_success server-side tracking is
+// ALREADY handled by recordPaymentSuccess() above (called at the top of the
+// checkout.session.completed case, covering BOTH the subscription and pack
+// paths, deduped via the stripe_events idempotency guard). No separate writer
+// is added here to avoid emitting duplicate payment_success rows.
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -150,6 +210,10 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+
+        // Canonical conversion tracking happens before entitlement updates, so
+        // a paid checkout remains visible even if a later profile write fails.
+        await recordPaymentSuccess(supabase, event.id, session)
 
         // ── Path A: Legacy one-time credit-pack purchase via Payment Link ──
         // Push #020 moved off Payment Links onto Stripe Checkout subscriptions,

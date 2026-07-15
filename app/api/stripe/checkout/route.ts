@@ -375,6 +375,9 @@ async function buildAndRedirect(
           // Marca a assinatura: é assim que o anti-abuso acima reconhece
           // "este cliente já usou o intro" sem precisar de migração no DB.
           sessionParams.subscription_data!.metadata!.intro = '1'
+          // Espelha no Checkout Session para o webhook registrar corretamente
+          // payment_success.metadata.intro sem uma chamada extra à API Stripe.
+          sessionParams.metadata!.intro = '1'
           // Success page mostra o valor realmente cobrado hoje.
           sessionParams.success_url = `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${INTRO_PRICES[tier][currency]}&intro=1&session_id={CHECKOUT_SESSION_ID}`
         }
