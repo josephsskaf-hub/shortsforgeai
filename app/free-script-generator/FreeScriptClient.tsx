@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import { trackEvent } from '@/lib/analytics'
 
 const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=script-generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
@@ -18,6 +19,39 @@ const EXAMPLES = [
 ]
 
 type Line = { label: string; text: string }
+
+function activationHref(lines: Line[]): string {
+  if (lines.length === 0) return SIGNUP
+
+  // The public result uses reader-friendly FACT labels. Translate those into
+  // the markers understood by /generate so the approved script survives
+  // signup/OAuth and enters the verbatim fast-path instead of being rewritten.
+  const markerFor = (label: string): string => {
+    const normalized = label.replace(/\s+/g, ' ').trim().toUpperCase()
+    if (normalized === 'HOOK') return 'HOOK'
+    if (normalized === 'FACT 1') return 'MICRO REWARD 1'
+    if (normalized === 'FACT 2') return 'MICRO REWARD 2'
+    if (normalized === 'FACT 3') return 'ESCALATION'
+    if (normalized === 'PAYOFF') return 'PAYOFF'
+    return label
+  }
+  const script = lines
+    .slice(0, 5)
+    .map(({ label, text }) => {
+      const marker = markerFor(label)
+      const safeText = text.slice(0, 220)
+      return marker ? `${marker}: ${safeText}` : safeText
+    })
+    .join('\n')
+  const destination = `/generate?${new URLSearchParams({ prompt: script, autoanalyze: '1' }).toString()}`
+  const signup = new URLSearchParams({
+    utm_source: 'seo',
+    utm_medium: 'tool',
+    utm_campaign: 'script-generator',
+    redirect: destination,
+  })
+  return `/signup?${signup.toString()}`
+}
 
 function parseScript(raw: string): Line[] {
   return raw
@@ -36,6 +70,7 @@ export default function FreeScriptClient() {
   const [lines, setLines] = useState<Line[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const createShortHref = activationHref(lines)
 
   async function generate(t?: string) {
     const q = (t ?? topic).trim()
@@ -127,8 +162,8 @@ export default function FreeScriptClient() {
             </div>
             <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>Now turn this into a finished video 🎬</div>
-              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI adds the voiceover, footage and captions — a ready-to-post 9:16 Short in ~60s. First one free.</p>
-              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
+              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI adds the voiceover, footage and captions — a ready-to-post 9:16 Short in ~60s. Your script comes with you after signup.</p>
+              <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', autoanalyze: true }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create this Short from my script →</Link>
             </div>
           </section>
         )}
@@ -141,7 +176,7 @@ export default function FreeScriptClient() {
         </p>
           <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>From script to finished Short</h2>
           <p style={{ margin: 0 }}>
-            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={SIGNUP} style={{ color: '#2997ff' }}>Make your first one free →</Link>
+            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', placement: 'explainer', autoanalyze: lines.length > 0 }) }} style={{ color: '#2997ff' }}>Create this Short →</Link>
           </p>
         </section>
       </div>

@@ -619,7 +619,8 @@ export default function GenerateClient() {
   // #465 — the saved video's DB id, for the public /v/[id] share link on the
   // done screen (share at peak delight → growth loop).
   const [publicVideoId, setPublicVideoId] = useState<string | null>(null)
-  const [sharedPublic, setSharedPublic] = useState(false)
+  const [sharedPublic, setSharedPublic] = useState<'shared' | 'copied' | 'ready' | null>(null)
+  const [shareReferralCode, setShareReferralCode] = useState<string | null>(null)
 
   // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
   // A free-plan video ships with a burnt-in watermark. Right after the render
@@ -796,6 +797,25 @@ export default function GenerateClient() {
     trackEvent('generate_page_view')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Preload the referral code before the user's win moment. Web Share and
+  // Clipboard require a live click gesture; awaiting a network request inside
+  // handleSharePublic can consume that gesture and make both APIs fail.
+  useEffect(() => {
+    if (phase !== 'composing' || shareReferralCode) return
+    let cancelled = false
+    fetch('/api/referral', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        const code = typeof data?.code === 'string' ? data.code.trim().toUpperCase() : ''
+        if (/^[A-HJ-NP-Z2-9]{8}$/.test(code)) setShareReferralCode(code)
+      })
+      .catch(() => {
+        // Sharing without a referral code still works and keeps UTM attribution.
+      })
+    return () => { cancelled = true }
+  }, [phase, shareReferralCode])
 
   // Push #317 — check YouTube connection status once when the done screen appears.
   useEffect(() => {
@@ -2635,28 +2655,62 @@ export default function GenerateClient() {
     }
   }
 
-  // #465 — copy the PUBLIC share page link (/v/[id]) at peak delight. This page
-  // shows the video + a "make your own free" CTA, so each share is a landing
-  // that brings a new pre-warmed visitor. Copies (not native share) because
-  // WhatsApp only renders the rich preview when a link is pasted.
+  // #465 — share the PUBLIC video page (/v/[id]) at peak delight. The link now
+  // carries both the user's referral code and first-touch UTMs. Mobile gets the
+  // native share sheet (one tap to WhatsApp/iMessage/etc.); desktop keeps the
+  // reliable copy-link fallback. Every outcome is measured separately.
   async function handleSharePublic() {
     if (!publicVideoId) return
-    const url = `${window.location.origin}/v/${publicVideoId}`
+
+    const shareUrl = new URL(`/v/${publicVideoId}`, window.location.origin)
+    shareUrl.searchParams.set('utm_source', 'kineo_user')
+    shareUrl.searchParams.set('utm_medium', 'video_share')
+    shareUrl.searchParams.set('utm_campaign', 'referral')
+
+    const referralAttached = !!shareReferralCode
+    if (shareReferralCode) {
+      shareUrl.searchParams.set('ref', shareReferralCode)
+    }
+
+    const url = shareUrl.toString()
+    const commonMetadata = {
+      video_id: publicVideoId,
+      where: 'done_screen',
+      referral_attached: referralAttached,
+    }
+    trackEvent('video_share_clicked', commonMetadata)
+
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'My Kineo Short',
+          text: 'I made this Short with Kineo. You can make your first one free:',
+          url,
+        })
+        setSharedPublic('shared')
+        setTimeout(() => setSharedPublic(null), 2000)
+        trackEvent('video_shared', { ...commonMetadata, method: 'native_share' })
+        return
+      } catch (error) {
+        // A deliberate cancel must not silently copy something to the clipboard.
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          trackEvent('video_share_cancelled', { ...commonMetadata, method: 'native_share' })
+          return
+        }
+        // Unsupported/failed share sheet falls through to the copy path.
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(url)
+      setSharedPublic('copied')
+      trackEvent('video_shared', { ...commonMetadata, method: 'clipboard' })
     } catch {
       try { window.prompt('Copy this link:', url) } catch {}
+      setSharedPublic('ready')
+      trackEvent('video_share_manual_copy_shown', commonMetadata)
     }
-    setSharedPublic(true)
-    setTimeout(() => setSharedPublic(false), 2000)
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'video_shared', metadata: { video_id: publicVideoId, where: 'done_screen' } }),
-        keepalive: true,
-      })
-    } catch {}
+    setTimeout(() => setSharedPublic(null), 2000)
   }
 
   // Push #047 — copy any section of the output package to the clipboard,
@@ -4703,7 +4757,13 @@ export default function GenerateClient() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {sharedPublic ? '✓ Copied — paste it!' : '🌐 Share my page'}
+                      {sharedPublic === 'shared'
+                        ? '✓ Shared!'
+                        : sharedPublic === 'copied'
+                          ? '✓ Link copied — paste it!'
+                          : sharedPublic === 'ready'
+                            ? 'Link ready to copy'
+                            : '🌐 Share this Short'}
                     </button>
                   )}
                   {/* WhatsApp — great for mobile / creator sharing */}

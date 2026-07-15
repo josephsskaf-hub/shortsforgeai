@@ -15,10 +15,15 @@
 
 import { useEffect } from 'react'
 import { captureSourceOnce } from '@/lib/analytics'
+import { captureRefOnce } from '@/lib/referral'
 
 export default function SourceCapture() {
   useEffect(() => {
     captureSourceOnce()
+    // Referral links can land on a public video page (/v/[id]), not only the
+    // homepage. Capture ?ref= globally so the code survives signup/OAuth and
+    // ReferralAutoTrigger can attribute the new account after authentication.
+    captureRefOnce()
   }, [])
   return null
 }

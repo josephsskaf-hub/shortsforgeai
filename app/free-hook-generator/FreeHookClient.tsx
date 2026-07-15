@@ -5,14 +5,32 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import { trackEvent } from '@/lib/analytics'
 
 const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=hook-generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
 const EXAMPLES = ['Billionaire money habits', 'The Bermuda Triangle', 'Why we dream', 'Ancient Rome secrets']
 
+function activationHref(topic: string, hook?: string): string {
+  const cleanTopic = topic.trim().slice(0, 200)
+  if (!cleanTopic) return SIGNUP
+  const prompt = hook
+    ? `Use this exact opening hook: "${hook.trim().slice(0, 220)}"\nTopic: ${cleanTopic}`
+    : cleanTopic
+  const destination = `/generate?${new URLSearchParams({ prompt, autoanalyze: '1' }).toString()}`
+  const signup = new URLSearchParams({
+    utm_source: 'seo',
+    utm_medium: 'tool',
+    utm_campaign: 'hook-generator',
+    redirect: destination,
+  })
+  return `/signup?${signup.toString()}`
+}
+
 export default function FreeHookClient() {
   const [topic, setTopic] = useState('')
   const [hooks, setHooks] = useState<string[]>([])
+  const [generatedTopic, setGeneratedTopic] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,6 +47,7 @@ export default function FreeHookClient() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data?.error || 'Could not generate. Try again.'); return }
       setHooks(Array.isArray(data.hooks) ? data.hooks : [])
+      setGeneratedTopic(q)
     } catch {
       setError('Network error. Try again.')
     } finally {
@@ -70,16 +89,17 @@ export default function FreeHookClient() {
           <section style={{ marginTop: 18, ...CARD, borderRadius: 16, padding: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {hooks.map((h, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', padding: '10px 0', borderBottom: i < hooks.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                   <div style={{ minWidth: 24, height: 24, borderRadius: 6, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</div>
-                  <div style={{ fontSize: '1.02rem', lineHeight: 1.45, fontWeight: 600 }}>{h}</div>
+                  <div style={{ flex: '1 1 280px', fontSize: '1.02rem', lineHeight: 1.45, fontWeight: 600 }}>{h}</div>
+                  <Link href={activationHref(generatedTopic, h)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'hook', hook_index: i + 1, autoanalyze: true }) }} style={{ color: '#2997ff', fontWeight: 900, fontSize: '0.82rem', textDecoration: 'none', whiteSpace: 'nowrap', padding: '3px 0' }}>Create this Short →</Link>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
-              <div style={{ fontWeight: 800, marginBottom: 4 }}>Turn a hook into a finished video 🎬</div>
-              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI writes the rest, adds voiceover, footage and captions — a ready-to-post Short in ~60s. First one free.</p>
-              <Link href={SIGNUP} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Make the full video free →</Link>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>Pick a hook above to create the full Short 🎬</div>
+              <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>Your chosen hook and topic come with you after signup. AI writes the rest, then adds voiceover, footage and captions.</p>
+              <Link href={activationHref(generatedTopic)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'topic', autoanalyze: true }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create a Short from this topic →</Link>
             </div>
           </section>
         )}
