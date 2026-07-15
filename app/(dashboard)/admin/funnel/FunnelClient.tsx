@@ -76,7 +76,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     return () => { cancelled = true; if (timerRef.current) clearInterval(timerRef.current) }
   }, [denied, days])
 
-  if (denied || !data) {
+  if (denied) {
     return (
       <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
         <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
@@ -88,8 +88,21 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     )
   }
 
+  if (!data) {
+    return (
+      <div className="px-4 sm:px-6 py-10 pb-20 max-w-3xl mx-auto">
+        <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div className="text-3xl mb-3">⏳</div>
+          <h1 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>Loading live funnel…</h1>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>Verifying external users, recurring checkouts and active Stripe subscriptions.</p>
+        </div>
+      </div>
+    )
+  }
+
   const s = data.realStats
   const r = data.rates
+  const recurringPaidUsers = s.proUsers + s.basicUsers + (s.starterUsers ?? 0) + (s.unknownPaidUsers ?? 0)
   const steps = data.funnelSteps ?? []
   const leak = data.biggestLeak ?? null
   const maxCount = steps.length ? Math.max(...steps.map((x) => x.count), 1) : 1
@@ -134,6 +147,9 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           })}
           <span className="ml-2 self-center text-[11px]" style={{ color: 'var(--muted)' }}>
             cohort = signups in period
+          </span>
+          <span className="self-center rounded-full px-2 py-1 text-[10px] font-bold" style={{ color: '#22d3ee', border: '1px solid rgba(34,211,238,0.35)', background: 'rgba(34,211,238,0.08)' }}>
+            {data.scopeLabel}
           </span>
         </div>
       </header>
@@ -300,24 +316,25 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
       </Section>
 
       <Section title="Subscribers">
-        <Card label="Pro"   value={fmt(s.proUsers)}   hint="plan = pro"   accent="#a78bfa" />
-        <Card label="Basic" value={fmt(s.basicUsers)} hint="plan = basic" accent="#a78bfa" />
-        <Card label="Free"  value={fmt(s.freeUsers)}  hint="no paid plan" accent="#94a3b8" />
+        <Card label="Starter" value={fmt(s.starterUsers ?? 0)} hint="Stripe active / trialing" accent="#22d3ee" />
+        <Card label="Creator" value={fmt(s.basicUsers)} hint="Stripe active / trialing" accent="#a78bfa" />
+        <Card label="Studio"  value={fmt(s.proUsers)}   hint="Stripe active / trialing" accent="#a78bfa" />
+        <Card label="Free"    value={fmt(s.freeUsers)}  hint="no valid recurring plan" accent="#94a3b8" />
         <Card label="Paid · 0 credits ⚠️" value={fmt(s.paidNoCredits)} hint="check Stripe webhook" accent={s.paidNoCredits > 0 ? '#f87171' : '#a78bfa'} />
       </Section>
 
       <Section title="Conversion rates (all-time)">
         <RateCard label="Signup → Video"  value={r.signupToVideo} sub={`${s.usersWithVideos} / ${s.totalUsers}`} />
-        <RateCard label="Signup → Paid"   value={r.signupToPaid}  sub={`${s.proUsers + s.basicUsers} / ${s.totalUsers}`} />
-        <RateCard label="Video → Paid"    value={r.videoToPaid}   sub={`${s.proUsers + s.basicUsers} / ${s.usersWithVideos}`} />
-        <RateCard label="Basic → Pro"     value={r.basicToPro}    sub={`${s.proUsers} / ${s.proUsers + s.basicUsers}`} />
+        <RateCard label="Signup → Paid"   value={r.signupToPaid}  sub={`${recurringPaidUsers} / ${s.totalUsers}`} />
+        <RateCard label="Video → Paid"    value={r.videoToPaid}   sub={`${recurringPaidUsers} / ${s.usersWithVideos}`} />
+        <RateCard label="Creator → Studio" value={r.basicToPro}   sub={`${s.proUsers} / ${s.proUsers + s.basicUsers}`} />
       </Section>
 
       {data.stripePayments && (
-        <Section title="💳 Payment funnel · Stripe">
-          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="reached Stripe checkout" accent="#a78bfa" />
-          <Card label="Completed ✅"        value={fmt(data.stripePayments.checkoutCompleted)} hint="payment succeeded"       accent="#a78bfa" />
-          <Card label="Abandoned ❌"        value={fmt(data.stripePayments.checkoutAbandoned)} hint="expired without paying"  accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#a78bfa'} />
+        <Section title="💳 Recurring payment funnel · Stripe">
+          <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="external subscription sessions" accent="#a78bfa" />
+          <Card label="Completed ✅"        value={fmt(data.stripePayments.checkoutCompleted)} hint="recurring subscription paid"    accent="#a78bfa" />
+          <Card label="Abandoned ❌"        value={fmt(data.stripePayments.checkoutAbandoned)} hint="subscription expired unpaid"    accent={data.stripePayments.checkoutAbandoned > 0 ? '#f87171' : '#a78bfa'} />
           <Card label="Still open ⏳"       value={fmt(data.stripePayments.checkoutOpen)}      hint="on checkout page now"    accent="#fbbf24" />
           <RateCard label="Checkout → Payment" value={data.stripePayments.conversionRate} sub={`${data.stripePayments.checkoutCompleted} / ${data.stripePayments.checkoutCompleted + data.stripePayments.checkoutAbandoned}`} />
           <Card label="Failed payments (30d)" value={fmt(data.stripePayments.recentFailedPayments)} hint="invoice.payment_failed" accent={data.stripePayments.recentFailedPayments > 0 ? '#f87171' : '#a78bfa'} />

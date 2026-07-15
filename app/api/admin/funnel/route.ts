@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import { INTERNAL_ACCOUNTS_LABEL, isInternalEmail } from '@/lib/internalAccounts'
 import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,7 @@ const ADMIN_EMAILS = new Set([
 ])
 
 export interface FunnelData {
+  scopeLabel: string
   eventsAvailable: boolean
   period: string
   realStats: {
@@ -210,14 +212,7 @@ export async function GET(req: Request) {
 
     // ── auth.users (all-time growth counters) ──────────────────────────────
     const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
-    const authUsers = authData?.users ?? []
-    let newThisWeek = 0, newThisMonth = 0
-    for (const u of authUsers) {
-      const t = u.created_at ? new Date(u.created_at).getTime() : 0
-      if (t >= weekAgo) newThisWeek++
-      if (t >= monthAgo) newThisMonth++
-    }
-    const totalUsers = authUsers.length
+    const rawAuthUsers = authData?.users ?? []
 
     // ── profiles (plans + cohort) ──────────────────────────────────────────
     let allProfiles: ProfileRow[] = []
@@ -231,6 +226,31 @@ export async function GET(req: Request) {
       }
     } catch { /* ignore */ }
 
+    // One shared exclusion list protects every metric below. Auth catches
+    // internal accounts even when their profile e-mail is missing; profiles
+    // catch legacy/test rows whose auth e-mail is unavailable.
+    const internalUserIds = new Set<string>()
+    for (const userRow of rawAuthUsers) {
+      if (isInternalEmail(userRow.email)) internalUserIds.add(userRow.id)
+    }
+    for (const profile of allProfiles) {
+      if (isInternalEmail(profile.email)) internalUserIds.add(profile.id)
+    }
+    const authUsers = rawAuthUsers.filter((userRow) => !internalUserIds.has(userRow.id))
+    const externalProfiles = allProfiles.filter((profile) => !internalUserIds.has(profile.id))
+    const externalKnownUserIds = new Set<string>([
+      ...authUsers.map((userRow) => userRow.id),
+      ...externalProfiles.map((profile) => profile.id),
+    ])
+
+    let newThisWeek = 0, newThisMonth = 0
+    for (const userRow of authUsers) {
+      const t = userRow.created_at ? new Date(userRow.created_at).getTime() : 0
+      if (t >= weekAgo) newThisWeek++
+      if (t >= monthAgo) newThisMonth++
+    }
+    const totalUsers = authUsers.length
+
     // ── videos ──────────────────────────────────────────────────────────────
     let totalVideos = 0, videosThisWeek = 0
     const userWithVideoSet = new Set<string>()
@@ -241,7 +261,7 @@ export async function GET(req: Request) {
         .select('user_id,status,quality_mode,topic,niche,created_at')
         .limit(5000)
       if (Array.isArray(vids)) {
-        allVideos = vids as VideoRow[]
+        allVideos = (vids as VideoRow[]).filter((row) => Boolean(row.user_id && externalKnownUserIds.has(row.user_id)))
         for (const row of allVideos) {
           totalVideos++
           if (row.user_id) userWithVideoSet.add(row.user_id)
@@ -252,15 +272,27 @@ export async function GET(req: Request) {
     const usersWithVideos = userWithVideoSet.size
 
     // ── click_events + checkout_abandoned (cohort signals) ──────────────────
-    let allClicks: Array<{ user_id: string | null; created_at: string | null }> = []
-    let allAbandoned: Array<{ user_id: string | null; expired_at: string | null }> = []
+    let allClicks: Array<{ user_id: string | null; created_at: string | null; plan: string | null }> = []
+    let allAbandoned: Array<{ user_id: string | null; expired_at: string | null; tier: string | null }> = []
     try {
-      const { data } = await admin.from('click_events').select('user_id,created_at').limit(5000)
-      if (Array.isArray(data)) allClicks = data as typeof allClicks
+      const { data } = await admin.from('click_events').select('user_id,created_at,plan').limit(5000)
+      if (Array.isArray(data)) {
+        // Legacy one-time Starter Pack clicks had plan=null. Current recurring
+        // Starter attempts are recorded server-side in public.events.
+        allClicks = (data as typeof allClicks).filter((row) =>
+          (!row.user_id || !internalUserIds.has(row.user_id)) &&
+          (row.plan === 'basic' || row.plan === 'pro')
+        )
+      }
     } catch { /* ignore */ }
     try {
-      const { data } = await admin.from('checkout_abandoned').select('user_id,expired_at').limit(5000)
-      if (Array.isArray(data)) allAbandoned = data as typeof allAbandoned
+      const { data } = await admin.from('checkout_abandoned').select('user_id,expired_at,tier').limit(5000)
+      if (Array.isArray(data)) {
+        allAbandoned = (data as typeof allAbandoned).filter((row) =>
+          (!row.user_id || !internalUserIds.has(row.user_id)) &&
+          (row.tier === 'starter' || row.tier === 'basic' || row.tier === 'pro')
+        )
+      }
     } catch { /* ignore */ }
 
     // public.events is live in production. Exact per-name counts avoid the
@@ -289,22 +321,30 @@ export async function GET(req: Request) {
       eventsAvailable = !probe.error
       if (eventsAvailable) {
         const periodIso = days === 'all' ? null : new Date(cohortCutoff).toISOString()
+        const externalEventFilter = internalUserIds.size > 0
+          ? `user_id.is.null,user_id.not.in.(${Array.from(internalUserIds).join(',')})`
+          : null
         const countResults = await Promise.all(trackedEventNames.map(async (name) => {
           let query = admin.from('events').select('id', { head: true, count: 'exact' }).eq('name', name)
           if (periodIso) query = query.gte('created_at', periodIso)
+          if (externalEventFilter) query = query.or(externalEventFilter)
           const result = await query
           return { name, count: result.error ? 0 : (result.count ?? 0) }
         }))
         for (const row of countResults) eventCounts.set(row.name, row.count)
 
-        const identities = await admin
+        let identityQuery = admin
           .from('events')
           .select('name,user_id,created_at,session_id,metadata')
           .in('name', identityEventNames)
           .order('created_at', { ascending: false })
           .limit(5000)
+        if (periodIso) identityQuery = identityQuery.gte('created_at', periodIso)
+        if (externalEventFilter) identityQuery = identityQuery.or(externalEventFilter)
+        const identities = await identityQuery
         if (!identities.error && Array.isArray(identities.data)) {
-          eventRows = identities.data as unknown as EventRow[]
+          eventRows = (identities.data as unknown as EventRow[])
+            .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
         }
       }
     } catch {
@@ -325,7 +365,7 @@ export async function GET(req: Request) {
     let stripeSubscriptionsAvailable = false
     let stripeSessions: Stripe.Checkout.Session[] = []
     let stripeSubscriptions: Stripe.Subscription[] = []
-    let recentFailedPayments = 0
+    let recentFailedInvoices: Stripe.Invoice[] = []
     if (process.env.STRIPE_SECRET_KEY) {
       try {
         let startingAfter: string | undefined
@@ -356,7 +396,7 @@ export async function GET(req: Request) {
       }
       try {
         const failedInvoices = await stripe.invoices.list({ limit: 100, status: 'uncollectible' })
-        recentFailedPayments = failedInvoices.data.filter((inv) => inv.created * 1000 >= monthAgo).length
+        recentFailedInvoices = failedInvoices.data.filter((inv) => inv.created * 1000 >= monthAgo)
       } catch { /* ignore */ }
     }
 
@@ -366,6 +406,25 @@ export async function GET(req: Request) {
       const customerId = objectId(session.customer)
       return customerId ? profileByCustomerId.get(customerId)?.id ?? null : null
     }
+    const externalSubscriptionSessions = stripeSessions.filter((session) => {
+      if (session.mode !== 'subscription') return false
+      const sessionUserId = userIdForSession(session)
+      const sessionEmail = session.customer_details?.email || session.customer_email || null
+      if (sessionUserId && internalUserIds.has(sessionUserId)) return false
+      if (isInternalEmail(sessionEmail)) return false
+      return Boolean(
+        (sessionUserId && externalKnownUserIds.has(sessionUserId)) ||
+        sessionEmail
+      )
+    })
+    const recentFailedPayments = recentFailedInvoices.filter((invoice) => {
+      const customerId = objectId(invoice.customer)
+      const profile = customerId ? profileByCustomerId.get(customerId) : undefined
+      const invoiceEmail = invoice.customer_email || profile?.email || null
+      if (profile && internalUserIds.has(profile.id)) return false
+      return !isInternalEmail(invoiceEmail)
+    }).length
+
     const activeTierByUser = new Map<string, PaidTier>()
     const tierRank: Record<PaidTier, number> = { unknown: 0, starter: 1, basic: 2, pro: 3 }
     for (const subscription of stripeSubscriptions) {
@@ -373,8 +432,10 @@ export async function GET(req: Request) {
       const customerId = objectId(subscription.customer)
       const profile = profileBySubscriptionId.get(subscription.id) || (customerId ? profileByCustomerId.get(customerId) : undefined)
       const userId = subscription.metadata?.supabase_user_id || profile?.id || null
-      if (!userId || !profileById.has(userId)) continue
-      const tier = normalizeTier(subscription.metadata?.tier || profile?.plan)
+      if (!userId || !externalKnownUserIds.has(userId) || internalUserIds.has(userId)) continue
+      const verifiedProfile = profileById.get(userId)
+      if (isInternalEmail(verifiedProfile?.email)) continue
+      const tier = normalizeTier(subscription.metadata?.tier || verifiedProfile?.plan || profile?.plan)
       const previous = activeTierByUser.get(userId)
       if (!previous || tierRank[tier] > tierRank[previous]) activeTierByUser.set(userId, tier)
     }
@@ -398,7 +459,7 @@ export async function GET(req: Request) {
     }
 
     let checkoutCreated = 0, checkoutCompleted = 0, checkoutAbandoned = 0, checkoutOpen = 0
-    for (const session of stripeSessions) {
+    for (const session of externalSubscriptionSessions) {
       checkoutCreated++
       if (session.status === 'complete') checkoutCompleted++
       else if (session.status === 'expired') checkoutAbandoned++
@@ -411,9 +472,7 @@ export async function GET(req: Request) {
     }
 
     // ── COHORT (signups in period, excluding admin/test) ────────────────────
-    const cohort = allProfiles.filter((p) => {
-      const e = (p.email ?? '').toLowerCase()
-      if (ADMIN_EMAILS.has(e)) return false
+    const cohort = externalProfiles.filter((p) => {
       if (days === 'all') return true
       const t = p.created_at ? new Date(p.created_at).getTime() : 0
       return t >= cohortCutoff
@@ -447,8 +506,8 @@ export async function GET(req: Request) {
       const eventUserId = event.user_id || (typeof metadata.supabase_user_id === 'string' ? metadata.supabase_user_id : null)
       if (eventUserId && cohortIds.has(eventUserId)) paidUserSet.add(eventUserId)
     }
-    for (const session of stripeSessions) {
-      if (session.mode !== 'subscription' || session.status !== 'complete') continue
+    for (const session of externalSubscriptionSessions) {
+      if (session.status !== 'complete') continue
       if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') continue
       const sessionUserId = userIdForSession(session)
       if (sessionUserId && cohortIds.has(sessionUserId)) paidUserSet.add(sessionUserId)
@@ -587,6 +646,7 @@ export async function GET(req: Request) {
 
     // Stripe checkout funnel is already range-filtered by the selected period.
     const data: FunnelData = {
+      scopeLabel: INTERNAL_ACCOUNTS_LABEL,
       eventsAvailable,
       period: days,
       realStats: { totalUsers, newThisWeek, newThisMonth, proUsers, basicUsers, starterUsers, unknownPaidUsers, freeUsers, usersWithVideos, totalVideos, videosThisWeek, paidNoCredits },
