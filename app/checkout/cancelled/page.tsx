@@ -9,8 +9,13 @@ import { useRouter } from 'next/navigation'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
 // Push #175 — use checkout GET route instead of hardcoded Stripe links.
+// KINEO-SPRINT-FIX-2026-07-15 — plan/offer preservation: buyers who abandon an
+// intro-month checkout land HERE via cancel_url, and the old retry link
+// re-entered checkout at FULL price (intro dropped → second-chance conversion
+// killed). Carry ?intro=1 on the Creator retry; the server validates
+// eligibility (1 per customer, monthly only), so this can never double-apply.
 const STRIPE_LINKS = {
-  basic: '/api/stripe/checkout?tier=basic',
+  basic: '/api/stripe/checkout?tier=basic&intro=1',
   pro: '/api/stripe/checkout?tier=pro',
 }
 
