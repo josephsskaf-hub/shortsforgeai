@@ -86,7 +86,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [hookMode, setHookMode] = useState(true)
   // KINEO-PRESENTER-2026-07-10 — 'presenter' (Kling AI Avatar v2) is the new
   // DEFAULT: best lip-sync quality per dollar (60 credits vs 110 legacy).
-  const [engine, setEngine] = useState<'presenter' | 'fabric' | 'omnihuman'>('presenter')
+  const [engine, setEngine] = useState<'presenter' | 'presenter_pro' | 'fabric' | 'omnihuman'>('presenter')
+  // Keep motion direction to trusted presets. This gives short social clips
+  // more energy without forwarding arbitrary client text to the provider.
+  const [performanceStyle, setPerformanceStyle] = useState<'natural' | 'energetic'>('natural')
   // Verbatim fix (13/06) — 'verbatim' speaks EXACTLY the typed text (no GPT
   // expansion / no 45s padding); 'expand' turns an idea into a full Short
   // script. Auto-suggested from length until the user picks manually.
@@ -334,25 +337,87 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     return () => window.removeEventListener('beforeunload', handler)
   }, [busy])
 
+  // Detect symmetrical near-black letter/pillar-box bars. Avatar models treat
+  // those bars as part of the scene, making the person smaller and reducing
+  // visible motion. Requiring matching bars on both sides avoids false crops
+  // on naturally dark backgrounds.
+  function detectBlackBars(data: ImageData): { x: number; y: number; width: number; height: number } {
+    const { width, height } = data
+    const pixels = data.data
+    const rowIsBlack = (y: number) => {
+      let black = 0
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4
+        if (pixels[i] < 22 && pixels[i + 1] < 22 && pixels[i + 2] < 22) black++
+      }
+      return black / width >= 0.985
+    }
+    const colIsBlack = (x: number) => {
+      let black = 0
+      for (let y = 0; y < height; y++) {
+        const i = (y * width + x) * 4
+        if (pixels[i] < 22 && pixels[i + 1] < 22 && pixels[i + 2] < 22) black++
+      }
+      return black / height >= 0.985
+    }
+
+    let top = 0
+    let bottom = 0
+    let left = 0
+    let right = 0
+    while (top < height / 3 && rowIsBlack(top)) top++
+    while (bottom < height / 3 && rowIsBlack(height - 1 - bottom)) bottom++
+    while (left < width / 3 && colIsBlack(left)) left++
+    while (right < width / 3 && colIsBlack(width - 1 - right)) right++
+
+    const paired = (a: number, b: number, size: number) => {
+      if (a < size * 0.025 || b < size * 0.025) return false
+      return Math.max(a, b) / Math.max(1, Math.min(a, b)) <= 1.6
+    }
+    const cropY = paired(top, bottom, height)
+    const cropX = paired(left, right, width)
+    return {
+      x: cropX ? left : 0,
+      y: cropY ? top : 0,
+      width: cropX ? Math.max(1, width - left - right) : width,
+      height: cropY ? Math.max(1, height - top - bottom) : height,
+    }
+  }
+
   // Fix 12/06 — Vercel functions reject bodies over ~4.5MB BEFORE our code
   // runs, so a modern camera photo (6-12MB) failed with a generic error.
-  // Compress client-side: downscale to ≤1280px and re-encode as JPEG ~0.85.
-  // Any phone photo lands around 200-400KB with no visible quality loss.
+  // Downscale to ≤1280px and re-encode as JPEG. Small files remain unchanged
+  // unless black bars were detected and safely removed.
   async function compressPhoto(file: File): Promise<File> {
-    if (file.size < 2 * 1024 * 1024) return file // small enough — keep as-is
     try {
       const bitmap = await createImageBitmap(file)
+      const sampleScale = Math.min(1, 420 / Math.max(bitmap.width, bitmap.height))
+      const sample = document.createElement('canvas')
+      sample.width = Math.max(1, Math.round(bitmap.width * sampleScale))
+      sample.height = Math.max(1, Math.round(bitmap.height * sampleScale))
+      const sampleCtx = sample.getContext('2d', { willReadFrequently: true })
+      if (!sampleCtx) { bitmap.close(); return file }
+      sampleCtx.drawImage(bitmap, 0, 0, sample.width, sample.height)
+      const cropSample = detectBlackBars(sampleCtx.getImageData(0, 0, sample.width, sample.height))
+      const hadBars = cropSample.x > 0 || cropSample.y > 0 || cropSample.width < sample.width || cropSample.height < sample.height
+      if (!hadBars && file.size < 2 * 1024 * 1024) { bitmap.close(); return file }
+
+      const sx = Math.round(cropSample.x / sampleScale)
+      const sy = Math.round(cropSample.y / sampleScale)
+      const sw = Math.min(bitmap.width - sx, Math.max(1, Math.round(cropSample.width / sampleScale)))
+      const sh = Math.min(bitmap.height - sy, Math.max(1, Math.round(cropSample.height / sampleScale)))
       const maxSide = 1280
-      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
-      const w = Math.round(bitmap.width * scale)
-      const h = Math.round(bitmap.height * scale)
+      const scale = Math.min(1, maxSide / Math.max(sw, sh))
+      const w = Math.round(sw * scale)
+      const h = Math.round(sh * scale)
       const canvas = document.createElement('canvas')
       canvas.width = w
       canvas.height = h
       const ctx = canvas.getContext('2d')
-      if (!ctx) return file
-      ctx.drawImage(bitmap, 0, 0, w, h)
-      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+      if (!ctx) { bitmap.close(); return file }
+      ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, w, h)
+      bitmap.close()
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9))
       if (!blob) return file
       return new File([blob], 'face.jpg', { type: 'image/jpeg' })
     } catch {
@@ -564,6 +629,10 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   // ── The run: generate → poll avatar → compose → poll render ──────────
   async function handleGenerate() {
     if (!canGenerate) return
+    // If there are no cutaways, never submit an 8-second hook slice as though
+    // it were a full avatar. That combination could leave the final timeline
+    // with a frozen/black tail after the source clip ended.
+    const noBroll = sourceKind === 'video' || fidelity === 'real' || Boolean(sceneImageUrl)
     setError(null)
     setFinalUrl(null)
     setProgress(8)
@@ -577,14 +646,15 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           duration: requestDuration,
           language,
           scriptMode,
+          performanceStyle,
           ...(voiceId ? { voiceId } : {}),
-          ...((fidelity === 'real' || sceneImageUrl) ? { noBroll: true } : {}),
+          ...(noBroll ? { noBroll: true } : {}),
           ...(sourceKind === 'video'
             ? { avatarSourceVideoUrl: videoUrl }
             : { avatarImageUrl: fidelity === 'scene' ? (sceneImageUrl ?? faceUrl) : faceUrl, engine }),
           // Hook mode only makes sense for expanded scripts — a 10s verbatim
           // line IS the hook.
-          avatarMode: sourceKind === 'photo' && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
+          avatarMode: sourceKind === 'photo' && !noBroll && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
         }),
       })
       const data = await res.json()
@@ -728,7 +798,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   }
 
   // ── UI ────────────────────────────────────────────────────────────────
-  const previewSrc = (fidelity === 'scene' && sceneImageUrl) ? sceneImageUrl : (sourceKind === 'video' ? videoUrl : faceUrl)
+  const previewSrc = sourceKind === 'video'
+    ? videoUrl
+    : (fidelity === 'scene' && sceneImageUrl) ? sceneImageUrl : faceUrl
 
   return (
     <div className="px-4 sm:px-6 py-7 pb-20">
@@ -767,7 +839,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                       cursor: busy ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {k === 'photo' ? '📷 Photo' : '🎥 Video'} {k === 'video' && <span style={{ fontSize: 8, opacity: 0.85 }}>BETA</span>}
+                    {k === 'photo' ? '📷 Photo' : '🎥 Real video'} {k === 'video' && <span style={{ fontSize: 8, opacity: 0.9 }}>BEST MOTION</span>}
                   </button>
                 ))}
               </div>
@@ -827,7 +899,9 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   {faceUrl ? '🖼️ Upload a different photo' : '🖼️ Upload a photo'}
                 </button>
                 <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'photo')} />
-                <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>Sharp, front-facing, one person. JPG/PNG up to 8 MB.</p>
+                <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>
+                  Sharp, front-facing, one person. For body motion, use a waist-up/full-body photo with both hands visible. Black bars are removed automatically.
+                </p>
               </>
             ) : (
               <>
@@ -842,7 +916,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                 </button>
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null, 'video')} />
                 <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>
-                  10–60s of you facing the camera (talking or not). We re-voice your lips with the script. MP4/MOV up to 40 MB — 720p export recommended.
+                  Best professional result: upload a 5–20s vertical clip doing the real gestures you want, roughly matching the script length. Sync-3 replaces the speech while preserving the real face and body motion. MP4/MOV up to 40 MB.
                 </p>
               </>
             )}
@@ -1149,7 +1223,15 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   Word-for-word videos always show your face the whole time (they’re short — no b-roll needed).
                 </p>
               )}
-              <div className="flex flex-wrap gap-2" style={{ display: scriptMode === 'verbatim' ? 'none' : undefined }}>
+              {scriptMode === 'expand' && (fidelity === 'real' || Boolean(sceneImageUrl)) && (
+                <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
+                  Max-realism and built-scene videos keep the presenter on screen for the full narration.
+                </p>
+              )}
+              <div
+                className="flex flex-wrap gap-2"
+                style={{ display: scriptMode === 'verbatim' || fidelity === 'real' || Boolean(sceneImageUrl) ? 'none' : undefined }}
+              >
                 <button
                   type="button"
                   onClick={() => setHookMode(true)}
@@ -1177,16 +1259,16 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
                   style={{ background: engine === 'presenter' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'presenter' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'presenter' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
                 >
-                  🎬 AI Presenter — best lip-sync · 70 cr <span style={{ fontSize: 8 }}>NEW</span>
+                  🎬 AI Presenter — fast & natural · 70 cr
                 </button>
                 <button
                   type="button"
-                  onClick={() => setEngine('fabric')}
+                  onClick={() => setEngine('presenter_pro')}
                   disabled={busy}
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
-                  style={{ background: engine === 'fabric' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'fabric' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'fabric' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                  style={{ background: engine === 'presenter_pro' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'presenter_pro' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'presenter_pro' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
                 >
-                  🎙️ Standard — talking head · 110 cr
+                  ✨ Presenter Pro — premium photo quality · 110 cr <span style={{ fontSize: 8 }}>NEW</span>
                 </button>
                 <button
                   type="button"
@@ -1195,9 +1277,42 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
                   className="rounded-lg px-3 py-2 text-[12px] font-bold"
                   style={{ background: engine === 'omnihuman' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'omnihuman' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'omnihuman' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
                 >
-                  🕺 Pro — body & gestures <span style={{ fontSize: 8 }}>BETA</span>
+                  🕺 Body Motion — torso, hands & gestures · 110 cr
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEngine('fabric')}
+                  disabled={busy}
+                  className="rounded-lg px-3 py-2 text-[12px] font-bold"
+                  style={{ background: engine === 'fabric' ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: engine === 'fabric' ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: engine === 'fabric' ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                >
+                  🎙️ Classic — talking head · 110 cr
                 </button>
               </div>
+              {engine !== 'fabric' && (
+                <div className="mt-3 rounded-xl px-3.5 py-3" style={{ background: 'rgba(41,151,255,0.06)', border: '1px solid rgba(41,151,255,0.2)' }}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Motion</span>
+                    {(['natural', 'energetic'] as const).map((style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => setPerformanceStyle(style)}
+                        disabled={busy}
+                        className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold capitalize"
+                        style={{ background: performanceStyle === style ? 'rgba(41,151,255,0.15)' : 'rgba(255,255,255,0.04)', border: performanceStyle === style ? '1px solid rgba(41,151,255,0.5)' : '1px solid var(--border)', color: performanceStyle === style ? '#2997ff' : 'var(--muted2)', cursor: 'pointer' }}
+                      >
+                        {style === 'natural' ? 'Natural' : '⚡ Energetic'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] mt-2 leading-relaxed" style={{ color: 'var(--muted)' }}>
+                    {engine === 'omnihuman'
+                      ? 'Body Motion can only move what the source shows. Use a waist-up/full-body image with unobstructed hands; a tight selfie will stay mostly shoulders and head.'
+                      : 'Presenter modes preserve the photo closely. They add natural head, shoulder and visible-hand motion, but do not invent a reliable full body outside the frame.'}
+                  </p>
+                </div>
+              )}
             </section>
           )}
 

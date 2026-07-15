@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       engineParam === 'omnihuman' ? 'omnihuman'
       : engineParam === 'lipsync' ? 'lipsync'
       : engineParam === 'animate' ? 'animate'
+      : engineParam === 'presenter_pro' ? 'presenter_pro'
       // KINEO-PRESENTER-2026-07-10 — Kling AI Avatar v2 engine.
       : engineParam === 'presenter' ? 'presenter'
       : 'fabric'

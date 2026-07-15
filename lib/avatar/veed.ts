@@ -27,7 +27,7 @@ const OMNIHUMAN_MODEL = 'fal-ai/bytedance/omnihuman/v1.5'
 // Avatar Studio (12/06) — third engine: video-source lip-sync. The user
 // uploads a short VIDEO of themselves (instead of a photo) and sync.so's
 // lipsync model re-animates the mouth to our narration mp3. Same fal queue.
-const LIPSYNC_MODEL = 'fal-ai/sync-lipsync'
+const LIPSYNC_MODEL = 'fal-ai/sync-lipsync/v3'
 
 // Animate (13/06) — image-to-video: brings a REAL PHOTO to life with motion
 // (Upwork-demand feature). Kling 2.5 Turbo Pro: best quality/price on fal at
@@ -44,6 +44,7 @@ const ANIMATE_MODEL = 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'
 // renders anchored dialogue scenes on this same engine (portrait anchor +
 // our TTS of the spoken line) so the host keeps ONE voice across every scene.
 export const PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
+export const PRESENTER_PRO_MODEL = 'fal-ai/kling-video/ai-avatar/v2/pro'
 
 // KINEO-PRESENTER-MOTION-2026-07-10 — Joseph's feedback on the first prod
 // render: the body stayed FROZEN (only lips moved). Kling AI Avatar v2
@@ -56,15 +57,45 @@ export const PRESENTER_MODEL = 'fal-ai/kling-video/ai-avatar/v2/standard'
 export const PRESENTER_PERFORMANCE_PROMPT =
   'the person speaks directly to the camera like a charismatic presenter: natural expressive hand gestures emphasizing key words, subtle head and shoulder movement, engaged body language that matches the rhythm of the speech, realistic natural motion'
 
-/** Which model animates the avatar. 'presenter' = Kling AI Avatar v2 talking
- *  human (best lip-sync per dollar, KINEO-PRESENTER); 'fabric' = VEED talking
- *  head from a photo (legacy default); 'omnihuman' = full-figure body &
- *  gestures from a photo ("Pro"); 'lipsync' = re-voice a real VIDEO of the
- *  person (Avatar Studio); 'animate' = image-to-video motion (no narration). */
-export type AvatarEngine = 'presenter' | 'fabric' | 'omnihuman' | 'lipsync' | 'animate'
+export const PRESENTER_ENERGETIC_PERFORMANCE_PROMPT =
+  'the person speaks directly to the camera with upbeat presenter energy: lively but controlled visible-hand gestures, confident head and shoulder movement, expressive posture matching the rhythm of the speech, realistic natural motion, stable camera, preserve the exact face and appearance'
+
+export const OMNIHUMAN_PERFORMANCE_PROMPT =
+  'A stable medium shot holds on the person speaking directly to the camera. Use natural head, shoulder, torso, and visible-hand movement that follows the speech. Keep the person centered and preserve the exact face, clothing, body proportions, and background. No sudden pose changes, no invented limbs, and no camera shake.'
+
+export const OMNIHUMAN_ENERGETIC_PERFORMANCE_PROMPT =
+  'A stable medium shot holds on the person speaking enthusiastically to the camera. Use energetic but controlled head, shoulder, torso, and visible-hand gestures that emphasize key words and follow the speech rhythm. Keep the person centered and preserve the exact face, clothing, body proportions, and background. No sudden pose changes, no invented limbs, and no camera shake.'
+
+/** Which model animates the avatar. 'presenter'/'presenter_pro' = Kling AI
+ *  Avatar v2 talking human; 'fabric' = VEED talking head from a photo (legacy
+ *  default); 'omnihuman' = full-figure body & gestures from a photo ("Pro");
+ *  'lipsync' = re-voice a real VIDEO of the person (Avatar Studio); 'animate'
+ *  = image-to-video motion (no narration). */
+export type AvatarEngine = 'presenter' | 'presenter_pro' | 'fabric' | 'omnihuman' | 'lipsync' | 'animate'
+export type PerformanceStyle = 'natural' | 'energetic'
+
+/** Server-owned directions only. Routes should map trusted style enums here
+ * instead of forwarding arbitrary client prompts to a provider. */
+export function performancePromptFor(
+  engine: AvatarEngine | undefined,
+  style: PerformanceStyle = 'natural',
+): string | undefined {
+  if (engine === 'omnihuman') {
+    return style === 'energetic'
+      ? OMNIHUMAN_ENERGETIC_PERFORMANCE_PROMPT
+      : OMNIHUMAN_PERFORMANCE_PROMPT
+  }
+  if (engine === 'presenter' || engine === 'presenter_pro') {
+    return style === 'energetic'
+      ? PRESENTER_ENERGETIC_PERFORMANCE_PROMPT
+      : PRESENTER_PERFORMANCE_PROMPT
+  }
+  return undefined
+}
 
 function modelFor(engine: AvatarEngine | undefined): string {
   if (engine === 'presenter') return PRESENTER_MODEL
+  if (engine === 'presenter_pro') return PRESENTER_PRO_MODEL
   if (engine === 'omnihuman') return OMNIHUMAN_MODEL
   if (engine === 'lipsync') return LIPSYNC_MODEL
   if (engine === 'animate') return ANIMATE_MODEL
@@ -175,6 +206,8 @@ export const VEED_480P_USD_PER_SECOND = 0.08
 export const OMNIHUMAN_720P_USD_PER_SECOND = 0.16
 // KINEO-PRESENTER-2026-07-10 — Kling AI Avatar v2 Standard ($0.0562/s on fal).
 export const PRESENTER_USD_PER_SECOND = 0.0562
+// Kling AI Avatar v2 Pro — higher-fidelity presenter endpoint ($0.115/s on fal).
+export const PRESENTER_PRO_USD_PER_SECOND = 0.115
 
 // ── Queue mode (used by /api/generate-avatar + /api/avatar-status) ──────────
 // VEED takes minutes for a 45-60s talking head, far beyond a Vercel function
@@ -203,22 +236,24 @@ export async function submitAvatarJob(args: {
   audioUrl: string
   resolution?: '480p' | '720p'
   engine?: AvatarEngine
-  /** KINEO-HOLLYWOOD-HOST-2026-07-13 — optional performance direction for the
-   * 'presenter' engine only. Hollywood host scenes pass the gesture prompt
+  /** Optional server-owned performance direction for presenter,
+   * presenter_pro, or omnihuman. Hollywood host scenes pass the gesture prompt
    * PLUS the plan's characterSheet/styleSheet so the avatar clip matches the
-   * anchored look. Absent/empty → the production default below (every
-   * existing caller stays byte-identical). Ignored by the other engines. */
+   * anchored look. Absent/empty → the safe per-engine default below. */
   performancePrompt?: string
 }): Promise<string | null> {
   if (!configureFal()) return null
   const model = modelFor(args.engine)
-  // lipsync re-voices a video (video_url + audio_url); presenter (Kling AI
-  // Avatar v2) takes image_url + audio_url with NO resolution param; the
-  // legacy photo engines animate a still (image_url + audio_url + resolution).
+  const performancePrompt =
+    args.performancePrompt?.trim() || performancePromptFor(args.engine, 'natural')
+  // lipsync re-voices a video (video_url + audio_url); presenter variants
+  // (Kling AI Avatar v2) take image_url + audio_url with NO resolution param;
+  // OmniHuman also accepts a body/camera prompt; Fabric only accepts the
+  // legacy image_url + audio_url + resolution input.
   const input: Record<string, unknown> =
     args.engine === 'lipsync'
-      ? { video_url: args.videoUrl, audio_url: args.audioUrl }
-      : args.engine === 'presenter'
+      ? { video_url: args.videoUrl, audio_url: args.audioUrl, sync_mode: 'cut_off' }
+      : args.engine === 'presenter' || args.engine === 'presenter_pro'
         ? {
             image_url: args.imageUrl,
             audio_url: args.audioUrl,
@@ -227,9 +262,17 @@ export async function submitAvatarJob(args: {
             // KINEO-HOLLYWOOD-HOST-2026-07-13 — callers may override with an
             // enriched prompt (host scenes add character/style sheets);
             // default keeps every existing presenter render identical.
-            prompt: args.performancePrompt?.trim() || PRESENTER_PERFORMANCE_PROMPT,
+            prompt: performancePrompt,
           }
-        : {
+        : args.engine === 'omnihuman'
+          ? {
+              image_url: args.imageUrl,
+              audio_url: args.audioUrl,
+              resolution: args.resolution ?? '720p',
+              prompt: performancePrompt,
+              turbo_mode: false,
+            }
+          : {
             image_url: args.imageUrl,
             audio_url: args.audioUrl,
             resolution: args.resolution ?? '720p',

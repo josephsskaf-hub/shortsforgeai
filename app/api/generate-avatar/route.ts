@@ -39,8 +39,11 @@ import {
   submitAvatarJob,
   VEED_720P_USD_PER_SECOND,
   OMNIHUMAN_720P_USD_PER_SECOND,
+  PRESENTER_PRO_USD_PER_SECOND,
   PRESENTER_USD_PER_SECOND,
+  performancePromptFor,
   type AvatarEngine,
+  type PerformanceStyle,
 } from '@/lib/avatar/veed'
 import { synthesizeWithVoice } from '@/lib/avatar/voice'
 import { getPixabayVideoForQueries } from '@/lib/pixabay'
@@ -155,6 +158,9 @@ export async function POST(req: NextRequest) {
       // person already IN a stadium wearing the jersey), the avatar must FILL
       // the whole video: no stock b-roll cutaways, length = the narration.
       noBroll?: boolean
+      // Trusted performance preset. The route maps this enum to server-owned
+      // prompts; arbitrary client prompt text is never forwarded to fal.
+      performanceStyle?: 'natural' | 'energetic'
     }
     try {
       body = await req.json()
@@ -168,7 +174,11 @@ export async function POST(req: NextRequest) {
     }
 
     const dryRun = body.dryRun === true
-    const hookMode = body.avatarMode === 'hook'
+    const noBroll = body.noBroll === true
+    // A hook render is only valid when b-roll exists to carry the remaining
+    // timeline. Otherwise the composer would stretch an ~8s avatar over the
+    // full narration and produce a frozen/black tail.
+    const hookMode = body.avatarMode === 'hook' && !noBroll
 
     // Source must be OUR storage URL (uploaded via /api/avatar/upload) —
     // never an arbitrary external URL (no SSRF / hot-linking surface).
@@ -179,12 +189,15 @@ export async function POST(req: NextRequest) {
     // Avatar Studio — video source takes precedence and forces the lipsync engine.
     const avatarSourceVideoUrl = (body.avatarSourceVideoUrl ?? '').trim()
     const videoMode = avatarSourceVideoUrl.length > 0
-    // KINEO-PRESENTER-2026-07-10 — 'presenter' (Kling AI Avatar v2) accepted.
+    // KINEO-PRESENTER-2026-07-10 — Kling AI Avatar v2 Standard + Pro accepted.
     const engine: AvatarEngine = videoMode
       ? 'lipsync'
       : body.engine === 'omnihuman' ? 'omnihuman'
+      : body.engine === 'presenter_pro' ? 'presenter_pro'
       : body.engine === 'presenter' ? 'presenter'
       : 'fabric'
+    const performanceStyle: PerformanceStyle =
+      body.performanceStyle === 'energetic' ? 'energetic' : 'natural'
     if (!dryRun && videoMode && !avatarSourceVideoUrl.startsWith(storagePrefix)) {
       return NextResponse.json({ error: 'Please upload your video first.' }, { status: 400 })
     }
@@ -224,8 +237,8 @@ export async function POST(req: NextRequest) {
     // KINEO-PRESENTER-2026-07-10 — per-engine cost: 'presenter' (Kling AI
     // Avatar v2 Standard, $0.0562/s → ~$3.37/60s real cost) charges 70
     // credits (~71% margin on Creator $/cr; Joseph subiu 60→70 em 10/07); the
-    // VEED/OmniHuman engines stay at 110 (real cost ~$9-9.60/60s). Keep in
-    // sync with creditCostFor() in compose/status ('presenter' → 70).
+    // Kling Presenter Pro, VEED, and OmniHuman stay at 110. Keep in sync with
+    // creditCostFor() in compose/status ('presenter' → 70, 'avatar' → 110).
     const AVATAR_CREDIT_COST = engine === 'presenter' ? 70 : 110
     if (!dryRun) {
       const { data: avProfile } = await supabase
@@ -323,6 +336,18 @@ export async function POST(req: NextRequest) {
     }
     const realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
 
+    // OmniHuman 1.5 at 720p hard-caps audio at 60 seconds. Reject before any
+    // upload/provider submit so the user gets a clear message and spends no
+    // credits. Voice-only dry runs remain available for longer scripts.
+    if (!dryRun && engine === 'omnihuman' && realAudioDuration > 60) {
+      return NextResponse.json(
+        {
+          error: `Pro body & gestures supports up to 60 seconds. Your narration is ${realAudioDuration.toFixed(1)} seconds — shorten the script and try again.`,
+        },
+        { status: 422 },
+      )
+    }
+
     let voiceoverUrl: string
     try {
       voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer)
@@ -371,6 +396,7 @@ export async function POST(req: NextRequest) {
       audioUrl: avatarAudioUrl,
       resolution: '720p',
       engine,
+      performancePrompt: performancePromptFor(engine, performanceStyle),
     })
     if (!requestId) {
       // Protection rule: nothing was (or ever will be at this point) charged.
@@ -418,7 +444,7 @@ export async function POST(req: NextRequest) {
     // Scene mode → no cutaways: the avatar (already in the scene) carries the
     // whole video, so it stays "you in the stadium" the entire time and the
     // length follows the narration (no b-roll padding stretching it out).
-    const clipUrls = body.noBroll === true
+    const clipUrls = noBroll
       ? []
       : await fetchCutawayClips(queries, narration, avatarHookSeconds != null ? 6 : 3)
 
@@ -428,6 +454,7 @@ export async function POST(req: NextRequest) {
     const generationId = randomUUID()
     const usdPerSecond =
       engine === 'presenter' ? PRESENTER_USD_PER_SECOND
+      : engine === 'presenter_pro' ? PRESENTER_PRO_USD_PER_SECOND
       : engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND
       : VEED_720P_USD_PER_SECOND
     console.log(
