@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuthRedirect } from '@/lib/authRedirect'
 
 // Activation-first: new users go straight to /generate to make their first
 // free Short (3 free credits) — product value BEFORE the paywall. The Google
 // Ads registration conversion still fires via ?signup=1 (handled in
 // GenerateClient). Returning users go to /generate (or an explicit `next`).
-function resolveDestination(rawNext: string | null): string {
-  if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//')) return '/generate'
-  return rawNext
-}
-
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -37,7 +33,7 @@ export async function GET(request: Request) {
       // checkout endpoint came from a buy click that bounced on auth. Resuming
       // the purchase beats the activation flow (they're about to PAY); every
       // other new user keeps the /generate?signup=1 onboarding.
-      const safeNext = resolveDestination(rawNext)
+      const safeNext = resolveAuthRedirect(rawNext)
       const isCheckoutNext =
         safeNext.startsWith('/api/stripe/checkout') || safeNext.startsWith('/api/paypal/checkout')
       let destinationPath = safeNext

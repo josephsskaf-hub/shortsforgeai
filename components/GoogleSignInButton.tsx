@@ -2,19 +2,24 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { trackCheckoutAuthStep, type AuthSurface } from '@/lib/authAnalytics'
 
 type Props = {
   redirectTo?: string
   onError?: (message: string) => void
   label?: string
+  analyticsSurface?: AuthSurface
 }
 
-export default function GoogleSignInButton({ redirectTo, onError, label }: Props) {
+export default function GoogleSignInButton({ redirectTo, onError, label, analyticsSurface }: Props) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
     setLoading(true)
+    if (redirectTo && analyticsSurface) {
+      trackCheckoutAuthStep('method_selected', analyticsSurface, redirectTo, 'google')
+    }
     try {
       const origin =
         typeof window !== 'undefined' ? window.location.origin : ''

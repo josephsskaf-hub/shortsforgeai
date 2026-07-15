@@ -8,21 +8,17 @@ import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
 import { trackSignupSource } from '@/lib/analytics'
 import { isDisposableEmail } from '@/lib/emailValidation'
+import { normalizeInternalRedirect } from '@/lib/authRedirect'
+import { trackCheckoutAuthStep } from '@/lib/authAnalytics'
 
 type Strength = { level: 0 | 1 | 2 | 3 | 4; label: string; color: string }
 
 // KINEO-CHECKOUT-RESUME-2026-07-07 — honor ?redirect (same-origin paths only) so
 // buyers bounced off checkout resume their purchase after signup. Mirrors the
 // safeRedirect guard in the login page.
-function safeRedirect(raw: string | null): string | null {
-  if (!raw) return null
-  if (!raw.startsWith('/') || raw.startsWith('//')) return null
-  return raw
-}
-
 function activationRedirectFromSearch(search: string): string {
   const params = new URLSearchParams(search)
-  const explicitRedirect = safeRedirect(params.get('redirect'))
+  const explicitRedirect = normalizeInternalRedirect(params.get('redirect'))
   if (explicitRedirect) return explicitRedirect
 
   // Carry the homepage idea through auth on a local activation URL only.
@@ -64,13 +60,17 @@ export default function SignupPage() {
   const [authSearch, setAuthSearch] = useState('')
   const [activationRedirect, setActivationRedirect] = useState('/generate?welcome=1')
   useEffect(() => {
+    const nextDestination = activationRedirectFromSearch(window.location.search)
     setAuthSearch(window.location.search)
-    setActivationRedirect(activationRedirectFromSearch(window.location.search))
+    setActivationRedirect(nextDestination)
 
     // KINEO-RECOVERY-2026-07-15 — the landing form is a plain GET for maximum
     // resilience. Count its arrival here, once per browser navigation, so the
     // hero → signup rate is measurable without risking a blocked submit.
     const params = new URLSearchParams(window.location.search)
+    if (params.get('reason') === 'checkout') {
+      trackCheckoutAuthStep('page_view', 'signup_page', nextDestination)
+    }
     const prompt = (params.get('prompt') ?? '').trim()
     if (params.get('utm_source') === 'homepage' && prompt) {
       const marker = `kineo_hero_submit:${prompt.slice(0, 120)}`
@@ -96,6 +96,7 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
     const nextDestination = activationRedirectFromSearch(window.location.search)
+    trackCheckoutAuthStep('method_selected', 'signup_page', nextDestination, 'email')
 
     // KINEO-DISPOSABLE-BLOCK-2026-07-06 — reject temp-mail signups BEFORE they
     // hit Supabase. Free plan = 2 real videos, so throwaway inboxes are pure
@@ -139,6 +140,7 @@ export default function SignupPage() {
       password,
     })
     if (signInError) {
+      trackCheckoutAuthStep('confirmation_required', 'signup_page', nextDestination, 'email')
       setSuccess(true)
       setLoading(false)
       return
@@ -181,6 +183,7 @@ export default function SignupPage() {
     // #383 — record signup attribution (gclid / utm_source / country). Fire-and-
     // forget; never awaited, never throws — cannot block or break the signup.
     trackSignupSource()
+    trackCheckoutAuthStep('completed', 'signup_page', nextDestination, 'email')
 
     // Activation-first onboarding: resume the homepage prompt in /generate.
     // A validated explicit redirect still takes priority for pending checkout.
@@ -438,7 +441,7 @@ export default function SignupPage() {
 
                 {/* KINEO-CHECKOUT-RESUME-2026-07-07 — OAuth signups also resume
                     a pending checkout via the auth callback's ?next param. */}
-                <GoogleSignInButton redirectTo={activationRedirect} onError={(msg) => setError(msg)} />
+                <GoogleSignInButton redirectTo={activationRedirect} analyticsSurface="signup_page" onError={(msg) => setError(msg)} />
 
                 {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
                     Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}

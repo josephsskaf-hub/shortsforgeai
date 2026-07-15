@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { resolveAuthRedirect } from '@/lib/authRedirect'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -57,10 +58,7 @@ export async function updateSession(request: NextRequest) {
     // checkout (expired API session) → /login?redirect=... → middleware saw a
     // session → /dashboard, silently eating the purchase. Same-origin only.
     const rawRedirect = request.nextUrl.searchParams.get('redirect')
-    const safe =
-      rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
-        ? rawRedirect
-        : '/dashboard'
+    const safe = resolveAuthRedirect(rawRedirect, '/dashboard')
     const dest = request.nextUrl.clone()
     const qIdx = safe.indexOf('?')
     dest.pathname = qIdx === -1 ? safe : safe.slice(0, qIdx)

@@ -2,13 +2,29 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import GoogleSignInButton from '@/components/GoogleSignInButton'
+import { normalizeInternalRedirect } from '@/lib/authRedirect'
+import { trackCheckoutAuthStep } from '@/lib/authAnalytics'
 
 interface AuthModalProps {
   onClose: () => void
   defaultTab?: 'login' | 'signup'
+  redirectTo?: string
 }
 
-export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalProps) {
+function getModalDestination(explicitRedirect?: string): string {
+  const explicit = normalizeInternalRedirect(explicitRedirect)
+  if (explicit) return explicit
+  if (typeof window === 'undefined') return '/generate'
+
+  const current = normalizeInternalRedirect(
+    `${window.location.pathname}${window.location.search}${window.location.hash}`
+  )
+  if (!current || /^\/(?:login|signup)(?:[/?#]|$)/.test(current)) return '/generate'
+  return current
+}
+
+export default function AuthModal({ onClose, defaultTab = 'signup', redirectTo }: AuthModalProps) {
   const supabase = createClient()
 
   const [tab, setTab] = useState<'login' | 'signup'>(defaultTab)
@@ -18,6 +34,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
   const [error, setError] = useState<string | null>(null)
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [destination, setDestination] = useState('/generate')
 
   function switchTab(t: 'login' | 'signup') {
     setTab(t)
@@ -35,10 +52,20 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
+  // Keep the exact in-app intent alive across password auth, email
+  // confirmation and OAuth. This includes prompt, plan, intro and attribution
+  // parameters, but never accepts an external destination.
+  useEffect(() => {
+    const nextDestination = getModalDestination(redirectTo)
+    setDestination(nextDestination)
+    trackCheckoutAuthStep('page_view', 'auth_modal', nextDestination)
+  }, [redirectTo])
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    trackCheckoutAuthStep('method_selected', 'auth_modal', destination, 'email')
 
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -61,7 +88,8 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     // Hard navigate so the Next.js middleware sees the freshly-set Supabase
     // auth cookies on the next request. router.refresh raced the cookie sync
     // and left the modal stuck on the loading button.
-    window.location.assign('/generate')
+    trackCheckoutAuthStep('completed', 'auth_modal', destination, 'email')
+    window.location.assign(destination)
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -69,12 +97,13 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     setLoading(true)
     setError(null)
     setEmailAlreadyExists(false)
+    trackCheckoutAuthStep('method_selected', 'auth_modal', destination, 'email')
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`,
       },
     })
 
@@ -108,7 +137,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     fetch('/api/send-welcome', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, activationPath: destination }),
     }).catch(() => {/* ignore email errors */})
 
     // Try immediate sign-in (if email confirmation is disabled).
@@ -116,8 +145,10 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
     // funnel — not straight into the generator.
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (!signInError) {
-      window.location.assign('/')
+      trackCheckoutAuthStep('completed', 'auth_modal', destination, 'email')
+      window.location.assign(destination)
     } else {
+      trackCheckoutAuthStep('confirmation_required', 'auth_modal', destination, 'email')
       setEmailSent(true)
       setLoading(false)
     }
@@ -254,6 +285,31 @@ export default function AuthModal({ onClose, defaultTab = 'signup' }: AuthModalP
                     ? 'Create your free account and start generating faceless videos in minutes.'
                     : 'Sign in to access your account and continue creating videos.'}
                 </p>
+              </div>
+
+              {destination.startsWith('/api/stripe/checkout') && (
+                <div
+                  role="status"
+                  className="rounded-xl px-4 py-3 text-xs mb-4"
+                  style={{ background: 'rgba(41,151,255,.08)', border: '1px solid rgba(41,151,255,.28)', color: '#2997ff', lineHeight: 1.5 }}
+                >
+                  Your selected plan and intro price are saved. Continue below and we&apos;ll take you straight back to secure checkout.
+                </div>
+              )}
+
+              <GoogleSignInButton
+                redirectTo={destination}
+                analyticsSurface="auth_modal"
+                onError={(message) => setError(message)}
+                label={tab === 'signup' ? 'Create account with Google' : 'Sign in with Google'}
+              />
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px" style={{ background: 'var(--border2)' }} />
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                  or continue with email
+                </span>
+                <div className="flex-1 h-px" style={{ background: 'var(--border2)' }} />
               </div>
 
               {/* Form */}

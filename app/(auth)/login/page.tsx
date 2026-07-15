@@ -7,19 +7,15 @@ import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
 import { trackSignupSource } from '@/lib/analytics'
+import { resolveAuthRedirect } from '@/lib/authRedirect'
+import { trackCheckoutAuthStep } from '@/lib/authAnalytics'
 
 // Only honor redirects that stay on our own site, so a malicious referrer
 // can't bounce a logged-in user out to an external phishing page.
-function safeRedirect(raw: string | null): string {
-  if (!raw) return '/generate'
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/generate'
-  return raw
-}
-
 function getRedirect(): string {
   if (typeof window === 'undefined') return '/dashboard'
   const params = new URLSearchParams(window.location.search)
-  return safeRedirect(params.get('redirect'))
+  return resolveAuthRedirect(params.get('redirect'))
 }
 
 // KINEO-CHECKOUT-RESUME-2026-07-07 — when checkout bounces a buyer here
@@ -44,8 +40,12 @@ export default function LoginPage() {
   // (state, not inline window read, to avoid an SSR hydration mismatch).
   const [authSearch, setAuthSearch] = useState('')
   useEffect(() => {
-    setCheckoutResume(isCheckoutResume())
+    const resumingCheckout = isCheckoutResume()
+    setCheckoutResume(resumingCheckout)
     setAuthSearch(window.location.search)
+    if (resumingCheckout) {
+      trackCheckoutAuthStep('page_view', 'login_page', getRedirect())
+    }
   }, [])
 
   useEffect(() => {
@@ -64,6 +64,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    const destination = getRedirect()
+    trackCheckoutAuthStep('method_selected', 'login_page', destination, 'email')
 
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -87,10 +89,11 @@ export default function LoginPage() {
     // users who confirm email later, then log in). Fire-and-forget, de-duped per
     // session, only fills null columns — never blocks or breaks login.
     trackSignupSource()
+    trackCheckoutAuthStep('completed', 'login_page', destination, 'email')
 
     // Hard navigate so the Next.js middleware sees the freshly-set Supabase
     // auth cookies on the next request.
-    window.location.assign(getRedirect())
+    window.location.assign(destination)
   }
 
   return (
@@ -313,13 +316,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            <GoogleSignInButton redirectTo={getRedirect()} onError={(msg) => setError(msg)} />
+            <GoogleSignInButton redirectTo={getRedirect()} analyticsSurface="login_page" onError={(msg) => setError(msg)} />
 
             {/* Apple Sign In — kept in code, hidden until Apple Developer is configured.
                 Reactivate by setting NEXT_PUBLIC_ENABLE_APPLE=true (see docs/oauth-setup.md). */}
             {process.env.NEXT_PUBLIC_ENABLE_APPLE === 'true' && (
               <div className="mt-3">
-                <AppleSignInButton onError={(msg) => setError(msg)} />
+                <AppleSignInButton redirectTo={getRedirect()} onError={(msg) => setError(msg)} />
               </div>
             )}
 
