@@ -1,5 +1,10 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import KineoLanding from './KineoLanding'
+
+export const metadata: Metadata = {
+  alternates: { canonical: 'https://www.usekineo.com/' },
+}
 
 // Push #066 — homepage auth hydration fix.
 //

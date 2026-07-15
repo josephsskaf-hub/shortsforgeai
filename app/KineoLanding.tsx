@@ -127,11 +127,12 @@ const KLP_CSS = `
 .klp .hero-center .composer{margin:48px auto 0;max-width:640px;min-height:auto;text-align:left}
 .klp .hero-center .composer .ci{min-height:104px}
 .klp .hero-center .trust{text-align:center}
-.klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(6,1fr);gap:12px;max-width:1160px;margin:52px auto 0}
+.klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:820px;margin:52px auto 0}
 .klp .hero-gallery .vcard{aspect-ratio:9/16;padding:13px}
 .klp .hero-gallery .vcard .vt{font-size:12.5px}
+.klp .hero-gallery .lab{z-index:2;background:rgba(0,0,0,.88);color:#f5f5f7;letter-spacing:.035em}
 .klp .gallery-cap{position:relative;z-index:1;margin-top:20px;text-align:center;font-size:13.5px;color:var(--muted2)}
-@media(max-width:900px){.klp .hero-gallery{grid-template-columns:repeat(3,1fr);max-width:560px}}
+@media(max-width:900px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:420px}}
 @media(max-width:560px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:380px}}
 .klp .platforms{position:relative;z-index:1;margin:22px auto 0;text-align:center;font-size:12px;font-weight:600;letter-spacing:.09em;color:var(--muted2);text-transform:uppercase}
 .klp .platforms b{color:var(--muted);font-weight:700}
@@ -185,7 +186,7 @@ export default function KineoLanding({ initialUser }: Props) {
             </div>
           </div>
           <HeroGallery />
-          <p className="gallery-cap">Each one made from a single topic — script, voice, footage and captions, automatically.</p>
+          <p className="gallery-cap">Real Kineo exports, not mockups. Each started with one topic — script, voice, footage and captions, automatically.</p>
           <div className="platforms">Built for <b>YouTube Shorts</b> · <b>TikTok</b> · <b>Reels</b></div>
         </div>
       </header>

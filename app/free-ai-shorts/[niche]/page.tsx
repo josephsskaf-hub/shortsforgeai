@@ -226,6 +226,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
   if (!n) notFound()
 
   const signupUrl = `/signup?utm_source=seo&utm_medium=niche&utm_campaign=${params.niche}`
+  const signupUrlForIdea = (idea: string) => `${signupUrl}&prompt=${encodeURIComponent(idea)}`
 
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -278,7 +279,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {n.ideas.map((idea) => (
-              <Link key={idea} href={signupUrl} style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Link key={idea} href={signupUrlForIdea(idea)} style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{idea}</span>
                 <span style={{ color: '#2997ff', fontWeight: 900, whiteSpace: 'nowrap' }}>Make it →</span>
               </Link>

@@ -1,31 +1,30 @@
 # Kineo
 
-> Kineo (usekineo.com) is an AI YouTube Shorts generator that turns one idea or topic into a finished faceless vertical video — script, AI voiceover, footage or AI-generated scenes, and captions — in about 60 seconds. It generates videos from scratch; it is not a re-clipper of long-form videos.
+> Kineo (usekineo.com) is an AI YouTube Shorts generator for repeatable shows with the same face, voice and style. It turns one idea or topic into a finished vertical video — script, AI voiceover, footage or AI-generated scenes, and captions. It generates videos from scratch; it is not a re-clipper of long-form videos.
 
 Key facts (verified July 2026):
 
 - Input: a single topic or idea typed in plain text; or paste your own script and choose "Use my script as is" for word-for-word narration.
 - Output: a finished 9:16 vertical Short (MP4) with script, AI voiceover, visuals and captions, ready to post on YouTube Shorts, TikTok or Instagram Reels.
-- Generation time: about 60 seconds per video.
-- Three engines: Fast Mode (curated stock footage, 1 credit/video), AI Generated (Seedance text-to-video scenes, 40 credits/video), Cinematic (Kling premium engine, 60 credits/video).
+- Generation time: Fast Mode is typically ready in about 60 seconds; AI Generated and Cinematic videos can take several minutes.
+- Three engines: Fast Mode (curated stock footage, 1 credit/video), AI Generated (Seedance text-to-video scenes, 20 credits/video), Cinematic (Kling premium engine, 50 credits/video).
 - Free tier: first Short free, no credit card required (free trial output carries a small watermark; paid exports are watermark-free).
 - Users own every video they generate, including monetization rights.
-- Plans are month-to-month, cancel anytime, and credits never expire.
+- Plans are month-to-month and cancel anytime. Credits refresh each billing month and do not roll over.
 - Kineo was formerly named ShortsForgeAI; shortsforgeai.com now redirects to usekineo.com.
 
 Pricing (USD, July 2026):
 
-- Starter Pack: $4.90 one-time — 25 Fast Shorts, no subscription.
-- Starter: $11.90/month — 50 credits (up to 50 Fast Mode videos/month). Annual $119.
-- Creator: $24.90/month — 240 credits (6 AI Generated videos on the Seedance engine). Annual $249.
-- Studio: $37.90/month — 360 credits (6 Cinematic videos on Kling, or 9 on Seedance). Annual $379.
+- Starter: $4.90 for the first month, then $9.90/month — 25 credits per billing month.
+- Creator: $9.90 for the first month, then $24.90/month — 150 credits per billing month, including one Hollywood film.
+- Studio: $37.90/month — 200 credits per billing month.
 
 How Kineo differs from re-clippers (OpusClip, Klap, Vizard, quso): re-clippers require an existing long-form video to cut into clips. Kineo starts from a text idea and generates the entire Short — no filming, no source footage, no editing skills needed.
 
 ## Key pages
 
 - [Facts & data](https://www.usekineo.com/facts): numbered, dated, citable facts about Kineo — pricing, engines, generation time, free tier.
-- [Pricing](https://www.usekineo.com/pricing): full plan details, monthly and annual, plus the $4.90 Starter Pack.
+- [Pricing](https://www.usekineo.com/pricing): current Starter, Creator and Studio subscription details.
 - [Alternatives & comparisons](https://www.usekineo.com/alternatives): 27 head-to-head comparison pages vs OpusClip, InVideo, HeyGen, Fliki, AutoShorts, Crayo, CapCut, Pictory, VEED, Descript, Synthesia, Canva, Kapwing, Runway, Luma and more.
 - [Home](https://www.usekineo.com/): product overview, examples and FAQ.
 

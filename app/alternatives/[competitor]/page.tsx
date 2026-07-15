@@ -146,7 +146,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Transparent gesture clips (WebM alpha) for courses/slides', sfa: true, them: false },
       { feature: 'Viral-structure scripts (hook → payoff) built-in', sfa: true, them: false },
       { feature: 'Also does fully faceless Shorts (no avatar at all)', sfa: true, them: false },
-      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: '$29/mo+' },
+      { feature: 'Starting price', sfa: '$4.90 first month · then $9.90/mo', them: '$29/mo+' },
     ],
     faq: [
       {
@@ -159,7 +159,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       },
       {
         q: 'Is Kineo cheaper than HeyGen?',
-        a: 'Yes — Kineo plans start at $9.90/month (HeyGen starts around $29), there’s a $4.90 one-time pack, your first Short is free with no credit card, and every plan has a 7-day money-back guarantee.',
+        a: 'Yes — Kineo Starter is $4.90 for the first month and then $9.90/month (HeyGen starts around $29). Your first Short is free with no credit card.',
       },
     ],
   },
@@ -468,12 +468,12 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Use your own footage as scenes', sfa: true, them: false },
       { feature: 'Also does fully faceless Shorts (no avatar at all)', sfa: true, them: false },
       { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'Corporate / training' },
-      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
+      { feature: 'Starting price', sfa: '$4.90 first month · then $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
       { q: 'What is the best Synthesia alternative for YouTube Shorts?', a: 'Kineo — it gives creators a talking AI Presenter with studio lip-sync AND the finished Short: viral script, AI scenes or your own footage, captions and your own cloned voice, from $9.90/mo.' },
       { q: 'Does Kineo have an AI presenter like Synthesia?', a: 'Yes. Kineo’s AI Presenter animates one photo into a talking video with perfect lip-sync, and Character Lock keeps the same face across every video — ideal for a channel host or brand persona.' },
-      { q: 'Is Kineo cheaper than Synthesia?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card, plus a $4.90 one-time pack. The bigger difference is scope: Synthesia makes the avatar video, Kineo delivers the whole ready-to-post Short.' },
+      { q: 'Is Kineo cheaper than Synthesia?', a: 'Kineo Starter is $4.90 for the first month and then $9.90/month, with a free first Short and no credit card. The bigger difference is scope: Synthesia makes the avatar video, Kineo delivers the whole ready-to-post Short.' },
     ],
   },
   canva: {
@@ -569,12 +569,12 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Use your own footage as scenes', sfa: true, them: false },
       { feature: 'Also does fully faceless Shorts', sfa: true, them: false },
       { feature: 'Built for YouTube Shorts / TikTok / Reels', sfa: true, them: 'Talking-head focus' },
-      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
+      { feature: 'Starting price', sfa: '$4.90 first month · then $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
       { q: 'What is the best Synthesys alternative for YouTube Shorts?', a: 'Kineo — AI Presenter with studio lip-sync, voice cloning, Character Lock for a consistent host, plus the whole Short (script, scenes, captions) generated from one idea. From $9.90/mo.' },
       { q: 'Does Kineo do voice cloning like Synthesys?', a: 'Yes — record about a minute of audio and every video can be narrated in your cloned voice. You can also upload a ready voiceover and Kineo syncs the captions to it.' },
-      { q: 'Is Kineo cheaper than Synthesys?', a: 'Kineo starts at $9.90/month with a free first Short and no credit card, plus a $4.90 one-time pack. And you get the finished Short, not just the avatar or the voice.' },
+      { q: 'Is Kineo cheaper than Synthesys?', a: 'Kineo Starter is $4.90 for the first month and then $9.90/month, with a free first Short and no credit card. And you get the finished Short, not just the avatar or the voice.' },
     ],
   },
   // KINEO-SEO-COMPARE-2026-07-11 — reposicionada pós-AI Presenter.
@@ -594,7 +594,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Writes the viral script for you', sfa: true, them: false },
       { feature: 'Also does fully faceless Shorts', sfa: true, them: false },
       { feature: 'Ready-to-post 9:16 in minutes', sfa: true, them: 'Needs your own pipeline' },
-      { feature: 'Starting price', sfa: 'From $9.90/mo · $4.90 pack', them: 'Paid plans' },
+      { feature: 'Starting price', sfa: '$4.90 first month · then $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
       { q: 'What is the best D-ID alternative for creators (no coding)?', a: 'Kineo — the AI Presenter turns one photo + your script into a talking video with studio lip-sync, and the platform finishes the whole Short around it: script, scenes, captions, your own voice. No API, no code.' },

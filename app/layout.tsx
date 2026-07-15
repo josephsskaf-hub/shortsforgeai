@@ -21,9 +21,10 @@ export const viewport: Viewport = {
 // Score alignment. Matching keyword density between ad copy and landing
 // page increases relevance score → better Ad Rank → higher CTR.
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.usekineo.com'),
   title: 'Kineo — AI YouTube Shorts Generator · From $9.90/mo',
   description:
-    'Turn any topic into a viral YouTube Short in 60 seconds. AI writes the script, finds footage, adds voiceover & captions. From $9.90/mo · 7-day money-back guarantee.',
+    'Launch a repeatable AI Shorts show with the same face, voice and style. Kineo builds the script, voice, captions and scenes. First Short free; plans from $9.90/mo.',
   keywords: [
     'YouTube Shorts generator',
     'AI YouTube Shorts creator',
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'Type a topic. AI writes, voices & edits your YouTube Short automatically. From $9.90/mo · 7-day money-back guarantee · No editing skills needed.',
+      'Launch a repeatable AI Shorts show with the same face, voice and style. Script, voice, captions and scenes are built for you.',
     url: 'https://www.usekineo.com',
     siteName: 'Kineo',
     images: [
@@ -54,7 +55,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'Type a topic. AI writes, voices & edits your YouTube Short in 60 seconds. From $9.90/mo · Try free today.',
+      'Launch a repeatable AI Shorts show with the same face, voice and style. First Short free; plans from $9.90/mo.',
     images: ['https://www.usekineo.com/og-image.png'],
   },
   icons: {

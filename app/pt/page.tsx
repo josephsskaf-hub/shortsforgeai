@@ -1,6 +1,6 @@
 // #483 — Landing em português (Brasil). Aproveita as vantagens injustas do
 // projeto no BR: público de "canal dark com IA" e
-// preço em Real. Estática, no sitemap, com canonical + hreflang. CTA
+// oferta recorrente vigente. Estática, no sitemap, com canonical + hreflang. CTA
 // para /signup com UTM pt/brazil para o funil atribuir o tráfego brasileiro.
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
   title: 'Kineo — Crie vídeos para canal dark com IA (em português)',
   description:
-    'Transforme uma ideia em um Short faceless pronto (roteiro + voz IA + imagens + legendas) em ~60s. Em português, com preço em Real. A partir de R$24,90. Primeiro vídeo grátis.',
+    'Transforme uma ideia em um Short faceless pronto (roteiro + voz IA + imagens + legendas). Em português. Primeiro vídeo grátis; Starter por R$24,90 no primeiro mês.',
   alternates: {
     canonical: 'https://www.usekineo.com/pt',
     languages: { 'en-US': 'https://www.usekineo.com/', 'pt-BR': 'https://www.usekineo.com/pt' },
@@ -34,8 +34,8 @@ const faq = [
     a: 'Sim — é exatamente para isso. Você digita o tema e recebe um Short vertical pronto, sem aparecer, sem filmar e sem editar: roteiro, narração com voz de IA, imagens e legendas, tudo no automático.',
   },
   {
-    q: 'Preciso pagar em dólar?',
-    a: 'Não. Você paga em Real. Pacotes a partir de R$24,90 (one-time) — os créditos não expiram.',
+    q: 'Como funciona o preço?',
+    a: 'O primeiro Short é grátis, sem cartão. No Brasil, o Starter custa R$24,90 no primeiro mês e depois R$49,90/mês; os créditos renovam a cada ciclo mensal.',
   },
   {
     q: 'Em quanto tempo o vídeo fica pronto?',
@@ -77,7 +77,7 @@ export default function PtLandingPage() {
             Criar meu primeiro vídeo grátis →
           </Link>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
-            Primeiro vídeo <b style={{ color: '#2997ff' }}>grátis</b> · sem cartão · preço em Real
+            Primeiro vídeo <b style={{ color: '#2997ff' }}>grátis</b> · sem cartão · cobrança em Real · cancele quando quiser
           </p>
         </section>
 
@@ -101,12 +101,12 @@ export default function PtLandingPage() {
 
         {/* Pricing */}
         <section style={{ marginTop: 48 }}>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.025em', textAlign: 'center', margin: '0 0 6px', color: '#f5f5f7' }}>Preço em Real</h2>
-          <p style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem', margin: '0 0 18px' }}>Pagamento único · sem assinatura · créditos não expiram</p>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 600, letterSpacing: '-0.025em', textAlign: 'center', margin: '0 0 6px', color: '#f5f5f7' }}>Planos mensais em Real</h2>
+          <p style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem', margin: '0 0 18px' }}>Créditos renovam todo mês · cancele quando quiser</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             {[
-              { price: 'R$50', credits: '90 créditos', detail: '3 vídeos AI Gen ou 90 vídeos rápidos' },
-              { price: 'R$90', credits: '180 créditos', detail: '6 vídeos AI Gen ou 180 vídeos rápidos' },
+              { price: 'R$24,90 hoje', credits: 'Starter · 25 créditos/mês', detail: 'Renova por R$49,90/mês em 30 dias' },
+              { price: 'R$49,90 hoje', credits: 'Creator · 150 créditos/mês', detail: 'Renova por R$99,90/mês em 30 dias' },
             ].map((p) => (
               <div key={p.price} style={{ ...CARD, borderRadius: 20, padding: '22px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 600, color: '#f5f5f7' }}>{p.price}</div>
@@ -122,7 +122,7 @@ export default function PtLandingPage() {
         <section style={{ marginTop: 44, ...CARD, borderRadius: 20, padding: '20px 22px' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, letterSpacing: '-0.025em', margin: '0 0 8px', color: '#f5f5f7' }}>Kineo x Opus Clip</h2>
           <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.95rem' }}>
-            O Opus Clip <b>corta</b> vídeos longos que você já gravou e cobra em dólar. O Kineo <b>cria o vídeo do zero</b> a partir de uma ideia, 100% faceless, em português, com preço em Real. Para canal dark, é a ferramenta certa.
+            O Opus Clip <b>corta</b> vídeos longos que você já gravou. O Kineo <b>cria o vídeo do zero</b> a partir de uma ideia, 100% faceless, em português e com cobrança em Real. Para canal dark, é a ferramenta certa.
           </p>
         </section>
 

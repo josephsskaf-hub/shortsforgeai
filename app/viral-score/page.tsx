@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   title: 'Will It Go Viral? — Free Short Idea Score | Kineo',
   description:
     'Paste any YouTube Shorts / TikTok idea and get an instant viral score — hook, retention, trend-fit and shareability — from Kineo’s viral engine. Free, no signup.',
-  alternates: { canonical: 'https://usekineo.com/viral-score' },
+  alternates: { canonical: 'https://www.usekineo.com/viral-score' },
   openGraph: {
     title: 'Will It Go Viral? — Free Short Idea Score',
     description: 'Score any Short idea in seconds. Free tool by Kineo.',
-    url: 'https://usekineo.com/viral-score',
+    url: 'https://www.usekineo.com/viral-score',
     type: 'website',
   },
   twitter: {

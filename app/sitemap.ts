@@ -14,9 +14,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '', priority: 1.0, freq: 'daily' },
     { path: '/pricing', priority: 0.9, freq: 'weekly' },
     { path: '/pt', priority: 0.9, freq: 'weekly' },
-    { path: '/start', priority: 0.8, freq: 'weekly' },
     { path: '/free-script-generator', priority: 0.8, freq: 'weekly' },
     { path: '/free-hook-generator', priority: 0.8, freq: 'weekly' },
+    { path: '/viral-score', priority: 0.8, freq: 'weekly' },
+    { path: '/ai-avatar', priority: 0.8, freq: 'weekly' },
     { path: '/partners', priority: 0.7, freq: 'weekly' },
     { path: '/youtube-shorts-from-topic', priority: 0.8, freq: 'weekly' },
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
@@ -25,9 +26,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/alternatives', priority: 0.8, freq: 'weekly' },
     // AEO/GEO — citable fact sheet for AI answer engines (linked in public/llms.txt).
     { path: '/facts', priority: 0.7, freq: 'weekly' },
-    { path: '/signup', priority: 0.7, freq: 'monthly' },
-    { path: '/login', priority: 0.4, freq: 'monthly' },
-    { path: '/referral', priority: 0.5, freq: 'monthly' },
     { path: '/terms', priority: 0.2, freq: 'monthly' },
     { path: '/privacy', priority: 0.2, freq: 'monthly' },
   ]

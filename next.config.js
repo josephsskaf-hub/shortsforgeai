@@ -15,7 +15,10 @@ const nextConfig = {
       // KINEO-RECOVERY-2026-07-15 — retire the stale campaign page at the
       // edge. A config redirect produces a real HTTP Location header even
       // when /start was previously statically generated.
-      { source: '/start', destination: '/signup?utm_source=start', permanent: false },
+      { source: '/start', destination: '/signup?utm_source=start', permanent: true },
+      // Retire the stale public founding offer without touching legacy buyer
+      // entitlements or private checkout handling.
+      { source: '/founding', destination: '/pricing', permanent: true },
       // Push #116 — legacy short alias for the thumbnail tool. The
       // sidebar + footer + every internal link uses /thumbnail-generator,
       // but a few external pings still hit /thumbnail.

@@ -26,62 +26,13 @@ const softwareApplicationSchema = {
   applicationCategory: 'MultimediaApplication',
   operatingSystem: 'Web',
   description:
-    'Kineo is an AI YouTube Shorts generator that turns any topic into a finished vertical video — script, voiceover, footage and captions — in about 60 seconds.',
+    'Kineo is an AI YouTube Shorts generator for repeatable shows with the same face, voice and style, including script, voiceover, scenes and captions.',
   offers: {
     '@type': 'AggregateOffer',
     lowPrice: '4.90',
     highPrice: '37.90',
     priceCurrency: 'USD',
   },
-}
-
-// Mirrors the #faq section in app/KineoLanding.tsx — keep both in sync if the
-// visible FAQ ever changes.
-const faqPageSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Is the video really mine to post?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. Everything Kineo makes is yours — download the MP4 and post it to YouTube, TikTok or Reels, monetize it, whatever you want.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Do I need any editing skills?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'None. You type one idea and the AI writes the script, records the voice, finds the footage and adds captions. You just download.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Is there a watermark?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Paid plans export clean, watermark-free MP4s. The free trial adds a small mark so you can test the output first.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I use my own script?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes — paste your script and pick “Use my script as is” and the AI narrates it word for word.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I cancel anytime?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Anytime, in one click. Plans are month to month and your credits never expire.',
-      },
-    },
-  ],
 }
 
 // Escape "<" so a value could never close the script tag early (defense in
@@ -100,10 +51,6 @@ export default function StructuredData() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={jsonLd(softwareApplicationSchema)}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={jsonLd(faqPageSchema)}
       />
     </>
   )
