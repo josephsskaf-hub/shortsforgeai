@@ -28,8 +28,11 @@ const FAQS: { q: string; a: string }[] = [
     // required... charged immediately") CONTRADIZIA o selo "First Short
     // free — no card" três telas acima. Conversion-killer clássico: o FAQ
     // é onde o indeciso vai tirar a última dúvida antes de clicar.
+    // KINEO-SPRINT-OFFER-2026-07-14 — dropped the "$4.90 one-time pack"
+    // mention: the pack has no public CTA anymore (single-offer cleanup),
+    // so naming it here would advertise a product the page doesn't sell.
     q: 'Do I need a credit card to start?',
-    a: 'No — your first Short is completely free and no card is asked. You only add a card if you decide to subscribe afterwards: Starter is $9.90/month, Creator $24.90/month, Studio $37.90/month, or a one-time $4.90 pack.',
+    a: 'No — your first Short is completely free and no card is asked. You only add a card if you decide to subscribe afterwards: Starter is $9.90/month, Creator $24.90/month, or Studio $37.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -165,10 +168,8 @@ export default function PricingPage() {
   // Push #171 — show a friendly "already subscribed" info banner instead of
   // silently redirecting to /generate when the API blocks a duplicate purchase.
   const [alreadySubscribed, setAlreadySubscribed] = useState(false)
-  // Push #116 — ROI calculator slider. Default starts at 5 Shorts/week
-  // (a credible "I post often" cadence) so the math reads as meaningful
-  // from the first paint.
-  const [shortsPerWeek, setShortsPerWeek] = useState<number>(5)
+  // KINEO-SPRINT-OFFER-2026-07-14 — ROI slider state removed with the widget
+  // (unverifiable "estimated views/month" promise — see note at the old block).
   // Push #117 — sticky mobile CTA bar shows after 300px scroll so phone
   // users always have the "Basic / Pro" choice in reach without
   // scrolling back up to the cards.
@@ -307,61 +308,12 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Push #116 — ROI calculator mini-widget. Maps Shorts/week →
-            monthly count and an estimated views-at-500-per-Short floor.
-            500 views is a deliberately conservative baseline so the
-            promise reads as plausible, not lottery. */}
-        <div
-          className="mx-auto mb-10 max-w-2xl rounded-2xl border p-5 sm:p-6"
-          style={{
-            background: 'rgba(255,255,255,.03)',
-            borderColor: 'rgba(255,255,255,.08)',
-          }}
-        >
-          <label
-            htmlFor="roi-slider"
-            className="block text-[12px] font-bold text-[#f5f5f7] mb-3"
-          >
-            How many Shorts per week do you want to post?
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              id="roi-slider"
-              type="range"
-              min={1}
-              max={21}
-              step={1}
-              value={shortsPerWeek}
-              onChange={(e) => setShortsPerWeek(Number(e.target.value))}
-              className="w-full accent-[#2997ff]"
-              style={{ flex: 1 }}
-            />
-            <div
-              className="rounded-lg px-3 py-1 text-[13px] font-black tabular-nums"
-              style={{
-                background: 'rgba(41,151,255,.10)',
-                border: '1px solid rgba(41,151,255,.32)',
-                color: '#2997ff',
-                minWidth: 64,
-                textAlign: 'center',
-              }}
-            >
-              {shortsPerWeek}/wk
-            </div>
-          </div>
-          <p className="mt-4 text-[13.5px] text-[#f5f5f7] leading-snug">
-            At <strong className="text-[#2997ff]">{shortsPerWeek}</strong> Shorts/week →{' '}
-            <strong className="text-[#2997ff]">{(shortsPerWeek * 4).toLocaleString()}</strong>{' '}
-            Shorts/month → estimated{' '}
-            <strong className="text-[#2997ff]">
-              {(shortsPerWeek * 4 * 500).toLocaleString()}
-            </strong>{' '}
-            views/month
-          </p>
-          <p className="mt-2 text-[12px] font-semibold text-[#86868b]">
-            Any plan pays for itself with just 1 viral Short.
-          </p>
-        </div>
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — ROI slider REMOVED. The
+            "estimated N views/month" math and "any plan pays for itself
+            with just 1 viral Short" were unverifiable promises (nobody can
+            guarantee views) sitting right above the buy buttons — classic
+            trust-killer for the skeptical buyer. The plan cards are the
+            hero now; nothing stands between the headline and them. */}
 
         {/* Push #267 — Free banner removed with Free card */}
 
@@ -392,66 +344,21 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* ROBO1-PRICE-2026-06-28 — free-first nudge + honest FOUNDING50
-            urgency directly above the plans. The discount % and seat count
-            mirror /founding (first 10 members, 50% off locked for life);
-            no fake countdown. The free-first line lowers the commitment by
-            reminding visitors they can try before they ever pay. */}
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — SINGLE OFFER cleanup. Three stacked
+            competing offers used to sit here (FOUNDING50 "50% for life" banner,
+            the Starter-intro strip, and — pre-13/07 — the $4.90 one-time pack).
+            A buyer arriving saw 3 different "deals" before the cards. Now the
+            plan cards ARE the offer (intro badge lives on each card); the only
+            thing above them is the honest free-first nudge. The one-time pack
+            endpoint (?pack=starter) still exists for the watermark unlock flow —
+            it just has no public CTA here. */}
         <div
           className="mx-auto mb-7 max-w-2xl rounded-2xl px-5 py-4 text-center"
           style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.4)' }}
         >
-          <p className="text-[13.5px] font-extrabold text-[#f5f5f7]">
-            🔑 Founding offer — the first <span style={{ color: '#2997ff' }}>10 members</span> lock <span style={{ color: '#2997ff' }}>50% off for life</span>.
-          </p>
-          <p className="mt-1.5 text-[12.5px] font-semibold text-[#86868b]">
+          <p className="text-[12.5px] font-semibold text-[#86868b]">
             Not sure yet? <Link href="/signup" className="font-bold text-[#2997ff] hover:text-[#2997ff]">Make your first Short free</Link> — no credit card needed.
           </p>
-        </div>
-
-        {/* KINEO-INTRO-MONTH-2026-07-13 — ROTA DE RECORRÊNCIA. O strip de
-            entrada era o pack $4.90 one-time: nossa oferta mais clicada
-            TERMINAVA a relação (compra, gasta, some — 0 assinaturas). Mesmo
-            preço de entrada, novo destino: 1º mês do Starter por $4.90,
-            renova $9.90, cancela quando quiser. O pack one-time continua
-            existindo como downsell no exit-intent (não some — desce). */}
-        <div className="mx-auto mb-7 max-w-2xl">
-          <button
-            type="button"
-            onClick={() => {
-              trackPricingEvent('intro_month_starter_clicked')
-              window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
-            }}
-            className="block w-full rounded-2xl px-5 py-4 text-left transition hover:bg-[rgba(41,151,255,0.10)]"
-            style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.5)', boxShadow: '0 0 28px rgba(41,151,255,0.10)', cursor: 'pointer' }}
-          >
-            <span className="mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[.12em]" style={{ background: 'rgba(41,151,255,0.14)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}>
-              ⚡ Cheapest way to start
-            </span>
-            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <span className="text-[15.5px] font-black text-[#f5f5f7]">
-                First month <span style={{ color: '#2997ff' }}>$4.90</span> — then $9.90/mo
-              </span>
-              <span className="text-[13px] font-extrabold" style={{ color: '#2997ff' }}>Start for $4.90 →</span>
-            </span>
-            <span className="mt-1.5 block text-[12px] font-semibold text-[#86868b]">
-              25 credits every month · watermark-free MP4s · cancel anytime — half price to see if it earns its keep.
-            </span>
-          </button>
-          {/* PAYPAL-2026-07-06 — one-time pack via PayPal ($4.90 USD). Hidden
-              until PayPal is verified working (PAYPAL_ENABLED). */}
-          {PAYPAL_ENABLED && (
-          <button
-            type="button"
-            onClick={() => {
-              trackPricingEvent('starter_pack_paypal_checkout_clicked')
-              window.location.href = '/api/paypal/checkout?pack=starter'
-            }}
-            className="mt-2 block w-full rounded-xl border border-white/[0.08] px-4 py-2 text-center text-[12.5px] font-bold text-[#f5f5f7] transition hover:bg-white/5 hover:border-[#2997ff]/40"
-          >
-            or get the 25-Short pack with <span style={{ color: '#009cde', fontWeight: 900 }}>Pay</span><span style={{ color: '#2997ff', fontWeight: 900 }}>Pal</span> ($4.90)
-          </button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
@@ -507,12 +414,20 @@ export default function PricingPage() {
                 {/* KINEO-INTRO-MONTH-2026-07-13 — badge do 1º mês com desconto
                     (monthly only). Starter $4.90 / Creator $9.90 na 1ª fatura;
                     o checkout aplica via ?intro=1 (handleBuy). */}
+                {/* KINEO-SPRINT-OFFER-2026-07-14 — renewal made explicit on the
+                    badge itself (price + when it renews + cancel anytime), so
+                    the intro can never read as the permanent price. */}
                 {billing === 'monthly' && (p.tier === 'starter' || p.tier === 'basic') && (
-                  <div
-                    className="mt-2 inline-block rounded-full px-2.5 py-1 text-[11px] font-black"
-                    style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}
-                  >
-                    🎁 First month {p.tier === 'starter' ? '$4.90' : '$9.90'} — applied at checkout
+                  <div className="mt-2">
+                    <div
+                      className="inline-block rounded-full px-2.5 py-1 text-[11px] font-black"
+                      style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}
+                    >
+                      🎁 First month {p.tier === 'starter' ? '$4.90' : '$9.90'} — applied at checkout
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-semibold text-[#86868b]">
+                      Renews at {p.price}/mo in 30 days — cancel anytime.
+                    </p>
                   </div>
                 )}
                 {'tagline' in p && p.tagline && (
@@ -686,13 +601,16 @@ export default function PricingPage() {
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Free
                   </th>
+                  {/* KINEO-SPRINT-OFFER-2026-07-14 — column emphasis moved
+                      Studio → Creator so the table agrees with the cards
+                      ("Most Popular" = Creator is the primary CTA). */}
                   <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Starter
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#2997ff]">
                     Creator
                   </th>
-                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#2997ff]">
+                  <th className="px-5 py-4 text-center text-[11px] font-extrabold uppercase tracking-[.14em] text-[#86868b]">
                     Studio
                   </th>
                 </tr>
@@ -779,8 +697,8 @@ export default function PricingPage() {
                     <td className="px-5 py-3.5 font-semibold text-[#f5f5f7]">{row.label}</td>
                     <td className="px-5 py-3.5 text-center text-[#86868b]">{row.free}</td>
                     <td className="px-5 py-3.5 text-center text-[#86868b]">{row.starter}</td>
-                    <td className="px-5 py-3.5 text-center text-[#86868b]">{row.basic}</td>
-                    <td className="px-5 py-3.5 text-center font-bold text-[#2997ff]">{row.pro}</td>
+                    <td className="px-5 py-3.5 text-center font-bold text-[#2997ff]">{row.basic}</td>
+                    <td className="px-5 py-3.5 text-center text-[#86868b]">{row.pro}</td>
                   </tr>
                 ))}
               </tbody>
@@ -919,6 +837,9 @@ export default function PricingPage() {
           }}
         >
           {/* #409 — Starter added to the sticky bar (was missing after the 3-tier launch) */}
+          {/* KINEO-SPRINT-OFFER-2026-07-14 — primary (filled blue) button moved
+              Studio → Creator so the sticky bar matches the card hierarchy
+              ("Most Popular" = Creator). Studio goes neutral. */}
           <button
             type="button"
             disabled={purchasing !== null && purchasing !== 'starter'}
@@ -944,25 +865,6 @@ export default function PricingPage() {
             onClick={() => handleBuy('basic')}
             style={{
               flex: 1,
-              padding: '12px 6px',
-              borderRadius: 10,
-              background: 'rgba(255,255,255,.06)',
-              border: '1px solid rgba(255,255,255,.12)',
-              color: '#f5f5f7',
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              minHeight: 48,
-            }}
-          >
-            {purchasing === 'basic' ? 'Loading…' : 'Creator $24.90'}
-          </button>
-          <button
-            type="button"
-            disabled={purchasing !== null && purchasing !== 'pro'}
-            onClick={() => handleBuy('pro')}
-            style={{
-              flex: 1,
               padding: '12px 8px',
               borderRadius: 10,
               background: '#2997ff',
@@ -975,7 +877,26 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(41,151,255,.35)',
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Studio $37.90 🔥'}
+            {purchasing === 'basic' ? 'Loading…' : 'Creator $24.90 🔥'}
+          </button>
+          <button
+            type="button"
+            disabled={purchasing !== null && purchasing !== 'pro'}
+            onClick={() => handleBuy('pro')}
+            style={{
+              flex: 1,
+              padding: '12px 6px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,.06)',
+              border: '1px solid rgba(255,255,255,.12)',
+              color: '#f5f5f7',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              minHeight: 48,
+            }}
+          >
+            {purchasing === 'pro' ? 'Loading…' : 'Studio $37.90'}
           </button>
         </div>
       )}

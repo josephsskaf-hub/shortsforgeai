@@ -64,10 +64,12 @@ export default function PricingCards() {
   // Push #171 — show a clear "already subscribed" banner instead of
   // silently redirecting to /generate on duplicate purchase attempts.
   const [alreadySubscribed, setAlreadySubscribed] = useState(false)
-  // Push #077 — pricing card selected state. Pro is the recommended
-  // default. Card click selects (does NOT trigger Stripe); CTA button
-  // click navigates to Stripe.
-  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('pro')
+  // Push #077 — pricing card selected state. Card click selects (does NOT
+  // trigger Stripe); CTA button click navigates to Stripe.
+  // KINEO-SPRINT-OFFER-2026-07-14 — default selection moved Pro → Creator so
+  // this in-flow grid agrees with /pricing and the 0-credit modal (Creator =
+  // the one primary plan everywhere).
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('basic')
 
   // Push #173 — use direct GET navigation to bypass iOS Safari async block.
   // The server-side GET handler creates the Stripe session and issues a 302
@@ -148,12 +150,16 @@ export default function PricingCards() {
       {/* Push #339 — 3-card layout: Spark + Basic + Pro. */}
       <div className="grid mx-auto gap-4 grid-cols-1 md:grid-cols-3" style={{ maxWidth: '62rem' }}>
 
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — Starter tagline was 2 pricing
+            generations stale ("50 Fast-Mode Shorts"); synced to V3C (25
+            credits). Intro renewal spelled out via renewNote. */}
         <PlanCard
           tier="starter"
           name={PLANS.starter.name}
           price={PLANS.starter.priceLabel}
           period="/ month"
-          tagline="50 Fast-Mode Shorts/month from smart stock footage + AI voiceover."
+          renewNote="First month $4.90 — renews at $9.90/mo in 30 days, cancel anytime"
+          tagline="25 credits/month — up to 25 Fast videos from smart stock footage + AI voiceover."
           features={STARTER_FEATURES}
           selected={selectedPlan === 'starter'}
           onSelect={() => setSelectedPlan('starter')}
@@ -169,14 +175,19 @@ export default function PricingCards() {
           }}
         />
 
+        {/* KINEO-PRICING-V3B-2026-07-10 — $24.90/150cr, 1 Hollywood film included. */}
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — Creator is the highlighted primary
+            ("Most Popular", matching /pricing); intro renewal explicit. */}
         <PlanCard
           tier="basic"
           name={PLANS.basic.name}
           price={PLANS.basic.priceLabel}
           period="/ month"
-          // KINEO-PRICING-V3B-2026-07-10 — $24.90/150cr, 1 Hollywood film included.
+          renewNote="First month $9.90 — renews at $24.90/mo in 30 days, cancel anytime"
           tagline="150 credits/month — 1 Hollywood film every month included."
           features={BASIC_FEATURES}
+          badge="Most Popular"
+          highlight
           selected={selectedPlan === 'basic'}
           onSelect={() => setSelectedPlan('basic')}
           cta={{
@@ -191,16 +202,15 @@ export default function PricingCards() {
           }}
         />
 
+        {/* KINEO-REBASE-2026-07-10 — 360/400 → 200 credits (2:1 rebase, USD unchanged). */}
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — badge/highlight moved to Creator. */}
         <PlanCard
           tier="pro"
           name={PLANS.pro.name}
           price={PLANS.pro.priceLabel}
           period="/ month"
-          // KINEO-REBASE-2026-07-10 — 360/400 → 200 credits (2:1 rebase, USD unchanged).
           tagline="Premium Kling engine + 200 credits — up to 10 AI or ~4 cinematic Shorts/month."
           features={PRO_FEATURES}
-          badge="Recommended"
-          highlight
           selected={selectedPlan === 'pro'}
           onSelect={() => setSelectedPlan('pro')}
           cta={{

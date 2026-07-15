@@ -3,7 +3,9 @@
 // keepalive:true lets the request survive the immediate `window.location`
 // navigation to Stripe that usually follows the click. Never throws and
 // never blocks the caller — checkout must always proceed.
-export function trackCheckoutClick(plan: 'basic' | 'pro'): void {
+// KINEO-SPRINT-OFFER-2026-07-14 — widened to include 'starter': the intro-month
+// CTAs track Starter clicks too (handleUpgradeNow already passed it, untyped).
+export function trackCheckoutClick(plan: 'starter' | 'basic' | 'pro'): void {
   try {
     void fetch('/api/track-click', {
       method: 'POST',

@@ -75,6 +75,10 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     credits: 150,
     cta: 'Go Creator',
     href: '/api/stripe/checkout?tier=basic',
+    // KINEO-SPRINT-OFFER-2026-07-14 — recommended flag moved Studio → Creator:
+    // every surface (pricing cards, 0-credit modal) now points at the same
+    // primary plan. Creator is what /pricing already calls "Most Popular".
+    recommended: true,
     annualPriceLabel: '$199',
     annualPerMonthLabel: '$16.58',
     annualHref: '/api/stripe/checkout?tier=basic&billing=annual',
@@ -93,7 +97,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     credits: 200,
     cta: 'Go Studio',
     href: '/api/stripe/checkout?tier=pro',
-    recommended: true,
+    // KINEO-SPRINT-OFFER-2026-07-14 — no longer the recommended plan (see basic).
     annualPriceLabel: '$379',
     annualPerMonthLabel: '$31.58',
     annualHref: '/api/stripe/checkout?tier=pro&billing=annual',

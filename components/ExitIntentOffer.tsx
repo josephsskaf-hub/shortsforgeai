@@ -68,7 +68,10 @@ function trackEvent(name: string): void {
 
 export default function ExitIntentOffer() {
   const [open, setOpen] = useState(false)
-  const [buying, setBuying] = useState<'pack' | 'starter' | 'creator' | null>(null)
+  // KINEO-SPRINT-OFFER-2026-07-14 — 'pack' removed from the union with the
+  // one-time escape-hatch link (single-offer cleanup: the modal now sells
+  // exactly two things — intro Starter and intro Creator, both recurring).
+  const [buying, setBuying] = useState<'starter' | 'creator' | null>(null)
   const shownRef = useRef(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
@@ -182,9 +185,12 @@ export default function ExitIntentOffer() {
 
   // KINEO-INTRO-MONTH-2026-07-13 — EXIT-INTENT v3 "RECORRÊNCIA": os dois
   // cards agora são ASSINATURAS com 1º mês de entrada ($4.90 Starter /
-  // $9.90 Creator). O pack one-time não some — vira o link discreto de
-  // último recurso abaixo dos cards ("prefer no subscription?"). Mesma
-  // mecânica GET (302 servidor, gesture-chain do iOS preservada).
+  // $9.90 Creator). Mesma mecânica GET (302 servidor, gesture-chain do
+  // iOS preservada).
+  // KINEO-SPRINT-OFFER-2026-07-14 — o link discreto do pack one-time
+  // ("prefer no subscription? 10 videos for $4.90 once") foi REMOVIDO:
+  // era a 3ª oferta no mesmo modal e reabria o beco sem saída one-time.
+  // O endpoint ?pack=starter segue vivo só para o fluxo return=wm.
   function handleIntroStarter() {
     if (buying) return
     setBuying('starter')
@@ -199,14 +205,6 @@ export default function ExitIntentOffer() {
     trackEvent('basic_checkout_clicked')
     trackEvent('exit_intent_intro_creator_clicked')
     window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
-  }
-
-  function handleStarterPack() {
-    if (buying) return
-    setBuying('pack')
-    trackEvent('starter_pack_checkout_clicked')
-    trackEvent('exit_intent_starter_pack_clicked')
-    window.location.href = '/api/stripe/checkout?pack=starter'
   }
 
   if (!open) return null
@@ -245,8 +243,10 @@ export default function ExitIntentOffer() {
         <h2 id="exit-offer-title" className="text-2xl font-black text-[#f5f5f7] mb-2 text-balance">
           Wait — pick your <span style={{ color: '#2997ff' }}>deal</span> before you go
         </h2>
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — copy no longer implies a one-time
+            option ("try it once" was the pack); both cards are subscriptions. */}
         <p id="exit-offer-desc" className="text-[13.5px] text-[#86868b] mb-5 leading-relaxed">
-          Try it once, or get fresh credits every month. Both take one click.
+          Half-price first month, fresh credits every month. One click.
         </p>
 
         {/* KINEO-INTRO-MONTH-2026-07-13 — v3 ladder: intro Starter (left) vs
@@ -327,16 +327,7 @@ export default function ExitIntentOffer() {
         </div>
 
         <p className="text-[11px] text-[#6e6e73]">
-          7-day money-back guarantee · cancel anytime ·{' '}
-          <button
-            type="button"
-            onClick={handleStarterPack}
-            disabled={buying !== null}
-            className="underline hover:text-[#a1a1a6] disabled:opacity-60"
-            style={{ color: '#6e6e73', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }}
-          >
-            {buying === 'pack' ? 'loading…' : 'prefer no subscription? 10 videos for $4.90 once'}
-          </button>
+          7-day money-back guarantee · cancel anytime · renews at the full monthly price after month 1
         </p>
       </div>
     </div>

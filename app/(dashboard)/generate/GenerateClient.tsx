@@ -4,7 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import PricingCards from '@/components/PricingCards'
-import PostVideoPaywall from '@/components/PostVideoPaywall'
+// KINEO-SPRINT-OFFER-2026-07-14 — PostVideoPaywall import removed. It was the
+// THIRD offer block on the success screen (on top of the Push #099 intro block
+// and UpsellSection), still selling FOUNDING50 + the one-time pack — three
+// conflicting deals in one scroll. The Push #099 block is the single offer
+// surface now. The component file stays in place, unused (same pattern as
+// AvatarPaywallModal below).
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { trackSignupSource } from '@/lib/analytics'
 import type { BrollPlan } from '@/lib/broll/types'
@@ -653,6 +658,13 @@ export default function GenerateClient() {
   // used to be wired here (signup-source state + localStorage gate + shown
   // event) moved wholesale into <TaaftReviewAsk/> so the gating logic lives
   // next to the card it gates; see the render site in the success branch.
+  // KINEO-SPRINT-OFFER-2026-07-14 — lifetime successful-render counter
+  // (localStorage 'kineo_render_count', incremented once per completed
+  // render by the effect below). Passed to <TaaftReviewAsk/>, which only
+  // asks for a review from the 2nd render on — render #1 belongs to the
+  // upgrade offer, not to a review ask competing in the same viewport.
+  const [renderCount, setRenderCount] = useState<number>(0)
+  const renderCountedRef = useRef(false)
   // Fast-mode-specific staged progress index (0..3). The real backend is
   // a single roundtrip; this drives a 4-step visual that auto-advances on
   // a timer so the wait feels intentional.
@@ -1458,6 +1470,27 @@ export default function GenerateClient() {
   useEffect(() => {
     if (phase === 'done' || phase === 'failed') setWmUnlocking(false)
   }, [phase])
+
+  // KINEO-SPRINT-OFFER-2026-07-14 — count each SUCCESSFUL render once
+  // (localStorage survives reloads; the ref stops double-counting while we
+  // stay in the same 'done' phase). Storage failure → count stays 0 and the
+  // TAAFT review ask simply never shows (fail-hidden, never fail-broken).
+  useEffect(() => {
+    if (phase !== 'done' || !finalVideoUrl) {
+      renderCountedRef.current = false
+      return
+    }
+    if (renderCountedRef.current) return
+    renderCountedRef.current = true
+    try {
+      const prev = parseInt(localStorage.getItem('kineo_render_count') ?? '0', 10)
+      const next = (Number.isFinite(prev) ? prev : 0) + 1
+      localStorage.setItem('kineo_render_count', String(next))
+      setRenderCount(next)
+    } catch {
+      // private mode / storage blocked — review ask stays gated off
+    }
+  }, [phase, finalVideoUrl])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
@@ -3220,8 +3253,11 @@ export default function GenerateClient() {
           loading={upgradeLoading}
           onUpgrade={(tier) => {
             // #380 — straight to Stripe via the working GET checkout route.
-            // #453 — carry the founding promo so the 50%-off-first-month applies
-            // automatically at this peak-intent moment (no code typing).
+            // KINEO-SPRINT-OFFER-2026-07-14 — SINGLE OFFER: the intro month
+            // ($4.90 Starter / $9.90 Creator first month) replaced the old
+            // ?promo=FOUNDING50 here. Two different discounts on the same
+            // modal contradicted each other; intro is deeper anyway and the
+            // server validates eligibility (1 per customer, monthly only).
             trackCheckoutClick(tier)
             // #457 — TikTok Pixel: InitiateCheckout = purchase intent (retargeting)
             try {
@@ -3229,19 +3265,28 @@ export default function GenerateClient() {
               if (ttq && typeof ttq.track === 'function') ttq.track('InitiateCheckout', { content_name: tier })
             } catch { /* non-blocking */ }
             setUpgradeLoading(true)
-            window.location.href = `/api/stripe/checkout?tier=${tier}&promo=FOUNDING50`
+            const introParam = tier === 'starter' || tier === 'basic' ? '&intro=1' : ''
+            window.location.href = `/api/stripe/checkout?tier=${tier}${introParam}`
           }}
           onClose={() => setShowUpgradeModal(false)}
         />
       )}
 
       {/* Push #109 — urgency variant with countdown for free users at 0. */}
+      {/* KINEO-SPRINT-OFFER-2026-07-14 — CTA now goes through the GET checkout
+          with the intro month (tier=basic&intro=1). The old handleUpgradeNow
+          POSTed to /api/stripe/checkout, which has no POST handler — every
+          click silently landed on /pricing. The BRL button was dropped with it
+          (stale "R$ 59,90" price; the server picks BRL by IP automatically). */}
       {showUrgencyModal && (
         <UrgencyModal
           remaining={urgencyRemaining}
           loading={upgradeLoading}
-          onUpgrade={() => handleUpgradeNow('basic', 'usd')}
-          onUpgradeBrl={() => handleUpgradeNow('basic', 'brl')}
+          onUpgrade={() => {
+            trackCheckoutClick('basic')
+            setUpgradeLoading(true)
+            window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+          }}
           onClose={() => setShowUrgencyModal(false)}
         />
       )}
@@ -3253,7 +3298,7 @@ export default function GenerateClient() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Upgrade to Pro"
+          aria-label="Upgrade offer"
           onClick={() => setShowExitIntentUpgrade(false)}
           style={{
             position: 'fixed',
@@ -3319,23 +3364,25 @@ export default function GenerateClient() {
               marginBottom: 22,
               lineHeight: 1.55,
             }}>
-              {/* Fix 2 (12/06) — copy now matches the REAL tier this button
-                  opens (tier=pro = Studio $37.90, 360 credits). It used to say
-                  "Pro $9.90/100 videos" — a 2-generations-old price that broke
-                  trust at the exact moment of purchase. */}
-              Upgrade to Studio and never run out of credits.
-              Get <strong style={{ color: '#2997ff' }}>200 credits/month</strong> + the premium
-              Kling engine (1080p) and keep your channel growing on autopilot.
+              {/* Fix 2 (12/06) — copy must match the REAL tier the button opens.
+                  KINEO-SPRINT-OFFER-2026-07-14 — pitching STUDIO $37.90 to a
+                  leaving FREE user was the hardest possible ask at the weakest
+                  moment, and contradicted the single primary offer (Creator).
+                  Now: intro Creator, renewal explicit, same one offer as the
+                  0-credit modal and the post-render block. */}
+              Go Creator and never run out of credits.
+              Get <strong style={{ color: '#2997ff' }}>150 credits/month</strong> — full AI scenes,
+              AI Presenter and 1 Hollywood film included, every month.
             </p>
             <a
-              href="/api/stripe/checkout?tier=pro"
-              onClick={() => trackCheckoutClick('pro')}
+              href="/api/stripe/checkout?tier=basic&intro=1"
+              onClick={() => trackCheckoutClick('basic')}
               style={{
                 display: 'block',
                 width: '100%',
                 padding: '14px 20px',
                 borderRadius: 12,
-                background: 'linear-gradient(90deg, #2997ff, #06B6D4)',
+                background: 'linear-gradient(90deg, #2997ff, #1d6fe0)',
                 color: '#fff',
                 fontWeight: 900,
                 fontSize: '0.95rem',
@@ -3344,8 +3391,11 @@ export default function GenerateClient() {
                 marginBottom: 10,
               }}
             >
-              Upgrade to Studio — $37.90/mo →
+              Go Creator — $9.90 first month →
             </a>
+            <p style={{ fontSize: '0.72rem', color: '#86868b', fontWeight: 600, margin: '0 0 10px' }}>
+              Renews at $24.90/mo in 30 days · cancel anytime
+            </p>
             <button
               type="button"
               onClick={() => setShowExitIntentUpgrade(false)}
@@ -3453,8 +3503,11 @@ export default function GenerateClient() {
             >
               <span className="text-base">🎉</span>
               {/* Marker: KINEO-FREE-TIER-FAST-2026-07-05 — free tier = Fast only, no free AI */}
+              {/* KINEO-SPRINT-OFFER-2026-07-14 — dropped the stale "Get 25 more
+                  for $4.90" (the pack is 10 credits since V3C and has no public
+                  CTA anymore). Welcome moment sells nothing — just start. */}
               <span>
-                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start. Get 25 more for $4.90, or a plan for unlimited.
+                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start.
               </span>
             </div>
           )}
@@ -4802,6 +4855,17 @@ export default function GenerateClient() {
                 )}
               </div>
 
+              {/* KINEO-TAAFT-REVIEW-2026-07-14 / KINEO-SPRINT-OFFER-2026-07-14 —
+                  TAAFT review ask, MOVED here (right after the download/share
+                  actions) from its old spot next to the upgrade block below:
+                  the review ask and the upsell were landing in the same
+                  viewport and competing for the same click. It also now only
+                  shows from the 2nd successful render on (renderCount prop —
+                  the counter effect above). All other gating (TAAFT signup
+                  source via /api/me/plan, once-per-browser localStorage flag)
+                  lives inside the component; any failure → renders null. */}
+              <TaaftReviewAsk renderCount={renderCount} />
+
               {/* Push #156 — Next-steps guide. Open by default (Push #296)
                   so users always see the 3-step publishing flow. */}
               <details
@@ -4890,11 +4954,17 @@ export default function GenerateClient() {
                 </div>
               </details>
 
-              {/* Push #099 — Post-generation upgrade upsell. Shows under the
-                  download/share row for free users only (planTier === 'free'
-                  AND credits < 20 — KINEO-REBASE-2026-07-10, so users who
-                  already upgraded don't get re-pitched). Uses the same
-                  /api/stripe/checkout flow as the out-of-credits modal. */}
+              {/* Push #099 — Post-generation upgrade upsell (free users with
+                  credits < 20 — KINEO-REBASE-2026-07-10).
+                  KINEO-SPRINT-OFFER-2026-07-14 — SINGLE OFFER rebuild: one
+                  primary path (intro Creator $9.90 first month — the plan that
+                  unlocks AI scenes + AI Presenter) + intro Starter $4.90 as
+                  the quieter secondary. The one-time pack CTA is GONE from
+                  this screen (it ended the relationship at $4.90; ?pack=starter
+                  survives only in the watermark return=wm flow above). Both
+                  buttons use the GET checkout (the old primary POSTed to
+                  /api/stripe/checkout, which has NO POST handler — every click
+                  silently fell back to /pricing). Green gradient → brand blue. */}
               {planTier === 'free' && credits !== null && credits < 20 && (
                 <div
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
@@ -4918,43 +4988,33 @@ export default function GenerateClient() {
                       className="text-xs font-semibold"
                       style={{ color: 'var(--muted2)', lineHeight: 1.5 }}
                     >
-                      25 credits/month · no watermark · cancel anytime
+                      Full AI scenes, AI Presenter and 150 credits every month.
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleUpgradeNow()}
-                    disabled={upgradeLoading}
-                    className="block w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
+                    onClick={() => {
+                      trackCheckoutClick('basic')
+                      window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+                    }}
+                    className="flex flex-col items-center justify-center w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
                     style={{
-                      background: upgradeLoading
-                        ? 'rgba(41,151,255,.6)'
-                        : 'linear-gradient(135deg, #22C55E, #16A34A)',
+                      background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
                       border: 'none',
-                      cursor: upgradeLoading ? 'wait' : 'pointer',
+                      cursor: 'pointer',
                       boxShadow: '0 8px 24px rgba(41,151,255,.32)',
                     }}
                   >
-                    {upgradeLoading ? 'Loading…' : 'Upgrade to Starter — $9.90/mo →'}
+                    <span>Go Creator — $9.90 first month →</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.92, marginTop: 2 }}>
+                      renews at $24.90/mo in 30 days · cancel anytime
+                    </span>
                   </button>
-                  {/* ROBO-ENTRY-495 — Starter Pack entry CTA. This block only
-                      renders when credits < 20, i.e. the user can no longer run
-                      another AI Generated video (20 credits each). The $4.90
-                      one-time 10-Shorts pack is the lowest-commitment fix —
-                      same checkout URL as /pricing, the 0-credit modal and the
-                      PostVideoPaywall entry option. */}
                   <button
                     type="button"
                     onClick={() => {
-                      try {
-                        void fetch('/api/events', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ name: 'starter_pack_checkout_clicked', metadata: { source: 'post_video_success' } }),
-                          keepalive: true,
-                        })
-                      } catch { /* non-blocking */ }
-                      window.location.href = '/api/stripe/checkout?pack=starter'
+                      trackCheckoutClick('starter')
+                      window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
                     }}
                     className="block w-full rounded-xl mt-2.5 px-4 py-3 text-center"
                     style={{
@@ -4967,10 +5027,10 @@ export default function GenerateClient() {
                       cursor: 'pointer',
                     }}
                   >
-                    Not ready for a subscription?{' '}
-                    <span style={{ color: '#2997ff' }}>Get 10 videos for $4.90 →</span>
+                    Just want Fast videos?{' '}
+                    <span style={{ color: '#2997ff' }}>Starter — $4.90 first month →</span>
                     <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
-                      One-time · no subscription · credits never expire
+                      25 credits/month · renews at $9.90/mo in 30 days · cancel anytime
                     </span>
                   </button>
                 </div>
@@ -4981,18 +5041,9 @@ export default function GenerateClient() {
                   renders nothing if the loop is unavailable. */}
               <ReferralMiniCard />
 
-              {/* KINEO-TAAFT-REVIEW-2026-07-14 — TAAFT review ask at the win
-                  moment. TAAFT drives ~72% of signups but our listing sits at
-                  3.0 stars (2 reviews), so one honest review is the highest-
-                  leverage ask we can make — and the only fair moment to ask
-                  is right after a successful render (this branch only renders
-                  when phase === 'done' && finalVideoUrl). ALL gating lives
-                  inside the component: signup source must be 'taaft' (via
-                  /api/me/plan, module-cached) and the once-per-browser
-                  localStorage flag must be absent (set at SHOW time). Any
-                  failure anywhere in that chain → the component renders null
-                  and this screen looks exactly as before. */}
-              <TaaftReviewAsk />
+              {/* KINEO-SPRINT-OFFER-2026-07-14 — <TaaftReviewAsk/> used to sit
+                  here, directly under the upgrade block (same viewport as the
+                  upsell). Moved up, right after the download/share actions. */}
 
               {/* Push #087 — secondary actions: re-generate the same idea
                   (one click) or jump back to edit the script. Keeps the
@@ -5062,15 +5113,12 @@ export default function GenerateClient() {
             </section>
           )}
 
-          {/* Push #060 — smart paywall. Shows below the video result on a
-              successful generation when the user's remaining balance is
-              at or below 30 credits. Failed runs never see it (we're
-              inside the `phase === 'done'` branch). The paywall component
-              re-checks credits itself as a safety net. */}
-          {phase === 'done' &&
-            finalVideoUrl &&
-            credits !== null &&
-            credits <= 15 && <PostVideoPaywall credits={credits} />}{/* KINEO-REBASE-2026-07-10 — 30→15 */}
+          {/* Push #060 smart paywall REMOVED (KINEO-SPRINT-OFFER-2026-07-14):
+              <PostVideoPaywall/> duplicated the Push #099 intro-offer block
+              for the exact same audience (free users, low credits) while
+              still pitching FOUNDING50 and the $4.90 one-time pack — the
+              conflicting-offers problem this sprint kills. One screen, one
+              offer: the #099 block above is it. */}
 
           {/* Push #047 — ready-to-post text package. Renders after a
               successful generation, alongside the video player above, so
@@ -5142,9 +5190,18 @@ export default function GenerateClient() {
             // they're at ≤1. Paid users keep the lighter
             // NextActionSection (their main action is "make another one").
             planTier === 'free' ? (
+              // KINEO-SPRINT-OFFER-2026-07-14 — BUG FIX: the button said
+              // "Upgrade to Creator — $24.90/mo" but passed tier 'pro'
+              // (Studio $37.90) to handleUpgradeNow — and handleUpgradeNow
+              // POSTs to a route with no POST handler, dumping every click on
+              // /pricing. Now: GET checkout, Creator, intro month — the same
+              // single offer as every other surface on this screen.
               <UpsellSection
                 onAnother={handleReset}
-                onUpgrade={() => handleUpgradeNow('pro', 'usd')}
+                onUpgrade={() => {
+                  trackCheckoutClick('basic')
+                  window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+                }}
                 upgradeLoading={upgradeLoading}
                 creditsLeft={credits ?? 0}
               />
@@ -5915,9 +5972,11 @@ function ShortPackageSection({
 
 // Push #116 — smarter post-generation upsell for free-tier users. Replaces
 // the bland "Ready to create more shorts?" section with a celebration +
-// credit-urgency line + a Pro pitch ("100 videos/month") + the same
-// Generate-Another fallback. Routes through handleUpgradeNow('pro') so
-// checkout attribution stays consistent with the rest of the app.
+// credit-urgency line + a Creator pitch + the Generate-Another fallback.
+// KINEO-SPRINT-OFFER-2026-07-14 — onUpgrade now points at the GET checkout
+// with tier=basic&intro=1 (see the call site): copy and charge finally match
+// (the old wiring said "Creator $24.90" but passed tier 'pro' to a POST
+// endpoint that doesn't exist).
 function UpsellSection({
   onAnother,
   onUpgrade,
@@ -5996,8 +6055,9 @@ function UpsellSection({
           }}
         >
           {/* Fix 2 (12/06) — copy matches the real tier this modal opens
-              (tier=basic = Creator $24.90/150 credits — KINEO-PRICING-V3B-2026-07-10). */}
-          Get 150 credits/month — 1 Hollywood film included — for $24.90/mo
+              (tier=basic = Creator — KINEO-PRICING-V3B-2026-07-10). */}
+          {/* KINEO-SPRINT-OFFER-2026-07-14 — intro-month framing, renewal explicit. */}
+          Get 150 credits/month — 1 Hollywood film included — for $9.90 your first month
         </div>
         <ul
           style={{
@@ -6021,7 +6081,7 @@ function UpsellSection({
             padding: '12px',
             borderRadius: 10,
             background: upgradeLoading ? 'rgba(41,151,255,.5)' : '#2997ff',
-            color: '#0A0A0F',
+            color: '#ffffff',
             fontWeight: 800,
             fontSize: '0.95rem',
             border: 'none',
@@ -6029,7 +6089,7 @@ function UpsellSection({
             boxShadow: '0 6px 22px rgba(41,151,255,.28)',
           }}
         >
-          {upgradeLoading ? 'Opening checkout…' : 'Upgrade to Creator — $24.90/mo →'}
+          {upgradeLoading ? 'Opening checkout…' : 'Go Creator — $9.90 first month →'}
         </button>
         <div
           style={{
@@ -6040,7 +6100,7 @@ function UpsellSection({
             fontWeight: 600,
           }}
         >
-          Cancel anytime
+          Renews at $24.90/mo in 30 days · cancel anytime
         </div>
       </div>
 
@@ -6850,7 +6910,10 @@ function FastPipelineStages({ step, phase }: { step: number; phase: Phase }) {
 // #380 — 3-plan out-of-credits modal. Shown at the exact moment the user runs
 // out of credits. Presents Spark / Basic / Pro so the user picks at peak intent.
 // Each card routes to the matching Stripe checkout via onUpgrade(tier);
-// currency is auto-detected server-side. Pro is highlighted as recommended.
+// currency is auto-detected server-side.
+// KINEO-SPRINT-OFFER-2026-07-14 — Creator carries the "MOST POPULAR" badge
+// now (lib/pricing recommended flag moved pro → basic) and the starter/basic
+// rows show the intro-month price inline; onUpgrade appends ?intro=1.
 function UpgradeModal({
   loading,
   onUpgrade,
@@ -6864,33 +6927,17 @@ function UpgradeModal({
   reason?: 'credits' | 'studio' | 'creator'
   isSubscriber?: boolean
 }) {
-  // #466 — live urgency countdown for the founding 50%-off offer. 15 min from
-  // first open, persisted in localStorage so it survives dismiss/reopen/reload.
-  const [remaining, setRemaining] = useState<number>(15 * 60)
-  useEffect(() => {
-    const KEY = 'sf_founding_deadline'
-    let dl: number
-    try {
-      const stored = parseInt(localStorage.getItem(KEY) ?? '', 10)
-      if (Number.isFinite(stored)) dl = stored
-      else {
-        dl = Date.now() + 15 * 60 * 1000
-        localStorage.setItem(KEY, String(dl))
-      }
-    } catch {
-      dl = Date.now() + 15 * 60 * 1000
-    }
-    const tick = () => setRemaining(Math.max(0, Math.floor((dl - Date.now()) / 1000)))
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-  const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
-  const ss = String(remaining % 60).padStart(2, '0')
+  // #466 fake 15-min "founding offer" countdown REMOVED
+  // (KINEO-SPRINT-OFFER-2026-07-14): the timer reset per browser and nothing
+  // actually expired — a fabricated counter sitting next to a real offer
+  // erodes trust in both. The intro month is the single, honest discount.
   // KINEO-REBASE-2026-07-10 — post-rebase credit numbers (2:1).
+  // KINEO-SPRINT-OFFER-2026-07-14 — intro-month sublabels so the modal shows
+  // ONE offer consistently (first month price + what it renews at is on the
+  // plan rows themselves; the checkout applies it via ?intro=1).
   const unlocks: Record<string, string> = {
-    starter: '25 credits / month',
-    basic: '150 credits · 1 Hollywood film / month included', // KINEO-PRICING-V3B-2026-07-10
+    starter: '25 credits / month · first month $4.90, then $9.90/mo',
+    basic: '150 credits · 1 Hollywood film / month · first month $9.90, then $24.90/mo', // KINEO-PRICING-V3B-2026-07-10
     pro: '200 credits · up to 10 AI-generated videos',
   }
   // KINEO-PLAN-GATE-MODAL — accurate headline per reason: a real credit shortage
@@ -6957,26 +7004,10 @@ function UpgradeModal({
           {head.sub}
         </p>
 
-        {/* #466 — social proof + live urgency right at the decision point */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
-          <span style={{ fontSize: '0.78rem', color: '#86868b', fontWeight: 700 }}>
-            ✨ Join 300+ creators making Shorts with AI
-          </span>
-          <span
-            style={{
-              fontSize: '0.78rem',
-              color: '#2997ff',
-              fontWeight: 800,
-              background: 'rgba(41,151,255,0.10)',
-              border: '1px solid rgba(41,151,255,0.35)',
-              borderRadius: 999,
-              padding: '3px 10px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🔥 50% off 1st month · {mm}:{ss}
-          </span>
-        </div>
+        {/* #466 social-proof row REMOVED (KINEO-SPRINT-OFFER-2026-07-14):
+            "Join 300+ creators" was unverifiable and the "50% off · mm:ss"
+            pill was a fake countdown competing with the intro-month offer
+            shown on the plan rows below. One modal, one offer. */}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {PLAN_LIST.map((plan) => {
@@ -7011,7 +7042,9 @@ function UpgradeModal({
                       top: -9,
                       left: 14,
                       background: '#2997ff',
-                      color: '#04210f',
+                      // KINEO-SPRINT-OFFER-2026-07-14 — was '#04210f' (legacy
+                      // dark-green token); white on brand blue.
+                      color: '#ffffff',
                       fontSize: '0.6rem',
                       fontWeight: 900,
                       letterSpacing: '0.08em',
@@ -7055,8 +7088,9 @@ function UpgradeModal({
         </div>
 
         {/* KINEO-TOPUP-2026-07-06 — subscribers who ran out of AI credits mid-cycle
-            get one-click top-ups (buy more AI videos) instead of a dead-end. Free/
-            Starter users see the $4.90 Starter Pack instead (below). */}
+            get one-click top-ups (buy more AI videos) instead of a dead-end.
+            KINEO-SPRINT-OFFER-2026-07-14 — non-subscribers take the intro month
+            on the plan rows above (the old pack escape button is gone). */}
         {isSubscriber && (
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#86868b', textAlign: 'center' }}>
@@ -7094,48 +7128,12 @@ function UpgradeModal({
           </div>
         )}
 
-        {/* KINEO-INTRO-MONTH-2026-07-13 — o botão de escape do modal de 0
-            créditos era o pack one-time (beco sem saída: compra, gasta, some).
-            Mesmo $4.90 de entrada, novo destino: 1º mês do Starter → MRR.
-            Serve TAMBÉM como upsell de exaustão pros donos de pack antigos
-            (hasPaid && !isSubscriber caem exatamente aqui ao zerar créditos). */}
-        {!isSubscriber && (
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => {
-            try {
-              void fetch('/api/events', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'intro_month_starter_clicked', metadata: { source: 'upgrade_modal' } }),
-                keepalive: true,
-              })
-            } catch { /* non-blocking */ }
-            window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
-          }}
-          style={{
-            width: '100%',
-            marginTop: 12,
-            padding: '13px 16px',
-            borderRadius: 14,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            background: 'rgba(41,151,255,0.08)',
-            border: '1px dashed rgba(41,151,255,0.45)',
-            color: '#E2E8F0',
-            fontSize: '0.9rem',
-            fontWeight: 800,
-            lineHeight: 1.35,
-            textAlign: 'center',
-          }}
-        >
-          Keep creating —{' '}
-          <span style={{ color: '#2997ff' }}>first month just $4.90 →</span>
-          <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#86868b', marginTop: 2 }}>
-            25 credits every month · then $9.90/mo · cancel anytime
-          </span>
-        </button>
-        )}
+        {/* KINEO-INTRO-MONTH-2026-07-13 escape button removed
+            (KINEO-SPRINT-OFFER-2026-07-14): it duplicated the Starter plan
+            row above, which now carries the same intro-month offer inline
+            ("first month $4.90, then $9.90/mo"). One modal, one list of
+            plans, one offer — Creator recommended, Starter as the cheap
+            secondary, Studio unhighlighted. */}
 
         {/* Push #452 — referral escape hatch. Turns a "won't pay right now"
             bounce into top-of-funnel growth by surfacing the live #443 loop
@@ -7176,9 +7174,9 @@ function UpgradeModal({
         >
           Maybe later
         </button>
-        <p style={{ marginTop: 12, fontSize: '0.8rem', color: '#2997ff', fontWeight: 800 }}>
-          🔥 Founding Creator — 50% off your first month · only 50 spots
-        </p>
+        {/* KINEO-SPRINT-OFFER-2026-07-14 — "Founding Creator · only 50 spots"
+            footer removed: third competing discount claim in this modal, and
+            the seat count was not enforced anywhere. */}
       </div>
     </div>
   )
@@ -7190,17 +7188,20 @@ function UpgradeModal({
 // free and credits <= 0. The 10-minute timer is sourced from
 // localStorage (sf_urgency_start) by the parent's tick effect, so the
 // clock survives dismiss + reopen and page reloads.
+// KINEO-SPRINT-OFFER-2026-07-14 — onUpgradeBrl prop + BRL button removed (the
+// checkout server already resolves BRL from the visitor's IP; the button also
+// showed a stale "R$ 59,90" price). Copy synced to the single intro offer —
+// the old body still sold "50 Fast Mode videos/month", two pricing
+// generations stale.
 function UrgencyModal({
   remaining,
   loading,
   onUpgrade,
-  onUpgradeBrl,
   onClose,
 }: {
   remaining: number
   loading: boolean
   onUpgrade: () => void
-  onUpgradeBrl: () => void
   onClose: () => void
 }) {
   const expired = remaining <= 0
@@ -7306,7 +7307,7 @@ function UrgencyModal({
             marginBottom: 22,
           }}
         >
-          50 Fast Mode videos/month for just <strong style={{ color: '#5cb3ff' }}>$9.90/mo</strong>. Cancel anytime.
+          Go Creator for <strong style={{ color: '#5cb3ff' }}>$9.90 your first month</strong> — 150 credits, full AI scenes and the AI Presenter. Renews at $24.90/mo in 30 days.
         </p>
         <button
           type="button"
@@ -7328,31 +7329,7 @@ function UrgencyModal({
             letterSpacing: '-0.01em',
           }}
         >
-          {loading ? 'Opening checkout…' : 'Get Starter — $9.90/mo →'}
-        </button>
-        {/* Push #113 — BRL option for BR users. */}
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onUpgradeBrl}
-          style={{
-            marginTop: 8,
-            width: '100%',
-            padding: '10px 16px',
-            borderRadius: 10,
-            background: 'rgba(255,255,255,.05)',
-            border: '1px solid rgba(255,255,255,.12)',
-            color: '#86868b',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-          }}
-        >
-          🇧🇷 Pagar em R$ 59,90/mês (Brasil)
+          {loading ? 'Opening checkout…' : 'Go Creator — $9.90 first month →'}
         </button>
         <p
           style={{
@@ -7362,7 +7339,7 @@ function UrgencyModal({
             fontWeight: 600,
           }}
         >
-          Cancel anytime
+          Cancel anytime · 7-day money-back guarantee
         </p>
       </div>
     </div>

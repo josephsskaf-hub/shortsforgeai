@@ -20,6 +20,12 @@
 //   3. never shown before in this browser — localStorage flag
 //      'kineo_taaft_review_asked', set the moment the card SHOWS (not on
 //      click), so it is strictly once-per-browser-lifetime
+//   4. KINEO-SPRINT-OFFER-2026-07-14 — renderCount >= 2 (prop, fed by the
+//      parent from localStorage 'kineo_render_count', incremented on each
+//      successful render). A first-render user is the upgrade block's
+//      audience, not ours — asking for a review on render #1 competed with
+//      the upsell at the exact peak-intent moment. From render #2 on the
+//      user has real experience to review AND has already seen the offer.
 // Clicking "Leave a review" or the × close hides it immediately; the flag is
 // already persisted so it never comes back either way.
 import { useEffect, useState } from 'react'
@@ -71,7 +77,7 @@ function trackReviewAskEvent(name: string): void {
   }
 }
 
-export default function TaaftReviewAsk() {
+export default function TaaftReviewAsk({ renderCount = 0 }: { renderCount?: number }) {
   // Starts hidden and only flips visible after ALL gates pass in the mount
   // effect below — hidden-by-default means SSR/hydration always agree and
   // every failure mode lands on "success UI exactly as before".
@@ -79,7 +85,11 @@ export default function TaaftReviewAsk() {
 
   useEffect(() => {
     let cancelled = false
-    // Gate 3 first (cheapest): already asked in this browser → done forever.
+    // Gate 4 (KINEO-SPRINT-OFFER-2026-07-14, cheapest of all): only ask from
+    // the 2nd successful render on. Default 0 → parents that don't pass the
+    // prop never show the card (fail-hidden, like every other gate here).
+    if (renderCount < 2) return
+    // Gate 3: already asked in this browser → done forever.
     // If storage itself throws (private mode / blocked), we bail hidden: we
     // can't honor "only once" without storage, so we never show at all.
     try {
@@ -105,7 +115,10 @@ export default function TaaftReviewAsk() {
     return () => {
       cancelled = true
     }
-  }, [])
+    // KINEO-SPRINT-OFFER-2026-07-14 — renderCount is a dep: the parent feeds
+    // it asynchronously (localStorage read in an effect), so the first mount
+    // can see 0 and the real value arrives one render later.
+  }, [renderCount])
 
   if (!visible) return null
 
