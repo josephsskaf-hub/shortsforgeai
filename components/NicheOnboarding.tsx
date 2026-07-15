@@ -198,7 +198,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           <span aria-hidden="true">🧠</span> <span style={{ color: '#86868b', fontWeight: 700 }}>Why it works:</span> {s.why}
         </p>
         <p style={{ margin: 0, fontSize: '0.7rem', color: '#6e6e73', fontWeight: 700, letterSpacing: '0.01em' }}>
-          Output: 60s • 9:16 • Voiceover • Captions • Fast
+          Output: 45s • 9:16 • Voiceover • Captions • Fast
         </p>
 
         {hookOpen && (

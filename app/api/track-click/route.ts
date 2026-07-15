@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const rawEvent = typeof body?.event === 'string' ? body.event.trim() : ''
     const event = rawEvent ? rawEvent.slice(0, 64) : 'checkout_click'
     const rawPlan = typeof body?.plan === 'string' ? body.plan.trim().toLowerCase() : ''
-    const plan = rawPlan === 'basic' || rawPlan === 'pro' ? rawPlan : null
+    const plan = rawPlan === 'starter' || rawPlan === 'basic' || rawPlan === 'pro' ? rawPlan : null
 
     // Resolve the user from the session cookie (don't trust a client-sent id).
     let userId: string | null = null

@@ -68,12 +68,6 @@ const SUPPORTED_DURATIONS = [45, 60, 90] as const
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: 'AI service is not configured.' }, { status: 500 })
-    }
-    if (!process.env.CREATOMATE_API_KEY) {
-      return NextResponse.json({ error: 'Render service is not configured.' }, { status: 500 })
-    }
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
       return NextResponse.json({ error: 'Storage backend is not configured.' }, { status: 500 })
     }
@@ -104,14 +98,7 @@ export async function POST(req: NextRequest) {
     const clipUrls = Array.isArray(body.clip_urls)
       ? body.clip_urls.filter((u) => typeof u === 'string' && u.trim().length > 0)
       : []
-    if (clipUrls.length === 0) {
-      return NextResponse.json({ error: 'clip_urls is required.' }, { status: 400 })
-    }
-
     const voiceoverScript = stripScriptMarkers(body.voiceover_script ?? '')
-    if (!voiceoverScript) {
-      return NextResponse.json({ error: 'voiceover_script is required.' }, { status: 400 })
-    }
 
     // ── 1) Verify the Stripe Checkout Session (webhook-independent) ──────────
     let paidOk = false
@@ -122,11 +109,24 @@ export async function POST(req: NextRequest) {
       const isPack =
         session.mode === 'payment' && session.metadata?.pack === 'starter10'
       const subscriptionTier = session.metadata?.tier
-      const isEligibleSubscription =
+      let isEligibleSubscription =
         session.mode === 'subscription' &&
         (subscriptionTier === 'starter' || subscriptionTier === 'basic' || subscriptionTier === 'pro')
+      if (isEligibleSubscription) {
+        const subscriptionId =
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id
+        if (!subscriptionId) {
+          isEligibleSubscription = false
+        } else {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          isEligibleSubscription = subscription.status === 'active' || subscription.status === 'trialing'
+        }
+      }
       paidOk =
         session.payment_status === 'paid' &&
+        session.status === 'complete' &&
         belongsToUser &&
         (isPack || isEligibleSubscription)
       if (!paidOk) {
@@ -159,6 +159,20 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       // Non-fatal — the webhook will set it too; the clean render below still runs.
       console.warn('[compose/unlock] has_paid set failed (non-fatal):', err instanceof Error ? err.message : String(err))
+    }
+
+    // A legitimate buyer may return in another browser or after clearing local
+    // storage. Confirm the purchase before the client unlocks paid UI even when
+    // there are no captured inputs to re-compose on this device.
+    if (clipUrls.length === 0 || !voiceoverScript) {
+      return NextResponse.json({ verified: true, render_id: null })
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'AI service is not configured.' }, { status: 500 })
+    }
+    if (!process.env.CREATOMATE_API_KEY) {
+      return NextResponse.json({ error: 'Render service is not configured.' }, { status: 500 })
     }
 
     // ── 3) Rebuild the SAME Fast video, clean (watermark:false) ──────────────
@@ -279,7 +293,7 @@ export async function POST(req: NextRequest) {
     })
 
     console.log(`[compose/unlock] clean re-render started user=${user.id.slice(0, 8)} render=${renderId} duration=${duration}s`)
-    return NextResponse.json({ render_id: renderId, quality: 'fast', duration })
+    return NextResponse.json({ verified: true, render_id: renderId, quality: 'fast', duration })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[compose/unlock] unexpected error:', msg)

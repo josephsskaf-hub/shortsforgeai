@@ -258,9 +258,12 @@ export default function GenerateClient() {
   // the Fast engine (zero-friction first video), then hands off to the normal
   // generate flow. Lifts first-video activation (the biggest funnel leak).
   const [showNicheOnboarding, setShowNicheOnboarding] = useState(false)
+  const onboardingAutoGenerateRef = useRef(false)
   useEffect(() => {
     try {
       if (localStorage.getItem('sf_onboarded')) return
+      const pendingPrompt = sessionStorage.getItem('pendingVideoPrompt') ?? ''
+      if (initialPrompt.trim() || pendingPrompt.trim()) return
     } catch {
       return
     }
@@ -272,9 +275,22 @@ export default function GenerateClient() {
     setShowNicheOnboarding(false)
   }
   function onboardingPick(topic: string) {
+    onboardingAutoGenerateRef.current = true
     setPrompt(topic)
     setMode('fast') // first video = Fast = zero friction (see value fast)
     finishOnboarding()
+    void handleAnalyze(topic, { fromTopic: true, skipPreview: true, structureFirst: true })
+  }
+
+  function redirectToLoginPreservingPrompt() {
+    const cleanPrompt = prompt.trim()
+    try {
+      if (cleanPrompt) sessionStorage.setItem('pendingVideoPrompt', cleanPrompt)
+    } catch { /* ignore */ }
+    const returnPath = cleanPrompt
+      ? `/generate?prompt=${encodeURIComponent(cleanPrompt)}`
+      : '/generate'
+    router.push(`/login?redirect=${encodeURIComponent(returnPath)}`)
   }
   // #383c — explicit script handling, visible to everyone (replaces the old
   // silent "skip the AI if the text has HOOK/PAYOFF markers" auto-detection).
@@ -1384,18 +1400,6 @@ export default function GenerateClient() {
     const sessionId = searchParams?.get('session_id') ?? ''
     wmUnlockRanRef.current = true
 
-    // Strip the unlock params so a manual refresh can't refire the flow.
-    try {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('wm_unlock')
-      url.searchParams.delete('session_id')
-      window.history.replaceState({}, '', url.toString())
-    } catch { /* ignore */ }
-
-    // The purchase succeeded — reflect it immediately + pull the real balance.
-    setHasPaid(true)
-    try { window.dispatchEvent(new Event('creditsChanged')) } catch { /* ignore */ }
-
     let stored: {
       clip_urls?: string[]
       voiceover_script?: string
@@ -1410,23 +1414,12 @@ export default function GenerateClient() {
       const raw = localStorage.getItem('kineo_wm_unlock')
       if (raw) stored = JSON.parse(raw)
     } catch { /* ignore */ }
-    try { localStorage.removeItem('kineo_wm_unlock') } catch { /* ignore */ }
-
-    // No captured render (bought from a different browser / cleared storage):
-    // nothing to rebuild here, but the plan is active — future paid renders
-    // is watermark-free. Degrade silently (no error).
-    if (
-      !stored ||
-      !sessionId ||
-      !Array.isArray(stored.clip_urls) ||
-      stored.clip_urls.length === 0 ||
-      !stored.voiceover_script
-    ) {
+    if (!sessionId) {
       setWmUnlocking(false)
       return
     }
 
-    const inputs = stored
+    const inputs = stored ?? {}
     setWmUnlocking(true)
     setWmUnlockError(null)
     ;(async () => {
@@ -1437,15 +1430,32 @@ export default function GenerateClient() {
           body: JSON.stringify({ session_id: sessionId, ...inputs }),
         })
         const data = await res.json().catch(() => null)
-        if (!res.ok || !data || typeof data.render_id !== 'string') {
-          // Safe degradation: the plan is active; the user can regenerate a clean
-          // video. The existing watermarked preview is unaffected.
+        if (!res.ok || data?.verified !== true) {
           setWmUnlocking(false)
           setWmUnlockError(
             typeof data?.error === 'string'
               ? data.error
-              : "Your Starter plan is active — generate again and the new video will be watermark-free.",
+              : "We couldn't verify this checkout yet. Refresh in a moment or open Account to confirm your plan.",
           )
+          return
+        }
+
+        // Only a Stripe-verified session may unlock paid UI. Keep the return
+        // params and saved render until this point so a temporary failure can be
+        // retried safely with a refresh.
+        setHasPaid(true)
+        try { window.dispatchEvent(new Event('creditsChanged')) } catch { /* ignore */ }
+        try { localStorage.removeItem('kineo_wm_unlock') } catch { /* ignore */ }
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('wm_unlock')
+          url.searchParams.delete('session_id')
+          window.history.replaceState({}, '', url.toString())
+        } catch { /* ignore */ }
+
+        // A valid return from another browser has no captured render to rebuild.
+        if (typeof data.render_id !== 'string') {
+          setWmUnlocking(false)
           return
         }
         // Reuse the standard composing → done pipeline to swap in the clean video.
@@ -1462,7 +1472,7 @@ export default function GenerateClient() {
       } catch {
         setWmUnlocking(false)
         setWmUnlockError(
-          "Your Starter plan is active — generate again and the new video will be watermark-free.",
+          "We couldn't verify this checkout yet. Refresh in a moment or open Account to confirm your plan.",
         )
       }
     })()
@@ -1599,7 +1609,7 @@ export default function GenerateClient() {
         const data = await res.json()
 
         if (res.status === 401) {
-          router.push('/login?redirect=/generate')
+          redirectToLoginPreservingPrompt()
           return
         }
         if (res.status === 402) {
@@ -1757,7 +1767,10 @@ export default function GenerateClient() {
       .join('\n\n')
   }
 
-  async function handleAnalyze(overridePrompt?: string, opts?: { fromTopic?: boolean; skipPreview?: boolean }) {
+  async function handleAnalyze(
+    overridePrompt?: string,
+    opts?: { fromTopic?: boolean; skipPreview?: boolean; structureFirst?: boolean },
+  ) {
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const rawSource = (override ?? structuredScriptRef.current ?? prompt).trim()
     if (!rawSource) {
@@ -1795,7 +1808,9 @@ export default function GenerateClient() {
     // analyze/generate untouched and reaches /api/generate-video-cinematic as
     // body.prompt.
     const isHollywoodRaw = mode === 'cinematic_ai' && aiEngine === 'hollywood'
-    const needsStructuring = opts?.skipPreview || isHollywoodRaw ? false : scriptMode === 'ai'
+    const needsStructuring = isHollywoodRaw
+      ? false
+      : scriptMode === 'ai' && (opts?.structureFirst === true || !opts?.skipPreview)
 
     if (isHollywoodRaw) {
       // Keep the raw idea as the submission source; do NOT rewrite the textarea.
@@ -1855,7 +1870,7 @@ export default function GenerateClient() {
         signal: controller.signal,
       })
       if (res.status === 401) {
-        router.push('/login?redirect=/generate')
+        redirectToLoginPreservingPrompt()
         return
       }
       const data = await res.json()
@@ -2025,7 +2040,7 @@ export default function GenerateClient() {
         body: JSON.stringify({ script: baseScript, suggestion, language, duration }),
       })
       if (res.status === 401) {
-        router.push('/login?redirect=/generate')
+        redirectToLoginPreservingPrompt()
         return
       }
       const data = await res.json().catch(() => ({}))
@@ -2255,7 +2270,7 @@ export default function GenerateClient() {
           }),
         })
         const data = await res.json()
-        if (res.status === 401) { router.push('/login?redirect=/generate'); return }
+        if (res.status === 401) { redirectToLoginPreservingPrompt(); return }
         if (res.status === 402) {
           // KINEO-AVATAR-120-2026-07-06 — avatar now costs 120 UNIVERSAL
           // video_credits (was the separate avatar_credits add-on). The 402 is
@@ -2338,7 +2353,7 @@ export default function GenerateClient() {
           body: JSON.stringify({ prompt: trimmed, duration, language, vertical: analysis?.niche ?? undefined, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined, ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
         })
         const data = await res.json()
-        if (res.status === 401) { router.push('/login?redirect=/generate'); return }
+        if (res.status === 401) { redirectToLoginPreservingPrompt(); return }
         if (res.status === 503 && data?.queued) {
           // KINEO-FAL-ALARM-2026-07-06 — fal balance exhausted: show a calm
           // "high demand, queued" message (no credits used) instead of an error.
@@ -2445,7 +2460,7 @@ export default function GenerateClient() {
         })
         const data = await res.json()
         if (res.status === 401) {
-          router.push('/login?redirect=/generate')
+          redirectToLoginPreservingPrompt()
           return
         }
         if (res.status === 402) {
@@ -2503,7 +2518,7 @@ export default function GenerateClient() {
       const data = await res.json()
 
       if (res.status === 401) {
-        router.push('/login?redirect=/generate')
+        redirectToLoginPreservingPrompt()
         return
       }
 
@@ -2554,6 +2569,25 @@ export default function GenerateClient() {
       setPhase('failed')
     }
   }
+
+  // The onboarding CTA promises a generated Short, so complete the Fast path
+  // automatically after its analysis is ready. Other entry points still stop
+  // at the options screen and require their normal explicit Generate click.
+  useEffect(() => {
+    if (!onboardingAutoGenerateRef.current) return
+    if (phase === 'failed') {
+      onboardingAutoGenerateRef.current = false
+      return
+    }
+    if (phase !== 'options' || !analysis || mode !== 'fast') return
+    onboardingAutoGenerateRef.current = false
+    trackEvent('first_video_generation_dispatched_from_viral_onboarding', {
+      source: 'viral_onboarding',
+      engine: 'fast',
+    })
+    void handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, analysis, mode])
 
   // #383d — download with a title-based filename. The video lives on Supabase
   // (cross-origin), so the <a download="..."> attribute is IGNORED by browsers
@@ -2756,6 +2790,11 @@ export default function GenerateClient() {
       // Private-mode / storage blocked — the subscription still activates; the
       // exact-video re-render simply cannot resume in this browser.
     }
+    trackEvent('starter_checkout_clicked', {
+      source: 'post_video_result',
+      offer: 'intro_month',
+      return_to: 'watermark_unlock',
+    })
     trackCheckoutClick('starter')
     window.location.href = '/api/stripe/checkout?tier=starter&intro=1&return=wm'
   }
@@ -4546,7 +4585,10 @@ export default function GenerateClient() {
                       Unlock this video + keep creating
                     </h3>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      Download this exact video watermark-free and get 25 credits every month.
+                      Unlock this exact video as your first of up to 25 Fast Shorts this month.
+                    </p>
+                    <p className="text-xs mt-2 font-bold" style={{ color: '#5cb3ff', lineHeight: 1.45 }}>
+                      About $0.20 per Fast Short in your first month.
                     </p>
                   </div>
                   <button
@@ -4803,7 +4845,7 @@ export default function GenerateClient() {
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
                       — use the download button above to save the file to your device
-                      {planTier === 'free' && !hasPaid ? ' (unlocking removes the watermark and includes 10 videos for $4.90)' : ''}.
+                      {planTier === 'free' && !hasPaid ? ' (Starter includes this unlocked video in your 25 Fast Shorts this month)' : ''}.
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>

@@ -63,7 +63,7 @@ export default function ViralScoreClient() {
     ? [['Hook strength', res.hook], ['Trend fit', res.trend], ['Retention', res.retention], ['Shareability', res.share]]
     : []
   const color = res ? verdictColor(res.overall) : '#2997ff'
-  const ctaHref = `/generate?utm_source=viral_score_tool&idea=${encodeURIComponent(idea.trim().slice(0, 120))}`
+  const ctaHref = `/generate?utm_source=viral_score_tool&prompt=${encodeURIComponent(idea.trim().slice(0, 120))}`
 
   return (
     <div className="vs-wrap">
