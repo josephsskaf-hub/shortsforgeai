@@ -87,6 +87,37 @@ Notificar imediatamente os buscadores participantes sobre as 61 páginas alterad
   - **zero assinantes recorrentes externos — placar 0/10**.
 - Nenhum email, mensagem, post, anúncio, evento de funil, checkout, pagamento ou render foi criado pela publicação.
 
+## Auditoria pós-publicação — Google e Lote 1
+
+### Google Search Console
+
+- A propriedade de domínio `usekineo.com` está verificada e acessível na conta do founder.
+- O sitemap já estava cadastrado desde 02/07, com última leitura em 09/07, status `Processado` e 62 páginas encontradas no snapshot antigo.
+- O relatório atualizado em 09/07 mostra 45 páginas indexadas e 32 não indexadas.
+- Motivos das 32 páginas:
+  - 22 detectadas, mas ainda não indexadas;
+  - 1 rastreada, mas ainda não indexada;
+  - 5 páginas com redirecionamento;
+  - 3 cópias sem canônica escolhida pelo Google;
+  - 1 página com `noindex`.
+- As 22 páginas detectadas apareceram pela primeira vez em 11/07 e ainda mostram último rastreamento `N/D`; os exemplos visíveis pertencem ao novo cluster `/alternatives`.
+- Desempenho disponível de 01/07 a 14/07: 7 cliques, 123 impressões, CTR 5,7% e posição média 13.
+- Superfícies com sinal exibido no relatório:
+  - homepage: 5 cliques / 67 impressões;
+  - `/pricing`: 1 / 36;
+  - `/youtube-shorts-from-topic`: 1 / 3.
+- As consultas visíveis são majoritariamente de marca; ainda não existe volume genérico relevante.
+- O sitemap não foi reenviado pelo formulário e nenhuma validação foi iniciada no Search Console sem confirmação explícita do owner.
+
+### Lote 1
+
+- Os quatro threads contêm exatamente um email enviado e um follow-up D+2 em rascunho cada.
+- Respostas recebidas: **0/4**.
+- Checkouts externos de assinatura desde 15/07: **0**.
+- Quatro códigos `KINEO5-*` ativos, com **zero resgates**.
+- Assinantes recorrentes externos: **0/10**.
+- Nenhum rascunho foi alterado ou enviado durante esta auditoria.
+
 ## Meta vinculada
 
 Chegar a pelo menos 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga. Placar no início deste push: **0/10**.
