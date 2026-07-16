@@ -729,8 +729,11 @@ export default function GenerateClient() {
   const [hasPaid, setHasPaid] = useState(false)
   const [wmUnlocking, setWmUnlocking] = useState(false)
   const [wmUnlockError, setWmUnlockError] = useState<string | null>(null)
+  const [watermarkedDownloadConfirmed, setWatermarkedDownloadConfirmed] = useState(false)
   const lastFastRenderRef = useRef<FastRenderInputs | null>(null)
   const wmUnlockRanRef = useRef(false)
+  const postVideoOfferRef = useRef<HTMLDivElement | null>(null)
+  const postVideoOfferTrackedKeyRef = useRef<string | null>(null)
 
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
   // result section. Cleared automatically after ~2s.
@@ -1986,6 +1989,30 @@ export default function GenerateClient() {
     }
   }, [phase, finalVideoUrl])
 
+  // PUSH #25 — measure a real offer impression, not merely an eligible render.
+  // The result player is tall on mobile, so the clean-export card can exist
+  // below the fold without ever being seen. Count it only after at least half
+  // of the card enters the viewport, once per finished asset.
+  useEffect(() => {
+    const eligible = phase === 'done' && Boolean(finalVideoUrl) && planTier === 'free' &&
+      !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current)
+    const element = postVideoOfferRef.current
+    const offerKey = publicVideoId || finalVideoUrl
+    if (!eligible || !element || !offerKey || postVideoOfferTrackedKeyRef.current === offerKey) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return
+      postVideoOfferTrackedKeyRef.current = offerKey
+      trackEvent('post_video_offer_viewed', {
+        source: 'result_export_choice',
+        offer: 'starter_intro_month',
+      })
+      observer.disconnect()
+    }, { threshold: [0.5] })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [phase, finalVideoUrl, publicVideoId, planTier, hasPaid, wmUnlocking])
+
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
   // ────────────────────────────────────────────────────────────────────────
@@ -2431,6 +2458,7 @@ export default function GenerateClient() {
     setClipUrls([])
     setRenderId(null)
     setFinalVideoUrl(null)
+    setWatermarkedDownloadConfirmed(false)
 
     // #383c — explicit choice drives whether we structure the text with the AI.
     //  • scriptMode 'ai'       → call /api/generate-script (DEFAULT)
@@ -2989,6 +3017,8 @@ export default function GenerateClient() {
     setFalClipsDone({ done: 0, total: 0 })
     setRenderId(null)
     setFinalVideoUrl(null)
+    setWatermarkedDownloadConfirmed(false)
+    postVideoOfferTrackedKeyRef.current = null
     setGenerateProgress(0)
     setRenderProgress(0)
     composeStartedRef.current = false
@@ -3351,6 +3381,11 @@ export default function GenerateClient() {
     if (!finalVideoUrl) return
     const slug = slugifyTitle(analysis?.title)
     const filename = slug ? `${slug}.mp4` : `kineo-${duration}s.mp4`
+    const exportType = planTier === 'free' && !hasPaid
+      ? 'watermarked'
+      : planTier === null && !hasPaid
+        ? 'current_asset'
+        : 'clean'
     e.preventDefault()
     try {
       const res = await fetch(finalVideoUrl)
@@ -3366,12 +3401,11 @@ export default function GenerateClient() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 4000)
       trackEvent('video_downloaded', {
         filename,
-        export_type: planTier === 'free' && !hasPaid
-          ? 'watermarked'
-          : planTier === null && !hasPaid
-            ? 'current_asset'
-            : 'clean',
+        export_type: exportType,
       })
+      if (exportType === 'watermarked') {
+        setWatermarkedDownloadConfirmed(true)
+      }
     } catch {
       // Fallback: open the original URL (old behavior) so the user still gets the file.
       try {
@@ -3530,8 +3564,10 @@ export default function GenerateClient() {
     setClipUrls([])
     setRenderId(null)
     setFinalVideoUrl(null)
+    setWatermarkedDownloadConfirmed(false)
     setPublicVideoId(null)
     setSharedPublic(null)
+    postVideoOfferTrackedKeyRef.current = null
     setGenerateProgress(0)
     setRenderProgress(0)
     setError(null)
@@ -3618,6 +3654,11 @@ export default function GenerateClient() {
       source: 'post_video_result',
       offer: 'intro_month',
       return_to: 'watermark_unlock',
+    })
+    trackEvent('post_video_clean_export_clicked', {
+      source: 'result_export_choice',
+      offer: 'starter_intro_month',
+      watermarked_downloaded: watermarkedDownloadConfirmed,
     })
     trackCheckoutClick('starter')
     window.location.href = '/api/stripe/checkout?tier=starter&intro=1&return=wm'
@@ -3944,6 +3985,8 @@ export default function GenerateClient() {
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
     analysis?.youtubeDescription?.trim() || analysis?.title?.trim() || ''
+  const showPostVideoExportChoice = phase === 'done' && planTier === 'free' &&
+    !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current)
 
   const showStep1 = phase === 'idle' || phase === 'analyzing' || phase === 'scripting'
   const showScriptPreview = phase === 'script_preview'
@@ -5382,12 +5425,14 @@ export default function GenerateClient() {
                 </div>
               </div>
 
-              {/* KINEO-RECOVERY-2026-07-15 — the finished video is the strongest
-                  purchase moment. Show one recurring offer, not a one-time pack
-                  beside a subscription at the same price. The exact render is
-                  restored after checkout whenever compositing inputs exist. */}
-              {planTier === 'free' && !hasPaid && !wmUnlocking && lastFastRenderRef.current && (
+              {/* PUSH #25 — make the real export decision explicit. The previous
+                  layout placed a blue clean-export offer above a much louder green
+                  free-download button. A real user skipped checkout, downloaded,
+                  then cancelled share. One card now presents both honest choices:
+                  clean Starter first, free watermarked export second. */}
+              {showPostVideoExportChoice && (
                 <div
+                  ref={postVideoOfferRef}
                   className="rounded-2xl px-5 py-5 mt-6 w-full"
                   style={{
                     maxWidth: 460,
@@ -5401,19 +5446,23 @@ export default function GenerateClient() {
                       className="text-[10px] font-black uppercase tracking-[.18em] mb-1.5"
                       style={{ color: '#2997ff' }}
                     >
-                      Your video is ready
+                      Choose your export
                     </div>
                     <h3
                       className="font-black tracking-tight"
                       style={{ fontSize: '1.15rem', color: 'var(--text)', lineHeight: 1.25 }}
                     >
-                      Remove the watermark + keep creating
+                      {watermarkedDownloadConfirmed
+                        ? 'Your watermarked copy is downloaded'
+                        : 'Keep this exact video — without the Kineo watermark'}
                     </h3>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      Export this exact video clean, then create 24 more — 25 clean Fast Shorts total this month.
+                      {watermarkedDownloadConfirmed
+                        ? 'Upgrade any time to rebuild this exact video clean and keep creating.'
+                        : 'Start Starter and we rebuild this exact video clean. You also get 25 credits for clean Fast Shorts this month.'}
                     </p>
                     <p className="text-xs mt-2 font-bold" style={{ color: '#5cb3ff', lineHeight: 1.45 }}>
-                      About $0.20 per Fast Short in your first month.
+                      $4.90 today · then $9.90/month in 30 days · cancel anytime
                     </p>
                   </div>
                   <button
@@ -5427,13 +5476,37 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(41,151,255,.34)',
                     }}
                   >
-                    <span>Remove watermark + Start Starter — $4.90 today →</span>
+                    <span>Download clean + Start Starter — $4.90 →</span>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.92, marginTop: 3 }}>
-                      Renews at $9.90/month in 30 days · cancel anytime
+                      This exact video clean · 25 credits included
                     </span>
                   </button>
+                  <div className="flex items-center gap-3 my-3" aria-hidden>
+                    <span style={{ height: 1, flex: 1, background: 'var(--border)' }} />
+                    <span style={{ color: 'var(--muted2)', fontSize: '0.68rem', fontWeight: 700 }}>OR</span>
+                    <span style={{ height: 1, flex: 1, background: 'var(--border)' }} />
+                  </div>
+                  <a
+                    href={finalVideoUrl}
+                    onClick={handleDownload}
+                    download={`${slugifyTitle(analysis?.title) || `kineo-${duration}s`}.mp4`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl py-3 px-3 text-sm font-bold"
+                    style={{
+                      background: watermarkedDownloadConfirmed ? 'rgba(41,151,255,.08)' : 'rgba(255,255,255,.05)',
+                      border: watermarkedDownloadConfirmed ? '1px solid rgba(41,151,255,.3)' : '1px solid var(--border2)',
+                      color: watermarkedDownloadConfirmed ? '#5cb3ff' : 'var(--text)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <span>{watermarkedDownloadConfirmed ? '✓' : '⬇'}</span>
+                    {watermarkedDownloadConfirmed
+                      ? 'Download the free watermarked copy again'
+                      : `Download free with Kineo watermark (${duration}s · MP4)`}
+                  </a>
                   <p className="text-center mt-2" style={{ color: 'var(--muted2)', fontSize: '0.7rem', lineHeight: 1.45 }}>
-                    Secure checkout · no hidden fees · your saved videos stay yours
+                    Free export stays available · secure checkout · no hidden fees
                   </p>
                 </div>
               )}
@@ -5445,33 +5518,35 @@ export default function GenerateClient() {
                 className="mt-7 w-full flex flex-col items-center gap-3"
                 style={{ maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}
               >
-                <a
-                  href={finalVideoUrl}
-                  onClick={handleDownload}
-                  download={`${slugifyTitle(analysis?.title) || `kineo-${duration}s`}.mp4`}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={planTier === 'free' && !hasPaid
-                    ? 'Download MP4 with Kineo watermark'
-                    : planTier === null && !hasPaid
-                      ? 'Download MP4'
-                      : 'Download clean MP4'}
-                  className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, #22C55E, #15803D)',
-                    textDecoration: 'none',
-                    boxShadow: '0 8px 28px rgba(41,151,255,.45)',
-                    letterSpacing: '-0.01em',
-                    fontSize: '1rem',
-                  }}
-                >
-                  <span style={{ fontSize: '1.15rem' }}>⬇</span>
-                  {planTier === 'free' && !hasPaid
-                    ? `Download with Kineo watermark (${duration}s · MP4)`
-                    : planTier === null && !hasPaid
-                      ? `Download Your Short (${duration}s · MP4)`
-                      : `Download clean Short (${duration}s · MP4)`}
-                </a>
+                {!showPostVideoExportChoice && (
+                  <a
+                    href={finalVideoUrl}
+                    onClick={handleDownload}
+                    download={`${slugifyTitle(analysis?.title) || `kineo-${duration}s`}.mp4`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={planTier === 'free' && !hasPaid
+                      ? 'Download MP4 with Kineo watermark'
+                      : planTier === null && !hasPaid
+                        ? 'Download MP4'
+                        : 'Download clean MP4'}
+                    className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, #22C55E, #15803D)',
+                      textDecoration: 'none',
+                      boxShadow: '0 8px 28px rgba(41,151,255,.45)',
+                      letterSpacing: '-0.01em',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.15rem' }}>⬇</span>
+                    {planTier === 'free' && !hasPaid
+                      ? `Download with Kineo watermark (${duration}s · MP4)`
+                      : planTier === null && !hasPaid
+                        ? `Download Your Short (${duration}s · MP4)`
+                        : `Download clean Short (${duration}s · MP4)`}
+                  </a>
+                )}
 
                 {publicVideoId ? (
                   <button

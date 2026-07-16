@@ -296,6 +296,7 @@ async function buildAndRedirect(
     currency,
     intro_requested: intro,
     return_to: returnToWatermark ? 'watermark_moment' : 'checkout_success',
+    checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
   }
 
   const supabase = createClient()
@@ -598,12 +599,14 @@ async function buildAndRedirect(
       tier,
       billing,
       plan_credits: String(plan.credits),
+      checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
     },
     subscription_data: {
       metadata: {
         supabase_user_id: user.id,
         tier,
         plan_credits: String(plan.credits),
+        checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
       },
     },
   }
@@ -696,7 +699,7 @@ async function buildAndRedirect(
   const checkoutWindow = Math.floor(Date.now() / (5 * 60 * 1000))
   const checkoutIdempotencyKeyFor = (finalCustomerId: string): string => {
     const checkoutSignature = JSON.stringify({
-      version: 2,
+      version: 3,
       user_id: user.id,
       customer_id: finalCustomerId,
       tier,
@@ -711,9 +714,10 @@ async function buildAndRedirect(
       success_url: sessionParams.success_url,
       cancel_url: sessionParams.cancel_url,
       client_reference_id: sessionParams.client_reference_id ?? null,
+      checkout_origin: sessionParams.metadata?.checkout_origin ?? 'standard',
       window: checkoutWindow,
     })
-    return `kineo-sub-v2:${createHash('sha256').update(checkoutSignature).digest('hex')}`
+    return `kineo-sub-v3:${createHash('sha256').update(checkoutSignature).digest('hex')}`
   }
   const createCheckoutSessionFor = (finalCustomerId: string) => {
     sessionParams.customer = finalCustomerId

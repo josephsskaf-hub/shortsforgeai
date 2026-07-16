@@ -128,6 +128,16 @@ export interface FunnelData {
     paid: number
     topLandingPages: Array<{ path: string; sessions: number }>
   }
+  postVideoOffer: {
+    offerViews: number
+    watermarkedDownloads: number
+    cleanExportClicks: number
+    checkoutStarts: number
+    payments: number
+    viewToClickRate: string
+    clickToCheckoutRate: string
+    checkoutToPaidRate: string
+  }
   creatorLoop: {
     completedVideos: number
     completedCreators: number
@@ -396,6 +406,7 @@ export async function GET(req: Request) {
     let eventRows: EventRow[] = []
     let organicEventRows: EventRow[] = []
     let retentionEventRows: EventRow[] = []
+    let postVideoEventRows: EventRow[] = []
     const eventCounts = new Map<string, number>()
     try {
       const probe = await admin.from('events').select('id', { head: true, count: 'exact' }).limit(1)
@@ -425,6 +436,24 @@ export async function GET(req: Request) {
         const identities = await identityQuery
         if (!identities.error && Array.isArray(identities.data)) {
           eventRows = (identities.data as unknown as EventRow[])
+            .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
+        }
+
+        let postVideoQuery = admin
+          .from('events')
+          .select('name,user_id,created_at,session_id,metadata,path')
+          .in('name', [
+            'post_video_offer_viewed', 'post_video_clean_export_clicked',
+            'video_downloaded',
+            'checkout_started', 'payment_success',
+          ])
+          .order('created_at', { ascending: false })
+          .limit(5000)
+        if (periodIso) postVideoQuery = postVideoQuery.gte('created_at', periodIso)
+        if (externalEventFilter) postVideoQuery = postVideoQuery.or(externalEventFilter)
+        const postVideoEvents = await postVideoQuery
+        if (!postVideoEvents.error && Array.isArray(postVideoEvents.data)) {
+          postVideoEventRows = (postVideoEvents.data as unknown as EventRow[])
             .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
         }
 
@@ -751,6 +780,50 @@ export async function GET(req: Request) {
         .slice(0, 10),
     }
 
+    // PUSH #25 — the export decision directly below a finished free video.
+    // A browser impression is counted only after the card is actually visible;
+    // checkout and payment remain server/Stripe-authoritative. Session and
+    // Stripe IDs connect the payment even when an older webhook lacks the new
+    // explicit checkout_origin metadata.
+    const postVideoOfferViewRows = postVideoEventRows.filter((event) => event.name === 'post_video_offer_viewed')
+    const postVideoWatermarkedDownloadRows = postVideoEventRows.filter((event) =>
+      event.name === 'video_downloaded' && event.metadata?.export_type === 'watermarked'
+    )
+    const postVideoCleanClickRows = postVideoEventRows.filter((event) => event.name === 'post_video_clean_export_clicked')
+    const postVideoCheckoutRows = postVideoEventRows.filter((event) =>
+      event.name === 'checkout_started' && (
+        event.metadata?.checkout_origin === 'post_video_clean_export' ||
+        event.metadata?.return_to === 'watermark_moment'
+      )
+    )
+    const postVideoStripeSessionIds = new Set(
+      postVideoCheckoutRows
+        .map((event) => event.metadata?.stripe_session_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+    const postVideoBrowserSessionIds = new Set(
+      postVideoCheckoutRows
+        .map((event) => event.session_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+    const postVideoPaymentRows = postVideoEventRows.filter((event) => {
+      if (event.name !== 'payment_success') return false
+      if (event.metadata?.checkout_origin === 'post_video_clean_export') return true
+      const stripeSessionId = event.metadata?.stripe_session_id
+      if (typeof stripeSessionId === 'string' && postVideoStripeSessionIds.has(stripeSessionId)) return true
+      return typeof event.session_id === 'string' && postVideoBrowserSessionIds.has(event.session_id)
+    })
+    const postVideoOffer = {
+      offerViews: postVideoOfferViewRows.length,
+      watermarkedDownloads: postVideoWatermarkedDownloadRows.length,
+      cleanExportClicks: postVideoCleanClickRows.length,
+      checkoutStarts: postVideoCheckoutRows.length,
+      payments: postVideoPaymentRows.length,
+      viewToClickRate: pct(postVideoCleanClickRows.length, postVideoOfferViewRows.length),
+      clickToCheckoutRate: pct(postVideoCheckoutRows.length, postVideoCleanClickRows.length),
+      checkoutToPaidRate: pct(postVideoPaymentRows.length, postVideoCheckoutRows.length),
+    }
+
     // PUSH #23 — creator distribution loop. A completed video only becomes an
     // acquisition asset when the creator shares its public page, a visitor
     // clicks the CTA, signs up and eventually pays. Every stage is measured
@@ -923,7 +996,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })

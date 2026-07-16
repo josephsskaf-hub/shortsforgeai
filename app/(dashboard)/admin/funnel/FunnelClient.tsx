@@ -110,6 +110,11 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     signupRate: '—', activated: 0, activationRate: '—', paid: 0,
     topLandingPages: [],
   }
+  const postVideoOffer = data.postVideoOffer ?? {
+    offerViews: 0, watermarkedDownloads: 0, cleanExportClicks: 0,
+    checkoutStarts: 0, payments: 0, viewToClickRate: '—',
+    clickToCheckoutRate: '—', checkoutToPaidRate: '—',
+  }
   const creatorLoop = data.creatorLoop ?? {
     completedVideos: 0, completedCreators: 0, shareClicks: 0, shareUsers: 0,
     shareRate: '—', sharesCompleted: 0, publicVideoLandings: 0,
@@ -422,6 +427,54 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           value={fmt(organic.paid)}
           hint="verified active / trialing"
           accent={organic.paid > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+      </Section>
+
+      <Section title={`Post-video export · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Offer actually viewed"
+          value={fmt(postVideoOffer.offerViews)}
+          hint="50% of export card visible"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Watermarked downloads"
+          value={fmt(postVideoOffer.watermarkedDownloads)}
+          hint="free export delivered"
+          accent="#a78bfa"
+        />
+        <Card
+          label="Clean-export clicks"
+          value={fmt(postVideoOffer.cleanExportClicks)}
+          hint="Starter at the export decision"
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="Offer view → Click"
+          value={postVideoOffer.viewToClickRate}
+          sub={`${postVideoOffer.cleanExportClicks} / ${postVideoOffer.offerViews}`}
+        />
+        <Card
+          label="Post-video checkouts"
+          value={fmt(postVideoOffer.checkoutStarts)}
+          hint="Stripe session created"
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="Click → Checkout"
+          value={postVideoOffer.clickToCheckoutRate}
+          sub={`${postVideoOffer.checkoutStarts} / ${postVideoOffer.cleanExportClicks}`}
+        />
+        <Card
+          label="Post-video subscribers"
+          value={fmt(postVideoOffer.payments)}
+          hint="verified payment_success"
+          accent={postVideoOffer.payments > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+        <RateCard
+          label="Checkout → Paid"
+          value={postVideoOffer.checkoutToPaidRate}
+          sub={`${postVideoOffer.payments} / ${postVideoOffer.checkoutStarts}`}
         />
       </Section>
 

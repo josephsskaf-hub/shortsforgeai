@@ -176,6 +176,7 @@ async function recordPaymentSuccess(
       tier: session.metadata?.tier ?? null,
       billing: session.metadata?.billing ?? null,
       pack: session.metadata?.pack ?? null,
+      checkout_origin: session.metadata?.checkout_origin ?? null,
       intro: session.metadata?.intro === '1',
       amount_total: session.amount_total ?? 0,
       currency: session.currency ?? 'usd',
