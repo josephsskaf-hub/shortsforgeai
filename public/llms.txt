@@ -8,7 +8,7 @@ Key facts (verified July 2026):
 - Output: a finished 9:16 vertical Short (MP4) with script, AI voiceover, visuals and captions, ready to post on YouTube Shorts, TikTok or Instagram Reels.
 - Generation time: Fast Mode is typically ready in about 60 seconds; AI Generated and Cinematic videos can take several minutes.
 - Three engines: Fast Mode (curated stock footage, 1 credit/video), AI Generated (Seedance text-to-video scenes, 20 credits/video), Cinematic (Kling premium engine, 50 credits/video).
-- Free tier: first Short free, no credit card required (free trial output carries a small watermark; paid exports are watermark-free).
+- Free access: create, watch, download and share up to 3 watermarked Fast videos every 24 hours, with no credit card. Paid exports are watermark-free.
 - Users own every video they generate, including monetization rights.
 - Plans are month-to-month and cancel anytime. Credits refresh each billing month and do not roll over.
 - Kineo was formerly named ShortsForgeAI; shortsforgeai.com now redirects to usekineo.com.

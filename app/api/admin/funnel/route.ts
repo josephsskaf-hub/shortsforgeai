@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
 import { INTERNAL_ACCOUNTS_LABEL, isInternalEmail } from '@/lib/internalAccounts'
+import { acquisitionSource, hasCorrectableSelfReferral } from '@/lib/acquisitionSource'
 import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
@@ -117,6 +118,15 @@ export interface FunnelData {
     activationRate: string
     signupToPaid: string
   }>
+  acquisitionAttribution: {
+    attributedSignups: number
+    attributedActivated: number
+    attributedPaid: number
+    directOrUnknownSignups: number
+    correctedSelfReferrals: number
+    topSource: string | null
+    topSourceSignups: number
+  }
   organicRecovery: {
     landingSessions: number
     ctaClicks: number
@@ -249,16 +259,11 @@ function normalizeTier(raw: unknown): PaidTier {
 }
 
 function sourceForProfile(profile: ProfileRow): string {
-  const explicit = (profile.signup_utm_source || profile.utm_source || '').trim().toLowerCase()
-  if (explicit) return explicit
-
-  const referrer = (profile.signup_referrer || '').trim()
-  if (!referrer) return 'direct'
-  try {
-    return new URL(referrer).hostname.replace(/^www\./, '').toLowerCase() || 'direct'
-  } catch {
-    return referrer.slice(0, 80).toLowerCase()
-  }
+  return acquisitionSource({
+    utmSource: profile.signup_utm_source,
+    legacyUtmSource: profile.utm_source,
+    referrer: profile.signup_referrer,
+  })
 }
 
 function objectId(value: string | { id: string } | null): string | null {
@@ -750,6 +755,17 @@ export async function GET(req: Request) {
     const sourceQuality = Array.from(srcMap.values())
       .map((s) => ({ ...s, activationRate: pct(s.activated, s.signups), signupToPaid: pct(s.paid, s.signups) }))
       .sort((a, b) => b.signups - a.signups)
+    const attributedSources = sourceQuality.filter((source) => source.source !== 'direct')
+    const topAttributedSource = attributedSources[0] ?? null
+    const acquisitionAttribution = {
+      attributedSignups: attributedSources.reduce((sum, source) => sum + source.signups, 0),
+      attributedActivated: attributedSources.reduce((sum, source) => sum + source.activated, 0),
+      attributedPaid: attributedSources.reduce((sum, source) => sum + source.paid, 0),
+      directOrUnknownSignups: sourceQuality.find((source) => source.source === 'direct')?.signups ?? 0,
+      correctedSelfReferrals: cohort.filter((profile) => hasCorrectableSelfReferral(profile.signup_referrer)).length,
+      topSource: topAttributedSource?.source ?? null,
+      topSourceSignups: topAttributedSource?.signups ?? 0,
+    }
 
     const organicLandingRows = organicEventRows.filter((event) =>
       event.name === 'landing_session_started' && isOrganicLandingPath(event.path)
@@ -996,7 +1012,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, acquisitionAttribution, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })

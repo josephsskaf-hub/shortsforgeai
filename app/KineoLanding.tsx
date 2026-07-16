@@ -204,7 +204,7 @@ export default function KineoLanding({ initialUser }: Props) {
               <tr><td>AI voiceover included</td><td className="us">✓</td><td className="no">—</td><td>✓</td><td className="no">—</td></tr>
               <tr><td>Finds and matches footage</td><td className="us">✓</td><td className="no">your upload</td><td className="no">avatar only</td><td className="no">your upload</td></tr>
               <tr><td>No per-minute caps</td><td className="us">✓</td><td className="no">credits</td><td className="no">credits</td><td className="no">—</td></tr>
-              <tr><td>Starting price</td><td className="us">$9.90/mo</td><td>$15/mo</td><td>$29/mo</td><td>$19/mo</td></tr>
+              <tr><td>Starting price</td><td className="us">$4.90 first month</td><td>$15/mo</td><td>$29/mo</td><td>$19/mo</td></tr>
             </tbody>
           </table></div>
         </div>

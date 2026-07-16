@@ -298,7 +298,7 @@ export default function PricingPage() {
             Pricing
           </div>
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
-            Real AI video generation from $9.90/mo.
+            Start for $4.90. Keep creating for $9.90/mo.
           </h1>
           {/* KINEO-SHOWCASE-2026-07-10 — Joseph: parágrafo comparativo removido
               ("texto sujo") — os CARDS de preço são a estrela do hero. */}
@@ -870,7 +870,7 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'starter' ? 'Loading…' : 'Starter $9.90'}
+            {purchasing === 'starter' ? 'Loading…' : 'Starter $4.90'}
           </button>
           <button
             type="button"
@@ -890,7 +890,7 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(41,151,255,.35)',
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Creator $24.90 🔥'}
+            {purchasing === 'basic' ? 'Loading…' : 'Creator $9.90 🔥'}
           </button>
           <button
             type="button"

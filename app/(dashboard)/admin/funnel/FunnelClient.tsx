@@ -110,6 +110,11 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     signupRate: '—', activated: 0, activationRate: '—', paid: 0,
     topLandingPages: [],
   }
+  const acquisition = data.acquisitionAttribution ?? {
+    attributedSignups: 0, attributedActivated: 0, attributedPaid: 0,
+    directOrUnknownSignups: 0, correctedSelfReferrals: 0,
+    topSource: null, topSourceSignups: 0,
+  }
   const postVideoOffer = data.postVideoOffer ?? {
     offerViews: 0, watermarkedDownloads: 0, cleanExportClicks: 0,
     checkoutStarts: 0, payments: 0, viewToClickRate: '—',
@@ -303,6 +308,33 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         </section>
       )}
 
+      <Section title={`Acquisition attribution · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Known-source signups"
+          value={fmt(acquisition.attributedSignups)}
+          hint={`${fmt(acquisition.attributedActivated)} activated · ${fmt(acquisition.attributedPaid)} paid`}
+          accent="#22d3ee"
+        />
+        <Card
+          label="Direct / unknown"
+          value={fmt(acquisition.directOrUnknownSignups)}
+          hint="no trustworthy first-touch source"
+          accent="#94a3b8"
+        />
+        <Card
+          label="OAuth / checkout refs ignored"
+          value={fmt(acquisition.correctedSelfReferrals)}
+          hint="historical rows normalized at read time"
+          accent={acquisition.correctedSelfReferrals > 0 ? '#fbbf24' : '#22d3ee'}
+        />
+        <Card
+          label="Top known source"
+          value={acquisition.topSource ?? '—'}
+          hint={`${fmt(acquisition.topSourceSignups)} signups`}
+          accent="#a78bfa"
+        />
+      </Section>
+
       {/* ── #475 — Topic performance ──────────────────────────────────────── */}
       {data.topicPerformance && data.topicPerformance.length > 0 && (
         <section className="mb-7">
@@ -388,7 +420,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         />
       </Section>
 
-      <Section title={`Organic recovery · ${days === 'all' ? 'all time' : `${days}d`}`}>
+      <Section title={`SEO landing pages · PUSH #22 · ${days === 'all' ? 'all time' : `${days}d`}`}>
         <Card
           label="SEO landing sessions"
           value={fmt(organic.landingSessions)}
@@ -409,7 +441,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         <Card
           label="Attributed signups"
           value={fmt(organic.signups)}
-          hint="campaign starts push22_"
+          hint="campaign starts push22_; other sources are above"
           accent="#22d3ee"
         />
         <RateCard

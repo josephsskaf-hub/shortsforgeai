@@ -1,14 +1,14 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Kineo Pricing — AI YouTube Shorts From $9.90/mo',
+  title: 'Kineo Pricing — Starter $4.90 First Month',
   description:
-    'Compare Kineo Starter, Creator and Studio. Make your first AI Short free, then choose a monthly plan from $9.90. Cancel anytime.',
+    'Compare Kineo Starter, Creator and Studio. Create up to 3 watermarked Fast videos every 24h with no card. Starter is $4.90 for the first month, then $9.90/month. Cancel anytime.',
   alternates: { canonical: 'https://www.usekineo.com/pricing' },
   openGraph: {
-    title: 'Kineo Pricing — AI YouTube Shorts From $9.90/mo',
+    title: 'Kineo Pricing — Starter $4.90 First Month',
     description:
-      'Make your first AI Short free, then choose the monthly Kineo plan that fits your workflow.',
+      'Create up to 3 watermarked Fast videos every 24h with no card. Starter is $4.90 for the first month, then $9.90/month.',
     url: 'https://www.usekineo.com/pricing',
     siteName: 'Kineo',
     images: ['/og-image.png'],

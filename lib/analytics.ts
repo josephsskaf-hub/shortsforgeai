@@ -1,3 +1,5 @@
+import { sanitizeAcquisitionReferrer, sanitizeAcquisitionUtmSource } from '@/lib/acquisitionSource'
+
 // Push #061 — shared client-side event tracking helper.
 //
 // `trackEvent` is fire-and-forget: it posts to /api/events but never
@@ -114,16 +116,20 @@ export function captureSourceOnce(): void {
     const src: StoredSource = {}
     SRC_FIELDS.forEach((k) => {
       const v = (sp.get(k) ?? '').trim()
-      if (v) src[k] = v.slice(0, 255)
+      if (!v) return
+      if (k === 'utm_source') {
+        const source = sanitizeAcquisitionUtmSource(v)
+        if (source) src[k] = source
+        return
+      }
+      src[k] = v.slice(0, 255)
     })
     // document.referrer is the off-site URL that linked here (directory, social,
     // search). Same-origin internal navigations set it to our own domain — skip
     // those so "referrer" only ever reflects a genuine external acquisition source.
     try {
-      const ref = (document.referrer ?? '').trim()
-      if (ref && !ref.startsWith(window.location.origin)) {
-        src.referrer = ref.slice(0, 300)
-      }
+      const ref = sanitizeAcquisitionReferrer(document.referrer, window.location.hostname)
+      if (ref) src.referrer = ref
     } catch {
       /* referrer may be unavailable — ignore */
     }

@@ -16,6 +16,7 @@
 import { useEffect } from 'react'
 import { captureSourceOnce, trackEvent } from '@/lib/analytics'
 import { captureRefOnce } from '@/lib/referral'
+import { acquisitionSource, sanitizeAcquisitionReferrer } from '@/lib/acquisitionSource'
 
 export default function SourceCapture() {
   useEffect(() => {
@@ -34,10 +35,8 @@ export default function SourceCapture() {
         sessionStorage.setItem(marker, '1')
         let referrerHost: string | null = null
         try {
-          const referrer = (document.referrer ?? '').trim()
-          if (referrer && !referrer.startsWith(window.location.origin)) {
-            referrerHost = new URL(referrer).hostname.slice(0, 120)
-          }
+          const referrer = sanitizeAcquisitionReferrer(document.referrer, window.location.hostname)
+          if (referrer) referrerHost = acquisitionSource({ referrer }).slice(0, 120)
         } catch {
           // Referrer is optional.
         }

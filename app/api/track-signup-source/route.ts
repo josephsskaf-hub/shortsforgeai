@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeAcquisitionReferrer, sanitizeAcquisitionUtmSource } from '@/lib/acquisitionSource'
 
 // #383 — best-effort signup attribution.
 //
@@ -41,11 +42,11 @@ export async function POST(req: NextRequest) {
     try {
       const body = await req.json()
       gclid = clean(body?.gclid, 255)
-      utm_source = clean(body?.utm_source, 255)
-      signup_utm_source = clean(body?.signup_utm_source, 255)
+      utm_source = sanitizeAcquisitionUtmSource(clean(body?.utm_source, 255))
+      signup_utm_source = sanitizeAcquisitionUtmSource(clean(body?.signup_utm_source, 255))
       signup_utm_medium = clean(body?.signup_utm_medium, 255)
       signup_utm_campaign = clean(body?.signup_utm_campaign, 255)
-      signup_referrer = clean(body?.signup_referrer, 300)
+      signup_referrer = sanitizeAcquisitionReferrer(clean(body?.signup_referrer, 300), req.nextUrl.hostname)
     } catch {
       /* no/invalid JSON body — keep nulls */
     }
@@ -63,10 +64,10 @@ export async function POST(req: NextRequest) {
             utm_campaign?: string
             referrer?: string
           }
-          signup_utm_source = clean(c.utm_source, 255)
+          signup_utm_source = sanitizeAcquisitionUtmSource(clean(c.utm_source, 255))
           signup_utm_medium = clean(c.utm_medium, 255)
           signup_utm_campaign = clean(c.utm_campaign, 255)
-          signup_referrer = clean(c.referrer, 300)
+          signup_referrer = sanitizeAcquisitionReferrer(clean(c.referrer, 300), req.nextUrl.hostname)
         }
       } catch {
         /* malformed cookie — keep nulls */
