@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { NICHE_SLUGS } from './free-ai-shorts/[niche]/page'
 import { COMPETITOR_SLUGS } from './alternatives/[competitor]/page'
 import { PT_SLUGS } from './pt/[slug]/page'
+import { PUBLIC_EXAMPLES } from '@/lib/publicExamples'
 
 // #458 — SEO: sitemap so Google can discover and index every public page.
 // The site had none, so search engines were barely crawling it — free organic
@@ -27,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/faceless-channel-ideas', priority: 0.8, freq: 'weekly' },
     { path: '/free-ai-shorts', priority: 0.8, freq: 'weekly' },
     { path: '/alternatives', priority: 0.8, freq: 'weekly' },
+    { path: '/examples', priority: 0.8, freq: 'weekly' },
     // AEO/GEO — citable fact sheet for AI answer engines (linked in public/llms.txt).
     { path: '/facts', priority: 0.7, freq: 'weekly' },
     { path: '/terms', priority: 0.2, freq: 'monthly' },
@@ -59,5 +61,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
-  return [...staticEntries, ...nicheEntries, ...altEntries, ...ptEntries]
+  const exampleEntries = PUBLIC_EXAMPLES.map((example) => ({
+    url: `${BASE}/examples/${example.slug}`,
+    lastModified: LAST_MODIFIED,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
+  return [...staticEntries, ...nicheEntries, ...altEntries, ...ptEntries, ...exampleEntries]
 }

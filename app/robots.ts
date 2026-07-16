@@ -42,7 +42,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: DISALLOW,
       },
     ],
-    sitemap: `${BASE}/sitemap.xml`,
+    sitemap: [`${BASE}/sitemap.xml`, `${BASE}/video-sitemap.xml`],
     host: BASE,
   }
 }

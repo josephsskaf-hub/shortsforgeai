@@ -15,18 +15,6 @@
     {
       "path": "/api/cron/refresh-niche-trends",
       "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/send-recovery",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/send-activation-nudge",
-      "schedule": "30 14 * * *"
-    },
-    {
-      "path": "/api/cron/send-video-rescue",
-      "schedule": "0 15 * * *"
     }
   ]
 }
