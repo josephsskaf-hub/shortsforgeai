@@ -7,15 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { checkAvatarJob, type AvatarEngine } from '@/lib/avatar/veed'
 import { refundRenderCredits } from '@/lib/credits/refund'
-import { settleAvatarCreditHoldForFailedRequest } from '@/lib/avatar/reservation'
 import {
-  AVATAR_CLAIM_EVENT,
-  AVATAR_CLAIM_PATH,
-  avatarClaimId,
-  avatarValueHash,
-  validAvatarGenerationId,
-  verifyAvatarClaim,
-} from '@/lib/avatar/claim'
+  bindAvatarCompletedVideo,
+  confirmAvatarBirthDebit,
+  loadVerifiedAvatarClaimForRequest,
+  refundAvatarBirthDebitForFailedRequest,
+} from '@/lib/avatar/reservation'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,51 +85,16 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
       }
 
-      let owned = job?.user_id === user.id && job?.engine === engine
-      if (!owned && !job) {
-        const { data: claim, error: claimError } = await admin
-          .from('events')
-          .select('id,user_id,path,session_id,metadata')
-          .eq('name', AVATAR_CLAIM_EVENT)
-          .eq('user_id', user.id)
-          .contains('metadata', { response: { avatar_request_id: requestId } })
-          .limit(1)
-          .maybeSingle()
-        if (claimError) {
-          console.error('[avatar-status] signed owner fallback failed:', claimError.message)
-          return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
-        }
-        const metadata = claim?.metadata && typeof claim.metadata === 'object'
-          ? claim.metadata as Record<string, unknown>
-          : {}
-        const generationId = typeof claim?.session_id === 'string' ? claim.session_id : ''
-        const fingerprint = typeof metadata.fingerprint === 'string' ? metadata.fingerprint : ''
-        const responseHash = typeof metadata.response_hash === 'string' ? metadata.response_hash : ''
-        const claimStatus = metadata.status === 'settled' ? 'settled' : metadata.status === 'done' ? 'done' : null
-        const creditCost = typeof metadata.credit_cost === 'number' && Number.isInteger(metadata.credit_cost)
-          ? metadata.credit_cost
-          : null
-        const response = metadata.response && typeof metadata.response === 'object' && !Array.isArray(metadata.response)
-          ? metadata.response as Record<string, unknown>
-          : null
-        owned = Boolean(
-          claim && response && claimStatus && validAvatarGenerationId(generationId) && fingerprint && responseHash && creditCost !== null &&
-          claim.id === avatarClaimId(user.id, generationId) &&
-          claim.path === AVATAR_CLAIM_PATH &&
-          response.avatar_request_id === requestId && response.engine === engine &&
-          avatarValueHash(response) === responseHash &&
-          verifyAvatarClaim(serviceRoleKey, {
-            claimId: claim.id as string,
-            userId: user.id,
-            generationId,
-            status: claimStatus,
-            fingerprint,
-            creditCost,
-            responseHash,
-          }, metadata.authority)
-        )
+      // avatar_jobs is only a rate-limit/lookup aid. Authorization comes from
+      // the server-signed birth claim, so a permissive or accidentally changed
+      // RLS policy on the auxiliary table can never grant provider polling.
+      const verified = await loadVerifiedAvatarClaimForRequest({ userId: user.id, requestId })
+      if (!verified.ok) {
+        console.error('[avatar-status] signed owner verification failed:', verified.error)
+        return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
       }
-      if (!owned) {
+      const jobConflicts = Boolean(job && (job.user_id !== user.id || job.engine !== engine))
+      if (!verified.claim || verified.claim.engine !== engine || jobConflicts) {
         return NextResponse.json({ error: 'Avatar job not found.' }, { status: 404 })
       }
     }
@@ -140,26 +102,22 @@ export async function GET(req: NextRequest) {
     const state = await checkAvatarJob(requestId, engine)
 
     if (state.status === 'failed') {
-      // Protection rule: a VEED failure never charges the user (checkpoint 1
-      // has no billing at all; checkpoint 2's debit only happens on success).
-      //
-      // AUTO-REFUND (TAAFT feedback) — the Animate flow is the exception: it
-      // debits upfront, keyed `animate-<request_id>`. On failure, refund that
-      // exact ledger row. Idempotent (the RPC only claims rows WHERE
-      // refunded_at IS NULL), so repeated polls of a failed job can never
-      // double-refund.
+      // Protection rule: all paid avatar providers debit before submission and
+      // refund their exact deterministic ledger key on terminal failure.
+      // Idempotent refund RPCs ensure repeated polls can never double-refund.
       let creditsRefunded = 0
       if (engine === 'animate') {
         creditsRefunded = await refundRenderCredits(`animate-${requestId}`)
       } else {
-        const released = await settleAvatarCreditHoldForFailedRequest({ userId: user.id, requestId })
-        if (!released) {
-          console.warn(`[avatar-hold] failed provider hold could not be settled request=${requestId}`)
+        const refunded = await refundAvatarBirthDebitForFailedRequest({ userId: user.id, requestId })
+        if (!refunded.ok) {
+          console.warn(`[avatar-hold] failed provider refund could not be settled request=${requestId}: ${refunded.error}`)
           return NextResponse.json(
-            { error: 'Finalizing the failed avatar safely. Please retry this status check.' },
+            { error: 'Finalizing your automatic avatar refund. Please retry this status check.' },
             { status: 503 },
           )
         }
+        creditsRefunded = refunded.credits
       }
       return NextResponse.json({
         status: 'failed',
@@ -170,6 +128,36 @@ export async function GET(req: NextRequest) {
             ? `Generation failed. Your ${creditsRefunded} credits were automatically refunded — please try again.`
             : 'Avatar generation failed. You were not charged — please try again.',
       })
+    }
+
+    if (state.status === 'done' && state.videoUrl && engine !== 'animate') {
+      // Bind the exact Fal URL into the signed birth claim and confirm the
+      // deterministic upfront debit before any raw paid MP4 leaves the server.
+      const bound = await bindAvatarCompletedVideo({
+        userId: user.id,
+        requestId,
+        engine,
+        videoUrl: state.videoUrl,
+      })
+      if (!bound.ok || !bound.claim) {
+        console.error('[avatar-status] completed URL binding failed:', bound.ok ? 'claim missing' : bound.error)
+        return NextResponse.json(
+          { error: 'Your avatar is ready while we verify secure delivery. Please retry this status check.' },
+          { status: 503 },
+        )
+      }
+      const debit = await confirmAvatarBirthDebit({
+        userId: user.id,
+        generationId: bound.claim.generationId,
+        creditCost: bound.claim.creditCost,
+      })
+      if (!debit.ok) {
+        console.error('[avatar-status] completed avatar debit verification failed:', debit.error)
+        return NextResponse.json(
+          { error: 'Your avatar is ready while we verify its credit charge. Please retry this status check.' },
+          { status: 503 },
+        )
+      }
     }
 
     return NextResponse.json({ status: state.status, video_url: state.videoUrl })

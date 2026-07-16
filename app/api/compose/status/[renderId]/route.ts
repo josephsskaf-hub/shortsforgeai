@@ -11,7 +11,11 @@ import { refundRenderCredits } from '@/lib/credits/refund'
 import { creditCostFor, normalizeQuality } from '@/lib/credits/engineCost'
 import { releaseFailedFreeFastClaim, settleComposeCreditHoldForRender } from '@/lib/credits/composeHold'
 import { getRenderIntent } from '@/lib/credits/renderIntent'
-import { settleAvatarCreditHoldForRender } from '@/lib/avatar/reservation'
+import {
+  loadPrepaidAvatarClaimForRender,
+  settleAvatarCreditHoldForRender,
+  type VerifiedAvatarBirthClaim,
+} from '@/lib/avatar/reservation'
 import {
   loadSettledCinematicClaimForRender,
   type CinematicClaim,
@@ -222,6 +226,7 @@ export async function GET(
       quality === 'cinematic_veo' || quality === 'cinematic_sora' ||
       quality === 'cinematic_hollywood'
     let prepaidCinematicClaim: CinematicClaim | null = null
+    let prepaidAvatarClaim: VerifiedAvatarBirthClaim | null = null
     let cinematicAdmin: ReturnType<typeof createAdminClient> | null = null
     let cinematicSecret = ''
     if (hasServerIntent && isCinematicQuality) {
@@ -250,6 +255,33 @@ export async function GET(
         )
       }
       prepaidCinematicClaim = prepaid.claim
+    }
+    if (hasServerIntent && (quality === 'avatar' || quality === 'presenter')) {
+      const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+      if (!adminUrl || !secret) {
+        return NextResponse.json(
+          { error: 'Avatar billing verification is temporarily unavailable.' },
+          { status: 503 },
+        )
+      }
+      const admin = createAdminClient(adminUrl, secret, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const prepaid = await loadPrepaidAvatarClaimForRender({
+        db: admin,
+        secret,
+        userId: user.id,
+        renderId,
+      })
+      if (!prepaid.ok || !prepaid.claim) {
+        console.error('[compose/status] avatar billing verification failed:', prepaid.ok ? 'claim missing' : prepaid.error)
+        return NextResponse.json(
+          { error: 'Avatar billing verification is temporarily unavailable.' },
+          { status: 503 },
+        )
+      }
+      prepaidAvatarClaim = prepaid.claim
     }
 
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
@@ -298,7 +330,7 @@ export async function GET(
           progress: 0,
         })
       }
-      let creditsDeducted = prepaidCinematicClaim !== null
+      let creditsDeducted = prepaidCinematicClaim !== null || prepaidAvatarClaim !== null
       let creditsRemaining: number | null = null
 
       // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
@@ -362,7 +394,7 @@ export async function GET(
       // paying accounts (fastIsPaidUser). Free Fast stays out (nothing to debit).
       const shouldDeductCredits =
         (!prepaidCinematicClaim && isCinematicQuality) ||
-        quality === 'avatar' || quality === 'presenter' ||
+        (!prepaidAvatarClaim && (quality === 'avatar' || quality === 'presenter')) ||
         (quality === 'fast' && (intentCost !== null ? intentCost > 0 : fastIsPaidUser))
 
       // Server-side idempotency guard (push #fix-double-deduction):
@@ -731,7 +763,7 @@ export async function GET(
         const avatarHoldReleased = await settleAvatarCreditHoldForRender({
           userId: user.id,
           renderId,
-          reason: 'provider_failed',
+          reason: prepaidAvatarClaim ? 'compose_failed_after_asset_delivered' : 'provider_failed',
         })
         if (!avatarHoldReleased) {
           console.warn(`[avatar-hold] failed compose could not release hold for render=${renderId}`)
@@ -741,19 +773,20 @@ export async function GET(
           )
         }
       }
-      // Cinematic birth credits pay for the Fal clips themselves and those
-      // owner-only URLs were already delivered. Refunding them because the
-      // downstream Creatomate assembly failed would let a user keep the raw AI
-      // clips, force a compose failure, and repeat for free. Only the clip-status
-      // route refunds cinematic birth credits, and only when every Fal clip
-      // terminally fails. Other engines keep the normal render-id refund path.
-      const creditsRefunded = prepaidCinematicClaim ? 0 : await refundRenderCredits(renderId)
+      // Cinematic and Avatar birth credits pay for raw Fal assets already
+      // delivered to the authenticated owner. A downstream Creatomate failure
+      // must not refund those assets; only terminal Fal failure refunds the
+      // deterministic birth key in its dedicated status route.
+      const prepaidProviderAsset = prepaidCinematicClaim !== null || prepaidAvatarClaim !== null
+      const creditsRefunded = prepaidProviderAsset ? 0 : await refundRenderCredits(renderId)
       return NextResponse.json({
         phase: 'failed',
         error:
           (state.error ?? 'Render failed.') +
           (prepaidCinematicClaim
             ? ' Your AI scenes remain paid and protected; no second AI-scene charge is needed to reassemble them.'
+            : prepaidAvatarClaim
+            ? ' Your completed avatar remains paid and protected; no second avatar charge is needed to reassemble it.'
             : creditsRefunded > 0
             ? ` Your ${creditsRefunded} credits were automatically refunded.`
             : ' You were not charged for this video.'),

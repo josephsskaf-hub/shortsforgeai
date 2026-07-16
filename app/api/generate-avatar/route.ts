@@ -64,6 +64,11 @@ import { pickLibraryClips } from '@/lib/stockLibrary'
 // (the "menina dançando" bug Joseph hit on 12/06).
 import { brollEngine } from '@/lib/broll/broll-engine'
 import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
+import {
+  avatarBillingReference,
+  markAvatarClaimPrepaid,
+  refundAvatarBirthDebit,
+} from '@/lib/avatar/reservation'
 
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
@@ -218,11 +223,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please upload your photo first.' }, { status: 400 })
     }
 
-    // KINEO-AVATAR-120-2026-07-06 — avatar videos now cost 120 UNIVERSAL
-    // video_credits (was the separate avatar_credits add-on @ 1/video). This is
-    // only the upfront balance gate; the actual 120-credit DEBIT happens on
-    // SUCCESS in compose/status via debit_video_credits (idempotent by
-    // render_id), so a failed VEED/render never charges (protection rule).
+    // KINEO-AVATAR-120-2026-07-06 — avatar videos use UNIVERSAL video_credits
+    // (not the retired separate avatar_credits add-on). The balance is held at
+    // admission and atomically debited before the first paid provider POST;
+    // terminal provider rejection/failure refunds the deterministic birth key.
     // The 402 matches the universal out-of-credits shape used by Fast/compose
     // (upsell:'credits' → the $4.90 pack / plan upgrade modal), NOT the retired
     // avatar_pack. Voice dry runs (internal, cents of TTS) skip the gate.
@@ -269,6 +273,9 @@ export async function POST(req: NextRequest) {
     let reservationId = ''
     let claimId = ''
     let requestFingerprint = ''
+    let avatarDebitConfirmed = false
+    let avatarDebitBalance: number | null = null
+    let avatarPrepaidAt = ''
     const claimStartedAt = new Date().toISOString()
 
     const safetyUnavailable = () => NextResponse.json(
@@ -276,8 +283,20 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     )
 
-    async function releaseAvatarSubmission(): Promise<void> {
-      if (!avatarAdmin) return
+    async function releaseAvatarSubmission(): Promise<boolean> {
+      if (avatarDebitConfirmed && generationId) {
+        const refunded = await refundAvatarBirthDebit({
+          userId,
+          generationId,
+          creditCost: AVATAR_CREDIT_COST,
+        })
+        if (!refunded.ok) {
+          console.error('[generate-avatar] refusing to release before refund confirmation:', refunded.error)
+          return false
+        }
+        avatarDebitConfirmed = false
+      }
+      if (!avatarAdmin) return true
       if (ownsAvatarReservation && reservationId) {
         const { error } = await avatarAdmin
           .from('avatar_jobs')
@@ -297,6 +316,7 @@ export async function POST(req: NextRequest) {
         if (error) console.error('[generate-avatar] claim release failed:', error.message)
         else ownsAvatarClaim = false
       }
+      return !ownsAvatarClaim && !ownsAvatarReservation
     }
 
     async function responseForClaimRow(row: unknown): Promise<NextResponse> {
@@ -307,6 +327,7 @@ export async function POST(req: NextRequest) {
         path?: unknown
         session_id?: unknown
         metadata?: unknown
+        created_at?: unknown
       } | null
       if (
         !avatarAdmin || !claim || claim.id !== claimId || claim.name !== AVATAR_CLAIM_EVENT ||
@@ -358,6 +379,54 @@ export async function POST(req: NextRequest) {
         }
         return NextResponse.json({ ...response, resumed: true })
       }
+      const createdAtMs = typeof claim.created_at === 'string' ? Date.parse(claim.created_at) : Number.NaN
+      if (Number.isFinite(createdAtMs) && Date.now() - createdAtMs > ACTIVE_RESERVATION_TTL_MS) {
+        // A pending claim older than the provider request window cannot ever
+        // expose a request id to this user. Close it deterministically so a
+        // transport-ambiguous POST or crashed worker cannot lock their credits
+        // forever. Refund is confirmed before the signed claim is removed.
+        const refunded = await refundAvatarBirthDebit({
+          userId,
+          generationId,
+          creditCost: AVATAR_CREDIT_COST,
+        })
+        if (!refunded.ok) {
+          console.error('[generate-avatar] stale pending refund not confirmed:', refunded.error)
+          return NextResponse.json(
+            { error: 'Your previous avatar attempt is being reconciled. Please retry shortly.', pending: true, retry_after_ms: 5000 },
+            { status: 503 },
+          )
+        }
+        const { data: deleted, error: deleteError } = await avatarAdmin
+          .from('events')
+          .delete()
+          .eq('id', claimId)
+          .eq('user_id', userId)
+          .eq('name', AVATAR_CLAIM_EVENT)
+          .eq('metadata->>status', 'pending')
+          .eq('metadata->>authority', metadata.authority as string)
+          .select('id')
+          .maybeSingle()
+        if (deleteError || deleted?.id !== claimId) {
+          console.error('[generate-avatar] stale pending claim close failed:', deleteError?.message ?? 'claim changed')
+          return safetyUnavailable()
+        }
+        await avatarAdmin
+          .from('avatar_jobs')
+          .delete()
+          .eq('request_id', reservationId)
+          .eq('user_id', userId)
+        return NextResponse.json(
+          {
+            error: refunded.credits > 0
+              ? `Your previous avatar attempt expired and ${refunded.credits} credits were refunded automatically. Retrying is safe.`
+              : 'Your previous avatar attempt expired before charging. Retrying is safe.',
+            retry_same_generation: true,
+            creditsRefunded: refunded.credits,
+          },
+          { status: 409 },
+        )
+      }
       return NextResponse.json(
         { error: 'This avatar is already being submitted.', pending: true, retry_after_ms: 3000 },
         { status: 409 },
@@ -366,33 +435,72 @@ export async function POST(req: NextRequest) {
 
     async function completeAvatarClaim(response: Record<string, unknown>): Promise<boolean> {
       if (!avatarAdmin || !ownsAvatarClaim) return false
-      const responseHash = avatarValueHash(response)
-      const metadata = {
-        generation_id: generationId,
-        status: 'done',
-        fingerprint: requestFingerprint,
-        credit_cost: AVATAR_CREDIT_COST,
-        response,
-        response_hash: responseHash,
-        started_at: claimStartedAt,
-        completed_at: new Date().toISOString(),
-        authority: signAvatarClaim(serviceRoleKey, {
-          claimId,
-          userId,
-          generationId,
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const { data: currentRow, error: currentError } = await avatarAdmin
+          .from('events')
+          .select('metadata')
+          .eq('id', claimId)
+          .eq('user_id', userId)
+          .eq('name', AVATAR_CLAIM_EVENT)
+          .maybeSingle()
+        if (currentError || !currentRow) {
+          console.error('[generate-avatar] could not load claim before completion:', currentError?.message ?? 'row missing')
+          return false
+        }
+        const currentMetadata = currentRow.metadata && typeof currentRow.metadata === 'object'
+          ? currentRow.metadata as Record<string, unknown>
+          : {}
+        if (currentMetadata.status === 'settled') return true
+        if (currentMetadata.status !== 'pending' && currentMetadata.status !== 'done') {
+          console.error('[generate-avatar] claim has invalid completion status:', currentMetadata.status)
+          return false
+        }
+        const currentAuthority = typeof currentMetadata.authority === 'string'
+          ? currentMetadata.authority
+          : ''
+        const currentResponse = currentMetadata.response && typeof currentMetadata.response === 'object' && !Array.isArray(currentMetadata.response)
+          ? currentMetadata.response as Record<string, unknown>
+          : {}
+        // avatar-status may bind the completed Fal URL while optional B-roll is
+        // still resolving. Re-read on every CAS retry and preserve that URL.
+        const completedVideoUrl = typeof currentResponse.completed_video_url === 'string'
+          ? currentResponse.completed_video_url
+          : ''
+        const safeResponse = completedVideoUrl
+          ? { ...response, completed_video_url: completedVideoUrl }
+          : response
+        const responseHash = avatarValueHash(safeResponse)
+        const metadata = {
+          ...currentMetadata,
+          generation_id: generationId,
           status: 'done',
           fingerprint: requestFingerprint,
-          creditCost: AVATAR_CREDIT_COST,
-          responseHash,
-        }),
-      }
-      for (let attempt = 1; attempt <= 3; attempt += 1) {
+          credit_cost: AVATAR_CREDIT_COST,
+          response: safeResponse,
+          response_hash: responseHash,
+          started_at: claimStartedAt,
+          completed_at: new Date().toISOString(),
+          ...(avatarDebitConfirmed ? {
+            prepaid_billing_reference: avatarBillingReference(userId, generationId),
+            prepaid_debited_at: avatarPrepaidAt || new Date().toISOString(),
+          } : {}),
+          authority: signAvatarClaim(serviceRoleKey, {
+            claimId,
+            userId,
+            generationId,
+            status: 'done',
+            fingerprint: requestFingerprint,
+            creditCost: AVATAR_CREDIT_COST,
+            responseHash,
+          }),
+        }
         const { data, error } = await avatarAdmin
           .from('events')
           .update({ metadata })
           .eq('id', claimId)
           .eq('user_id', userId)
           .eq('name', AVATAR_CLAIM_EVENT)
+          .eq('metadata->>authority', currentAuthority)
           // Optional B-roll enrichment can finish after the client has already
           // composed and paid. Never downgrade that concurrently-settled hold
           // back to `done`.
@@ -400,18 +508,7 @@ export async function POST(req: NextRequest) {
           .select('id')
           .maybeSingle()
         if (!error && data?.id === claimId) return true
-        if (!error && !data) {
-          const { data: current } = await avatarAdmin
-            .from('events')
-            .select('metadata')
-            .eq('id', claimId)
-            .maybeSingle()
-          const currentMetadata = current?.metadata && typeof current.metadata === 'object'
-            ? current.metadata as Record<string, unknown>
-            : {}
-          if (currentMetadata.status === 'settled') return true
-        }
-        console.error(`[generate-avatar] claim completion attempt ${attempt} failed:`, error?.message ?? 'row missing')
+        console.warn(`[generate-avatar] claim completion attempt ${attempt} raced:`, error?.message ?? 'claim changed')
       }
       return false
     }
@@ -470,7 +567,7 @@ export async function POST(req: NextRequest) {
         }
         const { data: existing, error: existingError } = await avatarAdmin
           .from('events')
-          .select('id,name,user_id,path,session_id,metadata')
+          .select('id,name,user_id,path,session_id,metadata,created_at')
           .eq('id', claimId)
           .maybeSingle()
         if (existingError || !existing) {
@@ -732,6 +829,47 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Atomically debit the signed birth job before the first paid Fal POST.
+    // This closes the gap where another endpoint could spend the same balance
+    // while the raw avatar MP4 was already rendering.
+    const billingReference = avatarBillingReference(userId, generationId)
+    const { data: debitedBalance, error: debitError } = await supabase.rpc('debit_video_credits', {
+      p_render: billingReference,
+      p_cost: AVATAR_CREDIT_COST,
+    })
+    if (debitError || typeof debitedBalance !== 'number') {
+      console.error('[generate-avatar] upfront debit failed:', debitError?.message ?? 'no balance returned')
+      await releaseAvatarSubmission()
+      const insufficient = /balance|credit|insufficient/i.test(debitError?.message ?? '')
+      return NextResponse.json(
+        {
+          error: insufficient
+            ? `Avatar generation needs ${AVATAR_CREDIT_COST} credits. Your available balance changed before it could start.`
+            : 'Your credit charge could not be confirmed. Nothing was submitted.',
+          needed: AVATAR_CREDIT_COST,
+          balance: typeof debitedBalance === 'number' ? debitedBalance : 0,
+        },
+        { status: insufficient ? 402 : 503 },
+      )
+    }
+    avatarDebitConfirmed = true
+    avatarDebitBalance = debitedBalance
+    avatarPrepaidAt = new Date().toISOString()
+    if (!(await markAvatarClaimPrepaid({ userId, generationId }))) {
+      const released = await releaseAvatarSubmission()
+      return NextResponse.json(
+        {
+          error: released
+            ? 'Avatar billing could not be signed. Your credits were refunded automatically.'
+            : 'Avatar billing is being reconciled. Please retry this same generation.',
+          pending: !released,
+          retry_after_ms: released ? undefined : 3000,
+        },
+        { status: 503 },
+      )
+    }
+
     let requestId: string
     try {
       requestId = await submitAvatarJob({
@@ -755,18 +893,27 @@ export async function POST(req: NextRequest) {
           { status: 409 },
         )
       }
-      await releaseAvatarSubmission()
+      const released = await releaseAvatarSubmission()
       return NextResponse.json(
-        { error: 'The avatar engine rejected the job. You were not charged. Please try again.' },
-        { status: 502 },
+        {
+          error: released
+            ? 'The avatar engine rejected the job. Your credits were refunded automatically.'
+            : 'The avatar engine rejected the job and your refund is still being confirmed. Please retry this same generation.',
+          pending: !released,
+        },
+        { status: released ? 502 : 503 },
       )
     }
     if (!requestId) {
-      await releaseAvatarSubmission()
-      // Protection rule: nothing was (or ever will be at this point) charged.
+      const released = await releaseAvatarSubmission()
       return NextResponse.json(
-        { error: 'The avatar engine could not accept the job. You were not charged — please try again.' },
-        { status: 502 },
+        {
+          error: released
+            ? 'The avatar engine could not accept the job. Your credits were refunded automatically.'
+            : 'The avatar engine could not accept the job and your refund is still being confirmed.',
+          pending: !released,
+        },
+        { status: released ? 502 : 503 },
       )
     }
 
@@ -818,6 +965,8 @@ export async function POST(req: NextRequest) {
       verbatim,
       avatar_credits_needed: AVATAR_CREDIT_COST,
       credits_needed: AVATAR_CREDIT_COST,
+      credits_charged: AVATAR_CREDIT_COST,
+      balance: avatarDebitBalance,
       estimated_seconds: Math.round(estSeconds),
       estimated_cost_usd: Number((estSeconds * usdPerSecond).toFixed(2)),
     }
@@ -880,13 +1029,12 @@ export async function POST(req: NextRequest) {
       duration,
       speed: speed ?? 1.0,
       verbatim,
-      // KINEO-AVATAR-120-2026-07-06 — Cost contract for the UI ("estimated cost
-      // BEFORE render"). 1 avatar video = 120 UNIVERSAL video_credits (was 1
-      // separate avatar credit). Key kept as-is for client compatibility but the
-      // value now reflects the 120 universal-credit charge; credits_needed is a
-      // clearer alias reading the same number.
+      // Cost contract for the UI. Key kept for client compatibility; both
+      // fields expose the exact per-engine universal-credit charge.
       avatar_credits_needed: AVATAR_CREDIT_COST,
       credits_needed: AVATAR_CREDIT_COST,
+      credits_charged: AVATAR_CREDIT_COST,
+      balance: avatarDebitBalance,
       estimated_seconds: Math.round(estSeconds),
       estimated_cost_usd: Number((estSeconds * usdPerSecond).toFixed(2)),
     })

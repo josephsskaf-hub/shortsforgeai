@@ -43,7 +43,10 @@ import {
   submitAvatarJob,
 } from '@/lib/avatar/veed'
 import { estimateMp3DurationSeconds, uploadVoiceoverToSupabase } from '@/lib/compose'
-import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
+import {
+  ACTIVE_COMPOSE_CREDIT_HOLD_TTL_MS,
+  inspectActiveComposeCreditHolds,
+} from '@/lib/credits/composeHold'
 import { refundRenderCredits } from '@/lib/credits/refund'
 import { FalQueueSubmitError, submitFalQueueOnce } from '@/lib/falQueue'
 import {
@@ -866,6 +869,69 @@ export async function POST(req: NextRequest) {
         })
         if (completed.ok) return settleDebitAndRespond(completed.claim, cached.response)
       }
+      const pendingStartedAt = Date.parse(acquired.claim.startedAt)
+      if (
+        Number.isFinite(pendingStartedAt) &&
+        Date.now() - pendingStartedAt > ACTIVE_COMPOSE_CREDIT_HOLD_TTL_MS
+      ) {
+        const { data: staleDebit, error: staleDebitError } = await cinematicAdmin
+          .from('credit_debits')
+          .select('user_id,amount,refunded_at')
+          .eq('render_id', billingReference)
+          .maybeSingle()
+        if (staleDebitError) {
+          console.error('[cinematic] stale pending debit lookup failed:', staleDebitError.message)
+          return NextResponse.json(
+            { error: 'Your previous AI submission is being reconciled. Please retry shortly.', pending: true, retry_after_ms: 5000 },
+            { status: 503 },
+          )
+        }
+        const staleAmount = typeof staleDebit?.amount === 'number'
+          ? staleDebit.amount
+          : Number(staleDebit?.amount)
+        if (
+          staleDebit &&
+          (staleDebit.user_id !== user.id || !Number.isFinite(staleAmount) || staleAmount !== cost)
+        ) {
+          console.error('[cinematic] stale pending debit does not match signed claim')
+          return NextResponse.json(
+            { error: 'Your previous AI submission needs billing review. No new job was submitted.' },
+            { status: 503 },
+          )
+        }
+        const alreadyRefunded = typeof staleDebit?.refunded_at === 'string' && Boolean(staleDebit.refunded_at)
+        if (staleDebit && !alreadyRefunded && !(await confirmCinematicRefund())) {
+          return NextResponse.json(
+            { error: 'Your previous AI submission refund is still being confirmed. Please retry shortly.', pending: true, retry_after_ms: 5000 },
+            { status: 503 },
+          )
+        }
+        const released = await releaseCinematicClaim({
+          db: cinematicAdmin,
+          secret: serviceRoleKey,
+          userId: user.id,
+          generationId,
+          reason: staleDebit ? 'stale_pending_refunded' : 'stale_pending_no_debit',
+          ...(staleDebit ? { reference: billingReference } : {}),
+        })
+        if (!released.ok) {
+          console.error('[cinematic] stale pending claim release failed:', released.error)
+          return NextResponse.json(
+            { error: 'Your previous AI submission is being closed safely. Please retry shortly.', pending: true, retry_after_ms: 5000 },
+            { status: 503 },
+          )
+        }
+        return NextResponse.json(
+          {
+            error: staleDebit
+              ? `Your previous AI submission expired and ${cost} credits were refunded automatically. Please start a new generation.`
+              : 'Your previous AI submission expired before charging. Please start a new generation.',
+            creditsRefunded: staleDebit ? cost : 0,
+            start_new_generation: true,
+          },
+          { status: 409 },
+        )
+      }
       return NextResponse.json(
         { error: 'This AI generation is already being submitted.', pending: true, retry_after_ms: 2500 },
         { status: 409 },
@@ -1342,8 +1408,19 @@ export async function POST(req: NextRequest) {
           } catch (e) {
             if (e instanceof AvatarSubmitError && e.ambiguous) {
               // The presenter POST may have been accepted. Falling back to O3
-              // would create a second paid job for the same scene.
+              // would create a second paid job for the same scene. If earlier
+              // scenes have durable IDs, publish those instead of stranding
+              // the whole paid generation in a pending claim forever.
               providerSubmissionMayExist = true
+              if (hRequestIds.some((requestId) => requestId !== null)) {
+                console.warn(
+                  `[cinematic] hollywood presenter scene ${hs.index} submit became ambiguous; preserving earlier accepted scenes`,
+                )
+                hRequestIds.push(null)
+                hModels.push(HOST_PRESENTER_MODEL)
+                hEngines.push('host')
+                break
+              }
               throw e
             }
             console.warn(
@@ -1365,13 +1442,39 @@ export async function POST(req: NextRequest) {
               : anchors.environmentUrl
             : undefined
           const scenePrompt = hs.prompt + eraSuffix
-          id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
+          try {
+            id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
+          } catch (e) {
+            if (
+              e instanceof FalQueueSubmitError && e.ambiguous &&
+              hRequestIds.some((requestId) => requestId !== null)
+            ) {
+              providerSubmissionMayExist = true
+              console.warn(
+                `[cinematic] hollywood scene ${hs.index} submit became ambiguous; preserving earlier accepted scenes`,
+              )
+              hRequestIds.push(null)
+              hModels.push(sceneModel)
+              hEngines.push(sceneEngine)
+              break
+            }
+            throw e
+          }
         }
         if (id) providerSubmissionMayExist = true
         hRequestIds.push(id)
         hModels.push(sceneModel)
         hEngines.push(sceneEngine)
         await new Promise((r) => setTimeout(r, 450))
+      }
+
+      // Keep every response array parallel to plan.scenes. Unsubmitted scenes
+      // remain null and follow the existing stock/fallback path in compose.
+      while (hRequestIds.length < plan.scenes.length) {
+        const unsubmitted = plan.scenes[hRequestIds.length]
+        hRequestIds.push(null)
+        hModels.push(anchors ? KLING3_I2V_MODEL : HOLLYWOOD_MODELS[unsubmitted.type])
+        hEngines.push(unsubmitted.type)
       }
 
       const hValid = hRequestIds.filter((id): id is string => id !== null)
@@ -1455,11 +1558,26 @@ export async function POST(req: NextRequest) {
         // environment-first b-roll, on-brand for this faceless channel.
         const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
         const cinematic = buildFacelessCinematicPrompt(visualPrompt) + eraSuffix + styleSuffix
-        let id = await submitToFal(cinematic, model, hd)
+        let id: string | null
+        try {
+          id = await submitToFal(cinematic, model, hd)
+        } catch (e) {
+          if (
+            e instanceof FalQueueSubmitError && e.ambiguous &&
+            ids.some((requestId) => requestId !== null)
+          ) {
+            providerSubmissionMayExist = true
+            console.warn('[cinematic] scene submit became ambiguous; preserving earlier accepted scenes')
+            ids.push(null)
+            break
+          }
+          throw e
+        }
         if (id) providerSubmissionMayExist = true
         ids.push(id)
         await new Promise((r) => setTimeout(r, 450))
       }
+      while (ids.length < scenes.length) ids.push(null)
       return ids
     }
 

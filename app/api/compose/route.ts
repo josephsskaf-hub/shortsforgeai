@@ -29,6 +29,10 @@ import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 import { creditCostFor } from '@/lib/credits/engineCost'
 import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
 import { loadVerifiedCinematicClaim, type CinematicClaim } from '@/lib/cinematic/claim'
+import {
+  loadPrepaidAvatarClaimForGeneration,
+  type VerifiedAvatarBirthClaim,
+} from '@/lib/avatar/reservation'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
 import {
   COMPOSE_CLAIM_EVENT,
@@ -319,6 +323,7 @@ export async function POST(req: NextRequest) {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     let cinematicBirthClaim: CinematicClaim | null = null
+    let avatarBirthClaim: VerifiedAvatarBirthClaim | null = null
     const cinematicClaimLoad = await loadVerifiedCinematicClaim({
       db: composeAdmin,
       secret: serviceRoleKey,
@@ -376,7 +381,40 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
+    if (isAvatarReq) {
+      const loadedAvatar = await loadPrepaidAvatarClaimForGeneration({
+        db: composeAdmin,
+        secret: serviceRoleKey,
+        userId: authenticatedUserId,
+        generationId,
+      })
+      if (!loadedAvatar.ok) {
+        console.error('[compose] avatar birth lookup failed:', loadedAvatar.error)
+        return NextResponse.json(
+          { error: 'Avatar ownership and billing could not be verified. Nothing was submitted.' },
+          { status: 503 },
+        )
+      }
+      avatarBirthClaim = loadedAvatar.claim
+      const avatarUrl = (body.avatar_url ?? '').trim()
+      const voiceoverUrl = (body.voiceover_url ?? '').trim()
+      const signedVoiceoverUrl = typeof avatarBirthClaim?.response?.voiceover_url === 'string'
+        ? avatarBirthClaim.response.voiceover_url.trim()
+        : ''
+      if (
+        !avatarBirthClaim || avatarBirthClaim.quality !== quality ||
+        avatarBirthClaim.creditCost !== creditCostFor(quality, true) ||
+        avatarBirthClaim.completedVideoUrl !== avatarUrl ||
+        !signedVoiceoverUrl || signedVoiceoverUrl !== voiceoverUrl
+      ) {
+        return NextResponse.json(
+          { error: 'This avatar video or voiceover does not match its signed paid generation.' },
+          { status: 400 },
+        )
+      }
+    }
     const cinematicUpstreamDebited = cinematicBirthClaim?.status === 'settled'
+    const avatarUpstreamDebited = avatarBirthClaim !== null
     const claimId = composeClaimId(authenticatedUserId, generationId)
     let ownsSubmissionClaim = false
     let submissionClaimIsCreditHold = false
@@ -931,7 +969,7 @@ export async function POST(req: NextRequest) {
       quality === 'cinematic_hollywood' || quality === 'avatar' ||
       quality === 'presenter' || (quality === 'fast' && !isFreePlanFast)
     if (isCreditBilledQuality && !ownsSubmissionClaim) {
-      if (cinematicUpstreamDebited) {
+      if (cinematicUpstreamDebited || avatarUpstreamDebited) {
         const prepaidReservation = await claimGenerationSubmission(creditCostFor(quality, true), false)
         if (prepaidReservation.kind !== 'acquired') return prepaidReservation.response
       } else {

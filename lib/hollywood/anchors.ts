@@ -18,8 +18,8 @@
 // Model: fal-ai/flux/schnell (fast + cheap text-to-image; the repo's only
 // other image model, FLUX Kontext in lib/avatar/scene.ts, is an image EDITOR
 // that requires an input photo — not usable for from-scratch anchors). Same
-// fal.subscribe + retry pattern as lib/avatar/scene.ts; image generation is
-// fast enough to run synchronously before the scene submits.
+// Each paid queue POST is sent exactly once, followed only by read-only status
+// polling; image generation is fast enough to finish before scene submission.
 //
 // FAIL-OPEN: any failure here returns null and the route falls back to the
 // v2.4 text-to-video path — anchors can never kill a render.
@@ -41,8 +41,8 @@ export type HollywoodAnchors = {
 }
 
 /** Generate ONE anchor image and return its fal-hosted URL (fal.media URLs
- * are directly usable as Kling `image_url`). One retry on transient failure —
- * same protection pattern as generateSceneImage in lib/avatar/scene.ts. */
+ * are directly usable as Kling `image_url`). Never retry the paid POST after
+ * an ambiguous response; only status/result reads may be retried. */
 async function generateAnchorImage(prompt: string): Promise<string | null> {
   const input: Record<string, unknown> = {
     prompt,

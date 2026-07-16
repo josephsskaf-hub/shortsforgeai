@@ -17,7 +17,7 @@ import {
 } from '@/lib/composeClaim'
 import { refundRenderCredits } from '@/lib/credits/refund'
 
-type SettlementReason = 'compose_succeeded' | 'provider_failed'
+type SettlementReason = 'compose_succeeded' | 'provider_failed' | 'compose_failed_after_asset_delivered'
 type AvatarClaimStatus = 'pending' | 'done' | 'settled'
 
 type AvatarClaimRow = {

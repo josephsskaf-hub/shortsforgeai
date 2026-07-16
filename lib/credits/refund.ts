@@ -72,6 +72,9 @@ export async function refundRenderCredits(renderId: string): Promise<number> {
  *   cinematic-% — cinematic birth jobs debit before authenticated Fal polling;
  *                 their final video uses a different Creatomate render id.
  *                 Terminal Fal/Compose failures refund this key live.
+ *   avatar-% — avatar birth jobs also debit before authenticated Fal polling;
+ *              their final compose uses another render id. Fal failures are
+ *              refunded live by /api/avatar-status.
  */
 export async function sweepStuckRenderDebits(): Promise<{
   scanned: number
@@ -95,6 +98,7 @@ export async function sweepStuckRenderDebits(): Promise<{
     // failure refunds happen in /api/gesture-clip-status.
     .not('render_id', 'like', 'gesture-%')
     .not('render_id', 'like', 'cinematic-%')
+    .not('render_id', 'like', 'avatar-%')
     .order('created_at', { ascending: false })
     .limit(200)
 

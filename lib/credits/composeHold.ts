@@ -53,6 +53,40 @@ export async function inspectActiveComposeCreditHolds(args: {
     return { ok: false, error: 'credit hold scan truncated; refusing provider submission' }
   }
 
+  // Avatar and Cinematic claims begin as balance holds, then become real
+  // upfront debits before the first paid provider POST. Once that ledger row
+  // exists, counting the signed claim as a hold as well would reserve the same
+  // credits twice. Only an exact, unrefunded credit_debits row for this user
+  // can turn a verified hold into an already-spent debit.
+  const candidateProviderDebitRefs = [...new Set((data ?? []).flatMap((raw) => {
+    const row = raw as { name?: unknown; id?: unknown }
+    if (
+      (row.name !== AVATAR_CLAIM_EVENT && row.name !== CINEMATIC_CLAIM_EVENT) ||
+      typeof row.id !== 'string' ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(row.id)
+    ) return []
+    return [`${row.name === AVATAR_CLAIM_EVENT ? 'avatar' : 'cinematic'}-${row.id}`]
+  }))]
+  const confirmedProviderDebits = new Map<string, { userId: string; amount: number }>()
+  if (candidateProviderDebitRefs.length > 0) {
+    const { data: debitRows, error: debitError } = await args.db
+      .from('credit_debits')
+      .select('render_id,user_id,amount,refunded_at')
+      .in('render_id', candidateProviderDebitRefs)
+    if (debitError) {
+      return { ok: false, error: `provider debit verification failed: ${debitError.message}` }
+    }
+    for (const row of debitRows ?? []) {
+      const reference = typeof row.render_id === 'string' ? row.render_id : ''
+      const userId = typeof row.user_id === 'string' ? row.user_id : ''
+      const amount = typeof row.amount === 'number' ? row.amount : Number(row.amount)
+      const refunded = typeof row.refunded_at === 'string' && Boolean(row.refunded_at)
+      if (reference && userId && Number.isFinite(amount) && amount > 0 && !refunded) {
+        confirmedProviderDebits.set(reference, { userId, amount })
+      }
+    }
+  }
+
   const costByGeneration = new Map<string, number>()
   let currentSeen = false
   for (const raw of data ?? []) {
@@ -149,6 +183,15 @@ export async function inspectActiveComposeCreditHolds(args: {
         console.error('[compose-hold] ignored invalid avatar hold:', claimId || 'missing-id')
         continue
       }
+      const billingReference = `avatar-${claimId}`
+      const confirmedDebit = confirmedProviderDebits.get(billingReference)
+      if (
+        confirmedDebit?.userId === args.userId &&
+        confirmedDebit.amount === cost
+      ) {
+        if (claimId === args.currentClaimId) currentSeen = true
+        continue
+      }
       const existingCost = costByGeneration.get(generationId)
       if (existingCost !== undefined && existingCost !== cost) {
         return { ok: false, error: `conflicting hold costs for generation ${generationId}` }
@@ -174,6 +217,11 @@ export async function inspectActiveComposeCreditHolds(args: {
       const createdAt = typeof row.created_at === 'string' ? row.created_at : ''
       if (verified.claim.status === 'pending' && (!createdAt || createdAt < activeSince)) continue
       const cost = verified.claim.creditCost
+      const confirmedDebit = confirmedProviderDebits.get(`cinematic-${claimId}`)
+      if (confirmedDebit?.userId === args.userId && confirmedDebit.amount === cost) {
+        if (claimId === args.currentClaimId) currentSeen = true
+        continue
+      }
       const existingCost = costByGeneration.get(generationId)
       if (existingCost !== undefined && existingCost !== cost) {
         return { ok: false, error: `conflicting hold costs for generation ${generationId}` }
