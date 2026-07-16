@@ -1,7 +1,7 @@
 # Kineo — PUSH #22
 
 **Nome:** Organic Acquisition Recovery
-**Status:** VALIDADO LOCALMENTE — aguardando commit, deploy READY e validação ao vivo
+**Status:** PUBLICADO — Vercel READY e produção validada
 **Data:** 16/07/2026
 
 ## Diagnóstico comprovado
@@ -60,6 +60,16 @@
 - Layout do novo hub validado em desktop e em 390 × 844 sem overflow horizontal.
 - Colunas de atribuição em `profiles` e de caminho/sessão em `events` confirmadas no banco.
 - `git diff --check` limpo.
+
+## Publicação validada em 16/07/2026
+
+- Commit de código: `b6a1027` — `PUSH #22 recover measurable organic acquisition`.
+- Deployment: `dpl_4Dijtsw6oVFdVPjs1jhnmvCGbjA8`.
+- Estado Vercel: READY, ambiente Production.
+- `https://www.usekineo.com/sitemap.xml`: 61 URLs, todas respondendo 200.
+- Homepage em produção: título de entrada por $4.90 e links para os hubs prioritários.
+- Hub `/free-ai-shorts`, página de nicho, página de tópico e comparação OpusClip:
+  canonical correto, oferta atual, campanha `push22_*`, footer interno e zero claim antigo no HTML entregue.
 
 ## Gate comercial
 
