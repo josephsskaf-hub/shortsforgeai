@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
   buildCreatomateSource,
+  CreatomateSubmitError,
   // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode source builder + types.
   buildHollywoodCreatomateSource,
   estimateMp3DurationSeconds,
@@ -26,6 +28,14 @@ import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 // ?quality / ?deducted query params). creditCostFor is the shared price table.
 import { creditCostFor } from '@/lib/credits/engineCost'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
+import {
+  COMPOSE_CLAIM_EVENT,
+  COMPOSE_CLAIM_PATH,
+  composeClaimId,
+  signComposeClaim,
+  validComposeGenerationId,
+  verifyComposeClaim,
+} from '@/lib/composeClaim'
 // KINEO-HOLLYWOOD-HOST-2026-07-13 — HOLLYWOOD HOST MODE v3.5: the hollywood
 // narration blocks are synthesized with ONE pinned voice, resolved from the
 // full voiceover_script — the SAME resolution the cinematic route ran for the
@@ -61,6 +71,54 @@ const DURATION_TOLERANCE_SECONDS = 3
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (per-scene engines,
 // native audio, block TTS).
 type Quality = 'fast' | 'basic' | 'basic_ai' | 'pro' | 'cinematic_ai' | 'cinematic_kling' | 'cinematic_veo' | 'cinematic_sora' | 'cinematic_hollywood' | 'avatar' | 'presenter'
+
+type SubmissionCacheEntry = { promise: Promise<string>; expiresAt: number }
+const composeSubmissionCache = new Map<string, SubmissionCacheEntry>()
+
+type SubmissionClaimResult =
+  | { kind: 'acquired' }
+  | { kind: 'existing'; response: NextResponse }
+  | { kind: 'unavailable'; response: NextResponse }
+
+// Creatomate does not document an idempotency key for render creation. Collapse
+// racing/retried requests for the same authenticated generation inside a warm
+// server instance, and retain the resolved render id briefly so a lost HTTP
+// response can be replayed without creating another paid job.
+function submitCreatomateOnce(
+  source: Record<string, unknown>,
+  key?: string,
+): Promise<string> {
+  if (!key) return submitCreatomateRender(source)
+  const now = Date.now()
+  for (const [cachedKey, entry] of composeSubmissionCache) {
+    if (entry.expiresAt <= now) composeSubmissionCache.delete(cachedKey)
+  }
+  const cached = composeSubmissionCache.get(key)
+  if (cached) return cached.promise
+
+  const entry: SubmissionCacheEntry = {
+    promise: Promise.resolve(''),
+    expiresAt: now + 30_000,
+  }
+  entry.promise = submitCreatomateRender(source).then(
+    (renderId) => {
+      entry.expiresAt = Date.now() + 5 * 60 * 1000
+      return renderId
+    },
+    (error) => {
+      // Hold only ambiguous failures. An explicit provider rejection can be
+      // retried after the durable claim is released.
+      if (error instanceof CreatomateSubmitError && error.ambiguous) {
+        entry.expiresAt = Date.now() + 30_000
+      } else {
+        composeSubmissionCache.delete(key)
+      }
+      throw error
+    },
+  )
+  composeSubmissionCache.set(key, entry)
+  return entry.promise
+}
 
 interface ComposeBody {
   generationId?: string
@@ -161,6 +219,7 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
+    const authenticatedUserId = user.id
 
     let body: ComposeBody
     try {
@@ -234,6 +293,248 @@ export async function POST(req: NextRequest) {
 
     // Push #316 — output language. OpenAI TTS auto-detects from the script text.
     const language = body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en'
+    const rawGenerationId = typeof body.generationId === 'string' ? body.generationId.trim() : ''
+    if (!validComposeGenerationId(rawGenerationId)) {
+      return NextResponse.json(
+        { error: 'This generation is missing its safety id. Please start it again.' },
+        { status: 400 },
+      )
+    }
+    const generationId = rawGenerationId
+    const submissionKey = `${authenticatedUserId}:${generationId}`
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[compose] distributed submission guard unavailable: service-role env missing')
+      return NextResponse.json(
+        { error: 'Render safety check is temporarily unavailable. Nothing was submitted. Please retry.' },
+        { status: 503 },
+      )
+    }
+    const composeAdmin: SupabaseClient = createAdminClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const claimId = composeClaimId(authenticatedUserId, generationId)
+    let ownsSubmissionClaim = false
+
+    const replayOrPending = (renderId: string): NextResponse => {
+      if (!renderId || renderId.startsWith('pending:')) {
+        return NextResponse.json(
+          { error: 'This render is already being submitted.', pending: true, retry_after_ms: 2500 },
+          { status: 409 },
+        )
+      }
+      console.log(`[compose] replaying existing generation_id=${generationId} render_id=${renderId}`)
+      return NextResponse.json({
+        render_id: renderId,
+        quality,
+        duration,
+        voiceover_url: '',
+        resumed: true,
+      })
+    }
+
+    const unavailableClaimResponse = () => NextResponse.json(
+      { error: 'Render safety check is temporarily unavailable. Nothing was submitted. Please retry.' },
+      { status: 503 },
+    )
+
+    const responseForClaimRow = async (row: unknown): Promise<NextResponse> => {
+      const claim = row as { id?: unknown; name?: unknown; user_id?: unknown; path?: unknown; session_id?: unknown; metadata?: unknown } | null
+      if (
+        claim?.id !== claimId || claim.name !== COMPOSE_CLAIM_EVENT ||
+        claim.user_id !== authenticatedUserId || claim.path !== COMPOSE_CLAIM_PATH ||
+        claim.session_id !== generationId
+      ) {
+        console.error(`[compose] deterministic claim collision id=${claimId}`)
+        return unavailableClaimResponse()
+      }
+      const metadata = claim.metadata && typeof claim.metadata === 'object'
+        ? claim.metadata as Record<string, unknown>
+        : {}
+      const renderId = typeof metadata.render_id === 'string' ? metadata.render_id.trim() : ''
+      const claimStatus = metadata.status === 'done' ? 'done' : metadata.status === 'pending' ? 'pending' : null
+      const claimCost = typeof metadata.cost === 'number' && Number.isFinite(metadata.cost) ? metadata.cost : null
+      const claimGenerationId = typeof metadata.generation_id === 'string' ? metadata.generation_id : ''
+      const claimQuality = typeof metadata.quality === 'string' ? metadata.quality : ''
+      if (
+        !claimStatus || claimCost === null || claimGenerationId !== generationId || claimQuality !== quality ||
+        !verifyComposeClaim(serviceRoleKey, {
+          claimId,
+          userId: authenticatedUserId,
+          generationId,
+          status: claimStatus,
+          ...(renderId ? { renderId } : {}),
+          quality: claimQuality,
+          cost: claimCost,
+        }, metadata.authority)
+      ) {
+        console.error(`[compose] rejected unsigned/invalid claim id=${claimId}`)
+        return unavailableClaimResponse()
+      }
+      if (!renderId) {
+        // If this retry lands on the same warm instance after the provider POST
+        // succeeded but our DB publication failed, recover from the collapsed
+        // promise and durably publish it now. Never issue another provider POST.
+        const cached = composeSubmissionCache.get(submissionKey)
+        const cachedCost = claimCost
+        if (cached && cached.expiresAt > Date.now() && cachedCost !== null) {
+          try {
+            const cachedRenderId = await cached.promise
+            const intentStored = await recordRenderIntent({
+              renderId: cachedRenderId,
+              userId: authenticatedUserId,
+              quality,
+              cost: cachedCost,
+            })
+            const claimStored = await completeGenerationClaim(cachedRenderId, cachedCost, true)
+            if (intentStored || claimStored) return replayOrPending(cachedRenderId)
+          } catch {
+            // Ambiguous cached failures remain pending and are never re-posted.
+          }
+        }
+      }
+      return replayOrPending(renderId)
+    }
+
+    // The events PK is our cross-instance mutex. Every mode (Fast, cinematic,
+    // Avatar and Presenter) reaches this table, unlike broll_metrics. A DB error
+    // fails closed before any provider POST.
+    try {
+      const { data: existingClaim, error: existingClaimError } = await composeAdmin
+        .from('events')
+        .select('id,name,user_id,path,session_id,metadata')
+        .eq('id', claimId)
+        .maybeSingle()
+      if (existingClaimError) {
+        console.error('[compose] distributed claim preflight failed:', existingClaimError.message)
+        return unavailableClaimResponse()
+      }
+      if (existingClaim) return await responseForClaimRow(existingClaim)
+    } catch (preflightError) {
+      console.error('[compose] distributed claim preflight threw:', preflightError instanceof Error ? preflightError.message : String(preflightError))
+      return unavailableClaimResponse()
+    }
+
+    // Backward-compatible replay for Fast generations completed before this
+    // distributed guard existed. This is not the lock; events remains the
+    // authoritative safety boundary for every new submission.
+    try {
+      const { data: legacyMetric, error: legacyMetricError } = await composeAdmin
+        .from('broll_metrics')
+        .select('render_id')
+        .eq('generation_id', generationId)
+        .eq('user_id', authenticatedUserId)
+        .maybeSingle()
+      if (legacyMetricError) {
+        console.warn('[compose] legacy broll replay lookup failed:', legacyMetricError.message)
+      } else {
+        const legacyRenderId = typeof legacyMetric?.render_id === 'string' ? legacyMetric.render_id.trim() : ''
+        if (legacyRenderId && legacyRenderId.length <= 160) return replayOrPending(legacyRenderId)
+      }
+    } catch (legacyLookupError) {
+      console.warn('[compose] legacy broll replay lookup threw:', legacyLookupError instanceof Error ? legacyLookupError.message : String(legacyLookupError))
+    }
+
+    async function claimGenerationSubmission(cost: number): Promise<SubmissionClaimResult> {
+      const { error: claimError } = await composeAdmin.from('events').insert({
+        id: claimId,
+        user_id: authenticatedUserId,
+        name: COMPOSE_CLAIM_EVENT,
+        path: COMPOSE_CLAIM_PATH,
+        session_id: generationId,
+        metadata: {
+          generation_id: generationId,
+          status: 'pending',
+          quality,
+          cost,
+          duration,
+          authority: signComposeClaim(serviceRoleKey, {
+            claimId,
+            userId: authenticatedUserId,
+            generationId,
+            status: 'pending',
+            quality,
+            cost,
+          }),
+        },
+      })
+      if (!claimError) {
+        ownsSubmissionClaim = true
+        return { kind: 'acquired' }
+      }
+      if ((claimError as { code?: string }).code !== '23505') {
+        console.error('[compose] distributed submission claim failed:', claimError.message)
+        return { kind: 'unavailable', response: unavailableClaimResponse() }
+      }
+      const { data: current, error: currentError } = await composeAdmin
+        .from('events')
+        .select('id,name,user_id,path,session_id,metadata')
+        .eq('id', claimId)
+        .maybeSingle()
+      if (currentError || !current) {
+        console.error('[compose] distributed claim recheck failed:', currentError?.message ?? 'claim row missing')
+        return { kind: 'unavailable', response: unavailableClaimResponse() }
+      }
+      return { kind: 'existing', response: await responseForClaimRow(current) }
+    }
+
+    async function releaseGenerationClaim(): Promise<void> {
+      if (!ownsSubmissionClaim) return
+      const { error: releaseError } = await composeAdmin
+        .from('events')
+        .delete()
+        .eq('id', claimId)
+        .eq('user_id', authenticatedUserId)
+        .eq('name', COMPOSE_CLAIM_EVENT)
+      if (releaseError) {
+        console.error('[compose] explicit-rejection claim release failed; keeping fail-closed:', releaseError.message)
+        return
+      }
+      ownsSubmissionClaim = false
+    }
+
+    async function completeGenerationClaim(renderId: string, cost: number, recoverExisting = false): Promise<boolean> {
+      if (!ownsSubmissionClaim && !recoverExisting) return false
+      const metadata = {
+        generation_id: generationId,
+        status: 'done',
+        render_id: renderId,
+        quality,
+        cost,
+        duration,
+        completed_at: new Date().toISOString(),
+        authority: signComposeClaim(serviceRoleKey, {
+          claimId,
+          userId: authenticatedUserId,
+          generationId,
+          status: 'done',
+          renderId,
+          quality,
+          cost,
+        }),
+      }
+      let lastError = ''
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const { data: completed, error: completeError } = await composeAdmin
+          .from('events')
+          .update({ metadata })
+          .eq('id', claimId)
+          .eq('user_id', authenticatedUserId)
+          .eq('name', COMPOSE_CLAIM_EVENT)
+          .select('id')
+          .maybeSingle()
+        if (!completeError && completed?.id === claimId) {
+          ownsSubmissionClaim = false
+          return true
+        }
+        lastError = completeError?.message ?? 'claim row missing'
+      }
+      // The current response can still safely carry the accepted render id and
+      // the warm-instance cache can replay it. Never release/re-POST here.
+      console.error(`[compose] accepted render claim completion failed id=${claimId}: ${lastError}`)
+      return false
+    }
 
     // Phase 1 Narration Engine — content vertical from analyze-idea (e.g. 'mystery',
     // 'finance', 'geography'). Used by selectPersonaForScript() inside generateTTS()
@@ -341,8 +642,7 @@ export async function POST(req: NextRequest) {
         if (!cntErr && (count ?? 0) >= 3) {
           return NextResponse.json(
             {
-              // KINEO-PRICING-V3C-2026-07-10 — pack copy: 25 → 10 videos.
-              error: "You've hit today's free limit (3 videos). Unlock downloads + 10 more videos for $4.90, or upgrade for unlimited creation.",
+              error: "You've hit today's free limit (3 videos). Keep creating with Starter for $4.90 your first month, then $9.90/month. Cancel anytime.",
               upsell: 'credits',
               outOfCredits: true,
               upgrade: '/pricing',
@@ -590,43 +890,62 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 })
       }
 
-      // Submit with the same one-retry protection as the standard path.
+      // Submit once per authenticated generation. Retrying a provider POST
+      // after an ambiguous response can create and charge two render jobs.
+      const hollywoodCost = creditCostFor(quality)
+      const hollywoodClaim = await claimGenerationSubmission(hollywoodCost)
+      if (hollywoodClaim.kind !== 'acquired') return hollywoodClaim.response
       let hollywoodRenderId: string
       try {
-        hollywoodRenderId = await submitCreatomateRender(hollywoodSource)
-      } catch (firstErr) {
-        console.warn('[compose] hollywood Creatomate submit failed — retrying once in 1.5s:',
-          firstErr instanceof Error ? firstErr.message : String(firstErr))
-        await new Promise((r) => setTimeout(r, 1500))
-        try {
-          hollywoodRenderId = await submitCreatomateRender(hollywoodSource)
-        } catch (err) {
-          console.error('[compose] hollywood Creatomate submit failed (after retry):',
-            err instanceof Error ? err.message : String(err))
-          return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
+        hollywoodRenderId = await submitCreatomateOnce(hollywoodSource, submissionKey)
+      } catch (err) {
+        console.error('[compose] hollywood Creatomate submit failed:',
+          err instanceof Error ? err.message : String(err))
+        if (err instanceof CreatomateSubmitError && err.ambiguous && ownsSubmissionClaim) {
+          return NextResponse.json(
+            { error: 'Render submission is still being verified.', pending: true, retry_after_ms: 3000 },
+            { status: 409 },
+          )
         }
+        await releaseGenerationClaim()
+        return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
       }
 
       // Same best-effort broll_metrics link as the standard path.
-      if (body.generationId) {
+      if (generationId) {
         try {
-          await supabase
+          const metricsClient = composeAdmin
+          let linkQuery = metricsClient
             .from('broll_metrics')
             .update({ render_id: hollywoodRenderId, vertical: vertical ?? null, submitted_at: new Date().toISOString() })
-            .eq('generation_id', body.generationId)
-        } catch { /* best-effort */ }
+            .eq('generation_id', generationId)
+            .eq('user_id', user.id)
+          const { error: linkError } = await linkQuery
+          if (linkError) console.warn('[broll_metrics] hollywood link failed:', linkError.message)
+        } catch (linkError) {
+          console.warn('[broll_metrics] hollywood link threw:', linkError instanceof Error ? linkError.message : String(linkError))
+        }
       }
 
       // KINEO-CREDIT-INTENT-2026-07-11 — pin the engine + intended cost to this
       // render_id BEFORE the client can poll status. Hollywood = 150 credits,
       // charged on SUCCESS in /api/compose/status from THIS record (never the
       // client ?quality param). Best-effort (never throws), loud on failure.
-      await recordRenderIntent({
+      const hollywoodIntentStored = await recordRenderIntent({
         renderId: hollywoodRenderId,
         userId: user.id,
         quality,
-        cost: creditCostFor(quality),
+        cost: hollywoodCost,
       })
+      // Publish the accepted render only after its server-side billing intent
+      // exists, so a cross-instance replay cannot race ahead of that record.
+      const hollywoodClaimStored = await completeGenerationClaim(hollywoodRenderId, hollywoodCost)
+      if (!hollywoodIntentStored && !hollywoodClaimStored) {
+        return NextResponse.json(
+          { error: 'Your render was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
+          { status: 503 },
+        )
+      }
 
       return NextResponse.json({
         render_id: hollywoodRenderId,
@@ -944,29 +1263,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 5 — Submit to Creatomate.
-    // 10/06 — ONE automatic retry: a transient Creatomate reject killed an
-    // avatar render whose (expensive, slow) VEED clip was already done; the
-    // identical payload succeeded seconds later. The retry protects every
-    // mode but matters most for avatar, where a lost compose wastes a paid
-    // multi-minute talking-head generation.
+    // Step 5 — Submit to Creatomate once per authenticated generation. The
+    // provider has no documented idempotency key, so a blind retry after an
+    // ambiguous response can create and charge two jobs.
+    const intendedCost = creditCostFor(quality, quality === 'fast' ? !isFreePlanFast : false)
+    const claim = await claimGenerationSubmission(intendedCost)
+    if (claim.kind !== 'acquired') return claim.response
     let renderId: string
     try {
-      renderId = await submitCreatomateRender(source)
-    } catch (firstErr) {
-      const firstMsg = firstErr instanceof Error ? firstErr.message : String(firstErr)
-      console.warn('[compose] Creatomate submit failed — retrying once in 1.5s:', firstMsg)
-      await new Promise((r) => setTimeout(r, 1500))
-      try {
-        renderId = await submitCreatomateRender(source)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error('[compose] Creatomate submit failed (after retry):', msg)
+      renderId = await submitCreatomateOnce(source, submissionKey)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[compose] Creatomate submit failed:', msg)
+      if (err instanceof CreatomateSubmitError && err.ambiguous && ownsSubmissionClaim) {
         return NextResponse.json(
-          { error: 'Render service rejected the job. Please try again.' },
-          { status: 502 }
+          { error: 'Render submission is still being verified.', pending: true, retry_after_ms: 3000 },
+          { status: 409 },
         )
       }
+      await releaseGenerationClaim()
+      return NextResponse.json(
+        { error: 'Render service rejected the job. Please try again.' },
+        { status: 502 }
+      )
     }
 
     // Best-effort sanity check — confirm the render actually exists.
@@ -980,20 +1299,23 @@ export async function POST(req: NextRequest) {
     // Push #355 — Link the broll_metrics row (created in generate-video-fast)
     // to this Creatomate render so compose/status can write render_time_ms.
     // Best-effort: never blocks the render response.
-    if (body.generationId) {
+    if (generationId) {
       try {
-        const { error: metricsErr } = await supabase
+        const metricsClient = composeAdmin
+        let linkQuery = metricsClient
           .from('broll_metrics')
           .update({
             render_id:    renderId,
             vertical:     vertical ?? null,
             submitted_at: new Date().toISOString(),
           })
-          .eq('generation_id', body.generationId)
+          .eq('generation_id', generationId)
+          .eq('user_id', user.id)
+        const { error: metricsErr } = await linkQuery
         if (metricsErr) {
           console.warn('[broll_metrics] compose update failed:', metricsErr.message)
         } else {
-          console.log(`[broll_metrics] linked generation_id=${body.generationId} → render_id=${renderId}`)
+          console.log(`[broll_metrics] linked generation_id=${generationId} → render_id=${renderId}`)
         }
       } catch (metricsEx) {
         console.warn('[broll_metrics] compose update threw:', metricsEx instanceof Error ? metricsEx.message : String(metricsEx))
@@ -1006,12 +1328,19 @@ export async function POST(req: NextRequest) {
     // ?quality / ?deducted params. For Fast, the intended cost mirrors the
     // watermark decision's paid-user resolution (isFreePlanFast): paid → 1,
     // free → 0. Premium engines are deterministic. Best-effort, never throws.
-    await recordRenderIntent({
+    const intentStored = await recordRenderIntent({
       renderId,
       userId: user.id,
       quality,
-      cost: creditCostFor(quality, quality === 'fast' ? !isFreePlanFast : false),
+      cost: intendedCost,
     })
+    const claimStored = await completeGenerationClaim(renderId, intendedCost)
+    if (!intentStored && !claimStored) {
+      return NextResponse.json(
+        { error: 'Your render was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
+        { status: 503 },
+      )
+    }
 
     return NextResponse.json({
       render_id: renderId,

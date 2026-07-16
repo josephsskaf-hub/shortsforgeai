@@ -17,7 +17,7 @@ import AvatarDemoLoop from '@/components/AvatarDemoLoop'
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, PLAN_LIST } from '@/lib/pricing'
 import { HOME_CHIPS, randomTopic } from '@/lib/curatedTopics'
-import { captureUtmsOnce } from '@/lib/analytics'
+import { captureUtmsOnce, trackEvent } from '@/lib/analytics'
 import { captureRefOnce } from '@/lib/referral'
 import { trackCheckoutClick } from '@/lib/trackClick'
 
@@ -324,20 +324,7 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
 }
 
 function trackHomepageEvent(name: string): void {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event_name: name,
-        name,
-        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
-      }),
-      keepalive: true,
-    }).catch(() => {})
-  } catch {
-    // ignore
-  }
+  void trackEvent(name)
 }
 
 interface HomePageClientProps {

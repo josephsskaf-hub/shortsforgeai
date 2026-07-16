@@ -13,7 +13,7 @@
 // + VEED matte — ~$1-1.7/clip → ~60-66% margin on Creator $/cr.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { submitAnimateJob } from '@/lib/avatar/veed'
+import { AvatarSubmitError, submitAnimateJob } from '@/lib/avatar/veed'
 import { getCharacterImageUrl } from '@/lib/characters'
 
 export const maxDuration = 60
@@ -92,7 +92,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const requestId = await submitAnimateJob({ imageUrl, prompt, duration })
+    let requestId: string | null
+    try {
+      requestId = await submitAnimateJob({ imageUrl, prompt, duration })
+    } catch (error) {
+      if (error instanceof AvatarSubmitError && error.ambiguous) {
+        return NextResponse.json(
+          {
+            error: 'The provider may already be processing this clip. Do not submit it again; contact support so we can recover the original job without charging twice.',
+            pending: true,
+            retry: false,
+          },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
     if (!requestId) {
       return NextResponse.json(
         { error: 'The clip engine could not accept the job. You were not charged — please try again.' },

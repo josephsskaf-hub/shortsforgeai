@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
 import {
   buildCreatomateSource,
+  CreatomateSubmitError,
   estimateMp3DurationSeconds,
   generateTTS,
   scaleVoiceoverScript,
@@ -20,6 +21,14 @@ import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
 // (not the client ?quality param), exactly like /api/compose does.
 import { creditCostFor } from '@/lib/credits/engineCost'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
+import {
+  COMPOSE_CLAIM_EVENT,
+  COMPOSE_CLAIM_PATH,
+  composeClaimId,
+  signComposeClaim,
+  verifyComposeClaim,
+} from '@/lib/composeClaim'
+import { createHash } from 'node:crypto'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -147,14 +156,80 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This purchase could not be verified.' }, { status: 402 })
     }
 
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const admin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    )
+
+    // One paid Checkout Session unlocks one clean re-render. A deterministic,
+    // server-signed claim lets reloads and lost HTTP responses converge on the
+    // same Creatomate job instead of spending another render.
+    const generationId = `unlock_${createHash('sha256').update(sessionId).digest('hex').slice(0, 32)}`
+    const claimId = composeClaimId(user.id, generationId)
+    const intendedCost = creditCostFor('fast', true)
+    let ownsSubmissionClaim = false
+
+    const claimUnavailable = () => NextResponse.json(
+      { error: 'Your clean render safety check is temporarily unavailable. Please refresh in a moment.' },
+      { status: 503 },
+    )
+
+    const responseForClaim = (row: unknown): NextResponse => {
+      const claim = row as { id?: unknown; name?: unknown; user_id?: unknown; path?: unknown; session_id?: unknown; metadata?: unknown } | null
+      if (
+        claim?.id !== claimId || claim.name !== COMPOSE_CLAIM_EVENT ||
+        claim.user_id !== user.id || claim.path !== COMPOSE_CLAIM_PATH ||
+        claim.session_id !== generationId
+      ) {
+        console.error('[compose/unlock] deterministic claim collision:', claimId)
+        return claimUnavailable()
+      }
+      const metadata = claim.metadata && typeof claim.metadata === 'object'
+        ? claim.metadata as Record<string, unknown>
+        : {}
+      const status = metadata.status === 'done' ? 'done' : metadata.status === 'pending' ? 'pending' : null
+      const renderId = typeof metadata.render_id === 'string' ? metadata.render_id.trim() : ''
+      if (
+        !status || metadata.generation_id !== generationId || metadata.quality !== 'fast' ||
+        metadata.cost !== intendedCost ||
+        !verifyComposeClaim(serviceRoleKey, {
+          claimId,
+          userId: user.id,
+          generationId,
+          status,
+          ...(renderId ? { renderId } : {}),
+          quality: 'fast',
+          cost: intendedCost,
+        }, metadata.authority)
+      ) {
+        console.error('[compose/unlock] rejected unsigned/invalid claim:', claimId)
+        return claimUnavailable()
+      }
+      if (status === 'done' && renderId) {
+        return NextResponse.json({ verified: true, render_id: renderId, quality: 'fast', resumed: true })
+      }
+      return NextResponse.json(
+        { error: 'Your clean render is already being submitted.', pending: true, retry_after_ms: 3000 },
+        { status: 409 },
+      )
+    }
+
+    const { data: existingClaim, error: existingClaimError } = await admin
+      .from('events')
+      .select('id,name,user_id,path,session_id,metadata')
+      .eq('id', claimId)
+      .maybeSingle()
+    if (existingClaimError) {
+      console.error('[compose/unlock] claim preflight failed:', existingClaimError.message)
+      return claimUnavailable()
+    }
+    if (existingClaim) return responseForClaim(existingClaim)
+
     // ── 2) Safety-net: mark the user as paid so any FUTURE render is clean too.
     //    Idempotent; the Stripe webhook also sets this. Never grants credits.
     try {
-      const admin = createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } },
-      )
       await admin.from('profiles').update({ has_paid: true }).eq('id', user.id)
     } catch (err) {
       // Non-fatal — the webhook will set it too; the clean render below still runs.
@@ -266,18 +341,73 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 })
     }
 
+    const { error: claimInsertError } = await admin.from('events').insert({
+      id: claimId,
+      user_id: user.id,
+      name: COMPOSE_CLAIM_EVENT,
+      path: COMPOSE_CLAIM_PATH,
+      session_id: generationId,
+      metadata: {
+        generation_id: generationId,
+        status: 'pending',
+        quality: 'fast',
+        cost: intendedCost,
+        authority: signComposeClaim(serviceRoleKey, {
+          claimId,
+          userId: user.id,
+          generationId,
+          status: 'pending',
+          quality: 'fast',
+          cost: intendedCost,
+        }),
+      },
+    })
+    if (claimInsertError) {
+      if (claimInsertError.code !== '23505') {
+        console.error('[compose/unlock] claim insert failed:', claimInsertError.message)
+        return claimUnavailable()
+      }
+      const { data: racedClaim, error: racedClaimError } = await admin
+        .from('events')
+        .select('id,name,user_id,path,session_id,metadata')
+        .eq('id', claimId)
+        .maybeSingle()
+      if (racedClaimError || !racedClaim) {
+        console.error('[compose/unlock] claim race recheck failed:', racedClaimError?.message ?? 'claim missing')
+        return claimUnavailable()
+      }
+      return responseForClaim(racedClaim)
+    }
+    ownsSubmissionClaim = true
+
+    const releaseExplicitlyRejectedClaim = async (): Promise<void> => {
+      if (!ownsSubmissionClaim) return
+      const { error: releaseError } = await admin
+        .from('events')
+        .delete()
+        .eq('id', claimId)
+        .eq('user_id', user.id)
+        .eq('name', COMPOSE_CLAIM_EVENT)
+      if (releaseError) {
+        console.error('[compose/unlock] explicit rejection claim release failed:', releaseError.message)
+      } else {
+        ownsSubmissionClaim = false
+      }
+    }
+
     let renderId: string
     try {
       renderId = await submitCreatomateRender(source)
-    } catch (firstErr) {
-      console.warn('[compose/unlock] Creatomate submit failed — retrying once:', firstErr instanceof Error ? firstErr.message : String(firstErr))
-      await new Promise((r) => setTimeout(r, 1500))
-      try {
-        renderId = await submitCreatomateRender(source)
-      } catch (err) {
-        console.error('[compose/unlock] Creatomate submit failed (after retry):', err instanceof Error ? err.message : String(err))
-        return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
+    } catch (err) {
+      console.error('[compose/unlock] Creatomate submit failed:', err instanceof Error ? err.message : String(err))
+      if (err instanceof CreatomateSubmitError && err.ambiguous) {
+        return NextResponse.json(
+          { error: 'Your clean render submission is still being verified.', pending: true, retry_after_ms: 3000 },
+          { status: 409 },
+        )
       }
+      await releaseExplicitlyRejectedClaim()
+      return NextResponse.json({ error: 'Render service rejected the job. Please try again.' }, { status: 502 })
     }
 
     // KINEO-CREDIT-INTENT-2026-07-11 — this is a Fast render for a user who just
@@ -285,12 +415,50 @@ export async function POST(req: NextRequest) {
     // /api/compose/status fail-opens if the pack credits haven't landed yet
     // (balance < 1 → delivered without debit), preserving the documented
     // "clean re-render is covered / safe degradation" behavior.
-    await recordRenderIntent({
+    const intentStored = await recordRenderIntent({
       renderId,
       userId: user.id,
       quality: 'fast',
-      cost: creditCostFor('fast', true),
+      cost: intendedCost,
     })
+
+    const doneMetadata = {
+      generation_id: generationId,
+      status: 'done',
+      render_id: renderId,
+      quality: 'fast',
+      cost: intendedCost,
+      completed_at: new Date().toISOString(),
+      authority: signComposeClaim(serviceRoleKey, {
+        claimId,
+        userId: user.id,
+        generationId,
+        status: 'done' as const,
+        renderId,
+        quality: 'fast',
+        cost: intendedCost,
+      }),
+    }
+    let claimStored = false
+    for (let attempt = 1; attempt <= 3 && !claimStored; attempt += 1) {
+      const { data: completed, error: completeError } = await admin
+        .from('events')
+        .update({ metadata: doneMetadata })
+        .eq('id', claimId)
+        .eq('user_id', user.id)
+        .eq('name', COMPOSE_CLAIM_EVENT)
+        .select('id')
+        .maybeSingle()
+      claimStored = !completeError && completed?.id === claimId
+      if (completeError) console.error('[compose/unlock] claim completion failed:', completeError.message)
+    }
+    if (claimStored) ownsSubmissionClaim = false
+    if (!intentStored && !claimStored) {
+      return NextResponse.json(
+        { error: 'Your clean render was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
+        { status: 503 },
+      )
+    }
 
     console.log(`[compose/unlock] clean re-render started user=${user.id.slice(0, 8)} render=${renderId} duration=${duration}s`)
     return NextResponse.json({ verified: true, render_id: renderId, quality: 'fast', duration })

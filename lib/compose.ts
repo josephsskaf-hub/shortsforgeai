@@ -1887,35 +1887,67 @@ export function buildHollywoodCreatomateSource({
 }
 // ── end KINEO-HOLLYWOOD-2026-07-09 ───────────────────────────────────────────
 
+export class CreatomateSubmitError extends Error {
+  constructor(message: string, public readonly ambiguous: boolean, public readonly status?: number) {
+    super(message)
+    this.name = 'CreatomateSubmitError'
+  }
+}
+
 export async function submitCreatomateRender(source: Record<string, unknown>): Promise<string> {
   const key = process.env.CREATOMATE_API_KEY
   if (!key) throw new Error('CREATOMATE_API_KEY is not configured.')
 
-  const res = await fetch(`${CREATOMATE_BASE}/renders`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ source }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${CREATOMATE_BASE}/renders`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ source }),
+    })
+  } catch (error) {
+    throw new CreatomateSubmitError(
+      `Creatomate submit connection failed: ${error instanceof Error ? error.message : String(error)}`,
+      true,
+    )
+  }
 
-  const text = await res.text()
+  let text: string
+  try {
+    text = await res.text()
+  } catch (error) {
+    // Once a 2xx/408/5xx response has started, a broken body stream does not
+    // prove whether the provider accepted the job. Mark it ambiguous so the
+    // caller keeps its distributed claim instead of blindly re-submitting.
+    const ambiguous = res.ok || res.status === 408 || res.status >= 500
+    throw new CreatomateSubmitError(
+      `Creatomate response body failed: ${error instanceof Error ? error.message : String(error)}`,
+      ambiguous,
+      res.status,
+    )
+  }
   if (!res.ok) {
-    throw new Error(`Creatomate rejected the render (${res.status}): ${text.slice(0, 300)}`)
+    throw new CreatomateSubmitError(
+      `Creatomate rejected the render (${res.status}): ${text.slice(0, 300)}`,
+      res.status === 408 || res.status >= 500,
+      res.status,
+    )
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
   } catch {
-    throw new Error('Creatomate returned a non-JSON response.')
+    throw new CreatomateSubmitError('Creatomate returned a non-JSON response.', true, res.status)
   }
 
   const first = Array.isArray(parsed) ? parsed[0] : parsed
   const obj = first as { id?: string } | null
   if (!obj || typeof obj.id !== 'string' || !obj.id) {
-    throw new Error('Creatomate returned no render id.')
+    throw new CreatomateSubmitError('Creatomate returned no render id.', true, res.status)
   }
   return obj.id
 }

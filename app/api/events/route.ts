@@ -13,6 +13,16 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
+const SERVER_ONLY_EVENTS = new Set([
+  'compose_submission_claim',
+  'avatar_submission_claim',
+  'payment_success',
+  'checkout_attempted',
+  'checkout_auth_required',
+  'checkout_started',
+  'checkout_failed',
+])
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
@@ -23,6 +33,12 @@ export async function POST(req: NextRequest) {
         : ''
     const name = rawName.trim().slice(0, 64)
     if (!name) {
+      return NextResponse.json({ ok: true, ignored: true, stored: false })
+    }
+    // These names are authoritative locks/payment facts written only by their
+    // server routes. Letting the generic browser sink mint them would corrupt
+    // billing recovery and funnel truth.
+    if (SERVER_ONLY_EVENTS.has(name)) {
       return NextResponse.json({ ok: true, ignored: true, stored: false })
     }
 

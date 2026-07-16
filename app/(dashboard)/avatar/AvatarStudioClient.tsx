@@ -19,6 +19,63 @@ type Phase = 'idle' | 'uploading' | 'submitting' | 'animating' | 'composing' | '
 
 interface SavedFace { id: string; url: string; created_at: string }
 
+interface AvatarRunState {
+  requestId: string
+  engine: string
+  voiceoverUrl: string
+  voiceoverScript: string
+  realAudioDuration: number | null
+  hookSeconds: number | null
+  clipUrls: string[]
+  generationId: string
+  requestDuration: number
+  topic: string
+  language: 'en' | 'pt' | 'es'
+}
+
+interface AvatarRunSnapshot {
+  userId: string
+  startedAt: number
+  stage: 'submitting' | 'animating' | 'composing' | 'rendering'
+  run?: AvatarRunState
+  submission?: {
+    generationId: string
+    payload: Record<string, unknown>
+  }
+  avatarVideoUrl?: string
+  renderId?: string
+  deducted?: boolean
+}
+
+function newAvatarGenerationId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  } catch {
+    // Fall through to a collision-resistant browser-local id.
+  }
+  return `avatar_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+const AVATAR_RUN_STORAGE_KEY = 'kineo_avatar_active_render_v1'
+const AVATAR_RUN_TAB_KEY = 'kineo_avatar_active_render_tab_v1'
+const AVATAR_RUN_TTL_MS = 2 * 60 * 60 * 1000
+
+function avatarRunStorageKey(userId: string): string {
+  let tabId = 'default'
+  try {
+    tabId = sessionStorage.getItem(AVATAR_RUN_TAB_KEY) ?? ''
+    if (!tabId) {
+      tabId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `tab_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+      sessionStorage.setItem(AVATAR_RUN_TAB_KEY, tabId)
+    }
+  } catch {
+    // Fall back to a user-bound key when sessionStorage is unavailable.
+  }
+  return `${AVATAR_RUN_STORAGE_KEY}:${userId}:${tabId}`
+}
+
 const PHASE_COPY: Record<Phase, string> = {
   idle: '',
   uploading: 'Uploading your file…',
@@ -152,17 +209,60 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   const [error, setError] = useState<string | null>(null)
   const [finalUrl, setFinalUrl] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
-  const runRef = useRef<{
-    requestId: string | null
-    engine: string
-    voiceoverUrl: string
-    voiceoverScript: string
-    realAudioDuration: number | null
-    hookSeconds: number | null
-    clipUrls: string[]
-    generationId: string | null
-  } | null>(null)
+  const runRef = useRef<AvatarRunState | null>(null)
+  const avatarRunStartedAtRef = useRef(0)
+  const avatarUserIdRef = useRef<string | null>(null)
+  const [avatarRestoreRetry, setAvatarRestoreRetry] = useState(0)
+  const avatarRestoreResolvedRef = useRef(!isLoggedIn)
+  const [avatarRestoreResolved, setAvatarRestoreResolved] = useState(!isLoggedIn)
   const cancelledRef = useRef(false)
+
+  function clearAvatarRunSnapshot(): void {
+    const userId = avatarUserIdRef.current
+    if (!userId) return
+    try { localStorage.removeItem(avatarRunStorageKey(userId)) } catch { /* ignore */ }
+  }
+
+  function persistAvatarRunSnapshot(
+    stage: AvatarRunSnapshot['stage'],
+    extras?: Partial<Pick<AvatarRunSnapshot, 'avatarVideoUrl' | 'renderId' | 'deducted'>>,
+  ): void {
+    const run = runRef.current
+    const userId = avatarUserIdRef.current
+    if (!run || !userId) return
+    try {
+      const snapshot: AvatarRunSnapshot = {
+        userId,
+        startedAt: avatarRunStartedAtRef.current || Date.now(),
+        stage,
+        run,
+        ...(extras?.avatarVideoUrl ? { avatarVideoUrl: extras.avatarVideoUrl } : {}),
+        ...(extras?.renderId ? { renderId: extras.renderId } : {}),
+        ...(extras?.deducted ? { deducted: true } : {}),
+      }
+      localStorage.setItem(avatarRunStorageKey(userId), JSON.stringify(snapshot))
+    } catch {
+      // The in-tab flow still works if storage is unavailable.
+    }
+  }
+
+  function persistAvatarSubmissionSnapshot(
+    userId: string,
+    generationId: string,
+    payload: Record<string, unknown>,
+  ): void {
+    try {
+      const snapshot: AvatarRunSnapshot = {
+        userId,
+        startedAt: Date.now(),
+        stage: 'submitting',
+        submission: { generationId, payload },
+      }
+      localStorage.setItem(avatarRunStorageKey(userId), JSON.stringify(snapshot))
+    } catch {
+      // The server claim still prevents duplicate provider work in this tab.
+    }
+  }
 
   // KINEO-CHARACTER-LOCK-2026-07-10 — My Characters (named, persisted faces
   // reusable across Presenter/Avatar/Hollywood; Feature 2).
@@ -298,6 +398,7 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
 
   useEffect(() => {
     if (!isLoggedIn) return
+    cancelledRef.current = false
     fetch('/api/avatar/list', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
@@ -323,9 +424,165 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     return () => { cancelledRef.current = true }
   }, [isLoggedIn])
 
+  // Resume every expensive stage after a reload. The snapshot is bound to the
+  // authenticated owner and keeps the original generationId, so recovery never
+  // starts a second avatar/provider job.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    let restoreCancelled = false
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    const markRestoreResolved = () => {
+      avatarRestoreResolvedRef.current = true
+      setAvatarRestoreResolved(true)
+    }
+    const scheduleRestoreRetry = () => {
+      retryTimer = setTimeout(() => {
+        if (!restoreCancelled) setAvatarRestoreRetry((value) => value + 1)
+      }, 1500)
+    }
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (restoreCancelled) return
+        if (authError) {
+          scheduleRestoreRetry()
+          return
+        }
+        if (!user) {
+          window.location.assign(`/login?redirect=${encodeURIComponent('/avatar')}`)
+          return
+        }
+        avatarUserIdRef.current = user.id
+
+        const raw = localStorage.getItem(avatarRunStorageKey(user.id))
+        if (!raw) {
+          markRestoreResolved()
+          return
+        }
+        let stored: Partial<AvatarRunSnapshot>
+        try {
+          stored = JSON.parse(raw) as Partial<AvatarRunSnapshot>
+        } catch {
+          clearAvatarRunSnapshot()
+          markRestoreResolved()
+          return
+        }
+        const startedAt = Number(stored.startedAt)
+        const age = Date.now() - startedAt
+        if (
+          stored.userId !== user.id ||
+          !Number.isFinite(startedAt) || age < 0 || age > AVATAR_RUN_TTL_MS
+        ) {
+          clearAvatarRunSnapshot()
+          markRestoreResolved()
+          return
+        }
+        if (stored.stage === 'submitting') {
+          const submission = stored.submission
+          const submissionId = typeof submission?.generationId === 'string' ? submission.generationId.trim() : ''
+          const payload = submission?.payload && typeof submission.payload === 'object' && !Array.isArray(submission.payload)
+            ? submission.payload
+            : null
+          if (!payload || !/^[A-Za-z0-9_-]{8,100}$/.test(submissionId) || payload.generationId !== submissionId) {
+            clearAvatarRunSnapshot()
+            markRestoreResolved()
+            return
+          }
+          const restoredPrompt = typeof payload.prompt === 'string' ? payload.prompt.slice(0, 10000) : ''
+          const restoredLanguage = payload.language === 'pt' || payload.language === 'es' ? payload.language : 'en'
+          setScript(restoredPrompt)
+          setLanguage(restoredLanguage)
+          setProgress(8)
+          setPhase('submitting')
+          setError('Your avatar is safe. Reconnecting to the same submission…')
+          markRestoreResolved()
+          void submitAvatarGeneration(payload, submissionId, startedAt)
+          return
+        }
+        const candidate = stored.run as Partial<AvatarRunState> | undefined
+        const generationId = typeof candidate?.generationId === 'string' ? candidate.generationId.trim() : ''
+        const requestId = typeof candidate?.requestId === 'string' ? candidate.requestId.trim() : ''
+        if (
+          stored.userId !== user.id ||
+          !Number.isFinite(startedAt) || age < 0 || age > AVATAR_RUN_TTL_MS ||
+          !/^[A-Za-z0-9_-]{8,100}$/.test(generationId) ||
+          !requestId || requestId.length > 300 ||
+          !candidate || typeof candidate.voiceoverUrl !== 'string' ||
+          typeof candidate.voiceoverScript !== 'string' ||
+          !Array.isArray(candidate.clipUrls)
+        ) {
+          clearAvatarRunSnapshot()
+          markRestoreResolved()
+          return
+        }
+        const restoredRun: AvatarRunState = {
+          requestId,
+          generationId,
+          engine: typeof candidate.engine === 'string' ? candidate.engine.slice(0, 40) : 'fabric',
+          voiceoverUrl: candidate.voiceoverUrl.slice(0, 2048),
+          voiceoverScript: candidate.voiceoverScript.slice(0, 10000),
+          realAudioDuration: typeof candidate.realAudioDuration === 'number' && Number.isFinite(candidate.realAudioDuration)
+            ? candidate.realAudioDuration
+            : null,
+          hookSeconds: typeof candidate.hookSeconds === 'number' && Number.isFinite(candidate.hookSeconds)
+            ? candidate.hookSeconds
+            : null,
+          clipUrls: candidate.clipUrls
+            .filter((url): url is string => typeof url === 'string' && url.length > 0 && url.length <= 2048)
+            .slice(0, 20),
+          requestDuration: typeof candidate.requestDuration === 'number' && Number.isFinite(candidate.requestDuration)
+            ? Math.max(3, Math.min(90, candidate.requestDuration))
+            : 45,
+          topic: typeof candidate.topic === 'string' ? candidate.topic.slice(0, 200) : '',
+          language: candidate.language === 'pt' || candidate.language === 'es' ? candidate.language : 'en',
+        }
+        runRef.current = restoredRun
+        avatarRunStartedAtRef.current = startedAt
+        setScript(restoredRun.topic || restoredRun.voiceoverScript)
+        setLanguage(restoredRun.language)
+        setError(null)
+
+        if (stored.stage === 'animating') {
+          setProgress(25)
+          setPhase('animating')
+          markRestoreResolved()
+          void pollAvatar()
+          return
+        }
+        if (stored.stage === 'composing' && typeof stored.avatarVideoUrl === 'string' && stored.avatarVideoUrl) {
+          setProgress(55)
+          setPhase('composing')
+          markRestoreResolved()
+          void kickCompose(stored.avatarVideoUrl)
+          return
+        }
+        if (stored.stage === 'rendering' && typeof stored.renderId === 'string' && stored.renderId) {
+          setProgress(70)
+          setPhase('rendering')
+          markRestoreResolved()
+          void pollRender(stored.renderId, stored.deducted === true)
+          return
+        }
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
+        markRestoreResolved()
+      } catch {
+        // Preserve a valid snapshot and retry before enabling a new paid job.
+        scheduleRestoreRetry()
+      }
+    })()
+    return () => {
+      restoreCancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, avatarRestoreRetry])
+
   const busy = phase !== 'idle' && phase !== 'done' && phase !== 'failed'
   const sourceReady = sourceKind === 'photo' ? !!faceUrl : !!videoUrl
-  const canGenerate = isLoggedIn && sourceReady && script.trim().length > 0 && !busy
+  const canGenerate = isLoggedIn && avatarRestoreResolved && sourceReady && script.trim().length > 0 && !busy
 
   // Warn before a refresh/close while a render is running — the job is still
   // processing and leaving abandons it. (Note: also reminds the user not to
@@ -627,8 +884,113 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   }
 
   // ── The run: generate → poll avatar → compose → poll render ──────────
+  async function submitAvatarGeneration(
+    payload: Record<string, unknown>,
+    generationId: string,
+    startedAt: number,
+  ): Promise<void> {
+    let reconnectAttempt = 0
+    while (!cancelledRef.current) {
+      let res: Response
+      let data: Record<string, unknown>
+      try {
+        res = await fetch('/api/generate-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        data = await res.json().catch(() => ({})) as Record<string, unknown>
+      } catch {
+        reconnectAttempt += 1
+        setError('Your avatar is safe. Reconnecting to the same submission…')
+        await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+        continue
+      }
+
+      if ((res.status === 409 || res.status === 503) && data.pending === true) {
+        reconnectAttempt += 1
+        const retryAfter = typeof data.retry_after_ms === 'number'
+          ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+          : reconnectAttempt <= 4 ? 3000 : 10000
+        setError('Your avatar is safe. Reconnecting to the same submission…')
+        await new Promise((resolve) => setTimeout(resolve, retryAfter))
+        continue
+      }
+      if (res.status === 401) {
+        setError('Your session expired. Sign in again to finish this avatar without starting over.')
+        window.location.assign(`/login?redirect=${encodeURIComponent('/avatar')}`)
+        return
+      }
+      if (res.status === 402) {
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
+        setError(typeof data.error === 'string'
+          ? data.error
+          : `Avatar videos cost ${AVATAR_COST} credits — you’re short. Credits are debited only when your video succeeds.`)
+        setPhase('failed')
+        return
+      }
+      const returnedGenerationId = typeof data.generationId === 'string' ? data.generationId.trim() : ''
+      if (
+        !res.ok || typeof data.avatar_request_id !== 'string' ||
+        returnedGenerationId !== generationId ||
+        typeof data.voiceover_url !== 'string'
+      ) {
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
+        setError(typeof data.error === 'string' ? data.error : 'Could not start the render. Please try again.')
+        setPhase('failed')
+        return
+      }
+
+      const requestedDuration = Number(payload.duration)
+      const restoredLanguage: 'en' | 'pt' | 'es' = payload.language === 'pt' || payload.language === 'es'
+        ? payload.language
+        : 'en'
+      runRef.current = {
+        requestId: data.avatar_request_id,
+        engine: typeof data.engine === 'string' ? data.engine : 'fabric',
+        voiceoverUrl: data.voiceover_url,
+        voiceoverScript: typeof data.voiceover_script === 'string'
+          ? data.voiceover_script
+          : typeof payload.prompt === 'string' ? payload.prompt : '',
+        realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
+        hookSeconds: typeof data.avatar_hook_seconds === 'number' ? data.avatar_hook_seconds : null,
+        clipUrls: Array.isArray(data.clip_urls)
+          ? data.clip_urls.filter((url): url is string => typeof url === 'string')
+          : [],
+        generationId,
+        requestDuration: Number.isFinite(requestedDuration) ? requestedDuration : 45,
+        topic: typeof payload.prompt === 'string' ? payload.prompt.slice(0, 200) : '',
+        language: restoredLanguage,
+      }
+      avatarRunStartedAtRef.current = startedAt
+      setError(null)
+      persistAvatarRunSnapshot('animating')
+      setPhase('animating')
+      setProgress(25)
+      void pollAvatar()
+      return
+    }
+  }
+
   async function handleGenerate() {
-    if (!canGenerate) return
+    if (!canGenerate || !avatarRestoreResolvedRef.current) return
+    if (runRef.current) {
+      setError('Your previous avatar is still recoverable. Refresh this page to reconnect instead of starting a duplicate job.')
+      return
+    }
+    cancelledRef.current = false
+    if (!avatarUserIdRef.current) {
+      const { data: { user }, error: authError } = await createClient().auth.getUser()
+      if (authError || !user) {
+        setError('Your session expired. Sign in again before starting this avatar.')
+        return
+      }
+      avatarUserIdRef.current = user.id
+    }
     // If there are no cutaways, never submit an 8-second hook slice as though
     // it were a full avatar. That combination could leave the final timeline
     // with a frozen/black tail after the source clip ended.
@@ -637,57 +999,27 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
     setFinalUrl(null)
     setProgress(8)
     setPhase('submitting')
-    try {
-      const res = await fetch('/api/generate-avatar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: script.trim(),
-          duration: requestDuration,
-          language,
-          scriptMode,
-          performanceStyle,
-          ...(voiceId ? { voiceId } : {}),
-          ...(noBroll ? { noBroll: true } : {}),
-          ...(sourceKind === 'video'
-            ? { avatarSourceVideoUrl: videoUrl }
-            : { avatarImageUrl: fidelity === 'scene' ? (sceneImageUrl ?? faceUrl) : faceUrl, engine }),
-          // Hook mode only makes sense for expanded scripts — a 10s verbatim
-          // line IS the hook.
-          avatarMode: sourceKind === 'photo' && !noBroll && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
-        }),
-      })
-      const data = await res.json()
-      if (res.status === 402) {
-        // KINEO-AVATAR-120-2026-07-06 — universal-credit wall (120 credits).
-        setError(typeof data?.error === 'string'
-          ? data.error
-          : `Avatar videos cost ${AVATAR_COST} credits — you’re short. Credits are debited only when your video succeeds.`)
-        setPhase('failed')
-        return
-      }
-      if (!res.ok || typeof data?.avatar_request_id !== 'string') {
-        setError(typeof data?.error === 'string' ? data.error : 'Could not start the render. Please try again.')
-        setPhase('failed')
-        return
-      }
-      runRef.current = {
-        requestId: data.avatar_request_id,
-        engine: typeof data.engine === 'string' ? data.engine : 'fabric',
-        voiceoverUrl: data.voiceover_url,
-        voiceoverScript: typeof data.voiceover_script === 'string' ? data.voiceover_script : script.trim(),
-        realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
-        hookSeconds: typeof data.avatar_hook_seconds === 'number' ? data.avatar_hook_seconds : null,
-        clipUrls: Array.isArray(data.clip_urls) ? data.clip_urls : [],
-        generationId: typeof data.generationId === 'string' ? data.generationId : null,
-      }
-      setPhase('animating')
-      setProgress(25)
-      void pollAvatar()
-    } catch {
-      setError('Could not start the render. Please try again.')
-      setPhase('failed')
+    const generationId = newAvatarGenerationId()
+    const payload: Record<string, unknown> = {
+      generationId,
+      prompt: script.trim(),
+      duration: requestDuration,
+      language,
+      scriptMode,
+      performanceStyle,
+      ...(voiceId ? { voiceId } : {}),
+      ...(noBroll ? { noBroll: true } : {}),
+      ...(sourceKind === 'video'
+        ? { avatarSourceVideoUrl: videoUrl }
+        : { avatarImageUrl: fidelity === 'scene' ? (sceneImageUrl ?? faceUrl) : faceUrl, engine }),
+      // Hook mode only makes sense for expanded scripts — a 10s verbatim
+      // line IS the hook.
+      avatarMode: sourceKind === 'photo' && !noBroll && hookMode && scriptMode === 'expand' ? 'hook' : 'full',
     }
+    const startedAt = Date.now()
+    avatarRunStartedAtRef.current = startedAt
+    persistAvatarSubmissionSnapshot(avatarUserIdRef.current, generationId, payload)
+    void submitAvatarGeneration(payload, generationId, startedAt)
   }
 
   async function pollAvatar() {
@@ -698,15 +1030,24 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         `/api/avatar-status?request_id=${encodeURIComponent(run.requestId)}&engine=${run.engine}`,
         { cache: 'no-store' },
       )
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (cancelledRef.current) return
+      if (res.status === 401) {
+        window.location.assign(`/login?redirect=${encodeURIComponent('/avatar')}`)
+        return
+      }
+      if (!res.ok) throw new Error('Avatar status lookup failed')
       if (data.status === 'done' && typeof data.video_url === 'string') {
+        persistAvatarRunSnapshot('composing', { avatarVideoUrl: data.video_url })
         setProgress(55)
         setPhase('composing')
         void kickCompose(data.video_url)
         return
       }
       if (data.status === 'failed') {
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
         setError(typeof data.error === 'string' ? data.error : 'Avatar generation failed. You were not charged.')
         setPhase('failed')
         return
@@ -721,41 +1062,73 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
   async function kickCompose(avatarVideoUrl: string) {
     const run = runRef.current
     if (!run) return
-    try {
-      const res = await fetch('/api/compose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    if (!run.generationId) {
+      setError('This avatar is missing its recovery id. Please start it again.')
+      setPhase('failed')
+      return
+    }
+    persistAvatarRunSnapshot('composing', { avatarVideoUrl })
+    const payload = {
           generationId: run.generationId,
           clip_urls: run.clipUrls,
           voiceover_script: run.voiceoverScript,
           scene_captions: [],
           // Tail fix (13/06) — real audio length drives compose; this is just
           // the fallback, so never send a 52s fallback for a 5s verbatim line.
-          duration: run.realAudioDuration != null ? Math.max(3, Math.ceil(run.realAudioDuration)) : requestDuration,
-          topic: script.trim().slice(0, 200),
+          duration: run.realAudioDuration != null ? Math.max(3, Math.ceil(run.realAudioDuration)) : run.requestDuration,
+          topic: run.topic,
           // KINEO-PRESENTER-2026-07-10 — presenter renders debit 60 credits via
           // their own quality; everything else stays on 'avatar' (110).
           quality: run.engine === 'presenter' ? 'presenter' : 'avatar',
-          language: 'en',
+          language: run.language,
           avatar_url: avatarVideoUrl,
           voiceover_url: run.voiceoverUrl,
           ...(run.realAudioDuration != null ? { real_audio_duration: run.realAudioDuration } : {}),
           ...(run.hookSeconds != null ? { avatar_hook_seconds: run.hookSeconds } : {}),
-        }),
-      })
-      const data = await res.json()
+        }
+    let reconnectAttempt = 0
+    while (!cancelledRef.current) {
+      let res: Response
+      let data: Record<string, unknown> | null
+      try {
+        res = await fetch('/api/compose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        data = await res.json().catch(() => null) as Record<string, unknown> | null
+      } catch {
+        reconnectAttempt += 1
+        setError('Your avatar is safe. We are reconnecting to the same final render — keep this tab open.')
+        await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+        continue
+      }
+
+      if ((res.status === 409 && data?.pending === true) || res.status === 503) {
+        reconnectAttempt += 1
+        const retryAfter = typeof data?.retry_after_ms === 'number'
+          ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+          : reconnectAttempt <= 4 ? 3000 : 10000
+        setError('Your avatar is safe. We are reconnecting to the same final render — keep this tab open.')
+        await new Promise((resolve) => setTimeout(resolve, retryAfter))
+        continue
+      }
+      if (res.status === 401) {
+        setError('Your session expired. Sign in again to finish this avatar without starting over.')
+        window.location.assign(`/login?redirect=${encodeURIComponent('/avatar')}`)
+        return
+      }
       if (!res.ok || typeof data?.render_id !== 'string') {
         setError(typeof data?.error === 'string' ? data.error : 'Could not assemble the final video.')
         setPhase('failed')
         return
       }
+      setError(null)
+      persistAvatarRunSnapshot('rendering', { renderId: data.render_id })
       setPhase('rendering')
       setProgress(70)
       void pollRender(data.render_id, false)
-    } catch {
-      setError('Could not assemble the final video.')
-      setPhase('failed')
+      return
     }
   }
 
@@ -768,10 +1141,33 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
       // quality_mode=basic_ai and no credit_debits row). Same class of bug as
       // push #361. Now the engine that ran drives the quality param.
       const pollQuality = runRef.current?.engine === 'presenter' ? 'presenter' : 'avatar'
-      const res = await fetch(`/api/compose/status/${encodeURIComponent(renderId)}?deducted=${deducted ? 1 : 0}&quality=${pollQuality}`, { cache: 'no-store' })
-      const data = await res.json()
+      const params = new URLSearchParams({
+        deducted: deducted ? '1' : '0',
+        quality: pollQuality,
+        resume: '1',
+      })
+      const res = await fetch(`/api/compose/status/${encodeURIComponent(renderId)}?${params.toString()}`, { cache: 'no-store' })
+      const data = await res.json().catch(() => ({}))
       if (cancelledRef.current) return
+      if (res.status === 401) {
+        persistAvatarRunSnapshot('rendering', { renderId, deducted })
+        window.location.assign(`/login?redirect=${encodeURIComponent('/avatar')}`)
+        return
+      }
+      if (!res.ok) {
+        if (res.status === 408 || res.status === 425 || res.status === 429 || res.status >= 500) {
+          throw new Error('Render status temporarily unavailable')
+        }
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
+        setError(typeof data?.error === 'string' ? data.error : 'This avatar render can no longer be resumed.')
+        setPhase('failed')
+        return
+      }
+      setError(null)
       if (data.phase === 'done' && typeof data.final_video_url === 'string') {
+        clearAvatarRunSnapshot()
         setFinalUrl(data.final_video_url)
         setProgress(100)
         setPhase('done')
@@ -785,11 +1181,15 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
         return
       }
       if (data.phase === 'failed') {
+        clearAvatarRunSnapshot()
+        runRef.current = null
+        avatarRunStartedAtRef.current = 0
         setError(typeof data.error === 'string' ? data.error : 'Render failed. You were not charged.')
         setPhase('failed')
         return
       }
       const nextDeducted = deducted || data.creditsDeducted === true
+      persistAvatarRunSnapshot('rendering', { renderId, deducted: nextDeducted })
       setProgress((p) => (typeof data.progress === 'number' ? Math.min(96, 70 + data.progress * 0.26) : Math.min(96, p + 3)))
       setTimeout(() => pollRender(renderId, nextDeducted), 4000)
     } catch {
@@ -1464,7 +1864,14 @@ export default function AvatarStudioClient({ isLoggedIn }: { isLoggedIn: boolean
           {phase === 'done' && (
             <button
               type="button"
-              onClick={() => { setPhase('idle'); setFinalUrl(null); setProgress(0) }}
+              onClick={() => {
+                clearAvatarRunSnapshot()
+                runRef.current = null
+                avatarRunStartedAtRef.current = 0
+                setPhase('idle')
+                setFinalUrl(null)
+                setProgress(0)
+              }}
               className="text-[12px] font-bold"
               style={{ color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}
             >

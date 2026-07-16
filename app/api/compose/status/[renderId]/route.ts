@@ -10,6 +10,7 @@ import { refundRenderCredits } from '@/lib/credits/refund'
 // shared price table (was a local copy here).
 import { creditCostFor, normalizeQuality } from '@/lib/credits/engineCost'
 import { getRenderIntent } from '@/lib/credits/renderIntent'
+import { settleAvatarCreditHoldForRender } from '@/lib/avatar/reservation'
 
 // Push #230 — bumped 30→60 to give the post-render asset migration
 // (download Creatomate video + thumbnail, re-upload to Supabase Storage)
@@ -174,14 +175,25 @@ export async function GET(
     // Forging ?quality=fast (to make a 110-credit Avatar settle as a free Fast
     // video) no longer works — the recurrence of "avatar nunca debitava por
     // quality ausente" is closed.
+    const resumeRequested = req.nextUrl.searchParams.get('resume') === '1'
     const intent = await getRenderIntent(renderId)
-    const hasServerIntent = !!intent && intent.userId === user.id
-    if (intent && intent.userId !== user.id) {
-      // A render_id that belongs to a different user should never be polled here
-      // in normal flow. Don't use its intent; fall back to legacy handling and
-      // log — any charge always lands on the authenticated poller anyway.
-      console.warn(`[compose/status] intent user mismatch render=${renderId} — ignoring intent row`)
+    if (intent === undefined) {
+      return NextResponse.json(
+        { error: 'Render ownership is temporarily unavailable. Please retry.' },
+        { status: 503 },
+      )
     }
+    // A restored client snapshot is not an authority boundary. Resume is
+    // allowed only when the server-side render intent exists and belongs to the
+    // authenticated user; missing/mismatched ids fail closed without revealing
+    // whether another user's render exists.
+    if (intent && intent.userId !== user.id) {
+      return NextResponse.json({ error: 'Render not found.' }, { status: 404 })
+    }
+    if (resumeRequested && !intent) {
+      return NextResponse.json({ error: 'No resumable render found.' }, { status: 404 })
+    }
+    const hasServerIntent = !!intent && intent.userId === user.id
 
     // Legacy fallback (no intent row = a render created before this deploy, or a
     // path that didn't record intent): keep the historical client-param parse.
@@ -264,7 +276,17 @@ export async function GET(
             e instanceof Error ? e.message : String(e))
         }
       }
-      const cost = creditCostFor(quality, fastIsPaidUser)
+      // The render-birth route signed and stored the exact cost. Pin settlement
+      // to that value so an upgrade/downgrade while the provider is rendering
+      // cannot turn a free Fast preview into a debit (or a paid Fast render into
+      // a free one). Legacy renders without a valid intent keep the old lookup.
+      const intentCost =
+        hasServerIntent && typeof intent!.cost === 'number' &&
+        Number.isFinite(intent!.cost) && Number.isInteger(intent!.cost) &&
+        intent!.cost >= 0 && intent!.cost <= 1000
+          ? intent!.cost
+          : null
+      const cost = intentCost ?? creditCostFor(quality, fastIsPaidUser)
 
       // Push #230 — URL returned to the client. Defaults to the Creatomate
       // output; upgraded to the permanent Supabase URL after the asset
@@ -289,7 +311,7 @@ export async function GET(
       // auto-refund on failure covers it too).
       // KINEO-PRICING-V3C-2026-07-10 — 'fast' is back in the whitelist ONLY for
       // paying accounts (fastIsPaidUser). Free Fast stays out (nothing to debit).
-      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || quality === 'presenter' || (quality === 'fast' && fastIsPaidUser)
+      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || quality === 'presenter' || (quality === 'fast' && (intentCost !== null ? intentCost > 0 : fastIsPaidUser))
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
@@ -320,6 +342,16 @@ export async function GET(
         } catch (e) {
           // Non-fatal: if the check fails we fall through to the normal path.
           console.warn('[compose/status] idempotency check failed:', e instanceof Error ? e.message : String(e))
+        }
+      }
+
+      if ((quality === 'avatar' || quality === 'presenter') && serverAlreadyDeducted) {
+        const holdSettled = await settleAvatarCreditHoldForRender({
+          userId: user.id,
+          renderId,
+        })
+        if (!holdSettled) {
+          console.warn(`[avatar-hold] retry could not settle hold for render=${renderId}`)
         }
       }
 
@@ -460,6 +492,20 @@ export async function GET(
             creditsRemaining,
             progress: 0,
           })
+        }
+
+        // Release the signed provider-cost hold immediately after the debit is
+        // confirmed, before asset migration, history, email or push work. If a
+        // serverless timeout happens later, a retry sees both an idempotent debit
+        // and an already-settled hold instead of blocking the buyer for two hours.
+        if ((quality === 'avatar' || quality === 'presenter') && creditsDeducted) {
+          const holdSettled = await settleAvatarCreditHoldForRender({
+            userId: user.id,
+            renderId,
+          })
+          if (!holdSettled) {
+            console.warn(`[avatar-hold] could not settle hold for render=${renderId}`)
+          }
         }
 
         // Push #050 — persist the completed video for Visual History.

@@ -39,6 +39,7 @@
 // has_paid=true, which the banner already filters out server-side.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { trackEvent as trackAnalyticsEvent } from '@/lib/analytics'
 
 const SESSION_KEY = 'kineo_exit_offer_shown'
 // KINEO-REBASE-2026-07-10 — read by Offer290Banner (post-exit $2.90 countdown).
@@ -50,20 +51,7 @@ const MOBILE_SCROLLUP_PX = 350 // mobile: accumulated fast upward scroll that co
 
 // Same fire-and-forget event beacon pattern the pricing page uses.
 function trackEvent(name: string): void {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event_name: name,
-        name,
-        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
-      }),
-      keepalive: true,
-    }).catch(() => {})
-  } catch {
-    // ignore — analytics must never break UI
-  }
+  void trackAnalyticsEvent(name)
 }
 
 export default function ExitIntentOffer() {

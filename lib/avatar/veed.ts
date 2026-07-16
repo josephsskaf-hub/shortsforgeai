@@ -104,7 +104,7 @@ function modelFor(engine: AvatarEngine | undefined): string {
 
 /**
  * Animate (13/06) — submit an image-to-video job (photo + motion prompt).
- * Same queue/retry pattern as submitAvatarJob; polled via checkAvatarJob
+ * Same single-submit queue pattern as submitAvatarJob; polled via checkAvatarJob
  * with engine='animate'.
  */
 export async function submitAnimateJob(args: {
@@ -113,7 +113,7 @@ export async function submitAnimateJob(args: {
   /** '5' | '10' seconds (Kling i2v accepted durations). */
   duration?: '5' | '10'
 }): Promise<string | null> {
-  if (!configureFal()) return null
+  if (!process.env.FAL_KEY) return null
   const input: Record<string, unknown> = {
     image_url: args.imageUrl,
     prompt: args.prompt,
@@ -123,18 +123,22 @@ export async function submitAnimateJob(args: {
   // overload — same pattern as submitAvatarJob below. The endpoint literal
   // otherwise selects a typed overload that rejects Record<string, unknown>.
   const model: string = ANIMATE_MODEL
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const { request_id } = await fal.queue.submit(model, { input })
-      if (request_id) return request_id
-    } catch (err) {
-      const e = err as { status?: number; message?: string }
-      console.error(`[animate] queue submit attempt ${attempt} failed:`, JSON.stringify({ status: e?.status, message: e?.message }))
-      if (looksExhausted(e)) void alertFalExhausted('animate submit')
-      if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
-    }
+  try {
+    return await submitQueueOnce(model, input)
+  } catch (err) {
+    const e = err as { status?: number; message?: string }
+    console.error('[animate] single queue submit failed:', JSON.stringify({
+      status: err instanceof AvatarSubmitError ? err.status : e?.status,
+      ambiguous: err instanceof AvatarSubmitError ? err.ambiguous : true,
+      message: e?.message,
+    }))
+    if (looksExhausted(e)) void alertFalExhausted('animate submit')
+    // A transport failure after POST may still mean FAL accepted the paid job.
+    // Propagate that uncertainty so callers never tell the user to submit a
+    // second job. Explicit provider rejections remain safe to retry.
+    if (err instanceof AvatarSubmitError && err.ambiguous) throw err
+    return null
   }
-  return null
 }
 
 export interface AvatarVideoResult {
@@ -222,11 +226,86 @@ function configureFal(): boolean {
   return true
 }
 
+export class AvatarSubmitError extends Error {
+  readonly ambiguous: boolean
+  readonly status: number | null
+
+  constructor(message: string, options: { ambiguous: boolean; status?: number | null; cause?: unknown }) {
+    super(message, options.cause === undefined ? undefined : { cause: options.cause })
+    this.name = 'AvatarSubmitError'
+    this.ambiguous = options.ambiguous
+    this.status = options.status ?? null
+  }
+}
+
 /**
- * Submit the avatar job to the fal queue with ONE automatic retry (protection
- * rule: a transient submit reject must not fail the user's render). Returns
- * the request id, or null when fal could not accept the job at all — the
- * caller then surfaces the error WITHOUT charging anything.
+ * The fal SDK retries queue POSTs on gateway errors and transport failures.
+ * That is unsafe for paid creation calls because the first POST may already
+ * have been accepted. Send one raw queue POST and let the durable caller claim
+ * decide whether an explicit rejection may be retried.
+ */
+async function submitQueueOnce(model: string, input: Record<string, unknown>): Promise<string> {
+  const key = process.env.FAL_KEY
+  if (!key) {
+    throw new AvatarSubmitError('FAL_KEY is not configured', { ambiguous: false })
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`https://queue.fal.run/${model}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Key ${key}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    })
+  } catch (error) {
+    throw new AvatarSubmitError('Avatar provider submit transport failed', {
+      ambiguous: true,
+      cause: error,
+    })
+  }
+
+  const raw = await response.text().catch(() => '')
+  let payload: Record<string, unknown> = {}
+  try {
+    payload = raw ? JSON.parse(raw) as Record<string, unknown> : {}
+  } catch {
+    payload = {}
+  }
+
+  if (!response.ok) {
+    const providerMessage = typeof payload.detail === 'string'
+      ? payload.detail
+      : typeof payload.error === 'string'
+        ? payload.error
+        : raw.slice(0, 300)
+    // Gateway/server failures and request timeouts cannot prove that the queue
+    // did not accept the job. Keep the server claim pending and never re-POST.
+    const ambiguous = response.status === 408 || response.status >= 500
+    throw new AvatarSubmitError(
+      `Avatar provider rejected submit (${response.status})${providerMessage ? `: ${providerMessage}` : ''}`,
+      { ambiguous, status: response.status },
+    )
+  }
+
+  const requestId = typeof payload.request_id === 'string' ? payload.request_id.trim() : ''
+  if (!requestId) {
+    throw new AvatarSubmitError('Avatar provider response had no request id', {
+      ambiguous: true,
+      status: response.status,
+    })
+  }
+  return requestId
+}
+
+/**
+ * Submit the avatar job to the fal queue exactly once. The caller owns a
+ * durable generation claim, so an ambiguous response is never blindly
+ * re-posted and an explicit rejection can be surfaced without charging.
  */
 export async function submitAvatarJob(args: {
   /** Face photo URL — fabric/omnihuman engines. */
@@ -241,8 +320,7 @@ export async function submitAvatarJob(args: {
    * PLUS the plan's characterSheet/styleSheet so the avatar clip matches the
    * anchored look. Absent/empty → the safe per-engine default below. */
   performancePrompt?: string
-}): Promise<string | null> {
-  if (!configureFal()) return null
+}): Promise<string> {
   const model = modelFor(args.engine)
   const performancePrompt =
     args.performancePrompt?.trim() || performancePromptFor(args.engine, 'natural')
@@ -277,21 +355,21 @@ export async function submitAvatarJob(args: {
             audio_url: args.audioUrl,
             resolution: args.resolution ?? '720p',
           }
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const { request_id } = await fal.queue.submit(model, { input })
-      if (request_id) return request_id
-    } catch (err) {
-      const e = err as { status?: number; body?: unknown; message?: string; name?: string }
-      console.error(`[avatar/veed] queue submit attempt ${attempt} (${model}) failed:`, JSON.stringify({
-        name: e?.name, status: e?.status, message: e?.message, body: e?.body,
-      }))
+  try {
+    return await submitQueueOnce(model, input)
+  } catch (err) {
+    const e = err as { status?: number; body?: unknown; message?: string; name?: string }
+    console.error(`[avatar/veed] single queue submit (${model}) failed:`, JSON.stringify({
+      name: e?.name,
+      status: err instanceof AvatarSubmitError ? err.status : e?.status,
+      ambiguous: err instanceof AvatarSubmitError ? err.ambiguous : true,
+      message: e?.message,
+      body: e?.body,
+    }))
       // KINEO-FAL-ALERT-LIB-2026-07-10 — exhausted balance → e-mail the founder.
-      if (looksExhausted(e)) void alertFalExhausted(`avatar submit model=${model}`)
-      if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
-    }
+    if (looksExhausted(e)) void alertFalExhausted(`avatar submit model=${model}`)
+    throw err
   }
-  return null
 }
 
 export type AvatarJobState = {
@@ -381,6 +459,10 @@ export async function checkAvatarJob(requestId: string, engine?: AvatarEngine): 
     return { status: 'failed', videoUrl: null }
   } catch (err) {
     console.error(`[avatar/veed] status check failed for ${requestId}:`, err instanceof Error ? err.message : String(err))
-    return { status: 'failed', videoUrl: null }
+    // A queue-status request can fail while the already-paid provider job keeps
+    // running (network reset, 429, provider 5xx). Treat transport exceptions as
+    // retryable; only an explicit terminal queue state above is allowed to make
+    // the clients discard their resumable snapshot and offer a fresh submit.
+    return { status: 'processing', videoUrl: null }
   }
 }

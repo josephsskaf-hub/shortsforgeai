@@ -15,6 +15,7 @@
 //  - Mobile rules (compact hero, full-width CTA, stacked input, scrollable chips)
 // Self-contained; parent wires onPick/onSurprise/onClose (signature unchanged).
 import { useEffect, useRef, useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 const VERTICAL_COLORS: Record<string, string> = {
   money: '#2997ff',
@@ -60,14 +61,7 @@ const STARTERS: Starter[] = [
 const FILTERS: string[] = ['All', ...Array.from(new Set(STARTERS.map((s) => s.label)))]
 
 function track(name: string, metadata?: Record<string, unknown>) {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, metadata }),
-      keepalive: true,
-    })
-  } catch {}
+  void trackEvent(name, metadata)
 }
 
 type Props = {

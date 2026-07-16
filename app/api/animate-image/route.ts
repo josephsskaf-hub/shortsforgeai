@@ -16,7 +16,8 @@
 // retail on Creator (~66% margin) / $2.38 on Starter (~85%).
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { submitAnimateJob } from '@/lib/avatar/veed'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { AvatarSubmitError, submitAnimateJob } from '@/lib/avatar/veed'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -73,7 +74,22 @@ export async function POST(req: NextRequest) {
     // failed job could only be restored via support. The balance gate above
     // still runs before fal is touched, and the debit RPC stays atomic +
     // idempotent by render_id.
-    const requestId = await submitAnimateJob({ imageUrl, prompt, duration })
+    let requestId: string | null
+    try {
+      requestId = await submitAnimateJob({ imageUrl, prompt, duration })
+    } catch (error) {
+      if (error instanceof AvatarSubmitError && error.ambiguous) {
+        return NextResponse.json(
+          {
+            error: 'The provider may already be processing this animation. Do not submit it again; contact support so we can recover the original job without charging twice.',
+            pending: true,
+            retry: false,
+          },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
     if (!requestId) {
       // fal refused the job — nothing was debited yet, so nothing to refund.
       console.error(`[animate-image] fal submit failed (no charge) user=${user.id.slice(0, 8)}`)
@@ -84,6 +100,21 @@ export async function POST(req: NextRequest) {
     }
 
     const renderId = `animate-${requestId}`
+    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (adminUrl && adminKey) {
+      const admin = createAdminClient(adminUrl, adminKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const { error: ownerMapError } = await admin.from('avatar_jobs').insert({
+        request_id: requestId,
+        user_id: user.id,
+        engine: 'animate',
+      })
+      if (ownerMapError && (ownerMapError as { code?: string }).code !== '23505') {
+        console.error('[animate-image] owner mapping failed:', ownerMapError.message)
+      }
+    }
     const { data: newBalance, error: debitErr } = await supabase
       .rpc('debit_video_credits', { p_render: renderId, p_cost: ANIMATE_COST })
     if (debitErr) {

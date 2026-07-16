@@ -11,7 +11,7 @@ import PricingCards from '@/components/PricingCards'
 // surface now. The component file stays in place, unused (same pattern as
 // AvatarPaywallModal below).
 import { trackCheckoutClick } from '@/lib/trackClick'
-import { trackSignupSource } from '@/lib/analytics'
+import { trackEvent, trackSignupSource } from '@/lib/analytics'
 import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
@@ -136,6 +136,89 @@ const DURATION_OPTIONS: { value: Duration; label: string }[] = [
 
 const POLL_GENERATING_MS = 4000
 const POLL_COMPOSING_MS = 5000
+const MAX_TRANSIENT_POLL_ERRORS = 4
+const ACTIVE_RENDER_STORAGE_KEY = 'kineo_active_render_v1'
+const ACTIVE_RENDER_TAB_KEY = 'kineo_active_render_tab_v1'
+const ACTIVE_RENDER_TTL_MS = 2 * 60 * 60 * 1000
+
+interface FastRenderInputs {
+  clip_urls: string[]
+  voiceover_script: string
+  scene_captions: string[]
+  duration: number
+  topic: string
+  language: string
+  vertical?: string
+  speed?: number
+}
+
+interface ActiveRenderSnapshot {
+  stage: 'avatar_submitting' | 'submitting' | 'rendering'
+  renderId?: string
+  userId: string
+  quality: string
+  mode: GenerationMode
+  duration: Duration
+  prompt: string
+  attemptId: string
+  startedAt: number
+  unlockInputs?: FastRenderInputs
+  composePayload?: Record<string, unknown>
+  avatarPayload?: Record<string, unknown>
+}
+
+function newGenerationAttemptId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+  } catch {
+    // Fall through to a collision-resistant browser-local id.
+  }
+  return `gen_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+// sessionStorage survives reloads but is isolated per tab. Namespace the
+// durable render snapshot with that tab id so one active render cannot
+// overwrite or delete another tab's recovery state.
+function activeRenderStorageKey(): string {
+  if (typeof window === 'undefined') return ACTIVE_RENDER_STORAGE_KEY
+  try {
+    let tabId = sessionStorage.getItem(ACTIVE_RENDER_TAB_KEY)
+    if (!tabId) {
+      tabId = newGenerationAttemptId()
+      sessionStorage.setItem(ACTIVE_RENDER_TAB_KEY, tabId)
+    }
+    return `${ACTIVE_RENDER_STORAGE_KEY}:${tabId}`
+  } catch {
+    return ACTIVE_RENDER_STORAGE_KEY
+  }
+}
+
+function normalizeFastRenderInputs(value: unknown): FastRenderInputs | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const input = value as Partial<FastRenderInputs>
+  const clipUrls = Array.isArray(input.clip_urls)
+    ? input.clip_urls.filter((url): url is string => typeof url === 'string' && url.length > 0 && url.length <= 2048).slice(0, 20)
+    : []
+  const voiceover = typeof input.voiceover_script === 'string' ? input.voiceover_script.slice(0, 10000) : ''
+  if (clipUrls.length === 0 || !voiceover.trim()) return undefined
+  const requestedDuration = Number(input.duration)
+  const safeDuration = requestedDuration === 60 || requestedDuration === 90 ? requestedDuration : 45
+  const language = input.language === 'pt' || input.language === 'es' ? input.language : 'en'
+  return {
+    clip_urls: clipUrls,
+    voiceover_script: voiceover,
+    scene_captions: Array.isArray(input.scene_captions)
+      ? input.scene_captions.filter((caption): caption is string => typeof caption === 'string').map((caption) => caption.slice(0, 500)).slice(0, 30)
+      : [],
+    duration: safeDuration,
+    topic: typeof input.topic === 'string' ? input.topic.slice(0, 1000) : '',
+    language,
+    ...(typeof input.vertical === 'string' && input.vertical.trim() ? { vertical: input.vertical.slice(0, 64) } : {}),
+    ...(typeof input.speed === 'number' && Number.isFinite(input.speed) ? { speed: Math.max(0.7, Math.min(1.3, input.speed)) } : {}),
+  }
+}
 
 // Push #095 — player resilience tuning.
 //  PLAYER_INITIAL_WAIT_MS: how long to wait for the first byte/frame before
@@ -523,12 +606,16 @@ export default function GenerateClient() {
   // UX-1 instrumentation — log EVERY phase transition (catches regressions like
   // generating -> analyzing). String log so it is fully readable in console capture.
   const prevPhaseRef = useRef<Phase>('idle')
-  useEffect(() => {
-    if (prevPhaseRef.current !== phase) {
-      if (process.env.NODE_ENV === 'development') console.log(`[ux1] PHASE ${prevPhaseRef.current} -> ${phase} @${Date.now()}`)
-      prevPhaseRef.current = phase
-    }
-  }, [phase])
+  const generationAttemptRef = useRef<string | null>(null)
+  const lastFailedAttemptRef = useRef<string | null>(null)
+  const generatingPollErrorsRef = useRef(0)
+  const composingPollErrorsRef = useRef(0)
+  const activeRenderRestoreCheckedRef = useRef(false)
+  const activeRenderRestoreResolvedRef = useRef(false)
+  const currentUserIdRef = useRef<string | null>(null)
+  const resumedRenderRef = useRef(false)
+  const [activeRenderRestoreResolved, setActiveRenderRestoreResolved] = useState(false)
+  const [activeRenderRestoreRetry, setActiveRenderRestoreRetry] = useState(0)
   // #360 — synchronous re-entry guard against double-submit. Catches the
   // sub-render race the disabled button can't: two clicks before React
   // re-renders both see phase==='options'. The ref flips synchronously.
@@ -634,16 +721,7 @@ export default function GenerateClient() {
   const [hasPaid, setHasPaid] = useState(false)
   const [wmUnlocking, setWmUnlocking] = useState(false)
   const [wmUnlockError, setWmUnlockError] = useState<string | null>(null)
-  const lastFastRenderRef = useRef<{
-    clip_urls: string[]
-    voiceover_script: string
-    scene_captions: string[]
-    duration: number
-    topic: string
-    language: string
-    vertical?: string
-    speed?: number
-  } | null>(null)
+  const lastFastRenderRef = useRef<FastRenderInputs | null>(null)
   const wmUnlockRanRef = useRef(false)
 
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
@@ -785,11 +863,303 @@ export default function GenerateClient() {
   const playerWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playerRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Persist every meaningful pipeline transition. Historically, the only
+  // durable points were "analyze clicked" and "compose finished", so preview
+  // abandonment, API rejects and interrupted polling all looked identical.
+  useEffect(() => {
+    const previousPhase = prevPhaseRef.current
+    if (previousPhase === phase) return
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[ux1] PHASE ${previousPhase} -> ${phase} @${Date.now()}`)
+    }
+
+    const attemptId = generationAttemptRef.current
+    if (attemptId) {
+      const effectiveQuality = falUsedRef.current
+        ? falQualityRef.current
+        : mode === 'fast' || mode === 'creator'
+          ? 'fast'
+          : quality
+      const metadata = {
+        attempt_id: attemptId,
+        stage: phase,
+        previous_stage: previousPhase,
+        mode,
+        quality: effectiveQuality,
+        duration,
+        generation_id: generationId,
+        render_id: renderId,
+      }
+
+      trackEvent('generation_stage_reached', metadata)
+
+      if (phase === 'failed' && lastFailedAttemptRef.current !== attemptId) {
+        lastFailedAttemptRef.current = attemptId
+        const failureMetadata = {
+          ...metadata,
+          failed_from_stage: previousPhase,
+          error: error?.slice(0, 180) ?? 'unknown',
+        }
+        trackEvent('generate_failed', failureMetadata)
+        trackEvent('video_generation_failed', failureMetadata)
+        trackEvent('generation_stage_error', failureMetadata)
+      } else if (phase === 'idle' && error) {
+        trackEvent('generation_stage_error', {
+          ...metadata,
+          failed_from_stage: previousPhase,
+          error: error.slice(0, 180),
+        })
+      }
+    }
+
+    prevPhaseRef.current = phase
+    // Stage metadata intentionally snapshots the state committed with `phase`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'done' && phase !== 'failed') return
+    resumedRenderRef.current = false
+    try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+  }, [phase])
+
   useEffect(() => {
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
   }, [])
+
+  // Resume an accepted Creatomate job after a reload/navigation instead of
+  // silently orphaning the render or starting a duplicate job.
+  useEffect(() => {
+    if (activeRenderRestoreCheckedRef.current) {
+      activeRenderRestoreResolvedRef.current = true
+      setActiveRenderRestoreResolved(true)
+      return
+    }
+    let cancelled = false
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let canResolve = true
+    const skipRestore = searchParams?.get('wm_unlock') === '1'
+
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (cancelled) return
+        // A transient auth/network failure must not destroy the only pointer to
+        // an already accepted paid render. The status request will handle a
+        // confirmed 401 and route the user through login with the snapshot kept.
+        if (authError) {
+          canResolve = false
+          retryTimer = setTimeout(() => {
+            if (!cancelled) setActiveRenderRestoreRetry((value) => value + 1)
+          }, 1500)
+          return
+        }
+        if (!user) {
+          canResolve = false
+          redirectToLoginPreservingPrompt()
+          return
+        }
+        currentUserIdRef.current = user.id
+        if (skipRestore) {
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+          return
+        }
+
+        const raw = localStorage.getItem(activeRenderStorageKey())
+        if (!raw) return
+        let stored: Partial<ActiveRenderSnapshot>
+        try {
+          stored = JSON.parse(raw) as Partial<ActiveRenderSnapshot>
+        } catch {
+          localStorage.removeItem(activeRenderStorageKey())
+          return
+        }
+        const startedAt = Number(stored.startedAt)
+        const age = Date.now() - startedAt
+        const storedStage = stored.stage === 'avatar_submitting'
+          ? 'avatar_submitting'
+          : stored.stage === 'submitting'
+            ? 'submitting'
+            : 'rendering'
+        const renderId = typeof stored.renderId === 'string' ? stored.renderId.trim() : ''
+        const composePayload = stored.composePayload && typeof stored.composePayload === 'object' && !Array.isArray(stored.composePayload)
+          ? stored.composePayload as Record<string, unknown>
+          : null
+        const payloadGenerationId = typeof composePayload?.generationId === 'string' ? composePayload.generationId.trim() : ''
+        const avatarPayload = stored.avatarPayload && typeof stored.avatarPayload === 'object' && !Array.isArray(stored.avatarPayload)
+          ? stored.avatarPayload as Record<string, unknown>
+          : null
+        const avatarGenerationId = typeof avatarPayload?.generationId === 'string' ? avatarPayload.generationId.trim() : ''
+        if (
+          stored.userId !== user.id ||
+          !Number.isFinite(startedAt) ||
+          age < 0 ||
+          age > ACTIVE_RENDER_TTL_MS ||
+          (storedStage === 'rendering' && (!renderId || renderId.length > 160)) ||
+          (storedStage === 'submitting' && (!composePayload || !/^[A-Za-z0-9_-]{8,100}$/.test(payloadGenerationId))) ||
+          (storedStage === 'avatar_submitting' && (!avatarPayload || !/^[A-Za-z0-9_-]{8,100}$/.test(avatarGenerationId)))
+        ) {
+          localStorage.removeItem(activeRenderStorageKey())
+          return
+        }
+
+        const restoredDuration: Duration = stored.duration === 60 || stored.duration === 90 ? stored.duration : 45
+        const restoredQuality = typeof stored.quality === 'string' ? stored.quality : 'basic_ai'
+        const restoredMode: GenerationMode =
+          stored.mode === 'fast' || stored.mode === 'creator' || stored.mode === 'cinematic' || stored.mode === 'cinematic_ai'
+            ? stored.mode
+            : restoredQuality === 'fast'
+              ? 'fast'
+              : restoredQuality.startsWith('cinematic_')
+                ? 'cinematic_ai'
+                : 'cinematic'
+        const restoredAttemptId =
+          typeof stored.attemptId === 'string' && stored.attemptId.length <= 80
+            ? stored.attemptId
+            : newGenerationAttemptId()
+
+        generationAttemptRef.current = restoredAttemptId
+        composeStartedRef.current = storedStage !== 'avatar_submitting'
+        resumedRenderRef.current = true
+        composingPollErrorsRef.current = 0
+        setPrompt(typeof stored.prompt === 'string' ? stored.prompt.slice(0, 1000) : '')
+        setDuration(restoredDuration)
+        setMode(restoredMode)
+        lastFastRenderRef.current = normalizeFastRenderInputs(stored.unlockInputs) ?? null
+        falUsedRef.current = restoredQuality.startsWith('cinematic_') || restoredQuality === 'avatar' || restoredQuality === 'presenter'
+        if (restoredQuality === 'fast' || restoredQuality === 'basic' || restoredQuality === 'basic_ai' || restoredQuality === 'pro') {
+          setQuality(restoredQuality)
+        } else if (restoredQuality.startsWith('cinematic_') || restoredQuality === 'avatar' || restoredQuality === 'presenter') {
+          falQualityRef.current = restoredQuality
+          setQuality('cinematic_ai')
+        }
+        const urlPrompt = searchParams?.get('prompt')?.trim()
+        if (urlPrompt) autoAnalyzeKeyRef.current = urlPrompt
+
+        if (storedStage === 'avatar_submitting' && avatarPayload) {
+          setGenerationId(avatarGenerationId)
+          setGenerateProgress(8)
+          setError('Your avatar is safe. Reconnecting to the same submission…')
+          setPhase('generating')
+          void submitDashboardAvatarGeneration(avatarPayload, avatarGenerationId, startedAt, true)
+          return
+        }
+
+        if (storedStage === 'submitting' && composePayload) {
+          setRenderProgress(5)
+          setError('Your render is safe. Reconnecting to the same submission…')
+          setPhase('composing')
+          let reconnectAttempt = 0
+          while (!cancelled) {
+            let res: Response
+            let data: Record<string, unknown> | null
+            try {
+              res = await fetch('/api/compose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(composePayload),
+              })
+              data = await res.json().catch(() => null) as Record<string, unknown> | null
+            } catch {
+              reconnectAttempt += 1
+              await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+              continue
+            }
+            if (cancelled) return
+            if (res.status === 401) {
+              canResolve = false
+              redirectToLoginPreservingPrompt()
+              return
+            }
+            if ((res.status === 409 && data?.pending === true) || res.status === 503) {
+              reconnectAttempt += 1
+              const retryAfter = typeof data?.retry_after_ms === 'number'
+                ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+                : reconnectAttempt <= 4 ? 3000 : 10000
+              await new Promise((resolve) => setTimeout(resolve, retryAfter))
+              continue
+            }
+            if (res.status === 402) {
+              localStorage.removeItem(activeRenderStorageKey())
+              resumedRenderRef.current = false
+              setError(typeof data?.error === 'string' ? data.error : "You've hit today's free limit.")
+              setPhase('options')
+              return
+            }
+            if (!res.ok) {
+              localStorage.removeItem(activeRenderStorageKey())
+              resumedRenderRef.current = false
+              setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
+              setPhase('failed')
+              return
+            }
+            const recoveredRenderId = typeof data?.render_id === 'string' ? data.render_id.trim() : ''
+            if (!recoveredRenderId || recoveredRenderId.length > 160) {
+              localStorage.removeItem(activeRenderStorageKey())
+              resumedRenderRef.current = false
+              setError(GENERIC_ERROR)
+              setPhase('failed')
+              return
+            }
+            const renderingSnapshot: ActiveRenderSnapshot = {
+              stage: 'rendering',
+              renderId: recoveredRenderId,
+              userId: user.id,
+              quality: restoredQuality,
+              mode: restoredMode,
+              duration: restoredDuration,
+              prompt: typeof stored.prompt === 'string' ? stored.prompt.slice(0, 1000) : '',
+              attemptId: restoredAttemptId,
+              startedAt,
+              ...(lastFastRenderRef.current ? { unlockInputs: lastFastRenderRef.current } : {}),
+            }
+            localStorage.setItem(activeRenderStorageKey(), JSON.stringify(renderingSnapshot))
+            setError(null)
+            setRenderId(recoveredRenderId)
+            setRenderProgress(5)
+            trackEvent('generation_render_resumed', {
+              attempt_id: restoredAttemptId,
+              render_id: recoveredRenderId,
+              quality: restoredQuality,
+              age_ms: age,
+              recovered_from: 'compose_submission',
+            })
+            return
+          }
+          return
+        }
+
+        setRenderId(renderId)
+        setRenderProgress(5)
+        trackEvent('generation_render_resumed', {
+          attempt_id: restoredAttemptId,
+          render_id: renderId,
+          quality: restoredQuality,
+          age_ms: age,
+        })
+        setPhase('composing')
+      } catch {
+        // Preserve a syntactically valid snapshot on transient storage/auth
+        // errors. A confirmed owner mismatch, expiry or malformed JSON above is
+        // the only reason to delete it.
+      } finally {
+        if (!cancelled && canResolve) {
+          activeRenderRestoreCheckedRef.current = true
+          activeRenderRestoreResolvedRef.current = true
+          setActiveRenderRestoreResolved(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, activeRenderRestoreRetry])
 
   // Push #061 — fire a single page-view event on mount. Silently no-ops if
   // public.events isn't available in this Supabase project.
@@ -1224,7 +1594,17 @@ export default function GenerateClient() {
         )
         const data = await res.json()
         if (cancelled) return
+        if (res.status === 401) {
+          trackEvent('generation_auth_expired', {
+            attempt_id: generationAttemptRef.current,
+            stage: 'generating',
+          })
+          redirectToLoginPreservingPrompt()
+          return
+        }
         if (!res.ok) throw new Error('Status lookup failed')
+        if (generatingPollErrorsRef.current > 0) setError(null)
+        generatingPollErrorsRef.current = 0
 
         // Always refresh the per-clip state so the progress grid keeps moving.
         if (Array.isArray(data.tasks)) {
@@ -1257,8 +1637,24 @@ export default function GenerateClient() {
       } catch (err) {
         if (cancelled) return
         console.error('[generate] generating poll error:', err)
-        setError(GENERIC_ERROR)
-        setPhase('failed')
+        const retry = ++generatingPollErrorsRef.current
+        if (retry <= MAX_TRANSIENT_POLL_ERRORS) {
+          trackEvent('generation_poll_retry', {
+            attempt_id: generationAttemptRef.current,
+            stage: 'generating',
+            retry,
+          })
+          pollTimerRef.current = setTimeout(poll, POLL_GENERATING_MS * Math.min(retry, 2))
+          return
+        }
+        if (retry === MAX_TRANSIENT_POLL_ERRORS + 1) {
+          trackEvent('generation_poll_degraded', {
+            attempt_id: generationAttemptRef.current,
+            stage: 'generating',
+          })
+        }
+        setError('Your clips are still rendering. We are reconnecting automatically — please keep this tab open.')
+        pollTimerRef.current = setTimeout(poll, 15000)
       }
     }
 
@@ -1377,11 +1773,23 @@ export default function GenerateClient() {
           `/api/avatar-status?request_id=${encodeURIComponent(avatarRequestId as string)}&engine=${avatarEngineRef.current}`,
           { cache: 'no-store' },
         )
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (cancelled) return
-        if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Avatar status lookup failed')
+        if (res.status === 401) {
+          redirectToLoginPreservingPrompt()
+          return
+        }
+        if (!res.ok) {
+          if (res.status === 408 || res.status === 425 || res.status === 429 || res.status >= 500) {
+            throw new Error('Avatar status temporarily unavailable')
+          }
+          setError(typeof data?.error === 'string' ? data.error : 'This avatar can no longer be resumed.')
+          setPhase('failed')
+          return
+        }
 
         if (data.status === 'done' && typeof data.video_url === 'string' && data.video_url) {
+          setError(null)
           if (avatarComposeRef.current) avatarComposeRef.current.avatarVideoUrl = data.video_url
           setPhase('clips_ready') // kicks /api/compose with avatar_url + voiceover_url
           return
@@ -1396,8 +1804,8 @@ export default function GenerateClient() {
       } catch (err) {
         if (cancelled) return
         console.error('[generate] avatar poll error:', err)
-        setError(GENERIC_ERROR)
-        setPhase('failed')
+        setError('Your avatar is still rendering. Reconnecting automatically…')
+        timer = setTimeout(poll, 7000)
       }
     }
 
@@ -1442,14 +1850,39 @@ export default function GenerateClient() {
     const inputs = stored ?? {}
     setWmUnlocking(true)
     setWmUnlockError(null)
+    let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/api/compose/unlock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, ...inputs }),
-        })
-        const data = await res.json().catch(() => null)
+        let res: Response | null = null
+        let data: Record<string, unknown> | null = null
+        let reconnectAttempt = 0
+        while (!cancelled) {
+          try {
+            res = await fetch('/api/compose/unlock', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionId, ...inputs }),
+            })
+            data = await res.json().catch(() => null) as Record<string, unknown> | null
+          } catch {
+            reconnectAttempt += 1
+            if (reconnectAttempt >= 12) throw new Error('unlock reconnect exhausted')
+            setWmUnlockError('Your purchase is safe. Reconnecting to the same clean render…')
+            await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 2500 : 5000))
+            continue
+          }
+          if ((res.status === 409 || res.status === 503) && data?.pending === true && reconnectAttempt < 12) {
+            reconnectAttempt += 1
+            const retryAfter = typeof data.retry_after_ms === 'number'
+              ? Math.max(1000, Math.min(7000, data.retry_after_ms))
+              : 3000
+            setWmUnlockError('Your purchase is safe. Reconnecting to the same clean render…')
+            await new Promise((resolve) => setTimeout(resolve, retryAfter))
+            continue
+          }
+          break
+        }
+        if (cancelled || !res) return
         if (!res.ok || data?.verified !== true) {
           setWmUnlocking(false)
           setWmUnlockError(
@@ -1496,6 +1929,7 @@ export default function GenerateClient() {
         )
       }
     })()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -1536,6 +1970,7 @@ export default function GenerateClient() {
     // talking head fills the timeline); every other path still requires clips.
     if (clipUrls.length === 0 && !avatarComposeRef.current?.avatarVideoUrl) return
     composeStartedRef.current = true
+    let cancelled = false
 
     async function kickCompose() {
       try {
@@ -1576,11 +2011,10 @@ export default function GenerateClient() {
           }
         }
 
-        const res = await fetch('/api/compose', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            generationId,
+        const composeGenerationId = generationId ?? generationAttemptRef.current ?? newGenerationAttemptId()
+        if (!generationAttemptRef.current) generationAttemptRef.current = composeGenerationId
+        const composePayload = {
+            generationId: composeGenerationId,
             clip_urls: clipUrls,
             voiceover_script: voiceoverScript,
             scene_captions: sceneCaptions,
@@ -1624,9 +2058,65 @@ export default function GenerateClient() {
                     : {}),
                 }
               : {}),
-          }),
-        })
-        const data = await res.json()
+          }
+
+        const attemptId = generationAttemptRef.current ?? newGenerationAttemptId()
+        generationAttemptRef.current = attemptId
+        const requestedComposeQuality = falUsedRef.current ? falQualityRef.current : quality
+        const composeStartedAt = Date.now()
+        if (currentUserIdRef.current) {
+          try {
+            const submittingSnapshot: ActiveRenderSnapshot = {
+              stage: 'submitting',
+              userId: currentUserIdRef.current,
+              quality: requestedComposeQuality,
+              mode,
+              duration,
+              prompt: prompt.slice(0, 1000),
+              attemptId,
+              startedAt: composeStartedAt,
+              composePayload,
+              ...(lastFastRenderRef.current ? { unlockInputs: lastFastRenderRef.current } : {}),
+            }
+            localStorage.setItem(activeRenderStorageKey(), JSON.stringify(submittingSnapshot))
+          } catch {
+            // In-tab reconnect still uses the same generation id without storage.
+          }
+        }
+
+        let res: Response | null = null
+        let data: Record<string, unknown> | null = null
+        let reconnectAttempt = 0
+        while (!cancelled) {
+          try {
+            res = await fetch('/api/compose', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(composePayload),
+            })
+            data = await res.json().catch(() => null) as Record<string, unknown> | null
+          } catch (requestError) {
+            // Only a server-correlated generation can be retried safely. The
+            // distributed claim makes every retry converge on the same render.
+            reconnectAttempt += 1
+            setError('Your render is still being submitted. We are reconnecting automatically — please keep this tab open.')
+            await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+            continue
+          }
+
+          if ((res.status === 409 || res.status === 503) && data?.pending === true) {
+            reconnectAttempt += 1
+            const retryAfter = typeof data.retry_after_ms === 'number'
+              ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+              : 3000
+            setError('Your render is already being submitted. We are reconnecting to the same job — please keep this tab open.')
+            await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 8 ? retryAfter : 10000))
+            continue
+          }
+          break
+        }
+        if (cancelled || !res) return
+        if (reconnectAttempt > 0 && res.ok) setError(null)
 
         if (res.status === 401) {
           redirectToLoginPreservingPrompt()
@@ -1640,24 +2130,51 @@ export default function GenerateClient() {
           // screen with the upgrade modal on top — nothing is lost, and closing
           // the modal leaves the user on their script, not on an error page.
           setError(typeof data?.error === 'string' ? data.error : "You've hit today's free limit.")
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
           openOutOfCreditsModal('credits')
           setPhase('options')
           return
         }
         if (!res.ok) {
           console.error('[generate] compose error:', data?.error)
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
           setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
           setPhase('failed')
           return
         }
 
-        const id = typeof data.render_id === 'string' ? data.render_id : null
+        const id = typeof data?.render_id === 'string' ? data.render_id : null
         if (!id) {
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
           setError(GENERIC_ERROR)
           setPhase('failed')
           return
         }
 
+        const persistedQuality =
+          typeof data?.quality === 'string'
+            ? data.quality
+            : requestedComposeQuality
+        if (currentUserIdRef.current) {
+          try {
+            const snapshot: ActiveRenderSnapshot = {
+              stage: 'rendering',
+              renderId: id,
+              userId: currentUserIdRef.current,
+              quality: persistedQuality,
+              mode,
+              duration,
+              prompt: prompt.slice(0, 1000),
+              attemptId,
+              startedAt: composeStartedAt,
+              ...(lastFastRenderRef.current ? { unlockInputs: lastFastRenderRef.current } : {}),
+            }
+            localStorage.setItem(activeRenderStorageKey(), JSON.stringify(snapshot))
+          } catch {
+            // Storage may be unavailable; the in-tab polling flow still works.
+          }
+        }
+        resumedRenderRef.current = false
         setRenderId(id)
         setRenderProgress(5)
         setPhase('composing')
@@ -1669,6 +2186,7 @@ export default function GenerateClient() {
     }
 
     kickCompose()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, clipUrls])
 
@@ -1683,6 +2201,9 @@ export default function GenerateClient() {
       try {
         const params = new URLSearchParams({ quality: falUsedRef.current ? falQualityRef.current : quality })
         if (deductedRef.current) params.set('deducted', '1')
+        // Every newly accepted render is owner-bound by a server intent. Always
+        // require that authority; resume is a security gate, not just reload UX.
+        params.set('resume', '1')
         // Push #050 — pass duration + topic so the server can record them
         // in the videos history row when the render finishes.
         params.set('duration', String(duration))
@@ -1693,7 +2214,27 @@ export default function GenerateClient() {
         )
         const data = await res.json()
         if (cancelled) return
-        if (!res.ok) throw new Error('Compose status lookup failed')
+        if (!res.ok) {
+          if (res.status === 401) {
+            // Keep the user-bound snapshot intact across authentication so the
+            // accepted job resumes instead of being submitted again.
+            redirectToLoginPreservingPrompt()
+            return
+          }
+          if (res.status === 408 || res.status === 425 || res.status === 429) {
+            throw new Error(`Transient compose status (${res.status})`)
+          }
+          if (res.status === 400 || res.status === 403 || res.status === 404 || res.status === 410 || res.status === 422) {
+            resumedRenderRef.current = false
+            try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+            setError(typeof data?.error === 'string' ? data.error : 'This render can no longer be resumed. Please generate again.')
+            setPhase('failed')
+            return
+          }
+          throw new Error('Compose status lookup failed')
+        }
+        if (composingPollErrorsRef.current > 0) setError(null)
+        composingPollErrorsRef.current = 0
 
         if (data.phase === 'done') {
           const url = typeof data.final_video_url === 'string' ? data.final_video_url : null
@@ -1709,18 +2250,26 @@ export default function GenerateClient() {
           setRenderProgress(100)
           setFinalVideoUrl(url)
           if (typeof data.video_id === 'string' && data.video_id) setPublicVideoId(data.video_id)
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
           setPhase('done')
           // Push #060 / #061 — fire-and-forget event tracking.
-          trackEvent('generate_completed')
-          trackEvent('video_generation_completed', { duration, quality })
+          const completionMetadata = {
+            attempt_id: generationAttemptRef.current,
+            render_id: renderId,
+            duration,
+            quality: falUsedRef.current ? falQualityRef.current : quality,
+            resumed: resumedRenderRef.current,
+          }
+          trackEvent('generate_completed', completionMetadata)
+          trackEvent('video_generation_completed', completionMetadata)
           return
         }
 
         if (data.phase === 'failed') {
+          resumedRenderRef.current = false
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
           setError(typeof data.error === 'string' ? data.error : GENERIC_ERROR)
           setPhase('failed')
-          trackEvent('generate_failed')
-          trackEvent('video_generation_failed', { duration, quality })
           return
         }
 
@@ -1729,8 +2278,26 @@ export default function GenerateClient() {
       } catch (err) {
         if (cancelled) return
         console.error('[generate] composing poll error:', err)
-        setError(GENERIC_ERROR)
-        setPhase('failed')
+        const retry = ++composingPollErrorsRef.current
+        if (retry <= MAX_TRANSIENT_POLL_ERRORS) {
+          trackEvent('generation_poll_retry', {
+            attempt_id: generationAttemptRef.current,
+            stage: 'composing',
+            render_id: renderId,
+            retry,
+          })
+          pollTimerRef.current = setTimeout(poll, POLL_COMPOSING_MS * Math.min(retry, 2))
+          return
+        }
+        if (retry === MAX_TRANSIENT_POLL_ERRORS + 1) {
+          trackEvent('generation_poll_degraded', {
+            attempt_id: generationAttemptRef.current,
+            stage: 'composing',
+            render_id: renderId,
+          })
+        }
+        setError('Your video is still rendering. We are reconnecting automatically — please keep this tab open.')
+        pollTimerRef.current = setTimeout(poll, 15000)
       }
     }
 
@@ -1787,10 +2354,27 @@ export default function GenerateClient() {
       .join('\n\n')
   }
 
+  async function waitForActiveRenderRestore(): Promise<boolean> {
+    if (activeRenderRestoreResolvedRef.current) return !resumedRenderRef.current
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      if (resumedRenderRef.current) return false
+      if (activeRenderRestoreResolvedRef.current) return true
+    }
+    return false
+  }
+
   async function handleAnalyze(
     overridePrompt?: string,
     opts?: { fromTopic?: boolean; skipPreview?: boolean; structureFirst?: boolean },
   ) {
+    // Manual, onboarding and URL-triggered analysis all share this gate. A
+    // click during the auth lookup must not race a restored composing job and
+    // orphan it when the later analysis response commits its own phase.
+    if (!(await waitForActiveRenderRestore())) {
+      if (!resumedRenderRef.current) setError('Checking for an in-progress render. Please try again in a moment.')
+      return
+    }
     const override = typeof overridePrompt === 'string' ? overridePrompt : undefined
     const rawSource = (override ?? structuredScriptRef.current ?? prompt).trim()
     if (!rawSource) {
@@ -1798,12 +2382,17 @@ export default function GenerateClient() {
       return
     }
     // Push #060 / #061 — fire-and-forget event tracking. Endpoint silently
-    // succeeds if public.events doesn't exist in this DB. We fire both the
-    // legacy name (kept for /admin/metrics dashboards) and the new spec
-    // name used by /admin/funnel.
-    trackEvent('analyze_idea_clicked')
-    trackEvent('generate_started')
-    trackEvent('video_generation_started', { duration, quality })
+    // Analyze is its own funnel step. The legacy generation-start events now
+    // fire only in handleGenerate, when a render is actually dispatched.
+    if (!generationAttemptRef.current || phase === 'idle' || phase === 'done' || phase === 'failed') {
+      generationAttemptRef.current = newGenerationAttemptId()
+    }
+    trackEvent('analyze_idea_clicked', {
+      attempt_id: generationAttemptRef.current,
+      mode,
+      duration,
+      source: opts?.fromTopic ? 'topic' : 'manual',
+    })
     setError(null)
     setAnalysis(null)
     setScenes([])
@@ -2149,6 +2738,10 @@ export default function GenerateClient() {
   // Auto-trigger analyze when URL has ?autoanalyze=1&prompt=… (topic quick-start)
   // Push #311 — Viral Now cards skip the preview step (scripts are pre-written).
   useEffect(() => {
+    // A reload may carry both an active render snapshot and the original
+    // ?autoanalyze URL. Resolve/restore first; otherwise a late analyze response
+    // can overwrite the resumed composing state and orphan the accepted job.
+    if (!activeRenderRestoreResolved || resumedRenderRef.current) return
     const sp = searchParams?.get('prompt') ?? ''
     const auto = searchParams?.get('autoanalyze') === '1'
     if (!auto || !sp.trim()) return
@@ -2158,7 +2751,7 @@ export default function GenerateClient() {
     if (process.env.NODE_ENV === 'development') console.log(`[ux1] autoanalyze-effect -> handleAnalyze() key="${key.slice(0,40)}" phase=${phase} @${Date.now()}`)
     handleAnalyze(sp, { fromTopic: true, skipPreview: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [searchParams, activeRenderRestoreResolved])
 
   // Push #301 — Viral Now cards used to AUTO-GENERATE: the moment analysis
   // finished they fired handleGenerate() on the default engine.
@@ -2210,7 +2803,99 @@ export default function GenerateClient() {
     }
   }
 
+  async function submitDashboardAvatarGeneration(
+    payload: Record<string, unknown>,
+    attemptId: string,
+    startedAt: number,
+    restored: boolean,
+  ): Promise<void> {
+    let reconnectAttempt = 0
+    while (true) {
+      let res: Response
+      let data: Record<string, unknown>
+      try {
+        res = await fetch('/api/generate-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        data = await res.json().catch(() => ({})) as Record<string, unknown>
+      } catch {
+        reconnectAttempt += 1
+        setError('Your avatar is safe. Reconnecting to the same submission…')
+        await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+        continue
+      }
+
+      if ((res.status === 409 || res.status === 503) && data.pending === true) {
+        reconnectAttempt += 1
+        const retryAfter = typeof data.retry_after_ms === 'number'
+          ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+          : reconnectAttempt <= 4 ? 3000 : 10000
+        setError('Your avatar is safe. Reconnecting to the same submission…')
+        await new Promise((resolve) => setTimeout(resolve, retryAfter))
+        continue
+      }
+      if (res.status === 401) {
+        redirectToLoginPreservingPrompt()
+        return
+      }
+      if (res.status === 402) {
+        try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+        resumedRenderRef.current = false
+        if (typeof data.balance === 'number') setCredits(data.balance)
+        setError(typeof data.error === 'string' ? data.error : "You've used your credits.")
+        openOutOfCreditsModal('credits')
+        setPhase('options')
+        return
+      }
+
+      const returnedGenerationId = typeof data.generationId === 'string' ? data.generationId.trim() : ''
+      const requestId = typeof data.avatar_request_id === 'string' ? data.avatar_request_id.trim() : ''
+      const voiceoverUrl = typeof data.voiceover_url === 'string' ? data.voiceover_url : ''
+      if (!res.ok || returnedGenerationId !== attemptId || !requestId || !voiceoverUrl) {
+        try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+        resumedRenderRef.current = false
+        setError(typeof data.error === 'string' ? data.error : GENERIC_ERROR)
+        setPhase('failed')
+        return
+      }
+
+      falUsedRef.current = true
+      falQualityRef.current = 'avatar'
+      setQuality('fast')
+      setGenerationId(attemptId)
+      setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
+      setFastCaptions(null)
+      setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
+      setClipUrls(Array.isArray(data.clip_urls)
+        ? data.clip_urls.filter((url): url is string => typeof url === 'string')
+        : [])
+      avatarComposeRef.current = {
+        voiceoverUrl,
+        realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
+        avatarVideoUrl: null,
+        hookSeconds: typeof data.avatar_hook_seconds === 'number' ? data.avatar_hook_seconds : null,
+      }
+      avatarEngineRef.current = data.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
+      setAvatarRequestId(requestId)
+      setError(null)
+      setPhase('avatar_polling')
+      if (restored) {
+        trackEvent('generation_avatar_resumed', {
+          attempt_id: attemptId,
+          age_ms: Math.max(0, Date.now() - startedAt),
+        })
+      }
+      return
+    }
+  }
+
   async function handleGenerate() {
+    if (!activeRenderRestoreResolvedRef.current || resumedRenderRef.current) {
+      if (!resumedRenderRef.current) setError('Checking for an in-progress render. Please try again in a moment.')
+      return
+    }
     // #360 — double-submit guard. Block re-entry if a generation is already in
     // flight (synchronous ref) or the UI is in a processing phase. Prevents the
     // duplicate generate-video-fast calls / orphan broll_metrics rows we saw.
@@ -2244,6 +2929,20 @@ export default function GenerateClient() {
       generationInFlightRef.current = false
       return
     }
+    if (!generationAttemptRef.current || phase === 'failed' || phase === 'done') {
+      generationAttemptRef.current = newGenerationAttemptId()
+    }
+    const dispatchMetadata = {
+      attempt_id: generationAttemptRef.current,
+      mode,
+      quality: mode === 'fast' || mode === 'creator' ? 'fast' : quality,
+      duration,
+      retry: phase === 'failed',
+    }
+    // These legacy dashboard events now mean an actual render dispatch, not an
+    // analysis click (which historically double-counted preview confirmation).
+    trackEvent('generate_started', dispatchMetadata)
+    trackEvent('video_generation_started', dispatchMetadata)
     setError(null)
     setTaskStates({})
     setTasks([])
@@ -2260,6 +2959,9 @@ export default function GenerateClient() {
     setRenderProgress(0)
     composeStartedRef.current = false
     deductedRef.current = false
+    resumedRenderRef.current = false
+    generatingPollErrorsRef.current = 0
+    composingPollErrorsRef.current = 0
     setAvatarRequestId(null)
     avatarComposeRef.current = null
     setPhase('generating')
@@ -2271,77 +2973,38 @@ export default function GenerateClient() {
     // Checkpoint 1: no paywall/billing — this branch must not reach production
     // until checkpoint 2 (Joseph's gate).
     if (avatarImageUrl) {
-      try {
-        const res = await fetch('/api/generate-avatar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // vertical → Narration Engine no avatar (persona + pacing por seção;
-          // payoff desacelerado — feedback 10/06 "voz acelerou no final").
-          // Face-app wave 1 — engine ('fabric' | 'omnihuman') + avatarMode
-          // ('hook' = face only on the first ~8s, recommended/default).
-          body: JSON.stringify({
-            prompt: trimmed,
-            duration,
-            language,
-            avatarImageUrl,
-            vertical: analysis?.niche ?? undefined,
-            engine: avatarEngine,
-            avatarMode: avatarHookMode ? 'hook' : 'full',
-          }),
-        })
-        const data = await res.json()
-        if (res.status === 401) { redirectToLoginPreservingPrompt(); return }
-        if (res.status === 402) {
-          // KINEO-AVATAR-120-2026-07-06 — avatar now costs 120 UNIVERSAL
-          // video_credits (was the separate avatar_credits add-on). The 402 is
-          // the standard universal out-of-credits shape (upsell:'credits'), so
-          // route it through the SAME upgrade modal as Fast/cinematic instead of
-          // the retired avatar-pack paywall.
-          if (typeof data?.balance === 'number') setCredits(data.balance)
-          setError(typeof data?.error === 'string' ? data.error : "You've used your credits.")
-          openOutOfCreditsModal('credits')
-          setPhase('options') // back to the options screen, nothing was started
-          return
-        }
-        if (!res.ok) {
-          setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
-          setPhase('failed')
-          return
-        }
-        // compose/status reads quality from falQualityRef when falUsedRef=true;
-        // KINEO-AVATAR-120-2026-07-06 — 'avatar' renders now cost 120 UNIVERSAL
-        // video_credits, debited on success in compose/status (was 0 / separate
-        // avatar_credits add-on).
-        falUsedRef.current = true
-        falQualityRef.current = 'avatar'
-        setQuality('fast') // cosmetic only — falQualityRef wins while falUsedRef=true
-        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
-        setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
-        setFastCaptions(null)
-        setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
-        setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
-        avatarComposeRef.current = {
-          voiceoverUrl: typeof data.voiceover_url === 'string' ? data.voiceover_url : '',
-          realAudioDuration: typeof data.real_audio_duration === 'number' ? data.real_audio_duration : null,
-          avatarVideoUrl: null,
-          hookSeconds: typeof data.avatar_hook_seconds === 'number' ? data.avatar_hook_seconds : null,
-        }
-        // The fal queue is per-model — the status poll must use the SAME
-        // engine the job was submitted with (server echoes it back).
-        avatarEngineRef.current = data.engine === 'omnihuman' ? 'omnihuman' : 'fabric'
-        const reqId = typeof data.avatar_request_id === 'string' ? data.avatar_request_id : null
-        if (!reqId || !avatarComposeRef.current.voiceoverUrl) {
-          setError(GENERIC_ERROR)
-          setPhase('failed')
-          return
-        }
-        setAvatarRequestId(reqId)
-        setPhase('avatar_polling')
-      } catch (err) {
-        console.error('[generate] avatar threw:', err)
-        setError(GENERIC_ERROR)
-        setPhase('failed')
+      const avatarGenerationId = generationAttemptRef.current ?? newGenerationAttemptId()
+      generationAttemptRef.current = avatarGenerationId
+      const avatarPayload: Record<string, unknown> = {
+        generationId: avatarGenerationId,
+        prompt: trimmed,
+        duration,
+        language,
+        avatarImageUrl,
+        vertical: analysis?.niche ?? undefined,
+        engine: avatarEngine,
+        avatarMode: avatarHookMode ? 'hook' : 'full',
       }
+      const avatarStartedAt = Date.now()
+      if (currentUserIdRef.current) {
+        try {
+          const avatarSnapshot: ActiveRenderSnapshot = {
+            stage: 'avatar_submitting',
+            userId: currentUserIdRef.current,
+            quality: 'avatar',
+            mode,
+            duration,
+            prompt: trimmed.slice(0, 1000),
+            attemptId: avatarGenerationId,
+            startedAt: avatarStartedAt,
+            avatarPayload,
+          }
+          localStorage.setItem(activeRenderStorageKey(), JSON.stringify(avatarSnapshot))
+        } catch {
+          // The durable server claim still protects this in-tab submission.
+        }
+      }
+      void submitDashboardAvatarGeneration(avatarPayload, avatarGenerationId, avatarStartedAt, false)
       return
     }
 
@@ -2754,6 +3417,9 @@ export default function GenerateClient() {
     }
     composeStartedRef.current = false
     deductedRef.current = false
+    resumedRenderRef.current = false
+    generationAttemptRef.current = null
+    try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
     setPhase('idle')
     setAnalysis(null)
     setScenes([])
@@ -3597,7 +4263,7 @@ export default function GenerateClient() {
                   for $4.90" (the pack is 10 credits since V3C and has no public
                   CTA anymore). Welcome moment sells nothing — just start. */}
               <span>
-                You&apos;re in. <strong>Your first 2 Fast videos are on us</strong> — we&apos;ve loaded an idea below to start.
+                You&apos;re in. <strong>Your Fast previews are free to create and watch</strong> — we&apos;ve loaded an idea below.
               </span>
             </div>
           )}
@@ -6227,28 +6893,6 @@ function buildSceneCaptions(
   // Push #208 — removed 30s, added 90s.
   const targetCount = duration === 90 ? 9 : duration === 45 ? 5 : 6
   return scenes.slice(0, targetCount).map((s) => trimCaption(s))
-}
-
-// Push #060 / #061 — fire-and-forget event tracking. POSTs to /api/events
-// which silently succeeds if public.events doesn't exist in this Supabase
-// project. Errors are swallowed so tracking never affects the user-facing
-// pipeline.
-function trackEvent(name: string, metadata?: Record<string, unknown>): void {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event_name: name,
-        name,
-        metadata: metadata ?? {},
-        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
-      }),
-      keepalive: true,
-    }).catch(() => {})
-  } catch {
-    // ignore
-  }
 }
 
 function trimCaption(s: string): string {

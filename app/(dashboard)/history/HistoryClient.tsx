@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import { trackEvent } from '@/lib/analytics'
 
 interface Video {
   id: string
@@ -284,6 +285,18 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   }
 
   const totalCredits = videos.reduce((a, v) => a + (v.credits_used ?? 1), 0)
+  // RETENTION-P0-2026-07-15 — the biggest activation leak is immediately after
+  // the first completed render. Turn that otherwise generic library visit into
+  // a concrete episode-two action while the user's original topic is available.
+  // autoanalyze keeps the next step short but still lets the user review before
+  // rendering; this never spends credits or starts a render by itself.
+  const firstVideoTitle = extractTitle(videos[0]?.topic ?? null)
+  const followUpPrompt = firstVideoTitle === 'Untitled Short'
+    ? ''
+    : `Create a distinct follow-up episode about "${firstVideoTitle}". Use a new hook and new facts. Do not repeat the first Short.`
+  const followUpHref = followUpPrompt
+    ? `/generate?prompt=${encodeURIComponent(followUpPrompt)}&autoanalyze=1`
+    : '/generate'
 
   /* ── Main ── */
   return (
@@ -317,6 +330,59 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           ⚡ New Video
         </Link>
       </div>
+
+      {/* First-render milestone: make the second successful action obvious.
+          Free unpaid users can keep testing Fast at a zero-credit balance;
+          state the exact server rule (watermarked, 3/24h) instead of implying
+          that a credit purchase is required before they can evaluate again. */}
+      {videos.length === 1 && (
+        <section
+          aria-label="Create your second Short"
+          className="rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(41,151,255,.14), rgba(41,151,255,.04))',
+            border: '1px solid rgba(41,151,255,.42)',
+            boxShadow: '0 10px 32px rgba(41,151,255,.10)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              className="font-black uppercase tracking-[.16em] mb-1.5"
+              style={{ fontSize: '0.62rem', color: '#5cb3ff' }}
+            >
+              First Short complete
+            </div>
+            <h2 className="font-black tracking-tight mb-1.5" style={{ color: 'var(--text)', fontSize: '1.05rem' }}>
+              Turn it into episode 2
+            </h2>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--muted2)', margin: 0, maxWidth: 620 }}>
+              We prepared a fresh follow-up prompt with a new hook and new facts. You can review it before rendering.
+            </p>
+            {downloadLocked && (
+              <p className="text-xs leading-relaxed mt-2" style={{ color: '#5cb3ff', marginBottom: 0 }}>
+                Fast works at 0 credits for up to 3 watermarked previews per 24 hours. Starter unlocks downloads.
+              </p>
+            )}
+          </div>
+          <Link
+            href={followUpHref}
+            onClick={() => {
+              void trackEvent('episode_two_clicked', {
+                source: 'history_first_video_milestone',
+                video_id: videos[0]?.id ?? null,
+              })
+            }}
+            className="flex items-center justify-center rounded-xl px-5 py-3 text-sm font-black text-white flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
+              textDecoration: 'none',
+              boxShadow: '0 6px 22px rgba(41,151,255,.30)',
+            }}
+          >
+            Build Episode 2 →
+          </Link>
+        </section>
+      )}
 
       {/* Stats */}
       <div

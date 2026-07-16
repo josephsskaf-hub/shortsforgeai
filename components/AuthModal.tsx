@@ -252,7 +252,7 @@ export default function AuthModal({ onClose, defaultTab = 'signup', redirectTo }
                   style={{ background: 'rgba(41,151,255,.07)', border: '1px solid rgba(41,151,255,.18)', color: '#2997ff' }}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse-dot" style={{ background: '#2997ff', boxShadow: '0 0 6px rgba(41,151,255,.5)' }} aria-hidden="true" />
-                  Free tier · 1 AI video credit — no card required
+                  Up to 3 free Fast previews per day — no card required
                 </div>
               )}
 

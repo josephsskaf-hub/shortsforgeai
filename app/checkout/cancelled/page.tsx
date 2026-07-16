@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Suspense, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import { trackEvent } from '@/lib/analytics'
 
 // Push #175 — use checkout GET route instead of hardcoded Stripe links.
 // KINEO-SPRINT-FIX-2026-07-15 — plan/offer preservation: buyers who abandon an
@@ -14,19 +15,6 @@ import { trackCheckoutClick } from '@/lib/trackClick'
 // re-entered checkout at FULL price (intro dropped → second-chance conversion
 // killed). Carry ?intro=1 on the Creator retry; the server validates
 // eligibility (1 per customer, monthly only), so this can never double-apply.
-function trackEvent(name: string) {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_name: name, name }),
-      keepalive: true,
-    }).catch(() => {})
-  } catch {
-    // ignore
-  }
-}
-
 export default function CheckoutCancelledPage() {
   return (
     <Suspense fallback={<main style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
@@ -48,16 +36,27 @@ function CheckoutCancelledContent() {
   if (returnToWatermark) retryParams.set('return', 'wm')
   const retryHref = `/api/stripe/checkout?${retryParams.toString()}`
   const planName = tier === 'starter' ? 'Starter' : tier === 'pro' ? 'Studio' : 'Creator'
-  const todayPrice = intro
-    ? tier === 'starter' ? '$4.90 today' : '$9.90 today'
-    : tier === 'starter' ? '$9.90/month' : tier === 'pro' ? '$37.90/month' : '$24.90/month'
+  const todayPrice = billing === 'annual'
+    ? tier === 'starter' ? '$99/year' : tier === 'pro' ? '$379/year' : '$199/year'
+    : intro
+      ? tier === 'starter' ? '$4.90 today' : '$9.90 today'
+      : tier === 'starter' ? '$9.90/month' : tier === 'pro' ? '$37.90/month' : '$24.90/month'
   const renewalCopy = intro
     ? tier === 'starter'
       ? 'Renews at $9.90/month in 30 days. Cancel anytime.'
       : 'Renews at $24.90/month in 30 days. Cancel anytime.'
-    : 'Your saved plan and billing period will be preserved.'
+    : billing === 'annual'
+      ? 'Billed once per year. Your annual billing choice will be preserved.'
+      : 'Your saved plan and monthly billing period will be preserved.'
 
-  useEffect(() => { trackEvent('checkout_cancelled') }, [])
+  useEffect(() => {
+    trackEvent('checkout_cancelled', {
+      tier,
+      billing,
+      intro,
+      return_to_watermark: returnToWatermark,
+    })
+  }, [tier, billing, intro, returnToWatermark])
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
@@ -72,7 +71,15 @@ function CheckoutCancelledContent() {
           <p style={{ fontSize: '0.82rem', color: 'var(--muted2)', margin: '4px 0 14px', lineHeight: 1.5 }}>{renewalCopy}</p>
           <a
             href={retryHref}
-            onClick={() => { trackEvent(`${tier}_checkout_retry_clicked`); trackCheckoutClick(tier) }}
+            onClick={() => {
+              trackEvent(`${tier}_checkout_retry_clicked`, {
+                tier,
+                billing,
+                intro,
+                return_to_watermark: returnToWatermark,
+              })
+              trackCheckoutClick(tier)
+            }}
             style={{ display: 'block', textAlign: 'center', textDecoration: 'none', padding: '13px 14px', borderRadius: 12, fontSize: '0.9rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', boxShadow: '0 8px 24px rgba(41,151,255,.28)' }}
           >
             Try secure checkout again →

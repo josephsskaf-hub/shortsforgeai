@@ -14,7 +14,7 @@
 // throws — it can never block or break page render.
 
 import { useEffect } from 'react'
-import { captureSourceOnce } from '@/lib/analytics'
+import { captureSourceOnce, trackEvent } from '@/lib/analytics'
 import { captureRefOnce } from '@/lib/referral'
 
 export default function SourceCapture() {
@@ -24,6 +24,28 @@ export default function SourceCapture() {
     // homepage. Capture ?ref= globally so the code survives signup/OAuth and
     // ReferralAutoTrigger can attribute the new account after authentication.
     captureRefOnce()
+
+    // One anonymous landing anchor per browser tab. The shared session_id in
+    // trackEvent connects this entry route to later signup/generation/checkout
+    // events without storing email, prompt or the full query string.
+    try {
+      const marker = 'kineo_landing_session_recorded'
+      if (!sessionStorage.getItem(marker)) {
+        sessionStorage.setItem(marker, '1')
+        let referrerHost: string | null = null
+        try {
+          const referrer = (document.referrer ?? '').trim()
+          if (referrer && !referrer.startsWith(window.location.origin)) {
+            referrerHost = new URL(referrer).hostname.slice(0, 120)
+          }
+        } catch {
+          // Referrer is optional.
+        }
+        void trackEvent('landing_session_started', { referrer_host: referrerHost })
+      }
+    } catch {
+      // Storage or analytics failures must never affect page rendering.
+    }
   }, [])
   return null
 }

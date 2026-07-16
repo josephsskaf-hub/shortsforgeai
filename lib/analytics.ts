@@ -9,6 +9,36 @@
 // → checkout → success), even after the OAuth/login hop. Every tracked event
 // then carries them for internal funnel attribution back to the Google Ads click.
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'ref'] as const
+const EVENT_SESSION_KEY = 'kineo_event_session_id'
+
+function syncEventSessionCookie(sessionId: string): void {
+  try {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `${EVENT_SESSION_KEY}=${encodeURIComponent(sessionId)}; Path=/; SameSite=Lax${secure}`
+  } catch {
+    // Cookie blocking must never affect product analytics or navigation.
+  }
+}
+
+function eventSessionId(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  try {
+    const existing = sessionStorage.getItem(EVENT_SESSION_KEY)
+    if (existing) {
+      const normalized = existing.slice(0, 64)
+      syncEventSessionCookie(normalized)
+      return normalized
+    }
+    const created = typeof window.crypto?.randomUUID === 'function'
+      ? window.crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 18)}`
+    sessionStorage.setItem(EVENT_SESSION_KEY, created)
+    syncEventSessionCookie(created)
+    return created
+  } catch {
+    return undefined
+  }
+}
 
 export function captureUtmsOnce(): void {
   if (typeof window === 'undefined') return
@@ -207,6 +237,7 @@ export async function trackEvent(
       name: event_name,
       metadata: { ...storedUtms(), ...(metadata ?? {}) },
       path: path ?? (typeof window !== 'undefined' ? window.location?.pathname : undefined),
+      session_id: eventSessionId(),
     })
     await fetch('/api/events', {
       method: 'POST',

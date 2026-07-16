@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackEvent } from '@/lib/analytics'
 
 export default function CheckoutSuccessPage() {
   const router = useRouter()
@@ -22,26 +23,11 @@ export default function CheckoutSuccessPage() {
     // by the verified Stripe webhook. This client event only measures whether
     // the buyer actually saw the success page, so refreshes cannot inflate
     // canonical payment counts.
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_name: 'checkout_success_viewed',
-          name: 'checkout_success_viewed',
-          path: window.location?.pathname,
-          session_id: sessionId,
-          metadata: {
-            stripe_session_id: sessionId,
-            amount_total: purchaseAmountTotal,
-            currency: purchaseCurrency.toLowerCase(),
-          },
-        }),
-        keepalive: true,
-      }).catch(() => {})
-    } catch {
-      // ignore
-    }
+    void trackEvent('checkout_success_viewed', {
+      stripe_session_id: sessionId,
+      amount_total: purchaseAmountTotal,
+      currency: purchaseCurrency.toLowerCase(),
+    })
 
     // #376 — read Stripe checkout_session_id from the URL and use it as the
     // transaction_id so Google Ads + TikTok DEDUPLICATE the purchase if the

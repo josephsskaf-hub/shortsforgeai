@@ -4,6 +4,8 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
 import { OFFER_290_ENABLED } from '@/lib/flags'
 import Stripe from 'stripe'
+import { createHash } from 'node:crypto'
+import { paypalFetch } from '@/lib/paypal'
 
 // Push #175 — force-dynamic so Next.js never tries to statically cache this
 // route. Without this, the GET handler could be pre-rendered at build time
@@ -12,6 +14,18 @@ export const dynamic = 'force-dynamic'
 
 type Tier = 'starter' | 'basic' | 'pro'
 type Currency = 'usd' | 'brl' | 'inr'
+
+function isStripeResourceMissing(error: unknown): boolean {
+  const stripeError = error as { code?: string; type?: string; statusCode?: number } | null
+  return stripeError?.code === 'resource_missing' ||
+    (stripeError?.type === 'StripeInvalidRequestError' && stripeError?.statusCode === 404)
+}
+
+function isMissingStripeCustomer(error: unknown): boolean {
+  const stripeError = error as { code?: string; param?: string; message?: string; statusCode?: number } | null
+  if (!isStripeResourceMissing(error)) return false
+  return stripeError?.param === 'customer' || /no such customer/i.test(stripeError?.message ?? '')
+}
 
 // KINEO-RECOVERY-2026-07-15 — checkout telemetry is written server-side so
 // the immediate navigation to Stripe cannot cancel it. This also records the
@@ -29,13 +43,23 @@ async function recordCheckoutEvent(
     const admin = createAdminClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { error } = await admin.from('events').insert({
+    const eventRow: Record<string, unknown> = {
       name,
       user_id: userId,
       path: '/api/stripe/checkout',
       session_id: sessionId ?? null,
       metadata,
-    })
+    }
+    // Stripe idempotency can return the same Checkout Session to two racing
+    // requests. Give checkout_started a deterministic UUID so analytics also
+    // remain idempotent instead of counting the same session twice.
+    const stripeSessionId = typeof metadata.stripe_session_id === 'string' ? metadata.stripe_session_id : null
+    if (name === 'checkout_started' && stripeSessionId) {
+      const hex = createHash('sha256').update(`checkout_started:${stripeSessionId}`).digest('hex').slice(0, 32)
+      eventRow.id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+    }
+    const { error } = await admin.from('events').insert(eventRow)
+    if (error?.code === '23505' && name === 'checkout_started') return
     if (error) console.error('[stripe/checkout] event insert failed:', name, error.code, error.message)
   } catch (error) {
     console.error('[stripe/checkout] event insert threw:', name, error)
@@ -239,6 +263,10 @@ async function buildAndRedirect(
   // still point at shortsforgeai.vercel.app; trusting it adds an unnecessary
   // cross-domain hop and can drop auth/attribution cookies.
   const appUrl = req.nextUrl.origin
+  const browserSessionCookie = req.cookies.get('kineo_event_session_id')?.value ?? ''
+  const browserSessionId = /^[A-Za-z0-9_-]{8,64}$/.test(browserSessionCookie)
+    ? browserSessionCookie
+    : null
 
   function redirectError(msg: string) {
     return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
@@ -272,10 +300,10 @@ async function buildAndRedirect(
 
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  await recordCheckoutEvent('checkout_attempted', user?.id ?? null, checkoutMetadata)
+  await recordCheckoutEvent('checkout_attempted', user?.id ?? null, checkoutMetadata, browserSessionId ?? undefined)
 
   if (authError || !user) {
-    await recordCheckoutEvent('checkout_auth_required', null, checkoutMetadata)
+    await recordCheckoutEvent('checkout_auth_required', null, checkoutMetadata, browserSessionId ?? undefined)
     console.error('[stripe/checkout] Auth error or no user:', authError?.message)
     // KINEO-CHECKOUT-RESUME-2026-07-07 — 7 buyers hit "Auth session missing" and
     // the old redirect (/signup?redirect=/pricing) silently DROPPED the purchase
@@ -295,48 +323,233 @@ async function buildAndRedirect(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('email, stripe_customer_id, is_pro, stripe_subscription_id')
+    .select('email, stripe_customer_id, is_pro, plan, stripe_subscription_id, paypal_subscription_id')
     .eq('id', user.id)
     .single()
 
   if (profileError && profileError.code !== 'PGRST116') {
     console.error('[stripe/checkout] Profile fetch error:', profileError.message, profileError.code)
+    return isGet
+      ? redirectError('We could not verify your account. Please try again in a moment.')
+      : jsonError('We could not verify your account. Please try again in a moment.', 503)
+  }
+  if (!profile) {
+    console.error('[stripe/checkout] Profile missing for authenticated user:', user.id)
+    return isGet
+      ? redirectError('Your account is still being prepared. Please refresh and try again.')
+      : jsonError('Your account is still being prepared. Please refresh and try again.', 503)
+  }
+
+  const originalCustomerId = profile.stripe_customer_id as string | null
+  let customerId = originalCustomerId
+  let linkedStripeCustomerId: string | null = null
+  const subscriptionCandidates = new Map<string, Stripe.Subscription>()
+  const hadLinkedProvider = Boolean(profile.paypal_subscription_id || profile.stripe_subscription_id)
+  let stalePayPalSubscription = false
+  let staleStripeSubscription = false
+  let staleStripeCustomer = false
+
+  const subscriptionPriority = (sub: Stripe.Subscription): number => {
+    if (sub.status === 'active' || sub.status === 'trialing') return 0
+    if (sub.status === 'past_due') return 1
+    if (sub.status === 'paused') return 2
+    if (sub.status === 'incomplete') return 3
+    if (sub.status === 'unpaid') return 4
+    return 5
+  }
+  const considerSubscription = (sub: Stripe.Subscription): void => {
+    if (sub.status === 'canceled' || sub.status === 'incomplete_expired') return
+    if (!subscriptionCandidates.has(sub.id)) subscriptionCandidates.set(sub.id, sub)
+  }
+
+  // Inspect every linked provider before mutating the profile. A stale linked
+  // id must never downgrade a payer when another live subscription exists.
+  if (profile.paypal_subscription_id) {
+    const paypalSubscriptionId = String(profile.paypal_subscription_id)
+    try {
+      const paypalSubscription = await paypalFetch(`/v1/billing/subscriptions/${paypalSubscriptionId}`) as { status?: string } | null
+      const paypalStatus = String(paypalSubscription?.status ?? '').toUpperCase()
+      stalePayPalSubscription = paypalStatus === 'CANCELLED' || paypalStatus === 'EXPIRED'
+      if (!stalePayPalSubscription) {
+        return redirectError('You already have a Kineo subscription. Manage that plan before starting another one.')
+      }
+    } catch (err) {
+      console.error('[stripe/checkout] could not verify PayPal subscription; refusing duplicate checkout:', paypalSubscriptionId, err)
+      return isGet
+        ? redirectError('We could not verify your current subscription. Please try again or contact support.')
+        : jsonError('We could not verify your current subscription. Please try again or contact support.', 503)
+    }
+  }
+
+  if (profile.stripe_subscription_id) {
+    const subId = String(profile.stripe_subscription_id)
+    try {
+      const sub = await stripe.subscriptions.retrieve(subId)
+      const linkedSubscriptionOwnerId = sub.metadata?.supabase_user_id
+      if (linkedSubscriptionOwnerId && linkedSubscriptionOwnerId !== user.id) {
+        console.error('[stripe/checkout] linked Stripe subscription belongs to another user:', user.id, subId)
+        return isGet
+          ? redirectError('We could not verify your current subscription. Please contact support.')
+          : jsonError('We could not verify your current subscription. Please contact support.', 409)
+      }
+      linkedStripeCustomerId = typeof sub.customer === 'string'
+        ? sub.customer
+        : sub.customer?.id ?? null
+      staleStripeSubscription = sub.status === 'canceled' || sub.status === 'incomplete_expired'
+      if (!staleStripeSubscription) {
+        // Carry this into the common repair path. Returning here would block a
+        // duplicate checkout but leave a mismatched Customer pointer (and stale
+        // access state) unrepaired.
+        considerSubscription(sub)
+      } else {
+        console.log('[stripe/checkout] terminal linked Stripe subscription found:', user.id, subId, sub.status)
+      }
+    } catch (err) {
+      if (isStripeResourceMissing(err)) {
+        staleStripeSubscription = true
+        console.warn('[stripe/checkout] linked Stripe subscription no longer exists; auditing Customer:', user.id, subId)
+      } else {
+        console.error('[stripe/checkout] could not verify Stripe subscription; refusing duplicate checkout:', subId, err)
+        return isGet
+          ? redirectError('We could not verify your current subscription. Please try again or contact support.')
+          : jsonError('We could not verify your current subscription. Please try again or contact support.', 503)
+      }
+    }
+  }
+
+  const customerIdsToAudit = Array.from(new Set(
+    [customerId, linkedStripeCustomerId].filter((id): id is string => Boolean(id)),
+  ))
+  const validCustomerIds: string[] = []
+
+  // A legacy profile can have a Customer pointer that differs from the
+  // Customer attached to its linked subscription. Audit both before clearing
+  // access so a live subscription on either Customer cannot be overlooked.
+  // Customer ownership is checked before reusing it: a corrupted/malicious
+  // profile pointer must never expose or charge another user's saved Customer.
+  for (const auditCustomerId of customerIdsToAudit) {
+    try {
+      const stripeCustomer = await stripe.customers.retrieve(auditCustomerId)
+      if ('deleted' in stripeCustomer && stripeCustomer.deleted) {
+        if (auditCustomerId === originalCustomerId) staleStripeCustomer = true
+        console.warn('[stripe/checkout] deleted Stripe Customer excluded after ownership audit:', user.id, auditCustomerId)
+        continue
+      }
+      if (stripeCustomer.metadata?.supabase_user_id !== user.id) {
+        console.error('[stripe/checkout] Stripe Customer ownership mismatch; refusing checkout:', user.id, auditCustomerId)
+        return isGet
+          ? redirectError('We could not verify your billing account. Please contact support.')
+          : jsonError('We could not verify your billing account. Please contact support.', 409)
+      }
+      const subscriptions = await stripe.subscriptions.list({ customer: auditCustomerId, status: 'all', limit: 100 })
+      validCustomerIds.push(auditCustomerId)
+      for (const subscription of subscriptions.data) {
+        const subscriptionOwnerId = subscription.metadata?.supabase_user_id
+        if (subscriptionOwnerId && subscriptionOwnerId !== user.id) {
+          console.error('[stripe/checkout] Customer contains subscription for another user; refusing checkout:', user.id, auditCustomerId, subscription.id)
+          return isGet
+            ? redirectError('We could not verify your current subscription. Please contact support.')
+            : jsonError('We could not verify your current subscription. Please contact support.', 409)
+        }
+        considerSubscription(subscription)
+      }
+    } catch (err) {
+      if (isMissingStripeCustomer(err)) {
+        if (auditCustomerId === originalCustomerId) staleStripeCustomer = true
+        console.warn('[stripe/checkout] Stripe Customer no longer exists; excluding it after the full audit:', user.id, auditCustomerId)
+      } else {
+        console.error('[stripe/checkout] could not audit Customer subscriptions; refusing duplicate checkout:', auditCustomerId, err)
+        return isGet
+          ? redirectError('We could not verify your current subscription. Please try again or contact support.')
+          : jsonError('We could not verify your current subscription. Please try again or contact support.', 503)
+      }
+    }
+  }
+
+  const preferredCustomerId = customerId ?? linkedStripeCustomerId
+  customerId = preferredCustomerId && validCustomerIds.includes(preferredCustomerId)
+    ? preferredCustomerId
+    : validCustomerIds[0] ?? null
+
+  const existingCustomerSubscription = Array.from(subscriptionCandidates.values())
+    .sort((a, b) => subscriptionPriority(a) - subscriptionPriority(b))[0] ?? null
+
+  if (existingCustomerSubscription) {
+    const grantsAccess = existingCustomerSubscription.status === 'active' || existingCustomerSubscription.status === 'trialing'
+    const repair: Record<string, unknown> = {
+      stripe_subscription_id: existingCustomerSubscription.id,
+      is_pro: grantsAccess,
+    }
+    const subscriptionCustomerId = typeof existingCustomerSubscription.customer === 'string'
+      ? existingCustomerSubscription.customer
+      : existingCustomerSubscription.customer?.id ?? null
+    if (subscriptionCustomerId) repair.stripe_customer_id = subscriptionCustomerId
+    if (stalePayPalSubscription) repair.paypal_subscription_id = null
+    const activeTier = existingCustomerSubscription.metadata?.tier
+    if (grantsAccess && (activeTier === 'starter' || activeTier === 'basic' || activeTier === 'pro')) {
+      repair.plan = activeTier
+    } else if (!grantsAccess) {
+      repair.plan = 'free'
+    }
+    const { error: repairError } = await supabase.from('profiles').update(repair).eq('id', user.id)
+    if (repairError) {
+      console.error('[stripe/checkout] active subscription profile repair failed:', user.id, repairError.message)
+    }
+    console.warn('[stripe/checkout] non-terminal subscription found on Customer; duplicate checkout blocked:', user.id, existingCustomerSubscription.id, existingCustomerSubscription.status)
+    return redirectError('You already have a Kineo subscription. Manage that plan before starting another one.')
+  }
+
+  // Provider-less Pro may be an admin grant or a legacy payment. Only linked
+  // provider ids confirmed terminal/missing authorize a downgrade.
+  if (profile.is_pro && !hadLinkedProvider) {
+    return isGet
+      ? redirectError('Your account already has paid access. Contact support before starting another subscription.')
+      : jsonError('Your account already has paid access. Contact support before starting another subscription.', 409)
+  }
+
+  const staleProfilePatch: Record<string, unknown> = {}
+  if (stalePayPalSubscription) staleProfilePatch.paypal_subscription_id = null
+  if (staleStripeSubscription) staleProfilePatch.stripe_subscription_id = null
+  if (staleStripeCustomer || (!originalCustomerId && customerId)) {
+    staleProfilePatch.stripe_customer_id = customerId
+  }
+  if (hadLinkedProvider) {
+    staleProfilePatch.is_pro = false
+    staleProfilePatch.plan = 'free'
+  }
+  if (Object.keys(staleProfilePatch).length > 0) {
+    const { error: staleUpdateError } = await supabase
+      .from('profiles')
+      .update(staleProfilePatch)
+      .eq('id', user.id)
+    if (staleUpdateError) {
+      console.error('[stripe/checkout] confirmed-stale profile cleanup failed:', user.id, staleUpdateError.message)
+      return isGet
+        ? redirectError('We could not update your account. Please try again in a moment.')
+        : jsonError('We could not update your account. Please try again in a moment.', 503)
+    }
   }
 
   // KINEO-RECOVERY-2026-07-15 — never create a second recurring subscription
   // for an already-active customer. It causes duplicate billing and inflates
   // subscriber counts; credit top-ups remain available through their own route.
-  // Stale flags are still repaired so a genuinely lapsed user can subscribe.
-  if (profile?.is_pro || profile?.stripe_subscription_id) {
-    const subId = profile.stripe_subscription_id as string | null
-    let isActuallyActive = false
-    if (subId) {
-      try {
-        const sub = await stripe.subscriptions.retrieve(subId)
-        isActuallyActive = sub.status === 'active' || sub.status === 'trialing'
-      } catch (err) {
-        console.warn('[stripe/checkout] could not verify subscription status, allowing checkout:', subId, err)
-      }
-    }
-    if (!isActuallyActive) {
-      // Stale flag — clear it and fall through to create a new checkout session.
-      console.log('[stripe/checkout] stale is_pro cleared for user:', user.id, 'sub:', subId)
-      await supabase
-        .from('profiles')
-        .update({ is_pro: false, plan: 'free', stripe_subscription_id: null })
-        .eq('id', user.id)
-    } else {
-      return redirectError('You already have an active Kineo plan. Use a credit top-up instead of starting a second subscription.')
-    }
-  }
-
-  let customerId = profile?.stripe_customer_id
+  // Only a provider-confirmed terminal state may clear a stale profile. A
+  // temporary provider/API error must fail closed, never downgrade a payer.
   if (!customerId) {
     try {
-      const customer = await stripe.customers.create({
-        email: profile?.email ?? user.email ?? '',
-        metadata: { supabase_user_id: user.id },
-      })
+      const customerKey = staleStripeCustomer && originalCustomerId
+        ? `kineo-customer-recovery-v1:${user.id}:${createHash('sha256').update(originalCustomerId).digest('hex').slice(0, 20)}`
+        : `kineo-customer-v1:${user.id}`
+      const customer = await stripe.customers.create(
+        {
+          email: profile.email ?? user.email ?? '',
+          metadata: { supabase_user_id: user.id },
+        },
+        // Two simultaneous first-checkout requests must converge on the same
+        // Customer before the profile update has time to persist. A confirmed
+        // deleted Customer gets a new deterministic recovery key.
+        { idempotencyKey: customerKey },
+      )
       customerId = customer.id
       const { error: updateError } = await supabase
         .from('profiles')
@@ -474,9 +687,45 @@ async function buildAndRedirect(
   const rwReferral = req.cookies.get('rewardful_referral')?.value
   if (rwReferral) sessionParams.client_reference_id = rwReferral
 
+  // KINEO-CHECKOUT-IDEMPOTENCY-2026-07-15 — 19 of 37 historical expired
+  // subscription sessions were repeats; one account created eight sessions in
+  // three seconds. Deduplicate only identical purchase intent in a five-minute
+  // window. The signature includes every value that can change the price,
+  // entitlement, attribution or return behaviour, so another tier, currency,
+  // intro/promo, billing period or cancel/success destination stays distinct.
+  const checkoutWindow = Math.floor(Date.now() / (5 * 60 * 1000))
+  const checkoutIdempotencyKeyFor = (finalCustomerId: string): string => {
+    const checkoutSignature = JSON.stringify({
+      version: 2,
+      user_id: user.id,
+      customer_id: finalCustomerId,
+      tier,
+      billing,
+      currency,
+      unit_amount: unitAmount,
+      interval,
+      intro_requested: intro,
+      discount_applied: discountApplied,
+      discounts: sessionParams.discounts ?? null,
+      allow_promotion_codes: sessionParams.allow_promotion_codes ?? false,
+      success_url: sessionParams.success_url,
+      cancel_url: sessionParams.cancel_url,
+      client_reference_id: sessionParams.client_reference_id ?? null,
+      window: checkoutWindow,
+    })
+    return `kineo-sub-v2:${createHash('sha256').update(checkoutSignature).digest('hex')}`
+  }
+  const createCheckoutSessionFor = (finalCustomerId: string) => {
+    sessionParams.customer = finalCustomerId
+    return stripe.checkout.sessions.create(
+      sessionParams,
+      { idempotencyKey: checkoutIdempotencyKeyFor(finalCustomerId) },
+    )
+  }
+
   let session: Stripe.Checkout.Session
   try {
-    session = await stripe.checkout.sessions.create(sessionParams)
+    session = await createCheckoutSessionFor(customerId)
   } catch (sessionErr) {
     const stripeErr = sessionErr as { message?: string; code?: string }
     const isCurrencyMismatch =
@@ -486,16 +735,28 @@ async function buildAndRedirect(
     if (isCurrencyMismatch) {
       console.warn('[stripe/checkout] currency mismatch — creating new customer and retrying')
       try {
-        const newCustomer = await stripe.customers.create({
-          email: profile?.email ?? user.email ?? '',
-          metadata: { supabase_user_id: user.id },
-        })
-        await supabase
+        const priorCustomerId = typeof sessionParams.customer === 'string' ? sessionParams.customer : customerId
+        const repairCustomerHash = createHash('sha256')
+          .update(`${user.id}:${currency}:${priorCustomerId}`)
+          .digest('hex')
+          .slice(0, 32)
+        const newCustomer = await stripe.customers.create(
+          {
+            email: profile.email ?? user.email ?? '',
+            metadata: { supabase_user_id: user.id, currency_repair: currency },
+          },
+          { idempotencyKey: `kineo-customer-currency-v1:${repairCustomerHash}` },
+        )
+        const { error: repairPersistError } = await supabase
           .from('profiles')
           .update({ stripe_customer_id: newCustomer.id })
           .eq('id', user.id)
-        sessionParams.customer = newCustomer.id
-        session = await stripe.checkout.sessions.create(sessionParams)
+        if (repairPersistError) {
+          console.error('[stripe/checkout] currency repair Customer persistence failed:', repairPersistError.message)
+        }
+        // Recompute from the final Customer so concurrent repairs and the next
+        // request using the repaired profile all converge on the same Session.
+        session = await createCheckoutSessionFor(newCustomer.id)
       } catch (retryErr) {
         const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
         console.error('[stripe/checkout] currency mismatch retry failed:', msg)
@@ -515,8 +776,8 @@ async function buildAndRedirect(
   await recordCheckoutEvent(
     'checkout_started',
     user.id,
-    { ...checkoutMetadata, intro_applied: discountApplied && intro },
-    session.id,
+    { ...checkoutMetadata, intro_applied: discountApplied && intro, stripe_session_id: session.id },
+    browserSessionId ?? undefined,
   )
 
   return isGet

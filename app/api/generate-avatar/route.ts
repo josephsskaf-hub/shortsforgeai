@@ -25,8 +25,8 @@
 //     best-effort on serverless — checkpoint 2 moves this to a DB counter
 //     alongside avatar_credits).
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
   estimateMp3DurationSeconds,
   generateTTS,
@@ -36,6 +36,7 @@ import {
 } from '@/lib/compose'
 import { parseUserScript, stripScriptMarkers } from '@/lib/scriptParser'
 import {
+  AvatarSubmitError,
   submitAvatarJob,
   VEED_720P_USD_PER_SECOND,
   OMNIHUMAN_720P_USD_PER_SECOND,
@@ -45,6 +46,16 @@ import {
   type AvatarEngine,
   type PerformanceStyle,
 } from '@/lib/avatar/veed'
+import {
+  AVATAR_CLAIM_EVENT,
+  AVATAR_CLAIM_PATH,
+  avatarClaimId,
+  avatarReservationId,
+  avatarValueHash,
+  signAvatarClaim,
+  validAvatarGenerationId,
+  verifyAvatarClaim,
+} from '@/lib/avatar/claim'
 import { synthesizeWithVoice } from '@/lib/avatar/voice'
 import { getPixabayVideoForQueries } from '@/lib/pixabay'
 import { pickLibraryClips } from '@/lib/stockLibrary'
@@ -60,11 +71,10 @@ export const dynamic = 'force-dynamic'
 const MIN_DURATION = 45
 const MAX_DURATION = 60
 
-// Rate limit — max 3 avatar jobs per account inside a rolling 5-min window.
-// Fix 1 (12/06): DB-BACKED via public.avatar_jobs (one row per submitted fal
-// job). The old in-memory Map was per-lambda and useless on Vercel — every
-// cold/parallel instance had its own empty Map, so the limit didn't hold.
-const RATE_WINDOW_MS = 5 * 60 * 1000
+// A provider job normally finishes in minutes. Keep its signed credit hold for
+// up to two hours so parallel generation ids cannot spend more provider money
+// than the user's available credits. Successful compose settles the hold.
+const ACTIVE_RESERVATION_TTL_MS = 2 * 60 * 60 * 1000
 const RATE_MAX = 3
 
 /** Best-effort b-roll cutaway clips. Never throws, may return [].
@@ -121,8 +131,10 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
     }
+    const userId = user.id
 
     let body: {
+      generationId?: string
       prompt?: string
       duration?: number
       language?: string
@@ -205,24 +217,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please upload your photo first.' }, { status: 400 })
     }
 
-    if (!dryRun) {
-      // Fix 1 (12/06) — count THIS user's jobs in the rolling window straight
-      // from the DB (works across every lambda instance). Fail-open on a
-      // count error: a transient DB blip must not block a paying render.
-      const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString()
-      const { count: recentCount, error: rateErr } = await supabase
-        .from('avatar_jobs')
-        .select('request_id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', windowStart)
-      if (!rateErr && (recentCount ?? 0) >= RATE_MAX) {
-        return NextResponse.json(
-          { error: 'You have 3 avatar videos rendering already — please wait for one to finish.' },
-          { status: 429 },
-        )
-      }
-    }
-
     // KINEO-AVATAR-120-2026-07-06 — avatar videos now cost 120 UNIVERSAL
     // video_credits (was the separate avatar_credits add-on @ 1/video). This is
     // only the upfront balance gate; the actual 120-credit DEBIT happens on
@@ -240,27 +234,6 @@ export async function POST(req: NextRequest) {
     // Kling Presenter Pro, VEED, and OmniHuman stay at 110. Keep in sync with
     // creditCostFor() in compose/status ('presenter' → 70, 'avatar' → 110).
     const AVATAR_CREDIT_COST = engine === 'presenter' ? 70 : 110
-    if (!dryRun) {
-      const { data: avProfile } = await supabase
-        .from('profiles')
-        .select('video_credits')
-        .eq('id', user.id)
-        .single()
-      const videoCreditBalance = avProfile?.video_credits ?? 0
-      if (videoCreditBalance < AVATAR_CREDIT_COST) {
-        return NextResponse.json(
-          {
-            error: `Avatar videos cost ${AVATAR_CREDIT_COST} credits. You have ${videoCreditBalance}. Get 25 more Shorts for $4.90, or upgrade to a plan for unlimited posting.`,
-            upsell: 'credits',
-            outOfCredits: true,
-            balance: videoCreditBalance,
-            upgrade: '/pricing',
-          },
-          { status: 402 },
-        )
-      }
-    }
-
     const forceVerbatim = body.scriptMode === 'verbatim'
     const requested = Number(body.duration) || MIN_DURATION
     // Verbatim fix (13/06) — the 45–60s lock exists so EXPANDED scripts fit
@@ -276,6 +249,356 @@ export async function POST(req: NextRequest) {
       : undefined
 
     // ── 1. Narration text ────────────────────────────────────────────────
+    // A browser-created id is persisted before this request starts. The events
+    // row is the cross-instance idempotency claim; avatar_jobs is a reservation
+    // acquired before any paid provider submission, never an after-the-fact lock.
+    const generationId = typeof body.generationId === 'string' ? body.generationId.trim() : ''
+    if (!dryRun && !validAvatarGenerationId(generationId)) {
+      return NextResponse.json(
+        { error: 'This avatar is missing its safety id. Please start it again.' },
+        { status: 400 },
+      )
+    }
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+    const supabaseAdminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    let avatarAdmin: SupabaseClient | null = null
+    let ownsAvatarClaim = false
+    let ownsAvatarReservation = false
+    let reservationId = ''
+    let claimId = ''
+    let requestFingerprint = ''
+    const claimStartedAt = new Date().toISOString()
+
+    const safetyUnavailable = () => NextResponse.json(
+      { error: 'Avatar safety check is temporarily unavailable. Nothing new was submitted. Please retry.' },
+      { status: 503 },
+    )
+
+    async function releaseAvatarSubmission(): Promise<void> {
+      if (!avatarAdmin) return
+      if (ownsAvatarReservation && reservationId) {
+        const { error } = await avatarAdmin
+          .from('avatar_jobs')
+          .delete()
+          .eq('request_id', reservationId)
+          .eq('user_id', userId)
+        if (error) console.error('[generate-avatar] reservation release failed:', error.message)
+        else ownsAvatarReservation = false
+      }
+      if (ownsAvatarClaim && claimId) {
+        const { error } = await avatarAdmin
+          .from('events')
+          .delete()
+          .eq('id', claimId)
+          .eq('user_id', userId)
+          .eq('name', AVATAR_CLAIM_EVENT)
+        if (error) console.error('[generate-avatar] claim release failed:', error.message)
+        else ownsAvatarClaim = false
+      }
+    }
+
+    async function responseForClaimRow(row: unknown): Promise<NextResponse> {
+      const claim = row as {
+        id?: unknown
+        name?: unknown
+        user_id?: unknown
+        path?: unknown
+        session_id?: unknown
+        metadata?: unknown
+      } | null
+      if (
+        !avatarAdmin || !claim || claim.id !== claimId || claim.name !== AVATAR_CLAIM_EVENT ||
+        claim.user_id !== userId || claim.path !== AVATAR_CLAIM_PATH || claim.session_id !== generationId
+      ) {
+        console.error(`[generate-avatar] deterministic claim collision id=${claimId}`)
+        return safetyUnavailable()
+      }
+      const metadata = claim.metadata && typeof claim.metadata === 'object'
+        ? claim.metadata as Record<string, unknown>
+        : {}
+      const status = metadata.status === 'settled'
+        ? 'settled'
+        : metadata.status === 'done'
+          ? 'done'
+          : metadata.status === 'pending'
+            ? 'pending'
+            : null
+      const fingerprint = typeof metadata.fingerprint === 'string' ? metadata.fingerprint : ''
+      const claimCreditCost = typeof metadata.credit_cost === 'number' && Number.isInteger(metadata.credit_cost)
+        ? metadata.credit_cost
+        : null
+      const responseHash = typeof metadata.response_hash === 'string' ? metadata.response_hash : ''
+      const response = metadata.response && typeof metadata.response === 'object' && !Array.isArray(metadata.response)
+        ? metadata.response as Record<string, unknown>
+        : null
+      if (
+        !status || !fingerprint || fingerprint !== requestFingerprint || claimCreditCost !== AVATAR_CREDIT_COST ||
+        !verifyAvatarClaim(serviceRoleKey, {
+          claimId,
+          userId,
+          generationId,
+          status,
+          fingerprint,
+          creditCost: claimCreditCost,
+          ...(responseHash ? { responseHash } : {}),
+        }, metadata.authority)
+      ) {
+        console.error(`[generate-avatar] rejected invalid/conflicting claim id=${claimId}`)
+        return NextResponse.json(
+          { error: 'This avatar safety id belongs to a different request. Please start again.' },
+          { status: 409 },
+        )
+      }
+      if (status === 'done' || status === 'settled') {
+        if (!response || !responseHash || avatarValueHash(response) !== responseHash) {
+          console.error(`[generate-avatar] rejected corrupt replay response id=${claimId}`)
+          return safetyUnavailable()
+        }
+        return NextResponse.json({ ...response, resumed: true })
+      }
+      return NextResponse.json(
+        { error: 'This avatar is already being submitted.', pending: true, retry_after_ms: 3000 },
+        { status: 409 },
+      )
+    }
+
+    async function completeAvatarClaim(response: Record<string, unknown>): Promise<boolean> {
+      if (!avatarAdmin || !ownsAvatarClaim) return false
+      const responseHash = avatarValueHash(response)
+      const metadata = {
+        generation_id: generationId,
+        status: 'done',
+        fingerprint: requestFingerprint,
+        credit_cost: AVATAR_CREDIT_COST,
+        response,
+        response_hash: responseHash,
+        started_at: claimStartedAt,
+        completed_at: new Date().toISOString(),
+        authority: signAvatarClaim(serviceRoleKey, {
+          claimId,
+          userId,
+          generationId,
+          status: 'done',
+          fingerprint: requestFingerprint,
+          creditCost: AVATAR_CREDIT_COST,
+          responseHash,
+        }),
+      }
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const { data, error } = await avatarAdmin
+          .from('events')
+          .update({ metadata })
+          .eq('id', claimId)
+          .eq('user_id', userId)
+          .eq('name', AVATAR_CLAIM_EVENT)
+          // Optional B-roll enrichment can finish after the client has already
+          // composed and paid. Never downgrade that concurrently-settled hold
+          // back to `done`.
+          .neq('metadata->>status', 'settled')
+          .select('id')
+          .maybeSingle()
+        if (!error && data?.id === claimId) return true
+        if (!error && !data) {
+          const { data: current } = await avatarAdmin
+            .from('events')
+            .select('metadata')
+            .eq('id', claimId)
+            .maybeSingle()
+          const currentMetadata = current?.metadata && typeof current.metadata === 'object'
+            ? current.metadata as Record<string, unknown>
+            : {}
+          if (currentMetadata.status === 'settled') return true
+        }
+        console.error(`[generate-avatar] claim completion attempt ${attempt} failed:`, error?.message ?? 'row missing')
+      }
+      return false
+    }
+
+    if (!dryRun) {
+      if (!serviceRoleKey || !supabaseAdminUrl) {
+        console.error('[generate-avatar] durable claim unavailable: service-role env missing')
+        return safetyUnavailable()
+      }
+      avatarAdmin = createAdminClient(supabaseAdminUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      claimId = avatarClaimId(user.id, generationId)
+      reservationId = avatarReservationId(user.id, generationId)
+      requestFingerprint = avatarValueHash({
+        prompt,
+        duration,
+        language,
+        avatarImageUrl,
+        avatarSourceVideoUrl,
+        engine,
+        performanceStyle,
+        hookMode,
+        noBroll,
+        forceVerbatim,
+        voiceId: typeof body.voiceId === 'string' ? body.voiceId.trim() : '',
+        vertical: vertical ?? '',
+      })
+      const pendingMetadata = {
+        generation_id: generationId,
+        status: 'pending',
+        fingerprint: requestFingerprint,
+        credit_cost: AVATAR_CREDIT_COST,
+        started_at: claimStartedAt,
+        authority: signAvatarClaim(serviceRoleKey, {
+          claimId,
+          userId: user.id,
+          generationId,
+          status: 'pending',
+          fingerprint: requestFingerprint,
+          creditCost: AVATAR_CREDIT_COST,
+        }),
+      }
+      const { error: claimError } = await avatarAdmin.from('events').insert({
+        id: claimId,
+        user_id: user.id,
+        name: AVATAR_CLAIM_EVENT,
+        path: AVATAR_CLAIM_PATH,
+        session_id: generationId,
+        metadata: pendingMetadata,
+      })
+      if (claimError) {
+        if ((claimError as { code?: string }).code !== '23505') {
+          console.error('[generate-avatar] durable claim failed:', claimError.message)
+          return safetyUnavailable()
+        }
+        const { data: existing, error: existingError } = await avatarAdmin
+          .from('events')
+          .select('id,name,user_id,path,session_id,metadata')
+          .eq('id', claimId)
+          .maybeSingle()
+        if (existingError || !existing) {
+          console.error('[generate-avatar] claim replay read failed:', existingError?.message ?? 'row missing')
+          return safetyUnavailable()
+        }
+        return await responseForClaimRow(existing)
+      }
+      ownsAvatarClaim = true
+
+      // Admission is based on signed, still-active claims rather than a naked
+      // balance read. This is a real credit hold: concurrent generation ids are
+      // ordered deterministically and their prefix cost may never exceed the
+      // current balance. The same claim becomes `settled` after successful
+      // compose, while abandoned holds expire after two hours.
+      const activeSince = new Date(Date.now() - ACTIVE_RESERVATION_TTL_MS).toISOString()
+      const { data: claimRows, error: activeClaimsError } = await avatarAdmin
+        .from('events')
+        .select('id,user_id,path,session_id,metadata,created_at')
+        .eq('name', AVATAR_CLAIM_EVENT)
+        .eq('user_id', user.id)
+        .gte('created_at', activeSince)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .limit(50)
+      if (activeClaimsError) {
+        console.error('[generate-avatar] active credit holds lookup failed:', activeClaimsError.message)
+        await releaseAvatarSubmission()
+        return safetyUnavailable()
+      }
+
+      let activeHoldCount = 0
+      let totalCreditsHeld = 0
+      let currentClaimSeen = false
+      for (const row of claimRows ?? []) {
+        const metadata = row.metadata && typeof row.metadata === 'object'
+          ? row.metadata as Record<string, unknown>
+          : {}
+        const status = metadata.status === 'done'
+          ? 'done'
+          : metadata.status === 'pending'
+            ? 'pending'
+            : null
+        if (!status) continue
+        const rowGenerationId = typeof row.session_id === 'string' ? row.session_id : ''
+        const rowFingerprint = typeof metadata.fingerprint === 'string' ? metadata.fingerprint : ''
+        const rowResponseHash = typeof metadata.response_hash === 'string' ? metadata.response_hash : ''
+        const rowCreditCost = typeof metadata.credit_cost === 'number' && Number.isInteger(metadata.credit_cost)
+          ? metadata.credit_cost
+          : null
+        const valid = Boolean(
+          rowGenerationId && rowFingerprint && rowCreditCost !== null && rowCreditCost > 0 && rowCreditCost <= 1000 &&
+          row.id === avatarClaimId(user.id, rowGenerationId) &&
+          row.user_id === user.id && row.path === AVATAR_CLAIM_PATH &&
+          verifyAvatarClaim(serviceRoleKey, {
+            claimId: row.id as string,
+            userId: user.id,
+            generationId: rowGenerationId,
+            status,
+            fingerprint: rowFingerprint,
+            creditCost: rowCreditCost,
+            ...(rowResponseHash ? { responseHash: rowResponseHash } : {}),
+          }, metadata.authority)
+        )
+        if (!valid) {
+          console.error('[generate-avatar] ignored invalid active credit hold:', row.id)
+          continue
+        }
+        activeHoldCount += 1
+        totalCreditsHeld += rowCreditCost as number
+        if (row.id === claimId) {
+          currentClaimSeen = true
+        }
+      }
+      if (!currentClaimSeen) {
+        console.error('[generate-avatar] newly inserted credit hold could not be verified')
+        await releaseAvatarSubmission()
+        return safetyUnavailable()
+      }
+
+      const { data: avProfile, error: profileError } = await avatarAdmin
+        .from('profiles')
+        .select('video_credits')
+        .eq('id', user.id)
+        .single()
+      if (profileError || typeof avProfile?.video_credits !== 'number') {
+        console.error('[generate-avatar] credit balance lookup failed:', profileError?.message ?? 'invalid balance')
+        await releaseAvatarSubmission()
+        return safetyUnavailable()
+      }
+      const videoCreditBalance = avProfile.video_credits
+      if (activeHoldCount > RATE_MAX) {
+        await releaseAvatarSubmission()
+        return NextResponse.json(
+          { error: 'You have 3 avatar videos rendering already — please wait for one to finish.' },
+          { status: 429 },
+        )
+      }
+      if (totalCreditsHeld > videoCreditBalance) {
+        await releaseAvatarSubmission()
+        const creditsHeldByOtherJobs = Math.max(0, totalCreditsHeld - AVATAR_CREDIT_COST)
+        const availableBalance = Math.max(0, videoCreditBalance - creditsHeldByOtherJobs)
+        return NextResponse.json(
+          {
+            error: `Avatar videos cost ${AVATAR_CREDIT_COST} credits. ${creditsHeldByOtherJobs > 0 ? 'Your active avatar renders already reserve part of your balance. ' : ''}You have ${availableBalance} credits available.`,
+            upsell: 'credits',
+            outOfCredits: true,
+            balance: availableBalance,
+            upgrade: '/pricing',
+          },
+          { status: 402 },
+        )
+      }
+
+      // Keep the provider request id mapped to its authenticated owner for
+      // status polling. The placeholder is replaced after the single submit.
+      const { error: reservationError } = await avatarAdmin.from('avatar_jobs').insert({
+        request_id: reservationId,
+        user_id: user.id,
+        engine,
+      })
+      if (reservationError) {
+        console.error('[generate-avatar] reservation insert failed:', reservationError.message)
+        await releaseAvatarSubmission()
+        return safetyUnavailable()
+      }
+      ownsAvatarReservation = true
+    }
+
     const parsed = parseUserScript(prompt)
     const verbatim = parsed.hasMarkers && parsed.segments.length > 0
     let narration: string
@@ -329,9 +652,11 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error('[generate-avatar] TTS failed:', err instanceof Error ? err.message : String(err))
+      await releaseAvatarSubmission()
       return NextResponse.json({ error: 'Voiceover generation failed. Please try again.' }, { status: 502 })
     }
     if (!audioBuffer || audioBuffer.length === 0) {
+      await releaseAvatarSubmission()
       return NextResponse.json({ error: 'Voiceover generation returned no audio.' }, { status: 502 })
     }
     const realAudioDuration = estimateMp3DurationSeconds(audioBuffer)
@@ -340,6 +665,7 @@ export async function POST(req: NextRequest) {
     // upload/provider submit so the user gets a clear message and spends no
     // credits. Voice-only dry runs remain available for longer scripts.
     if (!dryRun && engine === 'omnihuman' && realAudioDuration > 60) {
+      await releaseAvatarSubmission()
       return NextResponse.json(
         {
           error: `Pro body & gestures supports up to 60 seconds. Your narration is ${realAudioDuration.toFixed(1)} seconds — shorten the script and try again.`,
@@ -353,6 +679,7 @@ export async function POST(req: NextRequest) {
       voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer)
     } catch (err) {
       console.error('[generate-avatar] voiceover upload failed:', err instanceof Error ? err.message : String(err))
+      await releaseAvatarSubmission()
       return NextResponse.json({ error: 'Could not store the voiceover. Please try again.' }, { status: 502 })
     }
 
@@ -390,15 +717,37 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    const requestId = await submitAvatarJob({
-      imageUrl: videoMode ? undefined : avatarImageUrl,
-      videoUrl: videoMode ? avatarSourceVideoUrl : undefined,
-      audioUrl: avatarAudioUrl,
-      resolution: '720p',
-      engine,
-      performancePrompt: performancePromptFor(engine, performanceStyle),
-    })
+    let requestId: string
+    try {
+      requestId = await submitAvatarJob({
+        imageUrl: videoMode ? undefined : avatarImageUrl,
+        videoUrl: videoMode ? avatarSourceVideoUrl : undefined,
+        audioUrl: avatarAudioUrl,
+        resolution: '720p',
+        engine,
+        performancePrompt: performancePromptFor(engine, performanceStyle),
+      })
+    } catch (err) {
+      const ambiguous = err instanceof AvatarSubmitError ? err.ambiguous : true
+      console.error('[generate-avatar] provider submit failed:', JSON.stringify({
+        ambiguous,
+        status: err instanceof AvatarSubmitError ? err.status : null,
+        message: err instanceof Error ? err.message : String(err),
+      }))
+      if (ambiguous) {
+        return NextResponse.json(
+          { error: 'Avatar submission is still being verified.', pending: true, retry_after_ms: 5000 },
+          { status: 409 },
+        )
+      }
+      await releaseAvatarSubmission()
+      return NextResponse.json(
+        { error: 'The avatar engine rejected the job. You were not charged. Please try again.' },
+        { status: 502 },
+      )
+    }
     if (!requestId) {
+      await releaseAvatarSubmission()
       // Protection rule: nothing was (or ever will be at this point) charged.
       return NextResponse.json(
         { error: 'The avatar engine could not accept the job. You were not charged — please try again.' },
@@ -409,7 +758,17 @@ export async function POST(req: NextRequest) {
     // Fix 1 (12/06) — register the job for the DB-backed rate limit (replaces
     // the per-lambda Map). Best-effort: a failed insert never fails the render.
     try {
-      await supabase.from('avatar_jobs').insert({ request_id: requestId, user_id: user.id, engine })
+      if (avatarAdmin && ownsAvatarReservation) {
+        const { error: reservationPublishError } = await avatarAdmin
+          .from('avatar_jobs')
+          .update({ request_id: requestId, engine })
+          .eq('request_id', reservationId)
+          .eq('user_id', user.id)
+        if (reservationPublishError) {
+          throw reservationPublishError
+        }
+        reservationId = requestId
+      }
     } catch (err) {
       console.warn('[generate-avatar] avatar_jobs insert failed (non-blocking):', err instanceof Error ? err.message : String(err))
     }
@@ -420,6 +779,42 @@ export async function POST(req: NextRequest) {
     // with prompt.slice(0,80) (raw user text) → irrelevant stock ("menina
     // dançando"). Now the Phase-1 brollEngine derives per-scene queries from
     // the ACTUAL narration; the raw slice is only the last-resort fallback.
+    const estSeconds = avatarHookSeconds != null
+      ? avatarHookSeconds
+      : realAudioDuration > 4 ? realAudioDuration : duration
+    const usdPerSecond =
+      engine === 'presenter' ? PRESENTER_USD_PER_SECOND
+      : engine === 'presenter_pro' ? PRESENTER_PRO_USD_PER_SECOND
+      : engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND
+      : VEED_720P_USD_PER_SECOND
+    const baseResponse: Record<string, unknown> = {
+      mode: 'avatar',
+      engine,
+      avatar_mode: avatarHookSeconds != null ? 'hook' : 'full',
+      avatar_hook_seconds: avatarHookSeconds,
+      generationId,
+      avatar_request_id: requestId,
+      voiceover_url: voiceoverUrl,
+      voiceover_script: narration,
+      real_audio_duration: realAudioDuration,
+      clip_urls: [],
+      duration,
+      speed: speed ?? 1.0,
+      verbatim,
+      avatar_credits_needed: AVATAR_CREDIT_COST,
+      credits_needed: AVATAR_CREDIT_COST,
+      estimated_seconds: Math.round(estSeconds),
+      estimated_cost_usd: Number((estSeconds * usdPerSecond).toFixed(2)),
+    }
+    // Publish the provider request id before optional b-roll work. A lost HTTP
+    // response can now replay safely from another server instance.
+    if (!(await completeAvatarClaim(baseResponse))) {
+      return NextResponse.json(
+        { error: 'Your avatar was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
+        { status: 503 },
+      )
+    }
+
     let queries: string[]
     if (verbatim) {
       queries = parsed.segments.map((s) => s.pexelsQuery).filter(Boolean)
@@ -448,19 +843,14 @@ export async function POST(req: NextRequest) {
       ? []
       : await fetchCutawayClips(queries, narration, avatarHookSeconds != null ? 6 : 3)
 
-    const estSeconds = avatarHookSeconds != null
-      ? avatarHookSeconds
-      : realAudioDuration > 4 ? realAudioDuration : duration
-    const generationId = randomUUID()
-    const usdPerSecond =
-      engine === 'presenter' ? PRESENTER_USD_PER_SECOND
-      : engine === 'presenter_pro' ? PRESENTER_PRO_USD_PER_SECOND
-      : engine === 'omnihuman' ? OMNIHUMAN_720P_USD_PER_SECOND
-      : VEED_720P_USD_PER_SECOND
     console.log(
       `[generate-avatar] submitted user=${user.id.slice(0, 8)} engine=${engine} request=${requestId} audio=${estSeconds.toFixed(1)}s clips=${clipUrls.length} generationId=${generationId}`,
     )
 
+    const finalResponse: Record<string, unknown> = { ...baseResponse, clip_urls: clipUrls }
+    // B-roll is optional. Upgrade the replay payload when possible; the already
+    // published base response remains sufficient to finish the paid avatar.
+    await completeAvatarClaim(finalResponse)
     return NextResponse.json({
       mode: 'avatar',
       engine,

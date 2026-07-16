@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
-import { trackSignupSource } from '@/lib/analytics'
+import { trackEvent, trackSignupSource } from '@/lib/analytics'
 import { isDisposableEmail } from '@/lib/emailValidation'
 import { normalizeInternalRedirect } from '@/lib/authRedirect'
 import { trackCheckoutAuthStep } from '@/lib/authAnalytics'
@@ -77,12 +77,7 @@ export default function SignupPage() {
       try {
         if (!sessionStorage.getItem(marker)) {
           sessionStorage.setItem(marker, '1')
-          void fetch('/api/events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'hero_submit', path: '/', metadata: { destination: 'signup' } }),
-            keepalive: true,
-          }).catch(() => {})
+          void trackEvent('hero_submit', { destination: 'signup' }, '/')
         }
       } catch { /* analytics must never block signup */ }
     }

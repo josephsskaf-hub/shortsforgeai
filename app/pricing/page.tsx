@@ -10,8 +10,9 @@
 // launch offer.
 
 import Link from 'next/link'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
+import { trackEvent } from '@/lib/analytics'
 import ExitIntentOffer from '@/components/ExitIntentOffer'
 
 // PAYPAL-DISABLED-2026-07-06 — PayPal checkout is hidden on pricing until it's
@@ -139,20 +140,7 @@ function buildPricing() {
 }
 
 function trackPricingEvent(name: string): void {
-  try {
-    void fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event_name: name,
-        name,
-        path: typeof window !== 'undefined' ? window.location?.pathname : undefined,
-      }),
-      keepalive: true,
-    }).catch(() => {})
-  } catch {
-    // ignore
-  }
+  void trackEvent(name)
 }
 
 export default function PricingPage() {
@@ -164,10 +152,27 @@ export default function PricingPage() {
   // "Loading…" while the API call is in flight; `checkoutError` surfaces
   // any server-returned error below the cards.
   const [purchasing, setPurchasing] = useState<'starter' | 'basic' | 'pro' | null>(null)
+  // KINEO-CHECKOUT-IDEMPOTENCY-2026-07-15 — state alone is not a synchronous
+  // click lock: a fast double-click can run the handler twice before React
+  // paints the disabled button. Keep an immediate ref guard as the client-side
+  // half of the server idempotency protection.
+  const checkoutNavigationLockedRef = useRef(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   // Push #171 — show a friendly "already subscribed" info banner instead of
   // silently redirecting to /generate when the API blocks a duplicate purchase.
   const [alreadySubscribed, setAlreadySubscribed] = useState(false)
+
+  // Browsers may restore this page from the back-forward cache after the user
+  // leaves Stripe. React state and refs are restored too, so release the click
+  // lock on pageshow or every plan button can remain disabled forever.
+  useEffect(() => {
+    const releaseCheckoutLock = () => {
+      checkoutNavigationLockedRef.current = false
+      setPurchasing(null)
+    }
+    window.addEventListener('pageshow', releaseCheckoutLock)
+    return () => window.removeEventListener('pageshow', releaseCheckoutLock)
+  }, [])
   // KINEO-SPRINT-OFFER-2026-07-14 — ROI slider state removed with the widget
   // (unverifiable "estimated views/month" promise — see note at the old block).
   // Push #117 — sticky mobile CTA bar shows after 300px scroll so phone
@@ -198,6 +203,8 @@ export default function PricingPage() {
   // directly to the GET checkout endpoint which does a server-side 302
   // redirect to Stripe. No fetch(), no await, no gesture breakage.
   function handleBuy(tier: 'starter' | 'basic' | 'pro') {
+    if (checkoutNavigationLockedRef.current) return
+    checkoutNavigationLockedRef.current = true
     setPurchasing(tier)
     const eventName = tier === 'pro' ? 'pro_checkout_clicked' : tier === 'starter' ? 'starter_checkout_clicked' : 'basic_checkout_clicked'
     trackPricingEvent(eventName)
@@ -455,7 +462,7 @@ export default function PricingPage() {
                     to /signup. */}
                 <button
                   type="button"
-                  disabled={purchasing !== null && purchasing !== p.tier}
+                  disabled={purchasing !== null}
                   onClick={() => handleBuy(p.tier as 'starter' | 'basic' | 'pro')}
                   className="mt-auto block w-full rounded-xl bg-[#2997ff] px-4 py-3 text-center text-[14px] font-extrabold text-white shadow-[0_8px_24px_rgba(41,151,255,.35)] transition hover:bg-[#1f86ee] hover:shadow-[0_10px_30px_rgba(41,151,255,.45)] disabled:opacity-60"
                 >
@@ -848,7 +855,7 @@ export default function PricingPage() {
               ("Most Popular" = Creator). Studio goes neutral. */}
           <button
             type="button"
-            disabled={purchasing !== null && purchasing !== 'starter'}
+            disabled={purchasing !== null}
             onClick={() => handleBuy('starter')}
             style={{
               flex: 1,
@@ -867,7 +874,7 @@ export default function PricingPage() {
           </button>
           <button
             type="button"
-            disabled={purchasing !== null && purchasing !== 'basic'}
+            disabled={purchasing !== null}
             onClick={() => handleBuy('basic')}
             style={{
               flex: 1,
@@ -887,7 +894,7 @@ export default function PricingPage() {
           </button>
           <button
             type="button"
-            disabled={purchasing !== null && purchasing !== 'pro'}
+            disabled={purchasing !== null}
             onClick={() => handleBuy('pro')}
             style={{
               flex: 1,
