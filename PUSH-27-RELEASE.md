@@ -1,10 +1,10 @@
 # Kineo — PUSH #27
 
 **Nome:** One-Choice First Video Handoff
-**Status:** PRONTO LOCALMENTE; AGUARDA COMMIT, PUSH E DEPLOY READY
+**Status:** PUBLICADO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
-**Commit de código:** pendente
-**Deploy Vercel:** pendente
+**Commit de código:** `17d9ff855a06ee1754e3aa4b6b7f9db54789b714`
+**Deploy Vercel:** `dpl_FtesbFzBTN8X4kuNzhwJ6aqd3QMT` — READY
 
 ## Evidência que escolheu este push
 
@@ -104,15 +104,17 @@ Os números do PUSH #27 filtram a versão nova; eventos históricos do onboardin
 - A geração automática continua condicionada ao clique e ao término bem-sucedido da análise.
 - Nenhum cadastro, evento, checkout, pagamento, email ou render artificial foi criado.
 
-## Validação em produção pendente
+## Validação em produção concluída em 16/07/2026
 
-- Confirmar commit em `origin/main`.
-- Confirmar deploy Vercel `READY` e alias em `www.usekineo.com`.
-- Confirmar homepage HTTP 200.
-- Confirmar `/generate` sem sessão mantém redirect para login.
-- Confirmar `/api/admin/funnel` sem sessão mantém HTTP 403.
-- Não abrir o onboarding autenticado só para fabricar uma impressão.
-- Baseline versionado do PUSH #27 deve começar em zero e crescer apenas com usuários externos reais.
+- Commit `17d9ff8` confirmado em `origin/main`.
+- Deploy `dpl_FtesbFzBTN8X4kuNzhwJ6aqd3QMT` confirmado como `READY`.
+- `www.usekineo.com`, `usekineo.com`, `shortsforgeai.com` e aliases Vercel apontam para o mesmo deploy.
+- Homepage confirmou HTTP 200.
+- `/generate` sem sessão confirmou HTTP 307 para `/login?redirect=%2Fgenerate`.
+- `/api/admin/funnel` sem sessão confirmou HTTP 403.
+- O onboarding autenticado não foi aberto durante a validação, evitando fabricar impressão ou geração.
+- Consulta direta aos sete eventos com `version=push27_single_choice` confirmou baseline zero: nenhuma view, clique, saída, intenção, geração despachada, conclusão ou falha artificial.
+- O baseline deve crescer somente com usuários externos reais a partir deste deploy.
 
 ## Meta do microteste
 
