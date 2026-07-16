@@ -7,6 +7,7 @@
 // exports the SEO metadata; the interactive tool is the client child.
 import type { Metadata } from 'next'
 import FreeScriptClient from './FreeScriptClient'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
@@ -24,5 +25,10 @@ export const metadata: Metadata = {
 }
 
 export default function FreeScriptGeneratorPage() {
-  return <FreeScriptClient />
+  return (
+    <>
+      <FreeScriptClient />
+      <Footer />
+    </>
+  )
 }

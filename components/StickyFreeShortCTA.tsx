@@ -1,10 +1,11 @@
 'use client'
 
-// ROBO1-CONV-2026-06-29b — Public sticky "first Short free" CTA.
+// ROBO1-CONV-2026-06-29b — Public Fast-preview CTA.
 // Persistent bottom bar shown on high-intent SEO/marketing pages (alternatives,
 // cheapest-ai-shorts-maker, youtube-shorts-from-topic) so a scrolling buyer always
 // has a one-tap path to start — captures intent between the top and bottom CTAs.
-// Honest copy mirrors the real offer: first Short free, no credit card.
+// Honest copy mirrors the real offer: up to 3 watermarked Fast videos / 24h,
+// no credit card.
 // Dismissible (useState only, no localStorage → it gently reappears next session,
 // matching StickyUpgradeBar). pointer-events:none on the wrapper so it never blocks
 // clicks on page content behind the gutters.
@@ -14,7 +15,7 @@ import Link from 'next/link'
 
 export default function StickyFreeShortCTA({
   href = '/start',
-  label = 'Generate your first Short — free, no card',
+  label = 'Create up to 3 watermarked Fast videos every 24h — no card',
   cta = 'Start free',
 }: {
   href?: string

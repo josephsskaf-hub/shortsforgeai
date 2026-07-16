@@ -28,6 +28,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: '/youtube-shorts-from-topic', label: 'YouTube Shorts from a topic' },
       { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },
+      { href: '/ai-shorts-without-filming', label: 'Shorts without filming' },
       { href: '/faceless-channel-ideas', label: 'Faceless channel ideas (2026)' },
       { href: '/pricing', label: 'Pricing' },
       { href: '/signup', label: 'Start free' },
@@ -36,21 +37,24 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
   {
     title: 'Free tools',
     links: [
+      { href: '/free-ai-shorts', label: 'Free AI Shorts by niche' },
       { href: '/free-script-generator', label: 'Free script generator' },
       { href: '/free-hook-generator', label: 'Free hook generator' },
+      { href: '/viral-score', label: 'Free viral score' },
     ],
   },
   {
     title: 'Compare',
     links: [
-      // No /alternatives index exists (only a [competitor] dynamic route with
-      // dynamicParams=false), so we deep-link the highest-intent comparison.
+      { href: '/alternatives', label: 'All comparisons' },
       { href: '/alternatives/opusclip', label: 'Kineo vs OpusClip' },
+      { href: '/alternatives/invideo', label: 'Kineo vs InVideo' },
+      { href: '/alternatives/heygen', label: 'Kineo vs HeyGen' },
     ],
   },
 ]
 
-export default function Footer() {
+export default function Footer({ showStats = true }: { showStats?: boolean }) {
   return (
     <footer
       style={{
@@ -121,9 +125,11 @@ export default function Footer() {
       {/* Legal + contact (preserved) */}
       <div style={{ textAlign: 'center' }}>
         {/* Real live stats — renders nothing when unavailable/low */}
-        <div style={{ marginBottom: 10 }}>
-          <LiveStatsBadge />
-        </div>
+        {showStats && (
+          <div style={{ marginBottom: 10 }}>
+            <LiveStatsBadge />
+          </div>
+        )}
         <div style={{ fontWeight: 600 }}>
           © 2026 Kineo · All rights reserved
         </div>

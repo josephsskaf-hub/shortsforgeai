@@ -4,6 +4,7 @@
 // here (server); the interactive tool is the client child.
 import type { Metadata } from 'next'
 import FreeHookClient from './FreeHookClient'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
@@ -20,5 +21,10 @@ export const metadata: Metadata = {
 }
 
 export default function FreeHookGeneratorPage() {
-  return <FreeHookClient />
+  return (
+    <>
+      <FreeHookClient />
+      <Footer />
+    </>
+  )
 }

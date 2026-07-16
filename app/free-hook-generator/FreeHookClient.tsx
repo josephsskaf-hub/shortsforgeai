@@ -7,7 +7,7 @@ import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import { trackEvent } from '@/lib/analytics'
 
-const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=hook-generator'
+const SIGNUP = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_hook_generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
 const EXAMPLES = ['Billionaire money habits', 'The Bermuda Triangle', 'Why we dream', 'Ancient Rome secrets']
 
@@ -20,8 +20,8 @@ function activationHref(topic: string, hook?: string): string {
   const destination = `/generate?${new URLSearchParams({ prompt, autoanalyze: '1' }).toString()}`
   const signup = new URLSearchParams({
     utm_source: 'seo',
-    utm_medium: 'tool',
-    utm_campaign: 'hook-generator',
+    utm_medium: 'organic',
+    utm_campaign: 'push22_hook_generator',
     redirect: destination,
   })
   return `/signup?${signup.toString()}`
@@ -92,21 +92,21 @@ export default function FreeHookClient() {
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', padding: '10px 0', borderBottom: i < hooks.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                   <div style={{ minWidth: 24, height: 24, borderRadius: 6, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</div>
                   <div style={{ flex: '1 1 280px', fontSize: '1.02rem', lineHeight: 1.45, fontWeight: 600 }}>{h}</div>
-                  <Link href={activationHref(generatedTopic, h)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'hook', hook_index: i + 1, autoanalyze: true }) }} style={{ color: '#2997ff', fontWeight: 900, fontSize: '0.82rem', textDecoration: 'none', whiteSpace: 'nowrap', padding: '3px 0' }}>Create this Short →</Link>
+                  <Link href={activationHref(generatedTopic, h)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'hook', hook_index: i + 1, autoanalyze: true }); void trackEvent('organic_cta_clicked', { source: 'push22_hook_generator', placement: 'hook_result' }) }} style={{ color: '#2997ff', fontWeight: 900, fontSize: '0.82rem', textDecoration: 'none', whiteSpace: 'nowrap', padding: '3px 0' }}>Create this Short →</Link>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>Pick a hook above to create the full Short 🎬</div>
               <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>Your chosen hook and topic come with you after signup. AI writes the rest, then adds voiceover, footage and captions.</p>
-              <Link href={activationHref(generatedTopic)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'topic', autoanalyze: true }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create a Short from this topic →</Link>
+              <Link href={activationHref(generatedTopic)} onClick={() => { void trackEvent('free_hook_to_signup_clicked', { destination: 'generate', variant: 'topic', autoanalyze: true }); void trackEvent('organic_cta_clicked', { source: 'push22_hook_generator', placement: 'result' }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create a Short from this topic →</Link>
             </div>
           </section>
         )}
 
         <section style={{ marginTop: 30, color: '#86868b', fontSize: '0.92rem', lineHeight: 1.65 }}>
           <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>Why the hook decides everything</h2>
-          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in ~60s →</Link></p>
+          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} onClick={() => { void trackEvent('organic_cta_clicked', { source: 'push22_hook_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in ~60s →</Link></p>
         </section>
       </div>
       <StickyFreeShortCTA />

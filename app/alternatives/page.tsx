@@ -10,6 +10,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 import { COMPETITORS, COMPETITOR_SLUGS } from './[competitor]/page'
 
 export const dynamic = 'force-static'
@@ -17,7 +19,7 @@ export const dynamic = 'force-static'
 export const metadata: Metadata = {
   title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
   description:
-    'See how Kineo compares to every major AI video tool — OpusClip, InVideo, HeyGen, Synthesia, CapCut, Runway, Luma and more. Kineo turns one idea into a finished faceless YouTube Short in about 60 seconds, starting at $9.90/mo, first Short free.',
+    'Compare Kineo with OpusClip, InVideo, HeyGen, Synthesia, CapCut, Runway and more. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.',
   alternates: { canonical: 'https://www.usekineo.com/alternatives' },
   openGraph: {
     title: 'Kineo Alternatives — Compare Kineo to Other AI Video Tools',
@@ -31,6 +33,7 @@ export const metadata: Metadata = {
 const CARD = { background: '#161618', border: '1px solid #2a2a2d' }
 
 export default function AlternativesIndexPage() {
+  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_alternatives_hub'
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 18px 64px' }}>
@@ -49,14 +52,16 @@ export default function AlternativesIndexPage() {
           <p style={{ fontSize: '1.02rem', color: '#86868b', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 660 }}>
             Kineo turns a single topic or idea into a finished, faceless YouTube Short — script, AI voiceover, matched footage and captions — in about 60 seconds. It’s not a re-clipper. Pick a tool below to see an honest, feature-by-feature comparison, including when the other tool is actually the better fit.
           </p>
-          <Link
-            href="/start"
+          <OrganicCtaLink
+            href={signupUrl}
+            source="push22_alternatives_hub"
+            placement="hero"
             style={{ display: 'inline-block', marginTop: 22, background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Try Kineo free →
-          </Link>
+          </OrganicCtaLink>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
-            First Short free · no credit card · from <b style={{ color: '#2997ff' }}>$9.90/mo</b>
+            Up to 3 watermarked Fast videos / 24h · no card · Starter <b style={{ color: '#2997ff' }}>$4.90 first month</b>
           </p>
         </section>
 
@@ -94,17 +99,20 @@ export default function AlternativesIndexPage() {
 
         {/* Final CTA */}
         <section style={{ marginTop: 48, textAlign: 'center', ...CARD, borderRadius: 18, padding: '28px 20px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make your first faceless Short free</h2>
-          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>One idea in, a ready-to-post Short out. No editing, no credit card.</p>
-          <Link
-            href="/start"
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make a faceless Fast video free</h2>
+          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>One idea in, a ready-to-post watermarked video out. No editing, no card.</p>
+          <OrganicCtaLink
+            href={signupUrl}
+            source="push22_alternatives_hub"
+            placement="final"
             style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}
           >
             Start free →
-          </Link>
+          </OrganicCtaLink>
         </section>
       </div>
       <StickyFreeShortCTA />
+      <Footer />
     </main>
   )
 }

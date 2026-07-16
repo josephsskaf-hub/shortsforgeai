@@ -3,6 +3,7 @@
 // wrapping the interactive client.
 import type { Metadata } from 'next'
 import ViralScoreClient from './ViralScoreClient'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Will It Go Viral? — Free Short Idea Score | Kineo',
@@ -26,6 +27,7 @@ export default function ViralScorePage() {
   return (
     <main style={{ minHeight: '100vh', background: 'radial-gradient(1200px 600px at 50% -10%, #141826 0%, #0a0b0f 60%)' }}>
       <ViralScoreClient />
+      <Footer />
     </main>
   )
 }

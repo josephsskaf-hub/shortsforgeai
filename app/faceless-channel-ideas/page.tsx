@@ -6,21 +6,23 @@
 // mystery $5–12, motivation/stoicism $8–12). Static server component; same structure
 // as /ai-shorts-without-filming (badge → h1 → CTA → sections → FAQ JSON-LD → sticky
 // CTA). No email capture exists in this repo's free tools, so the conversion path is
-// the standard direct-signup CTA ("first Short free, no card"). Added to sitemap.
+// the standard direct-signup CTA (up to 3 watermarked Fast videos / 24h, no card). Added to sitemap.
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const metadata: Metadata = {
   title: '50 Faceless YouTube Channel Ideas for 2026 (High RPM) | Kineo',
   description:
-    '50 faceless YouTube channel ideas for 2026, organized by niche with real RPM data — finance, mystery, extreme places, luxury, history and more. No camera, no face, no editing. Start yours today: first Short free, no credit card.',
+    '50 faceless YouTube channel ideas for 2026 across finance, mystery, extreme places, luxury, history and more. Try up to 3 watermarked Fast videos every 24h, no card.',
   alternates: { canonical: 'https://www.usekineo.com/faceless-channel-ideas' },
   openGraph: {
     title: '50 Faceless YouTube Channel Ideas for 2026 (Ranked by Niche & RPM)',
     description:
-      '50 proven faceless channel ideas across the highest-paying 2026 niches — finance, mystery, geography, luxury, history. Each with a concrete angle. First Short free, no card.',
+      '50 concrete faceless channel ideas across finance, mystery, geography, luxury and history. Try Fast free; Starter is $4.90 for the first month.',
     url: 'https://www.usekineo.com/faceless-channel-ideas',
     type: 'website',
   },
@@ -176,6 +178,7 @@ const FAQ: { q: string; a: string }[] = [
 ]
 
 export default function FacelessChannelIdeasPage() {
+  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_faceless_ideas'
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -194,14 +197,14 @@ export default function FacelessChannelIdeasPage() {
           50 Faceless YouTube Channel Ideas for 2026
         </h1>
         <p style={{ fontSize: '1.08rem', color: '#86868b', lineHeight: 1.6, margin: '16px 0 0' }}>
-          Fifty concrete faceless channel ideas, organized into the ten niches with the strongest 2026 data — with real RPM ranges where the research gives numbers. Every one works with no camera, no face on screen and no editing: pick an idea, type it into Kineo, and get a finished 9:16 Short with script, AI voiceover, footage and captions in about 60 seconds. First Short free, no credit card.
+          Fifty concrete faceless channel ideas, organized into ten repeatable niches. Every one works with no camera, no face on screen and no editing: pick an idea, type it into Kineo, and get a finished 9:16 Short with script, AI voiceover, footage and captions in about 60 seconds. New accounts can create up to 3 watermarked Fast videos every 24 hours with no card.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Start your channel free →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_faceless_ideas" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Start with a Fast video →</OrganicCtaLink>
           <Link href="/ai-shorts-without-filming" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>How faceless Shorts work</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
-          🎁 First Short free · No credit card · No camera, ever
+          Up to 3 watermarked Fast videos / 24h · No card · No camera
         </p>
 
         {CATEGORIES.map((cat) => (
@@ -252,10 +255,11 @@ export default function FacelessChannelIdeasPage() {
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
           <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Pick an idea. Your first Short is free.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>One idea in, a ready-to-post faceless Short out in ~60 seconds. No camera, no card.</p>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my first Short →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_faceless_ideas" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
         </div>
       </div>
       <StickyFreeShortCTA />
+      <Footer />
     </main>
   )
 }

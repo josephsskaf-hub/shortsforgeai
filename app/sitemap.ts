@@ -7,9 +7,11 @@ import { PT_SLUGS } from './pt/[slug]/page'
 // The site had none, so search engines were barely crawling it — free organic
 // traffic left on the table. Canonical domain = the live www host.
 const BASE = 'https://www.usekineo.com'
+// Advance this only when the public acquisition cluster materially changes.
+// Using the request time for every URL makes lastModified meaningless.
+const LAST_MODIFIED = new Date('2026-07-16T00:00:00.000Z')
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date()
   const routes: { path: string; priority: number; freq: 'daily' | 'weekly' | 'monthly' }[] = [
     { path: '', priority: 1.0, freq: 'daily' },
     { path: '/pricing', priority: 0.9, freq: 'weekly' },
@@ -23,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
     { path: '/ai-shorts-without-filming', priority: 0.8, freq: 'weekly' },
     { path: '/faceless-channel-ideas', priority: 0.8, freq: 'weekly' },
+    { path: '/free-ai-shorts', priority: 0.8, freq: 'weekly' },
     { path: '/alternatives', priority: 0.8, freq: 'weekly' },
     // AEO/GEO — citable fact sheet for AI answer engines (linked in public/llms.txt).
     { path: '/facts', priority: 0.7, freq: 'weekly' },
@@ -31,28 +34,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ]
   const staticEntries = routes.map((r) => ({
     url: `${BASE}${r.path}`,
-    lastModified: now,
+    lastModified: LAST_MODIFIED,
     changeFrequency: r.freq,
     priority: r.priority,
   }))
   // #478 — programmatic SEO niche landing pages (/free-ai-shorts/[niche]).
   const nicheEntries = NICHE_SLUGS.map((slug) => ({
     url: `${BASE}/free-ai-shorts/${slug}`,
-    lastModified: now,
+    lastModified: LAST_MODIFIED,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
   // #482 — comparison / "X alternative" SEO pages (/alternatives/[competitor]).
   const altEntries = COMPETITOR_SLUGS.map((slug) => ({
     url: `${BASE}/alternatives/${slug}`,
-    lastModified: now,
+    lastModified: LAST_MODIFIED,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
   // #487 — Portuguese SEO pages (/pt/[slug]).
   const ptEntries = PT_SLUGS.map((slug) => ({
     url: `${BASE}/pt/${slug}`,
-    lastModified: now,
+    lastModified: LAST_MODIFIED,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))

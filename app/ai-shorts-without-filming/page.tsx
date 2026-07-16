@@ -9,16 +9,18 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const metadata: Metadata = {
   title: 'Make YouTube Shorts Without Filming — Faceless AI Shorts, No Camera | Kineo',
   description:
-    'Make faceless YouTube Shorts without filming anything. Type one idea and get a finished 9:16 Short — script, AI voiceover, footage and captions — in about 60 seconds. No camera, no face, no recording. First Short free, no credit card.',
+    'Make faceless YouTube Shorts without filming. Type one idea and get script, AI voiceover, footage and captions. Try up to 3 watermarked Fast videos every 24h, no card.',
   alternates: { canonical: 'https://www.usekineo.com/ai-shorts-without-filming' },
   openGraph: {
     title: 'Make YouTube Shorts without filming — faceless AI, no camera',
     description:
-      'Turn one idea into a finished faceless Short: script, AI voiceover, footage and captions. No camera, no face, no recording. First Short free, no card.',
+      'Turn one idea into a finished faceless Short: script, AI voiceover, footage and captions. No camera. Try Fast free; Starter is $4.90 for the first month.',
     url: 'https://www.usekineo.com/ai-shorts-without-filming',
     type: 'website',
   },
@@ -47,6 +49,7 @@ const FAQ: { q: string; a: string }[] = [
 ]
 
 export default function AiShortsWithoutFilmingPage() {
+  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_no_filming'
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -68,11 +71,11 @@ export default function AiShortsWithoutFilmingPage() {
           Kineo turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. A ready-to-post 9:16 video in about 60 seconds. Your first Short is free with no credit card.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make your first Short free →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_no_filming" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>
           <Link href="/pricing" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>See pricing</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
-          🎁 First Short free · No credit card · No camera, ever
+          Up to 3 watermarked Fast videos / 24h · No card · No camera
         </p>
 
         <h2 style={h2}>Make a faceless Short without filming in 3 steps</h2>
@@ -124,10 +127,11 @@ export default function AiShortsWithoutFilmingPage() {
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
           <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Make a Short without filming — the first one’s free.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>One idea in, a ready-to-post Short out. No camera, no card.</p>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my first Short →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_no_filming" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
         </div>
       </div>
       <StickyFreeShortCTA />
+      <Footer />
     </main>
   )
 }

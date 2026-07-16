@@ -8,7 +8,7 @@ import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import { trackEvent } from '@/lib/analytics'
 
-const SIGNUP = '/signup?utm_source=seo&utm_medium=tool&utm_campaign=script-generator'
+const SIGNUP = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_script_generator'
 const CARD = { background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,0.08)' }
 
 const EXAMPLES = [
@@ -46,8 +46,8 @@ function activationHref(lines: Line[]): string {
   const destination = `/generate?${new URLSearchParams({ prompt: script, autoanalyze: '1' }).toString()}`
   const signup = new URLSearchParams({
     utm_source: 'seo',
-    utm_medium: 'tool',
-    utm_campaign: 'script-generator',
+    utm_medium: 'organic',
+    utm_campaign: 'push22_script_generator',
     redirect: destination,
   })
   return `/signup?${signup.toString()}`
@@ -163,7 +163,7 @@ export default function FreeScriptClient() {
             <div style={{ marginTop: 18, padding: '16px', borderRadius: 12, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.25)', textAlign: 'center' }}>
               <div style={{ fontWeight: 800, marginBottom: 4 }}>Now turn this into a finished video 🎬</div>
               <p style={{ color: '#86868b', fontSize: '0.88rem', margin: '0 0 12px' }}>AI adds the voiceover, footage and captions — a ready-to-post 9:16 Short in ~60s. Your script comes with you after signup.</p>
-              <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', autoanalyze: true }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create this Short from my script →</Link>
+              <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', autoanalyze: true }); void trackEvent('organic_cta_clicked', { source: 'push22_script_generator', placement: 'result' }) }} style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '12px 26px', borderRadius: 10, textDecoration: 'none' }}>Create this Short from my script →</Link>
             </div>
           </section>
         )}
@@ -176,7 +176,7 @@ export default function FreeScriptClient() {
         </p>
           <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>From script to finished Short</h2>
           <p style={{ margin: 0 }}>
-            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', placement: 'explainer', autoanalyze: lines.length > 0 }) }} style={{ color: '#2997ff' }}>Create this Short →</Link>
+            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', placement: 'explainer', autoanalyze: lines.length > 0 }); void trackEvent('organic_cta_clicked', { source: 'push22_script_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>Create this Short →</Link>
           </p>
         </section>
       </div>

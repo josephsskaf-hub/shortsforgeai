@@ -6,6 +6,7 @@ import NavCreditsBadge from '@/components/NavCreditsBadge'
 import HeroGallery from './HeroGallery'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import LiveStatsBadge from '@/components/LiveStatsBadge'
+import Footer from '@/components/Footer'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -145,6 +146,7 @@ const KLP_CSS = `
 
 export default function KineoLanding({ initialUser }: Props) {
   return (
+    <>
     <main className="klp">
       <style dangerouslySetInnerHTML={{ __html: KLP_CSS }} />
 
@@ -338,15 +340,16 @@ export default function KineoLanding({ initialUser }: Props) {
       </section>
 
       {/* Marker: KINEO-TAAFT-BADGE-2026-07-01 (verification embed — homepage only) */}
-      <footer><div className="wrap">
+      <div className="wrap" style={{ paddingTop: 28, paddingBottom: 28, textAlign: 'center', borderTop: '1px solid #2a2a2d' }}>
         <div className="taaft-badge">
           <a href={"https://theresanaiforthat.com/ai/kineo/?ref=featured&v=11418043"} target="_blank" rel="nofollow noreferrer">
             <img width={200} src={"https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"} alt="Featured on There's An AI For That" />
           </a>
         </div>
-        © 2026 Kineo · <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> · <a href="mailto:support@usekineo.com">Contact</a>
-      </div></footer>
+      </div>
       <StickyFreeShortCTA />
     </main>
+    <Footer showStats={false} />
+    </>
   )
 }

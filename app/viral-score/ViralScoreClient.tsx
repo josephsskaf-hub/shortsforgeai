@@ -3,6 +3,7 @@
 // KINEO-PUBLIC-VIRALSCORE-2026-07-08 — free public grader UI. Calls the real
 // engine at /api/public/viral-score and funnels to signup with a strong CTA.
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 type Result = {
   overall: number
@@ -43,6 +44,7 @@ export default function ViralScoreClient() {
     const v = text.trim()
     if (v.length < 4) { setErr('Type a real idea first.'); return }
     setLoading(true); setErr(''); setRes(null)
+    void trackEvent('viral_score_started')
     try {
       const r = await fetch('/api/public/viral-score', {
         method: 'POST',
@@ -51,7 +53,9 @@ export default function ViralScoreClient() {
       })
       const data = await r.json()
       if (!r.ok) { setErr(data?.error || 'Something went wrong — try again.'); return }
-      setRes(data as Result)
+      const result = data as Result
+      setRes(result)
+      void trackEvent('viral_score_completed', { score_band: Math.floor(result.overall / 10) * 10 })
     } catch {
       setErr('Network error — try again.')
     } finally {
@@ -63,7 +67,7 @@ export default function ViralScoreClient() {
     ? [['Hook strength', res.hook], ['Trend fit', res.trend], ['Retention', res.retention], ['Shareability', res.share]]
     : []
   const color = res ? verdictColor(res.overall) : '#2997ff'
-  const ctaHref = `/generate?utm_source=viral_score_tool&prompt=${encodeURIComponent(idea.trim().slice(0, 120))}`
+  const ctaHref = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_viral_score&prompt=${encodeURIComponent(idea.trim().slice(0, 120))}`
 
   return (
     <div className="vs-wrap">
@@ -127,7 +131,7 @@ export default function ViralScoreClient() {
           </div>
           <div className="vs-cta">
             <p>You&apos;ve got the idea. <b>Kineo turns it into a finished, faceless Short in ~60 seconds</b> — AI scenes, voiceover, captions and music, done for you.</p>
-            <a href={ctaHref}>Make this Short free →</a>
+            <a href={ctaHref} onClick={() => { void trackEvent('organic_cta_clicked', { source: 'push22_viral_score', placement: 'result' }) }}>Make a Fast video from this idea →</a>
           </div>
         </div>
       )}

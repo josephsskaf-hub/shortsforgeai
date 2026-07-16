@@ -105,6 +105,11 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   const recurringPaidUsers = s.proUsers + s.basicUsers + (s.starterUsers ?? 0) + (s.unknownPaidUsers ?? 0)
   const steps = data.funnelSteps ?? []
   const leak = data.biggestLeak ?? null
+  const organic = data.organicRecovery ?? {
+    landingSessions: 0, ctaClicks: 0, ctaRate: '—', signups: 0,
+    signupRate: '—', activated: 0, activationRate: '—', paid: 0,
+    topLandingPages: [],
+  }
   const maxCount = steps.length ? Math.max(...steps.map((x) => x.count), 1) : 1
 
   return (
@@ -362,6 +367,69 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           accent={(data.counts.auth_callback_failed ?? 0) > 0 ? '#fbbf24' : '#22d3ee'}
         />
       </Section>
+
+      <Section title={`Organic recovery · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="SEO landing sessions"
+          value={fmt(organic.landingSessions)}
+          hint="high-intent public pages"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Organic CTA clicks"
+          value={fmt(organic.ctaClicks)}
+          hint="measured before signup"
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="Landing → CTA"
+          value={organic.ctaRate}
+          sub={`${organic.ctaClicks} / ${organic.landingSessions}`}
+        />
+        <Card
+          label="Attributed signups"
+          value={fmt(organic.signups)}
+          hint="campaign starts push22_"
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="CTA → Signup"
+          value={organic.signupRate}
+          sub={`${organic.signups} / ${organic.ctaClicks}`}
+        />
+        <RateCard
+          label="Signup → Video"
+          value={organic.activationRate}
+          sub={`${organic.activated} / ${organic.signups}`}
+        />
+        <Card
+          label="Recurring subscribers"
+          value={fmt(organic.paid)}
+          hint="verified active / trialing"
+          accent={organic.paid > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+      </Section>
+
+      {organic.topLandingPages.length > 0 && (
+        <section className="mb-6">
+          <h2 className="font-black tracking-tight mb-3" style={{ fontSize: '0.88rem', color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Organic entry pages
+          </h2>
+          <div className="overflow-x-auto rounded-2xl" style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid var(--border)' }}>
+            <table className="w-full text-xs">
+              <thead><tr style={{ color: 'var(--muted)' }}><th className="px-3 py-2 text-left">Path</th><th className="px-3 py-2 text-right">Sessions</th></tr></thead>
+              <tbody>
+                {organic.topLandingPages.map((page) => (
+                  <tr key={page.path} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td className="px-3 py-2 font-mono" style={{ color: 'var(--text)' }}>{page.path}</td>
+                    <td className="px-3 py-2 text-right font-bold" style={{ color: '#22d3ee' }}>{fmt(page.sessions)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {data.stripePayments && (
         <Section title="💳 Recurring payment funnel · Stripe">

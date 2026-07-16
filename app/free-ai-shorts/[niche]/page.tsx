@@ -6,6 +6,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const dynamic = 'force-static'
 export const dynamicParams = false
@@ -207,7 +209,7 @@ export function generateMetadata({ params }: { params: { niche: string } }): Met
   const n = NICHES[params.niche]
   if (!n) return {}
   const title = `${n.h1} — Kineo`
-  const description = `${n.intro} Your first Short is free, no credit card required.`
+  const description = `${n.intro} Create up to 3 watermarked Fast videos every 24h with no card. Starter is $4.90 for the first month.`
   const url = `https://www.usekineo.com/free-ai-shorts/${params.niche}`
   return {
     metadataBase: new URL('https://www.usekineo.com'),
@@ -225,7 +227,8 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
   const n = NICHES[params.niche]
   if (!n) notFound()
 
-  const signupUrl = `/signup?utm_source=seo&utm_medium=niche&utm_campaign=${params.niche}`
+  const campaign = `push22_niche_${params.niche}`
+  const signupUrl = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}`
   const signupUrlForIdea = (idea: string) => `${signupUrl}&prompt=${encodeURIComponent(idea)}`
 
   return (
@@ -244,14 +247,16 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
             {n.intro}
           </p>
           <p style={{ fontSize: '0.85rem', color: '#86868b', margin: '10px 0 0' }}>
-            Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#2997ff' }}>first one free</b>, no card needed
+            Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#2997ff' }}>up to 3 watermarked Fast videos / 24h</b>, no card
           </p>
-          <Link
+          <OrganicCtaLink
             href={signupUrl}
+            source={campaign}
+            placement="hero"
             style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
           >
-            Generate my free {n.label} Short →
-          </Link>
+            Generate a free {n.label} Fast video →
+          </OrganicCtaLink>
         </section>
 
         {/* How it works */}
@@ -279,24 +284,26 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {n.ideas.map((idea) => (
-              <Link key={idea} href={signupUrlForIdea(idea)} style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <OrganicCtaLink key={idea} href={signupUrlForIdea(idea)} source={campaign} placement="idea" style={{ ...CARD, borderRadius: 12, padding: '14px 16px', textDecoration: 'none', color: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{idea}</span>
                 <span style={{ color: '#2997ff', fontWeight: 900, whiteSpace: 'nowrap' }}>Make it →</span>
-              </Link>
+              </OrganicCtaLink>
             ))}
           </div>
         </section>
 
         {/* Final CTA */}
         <section style={{ marginTop: 48, textAlign: 'center', ...CARD, borderRadius: 18, padding: '28px 20px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make your first {n.label} Short free</h2>
-          <p style={{ color: '#CBD5E1', margin: '8px 0 18px', fontSize: '0.95rem' }}>No script, no voiceover, no editing. No credit card required.</p>
-          <Link
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make a {n.label} Fast video free</h2>
+          <p style={{ color: '#CBD5E1', margin: '8px 0 18px', fontSize: '0.95rem' }}>Up to 3 watermarked Fast videos every 24h. No card. Starter is $4.90 for the first month when you want clean exports.</p>
+          <OrganicCtaLink
             href={signupUrl}
+            source={campaign}
+            placement="final"
             style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
           >
             Start free →
-          </Link>
+          </OrganicCtaLink>
         </section>
 
         <nav style={{ marginTop: 40, textAlign: 'center', fontSize: '0.8rem', color: '#64748B' }}>
@@ -309,6 +316,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           ))}
         </nav>
       </div>
+      <Footer />
     </main>
   )
 }

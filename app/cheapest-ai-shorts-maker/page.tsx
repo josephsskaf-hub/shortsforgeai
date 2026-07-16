@@ -2,23 +2,25 @@
 // ROBO2-SEO-2026-06-28 — high-intent SEO page for the "cheapest AI shorts maker"
 // buyer cluster (cheapest AI YouTube Shorts generator / affordable faceless shorts AI /
 // make AI YouTube Shorts cheap). Honest angle: AI Gen (Seedance) is SFA's cheapest
-// AI engine at 20 credits/video; first Short free, no card; generates from a topic —
+// AI engine at 20 credits/video; Fast tier available without a card; generates from a topic —
 // not a re-clipper. No invented prices: pricing claims link to /pricing.
 // Static page; added to sitemap. FAQ JSON-LD for rich results.
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const metadata: Metadata = {
   title: 'Cheapest AI Shorts Maker — Make YouTube Shorts Cheap, First One Free | Kineo',
   description:
-    'The cheapest AI YouTube Shorts generator that builds a faceless Short from a single idea — script, AI voiceover, footage and captions in about 60 seconds. AI Gen (Seedance) is the lowest-cost AI engine at 20 credits per video. First Short free, no credit card.',
+    'An affordable AI YouTube Shorts generator that builds the whole faceless video from one idea. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.',
   alternates: { canonical: 'https://www.usekineo.com/cheapest-ai-shorts-maker' },
   openGraph: {
     title: 'Cheapest AI Shorts Maker — make AI YouTube Shorts cheap',
     description:
-      'Make affordable faceless Shorts from just an idea: script, voiceover, footage and captions. AI Gen (Seedance) is the cheapest engine at 20 credits/video. First Short free, no card.',
+      'Make affordable faceless Shorts from one idea: script, voiceover, footage and captions. Try Fast free; Starter is $4.90 for the first month.',
     url: 'https://www.usekineo.com/cheapest-ai-shorts-maker',
     type: 'website',
   },
@@ -38,15 +40,16 @@ const WHY_CHEAPER: { t: string; d: string }[] = [
 ]
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'What is the cheapest AI shorts maker?', a: 'Kineo is built only for faceless short-form, so it stays cheaper than general-purpose AI video suites. Its lowest-cost AI engine, AI Gen (Seedance), generates a full Short at 20 credits per video, and your first Short is free with no credit card. See current plans on the pricing page.' },
+  { q: 'What is the cheapest AI shorts maker?', a: 'Kineo is built only for faceless short-form. A new account can create, download and share up to 3 watermarked Fast videos every 24 hours with no card. Starter is $4.90 for the first month, then $9.90/month. See current plans on the pricing page.' },
   { q: 'How do I make AI YouTube Shorts cheap?', a: 'Type a single idea, choose the AI Gen (Seedance) engine — the cheapest AI tier at 20 credits per video — and download a finished 9:16 Short with script, AI voiceover, footage and captions in about 60 seconds. No camera and no editing app to pay for separately.' },
   { q: 'Is there an affordable faceless shorts AI that builds the video from just a topic?', a: 'Yes. Kineo generates the entire video from one topic — it writes the script, records the AI voiceover, matches footage to each line and adds captions. It’s made for faceless creators who start with nothing but an idea, so you never film anything.' },
   { q: 'Why is the cheapest AI YouTube Shorts generator not just a clip cutter?', a: 'Clip cutters like OpusClip or Submagic re-clip a long video you already filmed — useless if you’re faceless and starting from scratch. Kineo creates the video from an idea, so the low price gets you a finished Short, not chopped-up footage.' },
   { q: 'Do I have to use the most expensive AI engine?', a: 'No. You pick the engine per video. AI Gen (Seedance) is the cheapest AI engine at 20 credits per video and is the default for most creators; premium engines cost more credits and are optional.' },
-  { q: 'Can I really make a Short for free first?', a: 'Yes. Your first Short is free and requires no credit card, so you can see the quality and the workflow before choosing a paid plan on the pricing page.' },
+  { q: 'Can I really make a Short for free first?', a: 'Yes. A new account can create, download and share up to 3 watermarked Fast videos every 24 hours without a credit card. Paid plans unlock clean exports and premium AI engines.' },
 ]
 
 export default function CheapestAiShortsMakerPage() {
+  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_cheapest'
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -65,14 +68,14 @@ export default function CheapestAiShortsMakerPage() {
           The Cheapest AI Shorts Maker That Builds the Whole Video
         </h1>
         <p style={{ fontSize: '1.08rem', color: '#86868b', lineHeight: 1.6, margin: '16px 0 0' }}>
-          Kineo is an affordable, faceless AI YouTube Shorts generator that turns a single idea into a finished Short — the hook and script, an AI voiceover, footage matched to every line, and captions. Its cheapest AI engine, AI Gen (Seedance), runs at 20 credits per video, and your first Short is free with no credit card. A ready-to-post 9:16 video in about 60 seconds. No camera, no editing, no timeline.
+          Kineo is an affordable, faceless AI YouTube Shorts generator that turns a single idea into a finished Short — the hook and script, an AI voiceover, footage matched to every line, and captions. Try up to 3 watermarked Fast videos every 24 hours with no card. Starter is $4.90 for the first month, then $9.90/month. No camera, no editing, no timeline.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make your first Short free →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_cheapest" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>
           <Link href="/pricing" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>See pricing</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
-          🎁 First Short free · No credit card · AI Gen engine from 20 credits/video
+          Up to 3 watermarked Fast videos / 24h · Starter $4.90 first month
         </p>
 
         <h2 style={h2}>Make AI YouTube Shorts cheap in 3 steps</h2>
@@ -124,10 +127,11 @@ export default function CheapestAiShortsMakerPage() {
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
           <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Make an AI Short for cheap — the first one’s free.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>One idea in, a ready-to-post Short out. No credit card.</p>
-          <Link href="/start" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my first Short →</Link>
+          <OrganicCtaLink href={signupUrl} source="push22_cheapest" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
         </div>
       </div>
       <StickyFreeShortCTA />
+      <Footer />
     </main>
   )
 }

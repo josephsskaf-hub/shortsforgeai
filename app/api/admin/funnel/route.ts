@@ -117,6 +117,17 @@ export interface FunnelData {
     activationRate: string
     signupToPaid: string
   }>
+  organicRecovery: {
+    landingSessions: number
+    ctaClicks: number
+    ctaRate: string
+    signups: number
+    signupRate: string
+    activated: number
+    activationRate: string
+    paid: number
+    topLandingPages: Array<{ path: string; sessions: number }>
+  }
   topicPerformance: Array<{ topic: string; videos: number; users: number }>
   renderHealth: Array<{ engine: string; total: number; completed: number; failed: number; completionRate: string }>
   trackingHealth: { eventsTableMissing: boolean; note: string; lastVideoAt: string | null; lastClickAt: string | null; lastAbandonedAt: string | null }
@@ -145,10 +156,34 @@ function maxIso(rows: Array<string | null | undefined>): string | null {
   return bestIso
 }
 
+const ORGANIC_EXACT_PATHS = new Set([
+  '/youtube-shorts-from-topic',
+  '/cheapest-ai-shorts-maker',
+  '/ai-shorts-without-filming',
+  '/faceless-channel-ideas',
+  '/free-ai-shorts',
+  '/alternatives',
+  '/free-script-generator',
+  '/free-hook-generator',
+  '/viral-score',
+  '/ai-avatar',
+  '/facts',
+  '/pt',
+])
+
+function isOrganicLandingPath(path: string | null | undefined): path is string {
+  if (!path) return false
+  return ORGANIC_EXACT_PATHS.has(path) ||
+    path.startsWith('/free-ai-shorts/') ||
+    path.startsWith('/alternatives/') ||
+    path.startsWith('/pt/')
+}
+
 type ProfileRow = {
   id: string; email: string | null; created_at: string | null; is_pro: boolean | null
   plan: string | null; stripe_subscription_id: string | null; stripe_customer_id: string | null
   video_credits: number | null; utm_source: string | null; signup_utm_source: string | null
+  signup_utm_medium: string | null; signup_utm_campaign: string | null
   signup_referrer: string | null; signup_country: string | null
 }
 type VideoRow = { user_id: string | null; status: string | null; quality_mode: string | null; topic: string | null; niche: string | null; created_at: string | null }
@@ -158,6 +193,7 @@ type EventRow = {
   created_at: string | null
   session_id: string | null
   metadata: Record<string, unknown> | null
+  path?: string | null
 }
 
 type PaidTier = 'starter' | 'basic' | 'pro' | 'unknown'
@@ -224,7 +260,7 @@ export async function GET(req: Request) {
     try {
       const { data: profs } = await admin
         .from('profiles')
-        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,stripe_customer_id,video_credits,utm_source,signup_utm_source,signup_referrer,signup_country')
+        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,stripe_customer_id,video_credits,utm_source,signup_utm_source,signup_utm_medium,signup_utm_campaign,signup_referrer,signup_country')
         .limit(5000)
       if (Array.isArray(profs)) {
         allProfiles = profs as ProfileRow[]
@@ -305,6 +341,7 @@ export async function GET(req: Request) {
     // used to join checkout/payment activity back to cohort users.
     const trackedEventNames = [
       'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
+      'landing_session_started', 'organic_cta_clicked',
       'auth_callback_completed', 'auth_callback_failed', 'email_signup_completed',
       'generate_arrived_server', 'generate_activation_auth_missing',
       'generate_started', 'video_generation_started',
@@ -322,6 +359,7 @@ export async function GET(req: Request) {
     ]
     let eventsAvailable = false
     let eventRows: EventRow[] = []
+    let organicEventRows: EventRow[] = []
     const eventCounts = new Map<string, number>()
     try {
       const probe = await admin.from('events').select('id', { head: true, count: 'exact' }).limit(1)
@@ -351,6 +389,20 @@ export async function GET(req: Request) {
         const identities = await identityQuery
         if (!identities.error && Array.isArray(identities.data)) {
           eventRows = (identities.data as unknown as EventRow[])
+            .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
+        }
+
+        let organicQuery = admin
+          .from('events')
+          .select('name,user_id,created_at,session_id,metadata,path')
+          .in('name', ['landing_session_started', 'organic_cta_clicked'])
+          .order('created_at', { ascending: false })
+          .limit(5000)
+        if (periodIso) organicQuery = organicQuery.gte('created_at', periodIso)
+        if (externalEventFilter) organicQuery = organicQuery.or(externalEventFilter)
+        const organicEvents = await organicQuery
+        if (!organicEvents.error && Array.isArray(organicEvents.data)) {
+          organicEventRows = (organicEvents.data as unknown as EventRow[])
             .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
         }
       }
@@ -613,6 +665,35 @@ export async function GET(req: Request) {
       .map((s) => ({ ...s, activationRate: pct(s.activated, s.signups), signupToPaid: pct(s.paid, s.signups) }))
       .sort((a, b) => b.signups - a.signups)
 
+    const organicLandingRows = organicEventRows.filter((event) =>
+      event.name === 'landing_session_started' && isOrganicLandingPath(event.path)
+    )
+    const organicCtaRows = organicEventRows.filter((event) => event.name === 'organic_cta_clicked')
+    const organicPageMap = new Map<string, number>()
+    for (const event of organicLandingRows) {
+      const path = event.path as string
+      organicPageMap.set(path, (organicPageMap.get(path) ?? 0) + 1)
+    }
+    const push22Cohort = cohort.filter((profile) =>
+      (profile.signup_utm_campaign ?? '').toLowerCase().startsWith('push22_')
+    )
+    const push22Activated = push22Cohort.filter((profile) => (videoCountByUser.get(profile.id) ?? 0) >= 1).length
+    const push22Paid = push22Cohort.filter((profile) => paidUserSet.has(profile.id)).length
+    const organicRecovery = {
+      landingSessions: organicLandingRows.length,
+      ctaClicks: organicCtaRows.length,
+      ctaRate: pct(organicCtaRows.length, organicLandingRows.length),
+      signups: push22Cohort.length,
+      signupRate: pct(push22Cohort.length, organicCtaRows.length),
+      activated: push22Activated,
+      activationRate: pct(push22Activated, push22Cohort.length),
+      paid: push22Paid,
+      topLandingPages: Array.from(organicPageMap.entries())
+        .map(([path, sessions]) => ({ path, sessions }))
+        .sort((a, b) => b.sessions - a.sessions)
+        .slice(0, 10),
+    }
+
     const topicMap = new Map<string, { topic: string; videos: number; users: Set<string> }>()
     for (const v of allVideos) {
       if (!v.user_id || !cohortIds.has(v.user_id)) continue
@@ -683,7 +764,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })

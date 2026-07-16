@@ -8,6 +8,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
+import Footer from '@/components/Footer'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const dynamic = 'force-static'
 export const dynamicParams = false
@@ -742,7 +744,7 @@ export function generateMetadata({ params }: { params: { competitor: string } })
   const c = COMPETITORS[params.competitor]
   if (!c) return {}
   const title = `${c.name} Alternative for Faceless Creators — Kineo`
-  const description = `Looking for a ${c.name} alternative? Kineo turns one idea into a finished faceless YouTube Short — script, voiceover, footage & captions — in ~60s. From $9.90/mo, first Short free.`
+  const description = `Looking for a ${c.name} alternative? Kineo turns one idea into a finished faceless YouTube Short. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.`
   const url = `https://www.usekineo.com/alternatives/${params.competitor}`
   return {
     metadataBase: new URL('https://www.usekineo.com'),
@@ -756,17 +758,31 @@ export function generateMetadata({ params }: { params: { competitor: string } })
 
 const CARD = { background: '#161618', border: '1px solid #2a2a2d' }
 
+function currentKineoOffer(value: string): string {
+  return value
+    .replaceAll('starts lower at $9.90/mo', 'starts with Starter at $4.90 for the first month')
+    .replaceAll('From $9.90/mo', 'Starter $4.90 first month')
+    .replaceAll('from $9.90/mo', 'with Starter at $4.90 for the first month')
+    .replaceAll('for $9.90/mo', 'with Starter at $4.90 for the first month')
+    .replaceAll('from $9.90/month', 'with Starter at $4.90 for the first month')
+    .replaceAll('for $9.90/month', 'with Starter at $4.90 for the first month')
+    .replaceAll('first Short free', 'up to 3 watermarked Fast videos every 24h, no card')
+    .replaceAll('first one is free', 'up to 3 watermarked Fast videos every 24h are free')
+    .replaceAll('first one free', 'up to 3 watermarked Fast videos every 24h, no card')
+}
+
 function Cell({ v }: { v: boolean | string }) {
   if (v === true) return <span style={{ color: '#2997ff', fontWeight: 900 }}>✓</span>
   if (v === false) return <span style={{ color: '#6e6e73', fontWeight: 900 }}>—</span>
-  return <span style={{ fontSize: '0.82rem', color: '#86868b' }}>{v}</span>
+  return <span style={{ fontSize: '0.82rem', color: '#86868b' }}>{currentKineoOffer(v)}</span>
 }
 
 export default function AlternativePage({ params }: { params: { competitor: string } }) {
   const c = COMPETITORS[params.competitor]
   if (!c) notFound()
 
-  const signupUrl = `/signup?utm_source=seo&utm_medium=alternative&utm_campaign=${params.competitor}`
+  const campaign = `push22_alternative_${params.competitor}`
+  const signupUrl = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}`
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -774,7 +790,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
     mainEntity: c.faq.map((f) => ({
       '@type': 'Question',
       name: f.q,
-      acceptedAnswer: { '@type': 'Answer', text: f.a },
+      acceptedAnswer: { '@type': 'Answer', text: currentKineoOffer(f.a) },
     })),
   }
 
@@ -795,16 +811,18 @@ export default function AlternativePage({ params }: { params: { competitor: stri
             {c.h1}
           </h1>
           <p style={{ fontSize: '1.02rem', color: '#86868b', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 660 }}>
-            {c.intro}
+            {currentKineoOffer(c.intro)}
           </p>
-          <Link
+          <OrganicCtaLink
             href={signupUrl}
+            source={campaign}
+            placement="hero"
             style={{ display: 'inline-block', marginTop: 22, background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}
           >
             Try Kineo free →
-          </Link>
+          </OrganicCtaLink>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
-            First Short free · no credit card · from <b style={{ color: '#2997ff' }}>$9.90/mo</b>
+            Up to 3 watermarked Fast videos / 24h · no card · Starter <b style={{ color: '#2997ff' }}>$4.90 first month</b>
           </p>
         </section>
 
@@ -841,7 +859,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
         {/* Honest "pick them" */}
         <section style={{ marginTop: 40, ...CARD, borderRadius: 16, padding: '20px 22px' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 900, margin: '0 0 8px' }}>Which one should you pick?</h2>
-          <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.95rem' }}>{c.pickThem}</p>
+          <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.95rem' }}>{currentKineoOffer(c.pickThem)}</p>
         </section>
 
         {/* How it works */}
@@ -869,7 +887,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
             {c.faq.map((f) => (
               <div key={f.q} style={{ ...CARD, borderRadius: 12, padding: '16px 18px' }}>
                 <div style={{ fontWeight: 800, marginBottom: 6, fontSize: '0.95rem' }}>{f.q}</div>
-                <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.9rem' }}>{f.a}</p>
+                <p style={{ margin: 0, color: '#86868b', lineHeight: 1.6, fontSize: '0.9rem' }}>{currentKineoOffer(f.a)}</p>
               </div>
             ))}
           </div>
@@ -877,14 +895,16 @@ export default function AlternativePage({ params }: { params: { competitor: stri
 
         {/* Final CTA */}
         <section style={{ marginTop: 44, textAlign: 'center', ...CARD, borderRadius: 18, padding: '28px 20px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make your first faceless Short free</h2>
-          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>One idea in, a ready-to-post Short out. No editing, no credit card.</p>
-          <Link
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make a faceless Fast video free</h2>
+          <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>One idea in, a ready-to-post watermarked video out. No editing, no card.</p>
+          <OrganicCtaLink
             href={signupUrl}
+            source={campaign}
+            placement="final"
             style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}
           >
             Start free →
-          </Link>
+          </OrganicCtaLink>
         </section>
 
         {/* Cross-links */}
@@ -899,6 +919,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
         </nav>
       </div>
       <StickyFreeShortCTA href={signupUrl} />
+      <Footer />
     </main>
   )
 }

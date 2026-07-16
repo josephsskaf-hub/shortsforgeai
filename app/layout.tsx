@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 // page increases relevance score → better Ad Rank → higher CTR.
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
-  title: 'Kineo — AI YouTube Shorts Generator · From $9.90/mo',
+  title: 'Kineo AI YouTube Shorts Generator · $4.90 First Month',
   description:
     'Launch a repeatable AI Shorts show with the same face, voice and style. Create, watch, download and share up to 3 watermarked Fast videos every 24h, no card. Paid plans unlock clean MP4s.',
   keywords: [

@@ -2,6 +2,7 @@
 // Server component so we get SEO metadata + OG tags; renders the client landing.
 import type { Metadata } from 'next'
 import AvatarLandingClient from '@/components/AvatarLandingClient'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'AI Avatar Video — your face, speaking any script | Kineo',
@@ -23,5 +24,10 @@ export const metadata: Metadata = {
 }
 
 export default function AiAvatarPage() {
-  return <AvatarLandingClient />
+  return (
+    <>
+      <AvatarLandingClient />
+      <Footer />
+    </>
+  )
 }
