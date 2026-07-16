@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolveAuthRedirect } from '@/lib/authRedirect'
+import { writeServerEvent } from '@/lib/serverEvents'
 
 // Activation-first: new users go straight to /generate to make their first
-// free Short (3 free credits) — product value BEFORE the paywall. The Google
+// free Short (up to 3 watermarked Fast previews / 24h) — product value BEFORE
+// the paywall. The Google
 // Ads registration conversion still fires via ?signup=1 (handled in
 // GenerateClient). Returning users go to /generate (or an explicit `next`).
 export async function GET(request: Request) {
@@ -45,10 +47,35 @@ export async function GET(request: Request) {
         destination.searchParams.set('signup', '1')
         destinationPath = `${destination.pathname}${destination.search}`
       }
+      // PUSH #21 — client events can disappear when a user closes the tab
+      // during the OAuth return. Persist the completed callback before the
+      // redirect so signup -> destination is now an authoritative server fact.
+      await writeServerEvent({
+        name: 'auth_callback_completed',
+        userId: data.user?.id ?? null,
+        path: '/auth/callback',
+        metadata: {
+          is_new_user: isNewUser,
+          is_checkout_destination: isCheckoutNext,
+          destination_path: new URL(destinationPath, origin).pathname.slice(0, 128),
+          has_prompt: new URL(destinationPath, origin).searchParams.has('prompt'),
+          provider: typeof data.user?.app_metadata?.provider === 'string'
+            ? data.user.app_metadata.provider.slice(0, 32)
+            : 'unknown',
+        },
+      })
       const dest = `${origin}${destinationPath}`
       return NextResponse.redirect(dest)
     }
   }
+
+  // Store no OAuth code or error detail. This only proves that the callback
+  // failed to establish a session, which is enough to diagnose the broken hop.
+  await writeServerEvent({
+    name: 'auth_callback_failed',
+    path: '/auth/callback',
+    metadata: { had_code: Boolean(code) },
+  })
 
   return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
 }

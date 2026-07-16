@@ -21,6 +21,11 @@ const SERVER_ONLY_EVENTS = new Set([
   'checkout_auth_required',
   'checkout_started',
   'checkout_failed',
+  'auth_callback_completed',
+  'auth_callback_failed',
+  'email_signup_completed',
+  'generate_arrived_server',
+  'generate_activation_auth_missing',
 ])
 
 export async function POST(req: NextRequest) {

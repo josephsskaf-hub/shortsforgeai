@@ -181,6 +181,20 @@ export default function SignupPage() {
     trackSignupSource()
     trackCheckoutAuthStep('completed', 'signup_page', nextDestination, 'email')
 
+    // PUSH #21 — prove the direct email-auth hop on the server before leaving
+    // the page. OAuth/email-confirmation callbacks have their own authoritative
+    // event; this covers the auto-confirm + password sign-in path.
+    try {
+      await fetch('/api/auth/activation-completed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: nextDestination }),
+        keepalive: true,
+      })
+    } catch {
+      // Funnel proof must never block a successful signup.
+    }
+
     // Activation-first onboarding: resume the homepage prompt in /generate.
     // A validated explicit redirect still takes priority for pending checkout.
     window.location.assign(nextDestination)

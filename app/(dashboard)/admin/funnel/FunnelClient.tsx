@@ -330,6 +330,39 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         <RateCard label="Creator → Studio" value={r.basicToPro}   sub={`${s.proUsers} / ${s.proUsers + s.basicUsers}`} />
       </Section>
 
+      <Section title={`Activation proof · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="OAuth callbacks completed"
+          value={fmt(data.counts.auth_callback_completed ?? 0)}
+          hint="authoritative server event"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Email signups completed"
+          value={fmt(data.counts.email_signup_completed ?? 0)}
+          hint="authenticated before redirect"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Arrived at generator"
+          value={fmt(data.counts.generate_arrived_server ?? 0)}
+          hint="authenticated server arrival"
+          accent="#a78bfa"
+        />
+        <Card
+          label="Activation session missing"
+          value={fmt(data.counts.generate_activation_auth_missing ?? 0)}
+          hint="must stay at zero"
+          accent={(data.counts.generate_activation_auth_missing ?? 0) > 0 ? '#f87171' : '#22d3ee'}
+        />
+        <Card
+          label="OAuth callbacks failed"
+          value={fmt(data.counts.auth_callback_failed ?? 0)}
+          hint="no credentials stored"
+          accent={(data.counts.auth_callback_failed ?? 0) > 0 ? '#fbbf24' : '#22d3ee'}
+        />
+      </Section>
+
       {data.stripePayments && (
         <Section title="💳 Recurring payment funnel · Stripe">
           <Card label="Checkout initiated" value={fmt(data.stripePayments.checkoutCreated)}   hint="external subscription sessions" accent="#a78bfa" />

@@ -4015,7 +4015,11 @@ export default function GenerateClient() {
               {showRender && 'Rendering your vertical 9:16 Short.'}
             </p>
           </div>
-          <CreditsChip credits={credits} loading={creditsLoading} />
+          <CreditsChip
+            credits={credits}
+            loading={creditsLoading}
+            freeFastPreview={mode === 'fast' && !isPaidAccount}
+          />
         </div>
       </div>
 
@@ -4652,7 +4656,11 @@ export default function GenerateClient() {
                   ? `🤖 ${selectedCost} credits • AI Generated • ~3-5 min render.`
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
-              {credits !== null && (
+              {mode === 'fast' && !isPaidAccount ? (
+                <p className="text-xs mt-1" style={{ color: '#5cb3ff', fontWeight: 700 }}>
+                  Free preview · watermark · ~60s
+                </p>
+              ) : credits !== null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--muted2)', fontWeight: 700 }}>
                   {credits} credit{credits === 1 ? '' : 's'} left · ~60s
                 </p>
@@ -6493,7 +6501,15 @@ function ViralIntelligencePanel({
 // warning (under LOW_CREDITS_THRESHOLD), and healthy balance. We don't
 // render anything for guests (credits === null after a 401) since the
 // page already redirects them to /login when they try to generate.
-function CreditsChip({ credits, loading }: { credits: number | null; loading: boolean }) {
+function CreditsChip({
+  credits,
+  loading,
+  freeFastPreview,
+}: {
+  credits: number | null
+  loading: boolean
+  freeFastPreview: boolean
+}) {
   if (loading) {
     return (
       <div
@@ -6507,6 +6523,36 @@ function CreditsChip({ credits, loading }: { credits: number | null; loading: bo
         }}
       >
         Loading credits…
+      </div>
+    )
+  }
+  if (freeFastPreview) {
+    return (
+      <div style={{ textAlign: 'right' }}>
+        <div
+          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold"
+          style={{
+            background: 'rgba(41,151,255,.10)',
+            border: '1px solid rgba(41,151,255,.35)',
+            color: '#5cb3ff',
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#5cb3ff',
+              boxShadow: '0 0 8px rgba(41,151,255,.5)',
+              display: 'inline-block',
+            }}
+          />
+          Fast previews are free
+        </div>
+        <p className="text-[11px] mt-1.5" style={{ color: 'var(--muted2)', fontWeight: 600 }}>
+          Up to 3 / 24h · watermark · no card
+        </p>
       </div>
     )
   }

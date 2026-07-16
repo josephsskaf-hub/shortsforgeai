@@ -62,6 +62,11 @@ export interface FunnelData {
   counts: {
     homepage_view: number
     generate_page_view: number
+    auth_callback_completed?: number
+    auth_callback_failed?: number
+    email_signup_completed?: number
+    generate_arrived_server?: number
+    generate_activation_auth_missing?: number
     analyze_idea_clicked: number
     video_generation_started: number
     video_generation_completed: number
@@ -300,6 +305,8 @@ export async function GET(req: Request) {
     // used to join checkout/payment activity back to cohort users.
     const trackedEventNames = [
       'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
+      'auth_callback_completed', 'auth_callback_failed', 'email_signup_completed',
+      'generate_arrived_server', 'generate_activation_auth_missing',
       'generate_started', 'video_generation_started',
       'generate_completed', 'video_generation_completed',
       'generate_failed', 'video_generation_failed',
@@ -655,6 +662,11 @@ export async function GET(req: Request) {
       counts: {
         homepage_view: eventCounts.get('homepage_view') ?? 0,
         generate_page_view: eventCounts.get('generate_page_view') ?? 0,
+        auth_callback_completed: eventCounts.get('auth_callback_completed') ?? 0,
+        auth_callback_failed: eventCounts.get('auth_callback_failed') ?? 0,
+        email_signup_completed: eventCounts.get('email_signup_completed') ?? 0,
+        generate_arrived_server: eventCounts.get('generate_arrived_server') ?? 0,
+        generate_activation_auth_missing: eventCounts.get('generate_activation_auth_missing') ?? 0,
         analyze_idea_clicked: eventCounts.get('analyze_idea_clicked') ?? 0,
         // Both aliases are emitted together today; max avoids double-counting
         // while retaining history from either instrumentation generation.
