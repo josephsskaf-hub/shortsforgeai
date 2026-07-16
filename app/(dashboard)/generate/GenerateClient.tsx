@@ -15,6 +15,11 @@ import { trackEvent, trackSignupSource } from '@/lib/analytics'
 import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
+import {
+  buildSeriesContinuationHref,
+  buildSeriesContinuationPrompt,
+  type SeriesContinuationSource,
+} from '@/lib/seriesContinuation'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
 // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — AvatarPaywallModal import removed.
@@ -858,6 +863,7 @@ export default function GenerateClient() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoAnalyzeKeyRef = useRef<string | null>(null)
+  const seriesLandingKeyRef = useRef<string | null>(null)
   // Push #095 — player retry bookkeeping. attempt counts how many retries
   // have fired (0..4); the two timer refs hold the in-flight setTimeout
   // handles so we can cancel them on canplay/cleanup.
@@ -1169,6 +1175,22 @@ export default function GenerateClient() {
     trackEvent('generate_page_view')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // PUSH #24 — measure that a creator reached the generator through a
+  // continuation CTA. The key allows several episodes in the same mounted tab
+  // without double-counting a React re-render.
+  useEffect(() => {
+    if (searchParams?.get('series') !== '1') return
+    const source = searchParams.get('continuation_source') ?? 'unknown'
+    const seriesPrompt = searchParams.get('prompt')?.trim() ?? ''
+    const key = `${source}:${seriesPrompt}`
+    if (!seriesPrompt || seriesLandingKeyRef.current === key) return
+    seriesLandingKeyRef.current = key
+    trackEvent('series_continuation_landed', {
+      source,
+      prompt_length: seriesPrompt.length,
+    })
+  }, [searchParams])
 
   // Preload the referral code before the user's win moment. Web Share and
   // Clipboard require a live click gesture; awaiting a network request inside
@@ -2263,6 +2285,8 @@ export default function GenerateClient() {
             duration,
             quality: falUsedRef.current ? falQualityRef.current : quality,
             resumed: resumedRenderRef.current,
+            series_continuation: searchParams?.get('series') === '1',
+            continuation_source: searchParams?.get('continuation_source') ?? null,
           }
           trackEvent('generate_completed', completionMetadata)
           trackEvent('video_generation_completed', completionMetadata)
@@ -2396,6 +2420,8 @@ export default function GenerateClient() {
       mode,
       duration,
       source: opts?.fromTopic ? 'topic' : 'manual',
+      series_continuation: searchParams?.get('series') === '1',
+      continuation_source: searchParams?.get('continuation_source') ?? null,
     })
     setError(null)
     setAnalysis(null)
@@ -2944,6 +2970,8 @@ export default function GenerateClient() {
       quality: mode === 'fast' || mode === 'creator' ? 'fast' : quality,
       duration,
       retry: phase === 'failed',
+      series_continuation: searchParams?.get('series') === '1',
+      continuation_source: searchParams?.get('continuation_source') ?? null,
     }
     // These legacy dashboard events now mean an actual render dispatch, not an
     // analysis click (which historically double-counted preview confirmation).
@@ -3446,6 +3474,28 @@ export default function GenerateClient() {
     trackEvent('video_share_channel_opened', metadata)
   }
 
+  function handleContinueSeries(
+    seed: string | null | undefined,
+    source: SeriesContinuationSource,
+    videoId?: string | null,
+  ) {
+    const nextPrompt = buildSeriesContinuationPrompt(seed)
+    if (!nextPrompt) {
+      handleReset()
+      router.push('/generate')
+      return
+    }
+    trackEvent('series_continue_clicked', {
+      source,
+      video_id: videoId ?? null,
+    })
+    const href = buildSeriesContinuationHref(seed, source)
+    handleReset()
+    setPrompt(nextPrompt)
+    autoAnalyzeKeyRef.current = null
+    router.push(href)
+  }
+
   // Push #047 — copy any section of the output package to the clipboard,
   // flashing a transient "✓ Copied" state on the matching button. Used by
   // the per-card copy buttons and the top-level "Copy Full Short Package"
@@ -3480,6 +3530,8 @@ export default function GenerateClient() {
     setClipUrls([])
     setRenderId(null)
     setFinalVideoUrl(null)
+    setPublicVideoId(null)
+    setSharedPublic(null)
     setGenerateProgress(0)
     setRenderProgress(0)
     setError(null)
@@ -5524,6 +5576,23 @@ export default function GenerateClient() {
                   </button>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => handleContinueSeries(analysis?.title ?? prompt, 'done_screen', publicVideoId)}
+                  className="flex w-full flex-col items-center justify-center rounded-2xl px-5 py-4 text-center font-black"
+                  style={{
+                    background: 'rgba(255,255,255,.055)',
+                    border: '1px solid rgba(255,255,255,.16)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: '0.95rem' }}>Build the next episode →</span>
+                  <span style={{ marginTop: 4, fontSize: '0.72rem', fontWeight: 650, color: 'var(--muted2)' }}>
+                    Same settings stay selected · new hook, facts and payoff
+                  </span>
+                </button>
+
                 {/* Push #317 — YouTube upload: connect or post directly */}
                 {ytResult ? (
                   // Upload succeeded — show link to the live Short
@@ -6073,6 +6142,11 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
     }
   }
 
+  const latestCompleted = videos.find((video) => video.status === 'completed') ?? null
+  const latestContinuationHref = latestCompleted
+    ? buildSeriesContinuationHref(latestCompleted.title, 'generate_recent_video')
+    : '/generate'
+
   return (
     <section
       className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
@@ -6097,6 +6171,43 @@ function RecentVideosSection({ videos }: { videos: RecentVideo[] | null }) {
           View all →
         </a>
       </div>
+
+      {latestCompleted && (
+        <div
+          className="rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          style={{
+            background: 'linear-gradient(135deg, rgba(41,151,255,.14), rgba(41,151,255,.04))',
+            border: '1px solid rgba(41,151,255,.38)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#5cb3ff' }}>
+              Continue your show
+            </div>
+            <p className="text-xs font-bold" style={{ color: 'var(--text)', margin: 0, lineHeight: 1.45 }}>
+              Turn “{latestCompleted.title}” into a fresh next episode.
+            </p>
+          </div>
+          <a
+            href={latestContinuationHref}
+            onClick={() => {
+              void trackEvent('series_continue_clicked', {
+                source: 'generate_recent_video',
+                video_id: latestCompleted.id,
+              })
+            }}
+            className="rounded-xl px-4 py-2.5 text-xs font-black text-center flex-shrink-0"
+            style={{
+              background: '#2997ff',
+              color: '#fff',
+              textDecoration: 'none',
+              boxShadow: '0 5px 18px rgba(41,151,255,.28)',
+            }}
+          >
+            Build next episode →
+          </a>
+        </div>
+      )}
 
       <div className="rv-grid">
         {videos.map((v) => {

@@ -144,6 +144,21 @@ export interface FunnelData {
     referredPaid: number
     signupToPaidRate: string
   }
+  retentionLoop: {
+    completedCreators: number
+    oneAndDoneCreators: number
+    repeatCreators: number
+    secondVideoRate: string
+    repeatWithin7dCreators: number
+    laterDayReturnCreators: number
+    laterDayReturnRate: string
+    continuationClicks: number
+    continuationLandings: number
+    continuationStarts: number
+    continuationCompletes: number
+    clickToStartRate: string
+    startToCompleteRate: string
+  }
   topicPerformance: Array<{ topic: string; videos: number; users: number }>
   renderHealth: Array<{ engine: string; total: number; completed: number; failed: number; completionRate: string }>
   trackingHealth: { eventsTableMissing: boolean; note: string; lastVideoAt: string | null; lastClickAt: string | null; lastAbandonedAt: string | null }
@@ -361,6 +376,7 @@ export async function GET(req: Request) {
       'landing_session_started', 'organic_cta_clicked',
       'video_share_clicked', 'video_shared', 'video_share_channel_opened',
       'public_video_cta_clicked',
+      'series_continue_clicked', 'series_continuation_landed',
       'auth_callback_completed', 'auth_callback_failed', 'email_signup_completed',
       'generate_arrived_server', 'generate_activation_auth_missing',
       'generate_started', 'video_generation_started',
@@ -379,6 +395,7 @@ export async function GET(req: Request) {
     let eventsAvailable = false
     let eventRows: EventRow[] = []
     let organicEventRows: EventRow[] = []
+    let retentionEventRows: EventRow[] = []
     const eventCounts = new Map<string, number>()
     try {
       const probe = await admin.from('events').select('id', { head: true, count: 'exact' }).limit(1)
@@ -426,6 +443,23 @@ export async function GET(req: Request) {
         const organicEvents = await organicQuery
         if (!organicEvents.error && Array.isArray(organicEvents.data)) {
           organicEventRows = (organicEvents.data as unknown as EventRow[])
+            .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
+        }
+
+        let retentionQuery = admin
+          .from('events')
+          .select('name,user_id,created_at,session_id,metadata,path')
+          .in('name', [
+            'series_continue_clicked', 'series_continuation_landed',
+            'generate_started', 'generate_completed',
+          ])
+          .order('created_at', { ascending: false })
+          .limit(5000)
+        if (periodIso) retentionQuery = retentionQuery.gte('created_at', periodIso)
+        if (externalEventFilter) retentionQuery = retentionQuery.or(externalEventFilter)
+        const retentionEvents = await retentionQuery
+        if (!retentionEvents.error && Array.isArray(retentionEvents.data)) {
+          retentionEventRows = (retentionEvents.data as unknown as EventRow[])
             .filter((row) => !row.user_id || !internalUserIds.has(row.user_id))
         }
       }
@@ -768,6 +802,57 @@ export async function GET(req: Request) {
       signupToPaidRate: pct(referredPaid, referredProfiles.length),
     }
 
+    // PUSH #24 — second-video and later-day retention. The selected period is
+    // applied to completed-video activity so this answers whether creators who
+    // produced value in the window repeated it, independent of signup date.
+    const completedTimesByCreator = new Map<string, number[]>()
+    for (const video of completedPeriodVideos) {
+      if (!video.user_id || !video.created_at) continue
+      const timestamp = new Date(video.created_at).getTime()
+      if (!Number.isFinite(timestamp)) continue
+      const times = completedTimesByCreator.get(video.user_id) ?? []
+      times.push(timestamp)
+      completedTimesByCreator.set(video.user_id, times)
+    }
+    let repeatCreators = 0
+    let repeatWithin7dCreators = 0
+    let laterDayReturnCreators = 0
+    for (const times of completedTimesByCreator.values()) {
+      times.sort((a, b) => a - b)
+      if (times.length < 2) continue
+      repeatCreators++
+      if (times[1] - times[0] <= 7 * 24 * 60 * 60 * 1000) repeatWithin7dCreators++
+      const firstDay = new Date(times[0]).toISOString().slice(0, 10)
+      const returnedLaterDay = times.slice(1).some((timestamp) => {
+        const within7d = timestamp - times[0] <= 7 * 24 * 60 * 60 * 1000
+        return within7d && new Date(timestamp).toISOString().slice(0, 10) !== firstDay
+      })
+      if (returnedLaterDay) laterDayReturnCreators++
+    }
+    const continuationClicks = retentionEventRows.filter((event) => event.name === 'series_continue_clicked').length
+    const continuationLandings = retentionEventRows.filter((event) => event.name === 'series_continuation_landed').length
+    const continuationStarts = retentionEventRows.filter((event) =>
+      event.name === 'generate_started' && event.metadata?.series_continuation === true
+    ).length
+    const continuationCompletes = retentionEventRows.filter((event) =>
+      event.name === 'generate_completed' && event.metadata?.series_continuation === true
+    ).length
+    const retentionLoop = {
+      completedCreators: completedTimesByCreator.size,
+      oneAndDoneCreators: Math.max(0, completedTimesByCreator.size - repeatCreators),
+      repeatCreators,
+      secondVideoRate: pct(repeatCreators, completedTimesByCreator.size),
+      repeatWithin7dCreators,
+      laterDayReturnCreators,
+      laterDayReturnRate: pct(laterDayReturnCreators, completedTimesByCreator.size),
+      continuationClicks,
+      continuationLandings,
+      continuationStarts,
+      continuationCompletes,
+      clickToStartRate: pct(continuationStarts, continuationClicks),
+      startToCompleteRate: pct(continuationCompletes, continuationStarts),
+    }
+
     const topicMap = new Map<string, { topic: string; videos: number; users: Set<string> }>()
     for (const v of allVideos) {
       if (!v.user_id || !cohortIds.has(v.user_id)) continue
@@ -838,7 +923,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, creatorLoop, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })

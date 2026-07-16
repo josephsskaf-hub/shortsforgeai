@@ -117,6 +117,14 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     ctaToSignupRate: '—', qualifiedReferrals: 0, referredPaid: 0,
     signupToPaidRate: '—',
   }
+  const retentionLoop = data.retentionLoop ?? {
+    completedCreators: 0, oneAndDoneCreators: 0, repeatCreators: 0,
+    secondVideoRate: '—', repeatWithin7dCreators: 0,
+    laterDayReturnCreators: 0, laterDayReturnRate: '—',
+    continuationClicks: 0, continuationLandings: 0,
+    continuationStarts: 0, continuationCompletes: 0,
+    clickToStartRate: '—', startToCompleteRate: '—',
+  }
   const maxCount = steps.length ? Math.max(...steps.map((x) => x.count), 1) : 1
 
   return (
@@ -479,6 +487,65 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           label="Referral signup → Paid"
           value={creatorLoop.signupToPaidRate}
           sub={`${creatorLoop.referredPaid} / ${creatorLoop.referredSignups}`}
+        />
+      </Section>
+
+      <Section title={`Retention loop · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Completed creators"
+          value={fmt(retentionLoop.completedCreators)}
+          hint="creators active in period"
+          accent="#22d3ee"
+        />
+        <Card
+          label="One and done"
+          value={fmt(retentionLoop.oneAndDoneCreators)}
+          hint="only one completed video"
+          accent={retentionLoop.oneAndDoneCreators > 0 ? '#fbbf24' : '#22d3ee'}
+        />
+        <Card
+          label="Repeat creators"
+          value={fmt(retentionLoop.repeatCreators)}
+          hint={`${retentionLoop.repeatWithin7dCreators} repeated within 7d`}
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="Creator → Second video"
+          value={retentionLoop.secondVideoRate}
+          sub={`${retentionLoop.repeatCreators} / ${retentionLoop.completedCreators}`}
+        />
+        <Card
+          label="Returned another day"
+          value={fmt(retentionLoop.laterDayReturnCreators)}
+          hint="new UTC day within 7d"
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="7d later-day return"
+          value={retentionLoop.laterDayReturnRate}
+          sub={`${retentionLoop.laterDayReturnCreators} / ${retentionLoop.completedCreators}`}
+        />
+        <Card
+          label="Next-episode clicks"
+          value={fmt(retentionLoop.continuationClicks)}
+          hint={`${retentionLoop.continuationLandings} reached generator`}
+          accent="#a78bfa"
+        />
+        <Card
+          label="Continuation starts"
+          value={fmt(retentionLoop.continuationStarts)}
+          hint={`${retentionLoop.continuationCompletes} completed`}
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="Click → Render"
+          value={retentionLoop.clickToStartRate}
+          sub={`${retentionLoop.continuationStarts} / ${retentionLoop.continuationClicks}`}
+        />
+        <RateCard
+          label="Render → Complete"
+          value={retentionLoop.startToCompleteRate}
+          sub={`${retentionLoop.continuationCompletes} / ${retentionLoop.continuationStarts}`}
         />
       </Section>
 

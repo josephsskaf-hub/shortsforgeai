@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { trackEvent } from '@/lib/analytics'
+import { buildSeriesContinuationHref } from '@/lib/seriesContinuation'
 
 interface Video {
   id: string
@@ -316,12 +317,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // autoanalyze keeps the next step short but still lets the user review before
   // rendering; this never spends credits or starts a render by itself.
   const firstVideoTitle = extractTitle(videos[0]?.topic ?? null)
-  const followUpPrompt = firstVideoTitle === 'Untitled Short'
-    ? ''
-    : `Create a distinct follow-up episode about "${firstVideoTitle}". Use a new hook and new facts. Do not repeat the first Short.`
-  const followUpHref = followUpPrompt
-    ? `/generate?prompt=${encodeURIComponent(followUpPrompt)}&autoanalyze=1`
-    : '/generate'
+  const followUpHref = firstVideoTitle === 'Untitled Short'
+    ? '/generate'
+    : buildSeriesContinuationHref(firstVideoTitle, 'history_milestone')
 
   /* ── Main ── */
   return (
@@ -360,7 +358,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           Free unpaid users can keep testing Fast at a zero-credit balance;
           state the exact server rule (watermarked, 3/24h) instead of implying
           that a credit purchase is required before they can evaluate again. */}
-      {videos.length === 1 && (
+      {videos.length >= 1 && (
         <section
           aria-label="Create your second Short"
           className="rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -375,13 +373,13 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               className="font-black uppercase tracking-[.16em] mb-1.5"
               style={{ fontSize: '0.62rem', color: '#5cb3ff' }}
             >
-              First Short complete
+              {videos.length === 1 ? 'First Short complete' : 'Keep your show moving'}
             </div>
             <h2 className="font-black tracking-tight mb-1.5" style={{ color: 'var(--text)', fontSize: '1.05rem' }}>
-              Turn it into episode 2
+              {videos.length === 1 ? 'Turn it into episode 2' : 'Create the next episode'}
             </h2>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--muted2)', margin: 0, maxWidth: 620 }}>
-              We prepared a fresh follow-up prompt with a new hook and new facts. You can review it before rendering.
+              Continue from your latest Short with a fresh hook, new facts and a new payoff. Review the brief and settings before rendering.
             </p>
             {cleanExportLocked === true && (
               <p className="text-xs leading-relaxed mt-2" style={{ color: '#5cb3ff', marginBottom: 0 }}>
@@ -392,9 +390,10 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
           <Link
             href={followUpHref}
             onClick={() => {
-              void trackEvent('episode_two_clicked', {
-                source: 'history_first_video_milestone',
+              void trackEvent('series_continue_clicked', {
+                source: 'history_milestone',
                 video_id: videos[0]?.id ?? null,
+                completed_video_count: videos.length,
               })
             }}
             className="flex items-center justify-center rounded-xl px-5 py-3 text-sm font-black text-white flex-shrink-0"
@@ -404,7 +403,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               boxShadow: '0 6px 22px rgba(41,151,255,.30)',
             }}
           >
-            Build Episode 2 →
+            Build Next Episode →
           </Link>
         </section>
       )}
@@ -685,6 +684,32 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     {summaryLoading === video.id ? '…' : '📋'}
                   </button>
                 </div>
+
+                <Link
+                  href={buildSeriesContinuationHref(title, 'history_video_card')}
+                  onClick={() => {
+                    void trackEvent('series_continue_clicked', {
+                      source: 'history_video_card',
+                      video_id: video.id,
+                    })
+                  }}
+                  style={{
+                    marginTop: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '6px 8px',
+                    borderRadius: 7,
+                    background: 'rgba(41,151,255,0.12)',
+                    border: '1px solid rgba(41,151,255,0.32)',
+                    color: '#5cb3ff',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Next episode →
+                </Link>
 
                 {isWatermarkedFastAsset(video) && (
                   <p style={{ margin: '5px 0 0', color: 'var(--muted2)', fontSize: '0.54rem', textAlign: 'center', lineHeight: 1.25 }}>
