@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { trackEvent } from '@/lib/analytics'
 import { buildSeriesContinuationHref } from '@/lib/seriesContinuation'
+import { buildPublicVideoSharePath, PUBLIC_VIDEO_SHARE_VERSION } from '@/lib/videoShare'
 
 interface Video {
   id: string
@@ -84,11 +85,14 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // #459 — share the public /v/[id] page (native share on mobile, copy on desktop)
   const [sharedId, setSharedId] = useState<string | null>(null)
   const [referralCode, setReferralCode] = useState<string | null>(null)
+  const sharePromptRef = useRef<HTMLElement | null>(null)
+  const sharePromptTrackedKeyRef = useRef<string | null>(null)
   // Commercial truth: the current MP4 is always downloadable. For free users
   // that asset carries the Kineo watermark; payment unlocks a clean export.
   // Fail open so a plan lookup problem never hides an owned file.
   const [cleanExportLocked, setCleanExportLocked] = useState<boolean | null>(null)
   const repeatOfferTracked = useRef(false)
+  const latestVideo = videos[0] ?? null
   useEffect(() => {
     let cancelled = false
     fetch('/api/credits', { cache: 'no-store' })
@@ -112,6 +116,29 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       .catch(() => {/* sharing still works without a referral code */})
     return () => { cancelled = true }
   }, [])
+
+  // PUSH #29 — expose the latest finished asset as a distribution action to
+  // every returning creator, including the existing back-catalogue. Count the
+  // prompt only when the spotlight actually enters the viewport.
+  useEffect(() => {
+    const element = sharePromptRef.current
+    const key = latestVideo?.id ?? null
+    if (!element || !key || sharePromptTrackedKeyRef.current === key) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return
+      sharePromptTrackedKeyRef.current = key
+      void trackEvent('video_share_prompt_viewed', {
+        version: PUBLIC_VIDEO_SHARE_VERSION,
+        video_id: key,
+        where: 'history_spotlight',
+        referral_attached: !!referralCode,
+      })
+      observer.disconnect()
+    }, { threshold: [0.5] })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [latestVideo?.id, referralCode])
 
   useEffect(() => {
     if (repeatOfferTracked.current || cleanExportLocked !== true || videos.length < 2) return
@@ -177,20 +204,24 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
     }
   }
 
-  // #459/#464 — share the public video page by COPYING the link. WhatsApp only
+  function publicSharePath(video: Video): string {
+    return buildPublicVideoSharePath(video.id, referralCode) ?? `/v/${video.id}`
+  }
+
+  function publicShareUrl(video: Video): string {
+    return new URL(publicSharePath(video), window.location.origin).toString()
+  }
+
+  // #459/#464/#PUSH29 — share the public video page by COPYING the link. WhatsApp only
   // renders the rich preview reliably when a link is PASTED (the native share
   // sheet doesn't trigger it), so we copy + the user pastes. Each shared link is
   // a landing that brings a new (pre-warmed) visitor.
-  async function handleShare(video: Video) {
-    const shareUrl = new URL(`/v/${video.id}`, window.location.origin)
-    shareUrl.searchParams.set('utm_source', 'kineo_user')
-    shareUrl.searchParams.set('utm_medium', 'video_share')
-    shareUrl.searchParams.set('utm_campaign', 'referral')
-    if (referralCode) shareUrl.searchParams.set('ref', referralCode)
-    const url = shareUrl.toString()
+  async function handleShare(video: Video, where: 'history' | 'history_spotlight' = 'history') {
+    const url = publicShareUrl(video)
     const metadata = {
+      version: PUBLIC_VIDEO_SHARE_VERSION,
       video_id: video.id,
-      where: 'history',
+      where,
       channel: 'copy_link',
       referral_attached: !!referralCode,
     }
@@ -209,6 +240,23 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       ...metadata,
       method: copied ? 'clipboard' : 'manual_prompt',
     })
+  }
+
+  function handleShareChannel(video: Video, channel: 'whatsapp' | 'x') {
+    const url = publicShareUrl(video)
+    const metadata = {
+      version: PUBLIC_VIDEO_SHARE_VERSION,
+      video_id: video.id,
+      where: 'history_spotlight',
+      channel,
+      referral_attached: !!referralCode,
+    }
+    void trackEvent('video_share_clicked', metadata)
+    const destination = channel === 'whatsapp'
+      ? `https://wa.me/?text=${encodeURIComponent(`Watch my Short and tell me what you think: ${url}`)}`
+      : `https://twitter.com/intent/tweet?text=${encodeURIComponent('I made this Short with Kineo. Watch it here:')}&url=${encodeURIComponent(url)}`
+    window.open(destination, '_blank', 'noopener,noreferrer')
+    void trackEvent('video_share_channel_opened', metadata)
   }
 
   // Push #421 — open (or fetch, then open) the YouTube summary panel.
@@ -459,6 +507,77 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
             >
               {showRepeatCreatorOffer ? 'Keep testing with watermark' : 'Build Next Episode →'}
             </Link>
+          </div>
+        </section>
+      )}
+
+      {latestVideo && (
+        <section
+          ref={sharePromptRef}
+          aria-label="Share your latest Short for feedback"
+          className="rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(139,92,246,.14), rgba(41,151,255,.05))',
+            border: '1px solid rgba(167,139,250,.42)',
+            boxShadow: '0 10px 32px rgba(139,92,246,.09)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              className="font-black uppercase tracking-[.16em] mb-1.5"
+              style={{ fontSize: '0.62rem', color: '#c4b5fd' }}
+            >
+              Free distribution · latest Short
+            </div>
+            <h2 className="font-black tracking-tight mb-1.5" style={{ color: 'var(--text)', fontSize: '1.05rem' }}>
+              Send it to one person for feedback
+            </h2>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--muted2)', margin: 0, maxWidth: 620 }}>
+              Copy a public watch page for your finished video. Your friend can watch it without logging in, then use “Make one like this” if the idea inspires them.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => handleShare(latestVideo, 'history_spotlight')}
+              className="flex-1 sm:flex-none rounded-xl px-5 py-3 text-sm font-black text-white"
+              style={{
+                minWidth: 150,
+                background: 'linear-gradient(135deg, #7c3aed, #2997ff)',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 6px 22px rgba(124,58,237,.28)',
+              }}
+            >
+              {sharedId === latestVideo.id ? '✓ Watch page copied' : 'Copy watch page →'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleShareChannel(latestVideo, 'whatsapp')}
+              className="rounded-xl px-4 py-3 text-sm font-black"
+              style={{
+                background: 'rgba(37,211,102,.11)',
+                border: '1px solid rgba(37,211,102,.38)',
+                color: '#25D366',
+                cursor: 'pointer',
+              }}
+            >
+              WhatsApp
+            </button>
+            <a
+              href={publicSharePath(latestVideo)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl px-4 py-3 text-sm font-black"
+              style={{
+                background: 'rgba(255,255,255,.06)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                textDecoration: 'none',
+              }}
+            >
+              Preview
+            </a>
           </div>
         </section>
       )}

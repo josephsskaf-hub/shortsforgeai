@@ -171,6 +171,13 @@ export interface FunnelData {
   creatorLoop: {
     completedVideos: number
     completedCreators: number
+    deliveryPromptActors: number
+    deliveryClickActors: number
+    deliveryShareActors: number
+    deliveryPromptToClickRate: string
+    deliveryClickToShareRate: string
+    deliveryPublicLandings: number
+    deliveryPublicCtaClicks: number
     shareClicks: number
     shareUsers: number
     shareRate: string
@@ -493,7 +500,8 @@ export async function GET(req: Request) {
           .select('name,user_id,created_at,session_id,metadata,path')
           .in('name', [
             'landing_session_started', 'organic_cta_clicked',
-            'video_share_clicked', 'video_shared', 'video_share_channel_opened',
+            'video_share_prompt_viewed', 'video_share_clicked', 'video_shared',
+            'video_share_channel_opened', 'video_share_cancelled',
             'public_video_cta_clicked',
           ])
           .order('created_at', { ascending: false })
@@ -987,6 +995,29 @@ export async function GET(req: Request) {
       event.name === 'landing_session_started' && Boolean(event.path?.startsWith('/v/'))
     )
     const publicVideoCtaRows = organicEventRows.filter((event) => event.name === 'public_video_cta_clicked')
+    const deliveryRows = organicEventRows.filter((event) =>
+      event.metadata?.version === 'push29_share_delivery' ||
+      event.metadata?.utm_content === 'push29_share_delivery'
+    )
+    const deliveryActorKey = (event: EventRow, index: number): string =>
+      event.user_id || event.session_id || `${event.created_at ?? 'unknown'}:${index}`
+    const deliveryActors = (name: string): Set<string> => new Set(
+      deliveryRows
+        .filter((event) => event.name === name)
+        .map((event, index) => deliveryActorKey(event, index))
+    )
+    const deliveryPromptActors = deliveryActors('video_share_prompt_viewed')
+    const deliveryClickActors = deliveryActors('video_share_clicked')
+    const deliveryShareActors = new Set([
+      ...deliveryActors('video_shared'),
+      ...deliveryActors('video_share_channel_opened'),
+    ])
+    const deliveryPublicLandings = deliveryRows.filter((event) =>
+      event.name === 'landing_session_started' && Boolean(event.path?.startsWith('/v/'))
+    ).length
+    const deliveryPublicCtaClicks = deliveryRows.filter((event) =>
+      event.name === 'public_video_cta_clicked'
+    ).length
     const referredProfiles = cohort.filter((profile) => {
       const source = (profile.signup_utm_source || '').trim().toLowerCase()
       const campaign = (profile.signup_utm_campaign || '').trim().toLowerCase()
@@ -999,6 +1030,13 @@ export async function GET(req: Request) {
     const creatorLoop = {
       completedVideos: completedPeriodVideos.length,
       completedCreators: completedCreatorIds.size,
+      deliveryPromptActors: deliveryPromptActors.size,
+      deliveryClickActors: deliveryClickActors.size,
+      deliveryShareActors: deliveryShareActors.size,
+      deliveryPromptToClickRate: pct(deliveryClickActors.size, deliveryPromptActors.size),
+      deliveryClickToShareRate: pct(deliveryShareActors.size, deliveryClickActors.size),
+      deliveryPublicLandings,
+      deliveryPublicCtaClicks,
       shareClicks: creatorShareClickRows.length,
       shareUsers: creatorShareUserIds.size,
       shareRate: pct(creatorShareUserIds.size, completedCreatorIds.size),

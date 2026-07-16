@@ -20,6 +20,7 @@ import {
   buildSeriesContinuationPrompt,
   type SeriesContinuationSource,
 } from '@/lib/seriesContinuation'
+import { buildPublicVideoSharePath, PUBLIC_VIDEO_SHARE_VERSION } from '@/lib/videoShare'
 import VisualDirector from '@/components/video/VisualDirector'
 import NicheOnboarding from '@/components/NicheOnboarding'
 // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — AvatarPaywallModal import removed.
@@ -726,6 +727,8 @@ export default function GenerateClient() {
   const [publicVideoId, setPublicVideoId] = useState<string | null>(null)
   const [sharedPublic, setSharedPublic] = useState<'shared' | 'copied' | 'ready' | null>(null)
   const [shareReferralCode, setShareReferralCode] = useState<string | null>(null)
+  const sharePromptRef = useRef<HTMLButtonElement | null>(null)
+  const sharePromptTrackedKeyRef = useRef<string | null>(null)
 
   // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
   // A free-plan video ships with a burnt-in watermark. Right after the render
@@ -1223,6 +1226,29 @@ export default function GenerateClient() {
       })
     return () => { cancelled = true }
   }, [phase, shareReferralCode])
+
+  // PUSH #29 — a finished render is not a share impression. The action sits
+  // below a tall 9:16 player and the export choice, so count it only after the
+  // button is actually visible.
+  useEffect(() => {
+    const element = sharePromptRef.current
+    const key = publicVideoId
+    if (phase !== 'done' || !element || !key || sharePromptTrackedKeyRef.current === key) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return
+      sharePromptTrackedKeyRef.current = key
+      void trackEvent('video_share_prompt_viewed', {
+        version: PUBLIC_VIDEO_SHARE_VERSION,
+        video_id: key,
+        where: 'done_screen',
+        referral_attached: !!shareReferralCode,
+      })
+      observer.disconnect()
+    }, { threshold: [0.5] })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [phase, publicVideoId, shareReferralCode])
 
   // Push #317 — check YouTube connection status once when the done screen appears.
   useEffect(() => {
@@ -3454,23 +3480,21 @@ export default function GenerateClient() {
     }
   }
 
-  // PUSH #23 — every sharing surface uses the public /v/[id] landing, never the
-  // raw MP4. That landing has a preview, a tracked signup CTA and (when ready)
-  // the creator's referral code. One URL builder prevents channel drift.
+  // PUSH #23/#29 — every sharing surface uses the public /v/[id] landing,
+  // never the raw MP4. The shared helper keeps referral and attribution exact.
+  function publicSharePath(): string | null {
+    return buildPublicVideoSharePath(publicVideoId, shareReferralCode)
+  }
+
   function buildPublicShareUrl(): string | null {
-    if (!publicVideoId || typeof window === 'undefined') return null
-    const shareUrl = new URL(`/v/${publicVideoId}`, window.location.origin)
-    shareUrl.searchParams.set('utm_source', 'kineo_user')
-    shareUrl.searchParams.set('utm_medium', 'video_share')
-    shareUrl.searchParams.set('utm_campaign', 'referral')
-    if (shareReferralCode) {
-      shareUrl.searchParams.set('ref', shareReferralCode)
-    }
-    return shareUrl.toString()
+    const path = publicSharePath()
+    if (!path || typeof window === 'undefined') return null
+    return new URL(path, window.location.origin).toString()
   }
 
   function publicShareMetadata(channel: string) {
     return {
+      version: PUBLIC_VIDEO_SHARE_VERSION,
       video_id: publicVideoId,
       where: 'done_screen',
       referral_attached: !!shareReferralCode,
@@ -3481,30 +3505,8 @@ export default function GenerateClient() {
   async function handleSharePublic() {
     const url = buildPublicShareUrl()
     if (!url) return
-    const commonMetadata = publicShareMetadata('native_or_copy')
+    const commonMetadata = publicShareMetadata('copy_primary')
     trackEvent('video_share_clicked', commonMetadata)
-
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          title: 'My Kineo Short',
-          text: 'I made this Short with Kineo. You can create up to 3 Fast videos every 24h with no card:',
-          url,
-        })
-        setSharedPublic('shared')
-        setTimeout(() => setSharedPublic(null), 2000)
-        trackEvent('video_shared', { ...commonMetadata, method: 'native_share' })
-        return
-      } catch (error) {
-        // A deliberate cancel must not silently copy something to the clipboard.
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          trackEvent('video_share_cancelled', { ...commonMetadata, method: 'native_share' })
-          return
-        }
-        // Unsupported/failed share sheet falls through to the copy path.
-      }
-    }
-
     try {
       await navigator.clipboard.writeText(url)
       setSharedPublic('copied')
@@ -3517,21 +3519,32 @@ export default function GenerateClient() {
     setTimeout(() => setSharedPublic(null), 2000)
   }
 
-  async function handleCopyPublicLink() {
+  // Native share stays available as an explicit secondary option. The primary
+  // action now copies the watch page deterministically: the first real PUSH #23
+  // user opened this sheet and cancelled it two seconds later.
+  async function handleNativeSharePublic() {
     const url = buildPublicShareUrl()
     if (!url) return
-    const metadata = publicShareMetadata('copy_link')
+    if (typeof navigator.share !== 'function') {
+      await handleSharePublic()
+      return
+    }
+    const metadata = publicShareMetadata('native_more')
     trackEvent('video_share_clicked', metadata)
     try {
-      await navigator.clipboard.writeText(url)
-      setSharedPublic('copied')
-      trackEvent('video_shared', { ...metadata, method: 'clipboard' })
-    } catch {
-      try { window.prompt('Copy this link:', url) } catch {}
-      setSharedPublic('ready')
-      trackEvent('video_share_manual_copy_shown', metadata)
+      await navigator.share({
+        title: 'My Kineo Short',
+        text: 'Watch my Short and tell me what you think:',
+        url,
+      })
+      setSharedPublic('shared')
+      setTimeout(() => setSharedPublic(null), 2000)
+      trackEvent('video_shared', { ...metadata, method: 'native_share' })
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        trackEvent('video_share_cancelled', { ...metadata, method: 'native_share' })
+      }
     }
-    setTimeout(() => setSharedPublic(null), 2000)
   }
 
   function handlePublicShareChannel(channel: 'whatsapp' | 'x') {
@@ -3540,7 +3553,7 @@ export default function GenerateClient() {
     const metadata = publicShareMetadata(channel)
     trackEvent('video_share_clicked', metadata)
     const destination = channel === 'whatsapp'
-      ? `https://wa.me/?text=${encodeURIComponent(`I made this Short with Kineo. Watch it and make your own Fast video: ${url}`)}`
+      ? `https://wa.me/?text=${encodeURIComponent(`Watch my Short and tell me what you think: ${url}`)}`
       : `https://twitter.com/intent/tweet?text=${encodeURIComponent('I made this YouTube Short with Kineo. Create up to 3 Fast videos every 24h with no card.')}&url=${encodeURIComponent(url)}`
     window.open(destination, '_blank', 'noopener,noreferrer')
     trackEvent('video_share_channel_opened', metadata)
@@ -5587,6 +5600,7 @@ export default function GenerateClient() {
 
                 {publicVideoId ? (
                   <button
+                    ref={sharePromptRef}
                     type="button"
                     onClick={handleSharePublic}
                     className="flex w-full flex-col items-center justify-center rounded-2xl px-5 py-4 text-center font-black"
@@ -5602,13 +5616,13 @@ export default function GenerateClient() {
                       {sharedPublic === 'shared'
                         ? '✓ Shared!'
                         : sharedPublic === 'copied'
-                          ? '✓ Public link copied — paste it anywhere'
+                          ? '✓ Watch page copied — paste it in any chat'
                           : sharedPublic === 'ready'
                             ? 'Your public link is ready to copy'
-                            : '📤 Share your finished Short'}
+                            : '📋 Copy your public watch page'}
                     </span>
                     <span style={{ marginTop: 4, fontSize: '0.72rem', fontWeight: 650, color: '#a9c9ec' }}>
-                      Preview page + “make one like this” CTA{shareReferralCode ? ' + your referral reward' : ''}
+                      Send it for feedback. Friends can watch it and make one like it.
                     </span>
                   </button>
                 ) : (
@@ -5626,7 +5640,7 @@ export default function GenerateClient() {
                     a separate clean URL. */}
                 <div className="flex flex-wrap items-center justify-center gap-2 w-full">
                   <a
-                    href={finalVideoUrl}
+                    href={publicSharePath() ?? finalVideoUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
@@ -5638,24 +5652,8 @@ export default function GenerateClient() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    ▶ Preview
+                    ▶ Watch page
                   </a>
-                  <button
-                    type="button"
-                    onClick={handleCopyPublicLink}
-                    disabled={!publicVideoId}
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    style={{
-                      background: sharedPublic ? 'rgba(41,151,255,.12)' : 'rgba(255,255,255,.06)',
-                      border: sharedPublic ? '1px solid rgba(41,151,255,.45)' : '1px solid var(--border)',
-                      color: publicVideoId ? (sharedPublic ? '#5cb3ff' : 'var(--text)') : 'var(--muted)',
-                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
-                      transition: 'all 0.15s',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {sharedPublic === 'copied' ? '✓ Copied!' : '🔗 Copy public link'}
-                  </button>
                   <button
                     type="button"
                     onClick={() => handlePublicShareChannel('whatsapp')}
@@ -5673,7 +5671,7 @@ export default function GenerateClient() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handlePublicShareChannel('x')}
+                    onClick={handleNativeSharePublic}
                     disabled={!publicVideoId}
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                     style={{
@@ -5684,7 +5682,7 @@ export default function GenerateClient() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    𝕏 Share
+                    ⋯ More
                   </button>
                 </div>
 

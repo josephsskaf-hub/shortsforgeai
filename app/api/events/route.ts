@@ -30,6 +30,18 @@ const SERVER_ONLY_EVENTS = new Set([
 
 export async function POST(req: NextRequest) {
   try {
+    // PUSH #29 — local/preview QA must never contaminate the production
+    // acquisition funnel when a developer is using production-like env vars.
+    // Billing and other server-authoritative events use their own routes; this
+    // guard only affects the generic browser event sink.
+    const hostname = req.nextUrl.hostname.toLowerCase()
+    if (
+      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' ||
+      process.env.VERCEL_ENV === 'preview'
+    ) {
+      return NextResponse.json({ ok: true, ignored: true, stored: false, reason: 'non_production_qa' })
+    }
+
     const body = await req.json().catch(() => ({}))
     const rawName = typeof body?.event_name === 'string'
       ? body.event_name

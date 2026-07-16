@@ -130,6 +130,9 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   }
   const creatorLoop = data.creatorLoop ?? {
     completedVideos: 0, completedCreators: 0, shareClicks: 0, shareUsers: 0,
+    deliveryPromptActors: 0, deliveryClickActors: 0, deliveryShareActors: 0,
+    deliveryPromptToClickRate: '—', deliveryClickToShareRate: '—',
+    deliveryPublicLandings: 0, deliveryPublicCtaClicks: 0,
     shareRate: '—', sharesCompleted: 0, publicVideoLandings: 0,
     publicVideoCtaClicks: 0, landingToCtaRate: '—', referredSignups: 0,
     ctaToSignupRate: '—', qualifiedReferrals: 0, referredPaid: 0,
@@ -607,6 +610,28 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           label="Completed creators"
           value={fmt(creatorLoop.completedCreators)}
           hint={`${fmt(creatorLoop.completedVideos)} completed videos`}
+          accent="#22d3ee"
+        />
+        <Card
+          label="PUSH 29 prompts seen"
+          value={fmt(creatorLoop.deliveryPromptActors)}
+          hint="visible done/history prompts"
+          accent="#c4b5fd"
+        />
+        <RateCard
+          label="Prompt → Share click"
+          value={creatorLoop.deliveryPromptToClickRate}
+          sub={`${creatorLoop.deliveryClickActors} / ${creatorLoop.deliveryPromptActors} unique actors`}
+        />
+        <RateCard
+          label="Click → Link delivered"
+          value={creatorLoop.deliveryClickToShareRate}
+          sub={`${creatorLoop.deliveryShareActors} / ${creatorLoop.deliveryClickActors} unique actors`}
+        />
+        <Card
+          label="PUSH 29 landings"
+          value={fmt(creatorLoop.deliveryPublicLandings)}
+          hint={`${creatorLoop.deliveryPublicCtaClicks} public CTA clicks`}
           accent="#22d3ee"
         />
         <Card
