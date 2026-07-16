@@ -1,7 +1,7 @@
 # Kineo — PUSH #23
 
 **Nome:** Creator Loop + Referral Distribution
-**Status:** VALIDADO LOCALMENTE — aguardando commit, deploy READY e validação ao vivo
+**Status:** PUBLICADO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
 
 ## Diagnóstico comprovado
@@ -67,14 +67,18 @@
 - O único evento anônimo criado pelo QA local foi identificado por `utm_source=qa` e removido; o placar de produção não ficou contaminado.
 - Nenhum vídeo de provider foi gerado e nenhum email foi enviado.
 
-## Gate de publicação
+## Publicação e validação em produção
 
-1. Revisar apenas os arquivos do PUSH #23 no stage; nunca usar `git add .`.
-2. Commitar e enviar para `main`.
-3. Aguardar Vercel READY.
-4. Revalidar `/v/[id]`, páginas orgânicas e termos em produção.
-5. Confirmar que Admin · Funnel responde com `creatorLoop` sem expor contas internas.
-6. Não fabricar eventos de share em produção; medir somente usuários externos reais.
+- Commit de código e release: `044d4ad` (`PUSH #23 turn completed videos into measurable referrals`).
+- Push concluído em `main` sem `git add .`; nenhum arquivo privado do Lote 1, CSV, `.bat` ou material antigo entrou no commit.
+- Vercel deployment `dpl_4Kk31zuPenrRGkb27DeaWiDrkFS5`: READY e associado a `www.usekineo.com`.
+- `/v/[id]` com vídeo real, `/facts`, `/faceless-channel-ideas`, `/ai-shorts-without-filming`, `/cheapest-ai-shorts-maker`, `/alternatives/opusclip` e `/terms`: HTTP 200 em produção.
+- Página pública real contém o player, a oferta de até 3 Fast videos com marca d'água a cada 24 horas e a CTA `Make one like this`.
+- As páginas verificadas não contêm `first Short free`, `first one free`, `3-day trial`, `$11.90` nem `50 more Shorts`.
+- Termos publicados confirmam cobrança imediata do preço introdutório, data/preço da primeira renovação antes do pagamento e garantia de sete dias.
+- `/api/admin/funnel` mantém o gate de segurança: sem sessão admin responde `403 Forbidden`. O contrato `creatorLoop` passou no build do mesmo commit; o payload autenticado deve ser observado na próxima sessão admin real, sem fabricar autenticação ou eventos.
+- Nenhum evento de share/CTA foi fabricado durante a validação. Logo após o deploy havia zero eventos reais novos no creator loop.
+- Stripe continua com 2 assinaturas `active/trialing`, ambas internas pela classificação canônica; assinaturas recorrentes externas válidas: **0/10**.
 
 ## Meta do microteste
 
