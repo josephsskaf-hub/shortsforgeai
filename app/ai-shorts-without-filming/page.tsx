@@ -40,12 +40,12 @@ const NO_NEED: { t: string; d: string }[] = [
 ]
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'Can I make YouTube Shorts without filming anything?', a: 'Yes. Kineo builds the entire Short from a single idea — it writes the script, generates an AI voiceover, matches footage to each line and adds captions. You never open a camera, upload footage or record your voice, and your first Short is free with no credit card.' },
+  { q: 'Can I make YouTube Shorts without filming anything?', a: 'Yes. Kineo builds the entire Short from a single idea — it writes the script, generates an AI voiceover, matches footage to each line and adds captions. You never open a camera, upload footage or record your voice, and a new account can create up to 3 watermarked Fast videos every 24 hours with no card.' },
   { q: 'How do I make faceless Shorts with no camera?', a: 'Type one topic, let the AI generate the script, voiceover, footage and captions, then download a finished 9:16 video in about 60 seconds. Because every visual is generated and matched to your script, there is nothing to film and no camera to own.' },
   { q: 'Will my face or voice ever be shown?', a: 'No. The channel format is faceless by design — you never appear on screen, and the narration is an AI voiceover, so your own voice stays private. It is made for anonymous creators who want a channel without being on camera.' },
   { q: 'Is this just a clip cutter like OpusClip or Submagic?', a: 'No. Clip cutters re-clip a long video you already filmed — which still requires you to record footage first. Kineo works the other way around: it creates the video from an idea, so you start with nothing but a topic and never film at all.' },
   { q: 'Do I need editing skills to make a Short without filming?', a: 'No. There is no timeline and no clips to arrange. The script, AI voiceover, footage and captions are generated and assembled automatically, so you get a ready-to-post Short without touching an editor.' },
-  { q: 'How much does it cost to make Shorts without filming?', a: 'Your first Short is free with no credit card. After that you pick the engine per video — AI Gen (Seedance) is the lowest-cost AI engine — and you can see current plans on the pricing page.' },
+  { q: 'How much does it cost to make Shorts without filming?', a: 'A new account can create up to 3 watermarked Fast videos every 24 hours with no credit card. Paid plans unlock clean exports and premium AI engines; Starter is $4.90 for the first month and then $9.90/month.' },
 ]
 
 export default function AiShortsWithoutFilmingPage() {
@@ -68,7 +68,7 @@ export default function AiShortsWithoutFilmingPage() {
           Make YouTube Shorts Without Filming a Single Frame
         </h1>
         <p style={{ fontSize: '1.08rem', color: '#86868b', lineHeight: 1.6, margin: '16px 0 0' }}>
-          Kineo turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. A ready-to-post 9:16 video in about 60 seconds. Your first Short is free with no credit card.
+          Kineo turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. A ready-to-post 9:16 video in about 60 seconds. Create up to 3 watermarked Fast videos every 24 hours with no card.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
           <OrganicCtaLink href={signupUrl} source="push22_no_filming" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>

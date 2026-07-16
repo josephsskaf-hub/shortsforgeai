@@ -45,12 +45,12 @@ function buildEmail() {
   // KINEO-ACTIVATION-COPY-2026-07-06 — free plan gives 2 free videos, NOT
   // "30 credits" (stale copy that misled every signup). Short, founder-to-user
   // tone, one CTA to the video creator.
-  const url = `${APP_URL}/generate`
+  const url = `${APP_URL}/generate?utm_source=lifecycle&utm_medium=email&utm_campaign=d0_activation`
   const text = `Hey,
 
 It's the team at Kineo. You signed up a little while ago but haven't made your first video yet — so here's a nudge, because the first one is the fun part.
 
-Your first video is free and takes about 60 seconds. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. A minute later you've got a Short that's ready to post.
+Create, watch, download and share up to 3 watermarked Fast videos every 24 hours with no card. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage.
 
 Make your first video here: ${url}
 
@@ -62,7 +62,7 @@ usekineo.com`
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#111;line-height:1.6;max-width:480px;">
   <p style="margin:0 0 14px;">Hey,</p>
   <p style="margin:0 0 14px;">It's the team at Kineo. You signed up a little while ago but haven't made your first video yet — so here's a nudge, because the first one is the fun part.</p>
-  <p style="margin:0 0 14px;">Your first video is <strong>free</strong> and takes about 60 seconds. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage. A minute later you've got a Short that's ready to post.</p>
+  <p style="margin:0 0 14px;">Create, watch, download and share up to <strong>3 watermarked Fast videos every 24 hours</strong> with no card. Type any idea ("the Bermuda Triangle mystery", "how Bezos starts his day") and the AI writes the script, adds the voiceover, captions and footage.</p>
   <p style="margin:0 0 24px;"><a href="${url}" style="display:inline-block;background:#2997ff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 26px;border-radius:10px;">Make my first video →</a></p>
   <p style="margin:0 0 14px;">Stuck on anything? Just reply to this email — a real person reads every message.</p>
   <p style="margin:0 0 2px;">Kineo Team</p>
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
           from: FROM_EMAIL,
           to: [email],
           reply_to: 'hello@usekineo.com',
-          subject: 'Your first video is 60 seconds away',
+          subject: 'Your first Fast video is one minute away',
           text,
           html,
         }),

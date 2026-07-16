@@ -110,6 +110,13 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     signupRate: '—', activated: 0, activationRate: '—', paid: 0,
     topLandingPages: [],
   }
+  const creatorLoop = data.creatorLoop ?? {
+    completedVideos: 0, completedCreators: 0, shareClicks: 0, shareUsers: 0,
+    shareRate: '—', sharesCompleted: 0, publicVideoLandings: 0,
+    publicVideoCtaClicks: 0, landingToCtaRate: '—', referredSignups: 0,
+    ctaToSignupRate: '—', qualifiedReferrals: 0, referredPaid: 0,
+    signupToPaidRate: '—',
+  }
   const maxCount = steps.length ? Math.max(...steps.map((x) => x.count), 1) : 1
 
   return (
@@ -407,6 +414,71 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           value={fmt(organic.paid)}
           hint="verified active / trialing"
           accent={organic.paid > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+      </Section>
+
+      <Section title={`Creator loop · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Completed creators"
+          value={fmt(creatorLoop.completedCreators)}
+          hint={`${fmt(creatorLoop.completedVideos)} completed videos`}
+          accent="#22d3ee"
+        />
+        <Card
+          label="Share clicks"
+          value={fmt(creatorLoop.shareClicks)}
+          hint="done screen + My Videos"
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="Creator → Share"
+          value={creatorLoop.shareRate}
+          sub={`${creatorLoop.shareUsers} / ${creatorLoop.completedCreators} unique creators`}
+        />
+        <Card
+          label="Shares completed"
+          value={fmt(creatorLoop.sharesCompleted)}
+          hint="native share or copied public link"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Public-video landings"
+          value={fmt(creatorLoop.publicVideoLandings)}
+          hint="visits to /v/[id]"
+          accent="#a78bfa"
+        />
+        <Card
+          label="Public CTA clicks"
+          value={fmt(creatorLoop.publicVideoCtaClicks)}
+          hint="make one like this"
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="Landing → CTA"
+          value={creatorLoop.landingToCtaRate}
+          sub={`${creatorLoop.publicVideoCtaClicks} / ${creatorLoop.publicVideoLandings}`}
+        />
+        <Card
+          label="Referred signups"
+          value={fmt(creatorLoop.referredSignups)}
+          hint={`${creatorLoop.qualifiedReferrals} qualified rewards`}
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="CTA → Signup"
+          value={creatorLoop.ctaToSignupRate}
+          sub={`${creatorLoop.referredSignups} / ${creatorLoop.publicVideoCtaClicks}`}
+        />
+        <Card
+          label="Referred subscribers"
+          value={fmt(creatorLoop.referredPaid)}
+          hint="Stripe active / trialing"
+          accent={creatorLoop.referredPaid > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+        <RateCard
+          label="Referral signup → Paid"
+          value={creatorLoop.signupToPaidRate}
+          sub={`${creatorLoop.referredPaid} / ${creatorLoop.referredSignups}`}
         />
       </Section>
 

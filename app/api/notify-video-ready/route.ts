@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
         <a href="${safeVideoUrl}" style="display:inline-block;background:#2997ff;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
           ⬇ Download Your Short
         </a>
-        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://usekineo.com/pricing" style="color:#2997ff;">Upgrade to Starter — $9.90/mo →</a></p>
-        <p style="color:#475569;font-size:11px;margin:16px 0 0">Kineo · <a href="https://usekineo.com" style="color:#475569;">usekineo.com</a></p>
+        <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want a clean export and 24 more Fast Shorts this month? <a href="https://www.usekineo.com/pricing" style="color:#2997ff;">Starter is $4.90 for the first month, then $9.90/month →</a></p>
+        <p style="color:#475569;font-size:11px;margin:16px 0 0">Kineo · <a href="https://www.usekineo.com" style="color:#475569;">usekineo.com</a></p>
       </div>
     `
 

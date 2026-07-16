@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
               <!-- hero benefit box -->
               <div style="background:rgba(41,151,255,0.08);border:1px solid rgba(41,151,255,0.28);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
-                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">FIRST VIDEO FREE — NO CARD</p>
+                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">UP TO 3 FAST VIDEOS / 24H — NO CARD</p>
                 <p style="color:#f1f5f9;font-size:28px;font-weight:900;margin:0 0 4px;letter-spacing:-0.5px;">See your idea become a Short</p>
                 <p style="color:#64748b;font-size:13px;margin:0;">Script, voice, footage and captions — automatically.</p>
               </div>
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
                   </td>
                 </tr>
               </table>
-              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">No credit card · Start with any idea in seconds</p>
+              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 28px;">Free videos include a Kineo watermark · Start with any idea</p>
 
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;">
                 <p style="color:#475569;font-size:13px;margin:0;line-height:1.6;text-align:center;">
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     const text = `${greeting}
 
-Your Kineo account is ready. Your first AI Short is free to create and watch — no card required.
+Your Kineo account is ready. Create, watch, download and share up to 3 watermarked Fast videos every 24 hours — no card required.
 
 Your Short includes:
 - AI script + neural voiceover pipeline

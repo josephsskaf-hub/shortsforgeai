@@ -137,7 +137,13 @@ async function persistCompletedVideo(args: {
   // log explicitly for tracing and skip the re-insert.
   if ((error as { code?: string }).code === '23505') {
     console.log(`[history] DUPLICATE render_id=${args.renderId} — already persisted (videos_render_id_unique); skipping re-insert`)
-    return { ok: true, duplicate: true }
+    const { data: existing } = await admin
+      .from('videos')
+      .select('id')
+      .eq('render_id', args.renderId)
+      .eq('user_id', args.userId)
+      .maybeSingle()
+    return { ok: true, duplicate: true, id: existing?.id ? String(existing.id) : undefined }
   }
 
   // Real failure — never swallow silently. Surface the full PostgREST error.
@@ -149,6 +155,31 @@ async function persistCompletedVideo(args: {
     render_id: args.renderId,
   }))
   return { ok: false, error: error.message }
+}
+
+async function findCompletedVideoId(userId: string, renderId: string): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceKey) return null
+  try {
+    const admin = createAdminClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data, error } = await admin
+      .from('videos')
+      .select('id')
+      .eq('render_id', renderId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) {
+      console.warn('[history] share-id lookup failed:', error.message)
+      return null
+    }
+    return data?.id ? String(data.id) : null
+  } catch (error) {
+    console.warn('[history] share-id lookup threw:', error instanceof Error ? error.message : String(error))
+    return null
+  }
 }
 
 function safeUrlHost(u: string): string {
@@ -373,6 +404,7 @@ export async function GET(
       // output; upgraded to the permanent Supabase URL after the asset
       // migration runs on the first "done" poll.
       let responseVideoUrl = state.url
+      let persistedVideoId: string | null = null
 
       // Push #088 — Cinematic renders (any non-'fast' quality) no longer
       // deduct from `video_credits`. They were already paid for by a
@@ -634,6 +666,7 @@ export async function GET(
             topic,
             creditsUsed: cost,
           })
+          if (result.id) persistedVideoId = result.id
           console.log('[history] persist result:', JSON.stringify(result))
         } catch (e) {
           // persistCompletedVideo is meant to never throw, but if it
@@ -663,8 +696,8 @@ export async function GET(
                 <a href="${safeVideoUrl}" style="display:inline-block;background:#2997ff;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
                   ⬇ Download Your Short
                 </a>
-                <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want to make 50 more Shorts/month? <a href="https://usekineo.com/pricing" style="color:#2997ff;">Upgrade to Starter — $9.90/mo →</a></p>
-                <p style="color:#475569;font-size:11px;margin:16px 0 0">Kineo · <a href="https://usekineo.com" style="color:#475569;">usekineo.com</a></p>
+                <p style="color:#64748b;font-size:12px;margin:24px 0 0">Want a clean export and 24 more Fast Shorts this month? <a href="https://www.usekineo.com/pricing" style="color:#2997ff;">Starter is $4.90 for the first month, then $9.90/month →</a></p>
+                <p style="color:#475569;font-size:11px;margin:16px 0 0">Kineo · <a href="https://www.usekineo.com" style="color:#475569;">usekineo.com</a></p>
               </div>
             `
             const emailRes = await fetch('https://api.resend.com/emails', {
@@ -710,17 +743,10 @@ export async function GET(
         }
       }
 
-      // #465 — look up the saved video's DB id (by render_id) so the client can
-      // build the public /v/[id] share link on the done screen. Best-effort.
-      let videoId: string | null = null
-      try {
-        const { data: vid } = await supabase
-          .from('videos')
-          .select('id')
-          .eq('render_id', renderId)
-          .maybeSingle()
-        videoId = (vid?.id as string) ?? null
-      } catch {}
+      // PUSH #23 — the public share id is a growth-critical output, not a
+      // best-effort RLS read. Reuse the insert result when available and fall
+      // back to a service-role lookup scoped to this owner + render.
+      const videoId = persistedVideoId ?? await findCompletedVideoId(user.id, renderId)
 
       return NextResponse.json({
         phase: 'done',

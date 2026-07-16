@@ -82,6 +82,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   // #459 — share the public /v/[id] page (native share on mobile, copy on desktop)
   const [sharedId, setSharedId] = useState<string | null>(null)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
   // Commercial truth: the current MP4 is always downloadable. For free users
   // that asset carries the Kineo watermark; payment unlocks a clean export.
   // Fail open so a plan lookup problem never hides an owned file.
@@ -99,6 +100,14 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
         setCleanExportLocked(!cleanAccess)
       })
       .catch(() => {/* fail open */})
+    fetch('/api/referral', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return
+        const code = typeof d?.code === 'string' ? d.code.trim() : ''
+        if (/^[A-HJ-NP-Z2-9]{8}$/.test(code)) setReferralCode(code)
+      })
+      .catch(() => {/* sharing still works without a referral code */})
     return () => { cancelled = true }
   }, [])
 
@@ -157,23 +166,33 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // sheet doesn't trigger it), so we copy + the user pastes. Each shared link is
   // a landing that brings a new (pre-warmed) visitor.
   async function handleShare(video: Video) {
-    const url = `${window.location.origin}/v/${video.id}`
+    const shareUrl = new URL(`/v/${video.id}`, window.location.origin)
+    shareUrl.searchParams.set('utm_source', 'kineo_user')
+    shareUrl.searchParams.set('utm_medium', 'video_share')
+    shareUrl.searchParams.set('utm_campaign', 'referral')
+    if (referralCode) shareUrl.searchParams.set('ref', referralCode)
+    const url = shareUrl.toString()
+    const metadata = {
+      video_id: video.id,
+      where: 'history',
+      channel: 'copy_link',
+      referral_attached: !!referralCode,
+    }
+    trackEvent('video_share_clicked', metadata)
+    let copied = false
     try {
       await navigator.clipboard.writeText(url)
+      copied = true
     } catch {
       // clipboard blocked (rare) — show the link so it can be copied manually
       try { window.prompt('Copy this link:', url) } catch {}
     }
     setSharedId(video.id)
     setTimeout(() => setSharedId((cur) => (cur === video.id ? null : cur)), 1800)
-    try {
-      void fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'video_shared', metadata: { video_id: video.id } }),
-        keepalive: true,
-      })
-    } catch {}
+    trackEvent(copied ? 'video_shared' : 'video_share_manual_copy_shown', {
+      ...metadata,
+      method: copied ? 'clipboard' : 'manual_prompt',
+    })
   }
 
   // Push #421 — open (or fetch, then open) the YouTube summary panel.

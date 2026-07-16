@@ -13,7 +13,7 @@ import Footer from '@/components/Footer'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
 
 export const metadata: Metadata = {
-  title: 'Cheapest AI Shorts Maker — Make YouTube Shorts Cheap, First One Free | Kineo',
+  title: 'Affordable AI Shorts Maker — 3 Fast Videos Every 24h | Kineo',
   description:
     'An affordable AI YouTube Shorts generator that builds the whole faceless video from one idea. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.',
   alternates: { canonical: 'https://www.usekineo.com/cheapest-ai-shorts-maker' },
@@ -36,7 +36,7 @@ const WHY_CHEAPER: { t: string; d: string }[] = [
   { t: 'Built only for faceless Shorts', d: 'It does one job — turn an idea into a short-form video — so you’re not paying for a bloated general-purpose video suite you’ll never fully use.' },
   { t: 'AI Gen (Seedance) is the lowest-cost AI engine', d: 'You choose the engine. The cheapest AI tier, AI Gen / Seedance, runs at 20 credits per video — premium engines like Kling cost more, but you only reach for them when you actually want to.' },
   { t: 'No camera, no editor, no extra subscriptions', d: 'Script, AI voiceover, footage and captions are all generated in one pass — so the price of a Short is the credits, not a stack of separate tools.' },
-  { t: 'Try before you pay anything', d: 'Your first Short is free with no credit card, so you confirm it’s worth it before a single dollar leaves your account.' },
+  { t: 'Try before you pay anything', d: 'Create, watch, download and share up to 3 watermarked Fast videos every 24 hours with no credit card, so you can confirm the workflow fits before paying.' },
 ]
 
 const FAQ: { q: string; a: string }[] = [

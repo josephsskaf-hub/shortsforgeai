@@ -644,7 +644,7 @@ export default function DashboardClient({
             🔑 Create your account to start
           </p>
           <p className="text-sm mb-4" style={{ color: '#86868b' }}>
-            Create your first video free — just sign in.
+            Create up to 3 watermarked Fast videos every 24 hours — no card.
           </p>
         </div>
       )}

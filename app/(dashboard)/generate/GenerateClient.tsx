@@ -729,7 +729,6 @@ export default function GenerateClient() {
 
   // Push #045A — transient "Copied!" feedback on the Copy URL button in the
   // result section. Cleared automatically after ~2s.
-  const [copied, setCopied] = useState(false)
 
   // Push #047 — conversion polish state.
   //   fromHome: did the prompt arrive from the homepage via sessionStorage?
@@ -3355,49 +3354,41 @@ export default function GenerateClient() {
     }
   }
 
-  // Push #045A — result-page actions. Both reach for finalVideoUrl only.
-  async function handleCopyUrl() {
-    if (!finalVideoUrl) return
-    try {
-      await navigator.clipboard.writeText(finalVideoUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard can be denied in some browsers — silent no-op is fine
-      // because the Download button still works as the primary action.
-    }
-  }
-
-  // #465 — share the PUBLIC video page (/v/[id]) at peak delight. The link now
-  // carries both the user's referral code and first-touch UTMs. Mobile gets the
-  // native share sheet (one tap to WhatsApp/iMessage/etc.); desktop keeps the
-  // reliable copy-link fallback. Every outcome is measured separately.
-  async function handleSharePublic() {
-    if (!publicVideoId) return
-
+  // PUSH #23 — every sharing surface uses the public /v/[id] landing, never the
+  // raw MP4. That landing has a preview, a tracked signup CTA and (when ready)
+  // the creator's referral code. One URL builder prevents channel drift.
+  function buildPublicShareUrl(): string | null {
+    if (!publicVideoId || typeof window === 'undefined') return null
     const shareUrl = new URL(`/v/${publicVideoId}`, window.location.origin)
     shareUrl.searchParams.set('utm_source', 'kineo_user')
     shareUrl.searchParams.set('utm_medium', 'video_share')
     shareUrl.searchParams.set('utm_campaign', 'referral')
-
-    const referralAttached = !!shareReferralCode
     if (shareReferralCode) {
       shareUrl.searchParams.set('ref', shareReferralCode)
     }
+    return shareUrl.toString()
+  }
 
-    const url = shareUrl.toString()
-    const commonMetadata = {
+  function publicShareMetadata(channel: string) {
+    return {
       video_id: publicVideoId,
       where: 'done_screen',
-      referral_attached: referralAttached,
+      referral_attached: !!shareReferralCode,
+      channel,
     }
+  }
+
+  async function handleSharePublic() {
+    const url = buildPublicShareUrl()
+    if (!url) return
+    const commonMetadata = publicShareMetadata('native_or_copy')
     trackEvent('video_share_clicked', commonMetadata)
 
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({
           title: 'My Kineo Short',
-          text: 'I made this Short with Kineo. You can make your first one free:',
+          text: 'I made this Short with Kineo. You can create up to 3 Fast videos every 24h with no card:',
           url,
         })
         setSharedPublic('shared')
@@ -3426,6 +3417,35 @@ export default function GenerateClient() {
     setTimeout(() => setSharedPublic(null), 2000)
   }
 
+  async function handleCopyPublicLink() {
+    const url = buildPublicShareUrl()
+    if (!url) return
+    const metadata = publicShareMetadata('copy_link')
+    trackEvent('video_share_clicked', metadata)
+    try {
+      await navigator.clipboard.writeText(url)
+      setSharedPublic('copied')
+      trackEvent('video_shared', { ...metadata, method: 'clipboard' })
+    } catch {
+      try { window.prompt('Copy this link:', url) } catch {}
+      setSharedPublic('ready')
+      trackEvent('video_share_manual_copy_shown', metadata)
+    }
+    setTimeout(() => setSharedPublic(null), 2000)
+  }
+
+  function handlePublicShareChannel(channel: 'whatsapp' | 'x') {
+    const url = buildPublicShareUrl()
+    if (!url) return
+    const metadata = publicShareMetadata(channel)
+    trackEvent('video_share_clicked', metadata)
+    const destination = channel === 'whatsapp'
+      ? `https://wa.me/?text=${encodeURIComponent(`I made this Short with Kineo. Watch it and make your own Fast video: ${url}`)}`
+      : `https://twitter.com/intent/tweet?text=${encodeURIComponent('I made this YouTube Short with Kineo. Create up to 3 Fast videos every 24h with no card.')}&url=${encodeURIComponent(url)}`
+    window.open(destination, '_blank', 'noopener,noreferrer')
+    trackEvent('video_share_channel_opened', metadata)
+  }
+
   // Push #047 — copy any section of the output package to the clipboard,
   // flashing a transient "✓ Copied" state on the matching button. Used by
   // the per-card copy buttons and the top-level "Copy Full Short Package"
@@ -3440,24 +3460,6 @@ export default function GenerateClient() {
     } catch {
       // Clipboard can be denied in some browsers — silent no-op.
     }
-  }
-
-  async function handleShare() {
-    if (!finalVideoUrl) return
-    if (typeof navigator !== 'undefined' && 'share' in navigator) {
-      try {
-        await navigator.share({
-          title: 'My AI Short',
-          text: 'Made with Kineo',
-          url: finalVideoUrl,
-        })
-        return
-      } catch {
-        // User cancelled the share sheet or the platform refused — fall back
-        // to clipboard so the action button never feels dead.
-      }
-    }
-    await handleCopyUrl()
   }
 
   function handleReset() {
@@ -5419,7 +5421,42 @@ export default function GenerateClient() {
                       : `Download clean Short (${duration}s · MP4)`}
                 </a>
 
-                {/* Secondary row: preview + copy + whatsapp + more + X */}
+                {publicVideoId ? (
+                  <button
+                    type="button"
+                    onClick={handleSharePublic}
+                    className="flex w-full flex-col items-center justify-center rounded-2xl px-5 py-4 text-center font-black"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(41,151,255,.22), rgba(139,92,246,.18))',
+                      border: '1px solid rgba(41,151,255,.55)',
+                      color: '#eaf4ff',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 28px rgba(41,151,255,.16)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>
+                      {sharedPublic === 'shared'
+                        ? '✓ Shared!'
+                        : sharedPublic === 'copied'
+                          ? '✓ Public link copied — paste it anywhere'
+                          : sharedPublic === 'ready'
+                            ? 'Your public link is ready to copy'
+                            : '📤 Share your finished Short'}
+                    </span>
+                    <span style={{ marginTop: 4, fontSize: '0.72rem', fontWeight: 650, color: '#a9c9ec' }}>
+                      Preview page + “make one like this” CTA{shareReferralCode ? ' + your referral reward' : ''}
+                    </span>
+                  </button>
+                ) : (
+                  <div
+                    className="w-full rounded-xl px-4 py-3 text-center text-xs font-bold"
+                    style={{ color: 'var(--muted2)', border: '1px solid var(--border)', background: 'rgba(255,255,255,.04)' }}
+                  >
+                    Preparing your public share link…
+                  </div>
+                )}
+
+                {/* Secondary row: preview + tracked public-share channels. */}
                 {/* The current asset is intentionally shareable. For free users
                     it is the watermarked growth-loop asset; this UI never exposes
                     a separate clean URL. */}
@@ -5441,92 +5478,50 @@ export default function GenerateClient() {
                   </a>
                   <button
                     type="button"
-                    onClick={handleCopyUrl}
+                    onClick={handleCopyPublicLink}
+                    disabled={!publicVideoId}
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                     style={{
-                      background: copied ? 'rgba(41,151,255,.12)' : 'rgba(255,255,255,.06)',
-                      border: copied ? '1px solid rgba(41,151,255,.45)' : '1px solid var(--border)',
-                      color: copied ? '#5cb3ff' : 'var(--text)',
-                      cursor: 'pointer',
+                      background: sharedPublic ? 'rgba(41,151,255,.12)' : 'rgba(255,255,255,.06)',
+                      border: sharedPublic ? '1px solid rgba(41,151,255,.45)' : '1px solid var(--border)',
+                      color: publicVideoId ? (sharedPublic ? '#5cb3ff' : 'var(--text)') : 'var(--muted)',
+                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
                       transition: 'all 0.15s',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {copied ? '✓ Copied!' : '🔗 Copy link'}
+                    {sharedPublic === 'copied' ? '✓ Copied!' : '🔗 Copy public link'}
                   </button>
-                  {/* #465 — share the PUBLIC page (/v/[id]) with preview + CTA.
-                      This is the growth loop: each share is a landing that brings
-                      a new pre-warmed visitor. Copies the link so the WhatsApp
-                      preview renders (it only does when a link is pasted). */}
-                  {publicVideoId && (
-                    <button
-                      type="button"
-                      onClick={handleSharePublic}
-                      className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                      style={{
-                        background: sharedPublic ? 'rgba(41,151,255,.12)' : 'rgba(41,151,255,.12)',
-                        border: sharedPublic ? '1px solid rgba(41,151,255,.45)' : '1px solid rgba(41,151,255,.45)',
-                        color: sharedPublic ? '#5cb3ff' : '#2997ff',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {sharedPublic === 'shared'
-                        ? '✓ Shared!'
-                        : sharedPublic === 'copied'
-                          ? '✓ Link copied — paste it!'
-                          : sharedPublic === 'ready'
-                            ? 'Link ready to copy'
-                            : '🌐 Share this Short'}
-                    </button>
-                  )}
-                  {/* WhatsApp — great for mobile / creator sharing */}
-                  <a
-                    href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A usekineo.com`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handlePublicShareChannel('whatsapp')}
+                    disabled={!publicVideoId}
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                     style={{
                       background: 'rgba(37,211,102,.10)',
                       border: '1px solid rgba(37,211,102,.35)',
-                      color: '#25D366',
-                      textDecoration: 'none',
+                      color: publicVideoId ? '#25D366' : 'var(--muted)',
+                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
                       whiteSpace: 'nowrap',
                     }}
                   >
                     📲 WhatsApp
-                  </a>
+                  </button>
                   <button
                     type="button"
-                    onClick={handleShare}
+                    onClick={() => handlePublicShareChannel('x')}
+                    disabled={!publicVideoId}
                     className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
                     style={{
                       background: 'rgba(255,255,255,.06)',
                       border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    📤 More
-                  </button>
-                  {/* Push #101 — one-click X intent for organic distribution. */}
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at usekineo.com %23YouTubeShorts %23AIVideo`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    style={{
-                      background: 'rgba(255,255,255,.06)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      textDecoration: 'none',
+                      color: publicVideoId ? 'var(--text)' : 'var(--muted)',
+                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
                       whiteSpace: 'nowrap',
                     }}
                   >
                     𝕏 Share
-                  </a>
+                  </button>
                 </div>
 
                 {/* Push #317 — YouTube upload: connect or post directly */}

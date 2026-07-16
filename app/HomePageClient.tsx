@@ -1011,9 +1011,9 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#C4B5FD]">★ Start here</span>
               <div className="relative z-10">
                 <div className="font-display text-3xl font-bold text-white sm:text-4xl">Generate your first Short</div>
-                <div className="mt-1.5 text-sm text-[#CFC6E6]">One idea → a finished 9:16 Short. Free to try — no credit card.</div>
+                <div className="mt-1.5 text-sm text-[#CFC6E6]">One idea → a finished 9:16 Short. Up to 3 watermarked Fast videos every 24h — no card.</div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-[13px] font-bold text-white transition group-hover:brightness-110">Generate my first Short — free →</span>
+                  <span className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-[13px] font-bold text-white transition group-hover:brightness-110">Generate a Fast video →</span>
                   <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">AI voice + B-roll</span>
                   <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">~60s</span>
                   <span className="rounded-lg border border-[rgba(34,211,238,0.4)] px-3 py-1.5 text-[11px] text-[#22D3EE]">No card</span>
@@ -1062,7 +1062,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           {/* Push #432 — welcome-gift trust line under the dashboard. */}
           {/* ROBO1-CONV-2026-06-28 — free-first reassurance row. */}
           <p className="mt-5 text-center text-[13px] font-semibold text-[#9D96B8]">
-            🎁 <span className="text-[#A78BFA] font-bold">Your first Short is free</span> · No credit card · Cancel anytime
+            🎁 <span className="text-[#A78BFA] font-bold">Up to 3 Fast videos every 24h</span> · Watermarked · No card
           </p>
         </div>{/* end hero grid */}
 

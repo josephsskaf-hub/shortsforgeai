@@ -1,6 +1,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import PublicVideoCtaLink from '@/components/PublicVideoCtaLink'
 
 // #459 — Public shareable video page (/v/[id]). Every generated video gets a
 // public landing: the 9:16 player + a "make your own free" CTA. When a user
@@ -66,7 +67,7 @@ function signupHrefFor(v: VideoRow | null): string {
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const v = await getVideo(params.id)
   const title = titleFor(v)
-  const desc = 'Made with Kineo — type any topic and AI writes the script, voiceover, captions and footage. Create and download a watermarked Short for free.'
+  const desc = 'Made with Kineo — type any topic and AI writes the script, voiceover, captions and footage. Create up to 3 watermarked Fast videos every 24 hours with no card.'
   // #462 — og:image is now produced by the sibling opengraph-image.tsx (a
   // generated, always-valid 1200x630 card). We don't set images here anymore —
   // the static fallback didn't exist, which broke every link preview.
@@ -166,10 +167,11 @@ export default async function PublicVideoPage({ params }: { params: { id: string
         >
           <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Made in ~60 seconds with AI 🤯</p>
           <p style={{ margin: '6px 0 14px', color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            Use this idea as your starting point. Create, share and download a watermarked MP4 free — upgrade only when you want a clean export.
+            Use this idea as your starting point. Create, share and download up to 3 watermarked Fast videos every 24 hours — upgrade only when you want a clean export.
           </p>
-          <Link
+          <PublicVideoCtaLink
             href={signupHref}
+            videoId={params.id}
             style={{
               display: 'inline-block',
               background: '#2997ff',
@@ -182,7 +184,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             }}
           >
             Make one like this →
-          </Link>
+          </PublicVideoCtaLink>
         </div>
       </div>
     </main>

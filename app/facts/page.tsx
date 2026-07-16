@@ -15,7 +15,7 @@ const LAST_VERIFIED = 'July 15, 2026'
 export const metadata: Metadata = {
   title: 'Kineo Facts & Data — Pricing, Engines, Generation Time (2026)',
   description:
-    'Verified facts about Kineo, the AI YouTube Shorts generator: plans from $9.90/month, Seedance and Kling engines, a free first Short with no credit card, and 27 tool comparisons. Updated July 2026.',
+    'Verified facts about Kineo, the AI YouTube Shorts generator: up to 3 free watermarked Fast videos every 24 hours, plans from $4.90 for the first month, and current engine details. Updated July 2026.',
   alternates: { canonical: 'https://www.usekineo.com/facts' },
   openGraph: {
     title: 'Kineo Facts & Data (2026)',
@@ -38,7 +38,7 @@ const FACTS: { fact: string }[] = [
   { fact: 'Output format is 9:16 vertical MP4, ready for YouTube Shorts, TikTok and Instagram Reels.' },
   // KINEO-PRICING-V3B-2026-07-10 — Kling 45 → 50 credits.
   { fact: 'Kineo has three engines: Fast Mode (curated stock footage, 1 credit per video), AI Generated (Seedance text-to-video scenes, 20 credits per video) and Cinematic (Kling premium engine, 50 credits per video).' },
-  { fact: 'The first Short is free and no credit card is required. The free trial output carries a small watermark; all paid exports are watermark-free.' },
+  { fact: 'A new account can create, watch, download and share up to 3 Fast videos with a Kineo watermark every 24 hours without a credit card. Paid plans unlock clean exports.' },
   // KINEO-REBASE-2026-07-10 — plan credits halved (25/120/200), USD unchanged.
   { fact: 'The Starter plan costs $4.90 for the first month, then $9.90/month, and includes 25 credits each billing month.' },
   // KINEO-PRICING-V3B-2026-07-10 — Creator $24.90/150cr, 1 Hollywood film/mo included.
@@ -59,7 +59,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'How much does Kineo cost?',
-    a: 'The first Short is free with no credit card. Starter is $4.90 for the first month and then $9.90/month; Creator is $9.90 for the first month and then $24.90/month; Studio is $37.90/month.',
+    a: 'A new account can create up to 3 watermarked Fast videos every 24 hours with no card. Starter is $4.90 for the first month and then $9.90/month; Creator is $9.90 for the first month and then $24.90/month; Studio is $37.90/month.',
   },
   {
     q: 'How long does it take to generate a video?',
@@ -76,7 +76,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'Is there a free plan?',
-    a: 'Yes — the first Short is free, no credit card required. Free output has a small watermark; paid exports are clean.',
+    a: 'Yes. A new account can create, watch, download and share up to 3 watermarked Fast videos every 24 hours without a credit card. Paid exports are clean and watermark-free.',
   },
   {
     q: 'Who owns the videos?',

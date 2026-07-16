@@ -77,11 +77,12 @@ export default function TermsPage() {
             to deliver the Service.
           </Section>
 
-          <Section title="4. Payments, trials and refunds">
-            Paid subscriptions include a 7-day free trial unless stated
-            otherwise. After the trial ends, your card is charged the
-            first-month price shown in checkout, and then the regular
-            monthly price on each renewal until you cancel. You can
+          <Section title="4. Payments, introductory prices and refunds">
+            Unless checkout explicitly states otherwise, a paid subscription
+            is charged immediately at the introductory first-month price shown
+            in checkout. The regular monthly price and the exact first renewal
+            date are shown before payment. The subscription then renews at that
+            price each month until you cancel. You can
             cancel anytime from your account settings. We honor a 7-day
             money-back guarantee on the first paid month — email{' '}
             <a

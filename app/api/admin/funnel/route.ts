@@ -128,6 +128,22 @@ export interface FunnelData {
     paid: number
     topLandingPages: Array<{ path: string; sessions: number }>
   }
+  creatorLoop: {
+    completedVideos: number
+    completedCreators: number
+    shareClicks: number
+    shareUsers: number
+    shareRate: string
+    sharesCompleted: number
+    publicVideoLandings: number
+    publicVideoCtaClicks: number
+    landingToCtaRate: string
+    referredSignups: number
+    ctaToSignupRate: string
+    qualifiedReferrals: number
+    referredPaid: number
+    signupToPaidRate: string
+  }
   topicPerformance: Array<{ topic: string; videos: number; users: number }>
   renderHealth: Array<{ engine: string; total: number; completed: number; failed: number; completionRate: string }>
   trackingHealth: { eventsTableMissing: boolean; note: string; lastVideoAt: string | null; lastClickAt: string | null; lastAbandonedAt: string | null }
@@ -185,6 +201,7 @@ type ProfileRow = {
   video_credits: number | null; utm_source: string | null; signup_utm_source: string | null
   signup_utm_medium: string | null; signup_utm_campaign: string | null
   signup_referrer: string | null; signup_country: string | null
+  referred_by: string | null; referral_reward_granted: boolean | null; referral_count: number | null
 }
 type VideoRow = { user_id: string | null; status: string | null; quality_mode: string | null; topic: string | null; niche: string | null; created_at: string | null }
 type EventRow = {
@@ -260,7 +277,7 @@ export async function GET(req: Request) {
     try {
       const { data: profs } = await admin
         .from('profiles')
-        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,stripe_customer_id,video_credits,utm_source,signup_utm_source,signup_utm_medium,signup_utm_campaign,signup_referrer,signup_country')
+        .select('id,email,created_at,is_pro,plan,stripe_subscription_id,stripe_customer_id,video_credits,utm_source,signup_utm_source,signup_utm_medium,signup_utm_campaign,signup_referrer,signup_country,referred_by,referral_reward_granted,referral_count')
         .limit(5000)
       if (Array.isArray(profs)) {
         allProfiles = profs as ProfileRow[]
@@ -342,6 +359,8 @@ export async function GET(req: Request) {
     const trackedEventNames = [
       'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
       'landing_session_started', 'organic_cta_clicked',
+      'video_share_clicked', 'video_shared', 'video_share_channel_opened',
+      'public_video_cta_clicked',
       'auth_callback_completed', 'auth_callback_failed', 'email_signup_completed',
       'generate_arrived_server', 'generate_activation_auth_missing',
       'generate_started', 'video_generation_started',
@@ -395,7 +414,11 @@ export async function GET(req: Request) {
         let organicQuery = admin
           .from('events')
           .select('name,user_id,created_at,session_id,metadata,path')
-          .in('name', ['landing_session_started', 'organic_cta_clicked'])
+          .in('name', [
+            'landing_session_started', 'organic_cta_clicked',
+            'video_share_clicked', 'video_shared', 'video_share_channel_opened',
+            'public_video_cta_clicked',
+          ])
           .order('created_at', { ascending: false })
           .limit(5000)
         if (periodIso) organicQuery = organicQuery.gte('created_at', periodIso)
@@ -694,6 +717,57 @@ export async function GET(req: Request) {
         .slice(0, 10),
     }
 
+    // PUSH #23 — creator distribution loop. A completed video only becomes an
+    // acquisition asset when the creator shares its public page, a visitor
+    // clicks the CTA, signs up and eventually pays. Every stage is measured
+    // independently so a zero can be acted on instead of hidden in "referrals".
+    const periodVideos = allVideos.filter((video) => {
+      if (days === 'all') return true
+      const createdAt = video.created_at ? new Date(video.created_at).getTime() : 0
+      return createdAt >= cohortCutoff
+    })
+    const completedPeriodVideos = periodVideos.filter((video) => video.status === 'completed')
+    const completedCreatorIds = new Set(
+      completedPeriodVideos.map((video) => video.user_id).filter((id): id is string => Boolean(id))
+    )
+    const creatorShareClickRows = organicEventRows.filter((event) => event.name === 'video_share_clicked')
+    const creatorSharedRows = organicEventRows.filter((event) => event.name === 'video_shared')
+    const creatorShareUserIds = new Set<string>()
+    for (const event of creatorSharedRows) {
+      if (event.user_id && completedCreatorIds.has(event.user_id)) {
+        creatorShareUserIds.add(event.user_id)
+      }
+    }
+    const publicVideoLandingRows = organicEventRows.filter((event) =>
+      event.name === 'landing_session_started' && Boolean(event.path?.startsWith('/v/'))
+    )
+    const publicVideoCtaRows = organicEventRows.filter((event) => event.name === 'public_video_cta_clicked')
+    const referredProfiles = cohort.filter((profile) => {
+      const source = (profile.signup_utm_source || '').trim().toLowerCase()
+      const campaign = (profile.signup_utm_campaign || '').trim().toLowerCase()
+      return Boolean(profile.referred_by) ||
+        source === 'kineo_user' || source === 'public_video' ||
+        campaign === 'referral' || campaign === 'make_one_like_this'
+    })
+    const qualifiedReferrals = referredProfiles.filter((profile) => profile.referral_reward_granted === true).length
+    const referredPaid = referredProfiles.filter((profile) => paidUserSet.has(profile.id)).length
+    const creatorLoop = {
+      completedVideos: completedPeriodVideos.length,
+      completedCreators: completedCreatorIds.size,
+      shareClicks: creatorShareClickRows.length,
+      shareUsers: creatorShareUserIds.size,
+      shareRate: pct(creatorShareUserIds.size, completedCreatorIds.size),
+      sharesCompleted: creatorSharedRows.length,
+      publicVideoLandings: publicVideoLandingRows.length,
+      publicVideoCtaClicks: publicVideoCtaRows.length,
+      landingToCtaRate: pct(publicVideoCtaRows.length, publicVideoLandingRows.length),
+      referredSignups: referredProfiles.length,
+      ctaToSignupRate: pct(referredProfiles.length, publicVideoCtaRows.length),
+      qualifiedReferrals,
+      referredPaid,
+      signupToPaidRate: pct(referredPaid, referredProfiles.length),
+    }
+
     const topicMap = new Map<string, { topic: string; videos: number; users: Set<string> }>()
     for (const v of allVideos) {
       if (!v.user_id || !cohortIds.has(v.user_id)) continue
@@ -764,7 +838,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, organicRecovery, creatorLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })

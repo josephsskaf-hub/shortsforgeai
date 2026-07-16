@@ -167,13 +167,13 @@ const CATEGORIES: Category[] = [
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '1', t: 'Pick one idea from the list above', d: 'Choose a niche you can post in daily. Higher RPM is great, but consistency beats everything — pick the one whose topics you could brainstorm forever.' },
   { n: '2', t: 'Type the idea into Kineo', d: 'One line is enough — "the island too dangerous to visit". The AI writes the hook and script, generates the voiceover, matches footage to every line and burns in captions.' },
-  { n: '3', t: 'Download a ready-to-post Short in ~60 seconds', d: 'A finished 9:16 video — post it to YouTube, TikTok or Reels as-is. No camera, no face, no editing. Your first Short is free, no credit card.' },
+  { n: '3', t: 'Download a ready-to-post Short in ~60 seconds', d: 'A finished 9:16 video — post it to YouTube, TikTok or Reels as-is. No camera, no face, no editing. Create up to 3 watermarked Fast videos every 24 hours with no card.' },
 ]
 
 const FAQ: { q: string; a: string }[] = [
   { q: 'What is the best faceless YouTube channel idea for 2026?', a: 'Personal finance is the highest-paying faceless niche in 2026 (roughly $15–30+ RPM), followed by luxury/wealth, health and tech/AI. But the best idea is the one you can post in daily: mystery, horror and extreme-places channels earn less per view yet often grow much faster because retention is exceptional. Many creators start in a viral niche to build views, then add finance-adjacent topics for RPM.' },
   { q: 'Which faceless niches pay the most RPM in 2026?', a: 'Based on 2026 data across the niche-research sites: personal finance and investing ($15–30+ RPM), luxury and wealth ($10–20), health and wellness ($10–18), tech and AI ($8–15), motivation and stoicism ($8–12), horror ($6–12) and mystery/true crime ($5–12). US-heavy audiences can earn 5–10x more than the same views from other regions.' },
-  { q: 'How do I start a faceless YouTube channel with no camera or editing skills?', a: 'You can generate the entire video with AI. With Kineo you type one idea and get a finished 9:16 Short — script, AI voiceover, footage matched to each line, and captions — in about 60 seconds. No camera, no face on screen, no recording your voice, no editor. The first Short is free with no credit card.' },
+  { q: 'How do I start a faceless YouTube channel with no camera or editing skills?', a: 'You can generate the entire video with AI. With Kineo you type one idea and get a finished 9:16 Short — script, AI voiceover, footage matched to each line, and captions — in about 60 seconds. No camera, no face on screen, no recording your voice, no editor. A new account can create up to 3 watermarked Fast videos every 24 hours with no card.' },
   { q: 'Can faceless YouTube channels still get monetized in 2026?', a: 'Yes. YouTube monetizes faceless channels normally — what it rejects is unoriginal, mass-repeated content. Channels with original narration, a unique angle per video and consistent formats pass review. Every Kineo Short is generated from your own idea with a unique script and voiceover, which is exactly the kind of transformation the policy asks for.' },
 ]
 
@@ -253,7 +253,7 @@ export default function FacelessChannelIdeasPage() {
         </div>
 
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
-          <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Pick an idea. Your first Short is free.</div>
+          <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Pick an idea. Create up to 3 Fast previews every 24h.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>One idea in, a ready-to-post faceless Short out in ~60 seconds. No camera, no card.</p>
           <OrganicCtaLink href={signupUrl} source="push22_faceless_ideas" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
         </div>

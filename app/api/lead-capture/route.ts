@@ -3,7 +3,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 // #456 — saves an exit-intent lead to `leads`.
 // #461 — Measure 2 (lead nurture): on a NEW lead, instantly emails the lead
-// magnet (the 10 viral ideas) + a "make your first video free" CTA via Resend.
+// magnet (the 10 viral ideas) + a truthful free-Fast CTA via Resend.
 // Turns a captured email into an activated signup. Best-effort: a send failure
 // never breaks the capture.
 export const dynamic = 'force-dynamic'
@@ -30,7 +30,7 @@ async function sendLeadMagnet(email: string): Promise<void> {
     console.warn('[lead-capture] RESEND_API_KEY not set — skipping magnet email')
     return
   }
-  const url = `${APP_URL}/signup`
+  const url = `${APP_URL}/signup?utm_source=lead_magnet&utm_medium=email&utm_campaign=viral_ideas_activation`
   const list = VIRAL_IDEAS.map((idea, i) => `${i + 1}. ${idea}`).join('\n')
   const text = `Hey,
 
@@ -38,9 +38,9 @@ Here are your 10 viral Short ideas — pick any one and you have a video in 60 s
 
 ${list}
 
-Want to turn one into a real Short right now? Type it into Kineo and the AI writes the script, voiceover, captions and finds the footage. Your first video is free — no card needed.
+Want to turn one into a real Short right now? Type it into Kineo and the AI writes the script, voiceover, captions and finds the footage. Create up to 3 watermarked Fast videos every 24 hours — no card needed.
 
-Make your first one free: ${url}
+Make a Fast video: ${url}
 
 — Kineo Team
 usekineo.com`
@@ -54,9 +54,9 @@ usekineo.com`
   <p style="font-size:15px;">Hey,</p>
   <p style="font-size:15px;">Here are your <b>10 viral Short ideas</b> — pick any one and you have a video in 60 seconds:</p>
   ${ideasHtml}
-  <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into Kineo — the AI writes the script, voiceover, captions and finds the footage. <b>Your first video is free, no card needed.</b></p>
+  <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into Kineo — the AI writes the script, voiceover, captions and finds the footage. <b>Create up to 3 watermarked Fast videos every 24 hours, no card needed.</b></p>
   <p style="margin:20px 0;">
-    <a href="${url}" style="background:#2997ff;color:#ffffff;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Arial,sans-serif;font-size:15px;display:inline-block;">Make my first one free →</a>
+    <a href="${url}" style="background:#2997ff;color:#ffffff;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Arial,sans-serif;font-size:15px;display:inline-block;">Make a Fast video →</a>
   </p>
   <p style="font-size:13px;color:#555;">— Kineo Team<br/>usekineo.com</p>
 </div>`

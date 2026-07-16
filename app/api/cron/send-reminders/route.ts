@@ -4,7 +4,7 @@ import { sweepStuckRenderDebits } from '@/lib/credits/refund'
 
 // Cron route: fires daily via Vercel Cron (see vercel.json).
 // Finds users who signed up 20–28 hours ago and have no paid plan,
-// then sends a single reminder email nudging them to start their trial.
+// then sends a single reminder email nudging them to use their free Fast access.
 //
 // Idempotency: we track sent reminders in a `reminder_sent_at` column
 // on profiles. If the column is null AND the user hasn't subscribed, we
@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
   }
 
   // The credit-refund sweep above remains live. All outbound below is paused
-  // by default because it overlaps other recovery jobs and still carries a
-  // retired three-day-trial offer. Explicit opt-in is required to resume it.
+  // by default because it overlaps other recovery jobs. Explicit opt-in is
+  // required to resume it after the current Lote 1 measurement gate.
   if (!LIFECYCLE_EMAILS_ENABLED) {
     return NextResponse.json({ paused: true, sent: 0, refunds_checked: true, reason: 'lifecycle_email_gate' })
   }
@@ -115,14 +115,14 @@ export async function GET(req: NextRequest) {
 
     const name = user.full_name?.split(' ')[0] || null
     const greeting = name ? `Hey ${name},` : 'Hey Creator,'
-    const pricingUrl = `${APP_URL}/pricing`
+    const activationUrl = `${APP_URL}/generate?utm_source=lifecycle&utm_medium=email&utm_campaign=d1_activation`
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Still thinking? 3 days free — Kineo</title>
+  <title>Your free Fast previews are waiting — Kineo</title>
 </head>
 <body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:40px 20px;">
@@ -137,12 +137,12 @@ export async function GET(req: NextRequest) {
           <tr>
             <td style="background:#161618;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:40px 36px;">
               <p style="color:#e2e8f0;font-size:18px;font-weight:700;margin:0 0 6px;">${greeting}</p>
-              <p style="color:#94a3b8;font-size:15px;margin:0 0 24px;line-height:1.6;">You created your account yesterday but haven't started your free trial yet.</p>
+              <p style="color:#94a3b8;font-size:15px;margin:0 0 24px;line-height:1.6;">You created your account yesterday but haven't made your first Fast video yet.</p>
 
               <div style="background:rgba(41,151,255,0.08);border:1px solid rgba(41,151,255,0.3);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
-                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⏰ YOUR TRIAL IS STILL AVAILABLE</p>
-                <p style="color:#f1f5f9;font-size:24px;font-weight:900;margin:0 0 4px;">3 days free. No charge today.</p>
-                <p style="color:#64748b;font-size:13px;margin:0;">Cancel before Day 4 → $0. No questions asked.</p>
+                <p style="color:#2997ff;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⏰ YOUR FAST ACCESS IS READY</p>
+                <p style="color:#f1f5f9;font-size:24px;font-weight:900;margin:0 0 4px;">Up to 3 Fast videos every 24h.</p>
+                <p style="color:#64748b;font-size:13px;margin:0;">No card. Free videos include a Kineo watermark.</p>
               </div>
 
               <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;line-height:1.7;">
@@ -152,13 +152,13 @@ export async function GET(req: NextRequest) {
               <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:12px;">
                 <tr>
                   <td align="center">
-                    <a href="${pricingUrl}" style="display:inline-block;background:#2997ff;color:#ffffff;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(41,151,255,0.4);">
-                      Start My Free Trial →
+                    <a href="${activationUrl}" style="display:inline-block;background:#2997ff;color:#ffffff;font-size:17px;font-weight:900;text-decoration:none;padding:18px 48px;border-radius:14px;letter-spacing:0.01em;box-shadow:0 6px 28px rgba(41,151,255,0.4);">
+                      Make My First Fast Video →
                     </a>
                   </td>
                 </tr>
               </table>
-              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 24px;">Starter $9.90 · Creator $24.90 · Studio $37.90/mo after trial · Cancel anytime</p>
+              <p style="text-align:center;color:#475569;font-size:12px;margin:0 0 24px;">Starter $4.90 first month, then $9.90/mo · Creator $9.90 first month, then $24.90/mo</p>
 
               <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:18px;">
                 <p style="color:#475569;font-size:12px;margin:0;text-align:center;line-height:1.6;">
@@ -185,9 +185,9 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [user.email],
-          subject: '⏰ Your free 3-day trial is waiting — don\'t miss it',
+          subject: 'Your free Fast previews are waiting',
           html,
-          text: `${greeting}\n\nYou signed up for Kineo but haven't started your free trial yet.\n\n3 days free — no charge today. Cancel before Day 4 and you pay nothing.\n\nStart here: ${pricingUrl}\n\n— The Kineo Team`,
+          text: `${greeting}\n\nYou signed up for Kineo but haven't made your first Fast video yet.\n\nCreate, watch, download and share up to 3 watermarked Fast videos every 24 hours — no card.\n\nStart here: ${activationUrl}\n\n— The Kineo Team`,
         }),
       })
 

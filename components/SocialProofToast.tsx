@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation'
 const MESSAGES = [
   { emoji: '⚡', text: 'Script, voiceover, footage & captions in ~60s' },
   { emoji: '🎬', text: 'Faceless YouTube Shorts — no camera, no editing' },
-  { emoji: '🚀', text: 'First Short is free, no card required' },
+  { emoji: '🚀', text: 'Up to 3 Fast previews every 24h — no card' },
   { emoji: '💎', text: 'AI voiceover + auto captions on every Short' },
   { emoji: '🎉', text: 'New topic in, ready-to-post Short out' },
   { emoji: '⚡', text: 'Built for daily YouTube Shorts creators' },

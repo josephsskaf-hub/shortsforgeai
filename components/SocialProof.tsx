@@ -18,21 +18,21 @@ interface TrustSignal {
   accent: string
 }
 
-// Only real, verifiable claims. "First Short free" and the FOUNDING50 terms
-// are product facts; the capability line describes the actual output spec.
+// Only real, verifiable product facts. Keep this component aligned with the
+// canonical free-Fast access and current monthly offer before reusing it.
 const TRUST_SIGNALS: TrustSignal[] = [
   {
     id: 'free',
     icon: '🎬',
-    title: 'Your first Short is free',
-    sub: 'No credit card to start',
+    title: 'Up to 3 Fast previews / 24h',
+    sub: 'Watermarked · no card',
     accent: '#2997ff',
   },
   {
-    id: 'founder',
+    id: 'pricing',
     icon: '🔑',
-    title: 'Founding offer — only 10 seats',
-    sub: '50% off, locked for life',
+    title: 'Simple monthly plans',
+    sub: 'Cancel anytime · 7-day money-back',
     accent: '#2997ff',
   },
   {
@@ -173,7 +173,7 @@ export default function SocialProof() {
             margin: 0,
           }}
         >
-          No hype. Just your first Short, free.
+          No hype. Try the full Fast workflow first.
         </h2>
       </div>
 
