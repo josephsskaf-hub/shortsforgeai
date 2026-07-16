@@ -1,8 +1,10 @@
 # Kineo — PUSH #25
 
 **Nome:** Post-Video Export Conversion
-**Status:** VALIDADO LOCALMENTE — aguardando commit, deploy READY e validação ao vivo
+**Status:** PUBLICADO E VALIDADO TECNICAMENTE EM PRODUÇÃO
 **Data:** 16/07/2026
+**Commit de código:** `08ade7534905e7cff097542eda14651405f162c7`
+**Deploy Vercel:** `dpl_5GhAFbvuiaWzfHyvALLDHZzNdTbw` — READY em `https://www.usekineo.com`
 
 ## Evidência que escolheu este push
 
@@ -70,6 +72,29 @@ O gargalo observado deixou de ser cadastro ou primeiro render. Ele está entre o
 - `checkout_origin=post_video_clean_export` atravessa Checkout Session, Subscription e `payment_success` do webhook.
 - A chave de idempotência foi versionada e inclui a origem do checkout.
 - Nenhum checkout, pagamento, email ou render de provider foi criado durante a validação.
+
+## Validação em produção
+
+- Commit enviado para `main`; `HEAD` local e `origin/main` apontam para `08ade75`.
+- Deployment Vercel `dpl_5GhAFbvuiaWzfHyvALLDHZzNdTbw` confirmado como READY e associado a `www.usekineo.com`.
+- Homepage responde HTTP 200.
+- `/generate` sem sessão responde 307 para `/login?redirect=%2Fgenerate`, preservando retomada.
+- `/api/admin/funnel` sem sessão mantém o gate administrativo e responde 403.
+- Nenhum evento artificial de oferta, download, checkout ou pagamento foi criado na validação.
+- A sessão de QA disponível não estava autenticada; portanto, a tela protegida não foi clicada e nenhum render foi iniciado apenas para produzir uma impressão falsa.
+
+## Baseline pós-deploy
+
+Baseline fixado imediatamente após o deploy READY:
+
+- novos cadastros externos: 0;
+- novos vídeos externos: 0;
+- `post_video_offer_viewed`: 0;
+- `post_video_clean_export_clicked`: 0;
+- `checkout_started`: 0;
+- `payment_success`: 0;
+- assinantes recorrentes externos válidos: **0/10**;
+- assinaturas Stripe internas excluídas: 2.
 
 ## Meta do microteste
 
