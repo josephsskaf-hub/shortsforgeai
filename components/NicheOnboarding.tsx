@@ -1,348 +1,157 @@
 'use client'
 
-// #467/#469/#470/#472 — "Viral First Short Onboarding" (Measure 2 / P0, activation).
-// #472 — final 8.5 → 9.5 polish (conversion + UX + tracking) per spec. Same job:
-// a brand-new user lands on /generate and generates a watermarked Fast video in
-// one click — no engine choice, no empty dashboard. Added in #472:
-//  - Top copy: value line + "No credit card required" + honest 11.4K proof
-//  - Surprise Me → free Fast video (picks the highest-score idea, Fast)
-//  - Stronger input ("Type any topic, niche, product or idea…" + free video CTA)
-//  - Niche filter chips (horizontal-scroll on mobile) — filter only, never a form
-//  - Highlighted "🔥 Best Pick Right Now" full-width card to kill decision paralysis
-//  - 🧠 Why-it-works + explicit "Output: 60s • 9:16 • Voiceover • Captions • Fast"
-//  - Inline "Preview hook" that expands the spoken hook inside the card
-//  - Whole card clickable; richer funnel events (filter/card/preview/best-pick props)
-//  - Mobile rules (compact hero, full-width CTA, stacked input, scrollable chips)
-// Self-contained; parent wires onPick/onSurprise/onClose (signature unchanged).
-import { useEffect, useRef, useState } from 'react'
+// PUSH #27 — activation handoff for a brand-new account.
+//
+// The previous full-screen catalog asked a just-converted visitor to compare
+// eight topics, filters, hooks, scores and two input paths before the first
+// render. Live TAAFT evidence showed an authenticated user reaching this view
+// and leaving without a click. This version keeps the one-click Fast path but
+// presents one concrete choice and one escape hatch. No timer, viral promise,
+// view claim or fabricated urgency.
+
+import { useEffect } from 'react'
 import { trackEvent } from '@/lib/analytics'
 
-const VERTICAL_COLORS: Record<string, string> = {
-  money: '#2997ff',
-  mystery: '#2997ff',
-  country: '#2997ff',
-  ai: '#2997ff',
-  psychology: '#2997ff',
-  history: '#2997ff',
-  science: '#2997ff',
-  space: '#2997ff',
-}
-const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
-  Hot: { bg: 'rgba(245,245,247,0.14)', color: '#f5f5f7' },
-  Trending: { bg: 'rgba(245,245,247,0.14)', color: '#f5f5f7' },
-  'High Retention': { bg: 'rgba(41,151,255,0.18)', color: '#2997ff' },
-  Viral: { bg: 'rgba(41,151,255,0.18)', color: '#2997ff' },
-}
-
-type Starter = {
-  vertical: string
-  label: string
-  title: string
-  hook: string
-  previewHook: string
-  why: string
-  score: number
-  badge: keyof typeof BADGE_STYLES
-}
-
-// Order is curated for activation/click-through (most instant curiosity first).
-// STARTERS[0] is featured as "Best Pick Right Now".
-const STARTERS: Starter[] = [
-  { vertical: 'mystery', label: 'Mystery', title: 'The disappearance nobody solved in 70 years', hook: '3 people vanished without a trace — and the evidence left behind is more disturbing than the disappearance.', previewHook: 'Three people vanished without a trace. But what they left behind made the case even stranger.', why: 'Mystery + open loop + unsolved case', score: 95, badge: 'Viral' },
-  { vertical: 'money', label: 'Money', title: '$200 a month makes you a millionaire — here’s the math', hook: '$200 a month is all it takes. But start after 30 and you pay an $850,000 penalty.', previewHook: 'Saving $200 a month can make you a millionaire — but only if you start before this age.', why: 'Money + concrete numbers + urgency', score: 91, badge: 'High Retention' },
-  { vertical: 'country', label: 'Country', title: 'The island where snakes rule everything', hook: 'So many venomous snakes the government bans humans from setting foot on it.', previewHook: 'There’s an island so full of venomous snakes that the government bans anyone from landing.', why: 'Extreme place + danger + curiosity', score: 94, badge: 'Viral' },
-  { vertical: 'ai', label: 'AI / Tech', title: 'The AI tool replacing 10 jobs right now', hook: 'One AI tool is already replacing entire teams — and most people still haven’t heard of it.', previewHook: 'One AI tool is quietly doing the work of ten people — and most have never heard of it.', why: 'AI + fear + “you’re missing out”', score: 95, badge: 'Hot' },
-  { vertical: 'psychology', label: 'Health', title: 'Why cold showers change your brain in 60 seconds', hook: 'A 60-second cold shower triggers a neurochemical cascade your brain can’t get from coffee.', previewHook: 'Sixty seconds in a cold shower rewires your brain in a way coffee never could.', why: 'Health + quick win + science', score: 91, badge: 'Hot' },
-  { vertical: 'history', label: 'History', title: 'Why ancient Rome collapsed in 5 steps', hook: 'The empire that ruled the world fell faster than anyone expected — and the pattern is repeating.', previewHook: 'The empire that ruled the world collapsed in five steps — and we’re repeating them.', why: 'History + listicle + relevance', score: 90, badge: 'High Retention' },
-  { vertical: 'science', label: 'Science', title: 'The ocean mystery scientists still can’t explain', hook: 'We’ve mapped 95% of the ocean floor — and what’s down there contradicts everything expected.', previewHook: 'We’ve mapped more of Mars than our own ocean floor — and what’s down there makes no sense.', why: 'Mystery + science + curiosity gap', score: 91, badge: 'High Retention' },
-  { vertical: 'space', label: 'Space', title: 'What NASA found on Mars they never announced', hook: 'A signal, a structure, and a long silence — what the rovers captured raised more questions than answers.', previewHook: 'A rover caught something on Mars that NASA still has never explained.', why: 'Space + secrecy + intrigue', score: 96, badge: 'Viral' },
-]
-
-const FILTERS: string[] = ['All', ...Array.from(new Set(STARTERS.map((s) => s.label)))]
-
-function track(name: string, metadata?: Record<string, unknown>) {
-  void trackEvent(name, metadata)
+const FIRST_VIDEO = {
+  topic: 'The disappearance nobody solved in 70 years',
+  niche: 'mystery',
+  hook: 'Three people vanished without a trace. What they left behind made the case even stranger.',
 }
 
 type Props = {
-  onPick: (topic: string, niche: string) => void
-  onSurprise: (topic: string) => void
+  onPick: (topic: string) => void
   onClose: () => void
 }
 
-export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) {
-  const [customIdea, setCustomIdea] = useState('')
-  const [activeFilter, setActiveFilter] = useState('All')
-  const [openHook, setOpenHook] = useState<string | null>(null)
-  const typedFired = useRef(false)
-
+export default function NicheOnboarding({ onPick, onClose }: Props) {
   useEffect(() => {
-    track('viral_onboarding_viewed')
+    void trackEvent('viral_onboarding_viewed', {
+      version: 'push27_single_choice',
+      is_first_video: true,
+    })
   }, [])
 
-  // Accessibility: close on Escape, reusing the existing onClose handler.
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      void trackEvent('viral_onboarding_skipped', {
+        version: 'push27_single_choice',
+        action: 'escape',
+      })
+      onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  const COMMON = { source: 'viral_onboarding', engine: 'fast', is_first_video: true }
-
-  function generate(s: Starter, isFeatured: boolean) {
-    const props = {
-      selected_topic: s.title,
-      selected_category: s.vertical,
-      selected_score: s.score,
-      selected_label: s.badge,
-      card_position: STARTERS.indexOf(s),
-      is_best_pick: isFeatured,
-      filter_selected: activeFilter,
+  function createFirstVideo() {
+    const metadata = {
+      source: 'viral_onboarding',
+      version: 'push27_single_choice',
+      engine: 'fast',
+      is_first_video: true,
+      selected_category: FIRST_VIDEO.niche,
     }
-    track('viral_card_clicked', props)
-    track('viral_card_generate_clicked', props)
-    track('first_video_started_from_viral_onboarding', { ...props, ...COMMON, generated_from_card: true })
-    onPick(s.title, s.vertical)
+    void trackEvent('viral_onboarding_primary_clicked', metadata)
+    // Preserve the established event so the pre-PUSH #27 activation series
+    // remains comparable in the admin funnel.
+    void trackEvent('first_video_started_from_viral_onboarding', metadata)
+    onPick(FIRST_VIDEO.topic)
   }
 
-  function surprise() {
-    // Pick the single best idea (highest score), not a random one.
-    const s = [...STARTERS].sort((a, b) => b.score - a.score)[0]
-    track('surprise_me_clicked', { selected_topic: s.title, selected_score: s.score })
-    track('first_video_started_from_viral_onboarding', {
-      selected_topic: s.title, selected_category: s.vertical, selected_score: s.score,
-      ...COMMON, generated_from_surprise: true,
+  function useOwnIdea() {
+    void trackEvent('viral_onboarding_skipped', {
+      version: 'push27_single_choice',
+      action: 'own_idea',
     })
-    onSurprise(s.title)
-  }
-
-  function generateCustom() {
-    const idea = customIdea.trim()
-    if (!idea) return
-    track('custom_idea_generate_clicked', { selected_topic: idea })
-    track('first_video_started_from_viral_onboarding', { selected_topic: idea, ...COMMON, generated_from_custom_input: true })
-    onPick(idea, 'custom')
-  }
-
-  function onCustomType(v: string) {
-    setCustomIdea(v)
-    if (!typedFired.current && v.trim()) {
-      typedFired.current = true
-      track('custom_idea_typed')
-    }
-  }
-
-  function selectFilter(f: string) {
-    setActiveFilter(f)
-    setOpenHook(null)
-    track('viral_filter_clicked', { filter_selected: f })
-  }
-
-  function togglePreview(s: Starter) {
-    const next = openHook === s.title ? null : s.title
-    setOpenHook(next)
-    if (next) track('viral_card_preview_hook_clicked', { selected_topic: s.title, preview_hook_opened: true })
-  }
-
-  const showBestPick = activeFilter === 'All'
-  const featured = showBestPick ? STARTERS[0] : null
-  const gridCards = showBestPick ? STARTERS.slice(1) : STARTERS.filter((s) => s.label === activeFilter)
-
-  function renderCard(s: Starter, isFeatured: boolean) {
-    const vertColor = VERTICAL_COLORS[s.vertical] ?? '#14b8a6'
-    const badge = BADGE_STYLES[s.badge]
-    const hookOpen = openHook === s.title
-    return (
-      <div
-        key={s.title}
-        onClick={() => generate(s, isFeatured)}
-        style={{
-          background: isFeatured
-            ? 'linear-gradient(135deg, rgba(41,151,255,0.08), #161618)'
-            : '#161618',
-          border: `1px solid ${isFeatured ? '#48484a' : '#2a2a2d'}`,
-          borderRadius: 20,
-          padding: isFeatured ? '18px 18px' : '16px 16px',
-          display: 'flex', flexDirection: 'column', gap: 8,
-          gridColumn: isFeatured ? '1 / -1' : 'auto',
-          cursor: 'pointer',
-          boxShadow: isFeatured ? '0 0 28px rgba(41,151,255,0.12)' : 'none',
-          transition: 'border-color 0.2s, transform 0.15s, box-shadow 0.2s',
-        }}
-        onMouseEnter={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = '#3a3a3d'; t.style.transform = 'translateY(-2px)'; t.style.boxShadow = '0 8px 28px rgba(0,0,0,0.4)' }}
-        onMouseLeave={(e) => { const t = e.currentTarget as HTMLDivElement; t.style.borderColor = isFeatured ? '#48484a' : '#2a2a2d'; t.style.transform = 'translateY(0)'; t.style.boxShadow = isFeatured ? '0 0 28px rgba(41,151,255,0.12)' : 'none' }}
-      >
-        {isFeatured && (
-          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2997ff', letterSpacing: '0.02em', marginBottom: 2 }}>
-            <span aria-hidden="true">🔥</span> Best Pick Right Now
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: 'rgba(245,245,247,0.08)', color: '#86868b', whiteSpace: 'nowrap' }}>{s.label}</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86868b' }}><span aria-hidden="true">🔥</span> {s.score}</span>
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: badge.bg, color: badge.color, whiteSpace: 'nowrap' }}>{s.badge}</span>
-        </div>
-
-        <p style={{ margin: 0, fontSize: isFeatured ? '1.18rem' : '1.02rem', fontWeight: 900, lineHeight: 1.25, color: '#f5f5f7', letterSpacing: '-0.01em' }}>{s.title}</p>
-        <p style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#86868b', lineHeight: 1.45 }}>{s.hook}</p>
-        <p style={{ margin: 0, fontSize: '0.74rem', color: '#d2d2d7', fontWeight: 600 }}>
-          <span aria-hidden="true">🧠</span> <span style={{ color: '#86868b', fontWeight: 700 }}>Why it works:</span> {s.why}
-        </p>
-        <p style={{ margin: 0, fontSize: '0.7rem', color: '#6e6e73', fontWeight: 700, letterSpacing: '0.01em' }}>
-          Output: 45s • 9:16 • Voiceover • Captions • Fast
-        </p>
-
-        {hookOpen && (
-          <div style={{ margin: '2px 0', padding: '10px 12px', borderRadius: 10, background: 'rgba(41,151,255,0.06)', border: '1px solid rgba(41,151,255,0.20)' }}>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#f5f5f7', fontStyle: 'italic', lineHeight: 1.5 }}>"{s.previewHook}"</p>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto' }}>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); generate(s, isFeatured) }}
-            style={{
-              flex: 1, padding: '11px 0', borderRadius: 980, border: 'none',
-              background: '#f5f5f7', color: '#000',
-              fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', transition: 'opacity 0.15s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f7' }}
-          >
-            Generate Free Fast Video →
-          </button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); togglePreview(s) }}
-            style={{ background: 'transparent', border: 'none', color: '#6e6e73', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'underline' }}
-          >
-            {hookOpen ? 'Hide hook' : 'Preview hook'}
-          </button>
-        </div>
-      </div>
-    )
+    onClose()
   }
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Pick a viral idea to create a free watermarked Fast video"
+      aria-labelledby="first-video-title"
       style={{
-        position: 'fixed', inset: 0, zIndex: 1200,
-        background: 'rgba(0,0,0,0.94)',
-        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        overflowY: 'auto', padding: '30px 16px 56px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflowY: 'auto',
+        padding: '20px 16px',
+        background: 'rgba(0,0,0,0.9)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <style>{`
-        @media (max-width: 640px) {
-          .vo-h1 { font-size: 1.32rem !important; }
-          .vo-surprise { max-width: 100% !important; }
-          .vo-input-row { flex-direction: column !important; max-width: 100% !important; }
-          .vo-input-row button { width: 100% !important; }
-        }
-        .vo-chips { scrollbar-width: none; }
-        .vo-chips::-webkit-scrollbar { height: 0; display: none; }
-      `}</style>
-
-      <div style={{ width: '100%', maxWidth: 760 }}>
-        {/* Hero */}
-        <h1 className="vo-h1" style={{ fontSize: '1.6rem', fontWeight: 600, color: '#f5f5f7', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2, letterSpacing: '-0.03em' }}>
-          Pick a viral idea. We&apos;ll turn it into a Short.
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 520,
+          padding: 'clamp(22px, 5vw, 34px)',
+          borderRadius: 24,
+          border: '1px solid #2a2a2d',
+          background: '#131316',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}
+      >
+        <div style={{ marginBottom: 10, color: '#2997ff', fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          Your first Fast video
+        </div>
+        <h1 id="first-video-title" style={{ margin: '0 0 10px', color: '#f5f5f7', fontSize: 'clamp(1.55rem, 6vw, 2.15rem)', lineHeight: 1.1, letterSpacing: '-0.035em' }}>
+          Start with one ready-to-make idea.
         </h1>
-        <p style={{ fontSize: '0.92rem', color: '#86868b', textAlign: 'center', margin: '0 0 4px' }}>
-          Create, watch, download and share up to <b style={{ color: '#2997ff' }}>3 Fast videos every 24h</b>. No card. Free videos include a watermark.
-        </p>
-        <p style={{ fontSize: '0.8rem', color: '#6e6e73', textAlign: 'center', margin: '0 0 6px' }}>
-          Script • Voiceover • Captions • Visuals • Ready in ~60s
-        </p>
-        <p style={{ fontSize: '0.76rem', color: '#86868b', textAlign: 'center', margin: '0 0 18px' }}>
-          Real Shorts, real views — <b style={{ color: '#f5f5f7' }}>one reached 11.4K</b>.
+        <p style={{ margin: '0 0 20px', color: '#a1a1a6', fontSize: '0.94rem', lineHeight: 1.55 }}>
+          Kineo builds the script, voiceover, footage and captions. Free access includes up to 3 watermarked Fast videos every 24 hours, with no card.
         </p>
 
-        {/* Surprise Me */}
+        <div style={{ marginBottom: 18, padding: '17px 18px', borderRadius: 16, border: '1px solid rgba(41,151,255,0.35)', background: 'rgba(41,151,255,0.08)' }}>
+          <div style={{ marginBottom: 7, color: '#f5f5f7', fontSize: '1.05rem', fontWeight: 850, lineHeight: 1.3 }}>
+            {FIRST_VIDEO.topic}
+          </div>
+          <div style={{ color: '#a1a1a6', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.45 }}>
+            “{FIRST_VIDEO.hook}”
+          </div>
+        </div>
+
         <button
           type="button"
-          className="vo-surprise"
-          onClick={surprise}
+          onClick={createFirstVideo}
           style={{
-            display: 'block', width: '100%', maxWidth: 380, margin: '0 auto 12px',
-            padding: '14px 18px', borderRadius: 980,
+            width: '100%',
+            minHeight: 52,
+            padding: '14px 18px',
+            border: 0,
+            borderRadius: 999,
             background: '#f5f5f7',
-            color: '#000', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
+            color: '#000',
+            cursor: 'pointer',
+            fontSize: '0.98rem',
+            fontWeight: 900,
           }}
         >
-          <span aria-hidden="true">🎲</span> Surprise Me — generate a free Fast video
+          Create this free watermarked video →
         </button>
-
-        {/* Type your own idea */}
-        <div className="vo-input-row" style={{ display: 'flex', gap: 8, maxWidth: 560, margin: '0 auto 16px' }}>
-          <input
-            type="text"
-            value={customIdea}
-            onChange={(e) => onCustomType(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') generateCustom() }}
-            placeholder="Type any topic, niche, product or idea…"
-            style={{
-              flex: 1, padding: '11px 14px', borderRadius: 10,
-              border: '1px solid #2a2a2d', background: '#161618',
-              color: '#f5f5f7', fontSize: '0.9rem', outline: 'none',
-            }}
-          />
-          <button
-            type="button"
-            onClick={generateCustom}
-            style={{
-              padding: '11px 18px', borderRadius: 980, border: '1px solid #48484a',
-              background: 'transparent', color: '#f5f5f7', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-          >
-            Generate My Free Fast Video
-          </button>
-        </div>
-
-        {/* Niche filter chips (horizontal-scroll on mobile) */}
-        <div className="vo-chips" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 2px 10px', margin: '0 0 14px', WebkitOverflowScrolling: 'touch' }}>
-          {FILTERS.map((f) => {
-            const active = activeFilter === f
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => selectFilter(f)}
-                style={{
-                  flex: '0 0 auto', padding: '6px 14px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                  border: `1px solid ${active ? '#48484a' : '#2a2a2d'}`,
-                  background: active ? '#1d1d1f' : 'transparent',
-                  color: active ? '#f5f5f7' : '#86868b',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {f}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
-          {featured && renderCard(featured, true)}
-          {gridCards.map((s) => renderCard(s, false))}
-        </div>
-
         <button
           type="button"
-          onClick={onClose}
-          style={{ display: 'block', margin: '22px auto 0', background: 'transparent', border: 'none', color: '#6e6e73', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+          onClick={useOwnIdea}
+          style={{
+            display: 'block',
+            margin: '16px auto 0',
+            padding: 0,
+            border: 0,
+            background: 'transparent',
+            color: '#86868b',
+            cursor: 'pointer',
+            fontSize: '0.86rem',
+            fontWeight: 650,
+            textDecoration: 'underline',
+          }}
         >
-          Skip — I&apos;ll type my own idea
+          Use my own idea instead
         </button>
       </div>
     </div>

@@ -305,6 +305,7 @@ const VIRAL_STARTER_TOPICS = [
   'how tiny Monaco became the richest place on Earth',
   'the Roman city of Pompeii, buried by a volcano in a single day',
 ]
+const PUSH27_ONBOARDING_RENDER_SESSION_KEY = 'kineo_push27_onboarding_render_dispatched'
 
 export default function GenerateClient() {
   const router = useRouter()
@@ -347,6 +348,15 @@ export default function GenerateClient() {
   // generate flow. Lifts first-video activation (the biggest funnel leak).
   const [showNicheOnboarding, setShowNicheOnboarding] = useState(false)
   const onboardingAutoGenerateRef = useRef(false)
+  const onboardingGenerationDispatchedRef = useRef(false)
+  useEffect(() => {
+    try {
+      onboardingGenerationDispatchedRef.current =
+        sessionStorage.getItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY) === '1'
+    } catch {
+      // The in-memory ref still measures the uninterrupted path.
+    }
+  }, [])
   useEffect(() => {
     try {
       if (localStorage.getItem('sf_onboarded')) return
@@ -2317,6 +2327,20 @@ export default function GenerateClient() {
           }
           trackEvent('generate_completed', completionMetadata)
           trackEvent('video_generation_completed', completionMetadata)
+          let completedFromOnboarding = onboardingGenerationDispatchedRef.current
+          try {
+            completedFromOnboarding = completedFromOnboarding ||
+              sessionStorage.getItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY) === '1'
+          } catch { /* the in-memory ref is enough for the normal path */ }
+          if (completedFromOnboarding) {
+            onboardingGenerationDispatchedRef.current = false
+            try { sessionStorage.removeItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY) } catch {}
+            trackEvent('first_video_generation_completed_from_viral_onboarding', {
+              ...completionMetadata,
+              source: 'viral_onboarding',
+              version: 'push27_single_choice',
+            })
+          }
           return
         }
 
@@ -3364,13 +3388,27 @@ export default function GenerateClient() {
     }
     if (phase !== 'options' || !analysis || mode !== 'fast') return
     onboardingAutoGenerateRef.current = false
+    onboardingGenerationDispatchedRef.current = true
+    try { sessionStorage.setItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY, '1') } catch {}
     trackEvent('first_video_generation_dispatched_from_viral_onboarding', {
       source: 'viral_onboarding',
       engine: 'fast',
+      version: 'push27_single_choice',
     })
     void handleGenerate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, analysis, mode])
+
+  useEffect(() => {
+    if (phase !== 'failed' || !onboardingGenerationDispatchedRef.current) return
+    onboardingGenerationDispatchedRef.current = false
+    try { sessionStorage.removeItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY) } catch {}
+    trackEvent('first_video_generation_failed_from_viral_onboarding', {
+      source: 'viral_onboarding',
+      version: 'push27_single_choice',
+      engine: 'fast',
+    })
+  }, [phase])
 
   // #383d — download with a title-based filename. The video lives on Supabase
   // (cross-origin), so the <a download="..."> attribute is IGNORED by browsers
@@ -4140,7 +4178,6 @@ export default function GenerateClient() {
       {showNicheOnboarding && (
         <NicheOnboarding
           onPick={(topic) => onboardingPick(topic)}
-          onSurprise={(topic) => onboardingPick(topic)}
           onClose={finishOnboarding}
         />
       )}

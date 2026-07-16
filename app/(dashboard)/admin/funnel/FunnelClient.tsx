@@ -115,6 +115,10 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     directOrUnknownSignups: 0, correctedSelfReferrals: 0,
     topSource: null, topSourceSignups: 0,
   }
+  const firstVideoOnboarding = data.firstVideoOnboarding ?? {
+    views: 0, primaryClicks: 0, skips: 0, dispatched: 0, completed: 0, failed: 0,
+    viewToClickRate: '—', clickToDispatchRate: '—', dispatchToCompleteRate: '—',
+  }
   const postVideoOffer = data.postVideoOffer ?? {
     offerViews: 0, watermarkedDownloads: 0, cleanExportClicks: 0,
     checkoutStarts: 0, payments: 0, viewToClickRate: '—',
@@ -417,6 +421,48 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           value={fmt(data.counts.auth_callback_failed ?? 0)}
           hint="no credentials stored"
           accent={(data.counts.auth_callback_failed ?? 0) > 0 ? '#fbbf24' : '#22d3ee'}
+        />
+      </Section>
+
+      <Section title={`First-video handoff · PUSH #27 · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Compact handoff viewed"
+          value={fmt(firstVideoOnboarding.views)}
+          hint="unique users / sessions"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Primary clicks"
+          value={fmt(firstVideoOnboarding.primaryClicks)}
+          hint={`${fmt(firstVideoOnboarding.skips)} chose their own idea`}
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="View → Click"
+          value={firstVideoOnboarding.viewToClickRate}
+          sub={`${firstVideoOnboarding.primaryClicks} / ${firstVideoOnboarding.views}`}
+        />
+        <Card
+          label="Renders dispatched"
+          value={fmt(firstVideoOnboarding.dispatched)}
+          hint="analysis reached Fast generation"
+          accent="#22d3ee"
+        />
+        <RateCard
+          label="Click → Dispatch"
+          value={firstVideoOnboarding.clickToDispatchRate}
+          sub={`${firstVideoOnboarding.dispatched} / ${firstVideoOnboarding.primaryClicks}`}
+        />
+        <Card
+          label="First videos completed"
+          value={fmt(firstVideoOnboarding.completed)}
+          hint={`${fmt(firstVideoOnboarding.failed)} failed`}
+          accent={firstVideoOnboarding.completed > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+        <RateCard
+          label="Dispatch → Complete"
+          value={firstVideoOnboarding.dispatchToCompleteRate}
+          sub={`${firstVideoOnboarding.completed} / ${firstVideoOnboarding.dispatched}`}
         />
       </Section>
 

@@ -127,6 +127,17 @@ export interface FunnelData {
     topSource: string | null
     topSourceSignups: number
   }
+  firstVideoOnboarding: {
+    views: number
+    primaryClicks: number
+    skips: number
+    dispatched: number
+    completed: number
+    failed: number
+    viewToClickRate: string
+    clickToDispatchRate: string
+    dispatchToCompleteRate: string
+  }
   organicRecovery: {
     landingSessions: number
     ctaClicks: number
@@ -394,6 +405,11 @@ export async function GET(req: Request) {
       'series_continue_clicked', 'series_continuation_landed',
       'auth_callback_completed', 'auth_callback_failed', 'email_signup_completed',
       'generate_arrived_server', 'generate_activation_auth_missing',
+      'viral_onboarding_viewed', 'viral_onboarding_primary_clicked',
+      'viral_onboarding_skipped', 'first_video_started_from_viral_onboarding',
+      'first_video_generation_dispatched_from_viral_onboarding',
+      'first_video_generation_completed_from_viral_onboarding',
+      'first_video_generation_failed_from_viral_onboarding',
       'generate_started', 'video_generation_started',
       'generate_completed', 'video_generation_completed',
       'generate_failed', 'video_generation_failed',
@@ -486,6 +502,11 @@ export async function GET(req: Request) {
           .in('name', [
             'series_continue_clicked', 'series_continuation_landed',
             'generate_started', 'generate_completed',
+            'viral_onboarding_viewed', 'viral_onboarding_primary_clicked',
+            'viral_onboarding_skipped', 'first_video_started_from_viral_onboarding',
+            'first_video_generation_dispatched_from_viral_onboarding',
+            'first_video_generation_completed_from_viral_onboarding',
+            'first_video_generation_failed_from_viral_onboarding',
           ])
           .order('created_at', { ascending: false })
           .limit(5000)
@@ -796,6 +817,39 @@ export async function GET(req: Request) {
         .slice(0, 10),
     }
 
+    // PUSH #27 — unique authenticated actors through the compact first-video
+    // handoff. User id wins; session id is the anonymous-safe fallback. A
+    // generated fallback key keeps rows measurable if an older beacon lacks
+    // both without joining on prompt, email or other personal data.
+    const uniqueOnboardingActors = (name: string): number => {
+      const rows = retentionEventRows.filter((event) =>
+        event.name === name && event.metadata?.version === 'push27_single_choice'
+      )
+      return new Set(rows.map((event, index) =>
+        event.user_id || event.session_id || `${event.created_at ?? 'unknown'}:${index}`
+      )).size
+    }
+    const firstVideoOnboarding = {
+      views: uniqueOnboardingActors('viral_onboarding_viewed'),
+      primaryClicks: uniqueOnboardingActors('viral_onboarding_primary_clicked'),
+      skips: uniqueOnboardingActors('viral_onboarding_skipped'),
+      dispatched: uniqueOnboardingActors('first_video_generation_dispatched_from_viral_onboarding'),
+      completed: uniqueOnboardingActors('first_video_generation_completed_from_viral_onboarding'),
+      failed: uniqueOnboardingActors('first_video_generation_failed_from_viral_onboarding'),
+      viewToClickRate: pct(
+        uniqueOnboardingActors('viral_onboarding_primary_clicked'),
+        uniqueOnboardingActors('viral_onboarding_viewed'),
+      ),
+      clickToDispatchRate: pct(
+        uniqueOnboardingActors('first_video_generation_dispatched_from_viral_onboarding'),
+        uniqueOnboardingActors('viral_onboarding_primary_clicked'),
+      ),
+      dispatchToCompleteRate: pct(
+        uniqueOnboardingActors('first_video_generation_completed_from_viral_onboarding'),
+        uniqueOnboardingActors('first_video_generation_dispatched_from_viral_onboarding'),
+      ),
+    }
+
     // PUSH #25 — the export decision directly below a finished free video.
     // A browser impression is counted only after the card is actually visible;
     // checkout and payment remain server/Stripe-authoritative. Session and
@@ -1012,7 +1066,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, acquisitionAttribution, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, acquisitionAttribution, firstVideoOnboarding, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })
