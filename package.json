@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs",
+    "seo:indexnow:submit": "node scripts/submit-indexnow.mjs --submit"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",
