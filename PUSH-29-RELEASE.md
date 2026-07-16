@@ -1,8 +1,10 @@
 # Kineo — PUSH #29
 
 **Nome:** Share Delivery — Finished Videos into Organic Visits
-**Status:** VALIDADO LOCALMENTE — aguardando commit, Vercel READY e validação em produção
+**Status:** PUBLICADO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
+**Commit de código:** `ab59b05` — `PUSH #29 turn finished videos into organic visits`
+**Deploy de código:** `dpl_4M6Hpejz7Te6VPyxNnTCyVZ2Bvki` — Production · READY
 
 ## Evidência que escolheu este push
 
@@ -77,6 +79,18 @@ Eventos `push29_share_delivery` antes do deploy: todos em zero.
   - CTA “Make one like this” visível sem corte;
   - nenhuma métrica real contaminada.
 - Nenhum job de vídeo, checkout, pagamento, email ou mensagem foi criado.
+
+## Validação em produção concluída em 16/07/2026
+
+- O deploy `dpl_4M6Hpejz7Te6VPyxNnTCyVZ2Bvki` ficou READY e recebeu os aliases `usekineo.com`, `www.usekineo.com` e `shortsforgeai.vercel.app`.
+- `https://usekineo.com/`: HTTP 200.
+- `/history` sem autenticação: HTTP 307 para `/login`, preservando o gate.
+- `/api/admin/funnel?days=14` sem autenticação: HTTP 403, preservando o gate administrativo.
+- Uma página `/v/[id]` real com UTM do PUSH 29: HTTP 200.
+- O HTML de produção confirmou a prova honesta “Made in ~60 seconds with AI”, o CTA “Make one like this” e a explicação “upgrade only when you want a clean export”.
+- Snapshot às `2026-07-16T21:41:27.519Z`: zero eventos `push29_share_delivery`, zero prompts, zero cliques, zero links entregues, zero visitas públicas atribuídas e zero cliques no CTA. A medição começou limpa.
+- Stripe no mesmo snapshot: duas assinaturas `active/trialing` totais, ambas internas; **zero assinantes recorrentes externos**.
+- A validação não abriu o JavaScript de produção, não fabricou evento e não criou job de vídeo, checkout, pagamento, email ou mensagem.
 
 ## Gate de validação
 
