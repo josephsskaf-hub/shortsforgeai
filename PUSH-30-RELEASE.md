@@ -1,8 +1,10 @@
 # Kineo — PUSH #30
 
 **Nome:** Search Discovery — IndexNow Recovery
-**Status:** VALIDADO LOCALMENTE — aguardando commit, deploy e submissão
+**Status:** PUBLICADO, SUBMETIDO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
+**Commit de código:** `f0b68b5` — `PUSH #30 notify search engines of public updates`
+**Deploy Vercel:** `dpl_3gztt8hxD9gpRcNrVYGRc31r8z6o` — Production · READY
 
 ## Evidência que escolheu este push
 
@@ -67,6 +69,23 @@ Notificar imediatamente os buscadores participantes sobre as 61 páginas alterad
 - `git diff --check`: aprovado nos quatro arquivos do PUSH 30.
 - Build completo de produção: aprovado; 141 de 141 páginas geradas.
 - Nenhum evento, cadastro, checkout, pagamento, email, mensagem, anúncio ou render foi criado.
+
+## Publicação e submissão concluídas em 16/07/2026
+
+- Commit `f0b68b5` enviado para `origin/main` com stage limitado aos quatro arquivos do PUSH 30.
+- Deploy `dpl_3gztt8hxD9gpRcNrVYGRc31r8z6o` confirmado como READY e associado a `www.usekineo.com`.
+- Homepage, `sitemap.xml`, `robots.txt` e arquivo da chave responderam HTTP 200.
+- O arquivo público retornou somente a chave esperada.
+- Uma única submissão foi executada para `https://api.indexnow.org/indexnow`.
+- Resultado: HTTP 202, 61 URLs, `submittedAt=2026-07-16T21:53:45.826Z`.
+- HTTP 202 foi registrado corretamente como “recebido; validação da chave pendente”, sem alegar indexação ou ranking.
+- Snapshot comercial às `2026-07-16T21:54:33.250Z`:
+  - 665 perfis externos acumulados;
+  - zero novos perfis desde o deploy do PUSH 30;
+  - zero eventos reais versionados do PUSH 29;
+  - duas assinaturas Stripe `active/trialing`, ambas internas;
+  - **zero assinantes recorrentes externos — placar 0/10**.
+- Nenhum email, mensagem, post, anúncio, evento de funil, checkout, pagamento ou render foi criado pela publicação.
 
 ## Meta vinculada
 
