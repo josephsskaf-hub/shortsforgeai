@@ -1,10 +1,10 @@
 # Kineo — PUSH #26
 
 **Nome:** Acquisition Truth & Entry-Price Repair
-**Status:** PRONTO LOCALMENTE; AGUARDA COMMIT, PUSH E DEPLOY READY
+**Status:** PUBLICADO E VALIDADO TECNICAMENTE EM PRODUÇÃO
 **Data:** 16/07/2026
-**Commit de código:** pendente
-**Deploy Vercel:** pendente
+**Commit de código:** `cb25b15bf9a5640ee4523b05d579310458674e3a`
+**Deploy Vercel:** `dpl_DGdRaSFwzKPFaoRehvm9BweGtNEk` — READY em `https://www.usekineo.com`
 
 ## Evidência que escolheu este push
 
@@ -87,16 +87,18 @@
 - TypeScript completo: 21 erros de baseline e zero erro nos arquivos do PUSH #26.
 - `git diff --check`: aprovado.
 
-## Validação em produção pendente
+## Validação em produção concluída
 
-- Confirmar commit em `origin/main`.
-- Confirmar deploy Vercel `READY` e alias em `www.usekineo.com`.
-- Confirmar HTTP 200 em `/` e `/pricing`.
-- Confirmar title e description novos em `/pricing`.
-- Confirmar hero `$4.90` e ausência do hero antigo `from $9.90/mo`.
-- Confirmar `/api/admin/funnel` sem sessão continua respondendo 403.
-- Em sessão administrativa, confirmar a nova seção de atribuição e os 13 self-referrals corrigidos.
-- Não criar cadastro, evento, checkout, pagamento, email ou render artificial para validar.
+- Commit enviado para `main`; `HEAD` local e `origin/main` apontam para `cb25b15` antes deste registro documental.
+- Deployment `dpl_DGdRaSFwzKPFaoRehvm9BweGtNEk` confirmado como `READY` e associado a `www.usekineo.com`.
+- Homepage e `/pricing` respondem HTTP 200.
+- Title de `/pricing`: `Kineo Pricing — Starter $4.90 First Month`.
+- Description publica a oferta completa: até 3 Fast com marca d’água a cada 24h, Starter US$4.90 no primeiro mês e US$9.90/mês depois.
+- Hero novo `$4.90` presente; hero antigo `from $9.90/mo` ausente.
+- Comparação da homepage mostra `$4.90 first month`.
+- `/api/admin/funnel` sem sessão continua protegido e responde HTTP 403.
+- A releitura da base com a mesma função publicada confirmou 13 self-referrals históricos corrigidos na leitura.
+- Nenhum cadastro, evento, checkout, pagamento, email ou render artificial foi criado pela validação.
 
 ## Microteste após deploy
 
