@@ -1,10 +1,10 @@
 # Kineo — PUSH #28
 
 **Nome:** Repeat-Creator Upgrade Moment
-**Status:** VALIDADO LOCALMENTE — AGUARDA COMMIT, PUSH E DEPLOY READY
+**Status:** PUBLICADO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
-**Commit de código:** pendente
-**Deploy Vercel:** pendente
+**Commit de código:** `12c387f2910eb5ae23cfb66f6283e1d96fcab214`
+**Deploy Vercel:** `dpl_8Jg91LAegbWK4n3j7oo4Yf3Yreag` — READY
 
 ## Evidência que escolheu este push
 
@@ -64,7 +64,7 @@ O checkout é atribuído pelo mesmo usuário autenticado ou pela sessão de nave
 
 - `git diff --check`: aprovado.
 - Build de produção: aprovado; 141 de 141 páginas geradas.
-- `/history` compilou com bundle de 8.04 kB; Admin · Funnel compilou com 6.82 kB.
+- `/history` compilou com bundle final de 8.03 kB; Admin · Funnel compilou com 6.82 kB.
 - TypeScript completo manteve 21 erros de baseline já conhecidos.
 - Filtro focal confirmou zero erros nos três arquivos alterados do PUSH #28.
 - Baseline pré-deploy confirmado em zero para `history_repeat_offer_viewed` e `history_repeat_offer_clicked` com `version=push28_repeat_creator`.
@@ -75,15 +75,17 @@ O checkout é atribuído pelo mesmo usuário autenticado ou pela sessão de nave
   - `app/(dashboard)/admin/funnel/FunnelClient.tsx`;
   - `PUSH-28-RELEASE.md`.
 
-## Validação em produção pendente
+## Validação em produção concluída em 16/07/2026
 
-- Confirmar commit em `origin/main`.
-- Confirmar deploy Vercel `READY` e alias em `www.usekineo.com`.
-- Confirmar homepage HTTP 200.
-- Confirmar `/history` sem sessão mantém o redirect para login.
-- Confirmar `/api/admin/funnel` sem sessão mantém HTTP 403.
-- Não abrir `My Videos` com uma conta elegível só para fabricar impressão.
-- Confirmar baseline zero de `history_repeat_offer_viewed` e `history_repeat_offer_clicked`.
+- Commit `12c387f` confirmado em `origin/main`.
+- Deploy `dpl_8Jg91LAegbWK4n3j7oo4Yf3Yreag` confirmado como `READY`.
+- `www.usekineo.com`, `usekineo.com`, `shortsforgeai.com` e aliases Vercel apontam para o mesmo deploy.
+- Homepage confirmou HTTP 200.
+- `/history` sem sessão confirmou HTTP 307 para `/login`.
+- `/api/admin/funnel` sem sessão confirmou HTTP 403.
+- `My Videos` não foi aberto com conta elegível durante a validação.
+- Baseline pós-deploy confirmado em zero para `history_repeat_offer_viewed` e `history_repeat_offer_clicked` com `version=push28_repeat_creator`.
+- O baseline deve crescer somente com criadores externos reais que tenham dois ou mais vídeos concluídos.
 
 ## Meta do microteste
 
