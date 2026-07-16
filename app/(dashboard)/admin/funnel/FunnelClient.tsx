@@ -119,6 +119,10 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
     views: 0, primaryClicks: 0, skips: 0, dispatched: 0, completed: 0, failed: 0,
     viewToClickRate: '—', clickToDispatchRate: '—', dispatchToCompleteRate: '—',
   }
+  const repeatCreatorOffer = data.repeatCreatorOffer ?? {
+    views: 0, clicks: 0, checkoutStarts: 0, activeSubscribers: 0,
+    viewToClickRate: '—', clickToCheckoutRate: '—', checkoutToPaidRate: '—',
+  }
   const postVideoOffer = data.postVideoOffer ?? {
     offerViews: 0, watermarkedDownloads: 0, cleanExportClicks: 0,
     checkoutStarts: 0, payments: 0, viewToClickRate: '—',
@@ -463,6 +467,48 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           label="Dispatch → Complete"
           value={firstVideoOnboarding.dispatchToCompleteRate}
           sub={`${firstVideoOnboarding.completed} / ${firstVideoOnboarding.dispatched}`}
+        />
+      </Section>
+
+      <Section title={`Repeat-creator offer · PUSH #28 · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Offer viewed"
+          value={fmt(repeatCreatorOffer.views)}
+          hint="free users with 2+ completed videos"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Starter clicks"
+          value={fmt(repeatCreatorOffer.clicks)}
+          hint="primary $4.90 recurring offer"
+          accent="#4ade80"
+        />
+        <RateCard
+          label="View → Click"
+          value={repeatCreatorOffer.viewToClickRate}
+          sub={`${repeatCreatorOffer.clicks} / ${repeatCreatorOffer.views}`}
+        />
+        <Card
+          label="Stripe checkouts"
+          value={fmt(repeatCreatorOffer.checkoutStarts)}
+          hint="session created after this click"
+          accent="#a78bfa"
+        />
+        <RateCard
+          label="Click → Checkout"
+          value={repeatCreatorOffer.clickToCheckoutRate}
+          sub={`${repeatCreatorOffer.checkoutStarts} / ${repeatCreatorOffer.clicks}`}
+        />
+        <Card
+          label="Active subscribers"
+          value={fmt(repeatCreatorOffer.activeSubscribers)}
+          hint="verified active / trialing in Stripe"
+          accent={repeatCreatorOffer.activeSubscribers > 0 ? '#22d3ee' : '#fbbf24'}
+        />
+        <RateCard
+          label="Checkout → Active"
+          value={repeatCreatorOffer.checkoutToPaidRate}
+          sub={`${repeatCreatorOffer.activeSubscribers} / ${repeatCreatorOffer.checkoutStarts}`}
         />
       </Section>
 

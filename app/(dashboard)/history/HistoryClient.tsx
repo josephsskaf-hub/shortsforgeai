@@ -2,7 +2,7 @@
 
 // Push #323 - My Videos: show first frame via preload=metadata; no more black cards
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { trackEvent } from '@/lib/analytics'
@@ -88,6 +88,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // that asset carries the Kineo watermark; payment unlocks a clean export.
   // Fail open so a plan lookup problem never hides an owned file.
   const [cleanExportLocked, setCleanExportLocked] = useState<boolean | null>(null)
+  const repeatOfferTracked = useRef(false)
   useEffect(() => {
     let cancelled = false
     fetch('/api/credits', { cache: 'no-store' })
@@ -112,7 +113,21 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
     return () => { cancelled = true }
   }, [])
 
-  function handleStarterCheckout() {
+  useEffect(() => {
+    if (repeatOfferTracked.current || cleanExportLocked !== true || videos.length < 2) return
+    repeatOfferTracked.current = true
+    void trackEvent('history_repeat_offer_viewed', {
+      version: 'push28_repeat_creator',
+      completed_video_count: videos.length,
+    })
+  }, [cleanExportLocked, videos.length])
+
+  function handleStarterCheckout(source: 'history_repeat_offer' | 'history_lightbox' = 'history_lightbox') {
+    void trackEvent('history_repeat_offer_clicked', {
+      version: 'push28_repeat_creator',
+      source,
+      completed_video_count: videos.length,
+    })
     trackCheckoutClick('starter')
     window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
   }
@@ -320,6 +335,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   const followUpHref = firstVideoTitle === 'Untitled Short'
     ? '/generate'
     : buildSeriesContinuationHref(firstVideoTitle, 'history_milestone')
+  const showRepeatCreatorOffer = cleanExportLocked === true && videos.length >= 2
 
   /* ── Main ── */
   return (
@@ -354,57 +370,96 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
         </Link>
       </div>
 
-      {/* First-render milestone: make the second successful action obvious.
-          Free unpaid users can keep testing Fast at a zero-credit balance;
-          state the exact server rule (watermarked, 3/24h) instead of implying
-          that a credit purchase is required before they can evaluate again. */}
+      {/* First render keeps activation as the primary action. Once a free user
+          has completed 2+ videos, repeat value is proven: make the honest
+          recurring offer primary while preserving episode creation as a
+          secondary path. Existing files are never presented as retroactively
+          watermark-free. */}
       {videos.length >= 1 && (
         <section
-          aria-label="Create your second Short"
+          aria-label={showRepeatCreatorOffer ? 'Make future exports watermark-free' : 'Create your second Short'}
           className="rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           style={{
-            background: 'linear-gradient(135deg, rgba(41,151,255,.14), rgba(41,151,255,.04))',
-            border: '1px solid rgba(41,151,255,.42)',
-            boxShadow: '0 10px 32px rgba(41,151,255,.10)',
+            background: showRepeatCreatorOffer
+              ? 'linear-gradient(135deg, rgba(34,197,94,.15), rgba(41,151,255,.05))'
+              : 'linear-gradient(135deg, rgba(41,151,255,.14), rgba(41,151,255,.04))',
+            border: showRepeatCreatorOffer
+              ? '1px solid rgba(34,197,94,.45)'
+              : '1px solid rgba(41,151,255,.42)',
+            boxShadow: showRepeatCreatorOffer
+              ? '0 10px 32px rgba(34,197,94,.10)'
+              : '0 10px 32px rgba(41,151,255,.10)',
           }}
         >
           <div style={{ minWidth: 0 }}>
             <div
               className="font-black uppercase tracking-[.16em] mb-1.5"
-              style={{ fontSize: '0.62rem', color: '#5cb3ff' }}
+              style={{ fontSize: '0.62rem', color: showRepeatCreatorOffer ? '#4ade80' : '#5cb3ff' }}
             >
-              {videos.length === 1 ? 'First Short complete' : 'Keep your show moving'}
+              {showRepeatCreatorOffer
+                ? `${videos.length} Shorts complete · repeat creator`
+                : videos.length === 1
+                  ? 'First Short complete'
+                  : 'Keep your show moving'}
             </div>
             <h2 className="font-black tracking-tight mb-1.5" style={{ color: 'var(--text)', fontSize: '1.05rem' }}>
-              {videos.length === 1 ? 'Turn it into episode 2' : 'Create the next episode'}
+              {showRepeatCreatorOffer
+                ? 'Publish your next Short without the Kineo watermark'
+                : videos.length === 1
+                  ? 'Turn it into episode 2'
+                  : 'Create the next episode'}
             </h2>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--muted2)', margin: 0, maxWidth: 620 }}>
-              Continue from your latest Short with a fresh hook, new facts and a new payoff. Review the brief and settings before rendering.
+              {showRepeatCreatorOffer
+                ? 'Starter includes 25 Fast credits each month and clean exports for new videos. Start for $4.90 today, then $9.90/month. Cancel anytime.'
+                : 'Continue from your latest Short with a fresh hook, new facts and a new payoff. Review the brief and settings before rendering.'}
             </p>
-            {cleanExportLocked === true && (
+            {showRepeatCreatorOffer ? (
+              <p className="text-xs leading-relaxed mt-2" style={{ color: 'var(--muted)', marginBottom: 0 }}>
+                Your existing watermarked files stay available. The upgrade applies to new exports.
+              </p>
+            ) : cleanExportLocked === true ? (
               <p className="text-xs leading-relaxed mt-2" style={{ color: '#5cb3ff', marginBottom: 0 }}>
                 Fast includes up to 3 watermarked previews per 24 hours. Download and share them free; Starter unlocks clean watermark-free exports.
               </p>
-            )}
+            ) : null}
           </div>
-          <Link
-            href={followUpHref}
-            onClick={() => {
-              void trackEvent('series_continue_clicked', {
-                source: 'history_milestone',
-                video_id: videos[0]?.id ?? null,
-                completed_video_count: videos.length,
-              })
-            }}
-            className="flex items-center justify-center rounded-xl px-5 py-3 text-sm font-black text-white flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #2997ff, #1d6fe0)',
-              textDecoration: 'none',
-              boxShadow: '0 6px 22px rgba(41,151,255,.30)',
-            }}
-          >
-            Build Next Episode →
-          </Link>
+          <div className="flex flex-col gap-2 w-full sm:w-auto flex-shrink-0">
+            {showRepeatCreatorOffer && (
+              <button
+                type="button"
+                onClick={() => handleStarterCheckout('history_repeat_offer')}
+                className="flex items-center justify-center rounded-xl px-5 py-3 text-sm font-black text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 22px rgba(34,197,94,.30)',
+                }}
+              >
+                Make new exports clean · $4.90 →
+              </button>
+            )}
+            <Link
+              href={followUpHref}
+              onClick={() => {
+                void trackEvent('series_continue_clicked', {
+                  source: 'history_milestone',
+                  video_id: videos[0]?.id ?? null,
+                  completed_video_count: videos.length,
+                })
+              }}
+              className="flex items-center justify-center rounded-xl px-5 py-3 text-sm font-black text-white"
+              style={{
+                background: showRepeatCreatorOffer ? 'rgba(255,255,255,.08)' : 'linear-gradient(135deg, #2997ff, #1d6fe0)',
+                border: showRepeatCreatorOffer ? '1px solid rgba(255,255,255,.14)' : '1px solid transparent',
+                textDecoration: 'none',
+                boxShadow: showRepeatCreatorOffer ? 'none' : '0 6px 22px rgba(41,151,255,.30)',
+              }}
+            >
+              {showRepeatCreatorOffer ? 'Keep testing with watermark' : 'Build Next Episode →'}
+            </Link>
+          </div>
         </section>
       )}
 
@@ -847,7 +902,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
               </button>
               {isWatermarkedFastAsset(v) && cleanExportLocked === true && (
                 <button
-                  onClick={handleStarterCheckout}
+                  onClick={() => handleStarterCheckout('history_lightbox')}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', padding: '13px 10px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', border: '1px solid transparent', color: '#fff', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
                 >
                   <span>Unlock clean exports — Start Starter for $4.90</span>

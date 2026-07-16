@@ -138,6 +138,15 @@ export interface FunnelData {
     clickToDispatchRate: string
     dispatchToCompleteRate: string
   }
+  repeatCreatorOffer: {
+    views: number
+    clicks: number
+    checkoutStarts: number
+    activeSubscribers: number
+    viewToClickRate: string
+    clickToCheckoutRate: string
+    checkoutToPaidRate: string
+  }
   organicRecovery: {
     landingSessions: number
     ctaClicks: number
@@ -410,6 +419,7 @@ export async function GET(req: Request) {
       'first_video_generation_dispatched_from_viral_onboarding',
       'first_video_generation_completed_from_viral_onboarding',
       'first_video_generation_failed_from_viral_onboarding',
+      'history_repeat_offer_viewed', 'history_repeat_offer_clicked',
       'generate_started', 'video_generation_started',
       'generate_completed', 'video_generation_completed',
       'generate_failed', 'video_generation_failed',
@@ -507,6 +517,7 @@ export async function GET(req: Request) {
             'first_video_generation_dispatched_from_viral_onboarding',
             'first_video_generation_completed_from_viral_onboarding',
             'first_video_generation_failed_from_viral_onboarding',
+            'history_repeat_offer_viewed', 'history_repeat_offer_clicked',
           ])
           .order('created_at', { ascending: false })
           .limit(5000)
@@ -850,6 +861,63 @@ export async function GET(req: Request) {
       ),
     }
 
+    // PUSH #28 — monetization at the point where a free user has already
+    // completed at least two videos. The browser event and server checkout
+    // share the authenticated user id (or the browser session as fallback),
+    // so a generic checkout elsewhere is never credited to this offer.
+    const repeatOfferVersionRows = retentionEventRows.filter((event) =>
+      event.metadata?.version === 'push28_repeat_creator'
+    )
+    const repeatActorKey = (event: EventRow, index = 0): string =>
+      event.user_id || event.session_id || `${event.created_at ?? 'unknown'}:${index}`
+    const repeatOfferViewRows = repeatOfferVersionRows.filter((event) =>
+      event.name === 'history_repeat_offer_viewed'
+    )
+    const repeatOfferClickRows = repeatOfferVersionRows.filter((event) =>
+      event.name === 'history_repeat_offer_clicked' && event.metadata?.source === 'history_repeat_offer'
+    )
+    const repeatOfferViewActors = new Set(
+      repeatOfferViewRows.map((event, index) => repeatActorKey(event, index))
+    )
+    const repeatOfferClickActors = new Set(
+      repeatOfferClickRows.map((event, index) => repeatActorKey(event, index))
+    )
+    const firstRepeatClickAt = new Map<string, number>()
+    for (const [index, event] of repeatOfferClickRows.entries()) {
+      const actor = repeatActorKey(event, index)
+      const at = event.created_at ? new Date(event.created_at).getTime() : 0
+      const prior = firstRepeatClickAt.get(actor)
+      if (prior === undefined || at < prior) firstRepeatClickAt.set(actor, at)
+    }
+    const repeatCheckoutActors = new Set<string>()
+    for (const [index, event] of eventRows.entries()) {
+      if (event.name !== 'checkout_started') continue
+      const actor = repeatActorKey(event, index)
+      const clickedAt = firstRepeatClickAt.get(actor)
+      if (clickedAt === undefined) continue
+      const checkoutAt = event.created_at ? new Date(event.created_at).getTime() : 0
+      // The click beacon and checkout request are concurrent. Stripe can win
+      // that race by a few milliseconds, so tolerate a two-minute ordering
+      // skew while still requiring the same authenticated actor/session.
+      if (checkoutAt >= clickedAt - 2 * 60 * 1000) repeatCheckoutActors.add(actor)
+    }
+    const repeatClickedUserIds = new Set(
+      repeatOfferClickRows
+        .map((event) => event.user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+    const repeatActiveSubscribers = Array.from(repeatClickedUserIds)
+      .filter((userId) => activePaidUserSet.has(userId)).length
+    const repeatCreatorOffer = {
+      views: repeatOfferViewActors.size,
+      clicks: repeatOfferClickActors.size,
+      checkoutStarts: repeatCheckoutActors.size,
+      activeSubscribers: repeatActiveSubscribers,
+      viewToClickRate: pct(repeatOfferClickActors.size, repeatOfferViewActors.size),
+      clickToCheckoutRate: pct(repeatCheckoutActors.size, repeatOfferClickActors.size),
+      checkoutToPaidRate: pct(repeatActiveSubscribers, repeatCheckoutActors.size),
+    }
+
     // PUSH #25 — the export decision directly below a finished free video.
     // A browser impression is counted only after the card is actually visible;
     // checkout and payment remain server/Stripe-authoritative. Session and
@@ -1066,7 +1134,7 @@ export async function GET(req: Request) {
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
       cohort: { signups, createdVideo, completedVideo, checkoutClicked, abandoned, paid: paidCohort },
-      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, acquisitionAttribution, firstVideoOnboarding, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
+      funnelSteps, biggestLeak, revenueLeaks, hotLeads, sourceQuality, acquisitionAttribution, firstVideoOnboarding, repeatCreatorOffer, organicRecovery, postVideoOffer, creatorLoop, retentionLoop, topicPerformance, renderHealth, trackingHealth,
     }
 
     return NextResponse.json({ data, updatedAt: new Date().toISOString() })
