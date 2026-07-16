@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
   title: 'Kineo — AI YouTube Shorts Generator · From $9.90/mo',
   description:
-    'Launch a repeatable AI Shorts show with the same face, voice and style. Kineo builds the script, voice, captions and scenes. First Short free; plans from $9.90/mo.',
+    'Launch a repeatable AI Shorts show with the same face, voice and style. Create, watch, download and share up to 3 watermarked Fast videos every 24h, no card. Paid plans unlock clean MP4s.',
   keywords: [
     'YouTube Shorts generator',
     'AI YouTube Shorts creator',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'Launch a repeatable AI Shorts show with the same face, voice and style. Script, voice, captions and scenes are built for you.',
+      'Launch a repeatable AI Shorts show with the same face, voice and style. Try up to 3 watermarked Fast videos every 24h, no card; paid plans unlock clean MP4s.',
     url: 'https://www.usekineo.com',
     siteName: 'Kineo',
     images: [
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
     description:
-      'Launch a repeatable AI Shorts show with the same face, voice and style. First Short free; plans from $9.90/mo.',
+      'Launch a repeatable AI Shorts show with the same face, voice and style. Up to 3 watermarked Fast videos every 24h, no card; paid plans unlock clean MP4s.',
     images: ['https://www.usekineo.com/og-image.png'],
   },
   icons: {

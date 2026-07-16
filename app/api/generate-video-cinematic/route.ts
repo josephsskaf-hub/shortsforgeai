@@ -3,12 +3,11 @@
 // Client polls /api/cinematic-clip-status until all clips are ready, then
 // hands off to /api/compose exactly like Fast Mode. Cost: 3 credits.
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
 import { generateScenes, shortCaptionFromVoiceover } from '@/lib/runway'
 import { parseUserScript } from '@/lib/scriptParser'
 import { openai } from '@/lib/openai'
-import { fal } from '@fal-ai/client'
 // KINEO-HOLLYWOOD-2026-07-09 — Hollywood Mode 2.0: per-scene engine routing
 // with native audio. KINEO-HOLLYWOOD-22-2026-07-10: Kling3 dialogue+support /
 // Veo3.1 cinematic (1-2 epic shots max) — Seedance is OUT (visual coherence).
@@ -38,10 +37,43 @@ import {
   synthesizeHostSpeech,
   type HollywoodVoice,
 } from '@/lib/hollywood/hostVoice'
-import { PRESENTER_MODEL as HOST_PRESENTER_MODEL, submitAvatarJob } from '@/lib/avatar/veed'
+import {
+  AvatarSubmitError,
+  PRESENTER_MODEL as HOST_PRESENTER_MODEL,
+  submitAvatarJob,
+} from '@/lib/avatar/veed'
 import { estimateMp3DurationSeconds, uploadVoiceoverToSupabase } from '@/lib/compose'
+import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
+import { refundRenderCredits } from '@/lib/credits/refund'
+import { FalQueueSubmitError, submitFalQueueOnce } from '@/lib/falQueue'
+import {
+  acquireCinematicClaim,
+  cinematicClaimId,
+  cinematicRequestFingerprint,
+  completeCinematicClaim,
+  releaseCinematicClaim,
+  settleCinematicClaim,
+  validCinematicGenerationId,
+  type CinematicClaim,
+  type CinematicRequestId,
+} from '@/lib/cinematic/claim'
 
 export const maxDuration = 60
+
+type CachedCinematicSubmission = {
+  fingerprint: string
+  creditCost: number
+  quality: string
+  engine: string
+  response: Record<string, unknown>
+  requestIds: CinematicRequestId[]
+  models: string[]
+  expiresAt: number
+}
+
+// Recovers the narrow case where Fal accepted a job but publishing the signed
+// response to events briefly failed on the same warm serverless instance.
+const cinematicSubmissionCache = new Map<string, CachedCinematicSubmission>()
 
 // Push #402 — two user-selectable engines with different credit costs.
 // KINEO-REBASE-2026-07-10 — CREDIT REBASE 2:1: every engine cost divided by 2
@@ -391,31 +423,42 @@ function clipCountForDuration(d: number): number {
 // KINEO-HOLLYWOOD-30-2026-07-10 — `imageUrl` forwarded to buildFalInput (Kling
 // O3 i2v anchor); default keeps every existing call byte-identical.
 async function submitToFal(prompt: string, model: string = SEEDANCE_MODEL, hd: boolean = true, hollywood: boolean = false, seconds?: number, imageUrl?: string): Promise<string | null> {
-  const falKey = process.env.FAL_KEY
-  if (!falKey) return null
-
   try {
-    fal.config({ credentials: falKey })
-    const { request_id } = await fal.queue.submit(model, {
-      input: buildFalInput(model, prompt, hd, hollywood, seconds, imageUrl),
-    })
-    return request_id ?? null
+    return await submitFalQueueOnce(
+      model,
+      buildFalInput(model, prompt, hd, hollywood, seconds, imageUrl),
+    )
   } catch (err) {
     // #366 — surface the FULL fal error (status + body + message) so a model /
     // param / access issue is diagnosable straight from Vercel logs (the bare
     // object stringified to "[object]" before, hiding the real cause).
     const e = err as { status?: number; body?: unknown; message?: string; name?: string }
+    const status = err instanceof FalQueueSubmitError ? err.status ?? undefined : e?.status
+    const body = err instanceof FalQueueSubmitError ? err.providerBody : e?.body
     console.error('[cinematic] fal.ai submit error:', JSON.stringify({
-      name: e?.name, status: e?.status, message: e?.message, body: e?.body,
+      name: e?.name, status, message: e?.message, body,
     }))
     // KINEO-FAL-ALARM-2026-07-06 — flag an exhausted-balance failure so the POST
     // handler alerts the founder + soft-queues instead of hard-erroring.
-    if (looksExhausted(e)) FAL_EXHAUSTED = true
+    if (looksExhausted({ status, message: e?.message, body })) FAL_EXHAUSTED = true
+    // A transport/408/5xx or a success response without an id cannot prove
+    // that Fal did not accept the paid job. Never re-POST that scene.
+    if (!(err instanceof FalQueueSubmitError) || err.ambiguous) throw err
     return null
   }
 }
 
 export async function POST(req: NextRequest) {
+  let activeBirthClaim: {
+    db: SupabaseClient
+    secret: string
+    userId: string
+    generationId: string
+    billingReference: string
+    debitConfirmed: boolean
+  } | null = null
+  let providerSubmissionMayExist = false
+  let releaseActiveBirthClaim: ((reason: string) => Promise<boolean>) | null = null
   try {
     FAL_EXHAUSTED = false // KINEO-FAL-ALARM — reset per request
     if (!process.env.FAL_KEY) {
@@ -442,7 +485,7 @@ export async function POST(req: NextRequest) {
     // `brollScenes[].userFootageUrl` (My Footage, same contract as
     // generate-video-fast) is the prepared hook for demo scenes using the
     // user's own clips.
-    let body: { prompt?: string; duration?: number; engine?: string; language?: string; vertical?: string; characterId?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string; userFootageUrl?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
+    let body: { generationId?: string; prompt?: string; duration?: number; engine?: string; language?: string; vertical?: string; characterId?: string; brollScenes?: Array<{ sceneNumber?: number; brollPrompt?: string; shotType?: string; negativePrompt?: string; userFootageUrl?: string }>; globalStyle?: { mood?: string; lighting?: string; cameraStyle?: string } }
     try {
       body = await req.json()
     } catch {
@@ -453,11 +496,57 @@ export async function POST(req: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 })
     }
+    if (prompt.length > 12000) {
+      return NextResponse.json({ error: 'Prompt is too long.' }, { status: 400 })
+    }
+    const generationId = typeof body.generationId === 'string' ? body.generationId.trim() : ''
+    if (!validCinematicGenerationId(generationId)) {
+      return NextResponse.json(
+        { error: 'This AI generation is missing its safety id. Please start it again.' },
+        { status: 400 },
+      )
+    }
 
     const duration = Number(body.duration) || 45
-    // L2B - smart BrollPlan threaded from the client
-    const planScenes = Array.isArray(body.brollScenes) ? body.brollScenes : []
-    const gStyle = body.globalStyle
+    // Runtime-validate optional director data before any OpenAI/Fal work. A TS
+    // annotation is not a JSON boundary: null/malformed scene entries used to
+    // crash only after paid Hollywood anchors had already been generated.
+    const rawPlanScenes: unknown = body.brollScenes
+    if (
+      rawPlanScenes !== undefined &&
+      (!Array.isArray(rawPlanScenes) || rawPlanScenes.length > 12 || rawPlanScenes.some((scene) =>
+        !scene || typeof scene !== 'object' || Array.isArray(scene)
+      ))
+    ) {
+      return NextResponse.json({ error: 'Invalid cinematic scene plan.' }, { status: 400 })
+    }
+    const planScenes = (Array.isArray(rawPlanScenes) ? rawPlanScenes : []).map((raw) => {
+      const scene = raw as Record<string, unknown>
+      const optionalString = (value: unknown, max: number) =>
+        typeof value === 'string' && value.trim().length > 0
+          ? value.trim().slice(0, max)
+          : undefined
+      return {
+        sceneNumber: typeof scene.sceneNumber === 'number' && Number.isInteger(scene.sceneNumber)
+          ? Math.max(1, Math.min(99, scene.sceneNumber))
+          : undefined,
+        brollPrompt: optionalString(scene.brollPrompt, 1200),
+        shotType: optionalString(scene.shotType, 120),
+        negativePrompt: optionalString(scene.negativePrompt, 500),
+        userFootageUrl: optionalString(scene.userFootageUrl, 4096),
+      }
+    })
+    const rawStyle: unknown = body.globalStyle
+    if (rawStyle !== undefined && (!rawStyle || typeof rawStyle !== 'object' || Array.isArray(rawStyle))) {
+      return NextResponse.json({ error: 'Invalid cinematic style.' }, { status: 400 })
+    }
+    const styleRecord = (rawStyle ?? {}) as Record<string, unknown>
+    const styleString = (value: unknown) => typeof value === 'string' ? value.trim().slice(0, 200) : undefined
+    const gStyle = rawStyle === undefined ? undefined : {
+      mood: styleString(styleRecord.mood),
+      lighting: styleString(styleRecord.lighting),
+      cameraStyle: styleString(styleRecord.cameraStyle),
+    }
     const styleSuffix = gStyle && (gStyle.mood || gStyle.lighting || gStyle.cameraStyle) ? `, ${[gStyle.mood, gStyle.lighting, gStyle.cameraStyle].filter(Boolean).join(', ')}, consistent color grade across all scenes` : ''
     // #442 — base clip count on the selected duration for now; in verbatim mode
     // we re-size it to the actual SCRIPT length below (the video follows the
@@ -481,11 +570,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Upfront balance + free-trial eligibility check (deduction/flag-flip happens
-    // in compose/status on SUCCESS).
+    // Upfront paid-entitlement + balance check. Premium AI has no free trial;
+    // the authoritative atomic debit happens below, immediately before any
+    // paid provider work, and is keyed to this protected generation.
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('video_credits, free_ai_generate_used, plan, has_paid')
+      .select('video_credits, plan, has_paid')
       .eq('id', user.id)
       .single()
 
@@ -496,10 +586,13 @@ export async function POST(req: NextRequest) {
 
     // KINEO-REBASE-2026-07-10 — UNIVERSAL ENGINE GATES. The old plan ladder
     // (Seedance=Creator+, Kling/Veo/Hollywood=Studio) is retired: ANY paying
-    // user (has_paid or any paid plan) can use ANY engine as long as they have
-    // the credit balance. Free stays as today: Fast free + one AI Gen trial.
+    // user with an active plan, or a previous buyer with remaining purchased
+    // credits, can use any engine as long as the balance covers the full cost.
     const planVal = (profile?.plan ?? 'free') as string
-    const PAID_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial', 'pro', 'pro_trial'])
+    const PAID_PLANS = new Set([
+      'starter', 'starter_trial', 'basic', 'basic_trial',
+      'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
+    ])
     const isPaidUser = profile?.has_paid === true || PAID_PLANS.has(planVal)
 
     // Premium engines (Kling/Veo/Hollywood) need any PAID account — no free trial.
@@ -526,19 +619,9 @@ export async function POST(req: NextRequest) {
     // Kling 50, Veo 90, Sora 100 (blocked), Seedance 20.
     const cost = wantsHollywood ? HOLLYWOOD_CREDIT_COST : wantsKling ? KLING_CREDIT_COST : wantsVeo ? VEO_CREDIT_COST : wantsSora ? SORA_CREDIT_COST : SEEDANCE_CREDIT_COST
 
-    // #384 — FREE AI-GENERATE TRIAL eligibility. One per account, only after
-    // email confirmation. The free trial ALWAYS uses Seedance (never Kling).
-    const emailConfirmed = !!user.email_confirmed_at
-    const freeAlreadyUsed = profile?.free_ai_generate_used === true
-    const eligibleForFree = !freeAlreadyUsed && emailConfirmed
-    // KINEO-HOLLYWOOD-2026-07-09 — the free trial never applies to Hollywood.
-    const isFreeTrial = !wantsKling && !wantsVeo && !wantsSora && !wantsHollywood && balance < SEEDANCE_CREDIT_COST && eligibleForFree
-
-    // KINEO-REBASE-2026-07-10 — Seedance (AI Generated) now requires ANY paid
-    // account (was Creator+; the KINEO-LADDER plan gating is retired). Free
-    // users keep exactly today's behavior: Fast free + one AI Gen free trial.
-    // Kling/Veo/Hollywood already paid-gated above; this catches Seedance.
-    if (!wantsKling && !wantsVeo && !wantsHollywood && !isPaidUser && !isFreeTrial) {
+    // PUSH #20 — every premium AI engine is paid-only. The acquisition offer is
+    // Fast (3 watermarked videos / 24h), never a hidden premium trial.
+    if (!isPaidUser) {
       return NextResponse.json(
         {
           error: 'AI Generated videos are on the paid plans. Upgrade to use the AI engine.',
@@ -549,17 +632,388 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (balance < cost && !isFreeTrial) {
+    if (balance < cost) {
       return NextResponse.json(
         {
-          error: freeAlreadyUsed
-            ? `You've used your 1 free AI video. ${wantsKling ? 'Cinematic AI needs 50' : 'AI Generated needs 20'} credits. You have ${balance}.` // KINEO-PRICING-V3B-2026-07-10 — Kling 50
-            : `This needs ${cost} credits. You have ${balance}.`,
+          error: `This needs ${cost} credits. You have ${balance}.`,
           needed: cost,
           balance,
         },
         { status: 402 }
       )
+    }
+
+    const claimQuality = wantsHollywood
+      ? 'cinematic_hollywood'
+      : wantsKling
+        ? 'cinematic_kling'
+        : wantsVeo
+          ? 'cinematic_veo'
+          : 'cinematic_ai'
+    const claimEngine = wantsHollywood
+      ? 'hollywood'
+      : wantsKling
+        ? 'kling'
+        : wantsVeo
+          ? 'veo'
+          : 'seedance'
+    const claimFingerprint = cinematicRequestFingerprint({
+      prompt,
+      duration,
+      engine: claimEngine,
+      language: body.language === 'pt' ? 'pt' : body.language === 'es' ? 'es' : 'en',
+      vertical: typeof body.vertical === 'string' ? body.vertical.trim().toLowerCase() : '',
+      characterId: typeof body.characterId === 'string' ? body.characterId.trim() : '',
+      brollScenes: planScenes,
+      globalStyle: gStyle ?? null,
+    })
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { error: 'AI generation safety is temporarily unavailable. Nothing was submitted.' },
+        { status: 503 },
+      )
+    }
+    const cinematicAdmin: SupabaseClient = createAdminClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const cacheKey = `${user.id}:${generationId}`
+    const now = Date.now()
+    for (const [key, entry] of cinematicSubmissionCache) {
+      if (entry.expiresAt <= now) cinematicSubmissionCache.delete(key)
+    }
+
+    // A fully failed provider attempt is refunded, but repeated deliberately
+    // failing prompts must not turn paid Fal work (especially Hollywood
+    // anchors) into an unlimited free endpoint. Two signed/refunded failures
+    // inside 15 minutes trigger a short cooling-off window. Query failure is
+    // fail-open so an analytics outage never blocks legitimate generation.
+    const cooldownCutoff = new Date(now - 15 * 60 * 1000).toISOString()
+    const { data: recentClaims, error: cooldownError } = await cinematicAdmin
+      .from('events')
+      .select('metadata,created_at')
+      .eq('name', 'cinematic_submission_claim')
+      .eq('user_id', user.id)
+      .gte('created_at', cooldownCutoff)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    if (cooldownError) {
+      console.warn('[cinematic] refunded-attempt cooldown lookup failed:', cooldownError.message)
+    } else {
+      const recentRefundedFailures = (recentClaims ?? []).filter((row) => {
+        const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+          ? row.metadata as Record<string, unknown>
+          : {}
+        return metadata.status === 'released' &&
+          typeof metadata.authority === 'string' && /^[a-f0-9]{64}$/i.test(metadata.authority) &&
+          typeof metadata.resolution_reason === 'string' &&
+          /^provider_.*_refunded$/.test(metadata.resolution_reason)
+      }).length
+      if (recentRefundedFailures >= 2) {
+        return NextResponse.json(
+          {
+            error: 'Two AI attempts were just refunded. Please wait a few minutes before starting another one.',
+            retry_after_ms: 15 * 60 * 1000,
+          },
+          { status: 429 },
+        )
+      }
+    }
+
+    const billingReference = `cinematic-${cinematicClaimId(user.id, generationId)}`
+    const ensureCinematicDebit = async (creditCost: number): Promise<{
+      ok: boolean
+      balance: number
+      insufficient: boolean
+      error: string
+    }> => {
+      const { data, error } = await supabase.rpc('debit_video_credits', {
+        p_render: billingReference,
+        p_cost: creditCost,
+      })
+      if (error || typeof data !== 'number') {
+        const message = error?.message ?? 'no balance returned'
+        return {
+          ok: false,
+          balance: typeof data === 'number' ? data : 0,
+          insufficient: /balance|credit|insufficient/i.test(message),
+          error: message,
+        }
+      }
+      return { ok: true, balance: data, insufficient: false, error: '' }
+    }
+
+    const confirmCinematicRefund = async (): Promise<boolean> => {
+      const refunded = await refundRenderCredits(billingReference)
+      if (refunded > 0) return true
+      const { data, error } = await cinematicAdmin
+        .from('credit_debits')
+        .select('refunded_at')
+        .eq('render_id', billingReference)
+        .maybeSingle()
+      if (error) {
+        console.error('[cinematic] refund confirmation failed:', error.message)
+        return false
+      }
+      return typeof data?.refunded_at === 'string' && data.refunded_at.length > 0
+    }
+
+    const settleDebitAndRespond = async (
+      claim: CinematicClaim,
+      response: Record<string, unknown>,
+    ): Promise<NextResponse> => {
+      if (claim.status === 'released') {
+        return NextResponse.json(
+          { error: 'This AI generation was safely closed. Please start a new one.' },
+          { status: 409 },
+        )
+      }
+      if (claim.status === 'settled') return NextResponse.json(response)
+      if (claim.status !== 'done') {
+        return NextResponse.json(
+          { error: 'This AI generation is still being submitted.', pending: true, retry_after_ms: 2500 },
+          { status: 409 },
+        )
+      }
+
+      // The job was atomically debited before provider submission. Re-running
+      // the same deterministic ledger key here is an idempotent recovery check
+      // before exposing request IDs or allowing authenticated polling.
+      const debit = await ensureCinematicDebit(claim.creditCost)
+      if (!debit.ok) {
+        console.error('[cinematic] deterministic debit confirmation failed:', debit.error)
+        return NextResponse.json(
+          {
+            error: debit.insufficient
+              ? `Your AI scenes were reserved, but ${claim.creditCost} credits could not be confirmed. Add credits and retry this same generation.`
+              : 'Your AI scenes are safe while we confirm the credit charge. Reconnecting automatically.',
+            ...(debit.insufficient
+              ? { balance: debit.balance, resume_same_generation: true, generationId }
+              : { pending: true, retry_after_ms: 3000 }),
+          },
+          { status: debit.insufficient ? 402 : 503 },
+        )
+      }
+      const settled = await settleCinematicClaim({
+        db: cinematicAdmin,
+        secret: serviceRoleKey,
+        userId: user.id,
+        generationId,
+        reason: 'provider_submitted_and_debited',
+        renderId: billingReference,
+      })
+      if (!settled.ok) {
+        console.error('[cinematic] debit settled but claim publication failed:', settled.error)
+        return NextResponse.json(
+          { error: 'Your AI scenes are safe while we finalize the submission.', pending: true, retry_after_ms: 2500 },
+          { status: 503 },
+        )
+      }
+      activeBirthClaim = null
+      cinematicSubmissionCache.delete(cacheKey)
+      return NextResponse.json({ ...response, credits_charged: claim.creditCost, balance: debit.balance })
+    }
+
+    const acquired = await acquireCinematicClaim({
+      db: cinematicAdmin,
+      secret: serviceRoleKey,
+      userId: user.id,
+      generationId,
+      fingerprint: claimFingerprint,
+      creditCost: cost,
+      quality: claimQuality,
+      engine: claimEngine,
+    })
+    if (acquired.kind === 'conflict') {
+      return NextResponse.json({ error: acquired.error }, { status: 409 })
+    }
+    if (acquired.kind === 'error') {
+      console.error('[cinematic] birth claim unavailable:', acquired.error)
+      return NextResponse.json(
+        { error: 'AI generation safety is temporarily unavailable. Nothing was submitted.' },
+        { status: 503 },
+      )
+    }
+    if (acquired.kind === 'released') {
+      return NextResponse.json(
+        { error: 'This AI generation was safely closed. Please start a new one.' },
+        { status: 409 },
+      )
+    }
+    if (acquired.kind === 'replay') {
+      return settleDebitAndRespond(acquired.claim, acquired.response)
+    }
+    if (acquired.kind === 'pending') {
+      const cached = cinematicSubmissionCache.get(cacheKey)
+      if (
+        cached && cached.expiresAt > Date.now() &&
+        cached.fingerprint === claimFingerprint && cached.creditCost === cost &&
+        cached.quality === claimQuality && cached.engine === claimEngine
+      ) {
+        const completed = await completeCinematicClaim({
+          db: cinematicAdmin,
+          secret: serviceRoleKey,
+          userId: user.id,
+          generationId,
+          fingerprint: claimFingerprint,
+          creditCost: cost,
+          quality: claimQuality,
+          engine: claimEngine,
+          response: cached.response,
+          falRequestIds: cached.requestIds,
+          falModels: cached.models,
+        })
+        if (completed.ok) return settleDebitAndRespond(completed.claim, cached.response)
+      }
+      return NextResponse.json(
+        { error: 'This AI generation is already being submitted.', pending: true, retry_after_ms: 2500 },
+        { status: 409 },
+      )
+    }
+
+    activeBirthClaim = {
+      db: cinematicAdmin,
+      secret: serviceRoleKey,
+      userId: user.id,
+      generationId,
+      billingReference,
+      debitConfirmed: false,
+    }
+    const releaseBirthClaim = async (reason: string): Promise<boolean> => {
+      if (!activeBirthClaim) return true
+      const current = activeBirthClaim
+      let releaseReason = reason
+      let reference: string | undefined
+      if (current.debitConfirmed) {
+        const refundConfirmed = await confirmCinematicRefund()
+        if (!refundConfirmed) {
+          console.error('[cinematic] refusing to release claim before refund is confirmed:', reason)
+          return false
+        }
+        releaseReason = `${reason}_refunded`
+        reference = current.billingReference
+      }
+      const released = await releaseCinematicClaim({
+        db: current.db,
+        secret: current.secret,
+        userId: current.userId,
+        generationId: current.generationId,
+        reason: releaseReason,
+        reference,
+      })
+      if (!released.ok) {
+        console.error('[cinematic] birth claim release failed:', released.error)
+        return false
+      }
+      activeBirthClaim = null
+      return true
+    }
+    releaseActiveBirthClaim = releaseBirthClaim
+
+    // Every concurrent generation inserts first and then audits all signed
+    // holds. The last request necessarily sees the earlier reservations.
+    const holds = await inspectActiveComposeCreditHolds({
+      db: cinematicAdmin,
+      secret: serviceRoleKey,
+      userId: user.id,
+      currentClaimId: acquired.claim.id,
+    })
+    if (!holds.ok || !holds.currentSeen) {
+      console.error('[cinematic] credit hold audit failed:', holds.ok ? 'current claim missing' : holds.error)
+      await releaseBirthClaim('hold_audit_failed')
+      return NextResponse.json(
+        { error: 'Your credit reservation could not be verified. Nothing was submitted.' },
+        { status: 503 },
+      )
+    }
+    const { data: currentProfile, error: currentProfileError } = await cinematicAdmin
+      .from('profiles')
+      .select('video_credits,plan,has_paid')
+      .eq('id', user.id)
+      .single()
+    if (currentProfileError || typeof currentProfile?.video_credits !== 'number') {
+      await releaseBirthClaim('balance_lookup_failed')
+      return NextResponse.json(
+        { error: 'Your credit balance could not be verified. Nothing was submitted.' },
+        { status: 503 },
+      )
+    }
+    const currentPlan = String(currentProfile.plan ?? 'free').toLowerCase()
+    const currentPaid = currentProfile.has_paid === true || PAID_PLANS.has(currentPlan)
+    const currentBalance = Math.max(0, currentProfile.video_credits)
+    const heldByOtherJobs = Math.max(0, holds.totalHeld - cost)
+    if (!currentPaid || holds.totalHeld > currentBalance) {
+      await releaseBirthClaim('insufficient_available_credits')
+      return NextResponse.json(
+        {
+          error: !currentPaid
+            ? 'AI Generated videos require a paid plan.'
+            : `This generation needs ${cost} credits. ${heldByOtherJobs > 0 ? 'Other active renders already reserve part of your balance. ' : ''}You have ${Math.max(0, currentBalance - heldByOtherJobs)} available.`,
+          needed: cost,
+          balance: Math.max(0, currentBalance - heldByOtherJobs),
+        },
+        { status: 402 },
+      )
+    }
+
+    // Close the gap between an in-memory/events hold and every other debit
+    // route. The database RPC atomically spends this generation's credits
+    // before OpenAI/Fal work begins; concurrent spenders cannot double-use the
+    // same balance. The deterministic key makes retries safe.
+    const upfrontDebit = await ensureCinematicDebit(cost)
+    if (!upfrontDebit.ok) {
+      console.error('[cinematic] upfront debit failed:', upfrontDebit.error)
+      await releaseBirthClaim('upfront_debit_rejected')
+      return NextResponse.json(
+        {
+          error: upfrontDebit.insufficient
+            ? `This generation needs ${cost} credits. Your available balance changed before it could start.`
+            : 'Your credit charge could not be confirmed. Nothing was submitted.',
+          needed: cost,
+          balance: upfrontDebit.balance,
+        },
+        { status: upfrontDebit.insufficient ? 402 : 503 },
+      )
+    }
+    if (activeBirthClaim) activeBirthClaim.debitConfirmed = true
+
+    const publishCinematicResponse = async (
+      response: Record<string, unknown>,
+      requestIds: CinematicRequestId[],
+      models: string[],
+    ): Promise<NextResponse> => {
+      cinematicSubmissionCache.set(cacheKey, {
+        fingerprint: claimFingerprint,
+        creditCost: cost,
+        quality: claimQuality,
+        engine: claimEngine,
+        response,
+        requestIds,
+        models,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      })
+      const completed = await completeCinematicClaim({
+        db: cinematicAdmin,
+        secret: serviceRoleKey,
+        userId: user.id,
+        generationId,
+        fingerprint: claimFingerprint,
+        creditCost: cost,
+        quality: claimQuality,
+        engine: claimEngine,
+        response,
+        falRequestIds: requestIds,
+        falModels: models,
+      })
+      if (!completed.ok) {
+        console.error('[cinematic] accepted provider claim publication failed:', completed.error)
+        return NextResponse.json(
+          { error: 'Your AI scenes are safe while we finalize the submission.', pending: true, retry_after_ms: 2500 },
+          { status: 503 },
+        )
+      }
+      return settleDebitAndRespond(completed.claim, response)
     }
 
     // Parse script for verbatim mode
@@ -661,7 +1115,7 @@ export async function POST(req: NextRequest) {
     // Studio above). If Kling fails entirely, fall back to Seedance AND drop the
     // charge to the Seedance price so the user is never billed 50 cr for a
     // Seedance video. Single model per generation keeps the status poll simple.
-    let usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
+    const usedModel = wantsKling ? KLING_MODEL : wantsVeo ? VEO_MODEL : wantsSora ? SORA_MODEL : SEEDANCE_MODEL
 
     // KINEO-SEEDANCE-720-ALL-2026-07-06 — Seedance runs 720p on EVERY plan
     // (~$0.26/clip). 1080p (~$0.62/clip) blew the Studio margin (10 videos =
@@ -710,6 +1164,13 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error('[cinematic] hollywood planner failed:', e instanceof Error ? e.message : String(e))
+        const released = await releaseBirthClaim('hollywood_planner_rejected')
+        if (!released) {
+          return NextResponse.json(
+            { error: 'Scene planning failed and your automatic refund is still being confirmed. Please retry this same generation.' },
+            { status: 503 },
+          )
+        }
         return NextResponse.json(
           { error: 'Hollywood scene planning failed. Please try again.' },
           { status: 502 },
@@ -723,12 +1184,17 @@ export async function POST(req: NextRequest) {
       // never dies because of anchors.
       let anchors: HollywoodAnchors | null = null
       try {
+        // Anchor generation is itself paid Fal work. From this point onward an
+        // unexpected exception must keep the deterministic claim pending; it
+        // must never release and let a new generationId repeat provider spend.
+        providerSubmissionMayExist = true
         anchors = await generateHollywoodAnchors({
           characterSheet: plan.characterSheet,
           environmentSheet: plan.environmentSheet,
           styleSheet: plan.styleSheet,
         })
       } catch (e) {
+        if (e instanceof FalQueueSubmitError && e.ambiguous) throw e
         console.error('[cinematic] hollywood anchors threw (falling back to t2v):', e instanceof Error ? e.message : String(e))
         anchors = null
       }
@@ -874,6 +1340,12 @@ export async function POST(req: NextRequest) {
               `[cinematic] hollywood host scene ${hs.index}: TTS ${audioDur.toFixed(1)}s voice=${hostVoice.voice} → presenter submitted`,
             )
           } catch (e) {
+            if (e instanceof AvatarSubmitError && e.ambiguous) {
+              // The presenter POST may have been accepted. Falling back to O3
+              // would create a second paid job for the same scene.
+              providerSubmissionMayExist = true
+              throw e
+            }
             console.warn(
               `[cinematic] hollywood host scene ${hs.index} failed — falling back to O3 native audio:`,
               e instanceof Error ? e.message : String(e),
@@ -894,11 +1366,8 @@ export async function POST(req: NextRequest) {
             : undefined
           const scenePrompt = hs.prompt + eraSuffix
           id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
-          if (!id) {
-            await new Promise((r) => setTimeout(r, 800))
-            id = await submitToFal(scenePrompt, sceneModel, false, true, hs.seconds, anchorUrl)
-          }
         }
+        if (id) providerSubmissionMayExist = true
         hRequestIds.push(id)
         hModels.push(sceneModel)
         hEngines.push(sceneEngine)
@@ -907,12 +1376,19 @@ export async function POST(req: NextRequest) {
 
       const hValid = hRequestIds.filter((id): id is string => id !== null)
       if (hValid.length === 0) {
+        const released = await releaseBirthClaim(FAL_EXHAUSTED ? 'provider_balance_rejected' : 'provider_rejected')
+        if (!released) {
+          return NextResponse.json(
+            { error: 'No AI scenes started and your automatic refund is still being confirmed. Please retry this same generation.' },
+            { status: 503 },
+          )
+        }
         if (FAL_EXHAUSTED) {
           await alertFalExhausted(`user=${user.id.slice(0, 8)} engine=hollywood`)
           return NextResponse.json(
             {
               queued: true,
-              error: "We're experiencing high demand right now — your video is queued and we'll have it ready shortly. No credits were used.",
+              error: "We're experiencing high demand right now. Nothing started and your credits were refunded automatically.",
             },
             { status: 503 },
           )
@@ -923,7 +1399,6 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      const generationId = randomUUID()
       // KINEO-HOLLYWOOD-30-2026-07-10 — per-scene models (i2v when anchored)
       // + the anchors' ~$0.10 included in the logged TOTAL.
       logHollywoodCost(generationId, plan.scenes, {
@@ -937,7 +1412,7 @@ export async function POST(req: NextRequest) {
       // KINEO-HOLLYWOOD-HOST-2026-07-13 — hNarrations/hVoiceoverScript moved
       // ABOVE the submit loop (the host voice is resolved from them).
 
-      return NextResponse.json({
+      const response: Record<string, unknown> = {
         mode: 'cinematic_ai',
         freeTrial: false,
         generationId,
@@ -966,7 +1441,8 @@ export async function POST(req: NextRequest) {
         quality: 'cinematic_hollywood',
         verbatim,
         speed: parsedScript.speed,
-      })
+      }
+      return publishCinematicResponse(response, hRequestIds, hModels)
     }
     // ── end KINEO-HOLLYWOOD-2026-07-09 ──────────────────────────────────────
 
@@ -980,10 +1456,7 @@ export async function POST(req: NextRequest) {
         const visualPrompt = scene.aiPrompt || scene.stockSearchQuery || scene.description
         const cinematic = buildFacelessCinematicPrompt(visualPrompt) + eraSuffix + styleSuffix
         let id = await submitToFal(cinematic, model, hd)
-        if (!id) {
-          await new Promise((r) => setTimeout(r, 800))
-          id = await submitToFal(cinematic, model, hd)
-        }
+        if (id) providerSubmissionMayExist = true
         ids.push(id)
         await new Promise((r) => setTimeout(r, 450))
       }
@@ -993,24 +1466,27 @@ export async function POST(req: NextRequest) {
     let falRequestIds = await submitAllScenes(usedModel)
     let validIds = falRequestIds.filter((id): id is string => id !== null)
 
-    if (validIds.length === 0 && usedModel === KLING_MODEL) {
-      console.warn('[cinematic] Kling submit yielded 0 clips — falling back to Seedance')
-      usedModel = SEEDANCE_MODEL
-      falRequestIds = await submitAllScenes(SEEDANCE_MODEL)
-      validIds = falRequestIds.filter((id): id is string => id !== null)
-    }
+    // Do not silently downgrade Kling to Seedance after the signed cost/engine
+    // claim is born. A rejected premium submit is retriable and never charged.
 
     if (validIds.length === 0) {
+      const released = await releaseBirthClaim(FAL_EXHAUSTED ? 'provider_balance_rejected' : 'provider_rejected')
+      if (!released) {
+        return NextResponse.json(
+          { error: 'No AI scenes started and your automatic refund is still being confirmed. Please retry this same generation.' },
+          { status: 503 },
+        )
+      }
       // KINEO-FAL-ALARM-2026-07-06 — if the failure was an exhausted fal balance,
       // don't show a dead error: alert the founder and return a soft "queued"
       // message so the user waits calmly instead of thinking the product broke.
-      // No credits are charged (deduction only happens on successful render).
+      // The deterministic upfront debit has already been refunded above.
       if (FAL_EXHAUSTED) {
         await alertFalExhausted(`user=${user.id.slice(0, 8)} engine=${usedModel}`)
         return NextResponse.json(
           {
             queued: true,
-            error: "We're experiencing high demand right now — your video is queued and we'll have it ready shortly. No credits were used.",
+            error: "We're experiencing high demand right now. Nothing started and your credits were refunded automatically.",
           },
           { status: 503 },
         )
@@ -1025,15 +1501,13 @@ export async function POST(req: NextRequest) {
       ? parsedScript.narration
       : scenes.map((s) => s.voiceover).filter(Boolean).join(' ')
 
-    const generationId = randomUUID()
-
     console.log(
       `[cinematic] submitted ${validIds.length}/${scenes.length} clips to fal.ai user=${user.id.slice(0, 8)} generationId=${generationId}`
     )
 
-    return NextResponse.json({
+    const response: Record<string, unknown> = {
       mode: 'cinematic_ai',
-      freeTrial: isFreeTrial, // #384 — UI hint only; watermark/quota decided server-side
+      freeTrial: false,
       generationId,
       prompt,
       duration,
@@ -1042,15 +1516,43 @@ export async function POST(req: NextRequest) {
       voiceover_script: voiceoverScript,
       fal_request_ids: falRequestIds, // null for failed submissions
       fal_model: usedModel, // #401 — which engine ran (client passes it to clip-status)
-      // #402 — quality drives the credit cost in compose/status. Reflects the
-      // engine that ACTUALLY ran (so a Kling→Seedance fallback charges 30, not 45).
-      quality: usedModel === KLING_MODEL ? 'cinematic_kling' : usedModel === VEO_MODEL ? 'cinematic_veo' : usedModel === SORA_MODEL ? 'cinematic_sora' : 'cinematic_ai',
+      quality: claimQuality,
       verbatim,
       speed: parsedScript.speed,
-    })
+    }
+    return publishCinematicResponse(
+      response,
+      falRequestIds,
+      falRequestIds.map(() => usedModel),
+    )
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[cinematic] unexpected error:', msg)
+    if (
+      (error instanceof FalQueueSubmitError && error.ambiguous) ||
+      (error instanceof AvatarSubmitError && error.ambiguous)
+    ) {
+      providerSubmissionMayExist = true
+    }
+    if (activeBirthClaim && !providerSubmissionMayExist && releaseActiveBirthClaim) {
+      const released = await releaseActiveBirthClaim('explicit_pre_provider_failure')
+      if (!released) {
+        return NextResponse.json(
+          { error: 'Generation stopped before submission and your automatic refund is still being confirmed. Please retry this same generation.' },
+          { status: 503 },
+        )
+      }
+    }
+    if (activeBirthClaim && providerSubmissionMayExist) {
+      return NextResponse.json(
+        {
+          error: 'Your AI scenes may already be processing. Reconnecting to the same protected submission.',
+          pending: true,
+          retry_after_ms: 3000,
+        },
+        { status: 503 },
+      )
+    }
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }

@@ -9,8 +9,13 @@ import { refundRenderCredits } from '@/lib/credits/refund'
 // client's ?quality / ?deducted query params. creditCostFor is the single
 // shared price table (was a local copy here).
 import { creditCostFor, normalizeQuality } from '@/lib/credits/engineCost'
+import { releaseFailedFreeFastClaim, settleComposeCreditHoldForRender } from '@/lib/credits/composeHold'
 import { getRenderIntent } from '@/lib/credits/renderIntent'
 import { settleAvatarCreditHoldForRender } from '@/lib/avatar/reservation'
+import {
+  loadSettledCinematicClaimForRender,
+  type CinematicClaim,
+} from '@/lib/cinematic/claim'
 
 // Push #230 — bumped 30→60 to give the post-render asset migration
 // (download Creatomate video + thumbnail, re-upload to Supabase Storage)
@@ -193,6 +198,13 @@ export async function GET(
     if (resumeRequested && !intent) {
       return NextResponse.json({ error: 'No resumable render found.' }, { status: 404 })
     }
+    // A provider render id by itself is not authorization. All current render
+    // paths publish a signed/server-side intent before returning the id; fail
+    // closed for legacy or orphan ids instead of polling and exposing a URL to
+    // whichever authenticated user guessed it.
+    if (!intent) {
+      return NextResponse.json({ error: 'Render not found.' }, { status: 404 })
+    }
     const hasServerIntent = !!intent && intent.userId === user.id
 
     // Legacy fallback (no intent row = a render created before this deploy, or a
@@ -203,6 +215,42 @@ export async function GET(
     // defensive default to BOTH the intent value and the legacy query param.
     const clientQuality: Quality = normalizeQuality(qParam)
     const quality: Quality = hasServerIntent ? normalizeQuality(intent!.quality) : clientQuality
+    const isFreeFastIntent =
+      hasServerIntent && quality === 'fast' && intent!.cost === 0
+    const isCinematicQuality =
+      quality === 'cinematic_ai' || quality === 'cinematic_kling' ||
+      quality === 'cinematic_veo' || quality === 'cinematic_sora' ||
+      quality === 'cinematic_hollywood'
+    let prepaidCinematicClaim: CinematicClaim | null = null
+    let cinematicAdmin: ReturnType<typeof createAdminClient> | null = null
+    let cinematicSecret = ''
+    if (hasServerIntent && isCinematicQuality) {
+      const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      cinematicSecret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+      if (!adminUrl || !cinematicSecret) {
+        return NextResponse.json(
+          { error: 'Cinematic billing verification is temporarily unavailable.' },
+          { status: 503 },
+        )
+      }
+      cinematicAdmin = createAdminClient(adminUrl, cinematicSecret, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const prepaid = await loadSettledCinematicClaimForRender({
+        db: cinematicAdmin,
+        secret: cinematicSecret,
+        userId: user.id,
+        renderId,
+      })
+      if (!prepaid.ok) {
+        console.error('[compose/status] cinematic billing verification failed:', prepaid.error)
+        return NextResponse.json(
+          { error: 'Cinematic billing verification is temporarily unavailable.' },
+          { status: 503 },
+        )
+      }
+      prepaidCinematicClaim = prepaid.claim
+    }
 
     const deductedParam = req.nextUrl.searchParams.get('deducted') === '1'
     // KINEO-CREDIT-INTENT — when we have server-side intent, the client's
@@ -242,19 +290,20 @@ export async function GET(
     }
 
     if (state.status === 'succeeded' && state.url) {
-      let creditsDeducted = false
+      if (prepaidCinematicClaim?.status === 'released') {
+        return NextResponse.json({
+          phase: 'failed',
+          error: 'This cinematic generation was closed and its credits were refunded.',
+          creditsRefunded: prepaidCinematicClaim.creditCost,
+          progress: 0,
+        })
+      }
+      let creditsDeducted = prepaidCinematicClaim !== null
       let creditsRemaining: number | null = null
-      let wasFreeAiTrial = false // #384 — true when this render used the free AI trial (0 credits charged)
-      // KINEO-PRICING-V3C-2026-07-10 — true when a PAID user's Fast render was
-      // delivered without the 1-credit debit (balance < 1). Fail-open by design.
-      let fastCreditSkipped = false
 
       // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
-      // only. Resolve paid status server-side from the profile (never trust the
-      // client). Mirrors the PAID_PLANS + has_paid rule in /api/compose (the
-      // watermark decision) so billing and watermark stay keyed to the same
-      // truth. Lookup failure → treated as free (no debit) — fail-open: a DB
-      // blip must never charge or block anyone.
+      // only. New renders use their signed server intent; this profile lookup is
+      // retained solely for legacy renders that predate intent storage.
       let fastIsPaidUser = false
       if (quality === 'fast' && !skipClientDeducted) {
         try {
@@ -272,7 +321,7 @@ export async function GET(
             (payerProf as { has_paid?: boolean } | null)?.has_paid === true ||
             PAID_PLANS.has(planName)
         } catch (e) {
-          console.warn('[fast-credit] paid-status lookup failed — treating as free (no debit):',
+          console.warn('[fast-credit] legacy paid-status lookup failed:',
             e instanceof Error ? e.message : String(e))
         }
       }
@@ -311,7 +360,10 @@ export async function GET(
       // auto-refund on failure covers it too).
       // KINEO-PRICING-V3C-2026-07-10 — 'fast' is back in the whitelist ONLY for
       // paying accounts (fastIsPaidUser). Free Fast stays out (nothing to debit).
-      const shouldDeductCredits = quality === 'cinematic_ai' || quality === 'cinematic_kling' || quality === 'cinematic_veo' || quality === 'cinematic_sora' || quality === 'cinematic_hollywood' || quality === 'avatar' || quality === 'presenter' || (quality === 'fast' && (intentCost !== null ? intentCost > 0 : fastIsPaidUser))
+      const shouldDeductCredits =
+        (!prepaidCinematicClaim && isCinematicQuality) ||
+        quality === 'avatar' || quality === 'presenter' ||
+        (quality === 'fast' && (intentCost !== null ? intentCost > 0 : fastIsPaidUser))
 
       // Server-side idempotency guard (push #fix-double-deduction):
       // Check whether this render_id has already been persisted in `videos`.
@@ -352,6 +404,25 @@ export async function GET(
         })
         if (!holdSettled) {
           console.warn(`[avatar-hold] retry could not settle hold for render=${renderId}`)
+          return NextResponse.json(
+            { phase: 'processing', reconcile: true, error: 'Finalizing your credit settlement. Please retry.', progress: 99 },
+            { status: 503 },
+          )
+        }
+      }
+
+      if (serverAlreadyDeducted) {
+        const composeHoldSettled = await settleComposeCreditHoldForRender({
+          userId: user.id,
+          renderId,
+          reason: 'debited',
+        })
+        if (!composeHoldSettled) {
+          console.warn(`[compose-hold] retry could not settle hold for render=${renderId}`)
+          return NextResponse.json(
+            { phase: 'processing', reconcile: true, error: 'Finalizing your credit settlement. Please retry.', progress: 99 },
+            { status: 503 },
+          )
         }
       }
 
@@ -366,87 +437,22 @@ export async function GET(
       if (!skipClientDeducted && !serverAlreadyDeducted) {
         if (shouldDeductCredits) {
           deductionAttempted = true
-          const { data: profile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('video_credits, free_ai_generate_used')
-            .eq('id', user.id)
-            .single()
-          if (!fetchError) {
-            const current = profile?.video_credits ?? 0
-            // #384 — FREE AI-GENERATE TRIAL. This succeeded render is the free
-            // trial when: AI mode AND the user hasn't used their free AI yet AND
-            // they couldn't pay the 30-credit price. In that case we BURN THE
-            // FREE QUOTA (flip the flag) and do NOT touch video_credits — the 3
-            // Fast credits stay intact. Only happens on SUCCESS, so a failed
-            // render never costs the user their free trial.
-            const isFreeAiTrial =
-              quality === 'cinematic_ai' &&
-              profile?.free_ai_generate_used !== true &&
-              current < cost
-            if (quality === 'fast' && current < cost) {
-              // KINEO-PRICING-V3C-2026-07-10 — PRODUCT DECISION: never break a
-              // Fast render over 1 credit. A paying user with balance 0 still
-              // gets their clean video delivered normally — we just skip the
-              // debit (no watermark fallback, no 402). This branch also keeps
-              // debit_video_credits from ever being called with an
-              // insufficient balance for Fast.
-              fastCreditSkipped = true
-              creditsDeducted = true // settled — polls/refreshes must not retry
-              creditsRemaining = current
-              console.log(`[fast-credit] skip — paid user ${user.id.slice(0, 8)} balance ${current} < cost ${cost}; delivering without debit`)
-            } else if (isFreeAiTrial) {
-              // Conditional flip: only the FIRST render to reach here wins, so
-              // two near-simultaneous trials can't both go free.
-              const { data: claimed, error: claimErr } = await supabase
-                .from('profiles')
-                .update({ free_ai_generate_used: true })
-                .eq('id', user.id)
-                .eq('free_ai_generate_used', false)
-                .select('id')
-              if (claimErr) {
-                console.error('[compose/status] free-trial flag flip error:', claimErr.message)
-              }
-              if (claimed && claimed.length > 0) {
-                // We won the claim: free trial granted, credits untouched.
-                creditsDeducted = true
-                creditsRemaining = current
-                wasFreeAiTrial = true
-                console.log(`[compose/status] FREE AI trial consumed for user ${user.id.slice(0, 8)} — credits untouched (${current})`)
-              } else {
-                // Lost the race (flag already true) → fall back to normal charge.
-                // Fix 1 (12/06) — atomic + idempotent via RPC (ledger keyed by
-                // render_id), replacing the racy read→compute→write.
-                const { data: lostBalance, error: lostErr } = await supabase
-                  .rpc('debit_video_credits', { p_render: renderId, p_cost: cost })
-                if (!lostErr && typeof lostBalance === 'number') {
-                  creditsDeducted = true
-                  creditsRemaining = lostBalance
-                } else {
-                  console.error('[compose/status] credit deduct RPC error (trial race):', lostErr?.message)
-                }
-              }
-            } else {
-              // Fix 1 (12/06) — ATOMIC debit via RPC. One ledger row per
-              // render_id (PRIMARY KEY) makes the charge idempotent across
-              // tabs, refreshes and concurrent polls; the decrement runs
-              // inside the DB, so the old under-/double-charge races are gone.
+            const { error: fetchError } = await supabase
+              .from('profiles')
+              .select('video_credits')
+              .eq('id', user.id)
+              .single()
+            if (!fetchError) {
+              // Every clean export settles its full signed intent cost. There is
+              // no premium free trial and no zero-balance Fast exception.
               const { data: newBalance, error: rpcErr } = await supabase
                 .rpc('debit_video_credits', { p_render: renderId, p_cost: cost })
               if (!rpcErr && typeof newBalance === 'number') {
                 creditsDeducted = true
                 creditsRemaining = newBalance
-                // Push #430 — a paid AI render also burns the legacy
-                // free-AI-trial flag (behavior preserved from the old path).
-                if (quality === 'cinematic_ai' && profile?.free_ai_generate_used !== true) {
-                  await supabase
-                    .from('profiles')
-                    .update({ free_ai_generate_used: true })
-                    .eq('id', user.id)
-                }
               } else {
                 console.error('[compose/status] credit deduct RPC error:', rpcErr?.message ?? 'no balance returned')
               }
-            }
           } else {
             console.error('[compose/status] credit fetch error:', fetchError.message)
           }
@@ -469,13 +475,9 @@ export async function GET(
         // do not migrate assets, persist Visual History, email, or return a
         // clean final_video_url. The user is told they were NOT charged and can
         // retry (the idempotent RPC self-heals a transient blip on the next
-        // poll). Fast is exempt — the product rule "never break a Fast render
-        // over 1 credit" already fail-opens above (fastCreditSkipped). A free AI
-        // trial (wasFreeAiTrial) and an upstream-token cinematic (the
-        // non-shouldDeductCredits else branch) both set creditsDeducted=true, so
-        // they legitimately pass through.
-        const isPremiumPaid = shouldDeductCredits && quality !== 'fast'
-        if (isPremiumPaid && deductionAttempted && !creditsDeducted) {
+        // poll). This includes paid Fast: a clean export never bypasses its
+        // signed one-credit intent.
+        if (shouldDeductCredits && deductionAttempted && !creditsDeducted) {
           console.error('[compose/status] PREMIUM-DEBIT-FAILED — refusing to deliver clean premium video (no charge settled):', JSON.stringify({
             render_id: renderId,
             user_id_prefix: user.id.slice(0, 8),
@@ -486,12 +488,27 @@ export async function GET(
             phase: 'failed',
             reconcile: true,
             error:
-              "We couldn't confirm the credits for this premium video, so it wasn't delivered. " +
+              "We couldn't confirm the credits for this clean video, so it wasn't delivered. " +
               'You have NOT been charged — please check your balance and try again.',
             creditsDeducted: false,
             creditsRemaining,
             progress: 0,
           })
+        }
+
+        if (shouldDeductCredits && creditsDeducted) {
+          const composeHoldSettled = await settleComposeCreditHoldForRender({
+            userId: user.id,
+            renderId,
+            reason: 'debited',
+          })
+          if (!composeHoldSettled) {
+            console.warn(`[compose-hold] could not settle hold for render=${renderId}`)
+            return NextResponse.json(
+              { phase: 'processing', reconcile: true, error: 'Finalizing your credit settlement. Please retry.', progress: 99 },
+              { status: 503 },
+            )
+          }
         }
 
         // Release the signed provider-cost hold immediately after the debit is
@@ -505,6 +522,10 @@ export async function GET(
           })
           if (!holdSettled) {
             console.warn(`[avatar-hold] could not settle hold for render=${renderId}`)
+            return NextResponse.json(
+              { phase: 'processing', reconcile: true, error: 'Finalizing your credit settlement. Please retry.', progress: 99 },
+              { status: 503 },
+            )
           }
         }
 
@@ -579,10 +600,7 @@ export async function GET(
             quality,
             duration,
             topic,
-            // #384 — free AI trial charges 0 credits; reflect that in history.
-            // KINEO-PRICING-V3C-2026-07-10 — a skipped Fast debit also
-            // recorded as 0 (nothing was actually charged).
-            creditsUsed: wasFreeAiTrial || fastCreditSkipped ? 0 : cost,
+            creditsUsed: cost,
           })
           console.log('[history] persist result:', JSON.stringify(result))
         } catch (e) {
@@ -689,12 +707,54 @@ export async function GET(
       // so repeated polls of a failed render can never refund twice. On this
       // pipeline the debit normally only happens on SUCCESS, so this is a
       // safety net for debit-then-fail edge cases (timeouts, races).
-      const creditsRefunded = await refundRenderCredits(renderId)
+      const composeHoldReleased = await settleComposeCreditHoldForRender({
+        userId: user.id,
+        renderId,
+        reason: 'provider_failed',
+      })
+      if (!composeHoldReleased) {
+        return NextResponse.json(
+          { phase: 'processing', reconcile: true, error: 'Finalizing the failed render safely. Please retry.', progress: 0 },
+          { status: 503 },
+        )
+      }
+      if (isFreeFastIntent) {
+        const freeClaimReleased = await releaseFailedFreeFastClaim({ userId: user.id, renderId })
+        if (!freeClaimReleased) {
+          return NextResponse.json(
+            { phase: 'processing', reconcile: true, error: 'Restoring your free preview slot. Please retry.', progress: 0 },
+            { status: 503 },
+          )
+        }
+      }
+      if (quality === 'avatar' || quality === 'presenter') {
+        const avatarHoldReleased = await settleAvatarCreditHoldForRender({
+          userId: user.id,
+          renderId,
+          reason: 'provider_failed',
+        })
+        if (!avatarHoldReleased) {
+          console.warn(`[avatar-hold] failed compose could not release hold for render=${renderId}`)
+          return NextResponse.json(
+            { phase: 'processing', reconcile: true, error: 'Finalizing the failed avatar safely. Please retry.', progress: 0 },
+            { status: 503 },
+          )
+        }
+      }
+      // Cinematic birth credits pay for the Fal clips themselves and those
+      // owner-only URLs were already delivered. Refunding them because the
+      // downstream Creatomate assembly failed would let a user keep the raw AI
+      // clips, force a compose failure, and repeat for free. Only the clip-status
+      // route refunds cinematic birth credits, and only when every Fal clip
+      // terminally fails. Other engines keep the normal render-id refund path.
+      const creditsRefunded = prepaidCinematicClaim ? 0 : await refundRenderCredits(renderId)
       return NextResponse.json({
         phase: 'failed',
         error:
           (state.error ?? 'Render failed.') +
-          (creditsRefunded > 0
+          (prepaidCinematicClaim
+            ? ' Your AI scenes remain paid and protected; no second AI-scene charge is needed to reassemble them.'
+            : creditsRefunded > 0
             ? ` Your ${creditsRefunded} credits were automatically refunded.`
             : ' You were not charged for this video.'),
         creditsRefunded,

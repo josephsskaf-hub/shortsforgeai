@@ -46,10 +46,27 @@ function titleFor(v: VideoRow | null): string {
   return firstLine.slice(0, 90) || 'AI YouTube Short'
 }
 
+function signupHrefFor(v: VideoRow | null): string {
+  const query = new URLSearchParams({
+    utm_source: 'public_video',
+    utm_medium: 'share',
+    utm_campaign: 'make_one_like_this',
+  })
+  // Signup already accepts `prompt` and carries it through email/OAuth to the
+  // local /generate activation URL. URLSearchParams encodes untrusted text and
+  // a short title-sized cap keeps the CTA URL bounded.
+  // Remix the idea, not the entire stored script. Some legacy `topic` values
+  // contain every HOOK/ESCALATION line, which would create a duplicate instead
+  // of a fresh episode and produce an unnecessarily large signup URL.
+  const prompt = v ? titleFor(v).trim().slice(0, 160) : ''
+  if (prompt) query.set('prompt', prompt)
+  return `/signup?${query.toString()}`
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const v = await getVideo(params.id)
   const title = titleFor(v)
-  const desc = 'Made in 60 seconds with Kineo — type any topic and AI writes the script, voiceover, captions and footage. Make your own viral Short for free.'
+  const desc = 'Made with Kineo — type any topic and AI writes the script, voiceover, captions and footage. Create and download a watermarked Short for free.'
   // #462 — og:image is now produced by the sibling opengraph-image.tsx (a
   // generated, always-valid 1200x630 card). We don't set images here anymore —
   // the static fallback didn't exist, which broke every link preview.
@@ -75,6 +92,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
   const v = await getVideo(params.id)
   const ready = !!(v && v.video_url && (v.status === 'completed' || v.status == null))
   const title = titleFor(v)
+  const signupHref = signupHrefFor(v)
 
   return (
     <main
@@ -148,10 +166,10 @@ export default async function PublicVideoPage({ params }: { params: { id: string
         >
           <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Made in ~60 seconds with AI 🤯</p>
           <p style={{ margin: '6px 0 14px', color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            Type any topic — the AI writes the script, voiceover, captions and finds the footage. Your first one is free, no card needed.
+            Use this idea as your starting point. Create, share and download a watermarked MP4 free — upgrade only when you want a clean export.
           </p>
           <Link
-            href="/signup?utm_source=public_video&utm_medium=share"
+            href={signupHref}
             style={{
               display: 'inline-block',
               background: '#2997ff',
@@ -163,7 +181,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
               fontSize: '1rem',
             }}
           >
-            Make my own free →
+            Make one like this →
           </Link>
         </div>
       </div>

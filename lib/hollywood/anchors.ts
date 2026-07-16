@@ -24,6 +24,7 @@
 // FAIL-OPEN: any failure here returns null and the route falls back to the
 // v2.4 text-to-video path — anchors can never kill a render.
 import { fal } from '@fal-ai/client'
+import { FalQueueSubmitError, submitFalQueueOnce } from '@/lib/falQueue'
 
 const ANCHOR_IMAGE_MODEL = 'fal-ai/flux/schnell'
 
@@ -51,24 +52,44 @@ async function generateAnchorImage(prompt: string): Promise<string | null> {
     enable_safety_checker: true,
   }
   const model: string = ANCHOR_IMAGE_MODEL
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const result = (await fal.subscribe(model, { input })) as {
-        data?: { images?: Array<{ url?: string }> }
-        images?: Array<{ url?: string }>
-      }
-      const url = result?.data?.images?.[0]?.url ?? result?.images?.[0]?.url ?? null
-      if (url) return url
-      console.error('[hollywood-anchors] image model returned no URL')
-    } catch (err) {
-      console.error(
-        `[hollywood-anchors] attempt ${attempt} failed:`,
-        err instanceof Error ? err.message : String(err),
-      )
-      if (attempt === 1) await new Promise((r) => setTimeout(r, 800))
-    }
+  let requestId: string
+  try {
+    requestId = await submitFalQueueOnce(model, input)
+  } catch (err) {
+    console.error(
+      '[hollywood-anchors] single queue submit failed:',
+      err instanceof Error ? err.message : String(err),
+    )
+    if (err instanceof FalQueueSubmitError && err.ambiguous) throw err
+    return null
   }
-  return null
+
+  const deadline = Date.now() + 35_000
+  while (Date.now() < deadline) {
+    try {
+      const statusResult = await fal.queue.status(model, { requestId })
+      const status = (statusResult as { status?: string }).status
+      if (status === 'COMPLETED') {
+        const result = await fal.queue.result(model, { requestId }) as {
+          data?: { images?: Array<{ url?: string }> }
+          images?: Array<{ url?: string }>
+        }
+        const url = result?.data?.images?.[0]?.url ?? result?.images?.[0]?.url ?? null
+        if (url) return url
+        console.error('[hollywood-anchors] image model completed without a URL')
+        return null
+      }
+      if (status === 'FAILED') return null
+    } catch (err) {
+      // Status/result calls are read-only. A transient failure does not justify
+      // creating a second paid anchor job.
+      console.warn('[hollywood-anchors] transient poll failure:', err instanceof Error ? err.message : String(err))
+    }
+    await new Promise((resolve) => setTimeout(resolve, 750))
+  }
+  throw new FalQueueSubmitError('Hollywood anchor is still processing after the polling window', {
+    ambiguous: true,
+  })
 }
 
 /**
@@ -119,6 +140,7 @@ export async function generateHollywoodAnchors(args: {
     )
     return { portraitUrl, environmentUrl }
   } catch (err) {
+    if (err instanceof FalQueueSubmitError && err.ambiguous) throw err
     console.error(
       '[hollywood-anchors] failed (falling back to t2v):',
       err instanceof Error ? err.message : String(err),

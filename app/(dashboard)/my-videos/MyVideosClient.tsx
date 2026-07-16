@@ -32,6 +32,7 @@ export interface VideoRow {
   created_at: string
   prompt: string | null
   credits_used: number | null
+  quality_mode: string | null
   // Push #082 — quality text (e.g. "HD", "4K") + optional numeric
   // quality_score (e.g. 4.2 → ★★★★☆). Either can be null on staging.
   quality: string | null
@@ -110,9 +111,13 @@ function starsFor(score: number): string {
 function engineLabelFor(credits: number | null): string | null {
   if (!credits || credits <= 0) return null
   if (credits <= 2) return '⚡ Fast'
-  if (credits >= 30 && credits <= 45) return '✨ AI Generated'
+  if (credits >= 20 && credits <= 45) return '✨ AI Generated'
   if (credits >= 50 && credits <= 65) return '🎬 Cinematic'
   return null
+}
+
+function isWatermarkedFastAsset(video: VideoRow): boolean {
+  return video.quality_mode === 'fast' && Number(video.credits_used ?? 0) === 0
 }
 
 export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
@@ -123,11 +128,10 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
   // tapping a new card auto-pauses the previously playing one.
   const [playingId, setPlayingId] = useState<string | null>(null)
 
-  // KINEO-DL-PAYWALL-2026-07-09 — InVideo model: watching is free, downloading
-  // is paid. Free users (no pack, no plan) see the Starter intro offer instead
-  // of Download; one click starts recurring checkout. Fails OPEN
-  // (never blocks a paid user if /api/credits hiccups).
-  const [downloadLocked, setDownloadLocked] = useState(false)
+  // The current asset is always available: free users download/share the
+  // watermarked MP4, while Starter unlocks a clean watermark-free export.
+  // Fail open so a plan lookup problem never hides an owned file.
+  const [cleanExportLocked, setCleanExportLocked] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
     async function fetchPlan() {
@@ -135,9 +139,11 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
         const res = await fetch('/api/credits')
         if (!res.ok) return
         const data = await res.json()
-        const paid =
-          data.hasPaid === true || data.isStarter === true || data.isCreator === true || data.isStudio === true
-        if (!cancelled) setDownloadLocked(!paid)
+        const balance = Math.max(0, Number(data.credits ?? 0))
+        const cleanAccess =
+          data.isStarter === true || data.isCreator === true || data.isStudio === true ||
+          (data.hasPaid === true && balance > 0)
+        if (!cancelled) setCleanExportLocked(!cleanAccess)
       } catch {
         /* fail open */
       }
@@ -227,7 +233,13 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
       fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'video_downloaded', metadata: { video_id: v.id } }),
+        body: JSON.stringify({
+          name: 'video_downloaded',
+          metadata: {
+            video_id: v.id,
+            export_type: isWatermarkedFastAsset(v) ? 'watermarked' : 'clean',
+          },
+        }),
       }).catch(() => {/* swallow — tracking must never affect UX */})
     } catch {
       // Fall back to opening the URL in a new tab so the user isn't stranded.
@@ -298,7 +310,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
               onCopy={() => handleCopyLink(v)}
               onDownload={() => handleDownload(v)}
               isDownloading={downloadingId === v.id}
-              downloadLocked={downloadLocked}
+              cleanExportLocked={cleanExportLocked}
               onUnlock={handleStarterCheckout}
               isPinned={playingId === v.id}
               onTogglePin={() =>
@@ -337,7 +349,7 @@ function VideoCard({
   isDownloading,
   isPinned,
   onTogglePin,
-  downloadLocked,
+  cleanExportLocked,
   onUnlock,
 }: {
   video: VideoRow
@@ -347,7 +359,7 @@ function VideoCard({
   isDownloading: boolean
   isPinned: boolean
   onTogglePin: () => void
-  downloadLocked: boolean
+  cleanExportLocked: boolean | null
   onUnlock: () => void
 }) {
   const chip = statusChip(v.status)
@@ -670,32 +682,11 @@ function VideoCard({
               >
                 ▶ Open
               </a>
-              {/* Watching remains free; the download gate presents one honest
-                  recurring Starter intro offer. */}
-              {downloadLocked ? (
-                <button
-                  type="button"
-                  onClick={onUnlock}
-                  title="Starter: $4.90 first month, then $9.90/month"
-                  className="rounded-lg px-3 py-2 text-xs font-black flex flex-col items-center"
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    border: 'none',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(245,158,11,.35)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <span>Starter — $4.90</span>
-                  <span style={{ fontSize: '0.58rem', opacity: 0.9 }}>then $9.90/mo</span>
-                </button>
-              ) : (
               <button
                 type="button"
                 onClick={onDownload}
                 disabled={isDownloading}
-                title="Download MP4"
+                title={isWatermarkedFastAsset(v) ? 'Download MP4 with Kineo watermark' : 'Download clean MP4'}
                 className="rounded-lg px-3 py-2 text-xs font-bold"
                 style={{
                   background: 'rgba(255,255,255,.04)',
@@ -705,10 +696,27 @@ function VideoCard({
                   opacity: isDownloading ? 0.6 : 1,
                 }}
               >
-                {isDownloading ? '…' : '⬇ Download'}
+                {isDownloading ? '…' : isWatermarkedFastAsset(v) ? '⬇ Watermarked MP4' : '⬇ Download clean MP4'}
               </button>
-              )}
             </div>
+            {isWatermarkedFastAsset(v) && cleanExportLocked === true && (
+              <button
+                type="button"
+                onClick={onUnlock}
+                title="Starter: $4.90 first month, then $9.90/month"
+                className="rounded-lg px-3 py-2 text-xs font-black w-full flex flex-col items-center"
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(245,158,11,.35)',
+                }}
+              >
+                <span>Unlock clean exports — Starter $4.90</span>
+                <span style={{ fontSize: '0.58rem', opacity: 0.9 }}>for new videos · then $9.90/mo · cancel anytime</span>
+              </button>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"

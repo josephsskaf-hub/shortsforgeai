@@ -268,7 +268,7 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <section id="pricing">
         <div className="wrap">
-          <div className="sec-h"><h2>Simple pricing. First Short free.</h2><p>Three plans, flat monthly price — done-for-you Shorts at every level.</p></div>
+          <div className="sec-h"><h2>Simple pricing. Try Fast free first.</h2><p>Create, download and share up to 3 watermarked Fast videos every 24h, no card. Paid plans unlock clean MP4s.</p></div>
           <div className="price">
             {/* KINEO-SPRINT-OFFER-2026-07-14 — plan CTAs now go straight to the
                 GET checkout (plain <a>, not <Link>, so Next never prefetches an
@@ -302,7 +302,7 @@ export default function KineoLanding({ initialUser }: Props) {
           {/* KINEO-SPRINT-OFFER-2026-07-14 — the "10 videos for $4.90 one-time"
               note is gone (single-offer cleanup; ?pack=starter stays alive for
               the watermark unlock only). The intro month is the entry path. */}
-          <div className="snote">Try it first: <b>your first Short is free</b> — no credit card needed.</div>
+          <div className="snote">Try it first: <b>create, watch, download and share up to 3 Fast videos every 24h</b> — no card, watermark included.</div>
           <div className="pricing-more"><Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link></div>
         </div>
       </section>
@@ -311,9 +311,9 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="wrap">
           <div className="sec-h"><h2>Questions, answered.</h2></div>
           <div className="faq">
-            <div className="qa"><h3>Is the video really mine to post?</h3><p>Yes. Everything Kineo makes is yours — download the MP4 and post it to YouTube, TikTok or Reels, monetize it, whatever you want.</p></div>
-            <div className="qa"><h3>Do I need any editing skills?</h3><p>None. You type one idea and the AI writes the script, records the voice, finds the footage and adds captions. You just download.</p></div>
-            <div className="qa"><h3>Is there a watermark?</h3><p>Paid plans export clean, watermark-free MP4s. The free trial adds a small mark so you can test the output first.</p></div>
+            <div className="qa"><h3>Is the video really mine to post?</h3><p>Yes. Never-paid free users can download, share and post the watermarked MP4. Paid plans unlock the clean, watermark-free MP4 for YouTube, TikTok or Reels.</p></div>
+            <div className="qa"><h3>Do I need any editing skills?</h3><p>None. You type one idea and the AI writes the script, records the voice, finds the footage and adds captions. Free downloads carry a watermark; paid plans unlock the clean MP4.</p></div>
+            <div className="qa"><h3>Is there a watermark?</h3><p>Free access gives new users up to 3 watermarked Fast videos every 24 hours, with no card. You can download and share them. Paid plans export clean, watermark-free MP4s.</p></div>
             <div className="qa"><h3>Can I use my own script?</h3><p>Yes — paste your script and pick &ldquo;Use my script as is&rdquo; and the AI narrates it word for word.</p></div>
             <div className="qa"><h3>What if a generation fails?</h3><p>Your credits come back automatically the moment a render fails — no support ticket, no waiting. You only pay for videos you actually get.</p></div>
             {/* KINEO-SPRINT-OFFER-2026-07-14 — "credits never expire" was the
@@ -330,8 +330,8 @@ export default function KineoLanding({ initialUser }: Props) {
             <div className="glow" />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <h2 className="gtxt">Type a topic. Get a finished Short.</h2>
-              <p>Your first one is free — no credit card.</p>
-              <div className="fcta"><Link className="btn btn-w" href="/signup">Make my first Short — free</Link></div>
+              <p>Create, watch, download and share up to 3 watermarked Fast videos every 24h — no card.</p>
+              <div className="fcta"><Link className="btn btn-w" href="/signup">Make my Fast video — free</Link></div>
             </div>
           </div>
         </div>

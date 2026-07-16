@@ -26,14 +26,14 @@ const PAYPAL_ENABLED = false
 const FAQS: { q: string; a: string }[] = [
   {
     // KINEO-FAQ-NOCARD-2026-07-13 — a resposta antiga ("Yes, a card is
-    // required... charged immediately") CONTRADIZIA o selo "First Short
-    // free — no card" três telas acima. Conversion-killer clássico: o FAQ
+    // required... charged immediately") CONTRADIZIA a oferta de previews sem
+    // cartão três telas acima. Conversion-killer clássico: o FAQ
     // é onde o indeciso vai tirar a última dúvida antes de clicar.
     // KINEO-SPRINT-OFFER-2026-07-14 — dropped the "$4.90 one-time pack"
     // mention: the pack has no public CTA anymore (single-offer cleanup),
     // so naming it here would advertise a product the page doesn't sell.
     q: 'Do I need a credit card to start?',
-    a: 'No — your first Short is completely free and no card is asked. You only add a card if you decide to subscribe afterwards: Starter is $9.90/month, Creator $24.90/month, or Studio $37.90/month.',
+    a: 'No. A new free account can create, watch, download and share up to 3 Fast videos with a watermark every 24 hours, with no card. Free access grants no credits and no premium AI Generated videos. Subscribe only when you want a clean, watermark-free MP4: Starter is $4.90 for the first month then $9.90/month, Creator is $9.90 for the first month then $24.90/month, and Studio is $37.90/month.',
   },
   {
     q: 'How fast are videos generated?',
@@ -45,7 +45,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Is there a money-back guarantee?',
-    a: 'Yes — both Basic and Pro come with a 7-day money-back guarantee. If you\'re not satisfied, email us within 7 days of your purchase and we\'ll refund 100%. No questions asked.',
+    a: 'Yes — Starter, Creator, and Studio come with a 7-day money-back guarantee. If you\'re not satisfied, email us within 7 days of your purchase and we\'ll refund 100%. No questions asked.',
   },
   {
     q: 'What happens if a video fails to generate?',
@@ -305,11 +305,11 @@ export default function PricingPage() {
 
           {/* ROBO1-PRICE-2026-06-28 — honest trust row. Replaced the
               unverifiable "300+ Shorts created" + "4.8 / 5 average rating"
-              with real, checkable signals: first Short free / no card,
+              with real, checkable signals: 3 watermarked Fast videos / 24h,
               cancel anytime, and the 7-day money-back guarantee. */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
-              { icon: '🎬', label: 'First Short free — no card' },
+              { icon: '🎬', label: '3 watermarked Fast videos / 24h — no card' },
               { icon: '↩️', label: 'Cancel anytime' },
               { icon: '🔒', label: '7-day money-back guarantee' },
             ].map(({ icon, label }) => (
@@ -362,7 +362,7 @@ export default function PricingPage() {
             the Starter-intro strip, and — pre-13/07 — the $4.90 one-time pack).
             A buyer arriving saw 3 different "deals" before the cards. Now the
             plan cards ARE the offer (intro badge lives on each card); the only
-            thing above them is the honest free-first nudge. The one-time pack
+            thing above them is the honest free-video nudge. The one-time pack
             endpoint (?pack=starter) still exists for the watermark unlock flow —
             it just has no public CTA here. */}
         <div
@@ -370,7 +370,7 @@ export default function PricingPage() {
           style={{ background: 'rgba(41,151,255,0.07)', border: '1px solid rgba(41,151,255,0.4)' }}
         >
           <p className="text-[12.5px] font-semibold text-[#86868b]">
-            Not sure yet? <Link href="/signup" className="font-bold text-[#2997ff] hover:text-[#2997ff]">Make your first Short free</Link> — no credit card needed.
+            Not sure yet? <Link href="/signup" className="font-bold text-[#2997ff] hover:text-[#2997ff]">Create up to 3 Fast videos free every 24h</Link> — no card; download and share with a watermark.
           </p>
         </div>
 
@@ -561,12 +561,12 @@ export default function PricingPage() {
             {
               icon: '🆓',
               title: 'Try before you pay',
-              body: 'Your first Short is free with no credit card. See the real output for yourself, then pick a plan only if it earns it.',
+              body: 'Create, watch, download and share up to 3 watermarked Fast videos every 24h, no card. Free access grants no credits or premium AI Generated videos.',
             },
             {
               icon: '📲',
               title: 'Ready to post anywhere',
-              body: '9:16 vertical, ~60s, watermark-free MP4 — download and upload straight to YouTube Shorts, TikTok and Reels.',
+              body: 'Paid plans export a clean, watermark-free 9:16 MP4 — download and upload straight to YouTube Shorts, TikTok and Reels.',
             },
           ].map((c) => (
             <div
@@ -636,15 +636,15 @@ export default function PricingPage() {
                   // 20cr, Kling 50cr, Presenter 70cr, Hollywood 150cr. Engines
                   // unlock for ANY paid plan (balance permitting).
                   {
-                    label: 'Fast videos (smart stock, 1 cr)',
-                    free: '✅ watch free',
-                    starter: '✅',
-                    basic: '✅',
-                    pro: '✅',
+                    label: 'Fast mode (smart stock)',
+                    free: 'Up to 3 / 24h · watermark',
+                    starter: '✅ 1 cr',
+                    basic: '✅ 1 cr',
+                    pro: '✅ 1 cr',
                   },
                   {
                     label: 'AI Generated videos (Seedance, 20 cr)',
-                    free: '✅ 1 free',
+                    free: '— Paid only',
                     starter: '✅',
                     basic: '✅',
                     pro: '✅',
@@ -679,21 +679,21 @@ export default function PricingPage() {
                   },
                   {
                     label: 'Monthly credits',
-                    free: '2',
+                    free: '0',
                     starter: '25',
                     basic: '150',
                     pro: '200',
                   },
                   {
                     label: 'Render time',
-                    free: '~3-5 min',
+                    free: '~60 sec (Fast)',
                     starter: '~60 sec',
                     basic: '~3-5 min',
                     pro: '~3-5 min',
                   },
                   {
                     label: 'Watermark-free MP4',
-                    free: '—',
+                    free: '— Watermarked MP4',
                     starter: '✅',
                     basic: '✅',
                     pro: '✅',
@@ -719,7 +719,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-4 text-center text-[12px] text-[#86868b]">
-            ⚡ Every paid plan can access every engine, but your balance must cover its full credit cost. Starter&apos;s 25 monthly credits cover Fast videos or 1 Seedance video; Kling, AI Presenter and Hollywood require extra credits.
+            Free access lets you create, watch, download and share up to 3 watermarked Fast videos per 24h; it includes no credits or premium AI Generated videos. Every paid plan unlocks clean, watermark-free MP4s and can access every engine when its balance covers the full credit cost.
           </p>
         </div>
 

@@ -94,8 +94,9 @@ export default function SignupPage() {
     trackCheckoutAuthStep('method_selected', 'signup_page', nextDestination, 'email')
 
     // KINEO-DISPOSABLE-BLOCK-2026-07-06 — reject temp-mail signups BEFORE they
-    // hit Supabase. Free plan = 2 real videos, so throwaway inboxes are pure
-    // credit-burning abuse. Only gates the email path — Google/Apple OAuth
+    // hit Supabase. Free access allows up to 3 watermarked Fast videos per
+    // 24h, so throwaway inboxes still create pure provider abuse. Only gates
+    // the email path — Google/Apple OAuth
     // identities can't be disposable, so those flows are untouched.
     if (isDisposableEmail(email)) {
       setError(
@@ -307,14 +308,14 @@ export default function SignupPage() {
                     boxShadow: '0 0 6px rgba(41,151,255,.6)',
                   }}
                 />
-                🎁 Create videos free · No credit card
+                🎁 Up to 3 watermarked Fast videos / 24h · No card
               </div>
 
               <ul className="flex flex-col gap-4">
                 {[
                   'AI writes the script in 60 seconds',
                   'Stock footage + voiceover included',
-                  'Create & watch your videos free, no credit card',
+                  'Create, download & share 3 watermarked Fast videos / 24h',
                 ].map((line) => (
                   <li
                     key={line}
@@ -356,7 +357,7 @@ export default function SignupPage() {
                 className="text-xs"
                 style={{ color: 'var(--muted2)' }}
               >
-                First Short free, no card needed.
+                Free downloads include a watermark. Paid plans unlock clean MP4s.
               </p>
             </div>
           </div>
@@ -431,7 +432,7 @@ export default function SignupPage() {
                 <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
                   {isCheckoutResume
                     ? 'Your selected plan and intro price are saved. Continue securely below.'
-                    : 'Free trial, 1 video included.'}
+                    : 'Create, watch, download and share up to 3 watermarked Fast videos every 24h, no card.'}
                 </p>
 
                 {/* KINEO-CHECKOUT-RESUME-2026-07-07 — OAuth signups also resume

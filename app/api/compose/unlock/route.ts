@@ -20,6 +20,7 @@ import { getBackgroundMusicUrl } from '@/lib/pixabayMusic'
 // clean re-render so /api/compose/status bills it from the server-side intent
 // (not the client ?quality param), exactly like /api/compose does.
 import { creditCostFor } from '@/lib/credits/engineCost'
+import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
 import {
   COMPOSE_CLAIM_EVENT,
@@ -32,6 +33,36 @@ import { createHash } from 'node:crypto'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
+
+type UnlockSubmissionCacheEntry = { promise: Promise<string>; expiresAt: number }
+const unlockSubmissionCache = new Map<string, UnlockSubmissionCacheEntry>()
+
+function submitUnlockOnce(source: Record<string, unknown>, key: string): Promise<string> {
+  const now = Date.now()
+  for (const [cachedKey, entry] of unlockSubmissionCache) {
+    if (entry.expiresAt <= now) unlockSubmissionCache.delete(cachedKey)
+  }
+  const cached = unlockSubmissionCache.get(key)
+  if (cached) return cached.promise
+  const entry: UnlockSubmissionCacheEntry = {
+    promise: Promise.resolve(''),
+    expiresAt: now + 30_000,
+  }
+  entry.promise = submitCreatomateRender(source).then(
+    (renderId) => {
+      entry.expiresAt = Date.now() + 10 * 60 * 1000
+      return renderId
+    },
+    (error) => {
+      if (!(error instanceof CreatomateSubmitError && error.ambiguous)) {
+        unlockSubmissionCache.delete(key)
+      }
+      throw error
+    },
+  )
+  unlockSubmissionCache.set(key, entry)
+  return entry.promise
+}
 
 // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline unlock.
 //
@@ -52,10 +83,9 @@ export const dynamic = 'force-dynamic'
 //   3. Re-renders the SAME video with watermark:false and returns render_id.
 //      The client then polls the normal /api/compose/status pipeline, which
 //      migrates the asset to permanent storage + writes Visual History exactly
-//      like any Fast render. (The clean composition costs 1 credit; Starter has
-//      25/month, so it is covered. If the webhook credit
-//      grant hasn't landed yet, the debit RPC simply no-ops and the clean video
-//      is still delivered — safe degradation.)
+//      like any Fast render. The clean composition costs 1 credit; if the
+//      webhook grant has not landed yet, the route returns a retryable pending
+//      response before any provider submission.
 //
 // NOTE: no exploit surface for FREE renders — the clean re-render flows through
 // the standard credit path, so replaying a session_id only ever spends the
@@ -73,7 +103,8 @@ interface UnlockBody {
   speed?: number
 }
 
-const SUPPORTED_DURATIONS = [45, 60, 90] as const
+// Keep the clean re-render identical to the just-created Fast preview.
+const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 
 export async function POST(req: NextRequest) {
   try {
@@ -168,6 +199,7 @@ export async function POST(req: NextRequest) {
     // same Creatomate job instead of spending another render.
     const generationId = `unlock_${createHash('sha256').update(sessionId).digest('hex').slice(0, 32)}`
     const claimId = composeClaimId(user.id, generationId)
+    const submissionCacheKey = `${user.id}:${generationId}`
     const intendedCost = creditCostFor('fast', true)
     let ownsSubmissionClaim = false
 
@@ -176,7 +208,7 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     )
 
-    const responseForClaim = (row: unknown): NextResponse => {
+    const responseForClaim = async (row: unknown): Promise<NextResponse> => {
       const claim = row as { id?: unknown; name?: unknown; user_id?: unknown; path?: unknown; session_id?: unknown; metadata?: unknown } | null
       if (
         claim?.id !== claimId || claim.name !== COMPOSE_CLAIM_EVENT ||
@@ -210,6 +242,54 @@ export async function POST(req: NextRequest) {
       if (status === 'done' && renderId) {
         return NextResponse.json({ verified: true, render_id: renderId, quality: 'fast', resumed: true })
       }
+      const cached = unlockSubmissionCache.get(submissionCacheKey)
+      if (cached && cached.expiresAt > Date.now()) {
+        try {
+          const recoveredRenderId = await cached.promise
+          const intentStored = await recordRenderIntent({
+            renderId: recoveredRenderId,
+            userId: user.id,
+            quality: 'fast',
+            cost: intendedCost,
+          })
+          const recoveredMetadata = {
+            generation_id: generationId,
+            status: 'done',
+            render_id: recoveredRenderId,
+            quality: 'fast',
+            cost: intendedCost,
+            credit_hold: true,
+            completed_at: new Date().toISOString(),
+            authority: signComposeClaim(serviceRoleKey, {
+              claimId,
+              userId: user.id,
+              generationId,
+              status: 'done',
+              renderId: recoveredRenderId,
+              quality: 'fast',
+              cost: intendedCost,
+            }),
+          }
+          const { data: recovered } = await admin
+            .from('events')
+            .update({ metadata: recoveredMetadata })
+            .eq('id', claimId)
+            .eq('user_id', user.id)
+            .eq('name', COMPOSE_CLAIM_EVENT)
+            .select('id')
+            .maybeSingle()
+          if (intentStored || recovered?.id === claimId) {
+            return NextResponse.json({
+              verified: true,
+              render_id: recoveredRenderId,
+              quality: 'fast',
+              resumed: true,
+            })
+          }
+        } catch {
+          // Ambiguous provider submissions remain pending and are never posted again.
+        }
+      }
       return NextResponse.json(
         { error: 'Your clean render is already being submitted.', pending: true, retry_after_ms: 3000 },
         { status: 409 },
@@ -225,10 +305,10 @@ export async function POST(req: NextRequest) {
       console.error('[compose/unlock] claim preflight failed:', existingClaimError.message)
       return claimUnavailable()
     }
-    if (existingClaim) return responseForClaim(existingClaim)
+    if (existingClaim) return await responseForClaim(existingClaim)
 
-    // ── 2) Safety-net: mark the user as paid so any FUTURE render is clean too.
-    //    Idempotent; the Stripe webhook also sets this. Never grants credits.
+    // ── 2) Safety-net: mark payment history. Clean output still requires the
+    //    one-credit balance below; has_paid alone is never an entitlement.
     try {
       await admin.from('profiles').update({ has_paid: true }).eq('id', user.id)
     } catch (err) {
@@ -248,6 +328,100 @@ export async function POST(req: NextRequest) {
     }
     if (!process.env.CREATOMATE_API_KEY) {
       return NextResponse.json({ error: 'Render service is not configured.' }, { status: 500 })
+    }
+
+    const releaseExplicitlyRejectedClaim = async (): Promise<void> => {
+      if (!ownsSubmissionClaim) return
+      const { error: releaseError } = await admin
+        .from('events')
+        .delete()
+        .eq('id', claimId)
+        .eq('user_id', user.id)
+        .eq('name', COMPOSE_CLAIM_EVENT)
+      if (releaseError) {
+        console.error('[compose/unlock] explicit rejection claim release failed:', releaseError.message)
+      } else {
+        ownsSubmissionClaim = false
+      }
+    }
+
+    // Acquire the deterministic provider mutex and credit hold BEFORE script
+    // scaling, TTS, Whisper or uploads. Parallel returns from the same checkout
+    // converge here without duplicating any provider cost.
+    const { error: claimInsertError } = await admin.from('events').insert({
+      id: claimId,
+      user_id: user.id,
+      name: COMPOSE_CLAIM_EVENT,
+      path: COMPOSE_CLAIM_PATH,
+      session_id: generationId,
+      metadata: {
+        generation_id: generationId,
+        status: 'pending',
+        quality: 'fast',
+        cost: intendedCost,
+        credit_hold: true,
+        authority: signComposeClaim(serviceRoleKey, {
+          claimId,
+          userId: user.id,
+          generationId,
+          status: 'pending',
+          quality: 'fast',
+          cost: intendedCost,
+        }),
+      },
+    })
+    if (claimInsertError) {
+      if (claimInsertError.code !== '23505') {
+        console.error('[compose/unlock] claim insert failed:', claimInsertError.message)
+        return claimUnavailable()
+      }
+      const { data: racedClaim, error: racedClaimError } = await admin
+        .from('events')
+        .select('id,name,user_id,path,session_id,metadata')
+        .eq('id', claimId)
+        .maybeSingle()
+      if (racedClaimError || !racedClaim) {
+        console.error('[compose/unlock] claim race recheck failed:', racedClaimError?.message ?? 'claim missing')
+        return claimUnavailable()
+      }
+      return await responseForClaim(racedClaim)
+    }
+    ownsSubmissionClaim = true
+
+    const holds = await inspectActiveComposeCreditHolds({
+      db: admin,
+      secret: serviceRoleKey,
+      userId: user.id,
+      currentClaimId: claimId,
+    })
+    if (!holds.ok || !holds.currentSeen) {
+      console.error('[compose/unlock] credit hold audit failed:', holds.ok ? 'current claim missing' : holds.error)
+      await releaseExplicitlyRejectedClaim()
+      return claimUnavailable()
+    }
+
+    // Wait for the webhook's credit grant before spending provider money. The
+    // client treats this deterministic unlock as pending and reconnects.
+    const { data: creditProfile, error: creditProfileError } = await admin
+      .from('profiles')
+      .select('video_credits')
+      .eq('id', user.id)
+      .single()
+    if (creditProfileError) {
+      console.error('[compose/unlock] credit verification failed:', creditProfileError.message)
+      await releaseExplicitlyRejectedClaim()
+      return NextResponse.json(
+        { error: 'Your purchase is confirmed. Waiting for your credits…', pending: true, retry_after_ms: 2500 },
+        { status: 503 },
+      )
+    }
+    const availableCredits = Math.max(0, Number(creditProfile?.video_credits ?? 0))
+    if (holds.totalHeld > availableCredits) {
+      await releaseExplicitlyRejectedClaim()
+      return NextResponse.json(
+        { error: 'Your purchase is confirmed. Waiting for an available credit…', pending: true, retry_after_ms: 2500 },
+        { status: 409 },
+      )
     }
 
     // ── 3) Rebuild the SAME Fast video, clean (watermark:false) ──────────────
@@ -285,9 +459,11 @@ export async function POST(req: NextRequest) {
       audioBuffer = await generateTTS(scaledScript, explicitSpeed ?? 1.0, vertical, 'free', language)
     } catch (err) {
       console.error('[compose/unlock] TTS failed:', err instanceof Error ? err.message : String(err))
+      await releaseExplicitlyRejectedClaim()
       return NextResponse.json({ error: 'Voiceover generation failed. Please try again.' }, { status: 502 })
     }
     if (!audioBuffer || audioBuffer.length === 0) {
+      await releaseExplicitlyRejectedClaim()
       return NextResponse.json({ error: 'Voiceover generation returned no audio.' }, { status: 502 })
     }
 
@@ -307,6 +483,7 @@ export async function POST(req: NextRequest) {
       voiceoverUrl = await uploadVoiceoverToSupabase(user.id, audioBuffer)
     } catch (err) {
       console.error('[compose/unlock] voiceover upload failed:', err instanceof Error ? err.message : String(err))
+      await releaseExplicitlyRejectedClaim()
       return NextResponse.json({ error: 'Could not store the voiceover. Please try again.' }, { status: 502 })
     }
 
@@ -329,75 +506,21 @@ export async function POST(req: NextRequest) {
         realAudioDuration,
         whisperWords,
         musicUrl,
-        // The whole point of the pack: no watermark. End card stays (it is the
-        // free/Starter "Made with Kineo" ad, not the corner watermark, and it
-        // matches what a fresh Fast render from a pack buyer already produces).
+        // Paid means a genuinely clean MP4: no watermark and no promotional
+        // end card. This matches the public pricing promise.
         watermark: false,
-        endCard: true,
+        endCard: false,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[compose/unlock] source build failed:', msg)
+      await releaseExplicitlyRejectedClaim()
       return NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 })
-    }
-
-    const { error: claimInsertError } = await admin.from('events').insert({
-      id: claimId,
-      user_id: user.id,
-      name: COMPOSE_CLAIM_EVENT,
-      path: COMPOSE_CLAIM_PATH,
-      session_id: generationId,
-      metadata: {
-        generation_id: generationId,
-        status: 'pending',
-        quality: 'fast',
-        cost: intendedCost,
-        authority: signComposeClaim(serviceRoleKey, {
-          claimId,
-          userId: user.id,
-          generationId,
-          status: 'pending',
-          quality: 'fast',
-          cost: intendedCost,
-        }),
-      },
-    })
-    if (claimInsertError) {
-      if (claimInsertError.code !== '23505') {
-        console.error('[compose/unlock] claim insert failed:', claimInsertError.message)
-        return claimUnavailable()
-      }
-      const { data: racedClaim, error: racedClaimError } = await admin
-        .from('events')
-        .select('id,name,user_id,path,session_id,metadata')
-        .eq('id', claimId)
-        .maybeSingle()
-      if (racedClaimError || !racedClaim) {
-        console.error('[compose/unlock] claim race recheck failed:', racedClaimError?.message ?? 'claim missing')
-        return claimUnavailable()
-      }
-      return responseForClaim(racedClaim)
-    }
-    ownsSubmissionClaim = true
-
-    const releaseExplicitlyRejectedClaim = async (): Promise<void> => {
-      if (!ownsSubmissionClaim) return
-      const { error: releaseError } = await admin
-        .from('events')
-        .delete()
-        .eq('id', claimId)
-        .eq('user_id', user.id)
-        .eq('name', COMPOSE_CLAIM_EVENT)
-      if (releaseError) {
-        console.error('[compose/unlock] explicit rejection claim release failed:', releaseError.message)
-      } else {
-        ownsSubmissionClaim = false
-      }
     }
 
     let renderId: string
     try {
-      renderId = await submitCreatomateRender(source)
+      renderId = await submitUnlockOnce(source, submissionCacheKey)
     } catch (err) {
       console.error('[compose/unlock] Creatomate submit failed:', err instanceof Error ? err.message : String(err))
       if (err instanceof CreatomateSubmitError && err.ambiguous) {
@@ -411,10 +534,8 @@ export async function POST(req: NextRequest) {
     }
 
     // KINEO-CREDIT-INTENT-2026-07-11 — this is a Fast render for a user who just
-    // paid (has_paid=true above), so the intended cost is 1 credit. The debit in
-    // /api/compose/status fail-opens if the pack credits haven't landed yet
-    // (balance < 1 → delivered without debit), preserving the documented
-    // "clean re-render is covered / safe degradation" behavior.
+    // paid and credit-verified above, so the intended cost is exactly 1 credit.
+    // /api/compose/status settles that signed cost before releasing the asset.
     const intentStored = await recordRenderIntent({
       renderId,
       userId: user.id,
@@ -428,6 +549,7 @@ export async function POST(req: NextRequest) {
       render_id: renderId,
       quality: 'fast',
       cost: intendedCost,
+      credit_hold: true,
       completed_at: new Date().toISOString(),
       authority: signComposeClaim(serviceRoleKey, {
         claimId,

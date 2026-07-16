@@ -2,11 +2,11 @@
 
 // #467/#469/#470/#472 — "Viral First Short Onboarding" (Measure 2 / P0, activation).
 // #472 — final 8.5 → 9.5 polish (conversion + UX + tracking) per spec. Same job:
-// a brand-new user lands on /generate and generates their first FREE Short in one
-// click — no engine choice, no empty dashboard. Added in #472:
+// a brand-new user lands on /generate and generates a watermarked Fast video in
+// one click — no engine choice, no empty dashboard. Added in #472:
 //  - Top copy: value line + "No credit card required" + honest 11.4K proof
-//  - Surprise Me → "generate my free Short" (picks the highest-score idea, Fast)
-//  - Stronger input ("Type any topic, niche, product or idea…" + "Generate My Free Short")
+//  - Surprise Me → free Fast video (picks the highest-score idea, Fast)
+//  - Stronger input ("Type any topic, niche, product or idea…" + free video CTA)
 //  - Niche filter chips (horizontal-scroll on mobile) — filter only, never a form
 //  - Highlighted "🔥 Best Pick Right Now" full-width card to kill decision paralysis
 //  - 🧠 Why-it-works + explicit "Output: 60s • 9:16 • Voiceover • Captions • Fast"
@@ -213,7 +213,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff' }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f7' }}
           >
-            Generate Free Short →
+            Generate Free Fast Video →
           </button>
           <button
             type="button"
@@ -231,7 +231,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Pick a viral idea to create your first Short"
+      aria-label="Pick a viral idea to create a free watermarked Fast video"
       style={{
         position: 'fixed', inset: 0, zIndex: 1200,
         background: 'rgba(0,0,0,0.94)',
@@ -258,7 +258,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
           Pick a viral idea. We&apos;ll turn it into a Short.
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#86868b', textAlign: 'center', margin: '0 0 4px' }}>
-          Your first Short is <b style={{ color: '#2997ff' }}>free</b>. No credit card required. No script, no voiceover, no editing.
+          Create, watch, download and share up to <b style={{ color: '#2997ff' }}>3 Fast videos every 24h</b>. No card. Free videos include a watermark.
         </p>
         <p style={{ fontSize: '0.8rem', color: '#6e6e73', textAlign: 'center', margin: '0 0 6px' }}>
           Script • Voiceover • Captions • Visuals • Ready in ~60s
@@ -279,7 +279,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
             color: '#000', fontWeight: 900, fontSize: '1.02rem', border: 'none', cursor: 'pointer',
           }}
         >
-          <span aria-hidden="true">🎲</span> Surprise Me — generate my free Short
+          <span aria-hidden="true">🎲</span> Surprise Me — generate a free Fast video
         </button>
 
         {/* Type your own idea */}
@@ -304,7 +304,7 @@ export default function NicheOnboarding({ onPick, onSurprise, onClose }: Props) 
               background: 'transparent', color: '#f5f5f7', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
-            Generate My Free Short
+            Generate My Free Fast Video
           </button>
         </div>
 

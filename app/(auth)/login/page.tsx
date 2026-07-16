@@ -208,7 +208,7 @@ export default function LoginPage() {
                 {[
                   'AI writes the script in 60 seconds',
                   'Stock footage + voiceover included',
-                  'Create videos free to start, no card',
+                  'New free accounts: 3 watermarked Fast videos / 24h',
                 ].map((line) => (
                   <li
                     key={line}
@@ -247,7 +247,7 @@ export default function LoginPage() {
                 7-day money-back guarantee
               </p>
               <p className="text-xs" style={{ color: 'var(--muted2)' }}>
-                First Short free, no card needed.
+                Free downloads include a watermark. Paid plans unlock clean MP4s.
               </p>
             </div>
           </div>

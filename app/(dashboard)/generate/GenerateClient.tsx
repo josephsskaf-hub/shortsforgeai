@@ -380,8 +380,8 @@ export default function GenerateClient() {
   //  'ai'       → send the text to /api/generate-script to structure it (DEFAULT)
   //  'verbatim' → use the pasted text exactly as the script (advanced)
   const [scriptMode, setScriptMode] = useState<'ai' | 'verbatim'>('ai')
-  // #384 — whether this account has already used its 1 free AI-Generate video.
-  // null = unknown (still loading). Drives the "1 free (watermarked)" label.
+  // Legacy AI eligibility field retained for server-gate compatibility. New
+  // accounts start with it consumed; no free AI-Generate offer is advertised.
   const [freeAiUsed, setFreeAiUsed] = useState<boolean | null>(null)
   // #404 — plan flags drive which engine card is unlocked: Starter→Fast,
   // Creator→Seedance, Studio→Kling. The others render locked (upsell).
@@ -607,6 +607,7 @@ export default function GenerateClient() {
   // generating -> analyzing). String log so it is fully readable in console capture.
   const prevPhaseRef = useRef<Phase>('idle')
   const generationAttemptRef = useRef<string | null>(null)
+  const preserveGenerationAttemptRef = useRef(false)
   const lastFailedAttemptRef = useRef<string | null>(null)
   const generatingPollErrorsRef = useRef(0)
   const composingPollErrorsRef = useRef(0)
@@ -638,12 +639,14 @@ export default function GenerateClient() {
   const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({})
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState<Duration>(45)
-  const [quality, setQuality] = useState<Quality>('basic_ai')
+  const [quality, setQuality] = useState<Quality>('fast')
   // Push #084 — Fast Mode (Pexels + TTS, 1 credit, ~30s) is the new default.
   // Cinematic Mode keeps the Runway path. Quality tiers above only apply to
   // Cinematic Mode; Fast Mode pins the effective quality to 'fast' on submit.
-  // Push #401 — Fast Mode (stock engine) retired. AI Generate is the only path.
-  const [mode, setMode] = useState<GenerationMode>('cinematic_ai')
+  // PUSH #20 — Fast is the zero-friction acquisition path. Start every unknown
+  // session here; paid Creator/Studio accounts are defaulted to AI after their
+  // plan loads below.
+  const [mode, setMode] = useState<GenerationMode>('fast')
   // Push #316 — output language selector (en | pt | es).
   const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
   const [generationId, setGenerationId] = useState<string | null>(null)
@@ -826,7 +829,7 @@ export default function GenerateClient() {
   const deductedRef = useRef<boolean>(false)
   const composeStartedRef = useRef<boolean>(false)
   // True when the current generation used the fal.ai cinematic pipeline, so the
-  // compose call records quality 'cinematic_ai' (and deducts 30 credits) reliably,
+  // compose call records quality 'cinematic_ai' (and deducts 20 credits) reliably,
   // avoiding stale `quality` state in the compose effect closure.
   const falUsedRef = useRef<boolean>(false)
   // #401 — which fal engine ran this generation (Seedance or Kling). The clip
@@ -1345,11 +1348,11 @@ export default function GenerateClient() {
             // upgrades to AI Gen deliberately (no accidental credit burn).
             const fromViralNow = searchParams?.get('autoanalyze') === '1'
             if (fromViralNow) { setMode('fast') }
-            else if (data.isStarter) { setMode('fast') }
+            else if (data.isStarter || (!data.isCreator && !data.isStudio)) { setMode('fast') }
             // Fix 03/07 — Studio also defaults to Seedance (40cr): Kling (60cr) kept
             // pre-selecting itself on every load for Studio accounts (reported 5x),
             // silently costing +20cr per video. Kling stays one manual click away.
-            else { setMode('cinematic_ai'); setAiEngine('seedance') } // Creator + Studio + free trial
+            else { setMode('cinematic_ai'); setAiEngine('seedance') } // final access check stays server-side
           }
         }
       } catch {
@@ -1675,6 +1678,7 @@ export default function GenerateClient() {
   useEffect(() => {
     if (phase !== 'fal_polling') return
     if (falRequestIds.length === 0) return
+    if (!generationId) return
     let cancelled = false
 
     async function pollFal() {
@@ -1684,7 +1688,8 @@ export default function GenerateClient() {
         // KINEO-HOLLYWOOD-2026-07-09 — Hollywood generations carry one fal model
         // PER SCENE; the status route polls each clip on its own endpoint.
         const modelsQ = falModelsRef.current.length > 0 ? `&models=${encodeURIComponent(JSON.stringify(falModelsRef.current))}` : ''
-        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}${modelQ}${modelsQ}`, { cache: 'no-store' })
+        const generationQ = `&generationId=${encodeURIComponent(generationId!)}`
+        const res = await fetch(`/api/cinematic-clip-status?ids=${idsEncoded}${modelQ}${modelsQ}${generationQ}`, { cache: 'no-store' })
         const data = await res.json()
         if (cancelled) return
 
@@ -1753,7 +1758,7 @@ export default function GenerateClient() {
       cancelled = true
       if (pollTimerRef.current) { clearTimeout(pollTimerRef.current); pollTimerRef.current = null }
     }
-  }, [phase, falRequestIds])
+  }, [phase, falRequestIds, generationId])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: avatar_polling  →  poll /api/avatar-status until the VEED talking
@@ -2929,7 +2934,9 @@ export default function GenerateClient() {
       generationInFlightRef.current = false
       return
     }
-    if (!generationAttemptRef.current || phase === 'failed' || phase === 'done') {
+    const preserveExistingAttempt = preserveGenerationAttemptRef.current
+    preserveGenerationAttemptRef.current = false
+    if (!generationAttemptRef.current || ((phase === 'failed' || phase === 'done') && !preserveExistingAttempt)) {
       generationAttemptRef.current = newGenerationAttemptId()
     }
     const dispatchMetadata = {
@@ -3014,6 +3021,8 @@ export default function GenerateClient() {
     // Push #315 — Cinematic AI mode submits to fal.ai queue, then polls.
     if (mode === 'cinematic_ai') {
       try {
+        const cinematicGenerationId = generationAttemptRef.current ?? newGenerationAttemptId()
+        generationAttemptRef.current = cinematicGenerationId
         // L2B - thread the smart BrollPlan into the AI engine (same plan Fast uses)
         let cinePlan: BrollPlan | null = brollPlan
         if (!cinePlan && brollPlanPromiseRef.current) { try { cinePlan = await brollPlanPromiseRef.current } catch { cinePlan = null } }
@@ -3024,18 +3033,46 @@ export default function GenerateClient() {
         // (validated + logged); ignored by every non-hollywood engine.
         const cineFootage = footageItems.filter((f) => selectedFootageIds.includes(f.id) && f.kind !== 'audio')
         const cineBrollScenes = cineUsable ? cinePlan!.scenes.map((s, sceneIdx) => ({ sceneNumber: s.sceneNumber, brollPrompt: s.brollPrompt, shotType: s.shotType, negativePrompt: s.negativePrompt, ...(cineFootage[sceneIdx] ? { userFootageUrl: cineFootage[sceneIdx].url } : {}) })) : undefined
-        const res = await fetch('/api/generate-video-cinematic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // KINEO-CHARACTER-LOCK-2026-07-10 — lock a saved character into
-          // Hollywood renders (server resolves id → portrait anchor).
-          // KINEO-HOLLYWOOD-HOST-2026-07-13 — `vertical` (analyze-idea niche)
-          // forwarded so the server pins the SAME narrator persona for the
-          // host lines that /api/compose pins for the b-roll narration (this
-          // component already sends the same value to /api/compose below).
-          body: JSON.stringify({ prompt: trimmed, duration, language, vertical: analysis?.niche ?? undefined, engine: aiEngine, brollScenes: cineBrollScenes, globalStyle: cineUsable ? cinePlan!.globalStyle : undefined, ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}) }),
-        })
-        const data = await res.json()
+        const cinematicPayload = {
+          generationId: cinematicGenerationId,
+          prompt: trimmed,
+          duration,
+          language,
+          vertical: analysis?.niche ?? undefined,
+          engine: aiEngine,
+          brollScenes: cineBrollScenes,
+          globalStyle: cineUsable ? cinePlan!.globalStyle : undefined,
+          ...(aiEngine === 'hollywood' && selectedCharacterId ? { characterId: selectedCharacterId } : {}),
+        }
+        let res: Response
+        let data: Record<string, unknown>
+        let reconnectAttempt = 0
+        while (true) {
+          try {
+            res = await fetch('/api/generate-video-cinematic', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(cinematicPayload),
+            })
+            data = await res.json().catch(() => ({})) as Record<string, unknown>
+          } catch {
+            reconnectAttempt += 1
+            setError('Your AI scenes are safe. Reconnecting to the same submission…')
+            await new Promise((resolve) => setTimeout(resolve, reconnectAttempt <= 4 ? 3000 : 10000))
+            continue
+          }
+          if ((res.status === 409 || res.status === 503) && data.pending === true) {
+            reconnectAttempt += 1
+            const retryAfter = typeof data.retry_after_ms === 'number'
+              ? Math.max(1000, Math.min(10000, data.retry_after_ms))
+              : reconnectAttempt <= 4 ? 3000 : 10000
+            setError('Your AI scenes are safe. Reconnecting to the same submission…')
+            await new Promise((resolve) => setTimeout(resolve, retryAfter))
+            continue
+          }
+          break
+        }
+        if (reconnectAttempt > 0 && res.ok) setError(null)
         if (res.status === 401) { redirectToLoginPreservingPrompt(); return }
         if (res.status === 503 && data?.queued) {
           // KINEO-FAL-ALARM-2026-07-06 — fal balance exhausted: show a calm
@@ -3044,18 +3081,24 @@ export default function GenerateClient() {
           setPhase('failed'); return
         }
         if (res.status === 402) {
-          // #384 — server distinguishes "used your free AI" vs "needs 30 credits".
           // KINEO-PLAN-GATE-MODAL — a 402 carrying `upsell` is a PLAN gate (the
           // engine needs Creator/Studio), NOT a credit shortage. Show the correct
           // headline so users who HAVE credits aren't wrongly told they're broke.
           const gateReason: 'credits' | 'studio' | 'creator' =
             data?.upsell === 'studio' ? 'studio' : data?.upsell === 'creator' ? 'creator' : 'credits'
           setError(typeof data?.error === 'string' ? data.error : `This needs more credits. You have ${data?.balance ?? 0}.`)
+          if (data?.resume_same_generation === true && data?.generationId === cinematicGenerationId) {
+            preserveGenerationAttemptRef.current = true
+          }
           openOutOfCreditsModal(gateReason)
           setPhase('failed'); return
         }
         if (!res.ok) {
           setError(typeof data?.error === 'string' ? data.error : GENERIC_ERROR)
+          setPhase('failed'); return
+        }
+        if (data.generationId !== cinematicGenerationId) {
+          setError('We could not verify this AI generation. Nothing was composed. Please try again.')
           setPhase('failed'); return
         }
         setQuality('cinematic_ai')
@@ -3070,7 +3113,7 @@ export default function GenerateClient() {
         sceneSecondsRef.current = Array.isArray(data.scene_seconds) ? data.scene_seconds.map((s: unknown) => (typeof s === 'number' ? s : 10)) : []
         // KINEO-HOLLYWOOD-21-2026-07-10 (bug b) — real dialogue line per scene.
         sceneDialoguesRef.current = Array.isArray(data.scene_dialogues) ? data.scene_dialogues.map((d: unknown) => (typeof d === 'string' ? d : null)) : []
-        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
+        setGenerationId(cinematicGenerationId)
         setScenes(Array.isArray(data.scenes) ? data.scenes : [])
         setFastVoiceover(typeof data.voiceover_script === 'string' ? data.voiceover_script : null)
         setFastCaptions(Array.isArray(data.scene_captions) ? data.scene_captions : null)
@@ -3294,7 +3337,14 @@ export default function GenerateClient() {
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(blobUrl), 4000)
-      trackEvent('video_downloaded', { filename })
+      trackEvent('video_downloaded', {
+        filename,
+        export_type: planTier === 'free' && !hasPaid
+          ? 'watermarked'
+          : planTier === null && !hasPaid
+            ? 'current_asset'
+            : 'clean',
+      })
     } catch {
       // Fallback: open the original URL (old behavior) so the user still gets the file.
       try {
@@ -3458,7 +3508,7 @@ export default function GenerateClient() {
   function outOfCredits(): boolean {
     // KINEO-ZERO-SIGNUP-2026-07-09 — Fast renders are FREE (InVideo model):
     // new signups get 0 credits but can always generate/watch Fast videos.
-    // Monetization happens at the download moment ($4.90 unlock), never here.
+    // Monetization happens at the clean, watermark-free export moment, never here.
     if (mode === 'fast') return false
     if (credits === null) return false
     if (credits > 0) return false
@@ -3582,12 +3632,16 @@ export default function GenerateClient() {
     if (urgencyAutoShownRef.current) return
     if (phase !== 'done') return
     if (planTier !== 'free') return
+    // Zero credits is the normal never-paid state: free users still have their
+    // rolling Fast previews and should see the contextual clean-export offer,
+    // not a blocking "out of credits" modal over the finished video.
+    if (!hasPaid) return
     if (credits === null || credits > 0) return
     urgencyAutoShownRef.current = true
     // #380 — at the exact moment a free user drains their last credit, open the
     // 3-plan upgrade modal (Spark/Basic/Pro) — peak purchase intent.
     setShowUpgradeModal(true)
-  }, [phase, planTier, credits])
+  }, [phase, planTier, credits, hasPaid])
 
   // Push #109 — countdown tick while the urgency modal is open. The start
   // timestamp is persisted to localStorage so dismissing + reopening (or
@@ -3821,7 +3875,7 @@ export default function GenerateClient() {
   // uses the per-quality cost from QUALITY_OPTIONS.
   // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
   // (mirrors creditCostFor('fast', isPaidUser) server-side). Free users keep
-  // seeing Free/0 — their funnel (watermark + download paywall) is unchanged.
+  // seeing Free/0 — their render stays downloadable and shareable with a watermark.
   const isPaidAccount = hasPaid || (planTier !== null && planTier !== 'free')
   const selectedCost = mode === 'creator'
     ? 0
@@ -3832,10 +3886,6 @@ export default function GenerateClient() {
     // Hollywood 150 (preço FINAL aprovado 10/07), Seedance 20.
     ? (aiEngine === 'kling' ? 50 : aiEngine === 'veo' ? 90 : aiEngine === 'sora' ? 100 : aiEngine === 'hollywood' ? 150 : 20)
     : (QUALITY_OPTIONS.find((q) => q.key === quality)?.credits ?? 8)
-
-  // #384 — the free AI trial applies on the AI Generate mode when the account
-  // hasn't used it and can't pay 30 (mirrors the server rule). UI labeling only.
-  const aiTrialAvailable = mode === 'cinematic_ai' && aiEngine !== 'kling' && aiEngine !== 'veo' && aiEngine !== 'sora' && aiEngine !== 'hollywood' && freeAiUsed === false && (credits ?? 0) < 20 // KINEO-REBASE-2026-07-10 — 40→20
 
   // Push #156 — ready-to-paste YouTube description for the next-steps guide.
   const nextStepsDescription =
@@ -3917,17 +3967,15 @@ export default function GenerateClient() {
           universal credits, and a 402 from /api/generate-avatar routes to the
           universal upgrade modal (handled in the avatar submit path below). */}
 
-      {/* Push #415 — ACTIVATION FIX: a brand-new account (no plan, free AI
-          video still available) must see a GIFT, not a red out-of-credits
-          warning. Only 1/244 signups ever used the free trial — the scary
-          banner below was the first thing 0-credit users saw. */}
+      {/* Activation truth: a brand-new account can use free Fast previews and
+          must not see a red out-of-credits warning before evaluating them. */}
       {/* Push #430 — welcome credits: every new signup now starts with 30
           credits (30 Fast videos or 1 premium AI video). Banner shows the
           gift while the user is on free plan and still has credits. */}
       {/* KINEO-DL-PAYWALL-2026-07-09 — verbose green credits banner REMOVED
           (Joseph: "limpa a tela"). The compact credits chip in the top bar is
-          the single source of balance; monetization now happens at the
-          download moment, not via banner copy. */}
+          the single source of balance; monetization now happens when the user
+          asks for a clean watermark-free export, not via banner copy. */}
 
       {/* Push #103 sticky low-credits banner REMOVED (KINEO-ZERO-SIGNUP
           follow-up, Joseph 09/07: "tira esse sem créditos em vermelho, deixa
@@ -4005,7 +4053,7 @@ export default function GenerateClient() {
       {showUpgradeModal && (
         <UpgradeModal
           reason={upgradeReason}
-          isSubscriber={isCreator || isStudio}
+          isSubscriber={isStarter || isCreator || isStudio}
           loading={upgradeLoading}
           onUpgrade={(tier) => {
             // #380 — straight to Stripe via the working GET checkout route.
@@ -4263,7 +4311,7 @@ export default function GenerateClient() {
                   for $4.90" (the pack is 10 credits since V3C and has no public
                   CTA anymore). Welcome moment sells nothing — just start. */}
               <span>
-                You&apos;re in. <strong>Your Fast previews are free to create and watch</strong> — we&apos;ve loaded an idea below.
+                You&apos;re in. <strong>Your Fast previews are free to create, watch, share and download with a watermark</strong> — we&apos;ve loaded an idea below.
               </span>
             </div>
           )}
@@ -4601,9 +4649,7 @@ export default function GenerateClient() {
                   : mode === 'fast'
                   ? `⚡ ${selectedCost === 0 ? 'Free' : `${selectedCost} credit`} • Fast Mode • ready in ~60 seconds.`
                   : mode === 'cinematic_ai'
-                  ? (aiTrialAvailable
-                      ? `🎁 1 FREE AI video (with watermark) • AI Generated • ~3-5 min render.`
-                      : `🤖 ${selectedCost} credits • AI Generated • ~3-5 min render.`)
+                  ? `🤖 ${selectedCost} credits • AI Generated • ~3-5 min render.`
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
               {credits !== null && (
@@ -4950,8 +4996,6 @@ export default function GenerateClient() {
               >
                 {isProcessingPhase(phase)
                   ? '⏳ Generating…'
-                  : aiTrialAvailable
-                  ? 'Generate · 1 FREE (watermark)'
                   : `Generate${selectedCost === 0 ? ' · Free' : ` · ${selectedCost} credit${selectedCost === 1 ? '' : 's'}`}`}
               </button>
             </div>
@@ -5101,7 +5145,7 @@ export default function GenerateClient() {
               style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)' }}
             >
               <div className="font-black text-base mb-2" style={{ color: '#fca5a5' }}>
-                Generation failed. Any credits charged were automatically refunded — please try again.
+                Generation failed. If no paid AI work started, any reserved credits are refunded automatically. You can retry safely.
               </div>
               <button
                 onClick={handleGenerate}
@@ -5142,8 +5186,8 @@ export default function GenerateClient() {
                     </span>{' '}
                     left —{' '}
                     {credits >= 20
-                      ? `about ${Math.floor(credits / 20)} more AI video${Math.floor(credits / 20) === 1 ? '' : 's'}. Fast Mode is always free.`
-                      : 'not enough for another AI video (each takes 20). Fast Mode is still free.'}
+                      ? `about ${Math.floor(credits / 20)} more AI video${Math.floor(credits / 20) === 1 ? '' : 's'}. ${planTier === 'free' && !hasPaid ? 'Free Fast includes up to 3 watermarked previews per 24 hours.' : 'Paid Fast clean exports use 1 credit each.'}`
+                      : `not enough for another AI video (each takes 20). ${planTier === 'free' && !hasPaid ? 'You can still make up to 3 watermarked Fast previews per 24 hours.' : 'Paid Fast clean exports use 1 credit each.'}`}
                   </p>
                 )}
                 {/* Push #065 — show the generated title so the user can see
@@ -5207,10 +5251,9 @@ export default function GenerateClient() {
                     the moment the file plays — so a user who navigated away
                     during the render never has to click anything. */}
                 <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                  {/* KINEO-DL-GUARD-2026-07-09 — controlsList="nodownload" +
-                      context-menu block: Chrome's native ⋮ menu had a "Download"
-                      item that bypassed the $4.90 unlock entirely (Joseph caught
-                      it live). Paid users download via the real button below. */}
+                  {/* Keep native download hidden so every browser uses the named
+                      file action below. Free users receive this same current
+                      watermarked asset; checkout only replaces it with a clean one. */}
                   <video
                     ref={videoRef}
                     key={finalVideoUrl}
@@ -5302,10 +5345,10 @@ export default function GenerateClient() {
                       className="font-black tracking-tight"
                       style={{ fontSize: '1.15rem', color: 'var(--text)', lineHeight: 1.25 }}
                     >
-                      Unlock this video + keep creating
+                      Remove the watermark + keep creating
                     </h3>
                     <p className="text-xs mt-1.5" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
-                      Unlock this exact video as your first of up to 25 Fast Shorts this month.
+                      Export this exact video clean, then create 24 more — 25 clean Fast Shorts total this month.
                     </p>
                     <p className="text-xs mt-2 font-bold" style={{ color: '#5cb3ff', lineHeight: 1.45 }}>
                       About $0.20 per Fast Short in your first month.
@@ -5322,7 +5365,7 @@ export default function GenerateClient() {
                       boxShadow: '0 8px 24px rgba(41,151,255,.34)',
                     }}
                   >
-                    <span>Unlock + Start Starter — $4.90 today →</span>
+                    <span>Remove watermark + Start Starter — $4.90 today →</span>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.92, marginTop: 3 }}>
                       Renews at $9.90/month in 30 days · cancel anytime
                     </span>
@@ -5340,16 +5383,17 @@ export default function GenerateClient() {
                 className="mt-7 w-full flex flex-col items-center gap-3"
                 style={{ maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}
               >
-                {/* Paid users get the file action. Free users already have the
-                    single Starter offer immediately above; duplicating a second
-                    purchase button here reduced clarity and favoured the old pack. */}
-                {planTier === 'free' && !hasPaid ? null : (
                 <a
                   href={finalVideoUrl}
                   onClick={handleDownload}
                   download={`${slugifyTitle(analysis?.title) || `kineo-${duration}s`}.mp4`}
                   target="_blank"
                   rel="noreferrer"
+                  title={planTier === 'free' && !hasPaid
+                    ? 'Download MP4 with Kineo watermark'
+                    : planTier === null && !hasPaid
+                      ? 'Download MP4'
+                      : 'Download clean MP4'}
                   className="flex items-center justify-center gap-2 w-full rounded-2xl py-4 text-base font-black text-white"
                   style={{
                     background: 'linear-gradient(135deg, #22C55E, #15803D)',
@@ -5360,18 +5404,18 @@ export default function GenerateClient() {
                   }}
                 >
                   <span style={{ fontSize: '1.15rem' }}>⬇</span>
-                  Download Your Short ({duration}s · MP4)
+                  {planTier === 'free' && !hasPaid
+                    ? `Download with Kineo watermark (${duration}s · MP4)`
+                    : planTier === null && !hasPaid
+                      ? `Download Your Short (${duration}s · MP4)`
+                      : `Download clean Short (${duration}s · MP4)`}
                 </a>
-                )}
 
                 {/* Secondary row: preview + copy + whatsapp + more + X */}
-                {/* KINEO-DL-GUARD follow-up (Joseph 09/07): Preview, Copy link,
-                    WhatsApp and More all expose the RAW MP4 URL — a locked user
-                    could open it in a new tab and download via the ⋮ menu,
-                    bypassing the $4.90 unlock. Hidden for free+unpaid users;
-                    "Share my page" (/v/[id]) and X (no file URL) stay. */}
+                {/* The current asset is intentionally shareable. For free users
+                    it is the watermarked growth-loop asset; this UI never exposes
+                    a separate clean URL. */}
                 <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                  {!(planTier === 'free' && !hasPaid) && (
                   <a
                     href={finalVideoUrl}
                     target="_blank"
@@ -5387,8 +5431,6 @@ export default function GenerateClient() {
                   >
                     ▶ Preview
                   </a>
-                  )}
-                  {!(planTier === 'free' && !hasPaid) && (
                   <button
                     type="button"
                     onClick={handleCopyUrl}
@@ -5404,7 +5446,6 @@ export default function GenerateClient() {
                   >
                     {copied ? '✓ Copied!' : '🔗 Copy link'}
                   </button>
-                  )}
                   {/* #465 — share the PUBLIC page (/v/[id]) with preview + CTA.
                       This is the growth loop: each share is a landing that brings
                       a new pre-warmed visitor. Copies the link so the WhatsApp
@@ -5433,7 +5474,6 @@ export default function GenerateClient() {
                     </button>
                   )}
                   {/* WhatsApp — great for mobile / creator sharing */}
-                  {!(planTier === 'free' && !hasPaid) && (
                   <a
                     href={`https://wa.me/?text=Just made this YouTube Short with AI in 60s%21 %F0%9F%A4%AF%0AWatch%3A ${encodeURIComponent(finalVideoUrl ?? '')}%0ATry it free%3A usekineo.com`}
                     target="_blank"
@@ -5449,8 +5489,6 @@ export default function GenerateClient() {
                   >
                     📲 WhatsApp
                   </a>
-                  )}
-                  {!(planTier === 'free' && !hasPaid) && (
                   <button
                     type="button"
                     onClick={handleShare}
@@ -5465,7 +5503,6 @@ export default function GenerateClient() {
                   >
                     📤 More
                   </button>
-                  )}
                   {/* Push #101 — one-click X intent for organic distribution. */}
                   <a
                     href={`https://twitter.com/intent/tweet?text=Just created this YouTube Short with AI in 60 seconds! 🤯 Try it free at usekineo.com %23YouTubeShorts %23AIVideo`}
@@ -5571,7 +5608,7 @@ export default function GenerateClient() {
                     <span>
                       <span style={{ color: 'var(--text)', fontWeight: 700 }}>Download your video</span>{' '}
                       — use the download button above to save the file to your device
-                      {planTier === 'free' && !hasPaid ? ' (Starter includes this unlocked video in your 25 Fast Shorts this month)' : ''}.
+                      {planTier === 'free' && !hasPaid ? ' with the Kineo watermark; Starter exports this same video clean' : ''}.
                     </span>
                   </div>
                   <div className="flex items-start gap-3 text-xs" style={{ color: 'var(--muted2)', lineHeight: 1.5 }}>
@@ -7187,24 +7224,20 @@ function ModeSelector({
 
   // KINEO-REBASE-2026-07-10 — UNIVERSAL ENGINE GATES. The old per-plan ladder
   // (Seedance=Creator+, Kling/Veo/Hollywood=Studio) is retired: ANY paying
-  // user unlocks every engine (server still guards the credit balance). Free
-  // stays as today: Fast free + one AI Gen trial.
-  const noPlan = !isStarter && !isCreator && !isStudio
-  const anyPaid = isStarter || isCreator || isStudio || hasPaid
-  const freeCredits = noPlan && !hasPaid ? credits ?? 0 : 0
-  // Push #434 — Fast Mode is FREE + unlimited for everyone (growth engine).
+  // user unlocks every engine (server still guards the credit balance). Fast is
+  // the only free mode advertised; legacy AI eligibility remains server-guarded.
+  const anyPaid = isStarter || isCreator || isStudio || (hasPaid && (credits ?? 0) > 0)
+  // Fast Mode is the free growth engine (subject to the server's daily cap).
   // Free-plan Fast is watermarked server-side; removing the mark + AI engines
   // are the paid upgrades. So Fast is always unlocked.
   const fastUnlocked = true
-  const seedanceUnlocked =
-    anyPaid || (noPlan && freeAiUsed === false) || freeCredits >= 20
+  const seedanceUnlocked = anyPaid
   const klingUnlocked = anyPaid
-  const cinematicUnlocked = anyPaid || (credits ?? 0) >= 50 // KINEO-PRICING-V3B-2026-07-10 — Kling 50
+  const cinematicUnlocked = anyPaid
   const fastSelected = mode === 'fast'
   const seedanceSelected = mode === 'cinematic_ai' && aiEngine === 'seedance'
   const klingSelected = mode === 'cinematic_ai' && aiEngine === 'kling'
   const cinematicSelected = mode === 'cinematic_ai' && (aiEngine === 'kling' || aiEngine === 'veo' || aiEngine === 'sora' || aiEngine === 'hollywood')
-  const freeTrialBadge = noPlan && freeAiUsed === false
 
   return (
     <div className="mt-5">
@@ -7232,7 +7265,7 @@ function ModeSelector({
             /* Push #434 — Fast Mode is free for everyone now.
                KINEO-PRICING-V3C-2026-07-10 — paying accounts now pay 1 credit
                per Fast video, so their badge says so; free users keep FREE
-               (watermark + download-paywall funnel unchanged). */
+               (downloadable watermark; clean export is the paid upgrade). */
             anyPaid ? (
               <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#5cb3ff', border: '1px solid rgba(41,151,255,.4)' }}>1 credit</span>
             ) : (
@@ -7251,19 +7284,14 @@ function ModeSelector({
           accentText="#2997ff"
           icon="✨"
           name="AI Generated"
-          engineTag="Creator engine"
+          engineTag="Paid engine"
           tierLabel="premium"
           quality={2}
           features={aiFeatures}
-          badge={freeTrialBadge ? (
-            /* #413 — was a long "1 free · watermark" pill that overflowed the
-               card header (Joseph). The free-trial info already lives in the
-               summary line under the cards, so the badge slot stays empty. */
-            <></>
-          ) : seedanceUnlocked ? (
+          badge={seedanceUnlocked ? (
             <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(41,151,255,.18)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>20 credits</span>
           ) : (
-            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.15)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>🔒 Creator</span>
+            <span className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: 'rgba(41,151,255,.15)', color: '#2997ff', border: '1px solid rgba(41,151,255,.3)' }}>🔒 Paid</span>
           )}
           onClick={() => { if (seedanceUnlocked) { setMode('cinematic_ai'); setAiEngine('seedance') } else { onUpgrade() } }}
         />
@@ -7797,27 +7825,6 @@ function UpgradeModal({
             plans, one offer — Creator recommended, Starter as the cheap
             secondary, Studio unhighlighted. */}
 
-        {/* Push #452 — referral escape hatch. Turns a "won't pay right now"
-            bounce into top-of-funnel growth by surfacing the live #443 loop
-            at peak intent, with no extra dashboard banner. */}
-        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <a
-            href="/referral"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: '0.84rem',
-              fontWeight: 800,
-              color: '#2997ff',
-              textDecoration: 'none',
-              lineHeight: 1.4,
-            }}
-          >
-            🎁 Not ready to pay? Invite a friend — you both get 30 free credits →
-          </a>
-        </div>
-
         <button
           type="button"
           onClick={onClose}
@@ -8023,7 +8030,7 @@ function WelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       }}
     >
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.4 }}>
-        🎉 Your first AI video is free — we dropped a viral idea in the box below. Hit Generate, or type your own. No card needed.
+        🎉 Create up to 3 watermarked Fast videos every 24 hours — we dropped a viral idea below. Hit Generate, or type your own. No card needed.
       </span>
       <button
         type="button"

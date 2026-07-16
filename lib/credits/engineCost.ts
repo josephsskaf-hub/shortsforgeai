@@ -39,10 +39,8 @@ export function creditCostFor(quality: Quality, isPaidUser = false): number {
       // ~$0.02-0.05 to serve — it's the growth engine, not the revenue line.
       // KINEO-PRICING-V3C-2026-07-10 — for PAYING accounts (has_paid=true or
       // any paid plan) Fast now costs 1 credit per video. Free users stay at
-      // 0 (watermarked render + download paywall — funnel unchanged). Product
-      // rule: a paid user with 0 balance still renders fine — the debit is
-      // simply skipped ([fast-credit] skip below); never break a render over
-      // 1 credit.
+      // 0 (watermarked render). Paid clean exports cost 1 credit; a zero balance
+      // is rejected before provider submission and never bypasses settlement.
       return isPaidUser ? 1 : 0
     case 'avatar':
       // KINEO-AVATAR-120-2026-07-06 — AI Avatar folded into the UNIVERSAL

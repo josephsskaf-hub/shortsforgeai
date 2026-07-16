@@ -12,8 +12,9 @@ interface AccountClientProps {
   isPro: boolean
   generationsUsed: number
   hasStripeCustomer: boolean
+  hasPaid: boolean
   createdAt: string | null
-  planTier?: 'free' | 'basic' | 'pro'
+  planTier?: 'free' | 'starter' | 'basic' | 'pro'
 }
 
 // Settings v3 (12/06) — practical, Vercel/Linear-shaped account page.
@@ -33,10 +34,12 @@ function isTabKey(v: string | null | undefined): v is TabKey {
   return v === 'profile' || v === 'billing' || v === 'usage'
 }
 
-// Push #430 — free tier now starts with 30 welcome credits (30 Fast videos or 1 AI video)
-const PLAN_LIMITS = { free: 30, basic: 50, pro: 100 } as const
+// Free access is allowance-based (up to 3 watermarked Fast videos / 24h), not
+// credit-based. Only paid subscriptions include a monthly credit balance.
+const PLAN_LIMITS = { free: 0, starter: 25, basic: 150, pro: 200 } as const
 const PLAN_COLORS = {
   free: { color: '#86868b', bg: 'rgba(134,134,139,.1)', border: 'rgba(134,134,139,.2)' },
+  starter: { color: '#14b8a6', bg: 'rgba(20,184,166,.1)', border: 'rgba(20,184,166,.2)' },
   basic: { color: '#2997ff', bg: 'rgba(41,151,255,.1)', border: 'rgba(41,151,255,.2)' },
   pro: { color: '#2997ff', bg: 'rgba(41,151,255,.1)', border: 'rgba(41,151,255,.2)' },
 }
@@ -54,7 +57,7 @@ export default function AccountClient(props: AccountClientProps) {
   )
 }
 
-function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps) {
+function AccountInner({ email, isPro, hasPaid, createdAt, planTier }: AccountClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -64,9 +67,15 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
   const normalizedTab = rawTab === 'members' || rawTab === 'manage' ? 'billing' : rawTab
   const activeTab: TabKey = isTabKey(normalizedTab) ? normalizedTab : 'profile'
 
-  const tier: 'free' | 'basic' | 'pro' = planTier ?? (isPro ? 'pro' : 'free')
+  const tier: 'free' | 'starter' | 'basic' | 'pro' = planTier ?? (isPro ? 'pro' : 'free')
   const planLimit = PLAN_LIMITS[tier]
-  const planLabel = tier === 'pro' ? '⚡ Pro Plan' : tier === 'basic' ? '🔵 Basic Plan' : '🆓 Free Plan'
+  const planLabel = tier === 'pro'
+    ? '⚡ Studio Plan'
+    : tier === 'basic'
+      ? '🔵 Creator Plan'
+      : tier === 'starter'
+        ? '🟢 Starter Plan'
+        : '🆓 Free Access'
   const planStyle = PLAN_COLORS[tier]
   const initial = (email?.[0] ?? 'U').toUpperCase()
 
@@ -382,7 +391,19 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </h2>
               <div className="flex flex-col gap-1 mb-5">
                 <ReadOnlyRow label="Current plan" value={planLabel.replace(/^[^ ]+ /, '')} />
-                <ReadOnlyRow label="Video credits" value={credits === null ? '—' : String(credits)} />
+                {tier === 'free' ? (
+                  <>
+                    <ReadOnlyRow label="Included credits" value="0" />
+                    {(credits ?? 0) > 0 && <ReadOnlyRow label="Purchased credits" value={String(credits)} />}
+                    {hasPaid ? (
+                      <ReadOnlyRow label="Legacy paid access" value="Clean Fast videos · 1 credit each" />
+                    ) : (
+                      <ReadOnlyRow label="Never-paid allowance" value="3 watermarked Fast videos / 24h" />
+                    )}
+                  </>
+                ) : (
+                  <ReadOnlyRow label="Video credits" value={credits === null ? '—' : String(credits)} />
+                )}
                 {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — "Avatar credits" row removed. */}
                 <ReadOnlyRow label="Member since" value={formatDate(createdAt)} />
               </div>
@@ -453,9 +474,40 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               style={{ background: 'rgba(11,17,32,0.85)', border: '1px solid rgba(255,255,255,.07)', backdropFilter: 'blur(12px)' }}
             >
               <h2 className="font-bold mb-5" style={{ color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.63rem' }}>
-                Credits
+                {tier === 'free' ? 'Free videos' : 'Credits'}
               </h2>
 
+              {tier === 'free' ? (
+                <div
+                  className="rounded-2xl p-5"
+                  style={{ background: 'rgba(41,151,255,.06)', border: '1px solid rgba(41,151,255,.2)' }}
+                >
+                  <div className="text-xs font-black mb-2" style={{ color: '#2997ff', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+                    No card required
+                  </div>
+                  <h3 className="text-lg font-black mb-2" style={{ color: 'var(--text)' }}>
+                    {hasPaid ? 'Your purchased credits stay available' : 'Up to 3 Fast videos every 24 hours'}
+                  </h3>
+                  <p className="text-sm mb-3" style={{ color: 'var(--muted)', lineHeight: 1.6 }}>
+                    {hasPaid
+                      ? 'Your legacy pack keeps clean Fast exports available at 1 credit each. Upgrade to a monthly plan when you want a recurring balance.'
+                      : 'Never-paid free accounts can create, watch, download and share each Fast video with a watermark. The allowance grants no credits and does not include premium AI Generated video.'}
+                  </p>
+                  {(credits ?? 0) > 0 && (
+                    <p className="text-xs mb-3" style={{ color: 'var(--muted2)' }}>
+                      Purchased credit balance: <strong style={{ color: 'var(--text)' }}>{credits}</strong>
+                    </p>
+                  )}
+                  <Link
+                    href="/pricing"
+                    className="inline-flex rounded-xl px-4 py-2.5 text-sm font-black"
+                    style={{ background: '#2997ff', color: '#fff', textDecoration: 'none' }}
+                  >
+                    {hasPaid ? 'See monthly plans →' : 'Unlock clean, watermark-free MP4s →'}
+                  </Link>
+                </div>
+              ) : (
+                <>
               {/* Credit ring + stats */}
               <div className="flex items-center gap-6 mb-5">
                 {/* Animated ring */}
@@ -505,7 +557,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
                   <div>
                     <div className="font-black text-lg" style={{ color: 'var(--text2)', lineHeight: 1 }}>{planLimit}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
-                      {tier === 'free' ? 'free plan total' : 'monthly included'}
+                      monthly included
                     </div>
                   </div>
                   {/* KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — avatar-credit usage
@@ -517,7 +569,7 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               <div className="rounded-xl overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)' }}>
                 <div className="px-4 py-2 flex items-center justify-between">
                   <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-                    {tier === 'free' ? 'Free tier usage' : 'This cycle'}
+                    This cycle
                   </span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text2)' }}>
                     {creditsRemaining} / {planLimit} left
@@ -539,13 +591,16 @@ function AccountInner({ email, isPro, createdAt, planTier }: AccountClientProps)
               </div>
 
               <ul style={{ fontSize: '0.77rem', color: 'var(--muted2)', listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <li>🔵 Basic = <strong style={{ color: 'var(--text)' }}>50 Fast Mode videos / month</strong></li>
-                <li>⚡ Pro = <strong style={{ color: 'var(--text)' }}>100 Fast Mode videos + 1 Cinematic / month</strong></li>
+                <li>🟢 Starter = <strong style={{ color: 'var(--text)' }}>25 credits / month</strong></li>
+                <li>🔵 Creator = <strong style={{ color: 'var(--text)' }}>150 credits / month</strong></li>
+                <li>⚡ Studio = <strong style={{ color: 'var(--text)' }}>200 credits / month</strong></li>
               </ul>
 
               <p className="text-xs mt-4" style={{ color: 'var(--muted)' }}>
                 Credits are charged only when a video is successfully generated.
               </p>
+                </>
+              )}
             </div>
 
             {[

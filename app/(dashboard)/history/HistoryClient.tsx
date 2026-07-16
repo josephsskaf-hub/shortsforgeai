@@ -20,6 +20,10 @@ interface Video {
   created_at: string
 }
 
+function isWatermarkedFastAsset(video: Video): boolean {
+  return video.quality_mode === 'fast' && Number(video.credits_used ?? 0) === 0
+}
+
 function extractTitle(topic: string | null): string {
   if (!topic) return 'Untitled Short'
   // Try HOOK line: "HOOK (0-2s): [Pexels: ...] Actual hook text"
@@ -78,21 +82,21 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   // #459 — share the public /v/[id] page (native share on mobile, copy on desktop)
   const [sharedId, setSharedId] = useState<string | null>(null)
-  // KINEO-DL-PAYWALL-2026-07-09 — download gating on My Videos. This page's
-  // green Download button was a full paywall bypass: a free user blocked at
-  // the $4.90 unlock on /generate could just come here and download the same
-  // MP4. Rule mirrors MyVideosClient: locked unless the user has paid
-  // (pack via has_paid, or any plan). FAIL OPEN — if /api/credits errors,
-  // downloads stay unlocked so a DB blip never blocks a paying user.
-  const [downloadLocked, setDownloadLocked] = useState(false)
+  // Commercial truth: the current MP4 is always downloadable. For free users
+  // that asset carries the Kineo watermark; payment unlocks a clean export.
+  // Fail open so a plan lookup problem never hides an owned file.
+  const [cleanExportLocked, setCleanExportLocked] = useState<boolean | null>(null)
   useEffect(() => {
     let cancelled = false
     fetch('/api/credits', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (cancelled || !d) return
-        const paid = d.hasPaid === true || d.isStarter === true || d.isCreator === true || d.isStudio === true
-        setDownloadLocked(!paid)
+        const balance = Math.max(0, Number(d.credits ?? 0))
+        const cleanAccess =
+          d.isStarter === true || d.isCreator === true || d.isStudio === true ||
+          (d.hasPaid === true && balance > 0)
+        setCleanExportLocked(!cleanAccess)
       })
       .catch(() => {/* fail open */})
     return () => { cancelled = true }
@@ -109,10 +113,6 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
   // the bytes and name them ourselves. controlsList="nodownload" hides the ⋮
   // download path so users always get the correctly-named file.
   async function handleDownload(video: Video) {
-    // KINEO-DL-PAYWALL-2026-07-09 — non-payers never reach the file. From the
-    // grid, open the lightbox instead; it presents one clear recurring Starter
-    // offer before checkout.
-    if (downloadLocked) { setLightbox(video.id); return }
     if (!video.video_url || downloadingId) return
     setDownloadingId(video.id)
     try {
@@ -137,7 +137,13 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
       fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'video_downloaded', metadata: { video_id: video.id } }),
+        body: JSON.stringify({
+          name: 'video_downloaded',
+          metadata: {
+            video_id: video.id,
+            export_type: isWatermarkedFastAsset(video) ? 'watermarked' : 'clean',
+          },
+        }),
       }).catch(() => {/* tracking must never affect UX */})
     } catch {
       window.open(video.video_url, '_blank', 'noopener,noreferrer')
@@ -358,9 +364,9 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
             <p className="text-xs leading-relaxed" style={{ color: 'var(--muted2)', margin: 0, maxWidth: 620 }}>
               We prepared a fresh follow-up prompt with a new hook and new facts. You can review it before rendering.
             </p>
-            {downloadLocked && (
+            {cleanExportLocked === true && (
               <p className="text-xs leading-relaxed mt-2" style={{ color: '#5cb3ff', marginBottom: 0 }}>
-                Fast works at 0 credits for up to 3 watermarked previews per 24 hours. Starter unlocks downloads.
+                Fast includes up to 3 watermarked previews per 24 hours. Download and share them free; Starter unlocks clean watermark-free exports.
               </p>
             )}
           </div>
@@ -568,8 +574,8 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   <button
                     onClick={() => handleDownload(video)}
                     disabled={downloadingId === video.id}
-                    title={downloadLocked ? 'Start Starter — $4.90 first month' : 'Download MP4'}
-                    aria-label={downloadLocked ? 'Start Starter — $4.90 first month' : 'Download MP4'}
+                    title={isWatermarkedFastAsset(video) ? 'Download MP4 with Kineo watermark' : 'Download clean MP4'}
+                    aria-label={isWatermarkedFastAsset(video) ? 'Download MP4 with Kineo watermark' : 'Download clean MP4'}
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -586,7 +592,7 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                       cursor: downloadingId === video.id ? 'wait' : 'pointer',
                     }}
                   >
-                    {downloadingId === video.id ? '…' : downloadLocked ? '🔒' : '⬇'}
+                    {downloadingId === video.id ? '…' : isWatermarkedFastAsset(video) ? '⬇ WM' : '⬇'}
                   </button>
 
                   {/* #459 — share the public /v/[id] page */}
@@ -660,6 +666,12 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                     {summaryLoading === video.id ? '…' : '📋'}
                   </button>
                 </div>
+
+                {isWatermarkedFastAsset(video) && (
+                  <p style={{ margin: '5px 0 0', color: 'var(--muted2)', fontSize: '0.54rem', textAlign: 'center', lineHeight: 1.25 }}>
+                    Free MP4 includes the Kineo watermark
+                  </p>
+                )}
 
                 {/* Push #421 — summary fetch error */}
                 {summaryErrors[video.id] && !isExpanded && (
@@ -778,22 +790,25 @@ export default function MyVideosClient({ videos: initialVideos }: Props) {
                   onError={() => setErrors((prev) => new Set([...prev, v.id]))}
                 />
               </div>
-              {downloadLocked ? (
-                <button
-                  onClick={handleStarterCheckout}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', padding: '13px 10px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', border: '1px solid transparent', color: '#fff', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
-                >
-                  <span>Start Starter — $4.90 today</span>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.9 }}>Then $9.90/month · 25 credits/month · cancel anytime</span>
-                </button>
-              ) : (
               <button
                 onClick={() => handleDownload(v)}
                 disabled={downloadingId === v.id}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: downloadingId === v.id ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 28px rgba(34,197,94,0.35)' }}
               >
-                {downloadingId === v.id ? 'Downloading…' : '⬇ Download (MP4)'}
+                {downloadingId === v.id
+                  ? 'Downloading…'
+                  : isWatermarkedFastAsset(v)
+                    ? '⬇ Download with Kineo watermark (MP4)'
+                    : '⬇ Download clean MP4'}
               </button>
+              {isWatermarkedFastAsset(v) && cleanExportLocked === true && (
+                <button
+                  onClick={handleStarterCheckout}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', padding: '13px 10px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #2997ff, #1d6fe0)', border: '1px solid transparent', color: '#fff', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 8px 28px rgba(41,151,255,0.35)' }}
+                >
+                  <span>Unlock clean exports — Start Starter for $4.90</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.9 }}>For new videos · then $9.90/month · cancel anytime</span>
+                </button>
               )}
               <button
                 onClick={() => setLightbox(null)}

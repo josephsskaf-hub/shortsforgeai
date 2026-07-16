@@ -44,8 +44,12 @@ export async function fetchUserPlan(
   const row = (data ?? {}) as { plan?: string | null; is_pro?: boolean | null; video_credits?: number | null }
   const planRaw = (row.plan ?? '').toString().toLowerCase().trim()
 
-  if (planRaw === 'pro') return { tier: 'pro', isPro: true }
-  if (planRaw === 'basic') return { tier: 'basic', isPro: false }
+  if (['pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial'].includes(planRaw)) {
+    return { tier: 'pro', isPro: true }
+  }
+  if (['basic', 'basic_trial', 'starter', 'starter_trial'].includes(planRaw)) {
+    return { tier: 'basic', isPro: false }
+  }
   if (planRaw === 'free') return { tier: 'free', isPro: false }
 
   if (row.is_pro === true) return { tier: 'pro', isPro: true }

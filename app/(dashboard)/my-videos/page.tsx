@@ -57,6 +57,7 @@ function toRow(r: RawRow): VideoRow {
     created_at: typeof r.created_at === 'string' ? r.created_at : new Date().toISOString(),
     prompt: strOrNull(r.prompt) ?? strOrNull(r.topic),
     credits_used: numOrNull(r.credits_used),
+    quality_mode: strOrNull(r.quality_mode) ?? strOrNull(r.quality),
     quality: strOrNull(r.quality),
     quality_score: qualityScore,
   }
@@ -80,7 +81,7 @@ export default async function MyVideosPage() {
   // My Videos came up empty on environments where those columns were
   // never added.
   const wideColumns =
-    'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,quality_score,platform,thumbnail_url,thumb_url,render_id,credits_used,created_at'
+    'id,status,video_url,final_video_url,title,topic,prompt,script,duration,duration_seconds,quality,quality_mode,quality_score,platform,thumbnail_url,thumb_url,render_id,credits_used,created_at'
   const narrowColumns = 'id,status,video_url,topic,created_at'
 
   async function runSelect(columns: string) {

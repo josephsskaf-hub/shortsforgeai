@@ -61,7 +61,7 @@ export async function GET() {
           </div>
         </div>
         <div style={{ display: 'flex', color: '#86868b', fontSize: 30, fontWeight: 600 }}>
-          usekineo.com · from $9.90/mo · first Short free
+          usekineo.com · 3 watermarked Fast videos / 24h · paid = clean MP4
         </div>
       </div>
     ),

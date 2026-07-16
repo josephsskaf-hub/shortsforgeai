@@ -153,7 +153,13 @@ export async function GET(req: NextRequest) {
         creditsRefunded = await refundRenderCredits(`animate-${requestId}`)
       } else {
         const released = await settleAvatarCreditHoldForFailedRequest({ userId: user.id, requestId })
-        if (!released) console.warn(`[avatar-hold] failed provider hold could not be settled request=${requestId}`)
+        if (!released) {
+          console.warn(`[avatar-hold] failed provider hold could not be settled request=${requestId}`)
+          return NextResponse.json(
+            { error: 'Finalizing the failed avatar safely. Please retry this status check.' },
+            { status: 503 },
+          )
+        }
       }
       return NextResponse.json({
         status: 'failed',

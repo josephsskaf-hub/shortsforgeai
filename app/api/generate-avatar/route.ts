@@ -63,6 +63,7 @@ import { pickLibraryClips } from '@/lib/stockLibrary'
 // cutaways come from per-scene queries instead of prompt.slice(0,80) garbage
 // (the "menina dançando" bug Joseph hit on 12/06).
 import { brollEngine } from '@/lib/broll/broll-engine'
+import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
 
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
@@ -502,7 +503,6 @@ export async function POST(req: NextRequest) {
       }
 
       let activeHoldCount = 0
-      let totalCreditsHeld = 0
       let currentClaimSeen = false
       for (const row of claimRows ?? []) {
         const metadata = row.metadata && typeof row.metadata === 'object'
@@ -539,7 +539,6 @@ export async function POST(req: NextRequest) {
           continue
         }
         activeHoldCount += 1
-        totalCreditsHeld += rowCreditCost as number
         if (row.id === claimId) {
           currentClaimSeen = true
         }
@@ -549,6 +548,22 @@ export async function POST(req: NextRequest) {
         await releaseAvatarSubmission()
         return safetyUnavailable()
       }
+
+      // Cross-engine admission: Fast/AI compose jobs and Avatar jobs share the
+      // same credit balance. Count both signed claim types, deduped by the
+      // Avatar->Compose generation id, before any provider submission.
+      const providerHolds = await inspectActiveComposeCreditHolds({
+        db: avatarAdmin,
+        secret: serviceRoleKey,
+        userId: user.id,
+        currentClaimId: claimId,
+      })
+      if (!providerHolds.ok || !providerHolds.currentSeen) {
+        console.error('[generate-avatar] cross-engine hold audit failed:', providerHolds.ok ? 'current claim missing' : providerHolds.error)
+        await releaseAvatarSubmission()
+        return safetyUnavailable()
+      }
+      const allProviderCreditsHeld = providerHolds.totalHeld
 
       const { data: avProfile, error: profileError } = await avatarAdmin
         .from('profiles')
@@ -568,9 +583,9 @@ export async function POST(req: NextRequest) {
           { status: 429 },
         )
       }
-      if (totalCreditsHeld > videoCreditBalance) {
+      if (allProviderCreditsHeld > videoCreditBalance) {
         await releaseAvatarSubmission()
-        const creditsHeldByOtherJobs = Math.max(0, totalCreditsHeld - AVATAR_CREDIT_COST)
+        const creditsHeldByOtherJobs = Math.max(0, allProviderCreditsHeld - AVATAR_CREDIT_COST)
         const availableBalance = Math.max(0, videoCreditBalance - creditsHeldByOtherJobs)
         return NextResponse.json(
           {

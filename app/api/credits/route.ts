@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('video_credits, free_ai_generate_used, plan')
+      .select('video_credits, plan')
       .eq('id', user.id)
       .single()
 
@@ -120,8 +120,8 @@ export async function GET(req: Request) {
     }
 
     const credits = data?.video_credits ?? DEFAULT_CREDITS
-    // #384 — also surface whether the 1 free AI-Generate trial is still available,
-    // so the generator can label the AI card "1 free · watermark".
+    // Keep the retired flag true for compatibility with older cached clients:
+    // premium AI no longer has a free trial, so they must never unlock it.
     // #404 — surface the plan + per-engine flags so the generator can show the
     // right engine card unlocked: Starter→Fast, Creator→Seedance, Studio→Kling.
     const planVal = (data?.plan ?? 'free') as string
@@ -134,7 +134,7 @@ export async function GET(req: Request) {
       avatarCredits,
       // Face-app wave 1 — last approved face photo (avatar library).
       avatarFaceUrl,
-      freeAiUsed: data?.free_ai_generate_used === true,
+      freeAiUsed: true,
       // KINEO-WM-CHECKOUT-2026-07-07 — true once the user has paid (pack or plan);
       // drives hiding the post-render "remove watermark" upsell.
       hasPaid,

@@ -27,6 +27,8 @@ import { selectPersonaForScript } from '@/lib/narration/niche-mapping'
 // the trusted source /api/compose/status bills from (instead of the client's
 // ?quality / ?deducted query params). creditCostFor is the shared price table.
 import { creditCostFor } from '@/lib/credits/engineCost'
+import { inspectActiveComposeCreditHolds } from '@/lib/credits/composeHold'
+import { loadVerifiedCinematicClaim, type CinematicClaim } from '@/lib/cinematic/claim'
 import { recordRenderIntent } from '@/lib/credits/renderIntent'
 import {
   COMPOSE_CLAIM_EVENT,
@@ -66,6 +68,8 @@ const SUPPORTED_DURATIONS = [10, 30, 45, 50, 60, 90] as const
 // duration before we re-synthesize the TTS at an adjusted speed to pull it
 // back in line. ±3s matches the product tolerance.
 const DURATION_TOLERANCE_SECONDS = 3
+const FREE_FAST_PREVIEW_LIMIT = 3
+const FREE_FAST_WINDOW_MS = 24 * 60 * 60 * 1000
 // feature/ai-avatar — 'avatar' = premium talking-head render (VEED Fabric).
 // Checkpoint 1: no credit cost wired yet (billing lands in checkpoint 2).
 // KINEO-HOLLYWOOD-2026-07-09 — 'cinematic_hollywood' added (per-scene engines,
@@ -277,7 +281,7 @@ export async function POST(req: NextRequest) {
         ? requestedDuration
         : 45
 
-    const quality: Quality = ((): Quality => {
+    let quality: Quality = ((): Quality => {
       const q = (body.quality ?? 'basic_ai').toString()
       // Push #315 — added cinematic_ai for fal.ai Wan 2.1 mode (3 credits).
       // feature/ai-avatar — 'avatar' accepted ONLY when the request actually
@@ -314,8 +318,68 @@ export async function POST(req: NextRequest) {
     const composeAdmin: SupabaseClient = createAdminClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
+    let cinematicBirthClaim: CinematicClaim | null = null
+    const cinematicClaimLoad = await loadVerifiedCinematicClaim({
+      db: composeAdmin,
+      secret: serviceRoleKey,
+      userId: authenticatedUserId,
+      generationId,
+    })
+    if (!cinematicClaimLoad.ok) {
+      console.error('[compose] cinematic birth lookup failed:', cinematicClaimLoad.error)
+      return NextResponse.json(
+        { error: 'AI clip ownership could not be verified. Nothing was submitted.' },
+        { status: 503 },
+      )
+    }
+    cinematicBirthClaim = cinematicClaimLoad.claim
+    const cinematicQualities = new Set<Quality>([
+      'cinematic_ai', 'cinematic_kling', 'cinematic_veo',
+      'cinematic_sora', 'cinematic_hollywood',
+    ])
+    const clientRequestedCinematic = cinematicQualities.has(quality)
+    if (cinematicBirthClaim) {
+      if (cinematicBirthClaim.status !== 'settled') {
+        return NextResponse.json(
+          { error: 'Your AI scenes are still being finalized.', pending: true, retry_after_ms: 2500 },
+          { status: 409 },
+        )
+      }
+      const trustedQuality = cinematicBirthClaim.quality as Quality
+      const authorizedUrls = cinematicBirthClaim.authorizedCompletedUrls
+        .filter((url): url is string => typeof url === 'string' && url.length > 0)
+      const inputsMatch =
+        authorizedUrls.length === clipUrls.length &&
+        authorizedUrls.every((url, index) => url === clipUrls[index])
+      if (
+        !cinematicQualities.has(trustedQuality) || quality !== trustedQuality ||
+        cinematicBirthClaim.creditCost !== creditCostFor(trustedQuality, true) ||
+        !inputsMatch
+      ) {
+        return NextResponse.json(
+          { error: 'These AI clips do not match their signed generation.' },
+          { status: 400 },
+        )
+      }
+      quality = trustedQuality
+    } else if (clientRequestedCinematic) {
+      return NextResponse.json(
+        { error: 'These premium AI clips are missing their signed generation.' },
+        { status: 400 },
+      )
+    } else if (
+      quality === 'fast' &&
+      clipUrls.some((url) => /^https:\/\/([a-z0-9-]+\.)*fal\.(media|run|ai)\//i.test(url))
+    ) {
+      return NextResponse.json(
+        { error: 'AI-generated clips cannot be submitted as Fast footage.' },
+        { status: 400 },
+      )
+    }
+    const cinematicUpstreamDebited = cinematicBirthClaim?.status === 'settled'
     const claimId = composeClaimId(authenticatedUserId, generationId)
     let ownsSubmissionClaim = false
+    let submissionClaimIsCreditHold = false
 
     const replayOrPending = (renderId: string): NextResponse => {
       if (!renderId || renderId.startsWith('pending:')) {
@@ -355,6 +419,7 @@ export async function POST(req: NextRequest) {
       const renderId = typeof metadata.render_id === 'string' ? metadata.render_id.trim() : ''
       const claimStatus = metadata.status === 'done' ? 'done' : metadata.status === 'pending' ? 'pending' : null
       const claimCost = typeof metadata.cost === 'number' && Number.isFinite(metadata.cost) ? metadata.cost : null
+      const claimIsCreditHold = metadata.credit_hold === true
       const claimGenerationId = typeof metadata.generation_id === 'string' ? metadata.generation_id : ''
       const claimQuality = typeof metadata.quality === 'string' ? metadata.quality : ''
       if (
@@ -373,6 +438,40 @@ export async function POST(req: NextRequest) {
         return unavailableClaimResponse()
       }
       if (!renderId) {
+        // Recover a provider id that was durably linked in broll_metrics even
+        // if the final claim metadata write was interrupted. This closes the
+        // cold-instance replay gap without ever issuing another provider POST.
+        const { data: linkedMetric, error: linkedMetricError } = await composeAdmin
+          .from('broll_metrics')
+          .select('render_id')
+          .eq('generation_id', generationId)
+          .eq('user_id', authenticatedUserId)
+          .maybeSingle()
+        if (!linkedMetricError) {
+          const linkedRenderId = typeof linkedMetric?.render_id === 'string'
+            ? linkedMetric.render_id.trim()
+            : ''
+          if (linkedRenderId && linkedRenderId.length <= 160) {
+            const intentStored = await recordRenderIntent({
+              renderId: linkedRenderId,
+              userId: authenticatedUserId,
+              quality,
+              cost: claimCost,
+            })
+            const claimStored = await completeGenerationClaim(
+              linkedRenderId,
+              claimCost,
+              true,
+              claimIsCreditHold,
+            )
+            if (cinematicUpstreamDebited ? claimStored : (intentStored || claimStored)) {
+              return replayOrPending(linkedRenderId)
+            }
+          }
+        } else {
+          console.warn('[compose] pending-claim recovery lookup failed:', linkedMetricError.message)
+        }
+
         // If this retry lands on the same warm instance after the provider POST
         // succeeded but our DB publication failed, recover from the collapsed
         // promise and durably publish it now. Never issue another provider POST.
@@ -387,8 +486,10 @@ export async function POST(req: NextRequest) {
               quality,
               cost: cachedCost,
             })
-            const claimStored = await completeGenerationClaim(cachedRenderId, cachedCost, true)
-            if (intentStored || claimStored) return replayOrPending(cachedRenderId)
+            const claimStored = await completeGenerationClaim(cachedRenderId, cachedCost, true, claimIsCreditHold)
+            if (cinematicUpstreamDebited ? claimStored : (intentStored || claimStored)) {
+              return replayOrPending(cachedRenderId)
+            }
           } catch {
             // Ambiguous cached failures remain pending and are never re-posted.
           }
@@ -436,7 +537,7 @@ export async function POST(req: NextRequest) {
       console.warn('[compose] legacy broll replay lookup threw:', legacyLookupError instanceof Error ? legacyLookupError.message : String(legacyLookupError))
     }
 
-    async function claimGenerationSubmission(cost: number): Promise<SubmissionClaimResult> {
+    async function claimGenerationSubmission(cost: number, creditHold = false): Promise<SubmissionClaimResult> {
       const { error: claimError } = await composeAdmin.from('events').insert({
         id: claimId,
         user_id: authenticatedUserId,
@@ -446,9 +547,10 @@ export async function POST(req: NextRequest) {
         metadata: {
           generation_id: generationId,
           status: 'pending',
-          quality,
-          cost,
-          duration,
+           quality,
+           cost,
+           credit_hold: creditHold,
+           duration,
           authority: signComposeClaim(serviceRoleKey, {
             claimId,
             userId: authenticatedUserId,
@@ -461,6 +563,7 @@ export async function POST(req: NextRequest) {
       })
       if (!claimError) {
         ownsSubmissionClaim = true
+        submissionClaimIsCreditHold = creditHold
         return { kind: 'acquired' }
       }
       if ((claimError as { code?: string }).code !== '23505') {
@@ -492,9 +595,15 @@ export async function POST(req: NextRequest) {
         return
       }
       ownsSubmissionClaim = false
+      submissionClaimIsCreditHold = false
     }
 
-    async function completeGenerationClaim(renderId: string, cost: number, recoverExisting = false): Promise<boolean> {
+    async function completeGenerationClaim(
+      renderId: string,
+      cost: number,
+      recoverExisting = false,
+      creditHold = submissionClaimIsCreditHold,
+    ): Promise<boolean> {
       if (!ownsSubmissionClaim && !recoverExisting) return false
       const metadata = {
         generation_id: generationId,
@@ -502,6 +611,7 @@ export async function POST(req: NextRequest) {
         render_id: renderId,
         quality,
         cost,
+        credit_hold: creditHold,
         duration,
         completed_at: new Date().toISOString(),
         authority: signComposeClaim(serviceRoleKey, {
@@ -526,6 +636,7 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
         if (!completeError && completed?.id === claimId) {
           ownsSubmissionClaim = false
+          submissionClaimIsCreditHold = false
           return true
         }
         lastError = completeError?.message ?? 'claim row missing'
@@ -534,6 +645,165 @@ export async function POST(req: NextRequest) {
       // the warm-instance cache can replay it. Never release/re-POST here.
       console.error(`[compose] accepted render claim completion failed id=${claimId}: ${lastError}`)
       return false
+    }
+
+    async function rejectBeforeProviderSubmission(response: NextResponse): Promise<NextResponse> {
+      // Free Fast reserves its distributed claim before any paid TTS/render work
+      // so parallel generation ids cannot all pass the daily limit. Explicit
+      // local validation/provider-rejection failures release that reservation.
+      await releaseGenerationClaim()
+      return response
+    }
+
+    async function reserveFreeFastPreviewSlot(): Promise<NextResponse | null> {
+      // `videos` is written only after the client polls a successful render, so
+      // it cannot serialize concurrent submissions. Reserve this generation in
+      // the existing events PK mutex first, then audit the rolling window. Each
+      // concurrent request commits its own unique claim before it counts; at
+      // most FREE_FAST_PREVIEW_LIMIT claims can observe a count within quota.
+      const reservation = await claimGenerationSubmission(0)
+      if (reservation.kind !== 'acquired') return reservation.response
+
+      const since = new Date(Date.now() - FREE_FAST_WINDOW_MS).toISOString()
+      const [claimsResult, videosResult] = await Promise.all([
+        composeAdmin
+          .from('events')
+          .select('id,metadata')
+          .eq('user_id', authenticatedUserId)
+          .eq('name', COMPOSE_CLAIM_EVENT)
+          .eq('path', COMPOSE_CLAIM_PATH)
+          .eq('metadata->>quality', 'fast')
+          .eq('metadata->>cost', '0')
+          .gte('created_at', since),
+        composeAdmin
+          .from('videos')
+          .select('id,render_id,quality_mode,credits_used')
+          .eq('user_id', authenticatedUserId)
+          .eq('quality_mode', 'fast')
+          .eq('credits_used', 0)
+          .gte('created_at', since),
+      ])
+
+      if (claimsResult.error || videosResult.error) {
+        console.error('[compose] free Fast quota audit failed:',
+          claimsResult.error?.message ?? videosResult.error?.message ?? 'unknown database error')
+        await releaseGenerationClaim()
+        return NextResponse.json(
+          { error: 'Free preview limit could not be verified. Nothing was submitted. Please retry.' },
+          { status: 503 },
+        )
+      }
+
+      const claimRows = Array.isArray(claimsResult.data)
+        ? claimsResult.data as Array<{ id?: unknown; metadata?: unknown }>
+        : []
+      const claimedRenderIds = new Set<string>()
+      for (const row of claimRows) {
+        const metadata = row.metadata && typeof row.metadata === 'object'
+          ? row.metadata as Record<string, unknown>
+          : {}
+        const renderId = typeof metadata.render_id === 'string' ? metadata.render_id.trim() : ''
+        if (renderId) claimedRenderIds.add(renderId)
+      }
+
+      // Preserve pre-PUSH19 Fast previews that have a videos row but no claim.
+      // New completed renders have both records and are counted once by render_id.
+      const unmatchedVideoIds = new Set<string>()
+      const videoRows = Array.isArray(videosResult.data)
+        ? videosResult.data as Array<{ id?: unknown; render_id?: unknown }>
+        : []
+      for (const row of videoRows) {
+        const renderId = typeof row.render_id === 'string' ? row.render_id.trim() : ''
+        if (renderId && claimedRenderIds.has(renderId)) continue
+        if (typeof row.id === 'string' && row.id) unmatchedVideoIds.add(row.id)
+      }
+
+      const reservedOrCompleted = claimRows.length + unmatchedVideoIds.size
+      if (reservedOrCompleted > FREE_FAST_PREVIEW_LIMIT) {
+        await releaseGenerationClaim()
+        return NextResponse.json(
+          {
+            error: "You've hit today's free limit (3 Fast previews). Keep creating with Starter for $4.90 your first month, then $9.90/month. Cancel anytime.",
+            upsell: 'credits',
+            outOfCredits: true,
+            upgrade: '/pricing',
+          },
+          { status: 402 },
+        )
+      }
+
+      console.log(`[compose] free Fast quota reserved: ${reservedOrCompleted}/${FREE_FAST_PREVIEW_LIMIT} in rolling 24h`)
+      return null
+    }
+
+    async function reservePaidCreditSlot(cost: number): Promise<NextResponse | null> {
+      if (!Number.isInteger(cost) || cost <= 0 || cost > 1000) {
+        return NextResponse.json(
+          { error: 'This engine cost could not be verified. Nothing was submitted.' },
+          { status: 503 },
+        )
+      }
+
+      // The deterministic event claim is both the provider idempotency mutex and
+      // the credit hold. It must exist before TTS/Whisper/Creatomate so parallel
+      // generation ids cannot all spend the same balance.
+      const reservation = await claimGenerationSubmission(cost, true)
+      if (reservation.kind !== 'acquired') return reservation.response
+
+      const holds = await inspectActiveComposeCreditHolds({
+        db: composeAdmin,
+        secret: serviceRoleKey,
+        userId: authenticatedUserId,
+        currentClaimId: claimId,
+      })
+      if (!holds.ok || !holds.currentSeen) {
+        console.error('[compose-hold] admission audit failed:', holds.ok ? 'current claim missing' : holds.error)
+        await releaseGenerationClaim()
+        return NextResponse.json(
+          { error: 'Your credit reservation could not be verified. Nothing was submitted. Please retry.' },
+          { status: 503 },
+        )
+      }
+
+      const { data: creditProfile, error: creditProfileError } = await composeAdmin
+        .from('profiles')
+        .select('video_credits,plan,has_paid')
+        .eq('id', authenticatedUserId)
+        .single()
+      if (creditProfileError || typeof creditProfile?.video_credits !== 'number') {
+        console.error('[compose-hold] balance lookup failed:', creditProfileError?.message ?? 'invalid balance')
+        await releaseGenerationClaim()
+        return NextResponse.json(
+          { error: 'Your credit balance could not be verified. Nothing was submitted. Please retry.' },
+          { status: 503 },
+        )
+      }
+
+      const balance = Math.max(0, creditProfile.video_credits)
+      const plan = String(creditProfile.plan ?? 'free').toLowerCase()
+      const paidPlans = new Set([
+        'starter', 'starter_trial', 'basic', 'basic_trial',
+        'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
+      ])
+      const hasPaidEntitlement = paidPlans.has(plan) || creditProfile.has_paid === true
+      const heldByOtherJobs = Math.max(0, holds.totalHeld - cost)
+      const availableBalance = Math.max(0, balance - heldByOtherJobs)
+      if (!hasPaidEntitlement || holds.totalHeld > balance) {
+        await releaseGenerationClaim()
+        return NextResponse.json(
+          {
+            error: !hasPaidEntitlement
+              ? 'Clean and premium exports require a paid plan.'
+              : `This export needs ${cost} credit${cost === 1 ? '' : 's'}. ${heldByOtherJobs > 0 ? 'Your active renders already reserve part of your balance. ' : ''}You have ${availableBalance} available.`,
+            outOfCredits: hasPaidEntitlement,
+            upgrade: '/pricing',
+          },
+          { status: 402 },
+        )
+      }
+
+      console.log(`[compose-hold] reserved ${cost} credits; active=${holds.totalHeld}/${balance}`)
+      return null
     }
 
     // Phase 1 Narration Engine — content vertical from analyze-idea (e.g. 'mystery',
@@ -584,90 +854,89 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // #384 — FREE AI-GENERATE TRIAL: watermark decision is computed SERVER-SIDE
-    // from the DB profile (never trusts the client). A render is the free trial
-    // ONLY when: AI mode AND the user has NOT used their free AI yet AND they
-    // do NOT have enough credits to pay the 30-credit price. So anyone PAYING
-    // (>= 30 credits) NEVER gets a watermark — guaranteed here, server-side.
-    // The quota flag itself is flipped on SUCCESS in /api/compose/status.
-    // Push #430 — welcome credits (30 on signup) let FREE-plan users reach the
-    // paid AI path with a full balance, which used to skip the watermark. Rule
-    // now: ANY AI video from a free-plan account is watermarked. Clean video =
-    // paid plan. Fast videos stay watermark-free on every plan.
-    // Push #434 — Fast Mode is now FREE + unlimited as a growth engine. To make
-    // every free Fast video market the product, free-plan Fast renders carry the
-    // watermark (clean Fast = paid plan). Same rule already applies to AI videos.
-    let isFreeAiTrial = false
-    let isFreePlanAi = false
+    // PUSH #20 — one entitlement truth, resolved server-side. Never-paid free
+    // accounts get up to 3 watermarked Fast videos / rolling 24h. Active plans
+    // and prior buyers with remaining credits get clean exports and pay the
+    // documented credit cost. Premium AI has no free trial.
     let isFreePlanFast = false
     let withEndCard = false
     if (quality === 'cinematic_ai' || quality === 'fast') {
-      const { data: prof } = await supabase
+      const { data: prof, error: profileAccessError } = await supabase
         .from('profiles')
-        .select('free_ai_generate_used, video_credits, plan, has_paid')
+        .select('video_credits, plan, has_paid')
         .eq('id', user.id)
         .single()
+      if (profileAccessError) {
+        console.error('[compose] entitlement lookup failed:', profileAccessError.message)
+        return NextResponse.json(
+          { error: 'Your video access could not be verified. Nothing was submitted. Please retry.' },
+          { status: 503 },
+        )
+      }
       const PAID_PLANS = new Set([
         'starter', 'starter_trial', 'basic', 'basic_trial',
         'pro', 'pro_trial', 'creator', 'creator_trial', 'studio', 'studio_trial',
       ])
       const isFreePlan = !PAID_PLANS.has((prof?.plan ?? 'free').toLowerCase())
-      // KINEO-PACK-NOWM-2026-07-06 — the Starter Pack ($4.90) sells watermark-FREE
-      // Fast. A pack buyer stays on the 'free' plan, so we key clean output off a
-      // has_paid flag (set true by the Stripe/PayPal webhook on ANY purchase).
-      // Defensive: undefined column → false → current behavior (free = watermark).
       const hasPaid = (prof as { has_paid?: boolean } | null)?.has_paid === true
+      const creditBalance = Math.max(0, Number(prof?.video_credits ?? 0))
+      const hasPaidCreditAccess = !isFreePlan || (hasPaid && creditBalance > 0)
 
-      // KINEO-ZERO-SIGNUP-2026-07-09 — InVideo model: Fast renders are FREE for
-      // everyone (no credit wall). New signups get 0 credits; they can generate
-      // and WATCH Fast videos (watermarked), and monetization happens at the
-      // DOWNLOAD moment ($4.90 unlock — KINEO-DL-PAYWALL-2026-07-09) or via
-      // plans. The old KINEO-FAST-1CR 402 wall was removed here: blocking the
-      // render killed the "wow" moment before the user ever saw their video.
-      //
-      // ABUSE GUARD (same push) — free Fast costs us ~$0.02-0.05/render
-      // (Creatomate + TTS), so an unlimited free tier invites bot abuse. Rule:
-      // users who NEVER paid get 3 Fast renders per rolling 24h; ANY payment
-      // (pack or plan) lifts the cap. 3/day is enough to fall in love with the
-      // product and doubles as one more nudge toward the $4.90 unlock.
-      if (quality === 'fast' && isFreePlan && !hasPaid) {
-        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        const { count, error: cntErr } = await supabase
-          .from('videos')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .gte('created_at', since)
-        // Defensive: if the count query fails, let the render through — never
-        // block a legit user because of a transient DB blip.
-        if (!cntErr && (count ?? 0) >= 3) {
+      if (quality === 'cinematic_ai') {
+        const requiredCredits = creditCostFor('cinematic_ai', true)
+        if (!hasPaidCreditAccess) {
+          return NextResponse.json(
+            { error: 'AI Generated videos are available on paid plans. Upgrade to continue.', upgrade: '/pricing' },
+            { status: 402 },
+          )
+        }
+        if (!cinematicUpstreamDebited && creditBalance < requiredCredits) {
           return NextResponse.json(
             {
-              error: "You've hit today's free limit (3 videos). Keep creating with Starter for $4.90 your first month, then $9.90/month. Cancel anytime.",
-              upsell: 'credits',
+              error: `AI Generated needs ${requiredCredits} credits. You have ${creditBalance}.`,
               outOfCredits: true,
               upgrade: '/pricing',
             },
             { status: 402 },
           )
         }
-      }
-      // #482 — end card (Option A): free + Starter get the "Made with
-      // ShortsForgeAI" end card so every posted video advertises the product.
-      // Clean on Creator/Studio (they're not free and not in STARTER_PLANS).
-      const STARTER_PLANS = new Set(['starter', 'starter_trial', 'basic', 'basic_trial'])
-      const isStarterPlan = STARTER_PLANS.has((prof?.plan ?? 'free').toLowerCase())
-      withEndCard = isFreePlan || isStarterPlan
-      if (quality === 'cinematic_ai') {
-        const used = prof?.free_ai_generate_used === true
-        const creds = prof?.video_credits ?? 0
-        isFreeAiTrial = !used && creds < 30
-        isFreePlanAi = isFreePlan
       } else {
         // quality === 'fast'
-        // KINEO-PACK-NOWM-2026-07-06 — free-plan Fast is watermarked UNLESS the
-        // user has paid (pack or plan). Pack buyers get clean Fast — the whole
-        // point of the $4.90 pack vs the free tier.
         isFreePlanFast = isFreePlan && !hasPaid
+        if (isFreePlanFast) {
+          // The downloadable watermark + end card are the organic distribution
+          // loop. Paid Starter/Creator/Studio and pack-credit renders stay clean.
+          withEndCard = true
+          const quotaResponse = await reserveFreeFastPreviewSlot()
+          if (quotaResponse) return quotaResponse
+        } else {
+          const requiredCredits = creditCostFor('fast', true)
+          if (creditBalance < requiredCredits) {
+            return NextResponse.json(
+              {
+                error: `Fast needs ${requiredCredits} credit. You have ${creditBalance}. Upgrade or renew to keep creating clean exports.`,
+                outOfCredits: true,
+                upgrade: '/pricing',
+              },
+              { status: 402 },
+            )
+          }
+        }
+      }
+    }
+
+    const isCreditBilledQuality =
+      quality === 'cinematic_ai' || quality === 'cinematic_kling' ||
+      quality === 'cinematic_veo' || quality === 'cinematic_sora' ||
+      quality === 'cinematic_hollywood' || quality === 'avatar' ||
+      quality === 'presenter' || (quality === 'fast' && !isFreePlanFast)
+    if (isCreditBilledQuality && !ownsSubmissionClaim) {
+      if (cinematicUpstreamDebited) {
+        const prepaidReservation = await claimGenerationSubmission(creditCostFor(quality, true), false)
+        if (prepaidReservation.kind !== 'acquired') return prepaidReservation.response
+      } else {
+        const paidReservation = await reservePaidCreditSlot(creditCostFor(quality, true))
+        if (paidReservation) return paidReservation
       }
     }
 
@@ -683,10 +952,14 @@ export async function POST(req: NextRequest) {
       const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
       const falCdn = /^https:\/\/([a-z0-9-]+\.)*fal\.(media|run|ai)\//i
       if (!voiceoverUrlBody.startsWith(storagePrefix)) {
-        return NextResponse.json({ error: 'Invalid voiceover for avatar render.' }, { status: 400 })
+        return rejectBeforeProviderSubmission(
+          NextResponse.json({ error: 'Invalid voiceover for avatar render.' }, { status: 400 }),
+        )
       }
       if (!falCdn.test(avatarUrlBody) && !avatarUrlBody.startsWith(storagePrefix)) {
-        return NextResponse.json({ error: 'Invalid avatar video URL.' }, { status: 400 })
+        return rejectBeforeProviderSubmission(
+          NextResponse.json({ error: 'Invalid avatar video URL.' }, { status: 400 }),
+        )
       }
     }
 
@@ -699,7 +972,9 @@ export async function POST(req: NextRequest) {
     if (hasUserVoice) {
       const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
       if (!userVoiceUrlBody.startsWith(storagePrefix)) {
-        return NextResponse.json({ error: 'Invalid voiceover URL.' }, { status: 400 })
+        return rejectBeforeProviderSubmission(
+          NextResponse.json({ error: 'Invalid voiceover URL.' }, { status: 400 }),
+        )
       }
     }
     // The pre-existing audio file (avatar lip-synced mp3 OR user upload).
@@ -887,13 +1162,17 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error('[compose] hollywood source build failed:', msg)
-        return NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 })
+        return rejectBeforeProviderSubmission(
+          NextResponse.json({ error: `Could not assemble the render: ${msg}` }, { status: 500 }),
+        )
       }
 
       // Submit once per authenticated generation. Retrying a provider POST
       // after an ambiguous response can create and charge two render jobs.
       const hollywoodCost = creditCostFor(quality)
-      const hollywoodClaim = await claimGenerationSubmission(hollywoodCost)
+      const hollywoodClaim: SubmissionClaimResult = ownsSubmissionClaim
+        ? { kind: 'acquired' }
+        : await claimGenerationSubmission(hollywoodCost)
       if (hollywoodClaim.kind !== 'acquired') return hollywoodClaim.response
       let hollywoodRenderId: string
       try {
@@ -940,7 +1219,10 @@ export async function POST(req: NextRequest) {
       // Publish the accepted render only after its server-side billing intent
       // exists, so a cross-instance replay cannot race ahead of that record.
       const hollywoodClaimStored = await completeGenerationClaim(hollywoodRenderId, hollywoodCost)
-      if (!hollywoodIntentStored && !hollywoodClaimStored) {
+      if (
+        (!hollywoodIntentStored && !hollywoodClaimStored) ||
+        (cinematicUpstreamDebited && !hollywoodClaimStored)
+      ) {
         return NextResponse.json(
           { error: 'Your render was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
           { status: 503 },
@@ -1010,7 +1292,9 @@ export async function POST(req: NextRequest) {
       // Level A hard requirement: a USER voiceover that can't be fetched must
       // fail loudly (there is no TTS to fall back to — the audio IS the video).
       if (hasUserVoice && (!audioBuffer || audioBuffer.length === 0)) {
-        return NextResponse.json({ error: 'Could not load your voiceover file. Please re-upload it.' }, { status: 502 })
+        return rejectBeforeProviderSubmission(
+          NextResponse.json({ error: 'Could not load your voiceover file. Please re-upload it.' }, { status: 502 }),
+        )
       }
     } else {
       console.log(
@@ -1052,17 +1336,21 @@ export async function POST(req: NextRequest) {
         console.error('[compose] TTS failed:', err instanceof Error
           ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
           : String(err))
-        return NextResponse.json(
-          { error: 'Voiceover generation failed. Please try again.' },
-          { status: 502 }
+        return rejectBeforeProviderSubmission(
+          NextResponse.json(
+            { error: 'Voiceover generation failed. Please try again.' },
+            { status: 502 },
+          ),
         )
       }
 
       if (!audioBuffer || audioBuffer.length === 0) {
         console.error('[compose] TTS produced an empty buffer — refusing to upload.')
-        return NextResponse.json(
-          { error: 'Voiceover generation returned no audio. Please try again.' },
-          { status: 502 }
+        return rejectBeforeProviderSubmission(
+          NextResponse.json(
+            { error: 'Voiceover generation returned no audio. Please try again.' },
+            { status: 502 },
+          ),
         )
       }
     }
@@ -1174,9 +1462,11 @@ export async function POST(req: NextRequest) {
       console.error('[compose] voiceover upload failed:', err instanceof Error
         ? JSON.stringify({ name: err.name, message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') })
         : String(err))
-      return NextResponse.json(
-        { error: 'Could not store the voiceover. Please try again.' },
-        { status: 502 }
+      return rejectBeforeProviderSubmission(
+        NextResponse.json(
+          { error: 'Could not store the voiceover. Please try again.' },
+          { status: 502 },
+        ),
       )
     }
     const voiceoverUrl: string = uploadResult.url
@@ -1244,12 +1534,10 @@ export async function POST(req: NextRequest) {
             ? body.avatar_hook_seconds
             : null,
         watermark:
-          isFreeAiTrial ||
-          isFreePlanAi ||
           isFreePlanFast ||
           FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase()), // #434 — Joseph's self-promo accounts always watermarked
-        // #482 — end card on free + Starter; also on Joseph's own self-promo
-        // accounts so his daily content advertises the product.
+        // Free growth-loop videos and Joseph's self-promo accounts carry the
+        // end card. Every paid export is clean.
         endCard:
           withEndCard ||
           FORCE_WATERMARK_EMAILS.has((user.email ?? '').toLowerCase()),
@@ -1257,9 +1545,11 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[compose] source build failed:', msg)
-      return NextResponse.json(
-        { error: `Could not assemble the render: ${msg}` },
-        { status: 500 }
+      return rejectBeforeProviderSubmission(
+        NextResponse.json(
+          { error: `Could not assemble the render: ${msg}` },
+          { status: 500 },
+        ),
       )
     }
 
@@ -1267,7 +1557,9 @@ export async function POST(req: NextRequest) {
     // provider has no documented idempotency key, so a blind retry after an
     // ambiguous response can create and charge two jobs.
     const intendedCost = creditCostFor(quality, quality === 'fast' ? !isFreePlanFast : false)
-    const claim = await claimGenerationSubmission(intendedCost)
+    const claim: SubmissionClaimResult = ownsSubmissionClaim
+      ? { kind: 'acquired' }
+      : await claimGenerationSubmission(intendedCost)
     if (claim.kind !== 'acquired') return claim.response
     let renderId: string
     try {
@@ -1335,7 +1627,7 @@ export async function POST(req: NextRequest) {
       cost: intendedCost,
     })
     const claimStored = await completeGenerationClaim(renderId, intendedCost)
-    if (!intentStored && !claimStored) {
+    if ((!intentStored && !claimStored) || (cinematicUpstreamDebited && !claimStored)) {
       return NextResponse.json(
         { error: 'Your render was accepted and is being recovered safely.', pending: true, retry_after_ms: 5000 },
         { status: 503 },

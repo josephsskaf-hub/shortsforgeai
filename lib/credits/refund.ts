@@ -69,6 +69,9 @@ export async function refundRenderCredits(renderId: string): Promise<number> {
  *   gesture-% — KINEO-GESTURE-2026-07-10: transparent gesture clips never
  *               persist to `videos` (the WebM IS the product, no compose).
  *               Their failures are refunded live by /api/gesture-clip-status.
+ *   cinematic-% — cinematic birth jobs debit before authenticated Fal polling;
+ *                 their final video uses a different Creatomate render id.
+ *                 Terminal Fal/Compose failures refund this key live.
  */
 export async function sweepStuckRenderDebits(): Promise<{
   scanned: number
@@ -91,6 +94,7 @@ export async function sweepStuckRenderDebits(): Promise<{
     // KINEO-GESTURE-2026-07-10 — success = no videos row (normal); live
     // failure refunds happen in /api/gesture-clip-status.
     .not('render_id', 'like', 'gesture-%')
+    .not('render_id', 'like', 'cinematic-%')
     .order('created_at', { ascending: false })
     .limit(200)
 
