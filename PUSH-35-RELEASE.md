@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** pronto para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -51,9 +51,24 @@
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
-- Validação em produção: pendente.
+- Commit: `d14449a` (`PUSH #35 turn indexed ideas into first videos`).
+- Deploy Vercel: `dpl_GmtoE5gHFTATyQ9o4PvBxrToJStp` — `READY`.
+- Domínio validado: `https://www.usekineo.com/faceless-channel-ideas`.
+- Formulário e três exemplos renderizados na primeira dobra.
+- Exatamente 50 CTAs de ideia encontrados no DOM; 50/50 preservam `prompt` e `intent_campaign=push35_faceless_idea`.
+- Selecionar um exemplo atualiza corretamente o campo sem navegar ou criar vídeo.
+- Zero erros ou warnings no console durante a validação.
+- O único `landing_session_started` registrado entre o deploy e o baseline foi a visita de QA conhecida; ele fica antes do marco de medição e não entra nos resultados.
+
+## Baseline pós-QA
+
+Fixado em **16/07/2026 às 22:27 BRT** (`2026-07-17T01:27:08Z`).
+
+- novos perfis externos: 0;
+- vídeos externos: 0;
+- sessões Stripe recorrentes externas: 0;
+- assinantes externos `active`/`trialing`: 0/10;
+- códigos Lote 1 ativos/resgates: 4/0.
 
 ## Medição
 
