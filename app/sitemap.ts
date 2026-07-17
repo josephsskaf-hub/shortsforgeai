@@ -10,12 +10,13 @@ import { PUBLIC_EXAMPLES } from '@/lib/publicExamples'
 const BASE = 'https://www.usekineo.com'
 // Advance this only when the public acquisition cluster materially changes.
 // Using the request time for every URL makes lastModified meaningless.
-const LAST_MODIFIED = new Date('2026-07-16T00:00:00.000Z')
+const LAST_MODIFIED = new Date('2026-07-17T00:00:00.000Z')
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes: { path: string; priority: number; freq: 'daily' | 'weekly' | 'monthly' }[] = [
     { path: '', priority: 1.0, freq: 'daily' },
     { path: '/pricing', priority: 0.9, freq: 'weekly' },
+    { path: '/viral-now', priority: 0.9, freq: 'daily' },
     { path: '/pt', priority: 0.9, freq: 'weekly' },
     { path: '/free-script-generator', priority: 0.8, freq: 'weekly' },
     { path: '/free-hook-generator', priority: 0.8, freq: 'weekly' },
