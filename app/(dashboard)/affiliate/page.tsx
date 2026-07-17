@@ -6,6 +6,7 @@
 // /admin/funnel. Amounts arrive in CENTS and are divided by 100 for display.
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface Commission {
   created_at: string | null
@@ -88,6 +89,7 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
 export default function AffiliatePage() {
   const [data, setData] = useState<AffiliateMe | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authRequired, setAuthRequired] = useState(false)
   const [applying, setApplying] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -97,6 +99,9 @@ export default function AffiliatePage() {
       if (res.ok) {
         const json = (await res.json()) as AffiliateMe
         setData(json)
+        setAuthRequired(false)
+      } else if (res.status === 401) {
+        setAuthRequired(true)
       }
     } catch {
       /* silent */
@@ -113,11 +118,15 @@ export default function AffiliatePage() {
   async function apply() {
     setApplying(true)
     try {
-      await fetch('/api/affiliate/apply', {
+      const response = await fetch('/api/affiliate/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       })
+      if (response.status === 401) {
+        setAuthRequired(true)
+        return
+      }
       await load()
     } catch {
       /* silent */
@@ -143,6 +152,35 @@ export default function AffiliatePage() {
     return (
       <div className={wrap}>
         <div className="rounded-2xl" style={{ background: CARD, border: BORDER, height: 180 }} />
+      </div>
+    )
+  }
+
+  if (authRequired) {
+    return (
+      <div className={wrap}>
+        <div
+          className="rounded-2xl p-8 text-center"
+          style={{ background: CARD, border: '1px solid rgba(41,151,255,.28)' }}
+        >
+          <div className="text-5xl mb-4">🤝</div>
+          <h1 className="font-black tracking-tight mb-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', color: TEXT }}>
+            Sign in before applying
+          </h1>
+          <p className="text-sm mb-6 mx-auto" style={{ color: MUTED, maxWidth: 460, lineHeight: 1.6 }}>
+            Your Kineo account owns the affiliate link, dashboard and recurring commission history.
+          </p>
+          <Link
+            href="/signup?redirect=%2Faffiliate&utm_source=affiliate_dashboard&utm_medium=organic&utm_campaign=push33_partner_program"
+            className="inline-block rounded-xl px-7 py-3 text-sm font-black text-white"
+            style={{ background: 'linear-gradient(135deg, #2997ff, #2997ff)', textDecoration: 'none' }}
+          >
+            Create account and continue →
+          </Link>
+          <div className="mt-3 text-xs" style={{ color: MUTED }}>
+            Already have an account? <Link href="/login?redirect=%2Faffiliate" style={{ color: CYAN }}>Sign in</Link>
+          </div>
+        </div>
       </div>
     )
   }

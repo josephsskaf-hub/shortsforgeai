@@ -27,15 +27,28 @@ export default function ReferralAutoTrigger() {
         // Attribute once: if the visitor arrived via ?ref=CODE (captured into
         // localStorage on the homepage), tie this account to the referrer.
         if (!attributedRef.current) {
-          attributedRef.current = true
           const ref = getStoredRef()
           if (ref) {
-            await fetch('/api/referral/attribute', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ref }),
-            }).catch(() => {})
-            clearStoredRef()
+            attributedRef.current = true
+            try {
+              const response = await fetch('/api/referral/attribute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ref }),
+              })
+              const result = (await response.json().catch(() => null)) as { ok?: boolean } | null
+              if (response.ok && result?.ok === true) {
+                // Clear only after the server proves the profile was actually
+                // attributed (or already had a first-touch referrer).
+                clearStoredRef()
+              } else {
+                // Profile creation/auth can briefly lag the first dashboard
+                // render. Keep the code and retry on the next navigation.
+                attributedRef.current = false
+              }
+            } catch {
+              attributedRef.current = false
+            }
           }
         }
         // Qualify on every route change. Idempotent + self-gating server-side:

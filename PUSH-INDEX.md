@@ -22,7 +22,8 @@
 - [PUSH #30](./PUSH-30-RELEASE.md)
 - [PUSH #31](./PUSH-31-RELEASE.md)
 - [PUSH #32](./PUSH-32-RELEASE.md) — publicado e validado
+- [PUSH #33](./PUSH-33-RELEASE.md) — em preparação
 
 ## Próximo número
 
-O próximo release novo será o **PUSH #33**, salvo se o PUSH #32 ainda precisar ser concluído ou corrigido.
+O próximo release novo será o **PUSH #34**, salvo se o PUSH #33 ainda precisar ser concluído ou corrigido.

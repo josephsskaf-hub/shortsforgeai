@@ -9,14 +9,16 @@
 // failure can never break the page. Mirrors the style of lib/analytics.ts.
 
 const REF_KEY = 'sf_ref'
+const REFERRAL_CODE = /^[A-HJ-NP-Z2-9]{8}$/
 
 export function captureRefOnce(): void {
   if (typeof window === 'undefined') return
   try {
     const raw = new URLSearchParams(window.location.search).get('ref')
-    const ref = (raw ?? '').trim()
-    if (!ref) return
-    if (localStorage.getItem(REF_KEY)) return // first-touch wins
+    const ref = (raw ?? '').trim().toUpperCase()
+    if (!REFERRAL_CODE.test(ref)) return
+    const existing = (localStorage.getItem(REF_KEY) ?? '').trim().toUpperCase()
+    if (REFERRAL_CODE.test(existing)) return // valid first-touch wins
     localStorage.setItem(REF_KEY, ref)
   } catch {
     /* localStorage may be unavailable — never break the page */
@@ -26,8 +28,10 @@ export function captureRefOnce(): void {
 export function getStoredRef(): string | null {
   if (typeof window === 'undefined') return null
   try {
-    const v = (localStorage.getItem(REF_KEY) ?? '').trim()
-    return v.length > 0 ? v : null
+    const v = (localStorage.getItem(REF_KEY) ?? '').trim().toUpperCase()
+    if (REFERRAL_CODE.test(v)) return v
+    if (v) localStorage.removeItem(REF_KEY)
+    return null
   } catch {
     return null
   }

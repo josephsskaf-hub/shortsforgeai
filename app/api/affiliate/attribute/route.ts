@@ -17,6 +17,9 @@ export async function POST() {
   try {
     const code = cookies().get(COOKIE)?.value?.trim().toUpperCase()
     if (!code) return NextResponse.json({ ok: false, reason: 'no_cookie' })
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) {
+      return NextResponse.json({ ok: false, reason: 'invalid_code' })
+    }
 
     const supabase = createClient()
     const {
@@ -30,20 +33,47 @@ export async function POST() {
       { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
-    // First-touch is permanent: if this user is already attributed, stop.
-    const { data: existing } = await admin
+    // First-touch is permanent. If the referral row exists but a previous
+    // request failed before stamping profiles.affiliate_id, repair the profile
+    // instead of leaving commissions permanently disconnected.
+    const { data: existing, error: existingError } = await admin
       .from('affiliate_referrals')
-      .select('id')
+      .select('id, affiliate_id')
       .eq('referred_user_id', user.id)
       .maybeSingle()
-    if (existing) return NextResponse.json({ ok: false, reason: 'already_attributed' })
+    if (existingError) {
+      console.error('[affiliate attribute] existing lookup error:', existingError.code, existingError.message)
+      return NextResponse.json({ ok: false, reason: 'lookup_failed' })
+    }
+
+    const stampProfile = async (affiliateId: string): Promise<boolean> => {
+      const { data: stamped, error } = await admin
+        .from('profiles')
+        .update({ affiliate_id: affiliateId })
+        .eq('id', user.id)
+        .select('id, affiliate_id')
+        .maybeSingle()
+      if (error) {
+        console.error('[affiliate attribute] profile stamp error:', error.code, error.message)
+        return false
+      }
+      return stamped?.id === user.id && stamped?.affiliate_id === affiliateId
+    }
+
+    if (existing?.affiliate_id) {
+      const repaired = await stampProfile(existing.affiliate_id)
+      return repaired
+        ? NextResponse.json({ ok: true, already: true })
+        : NextResponse.json({ ok: false, reason: 'profile_stamp_failed' })
+    }
 
     const { data: aff } = await admin
       .from('affiliates')
-      .select('id, user_id')
+      .select('id, user_id, status')
       .eq('code', code)
-      .single()
+      .maybeSingle()
     if (!aff) return NextResponse.json({ ok: false, reason: 'unknown_code' })
+    if (aff.status !== 'active') return NextResponse.json({ ok: false, reason: 'inactive_affiliate' })
 
     // No self-referral.
     if (aff.user_id && aff.user_id === user.id) {
@@ -51,19 +81,45 @@ export async function POST() {
     }
 
     // Idempotent insert — the unique(referred_user_id) constraint wins any race.
-    const { error: insErr } = await admin.from('affiliate_referrals').insert({
-      affiliate_id: aff.id,
-      referred_user_id: user.id,
-      email: user.email ?? null,
-      status: 'signup',
-    })
+    const { data: inserted, error: insErr } = await admin
+      .from('affiliate_referrals')
+      .insert({
+        affiliate_id: aff.id,
+        referred_user_id: user.id,
+        email: user.email ?? null,
+        status: 'signup',
+      })
+      .select('id, affiliate_id')
+      .maybeSingle()
     if (insErr && insErr.code !== '23505') {
       console.error('[affiliate attribute] insert error:', insErr.code, insErr.message)
       return NextResponse.json({ ok: false, reason: 'insert_failed' })
     }
 
-    // Stamp the profile so the Stripe webhook can find the affiliate in O(1).
-    await admin.from('profiles').update({ affiliate_id: aff.id }).eq('id', user.id)
+    // A concurrent request can win the unique(referred_user_id) race. Re-read
+    // the canonical row and stamp THAT affiliate, never the losing request's
+    // code, so first-touch remains deterministic.
+    let canonicalAffiliateId = inserted?.affiliate_id as string | undefined
+    if (!canonicalAffiliateId) {
+      const { data: canonical, error: canonicalError } = await admin
+        .from('affiliate_referrals')
+        .select('affiliate_id')
+        .eq('referred_user_id', user.id)
+        .maybeSingle()
+      if (canonicalError || !canonical?.affiliate_id) {
+        if (canonicalError) {
+          console.error('[affiliate attribute] race reconciliation error:', canonicalError.code, canonicalError.message)
+        }
+        return NextResponse.json({ ok: false, reason: 'reconciliation_failed' })
+      }
+      canonicalAffiliateId = canonical.affiliate_id
+    }
+
+    if (!canonicalAffiliateId) {
+      return NextResponse.json({ ok: false, reason: 'reconciliation_failed' })
+    }
+    const stamped = await stampProfile(canonicalAffiliateId)
+    if (!stamped) return NextResponse.json({ ok: false, reason: 'profile_stamp_failed' })
 
     return NextResponse.json({ ok: true })
   } catch (err) {
