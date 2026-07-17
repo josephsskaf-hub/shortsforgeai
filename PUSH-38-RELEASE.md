@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** pronto para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -67,9 +67,12 @@ Nenhum prompt, e-mail ou identificador pessoal é gravado nesses eventos.
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
-- Validação de produção: pendente.
+- Commit: `ee98fed` (`PUSH #38 put first free video above the fold`).
+- Deploy Vercel: `dpl_FfX72ohz59B2spRYKh7WtNJHivir` — `READY`.
+- O log da Vercel confirma clone do commit `ee98fed`, compilação bem-sucedida e rota `/generate` no bundle de produção.
+- O domínio canônico `https://www.usekineo.com` foi confirmado no mesmo deploy.
+- `/generate` respondeu com o redirect autenticado esperado para `/login?redirect=%2Fgenerate`, sem falha de rota.
+- A validação não executou JavaScript autenticado nem clicou no CTA; portanto, nenhum evento, render ou custo de provedor foi criado.
 
 ## Gate pós-deploy
 
