@@ -353,6 +353,7 @@ export default function GenerateClient() {
   const [showNicheOnboarding, setShowNicheOnboarding] = useState(false)
   const onboardingAutoGenerateRef = useRef(false)
   const onboardingGenerationDispatchedRef = useRef(false)
+  const inlineFirstVideoViewedRef = useRef(false)
   useEffect(() => {
     try {
       onboardingGenerationDispatchedRef.current =
@@ -3688,6 +3689,28 @@ export default function GenerateClient() {
     handleGenerate()
   }
 
+  // PUSH #38 — a live TAAFT signup reached /generate four times and opened
+  // pricing, but never fired analyze_idea_clicked. The only primary CTA sat
+  // below uploads, examples, engines and duration. Give a free account with
+  // zero videos the same one-click Fast handoff as the onboarding dialog,
+  // immediately below the already-filled idea.
+  function handleInlineFirstVideo() {
+    const topic = prompt.trim()
+    if (!topic || mode !== 'fast' || isProcessingPhase(phase) || onboardingAutoGenerateRef.current) return
+    const metadata = {
+      source: 'inline_first_video',
+      surface: 'under_prompt',
+      version: 'push27_single_choice',
+      engine: 'fast',
+      is_first_video: true,
+    }
+    void trackEvent('viral_onboarding_primary_clicked', metadata)
+    void trackEvent('first_video_started_from_viral_onboarding', metadata)
+    onboardingAutoGenerateRef.current = true
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
+    void handleAnalyze(topic, { fromTopic: true, skipPreview: true, structureFirst: true })
+  }
+
   // Push #113 — explicit currency selection. Auto-detection (browser
   // locale in #111, then Vercel-IP-country in #112) wasn't reliable
   // through VPNs and a few browser configs. The UI now exposes a BRL
@@ -4027,6 +4050,20 @@ export default function GenerateClient() {
   // (mirrors creditCostFor('fast', isPaidUser) server-side). Free users keep
   // seeing Free/0 — their render stays downloadable and shareable with a watermark.
   const isPaidAccount = hasPaid || (planTier !== null && planTier !== 'free')
+  const showInlineFirstVideo = mode === 'fast' && !isPaidAccount && (
+    showFirstShortNudge || (recentVideos !== null && recentVideos.length === 0)
+  )
+  useEffect(() => {
+    if (!showInlineFirstVideo || !prompt.trim() || inlineFirstVideoViewedRef.current) return
+    inlineFirstVideoViewedRef.current = true
+    void trackEvent('viral_onboarding_viewed', {
+      source: 'inline_first_video',
+      surface: 'under_prompt',
+      version: 'push27_single_choice',
+      engine: 'fast',
+      is_first_video: true,
+    })
+  }, [showInlineFirstVideo, prompt])
   const selectedCost = mode === 'creator'
     ? 0
     : mode === 'fast'
@@ -4491,11 +4528,10 @@ export default function GenerateClient() {
             placeholder={'What’s your Short about? Try "the Bermuda Triangle mystery" or "how Bezos starts his day"'}
             maxLength={5000}
             disabled={phase === 'analyzing'}
-            // Push #052 — Tailwind responsive min-h so the textarea stays
-            // ~220px (≈8 lines) on phones, then expands back to 400px on
-            // sm+ viewports. Keeps the Generate button above the fold on
-            // iPhone heights without changing desktop density.
-            className="w-full rounded-xl px-4 py-4 text-sm leading-relaxed min-h-[220px] sm:min-h-[400px]"
+            // PUSH #38 keeps the first-video box compact so its free CTA stays
+            // in the first viewport. Returning creators keep the larger script
+            // workspace used for long prompts and verbatim copy.
+            className={`w-full rounded-xl px-4 py-4 text-sm leading-relaxed ${showInlineFirstVideo ? 'min-h-[180px] sm:min-h-[220px]' : 'min-h-[220px] sm:min-h-[400px]'}`}
             style={{
               width: '100%',
               maxWidth: '830px',
@@ -4506,6 +4542,30 @@ export default function GenerateClient() {
               resize: 'none',
             }}
           />
+
+          {showInlineFirstVideo && (
+            <div className="mt-4" style={{ maxWidth: 830 }}>
+              <button
+                type="button"
+                onClick={handleInlineFirstVideo}
+                disabled={!prompt.trim() || isProcessingPhase(phase)}
+                className="w-full rounded-xl px-6 py-3.5 text-base font-black flex items-center justify-center gap-2"
+                style={{
+                  minHeight: 54,
+                  border: 'none',
+                  background: prompt.trim() && !isProcessingPhase(phase) ? '#2997ff' : 'rgba(255,255,255,.04)',
+                  color: prompt.trim() && !isProcessingPhase(phase) ? '#fff' : 'var(--muted)',
+                  cursor: prompt.trim() && !isProcessingPhase(phase) ? 'pointer' : 'not-allowed',
+                  boxShadow: prompt.trim() && !isProcessingPhase(phase) ? '0 10px 34px rgba(41,151,255,.38)' : 'none',
+                }}
+              >
+                Create my free Short →
+              </button>
+              <p className="text-center text-xs mt-2" style={{ color: 'var(--muted2)' }}>
+                Fast preview · no card · watermark · advanced settings are optional below
+              </p>
+            </div>
+          )}
 
           {/* AI Avatar removed from the Short flow (16/06) — Avatar and Short are
               separate flows. The Avatar Studio lives on its own page (/avatar),
