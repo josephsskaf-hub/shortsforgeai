@@ -68,6 +68,92 @@ function storedUtms(): Record<string, string> {
   }
 }
 
+// PUSH #32 — remember the high-intent page that handed a visitor to signup
+// without rewriting their real first-touch acquisition source. Internal UTMs
+// would turn a Google/TAAFT/referral visit into a false `seo` source, so this
+// campaign marker travels separately and is only used when the true source did
+// not already provide a campaign.
+const SIGNUP_CAMPAIGN_KEY = 'kineo_signup_campaign'
+const SIGNUP_CAMPAIGN_TTL_MS = 24 * 60 * 60 * 1000
+
+type StoredSignupCampaign = {
+  campaign: string
+  capturedAt: number
+}
+
+function cleanSignupCampaign(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const campaign = value.trim()
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(campaign) ? campaign : null
+}
+
+function parseSignupCampaign(raw: string | null): string | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredSignupCampaign>
+    const campaign = cleanSignupCampaign(parsed.campaign)
+    if (!campaign || typeof parsed.capturedAt !== 'number') return null
+    if (Date.now() - parsed.capturedAt > SIGNUP_CAMPAIGN_TTL_MS) return null
+    return campaign
+  } catch {
+    return null
+  }
+}
+
+function signupCampaignCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)kineo_signup_campaign=([^;]+)/)
+    return parseSignupCampaign(match ? decodeURIComponent(match[1]) : null)
+  } catch {
+    return null
+  }
+}
+
+function storedSignupCampaign(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const fromSession = parseSignupCampaign(sessionStorage.getItem(SIGNUP_CAMPAIGN_KEY))
+    if (fromSession) return fromSession
+  } catch {
+    /* fall through */
+  }
+  try {
+    const fromLocal = parseSignupCampaign(localStorage.getItem(SIGNUP_CAMPAIGN_KEY))
+    if (fromLocal) return fromLocal
+  } catch {
+    /* fall through */
+  }
+  return signupCampaignCookie()
+}
+
+export function rememberSignupCampaign(value: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const campaign = cleanSignupCampaign(value)
+    if (!campaign || storedSignupCampaign()) return // first high-intent handoff wins
+    const payload = JSON.stringify({ campaign, capturedAt: Date.now() } satisfies StoredSignupCampaign)
+    try {
+      sessionStorage.setItem(SIGNUP_CAMPAIGN_KEY, payload)
+    } catch {
+      /* ignore */
+    }
+    try {
+      localStorage.setItem(SIGNUP_CAMPAIGN_KEY, payload)
+    } catch {
+      /* ignore */
+    }
+    try {
+      const secure = window.location.protocol === 'https:' ? ';secure' : ''
+      document.cookie = `${SIGNUP_CAMPAIGN_KEY}=${encodeURIComponent(payload)};path=/;max-age=86400;samesite=lax${secure}`
+    } catch {
+      /* ignore */
+    }
+  } catch {
+    /* campaign attribution must never break navigation */
+  }
+}
+
 // KINEO-SOURCE-TRACK-2026-07-06 — Block 3.3 acquisition source tracking.
 //
 // First-touch capture of where a signup came from, surviving the Google OAuth
@@ -204,7 +290,7 @@ export function trackSignupSource(): void {
         // Block 3.3 first-touch source fields:
         signup_utm_source: src.utm_source || utms.utm_source || null,
         signup_utm_medium: src.utm_medium || utms.utm_medium || null,
-        signup_utm_campaign: src.utm_campaign || utms.utm_campaign || null,
+        signup_utm_campaign: src.utm_campaign || storedSignupCampaign() || utms.utm_campaign || null,
         signup_referrer: src.referrer || null,
       }),
       keepalive: true,

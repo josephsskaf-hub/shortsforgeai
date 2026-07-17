@@ -7,6 +7,13 @@ import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import Footer from '@/components/Footer'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
+import ExampleVideoPlayer from '@/app/examples/ExampleVideoPlayer'
+import TopicGeneratorForm from './TopicGeneratorForm'
+import { PUBLIC_EXAMPLES } from '@/lib/publicExamples'
+
+const BASE = 'https://www.usekineo.com'
+const FEATURED_EXAMPLE = PUBLIC_EXAMPLES[0]
+const PUBLICATION_DATE = '2026-07-16T00:00:00.000Z'
 
 export const metadata: Metadata = {
   title: 'Make a YouTube Short From a Topic — AI Writes, Voices & Edits It | Kineo',
@@ -19,6 +26,14 @@ export const metadata: Metadata = {
       'One topic in, a ready-to-post 9:16 Short out: script, voiceover, footage and captions. Try Fast free; Starter is $4.90 for the first month.',
     url: 'https://www.usekineo.com/youtube-shorts-from-topic',
     type: 'website',
+    images: [{ url: FEATURED_EXAMPLE.posterPath, width: 360, height: 640 }],
+    videos: [{ url: FEATURED_EXAMPLE.videoPath, width: 360, height: 640, type: 'video/mp4' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Make a YouTube Short From a Topic | Kineo',
+    description: 'Enter one topic, watch a real output preview and create a finished faceless Short.',
+    images: [FEATURED_EXAMPLE.posterPath],
   },
 }
 
@@ -43,11 +58,38 @@ export default function YouTubeShortsFromTopicPage() {
     '@type': 'FAQPage',
     mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
   }
+  const howToJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to make a YouTube Short from a topic',
+    description: 'Turn one topic into a scripted, voiced, captioned 9:16 Short with Kineo.',
+    totalTime: 'PT1M',
+    step: STEPS.map((step) => ({
+      '@type': 'HowToStep',
+      position: Number(step.n),
+      name: step.t,
+      text: step.d,
+      url: `${BASE}/youtube-shorts-from-topic#step-${step.n}`,
+    })),
+  }
+  const videoJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: FEATURED_EXAMPLE.title,
+    description: FEATURED_EXAMPLE.description,
+    thumbnailUrl: [`${BASE}${FEATURED_EXAMPLE.posterPath}`],
+    uploadDate: PUBLICATION_DATE,
+    duration: `PT${FEATURED_EXAMPLE.previewDurationSeconds}S`,
+    contentUrl: `${BASE}${FEATURED_EXAMPLE.videoPath}`,
+    embedUrl: `${BASE}/examples/${FEATURED_EXAMPLE.slug}`,
+  }
   const h2: CSSProperties = { fontSize: 'clamp(1.3rem, 3.5vw, 1.7rem)', fontWeight: 800, margin: '44px 0 12px' }
   const p: CSSProperties = { fontSize: '1rem', color: '#86868b', lineHeight: 1.65, margin: '0 0 12px' }
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd).replace(/</g, '\\u003c') }} />
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '64px 20px 88px' }}>
         <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#2997ff', border: '1px solid rgba(41,151,255,0.4)', background: 'rgba(41,151,255,0.12)', borderRadius: 999, padding: '6px 12px' }}>
           AI YouTube Shorts Generator
@@ -66,10 +108,41 @@ export default function YouTubeShortsFromTopicPage() {
           Up to 3 watermarked Fast videos / 24h · No card · Starter $4.90 first month
         </p>
 
+        <TopicGeneratorForm />
+
+        <h2 style={h2}>Watch a real topic-to-Short preview</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
+          <div style={{ flex: '1 1 240px', width: '100%', maxWidth: 310, aspectRatio: '9 / 16', overflow: 'hidden', borderRadius: 24, border: '1px solid #343438', background: '#000' }}>
+            <ExampleVideoPlayer
+              slug={FEATURED_EXAMPLE.slug}
+              title={FEATURED_EXAMPLE.title}
+              src={FEATURED_EXAMPLE.videoPath}
+              poster={FEATURED_EXAMPLE.posterPath}
+              placement="youtube_shorts_from_topic"
+              version="push32"
+            />
+          </div>
+          <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#2997ff', margin: 0 }}>
+              Real Kineo output · 5-second preview
+            </p>
+            <h3 style={{ fontSize: 'clamp(1.25rem, 3vw, 1.65rem)', lineHeight: 1.2, margin: '10px 0 10px' }}>
+              {FEATURED_EXAMPLE.shortTitle}
+            </h3>
+            <p style={p}>{FEATURED_EXAMPLE.description}</p>
+            <p style={{ ...p, fontSize: 14 }}>
+              The preview is five seconds cut from a {FEATURED_EXAMPLE.outputDurationSeconds}-second export. It demonstrates the output format, not views or revenue performance.
+            </p>
+            <Link href={`/examples/${FEATURED_EXAMPLE.slug}`} style={{ color: '#2997ff', fontSize: 14, fontWeight: 800 }}>
+              Open the watch page and remix its prompt →
+            </Link>
+          </div>
+        </div>
+
         <h2 style={h2}>From a topic to a Short in 3 steps</h2>
         <div style={{ display: 'grid', gap: 12 }}>
           {STEPS.map((s) => (
-            <div key={s.n} style={{ display: 'flex', gap: 14, background: '#161618', border: '1px solid #2a2a2d', borderRadius: 14, padding: '16px 18px' }}>
+            <div id={`step-${s.n}`} key={s.n} style={{ display: 'flex', gap: 14, background: '#161618', border: '1px solid #2a2a2d', borderRadius: 14, padding: '16px 18px' }}>
               <span style={{ flex: 'none', width: 30, height: 30, borderRadius: 8, background: 'rgba(41,151,255,0.18)', color: '#2997ff', fontWeight: 800, display: 'grid', placeItems: 'center' }}>{s.n}</span>
               <div>
                 <div style={{ fontWeight: 700, color: '#f5f5f7' }}>{s.t}</div>

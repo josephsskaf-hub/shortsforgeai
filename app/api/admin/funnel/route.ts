@@ -415,7 +415,7 @@ export async function GET(req: Request) {
     // used to join checkout/payment activity back to cohort users.
     const trackedEventNames = [
       'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
-      'landing_session_started', 'organic_cta_clicked',
+      'landing_session_started', 'organic_cta_clicked', 'organic_topic_submitted',
       'video_share_clicked', 'video_shared', 'video_share_channel_opened',
       'public_video_cta_clicked',
       'series_continue_clicked', 'series_continuation_landed',
@@ -499,7 +499,7 @@ export async function GET(req: Request) {
           .from('events')
           .select('name,user_id,created_at,session_id,metadata,path')
           .in('name', [
-            'landing_session_started', 'organic_cta_clicked',
+            'landing_session_started', 'organic_cta_clicked', 'organic_topic_submitted',
             'video_share_prompt_viewed', 'video_share_clicked', 'video_shared',
             'video_share_channel_opened', 'video_share_cancelled',
             'public_video_cta_clicked',
@@ -810,26 +810,35 @@ export async function GET(req: Request) {
     const organicLandingRows = organicEventRows.filter((event) =>
       event.name === 'landing_session_started' && isOrganicLandingPath(event.path)
     )
-    const organicCtaRows = organicEventRows.filter((event) => event.name === 'organic_cta_clicked')
+    // PUSH #32 — a completed topic form is a stronger organic intent action
+    // than a generic CTA click. Count both paths so the Search Console-led
+    // experiment is visible without changing the established dashboard shape.
+    const organicCtaRows = organicEventRows.filter((event) =>
+      event.name === 'organic_cta_clicked' || event.name === 'organic_topic_submitted'
+    )
     const organicPageMap = new Map<string, number>()
     for (const event of organicLandingRows) {
       const path = event.path as string
       organicPageMap.set(path, (organicPageMap.get(path) ?? 0) + 1)
     }
-    const push22Cohort = cohort.filter((profile) =>
-      (profile.signup_utm_campaign ?? '').toLowerCase().startsWith('push22_')
-    )
-    const push22Activated = push22Cohort.filter((profile) => (videoCountByUser.get(profile.id) ?? 0) >= 1).length
-    const push22Paid = push22Cohort.filter((profile) => paidUserSet.has(profile.id)).length
+    const organicCohort = cohort.filter((profile) => {
+      const campaign = (profile.signup_utm_campaign ?? '').toLowerCase()
+      const source = (profile.signup_utm_source ?? profile.utm_source ?? '').toLowerCase()
+      const medium = (profile.signup_utm_medium ?? '').toLowerCase()
+      return campaign.startsWith('push22_') || campaign.startsWith('push32_') ||
+        (source === 'seo' && medium === 'organic')
+    })
+    const organicActivated = organicCohort.filter((profile) => (videoCountByUser.get(profile.id) ?? 0) >= 1).length
+    const organicPaid = organicCohort.filter((profile) => paidUserSet.has(profile.id)).length
     const organicRecovery = {
       landingSessions: organicLandingRows.length,
       ctaClicks: organicCtaRows.length,
       ctaRate: pct(organicCtaRows.length, organicLandingRows.length),
-      signups: push22Cohort.length,
-      signupRate: pct(push22Cohort.length, organicCtaRows.length),
-      activated: push22Activated,
-      activationRate: pct(push22Activated, push22Cohort.length),
-      paid: push22Paid,
+      signups: organicCohort.length,
+      signupRate: pct(organicCohort.length, organicCtaRows.length),
+      activated: organicActivated,
+      activationRate: pct(organicActivated, organicCohort.length),
+      paid: organicPaid,
       topLandingPages: Array.from(organicPageMap.entries())
         .map(([path, sessions]) => ({ path, sessions }))
         .sort((a, b) => b.sessions - a.sessions)

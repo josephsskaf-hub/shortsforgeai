@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Footer from '@/components/Footer'
 import GoogleSignInButton from '@/components/GoogleSignInButton'
 import AppleSignInButton from '@/components/AppleSignInButton'
-import { trackEvent, trackSignupSource } from '@/lib/analytics'
+import { rememberSignupCampaign, trackEvent, trackSignupSource } from '@/lib/analytics'
 import { isDisposableEmail } from '@/lib/emailValidation'
 import { normalizeInternalRedirect } from '@/lib/authRedirect'
 import { trackCheckoutAuthStep } from '@/lib/authAnalytics'
@@ -68,6 +68,8 @@ export default function SignupPage() {
     // resilience. Count its arrival here, once per browser navigation, so the
     // hero → signup rate is measurable without risking a blocked submit.
     const params = new URLSearchParams(window.location.search)
+    const intentCampaign = params.get('intent_campaign')
+    if (intentCampaign) rememberSignupCampaign(intentCampaign)
     if (params.get('reason') === 'checkout') {
       trackCheckoutAuthStep('page_view', 'signup_page', nextDestination)
     }

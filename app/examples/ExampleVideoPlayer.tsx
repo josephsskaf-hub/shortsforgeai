@@ -7,9 +7,18 @@ interface ExampleVideoPlayerProps {
   title: string
   src: string
   poster: string
+  placement?: string
+  version?: string
 }
 
-export default function ExampleVideoPlayer({ slug, title, src, poster }: ExampleVideoPlayerProps) {
+export default function ExampleVideoPlayer({
+  slug,
+  title,
+  src,
+  poster,
+  placement = 'example_watch',
+  version = 'push31',
+}: ExampleVideoPlayerProps) {
   const tracked = useRef(false)
 
   function trackPlay() {
@@ -24,8 +33,9 @@ export default function ExampleVideoPlayer({ slug, title, src, poster }: Example
           name: 'example_video_play',
           path: window.location.pathname,
           metadata: {
-            version: 'push31',
+            version,
             example_slug: slug,
+            placement,
           },
         }),
         keepalive: true,

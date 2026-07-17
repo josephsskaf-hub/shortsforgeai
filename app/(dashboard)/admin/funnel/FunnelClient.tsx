@@ -515,7 +515,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         />
       </Section>
 
-      <Section title={`SEO landing pages · PUSH #22 · ${days === 'all' ? 'all time' : `${days}d`}`}>
+      <Section title={`SEO landing pages · organic · ${days === 'all' ? 'all time' : `${days}d`}`}>
         <Card
           label="SEO landing sessions"
           value={fmt(organic.landingSessions)}
@@ -523,9 +523,9 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           accent="#22d3ee"
         />
         <Card
-          label="Organic CTA clicks"
+          label="Organic intent actions"
           value={fmt(organic.ctaClicks)}
-          hint="measured before signup"
+          hint="CTA clicks + topic submits"
           accent="#a78bfa"
         />
         <RateCard
@@ -536,7 +536,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         <Card
           label="Attributed signups"
           value={fmt(organic.signups)}
-          hint="campaign starts push22_; other sources are above"
+          hint="seo/organic campaigns; other sources are above"
           accent="#22d3ee"
         />
         <RateCard

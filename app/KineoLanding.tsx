@@ -159,7 +159,7 @@ export default function KineoLanding({ initialUser }: Props) {
           </div>
           Kineo
         </Link>
-        <div className="nav-links"><Link href="/generate">Video Generation</Link><Link href="/avatar">AI Avatar</Link><a href="#samples">Examples</a><a href="#pricing">Pricing</a></div>
+        <div className="nav-links"><Link href="/generate">Video Generation</Link><Link href="/avatar">AI Avatar</Link><Link href="/examples">Examples</Link><a href="#pricing">Pricing</a></div>
         {initialUser
           ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Dashboard</Link></div>
           : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
@@ -188,7 +188,7 @@ export default function KineoLanding({ initialUser }: Props) {
             </div>
           </div>
           <HeroGallery />
-          <p className="gallery-cap">Real Kineo exports, not mockups. Each started with one topic — script, voice, footage and captions, automatically.</p>
+          <p className="gallery-cap">Real Kineo exports, not mockups. Each started with one topic — script, voice, footage and captions, automatically. <Link href="/youtube-shorts-from-topic">See the topic-to-Short workflow →</Link></p>
           <div className="platforms">Built for <b>YouTube Shorts</b> · <b>TikTok</b> · <b>Reels</b></div>
         </div>
       </header>

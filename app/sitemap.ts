@@ -22,7 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/viral-score', priority: 0.8, freq: 'weekly' },
     { path: '/ai-avatar', priority: 0.8, freq: 'weekly' },
     { path: '/partners', priority: 0.7, freq: 'weekly' },
-    { path: '/youtube-shorts-from-topic', priority: 0.8, freq: 'weekly' },
+    { path: '/youtube-shorts-from-topic', priority: 0.9, freq: 'weekly' },
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
     { path: '/ai-shorts-without-filming', priority: 0.8, freq: 'weekly' },
     { path: '/faceless-channel-ideas', priority: 0.8, freq: 'weekly' },
