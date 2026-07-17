@@ -15,6 +15,10 @@ export const dynamic = 'force-dynamic'
 type Tier = 'starter' | 'basic' | 'pro'
 type Currency = 'usd' | 'brl' | 'inr'
 
+function isPrivatePackPromotion(raw: string): boolean {
+  return raw.toUpperCase().startsWith('KINEO5-')
+}
+
 function isStripeResourceMissing(error: unknown): boolean {
   const stripeError = error as { code?: string; type?: string; statusCode?: number } | null
   return stripeError?.code === 'resource_missing' ||
@@ -284,6 +288,9 @@ async function buildAndRedirect(
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
   const currency: Currency = resolveCurrency(country)
+  const rawPromo = (promo ?? '').trim()
+  const requestedPromo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : undefined
+  const privatePackPromo = isPrivatePackPromotion(rawPromo)
   const plan = TIERS[tier]
   // #381 — annual vs monthly price + billing interval.
   const isAnnual = billing === 'annual'
@@ -295,6 +302,7 @@ async function buildAndRedirect(
     billing,
     currency,
     intro_requested: intro,
+    offer_requested: privatePackPromo ? 'kineo5_pack_upgrade' : null,
     return_to: returnToWatermark ? 'watermark_moment' : 'checkout_success',
     checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
   }
@@ -593,7 +601,7 @@ async function buildAndRedirect(
     ],
     mode: 'subscription',
     success_url: `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}${intro ? '&intro=1' : ''}${returnToWatermark ? '&return=wm' : ''}`,
+    cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}&currency=${currency}${intro ? '&intro=1' : ''}${requestedPromo ? `&promo=${encodeURIComponent(requestedPromo)}` : ''}${returnToWatermark ? '&return=wm' : ''}`,
     metadata: {
       supabase_user_id: user.id,
       tier,
@@ -645,25 +653,114 @@ async function buildAndRedirect(
     }
   }
 
-  // Push #453 — auto-apply a promotion code (e.g. FOUNDING50) when ?promo= is
-  // present, so win-back / founding links give the discount with ZERO typing.
-  // Looked up by its human-facing code; if it doesn't exist or is inactive we
-  // silently skip it (checkout still proceeds at full price — never blocks a
-  // sale). NOTE: Stripe forbids combining `discounts` with allow_promotion_codes,
-  // and we set neither elsewhere, so this is safe.
-  if (!discountApplied && promo) {
+  // Push #453 — auto-apply a promotion code when ?promo= is present.
+  // PUSH #37 — private KINEO5 pack-upgrade links are a promised $5 Creator
+  // price, so they fail CLOSED. An expired, mismatched or temporarily
+  // unverifiable private code must never become a silent $24.90 checkout.
+  const rejectPrivatePromo = async (reason: string, message: string): Promise<NextResponse> => {
+    await recordCheckoutEvent(
+      'checkout_failed',
+      user.id,
+      { ...checkoutMetadata, failure_stage: 'private_promo', failure_reason: reason },
+      browserSessionId ?? undefined,
+    )
+    return isGet ? redirectError(message) : jsonError(message, 409)
+  }
+
+  if (privatePackPromo && (!requestedPromo || tier !== 'basic' || isAnnual || intro)) {
+    return rejectPrivatePromo(
+      'invalid_offer_shape',
+      'This private $5 link is only valid for the monthly Creator upgrade. You have not been charged. Please reply to Joseph for help.',
+    )
+  }
+
+  if (!discountApplied && requestedPromo) {
     try {
-      const codes = await stripe.promotionCodes.list({ code: promo, active: true, limit: 1 })
+      const codes = await stripe.promotionCodes.list({ code: requestedPromo, active: true, limit: 1 })
       const pc = codes.data[0]
       if (pc) {
+        if (privatePackPromo) {
+          const restrictedCustomerId = typeof pc.customer === 'string'
+            ? pc.customer
+            : pc.customer?.id ?? null
+          const expired = Boolean(pc.expires_at && pc.expires_at * 1000 <= Date.now())
+          const exhausted = pc.max_redemptions !== null && pc.times_redeemed >= pc.max_redemptions
+          if (expired || exhausted || !pc.active) {
+            return rejectPrivatePromo(
+              'expired_or_redeemed',
+              'This private $5 upgrade link has expired or has already been used. You have not been charged. Please reply to Joseph for help.',
+            )
+          }
+          if (restrictedCustomerId && restrictedCustomerId !== customerId) {
+            return rejectPrivatePromo(
+              'customer_mismatch',
+              'This private $5 link belongs to a different account. Sign in with the email that received it or reply to Joseph. You have not been charged.',
+            )
+          }
+
+          const coupon = typeof pc.coupon === 'string'
+            ? await stripe.coupons.retrieve(pc.coupon)
+            : pc.coupon
+          if ('deleted' in coupon && coupon.deleted) {
+            return rejectPrivatePromo(
+              'coupon_deleted',
+              'We could not verify the $5 price on this private link. You have not been charged. Please reply to Joseph for help.',
+            )
+          }
+          const amountOff = coupon.amount_off
+          const firstChargeAmount = typeof amountOff === 'number' ? unitAmount - amountOff : null
+          const expectedFirstCharge = currency === 'usd' ? 500 : currency === 'inr' ? 40500 : null
+          if (
+            !coupon.valid ||
+            coupon.duration !== 'once' ||
+            coupon.currency !== currency ||
+            firstChargeAmount === null ||
+            firstChargeAmount !== expectedFirstCharge
+          ) {
+            return rejectPrivatePromo(
+              coupon.currency !== currency ? 'currency_mismatch' : 'price_mismatch',
+              coupon.currency !== currency
+                ? 'This private $5 link does not match your current billing currency. You have not been charged. Please reply to Joseph before continuing.'
+                : 'We could not verify the exact $5 price on this private link. You have not been charged. Please reply to Joseph before continuing.',
+            )
+          }
+
+          sessionParams.success_url = `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${firstChargeAmount}&offer=kineo5_pack_upgrade&session_id={CHECKOUT_SESSION_ID}`
+          sessionParams.metadata!.offer = 'kineo5_pack_upgrade'
+          sessionParams.metadata!.first_charge_amount = String(firstChargeAmount)
+          sessionParams.subscription_data!.metadata!.offer = 'kineo5_pack_upgrade'
+        }
         sessionParams.discounts = [{ promotion_code: pc.id }]
         discountApplied = true
       } else {
-        console.warn('[stripe/checkout] promo not found/inactive, skipping:', promo)
+        if (privatePackPromo) {
+          return rejectPrivatePromo(
+            'not_found_or_inactive',
+            'This private $5 upgrade link has expired or is not active. You have not been charged. Please reply to Joseph for help.',
+          )
+        }
+        console.warn('[stripe/checkout] promo not found/inactive, skipping:', requestedPromo)
       }
     } catch (promoErr) {
-      console.warn('[stripe/checkout] promo lookup failed, skipping:', promo, promoErr)
+      console.warn(
+        '[stripe/checkout] promo lookup failed:',
+        privatePackPromo ? 'KINEO5-[redacted]' : requestedPromo,
+        promoErr,
+      )
+      if (privatePackPromo) {
+        return rejectPrivatePromo(
+          'verification_failed',
+          'We could not verify your private $5 price right now. You have not been charged. Please try again or reply to Joseph.',
+        )
+      }
     }
+  }
+
+  if (privatePackPromo && !discountApplied) {
+    return rejectPrivatePromo(
+      'discount_not_applied',
+      'We could not apply your private $5 price. You have not been charged. Please reply to Joseph before continuing.',
+    )
   }
 
   // KINEO-PROMO-FIELD-2026-07-08 — manual promo field for loose campaigns.
@@ -699,7 +796,7 @@ async function buildAndRedirect(
   const checkoutWindow = Math.floor(Date.now() / (5 * 60 * 1000))
   const checkoutIdempotencyKeyFor = (finalCustomerId: string): string => {
     const checkoutSignature = JSON.stringify({
-      version: 3,
+      version: 4,
       user_id: user.id,
       customer_id: finalCustomerId,
       tier,
@@ -780,7 +877,12 @@ async function buildAndRedirect(
   await recordCheckoutEvent(
     'checkout_started',
     user.id,
-    { ...checkoutMetadata, intro_applied: discountApplied && intro, stripe_session_id: session.id },
+    {
+      ...checkoutMetadata,
+      intro_applied: discountApplied && intro,
+      private_offer_applied: privatePackPromo && discountApplied,
+      stripe_session_id: session.id,
+    },
     browserSessionId ?? undefined,
   )
 

@@ -15,6 +15,9 @@ import { trackEvent } from '@/lib/analytics'
 // re-entered checkout at FULL price (intro dropped → second-chance conversion
 // killed). Carry ?intro=1 on the Creator retry; the server validates
 // eligibility (1 per customer, monthly only), so this can never double-apply.
+// PUSH #37 also carries a validated private promotion code and its display
+// currency. A buyer who backs out of the $5 pack-upgrade must never retry at
+// full price or see copy that contradicts the Stripe checkout they just left.
 export default function CheckoutCancelledPage() {
   return (
     <Suspense fallback={<main style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
@@ -30,18 +33,29 @@ function CheckoutCancelledContent() {
     rawTier === 'starter' || rawTier === 'pro' ? rawTier : 'basic'
   const billing = searchParams.get('billing') === 'annual' ? 'annual' : 'monthly'
   const intro = searchParams.get('intro') === '1' && billing === 'monthly' && tier !== 'pro'
+  const rawPromo = (searchParams.get('promo') ?? '').trim()
+  const promo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : null
+  const privatePackPromo = Boolean(promo?.toUpperCase().startsWith('KINEO5-')) && billing === 'monthly' && tier === 'basic'
+  const checkoutCurrency = searchParams.get('currency') === 'inr' ? 'inr' : 'usd'
   const returnToWatermark = searchParams.get('return') === 'wm'
   const retryParams = new URLSearchParams({ tier, billing })
   if (intro) retryParams.set('intro', '1')
+  if (promo) retryParams.set('promo', promo)
   if (returnToWatermark) retryParams.set('return', 'wm')
   const retryHref = `/api/stripe/checkout?${retryParams.toString()}`
   const planName = tier === 'starter' ? 'Starter' : tier === 'pro' ? 'Studio' : 'Creator'
   const todayPrice = billing === 'annual'
     ? tier === 'starter' ? '$99/year' : tier === 'pro' ? '$379/year' : '$199/year'
+    : privatePackPromo
+      ? checkoutCurrency === 'inr' ? '₹405 today' : 'US$5 today'
+      : intro
+        ? tier === 'starter' ? '$4.90 today' : '$9.90 today'
+        : tier === 'starter' ? '$9.90/month' : tier === 'pro' ? '$37.90/month' : '$24.90/month'
+  const renewalCopy = privatePackPromo
+    ? checkoutCurrency === 'inr'
+      ? 'Renews at ₹1,599/month in 30 days. Cancel anytime.'
+      : 'Renews at US$24.90/month in 30 days. Cancel anytime.'
     : intro
-      ? tier === 'starter' ? '$4.90 today' : '$9.90 today'
-      : tier === 'starter' ? '$9.90/month' : tier === 'pro' ? '$37.90/month' : '$24.90/month'
-  const renewalCopy = intro
     ? tier === 'starter'
       ? 'Renews at $9.90/month in 30 days. Cancel anytime.'
       : 'Renews at $24.90/month in 30 days. Cancel anytime.'
@@ -54,9 +68,10 @@ function CheckoutCancelledContent() {
       tier,
       billing,
       intro,
+      private_offer: privatePackPromo,
       return_to_watermark: returnToWatermark,
     })
-  }, [tier, billing, intro, returnToWatermark])
+  }, [tier, billing, intro, privatePackPromo, returnToWatermark])
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
@@ -76,6 +91,7 @@ function CheckoutCancelledContent() {
                 tier,
                 billing,
                 intro,
+                private_offer: privatePackPromo,
                 return_to_watermark: returnToWatermark,
               })
               trackCheckoutClick(tier)
