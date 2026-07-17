@@ -1,8 +1,10 @@
 # Kineo — PUSH #32
 
 **Nome:** Search-Led Topic Intent
-**Status:** VALIDADO LOCALMENTE — aguardando commit, deploy READY e validação em produção
+**Status:** PUBLICADO E VALIDADO EM PRODUÇÃO
 **Data:** 16/07/2026
+**Commit de código:** `342f860` — `PUSH #32 convert proven organic topic traffic`
+**Deploy Vercel:** `dpl_4XGnxAwbm9G185b9MiZVgxzPurGr` — Production · READY
 
 ## Diagnóstico que escolheu este push
 
@@ -63,6 +65,15 @@ O próximo investimento orgânico só replica a estrutura se houver intenção o
 - O formulário não contém UTMs internas que poderiam apagar a origem verdadeira do visitante.
 - HTML local não contém URL privada Supabase, `FOUNDING50` nem claim “50% for life”.
 - `git diff --check`: aprovado.
+
+## Validação em produção
+
+- `https://www.usekineo.com/youtube-shorts-from-topic` responde HTTP 200.
+- A página pública contém o formulário, `prompt`, `intent_campaign=push32_topic_intent`, preview real e schemas `FAQPage`, `HowTo` e `VideoObject`.
+- O formulário público não contém UTMs internas, URL privada de storage, `FOUNDING50` nem claim “50% for life”.
+- A homepage pública liga `Examples` a `/examples` e o fluxo contextual a `/youtube-shorts-from-topic`.
+- O sitemap público mantém 66 URLs únicas e publica `/youtube-shorts-from-topic` com prioridade 0,9.
+- A validação foi feita por HTTP sem executar JavaScript e sem criar eventos artificiais no funil.
 
 ## Guardrails
 

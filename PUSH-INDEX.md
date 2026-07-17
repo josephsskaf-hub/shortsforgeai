@@ -21,7 +21,7 @@
 - [PUSH #29](./PUSH-29-RELEASE.md)
 - [PUSH #30](./PUSH-30-RELEASE.md)
 - [PUSH #31](./PUSH-31-RELEASE.md)
-- [PUSH #32](./PUSH-32-RELEASE.md) — em preparação
+- [PUSH #32](./PUSH-32-RELEASE.md) — publicado e validado
 
 ## Próximo número
 
