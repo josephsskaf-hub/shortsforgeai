@@ -13,6 +13,14 @@ import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import Footer from '@/components/Footer'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
+import TopicGeneratorForm from '@/app/youtube-shorts-from-topic/TopicGeneratorForm'
+
+const INTENT_CAMPAIGN = 'push35_faceless_idea'
+const FORM_EXAMPLES = [
+  'Why Snake Island is too dangerous to visit',
+  'The billion-dollar mistake that killed Blockbuster',
+  'What happens to your brain after 24 hours without sleep',
+] as const
 
 export const metadata: Metadata = {
   title: '50 Faceless YouTube Channel Ideas for 2026 (High RPM) | Kineo',
@@ -164,6 +172,12 @@ const CATEGORIES: Category[] = [
   },
 ]
 
+function ideaSignupUrl(idea: Idea): string {
+  const prompt = `Make a 45-second faceless YouTube Short using this format: ${idea.t}. ${idea.d}`
+  const params = new URLSearchParams({ prompt, intent_campaign: INTENT_CAMPAIGN })
+  return `/signup?${params.toString()}`
+}
+
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '1', t: 'Pick one idea from the list above', d: 'Choose a niche you can post in daily. Higher RPM is great, but consistency beats everything — pick the one whose topics you could brainstorm forever.' },
   { n: '2', t: 'Type the idea into Kineo', d: 'One line is enough — "the island too dangerous to visit". The AI writes the hook and script, generates the voiceover, matches footage to every line and burns in captions.' },
@@ -178,7 +192,7 @@ const FAQ: { q: string; a: string }[] = [
 ]
 
 export default function FacelessChannelIdeasPage() {
-  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_faceless_ideas'
+  const formAnchor = '#try-a-faceless-idea'
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -200,23 +214,38 @@ export default function FacelessChannelIdeasPage() {
           Fifty concrete faceless channel ideas, organized into ten repeatable niches. Every one works with no camera, no face on screen and no editing: pick an idea, type it into Kineo, and get a finished 9:16 Short with script, AI voiceover, footage and captions in about 60 seconds. New accounts can create up to 3 watermarked Fast videos every 24 hours with no card.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
-          <OrganicCtaLink href={signupUrl} source="push22_faceless_ideas" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Start with a Fast video →</OrganicCtaLink>
+          <OrganicCtaLink href={formAnchor} source="push35_faceless_ideas" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Try one of these ideas →</OrganicCtaLink>
           <Link href="/ai-shorts-without-filming" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>How faceless Shorts work</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
           Up to 3 watermarked Fast videos / 24h · No card · No camera
         </p>
 
-        {CATEGORIES.map((cat) => (
+        <TopicGeneratorForm
+          campaign={INTENT_CAMPAIGN}
+          source="push35_faceless_ideas"
+          examples={FORM_EXAMPLES}
+          formId="try-a-faceless-idea"
+        />
+
+        {CATEGORIES.map((cat, categoryIndex) => (
           <section key={cat.name}>
             <h2 style={h2}>{cat.name}</h2>
             <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '0 0 8px' }}>{cat.rpm}</p>
             <p style={p}>{cat.blurb}</p>
             <div style={{ display: 'grid', gap: 10 }}>
-              {cat.ideas.map((idea) => (
+              {cat.ideas.map((idea, ideaIndex) => (
                 <div key={idea.t} style={{ background: '#161618', border: '1px solid #2a2a2d', borderRadius: 14, padding: '16px 18px' }}>
                   <div style={{ fontWeight: 700, color: '#f5f5f7' }}>{idea.t}</div>
                   <div style={{ fontSize: 14, color: '#86868b', marginTop: 4, lineHeight: 1.55 }}>{idea.d}</div>
+                  <OrganicCtaLink
+                    href={ideaSignupUrl(idea)}
+                    source="push35_faceless_ideas"
+                    placement={`idea_${categoryIndex + 1}_${ideaIndex + 1}`}
+                    style={{ display: 'inline-block', marginTop: 11, color: '#2997ff', fontSize: 13, fontWeight: 800, textDecoration: 'none' }}
+                  >
+                    Make this first Short →
+                  </OrganicCtaLink>
                 </div>
               ))}
             </div>
@@ -255,7 +284,7 @@ export default function FacelessChannelIdeasPage() {
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
           <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Pick an idea. Create up to 3 Fast previews every 24h.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>One idea in, a ready-to-post faceless Short out in ~60 seconds. No camera, no card.</p>
-          <OrganicCtaLink href={signupUrl} source="push22_faceless_ideas" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
+          <OrganicCtaLink href={formAnchor} source="push35_faceless_ideas" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Choose my first idea →</OrganicCtaLink>
         </div>
       </div>
       <StickyFreeShortCTA />

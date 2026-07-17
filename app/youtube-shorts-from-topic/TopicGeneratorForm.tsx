@@ -9,12 +9,25 @@ const TOPIC_EXAMPLES = [
   'How compound interest grows $100',
 ] as const
 
-export default function TopicGeneratorForm() {
+type TopicGeneratorFormProps = {
+  campaign?: string
+  source?: string
+  examples?: readonly string[]
+  formId?: string
+}
+
+export default function TopicGeneratorForm({
+  campaign = 'push32_topic_intent',
+  source = 'push32_topic',
+  examples = TOPIC_EXAMPLES,
+  formId = 'try-a-topic',
+}: TopicGeneratorFormProps = {}) {
   const [topic, setTopic] = useState('')
+  const inputId = `${formId}-input`
 
   return (
     <div
-      id="try-a-topic"
+      id={formId}
       style={{
         marginTop: 30,
         border: '1px solid rgba(41,151,255,0.35)',
@@ -27,19 +40,19 @@ export default function TopicGeneratorForm() {
         action="/signup"
         method="get"
         onSubmit={() => {
-          rememberSignupCampaign('push32_topic_intent')
+          rememberSignupCampaign(campaign)
           void trackEvent('organic_topic_submitted', {
-            source: 'push32_topic',
+            source,
             placement: 'hero_form',
             topic_length: topic.trim().length,
           })
         }}
       >
-        <label htmlFor="topic-generator-input" style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#f5f5f7', marginBottom: 9 }}>
+        <label htmlFor={inputId} style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#f5f5f7', marginBottom: 9 }}>
           What should your Short be about?
         </label>
         <textarea
-          id="topic-generator-input"
+          id={inputId}
           name="prompt"
           value={topic}
           onChange={(event) => setTopic(event.target.value)}
@@ -64,7 +77,7 @@ export default function TopicGeneratorForm() {
             outline: 'none',
           }}
         />
-        <input type="hidden" name="intent_campaign" value="push32_topic_intent" />
+        <input type="hidden" name="intent_campaign" value={campaign} />
         <button
           type="submit"
           style={{
@@ -86,7 +99,7 @@ export default function TopicGeneratorForm() {
       </form>
 
       <div aria-label="Example topics" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 13 }}>
-        {TOPIC_EXAMPLES.map((example) => (
+        {examples.map((example) => (
           <button
             key={example}
             type="button"
