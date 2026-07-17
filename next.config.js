@@ -11,7 +11,27 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // PUSH #34 — the strongest stale branded-search result still points to
+      // /auth.html?mode=signup. The old catch-all sent that signup intent to
+      // /login, adding a needless dead end for traffic we already earned.
+      // Query values not consumed by the rule (prompt, plan, redirect, etc.)
+      // are preserved by Next.js, so old campaign/bookmark links keep working.
+      {
+        source: '/auth.html',
+        has: [{ type: 'query', key: 'mode', value: '(?<legacySignup>signup|register)' }],
+        destination: '/signup?intent_campaign=push34_legacy_auth',
+        permanent: true,
+      },
       { source: '/auth.html', destination: '/login', permanent: true },
+      // Retire the remaining paths from the pre-Next static site. These are
+      // exact compatibility redirects, not indexable duplicate pages.
+      { source: '/signup.html', destination: '/signup?intent_campaign=push34_legacy_auth', permanent: true },
+      { source: '/login.html', destination: '/login', permanent: true },
+      { source: '/dashboard.html', destination: '/dashboard', permanent: true },
+      { source: '/generate.html', destination: '/generate', permanent: true },
+      { source: '/pricing.html', destination: '/pricing', permanent: true },
+      { source: '/history.html', destination: '/history', permanent: true },
+      { source: '/index.html', destination: '/', permanent: true },
       // KINEO-RECOVERY-2026-07-15 — retire the stale campaign page at the
       // edge. A config redirect produces a real HTTP Location header even
       // when /start was previously statically generated.
