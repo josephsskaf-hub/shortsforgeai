@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** em preparação para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -54,9 +54,13 @@
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
-- Validação em produção: pendente.
+- Commit de código: `de67d12` (`PUSH #34 recover legacy signup traffic`).
+- Deploy Vercel: `dpl_2rTDf3EW62DPRhAwwFAatPMBCT11` — `READY`.
+- Domínios confirmados: `www.usekineo.com`, `usekineo.com`, `shortsforgeai.vercel.app`, `shortsforgeai.com` e `www.shortsforgeai.com`.
+- Resultado indexado exato: `shortsforgeai.com/auth.html?mode=signup` → HTTP 308 → `usekineo.com/auth.html?mode=signup` → HTTP 308 → `/signup?mode=signup&intent_campaign=push34_legacy_auth` → HTTP 200.
+- `prompt`, `plan` e `redirect` confirmados na URL final em produção.
+- Login legado continua terminando em `/login`.
+- Todos os oito caminhos testados terminam em uma página HTTP 200, sem 404.
 
 ## Medição
 
