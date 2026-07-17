@@ -5,12 +5,21 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import TopicGeneratorForm from '@/app/youtube-shorts-from-topic/TopicGeneratorForm'
 
 export const dynamic = 'force-static'
 export const dynamicParams = false
 
 type Section = { h: string; p: string }
-type PtPage = { title: string; desc: string; h1: string; intro: string; sections: Section[]; faq: { q: string; a: string }[] }
+type PtPage = {
+  title: string
+  desc: string
+  h1: string
+  intro: string
+  examples: readonly string[]
+  sections: Section[]
+  faq: { q: string; a: string }[]
+}
 
 const PAGES: Record<string, PtPage> = {
   'canal-dark-com-ia': {
@@ -19,6 +28,11 @@ const PAGES: Record<string, PtPage> = {
     h1: 'Canal dark com IA: do zero ao Short pronto, sem editar',
     intro:
       'Montar um canal dark (faceless) trava na produção: roteiro, voz, busca de imagens, edição. O Kineo resolve tudo isso num passo — você digita uma ideia e recebe um Short vertical pronto pra postar no YouTube Shorts, TikTok e Reels. Sem aparecer, sem filmar, sem editar.',
+    examples: [
+      '3 mistérios do oceano que a ciência ainda não explicou',
+      'Como a cidade mais rica do mundo ficou sem dinheiro',
+      'O lugar mais isolado e perigoso do planeta',
+    ],
     sections: [
       { h: 'Por que canal dark com IA explodiu', p: 'Canais dark monetizam sem rosto, sem câmera e sem equipe — só conteúdo. A IA derrubou a última barreira: antes você precisava de ChatGPT + ElevenLabs + CapCut + banco de imagens. Agora uma ferramenta só faz o pacote inteiro, então dá pra postar todo dia sem virar editor.' },
       { h: 'Como o Kineo faz', p: 'Você dá o tema. A IA escreve o roteiro com gancho viral, grava a narração com voz de IA, busca e encaixa as imagens cena a cena, e adiciona as legendas. Sai um MP4 9:16 pronto. Funciona pra qualquer nicho: finanças, mistério, história, curiosidades, motivação.' },
@@ -36,6 +50,11 @@ const PAGES: Record<string, PtPage> = {
     h1: 'A alternativa ao Opus Clip em português',
     intro:
       'O Opus Clip é ótimo pra cortar um vídeo longo que você já gravou. Mas se você quer criar um Short faceless do zero, a partir de uma ideia, é outra ferramenta. O Kineo escreve o roteiro, narra com voz de IA, busca as imagens e monta o Short — em português de verdade.',
+    examples: [
+      'Como a Blockbuster perdeu tudo para a Netflix',
+      'Por que os aviões evitam voar sobre o Tibete',
+      'A ilha brasileira onde quase ninguém pode entrar',
+    ],
     sections: [
       { h: 'A diferença que importa', p: 'Opus Clip = reaproveita vídeo longo (precisa do seu material). Kineo = cria o vídeo inteiro a partir de uma ideia, sem você precisar de gravação nenhuma. Para canal dark, é a ferramenta certa: ela produz, não só recorta.' },
       { h: 'Português nativo', p: 'No Kineo, a interface e a narração funcionam em português. O primeiro Short é grátis; no Brasil, o Starter custa R$24,90 no primeiro mês e depois R$49,90/mês.' },
@@ -53,6 +72,11 @@ const PAGES: Record<string, PtPage> = {
     h1: 'Criar Shorts com IA sem editar',
     intro:
       'Você digita uma ideia e o Kineo monta o Short inteiro: roteiro com gancho, narração com voz de IA, imagens cena a cena e legendas. Pronto pra postar no YouTube Shorts, TikTok e Reels — sem aparecer e sem editar.',
+    examples: [
+      'O que acontece com seu corpo depois de 3 dias sem açúcar',
+      'O bilionário que perdeu tudo em uma noite',
+      'Por que a Porta do Inferno continua queimando',
+    ],
     sections: [
       { h: 'Uma ideia entra, um Short sai', p: 'Sem prompt complicado, sem timeline pra aprender. Tema → vídeo 9:16 pronto. É a forma mais rápida de postar conteúdo curto todo dia sem montar um estúdio.' },
       { h: 'Tudo no automático', p: 'A IA escreve o roteiro, grava a voz, encaixa as imagens e adiciona as legendas. Você só baixa e posta. Funciona em qualquer nicho.' },
@@ -86,11 +110,18 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
 }
 
 const CARD = { background: '#161618', border: '1px solid #2a2a2d' }
+const PT_FORM_COPY = {
+  label: 'Qual ideia você quer transformar em Short?',
+  placeholder: 'Digite um tema ou cole seu roteiro',
+  submit: 'Criar meu primeiro Short →',
+  examplesLabel: 'Temas de exemplo',
+  note: 'Seu tema e o idioma português continuam preenchidos depois do cadastro. Sem cartão no primeiro vídeo.',
+}
 
 export default function PtSeoPage({ params }: { params: { slug: string } }) {
   const pg = PAGES[params.slug]
   if (!pg) notFound()
-  const signupUrl = `/signup?utm_source=seo&utm_medium=pt&utm_campaign=${params.slug}`
+  const campaign = `push36_pt_${params.slug}`
   const faqJsonLd = {
     '@context': 'https://schema.org', '@type': 'FAQPage',
     mainEntity: pg.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
@@ -108,7 +139,15 @@ export default function PtSeoPage({ params }: { params: { slug: string } }) {
           <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.12)', borderRadius: 999, padding: '6px 14px' }}>🇧🇷 Em português</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.15, margin: '16px 0 0', background: 'linear-gradient(180deg,#fff 35%,#a1a1a6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{pg.h1}</h1>
           <p style={{ fontSize: '1.02rem', color: '#86868b', lineHeight: 1.6, margin: '14px 0 0' }}>{pg.intro}</p>
-          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 20, background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Criar meu primeiro vídeo grátis →</Link>
+          <Link href="#criar-short" style={{ display: 'inline-block', marginTop: 20, background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Escolher o tema do meu vídeo →</Link>
+          <TopicGeneratorForm
+            campaign={campaign}
+            source={campaign}
+            examples={pg.examples}
+            formId="criar-short"
+            language="pt"
+            copy={PT_FORM_COPY}
+          />
         </section>
 
         {pg.sections.map((s) => (
@@ -133,7 +172,7 @@ export default function PtSeoPage({ params }: { params: { slug: string } }) {
         <section style={{ marginTop: 40, textAlign: 'center', ...CARD, borderRadius: 20, padding: '28px 20px' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 600, letterSpacing: '-0.025em', margin: 0, color: '#f5f5f7' }}>Faça seu primeiro Short grátis</h2>
           <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>Uma ideia entra, um Short pronto sai. Sem cartão.</p>
-          <Link href={signupUrl} style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Começar grátis →</Link>
+          <Link href="#criar-short" style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Escolher meu tema →</Link>
         </section>
 
         <nav style={{ marginTop: 36, textAlign: 'center', fontSize: '0.8rem', color: '#6e6e73' }}>

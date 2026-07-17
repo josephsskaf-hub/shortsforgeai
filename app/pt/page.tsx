@@ -1,9 +1,9 @@
 // #483 — Landing em português (Brasil). Aproveita as vantagens injustas do
 // projeto no BR: público de "canal dark com IA" e
-// oferta recorrente vigente. Estática, no sitemap, com canonical + hreflang. CTA
-// para /signup com UTM pt/brazil para o funil atribuir o tráfego brasileiro.
+// oferta recorrente vigente. Estática, no sitemap, com canonical + hreflang.
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import TopicGeneratorForm from '@/app/youtube-shorts-from-topic/TopicGeneratorForm'
 
 export const dynamic = 'force-static'
 
@@ -26,7 +26,18 @@ export const metadata: Metadata = {
 }
 
 const CARD = { background: '#161618', border: '1px solid #2a2a2d' }
-const signupUrl = '/signup?utm_source=seo&utm_medium=pt&utm_campaign=brazil'
+const PT_EXAMPLES = [
+  'Por que a Ilha da Queimada Grande é tão perigosa',
+  'O erro bilionário que acabou com a Blockbuster',
+  'O que acontece com seu cérebro depois de 24 horas sem dormir',
+] as const
+const PT_FORM_COPY = {
+  label: 'Sobre o que deve ser seu Short?',
+  placeholder: 'Digite um tema ou cole seu roteiro',
+  submit: 'Transformar este tema em Short →',
+  examplesLabel: 'Temas de exemplo',
+  note: 'Seu tema e o idioma português continuam preenchidos depois do cadastro. Sem cartão no primeiro vídeo.',
+}
 
 const faq = [
   {
@@ -73,12 +84,22 @@ export default function PtLandingPage() {
           <p style={{ fontSize: '1.05rem', color: '#86868b', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 640 }}>
             Você digita uma ideia e o Kineo monta o Short faceless inteiro: <b>roteiro + voz de IA + imagens + legendas</b>, em cerca de 60 segundos. Pronto para postar no YouTube Shorts, TikTok e Reels.
           </p>
-          <Link href={signupUrl} style={{ display: 'inline-block', marginTop: 22, background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}>
+          <Link href="#criar-short" style={{ display: 'inline-block', marginTop: 22, background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}>
             Criar meu primeiro vídeo grátis →
           </Link>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
             Primeiro vídeo <b style={{ color: '#2997ff' }}>grátis</b> · sem cartão · cobrança em Real · cancele quando quiser
           </p>
+          <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'left' }}>
+            <TopicGeneratorForm
+              campaign="push36_pt_activation"
+              source="push36_pt_activation"
+              examples={PT_EXAMPLES}
+              formId="criar-short"
+              language="pt"
+              copy={PT_FORM_COPY}
+            />
+          </div>
         </section>
 
         {/* Como funciona */}
@@ -112,7 +133,7 @@ export default function PtLandingPage() {
                 <div style={{ fontSize: '2rem', fontWeight: 600, color: '#f5f5f7' }}>{p.price}</div>
                 <div style={{ color: '#2997ff', fontWeight: 700, margin: '4px 0' }}>{p.credits}</div>
                 <p style={{ color: '#86868b', fontSize: '0.85rem', margin: '0 0 14px' }}>{p.detail}</p>
-                <Link href={signupUrl} style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '11px 22px', borderRadius: 980, textDecoration: 'none', fontSize: '0.92rem' }}>Começar →</Link>
+                <Link href="#criar-short" style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '11px 22px', borderRadius: 980, textDecoration: 'none', fontSize: '0.92rem' }}>Criar primeiro Short →</Link>
               </div>
             ))}
           </div>
@@ -143,7 +164,7 @@ export default function PtLandingPage() {
         <section style={{ marginTop: 44, textAlign: 'center', ...CARD, borderRadius: 20, padding: '28px 20px' }}>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '-0.025em', margin: 0, color: '#f5f5f7' }}>Faça seu primeiro Short grátis</h2>
           <p style={{ color: '#86868b', margin: '8px 0 18px', fontSize: '0.95rem' }}>Uma ideia entra, um Short pronto sai. Sem editar, sem cartão.</p>
-          <Link href={signupUrl} style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Começar grátis →</Link>
+          <Link href="#criar-short" style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 600, padding: '14px 30px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}>Escolher meu tema →</Link>
         </section>
       </div>
     </main>

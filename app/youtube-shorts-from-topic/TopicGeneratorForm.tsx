@@ -14,6 +14,14 @@ type TopicGeneratorFormProps = {
   source?: string
   examples?: readonly string[]
   formId?: string
+  language?: 'en' | 'pt' | 'es'
+  copy?: {
+    label: string
+    placeholder: string
+    submit: string
+    examplesLabel: string
+    note: string
+  }
 }
 
 export default function TopicGeneratorForm({
@@ -21,6 +29,14 @@ export default function TopicGeneratorForm({
   source = 'push32_topic',
   examples = TOPIC_EXAMPLES,
   formId = 'try-a-topic',
+  language,
+  copy = {
+    label: 'What should your Short be about?',
+    placeholder: 'Type one topic or paste your script',
+    submit: 'Turn this topic into a Short →',
+    examplesLabel: 'Example topics',
+    note: 'Your topic stays attached through signup. No card required for the free Fast workflow.',
+  },
 }: TopicGeneratorFormProps = {}) {
   const [topic, setTopic] = useState('')
   const inputId = `${formId}-input`
@@ -45,11 +61,12 @@ export default function TopicGeneratorForm({
             source,
             placement: 'hero_form',
             topic_length: topic.trim().length,
+            ...(language ? { language } : {}),
           })
         }}
       >
         <label htmlFor={inputId} style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#f5f5f7', marginBottom: 9 }}>
-          What should your Short be about?
+          {copy.label}
         </label>
         <textarea
           id={inputId}
@@ -60,7 +77,7 @@ export default function TopicGeneratorForm({
           minLength={3}
           maxLength={1000}
           rows={3}
-          placeholder="Type one topic or paste your script"
+          placeholder={copy.placeholder}
           style={{
             display: 'block',
             width: '100%',
@@ -78,6 +95,7 @@ export default function TopicGeneratorForm({
           }}
         />
         <input type="hidden" name="intent_campaign" value={campaign} />
+        {language && <input type="hidden" name="language" value={language} />}
         <button
           type="submit"
           style={{
@@ -94,11 +112,11 @@ export default function TopicGeneratorForm({
             cursor: 'pointer',
           }}
         >
-          Turn this topic into a Short →
+          {copy.submit}
         </button>
       </form>
 
-      <div aria-label="Example topics" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 13 }}>
+      <div aria-label={copy.examplesLabel} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 13 }}>
         {examples.map((example) => (
           <button
             key={example}
@@ -120,7 +138,7 @@ export default function TopicGeneratorForm({
       </div>
 
       <p style={{ margin: '13px 0 0', color: '#86868b', fontSize: 12, lineHeight: 1.5 }}>
-        Your topic stays attached through signup. No card required for the free Fast workflow.
+        {copy.note}
       </p>
     </div>
   )

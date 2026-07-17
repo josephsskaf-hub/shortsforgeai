@@ -26,6 +26,10 @@ function activationRedirectFromSearch(search: string): string {
   const activationParams = new URLSearchParams({ welcome: '1' })
   const prompt = (params.get('prompt') ?? '').trim().slice(0, 1000)
   if (prompt) activationParams.set('prompt', prompt)
+  const language = params.get('language')
+  if (language === 'en' || language === 'pt' || language === 'es') {
+    activationParams.set('language', language)
+  }
   return `/generate?${activationParams.toString()}`
 }
 
@@ -87,6 +91,9 @@ export default function SignupPage() {
 
   const strength = scorePassword(password)
   const isCheckoutResume = new URLSearchParams(authSearch).get('reason') === 'checkout'
+  const loginParams = new URLSearchParams({ redirect: activationRedirect })
+  if (isCheckoutResume) loginParams.set('reason', 'checkout')
+  const loginHref = `/login?${loginParams.toString()}`
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -430,7 +437,7 @@ export default function SignupPage() {
                   Click it to activate your account.
                 </p>
                 <Link
-                  href="/login"
+                  href={loginHref}
                   className="inline-block mt-6 text-sm font-semibold"
                   style={{ color: '#2997ff' }}
                 >
@@ -663,7 +670,7 @@ export default function SignupPage() {
                   Already have an account?{' '}
                   {/* KINEO-CHECKOUT-RESUME-2026-07-07 — keep pending checkout alive */}
                   <Link
-                    href={`/login${authSearch}`}
+                    href={loginHref}
                     className="font-semibold transition-colors"
                     style={{ color: '#2997ff' }}
                   >

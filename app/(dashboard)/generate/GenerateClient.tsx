@@ -316,6 +316,9 @@ export default function GenerateClient() {
   // previously submitted `topic` while this screen read only `prompt`, so the
   // visitor's exact idea disappeared at the highest-intent first step.
   const initialPrompt = searchParams.get('prompt') ?? searchParams.get('topic') ?? ''
+  const requestedLanguage = searchParams.get('language')
+  const initialLanguage: 'en' | 'pt' | 'es' =
+    requestedLanguage === 'pt' || requestedLanguage === 'es' ? requestedLanguage : 'en'
 
   const [prompt, setPrompt] = useState(initialPrompt)
 
@@ -663,8 +666,9 @@ export default function GenerateClient() {
   // session here; paid Creator/Studio accounts are defaulted to AI after their
   // plan loads below.
   const [mode, setMode] = useState<GenerationMode>('fast')
-  // Push #316 — output language selector (en | pt | es).
-  const [language, setLanguage] = useState<'en' | 'pt' | 'es'>('en')
+  // Push #316 — output language selector (en | pt | es). PUSH #36 preserves
+  // the language promised by localized acquisition pages through auth.
+  const [language, setLanguage] = useState<'en' | 'pt' | 'es'>(initialLanguage)
   const [generationId, setGenerationId] = useState<string | null>(null)
   const [clipUrls, setClipUrls] = useState<string[]>([])
   // Push #235 — when the user pastes a script with explicit [Pexels:] markers,
