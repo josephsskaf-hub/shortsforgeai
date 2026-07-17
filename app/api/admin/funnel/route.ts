@@ -151,6 +151,9 @@ export interface FunnelData {
     landingSessions: number
     ctaClicks: number
     ctaRate: string
+    viralNowViews: number
+    viralNowClicks: number
+    viralNowViewToClickRate: string
     signups: number
     signupRate: string
     activated: number
@@ -244,6 +247,7 @@ const ORGANIC_EXACT_PATHS = new Set([
   '/free-script-generator',
   '/free-hook-generator',
   '/viral-score',
+  '/viral-now',
   '/ai-avatar',
   '/facts',
   '/pt',
@@ -416,6 +420,7 @@ export async function GET(req: Request) {
     const trackedEventNames = [
       'homepage_view', 'generate_page_view', 'analyze_idea_clicked',
       'landing_session_started', 'organic_cta_clicked', 'organic_topic_submitted',
+      'viral_now_viewed', 'viral_now_topic_clicked',
       'video_share_clicked', 'video_shared', 'video_share_channel_opened',
       'public_video_cta_clicked',
       'series_continue_clicked', 'series_continuation_landed',
@@ -500,6 +505,7 @@ export async function GET(req: Request) {
           .select('name,user_id,created_at,session_id,metadata,path')
           .in('name', [
             'landing_session_started', 'organic_cta_clicked', 'organic_topic_submitted',
+            'viral_now_viewed', 'viral_now_topic_clicked',
             'video_share_prompt_viewed', 'video_share_clicked', 'video_shared',
             'video_share_channel_opened', 'video_share_cancelled',
             'public_video_cta_clicked',
@@ -814,8 +820,21 @@ export async function GET(req: Request) {
     // than a generic CTA click. Count both paths so the Search Console-led
     // experiment is visible without changing the established dashboard shape.
     const organicCtaRows = organicEventRows.filter((event) =>
-      event.name === 'organic_cta_clicked' || event.name === 'organic_topic_submitted'
+      event.name === 'organic_cta_clicked' || event.name === 'organic_topic_submitted' ||
+      event.name === 'viral_now_topic_clicked'
     )
+    const viralNowEventRows = organicEventRows.filter((event) => {
+      const campaign = event.metadata?.campaign
+      return typeof campaign === 'string' && campaign.toLowerCase() === 'push39_viral_now'
+    })
+    const uniqueViralNowActors = (name: 'viral_now_viewed' | 'viral_now_topic_clicked'): number => {
+      const rows = viralNowEventRows.filter((event) => event.name === name)
+      return new Set(rows.map((event, index) =>
+        event.user_id || event.session_id || `${event.created_at ?? 'unknown'}:${index}`
+      )).size
+    }
+    const viralNowViews = uniqueViralNowActors('viral_now_viewed')
+    const viralNowClicks = uniqueViralNowActors('viral_now_topic_clicked')
     const organicPageMap = new Map<string, number>()
     for (const event of organicLandingRows) {
       const path = event.path as string
@@ -826,6 +845,7 @@ export async function GET(req: Request) {
       const source = (profile.signup_utm_source ?? profile.utm_source ?? '').toLowerCase()
       const medium = (profile.signup_utm_medium ?? '').toLowerCase()
       return campaign.startsWith('push22_') || campaign.startsWith('push32_') ||
+        campaign.startsWith('push39_') ||
         (source === 'seo' && medium === 'organic')
     })
     const organicActivated = organicCohort.filter((profile) => (videoCountByUser.get(profile.id) ?? 0) >= 1).length
@@ -834,6 +854,9 @@ export async function GET(req: Request) {
       landingSessions: organicLandingRows.length,
       ctaClicks: organicCtaRows.length,
       ctaRate: pct(organicCtaRows.length, organicLandingRows.length),
+      viralNowViews,
+      viralNowClicks,
+      viralNowViewToClickRate: pct(viralNowClicks, viralNowViews),
       signups: organicCohort.length,
       signupRate: pct(organicCohort.length, organicCtaRows.length),
       activated: organicActivated,

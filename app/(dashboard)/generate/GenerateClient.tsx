@@ -308,14 +308,14 @@ const VIRAL_STARTER_TOPICS = [
 ]
 const PUSH27_ONBOARDING_RENDER_SESSION_KEY = 'kineo_push27_onboarding_render_dispatched'
 
-export default function GenerateClient() {
+export default function GenerateClient({ initialViralPrompt = '' }: { initialViralPrompt?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   // KINEO-RECOVERY-2026-07-15 — accept the legacy `topic` key as a safety
   // net, but standardise every current entry point on `prompt`. The homepage
   // previously submitted `topic` while this screen read only `prompt`, so the
   // visitor's exact idea disappeared at the highest-intent first step.
-  const initialPrompt = searchParams.get('prompt') ?? searchParams.get('topic') ?? ''
+  const initialPrompt = searchParams.get('prompt') ?? searchParams.get('topic') ?? initialViralPrompt
   const requestedLanguage = searchParams.get('language')
   const initialLanguage: 'en' | 'pt' | 'es' =
     requestedLanguage === 'pt' || requestedLanguage === 'es' ? requestedLanguage : 'en'

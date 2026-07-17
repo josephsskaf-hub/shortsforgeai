@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ViralTopic } from '@/lib/viralTopics'
 import { getNextRefreshMs } from '@/lib/viralTopics'
+import { trackEvent } from '@/lib/analytics'
 
 // ── Vertical color map ───────────────────────────────────────────────────────
 const VERTICAL_COLORS: Record<string, string> = {
@@ -38,10 +39,6 @@ function formatCountdown(ms: number): string {
   const h = Math.floor(totalMinutes / 60)
   const m = totalMinutes % 60
   return `${h}h ${m}m`
-}
-
-function todayLabel(): string {
-  return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
@@ -79,7 +76,7 @@ function TopicCard({ topic, onGenerate }: { topic: ViralTopic; onGenerate: (t: V
   const badge = BADGE_STYLES[topic.badge] ?? BADGE_STYLES['Trending']
 
   return (
-    <div style={{
+    <div id={`topic-${topic.id}`} style={{
       background: 'var(--card)',
       border: `1px solid var(--border)`,
       borderRadius: 14,
@@ -198,38 +195,60 @@ function TopicCard({ topic, onGenerate }: { topic: ViralTopic; onGenerate: (t: V
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
       >
-        Generate Short →
+        Create this Short free →
       </button>
     </div>
   )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+export default function ViralNowClient({
+  isLoggedIn,
+  initialTopics,
+}: {
+  isLoggedIn: boolean
+  initialTopics: ViralTopic[]
+}) {
   const router = useRouter()
-  const [topics, setTopics] = useState<ViralTopic[]>([])
-  const [loading, setLoading] = useState(true)
+  const [topics, setTopics] = useState<ViralTopic[]>(initialTopics)
+  const [loading, setLoading] = useState(initialTopics.length === 0)
   const [countdown, setCountdown] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const viewTrackedRef = useRef(false)
+
+  // One anonymous-safe actor per browser session is used by the recovery
+  // dashboard. No prompt, email or other personal data is recorded.
+  useEffect(() => {
+    if (viewTrackedRef.current) return
+    viewTrackedRef.current = true
+    void trackEvent('viral_now_viewed', {
+      source: 'viral_now_public',
+      campaign: 'push39_viral_now',
+      topics_count: initialTopics.length,
+      logged_in: isLoggedIn,
+    }, '/viral-now')
+  }, [initialTopics.length, isLoggedIn])
 
   // Fetch topics
   useEffect(() => {
     async function load() {
       try {
-        setLoading(true)
+        if (initialTopics.length === 0) setLoading(true)
         const res = await fetch('/api/viral-now', { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
-        setTopics(data.topics ?? [])
+        if (Array.isArray(data.topics) && data.topics.length > 0) {
+          setTopics(data.topics)
+        }
       } catch (err) {
         console.error('[ViralNowClient] fetch error:', err)
-        setError('Could not load topics. Please refresh.')
+        if (initialTopics.length === 0) setError('Could not load topics. Please refresh.')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [])
+  }, [initialTopics.length])
 
   // Countdown timer — updates every 30s
   useEffect(() => {
@@ -243,12 +262,34 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
   }, [])
 
   const handleGenerate = useCallback((topic: ViralTopic) => {
+    const generateParams = new URLSearchParams({
+      viral_topic: topic.id,
+      autoanalyze: '1',
+      duration: String(topic.duration),
+      utm_source: 'viral_now',
+      utm_medium: 'organic',
+      utm_campaign: 'push39_viral_now',
+      utm_content: topic.id,
+    })
+    const generateUrl = `/generate?${generateParams.toString()}`
+
+    void trackEvent('viral_now_topic_clicked', {
+      source: 'viral_now_public',
+      campaign: 'push39_viral_now',
+      topic_id: topic.id,
+      vertical: topic.vertical,
+      logged_in: isLoggedIn,
+    }, '/viral-now')
+
     if (!isLoggedIn) {
-      router.push('/login?redirect=/viral-now')
+      const signupParams = new URLSearchParams({
+        redirect: generateUrl,
+        intent_campaign: 'push39_viral_now',
+      })
+      router.push(`/signup?${signupParams.toString()}`)
       return
     }
-    const url = `/generate?prompt=${encodeURIComponent(topic.prompt)}&autoanalyze=1&duration=${topic.duration}`
-    router.push(url)
+    router.push(generateUrl)
   }, [router, isLoggedIn])
 
   return (
@@ -264,7 +305,7 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
             color: 'var(--foreground)',
             letterSpacing: '-0.02em',
           }}>
-            🔥 Viral Now
+            🔥 Viral Now: Trending YouTube Shorts Ideas
           </h1>
           {/* Pulsing red dot */}
           <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -284,10 +325,20 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
           fontSize: '0.82rem',
           color: 'var(--muted, #6b7280)',
         }}>
-          {todayLabel()} &middot; Refreshes in{' '}
+          8 ready-to-create ideas &middot; Refreshes in{' '}
           <span style={{ color: 'var(--foreground)', fontWeight: 600 }}>
             {countdown || '…'}
           </span>
+        </p>
+        <p style={{
+          margin: '10px 0 0',
+          maxWidth: 680,
+          fontSize: '0.92rem',
+          color: 'var(--muted2, #9ca3af)',
+          lineHeight: 1.5,
+        }}>
+          Pick a trending topic and create a free watermarked faceless Short—no card required.
+          Your exact idea stays selected through signup.
         </p>
       </div>
 
@@ -330,7 +381,7 @@ export default function ViralNowClient({ isLoggedIn }: { isLoggedIn: boolean }) 
         fontSize: '0.72rem',
         color: 'var(--muted, #6b7280)',
       }}>
-        6 topics &middot; Refreshes every 4 hours &middot; Powered by Kineo
+        {topics.length} topics &middot; Refreshes every 4 hours &middot; Powered by Kineo
       </p>
 
       {/* ── Keyframes via style tag ── */}

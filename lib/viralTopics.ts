@@ -1018,6 +1018,16 @@ export function getViralNowTopics(): ViralTopic[] {
   return picked.slice(0, 8).map((t, i) => ({ ...t, slot: i + 1 }))
 }
 
+// PUSH #39 — keep auth/OAuth URLs short without losing the selected idea.
+// Only a bounded topic id crosses the auth boundary; the trusted server-side
+// catalogue restores the full prompt after the user returns to /generate.
+export function getViralTopicById(topicId: string | null | undefined): ViralTopic | null {
+  if (!topicId) return null
+  const normalizedId = topicId.trim().slice(0, 64)
+  const topic = VIRAL_TOPICS_POOL.find((candidate) => candidate.id === normalizedId)
+  return topic ? { ...topic } : null
+}
+
 export function getNextRefreshMs(): number {
   const now = new Date()
   const msInHour = 3600000

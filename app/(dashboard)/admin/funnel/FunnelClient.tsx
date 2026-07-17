@@ -107,6 +107,7 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
   const leak = data.biggestLeak ?? null
   const organic = data.organicRecovery ?? {
     landingSessions: 0, ctaClicks: 0, ctaRate: '—', signups: 0,
+    viralNowViews: 0, viralNowClicks: 0, viralNowViewToClickRate: '—',
     signupRate: '—', activated: 0, activationRate: '—', paid: 0,
     topLandingPages: [],
   }
@@ -532,6 +533,23 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
           label="Landing → CTA"
           value={organic.ctaRate}
           sub={`${organic.ctaClicks} / ${organic.landingSessions}`}
+        />
+        <Card
+          label="Viral Now visitors"
+          value={fmt(organic.viralNowViews)}
+          hint="unique external actors · PUSH #39"
+          accent="#f97316"
+        />
+        <Card
+          label="Viral topic selections"
+          value={fmt(organic.viralNowClicks)}
+          hint="exact topic preserved through signup"
+          accent="#ef4444"
+        />
+        <RateCard
+          label="Viral view → Topic"
+          value={organic.viralNowViewToClickRate}
+          sub={`${organic.viralNowClicks} / ${organic.viralNowViews}`}
         />
         <Card
           label="Attributed signups"

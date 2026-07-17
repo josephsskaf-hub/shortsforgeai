@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { writeServerEvent } from '@/lib/serverEvents'
+import { getViralTopicById } from '@/lib/viralTopics'
 import GenerateClient from './GenerateClient'
 
 export const dynamic = 'force-dynamic'
@@ -48,6 +49,11 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
       : 'standard'
   const sessionId = cookies().get('kineo_event_session_id')?.value ?? null
   const path = generatePath(searchParams)
+  const viralTopicId = firstParam(searchParams, 'viral_topic')
+  const viralTopic = getViralTopicById(viralTopicId)
+
+  // A stale or forged id must never silently turn into an unrelated video.
+  if (viralTopicId && !viralTopic) redirect('/viral-now?topic=unavailable')
 
   if (!user) {
     if (activationEntry !== 'standard') {
@@ -70,14 +76,15 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
     sessionId,
     metadata: {
       activation_entry: activationEntry,
-      has_prompt: Boolean(firstParam(searchParams, 'prompt')?.trim()),
+      has_prompt: Boolean(firstParam(searchParams, 'prompt')?.trim() || viralTopic?.prompt),
       autoanalyze: firstParam(searchParams, 'autoanalyze') === '1',
+      viral_topic_id: viralTopic?.id ?? null,
     },
   })
 
   return (
     <Suspense fallback={null}>
-      <GenerateClient />
+      <GenerateClient initialViralPrompt={viralTopic?.prompt ?? ''} />
     </Suspense>
   )
 }
