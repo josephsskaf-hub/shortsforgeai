@@ -26,7 +26,7 @@
 - [PUSH #34](./PUSH-34-RELEASE.md) — publicado e validado
 - [PUSH #35](./PUSH-35-RELEASE.md) — publicado e validado
 - [PUSH #36](./PUSH-36-RELEASE.md) — publicado e validado
-- [PUSH #37](./PUSH-37-RELEASE.md) — pronto para publicação
+- [PUSH #37](./PUSH-37-RELEASE.md) — publicado e validado
 
 ## Próximo número
 

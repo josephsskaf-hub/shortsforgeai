@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** pronto para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -59,9 +59,12 @@
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
-- Validação de produção: pendente.
+- Commit: `68b5ebf` (`PUSH #37 make private pack upgrade fail closed`).
+- Deploy Vercel: `dpl_4z585o2sV9ZZmQcQpW4QsK7jY87g` — `READY`.
+- O domínio canônico `https://www.usekineo.com` foi confirmado no mesmo deploy.
+- `/checkout/cancelled` respondeu HTTP 200.
+- Os chunks JavaScript publicados contêm a detecção da oferta privada, os preços US$5/₹405, a renovação de US$24.90 e os metadados de tracking.
+- A validação usou somente HTTP sem executar JavaScript e sem chamar a rota de checkout; nenhum evento, sessão Stripe, cobrança ou resgate foi criado.
 
 ## Gate pós-deploy
 
