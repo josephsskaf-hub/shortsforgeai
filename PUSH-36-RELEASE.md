@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** pronto para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -54,6 +54,28 @@
 - `app/(dashboard)/generate/GenerateClient.tsx`
 - `PUSH-36-RELEASE.md`
 - `PUSH-INDEX.md`
+
+## Publicação
+
+- Commit: `2748746` (`PUSH #36 preserve Portuguese activation intent`).
+- Deploy Vercel: `dpl_D3RZERbc4EepKgp41Qd6i9o4C4QV` — `READY`.
+- Domínios validados por HTTP: `/pt` e as três rotas de `/pt/[slug]`, todas com status 200.
+- Nas quatro páginas, o HTML de produção contém formulário, `language=pt`, campanha `push36_pt_*` e copy localizada.
+- Zero ocorrência da UTM interna antiga nas quatro páginas de produção.
+- A validação usou HTTP sem executar JavaScript público; nenhum evento de QA foi criado.
+
+## Baseline pós-deploy
+
+Fixado em **16/07/2026 às 22:43 BRT** (`2026-07-17T01:43:29Z`).
+
+- novos perfis externos: 0;
+- novos perfis brasileiros: 0;
+- vídeos externos: 0;
+- eventos `push36_pt_*`: 0;
+- sessões Stripe recorrentes externas: 0;
+- assinantes externos `active`/`trialing`: **0/10**;
+- assinaturas internas excluídas: 2;
+- códigos Lote 1 ativos/resgates: 4/0.
 
 ## Medíção
 
