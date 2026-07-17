@@ -2,7 +2,7 @@
 
 **Data:** 16/07/2026
 
-**Status:** em preparação para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 **Placar antes deste PUSH:** 0/10
@@ -62,9 +62,13 @@ O motor existia, mas ainda não havia gerado aquisição. A inspeção encontrou
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
-- Validação em produção: pendente.
+- Commit de código: `f966a7d` (`PUSH #33 make partner attribution reliable`).
+- Deploy Vercel: `dpl_3zGCQAQC5Mtn5hyMkNUrJG6P4KyP` — `READY`.
+- Domínios confirmados: `www.usekineo.com`, `usekineo.com`, `shortsforgeai.vercel.app`, `shortsforgeai.com` e `www.shortsforgeai.com`.
+- `/partners`: HTTP 200 no domínio público, campanha, CTA, 90 dias, matemática atual e FAQ confirmados.
+- `/affiliate`: HTTP 200 no domínio público.
+- Claims antigos confirmados como ausentes em produção.
+- Sitemap: 66 URLs, 66 únicas, `/partners` presente.
 
 ## Gate de resultado
 
