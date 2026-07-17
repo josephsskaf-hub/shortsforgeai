@@ -2,7 +2,7 @@
 
 **Data:** 17/07/2026
 
-**Status:** pronto para publicação
+**Status:** publicado e validado em produção
 
 **Meta comercial ativa:** 10 assinantes recorrentes externos válidos em 14 dias, sem mídia paga
 
@@ -70,8 +70,12 @@
 
 ## Publicação
 
-- Commit: pendente.
-- Deploy Vercel: pendente.
+- Commit: `ddb73f3` (`PUSH #39 preserve Viral Now intent`).
+- Deploy Vercel: `dpl_Fzv5bcbEL6yirrLbeLhz2jZghash` — `READY`.
+- O log da Vercel confirma clone da branch `main` no commit `ddb73f3`, build concluído e target `production`.
+- O domínio canônico `https://www.usekineo.com/viral-now` devolveu o novo title, description, canonical, `ItemList`, CTA gratuito e oito cards no HTML do servidor.
+- Em produção, um tema válido respondeu 307 para auth mantendo o ID e a campanha, sem incluir o prompt; um ID adulterado respondeu 307 de volta à lista.
+- A validação usou somente HTTP sem JavaScript: nenhum evento, render ou custo de provedor foi criado.
 
 ## Gate pós-deploy
 
