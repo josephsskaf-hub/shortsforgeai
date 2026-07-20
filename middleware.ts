@@ -7,6 +7,12 @@ const LEGACY_PUBLIC_HOSTS = new Set([
   'shortsforgeai.vercel.app',
 ])
 
+// Stripe treats redirects as failed webhook deliveries. Keep the old live
+// endpoint executable while Stripe retries events created before the account
+// endpoint was moved to www.usekineo.com. Signature verification still happens
+// inside the route, so this exception does not weaken webhook authentication.
+const LEGACY_HOST_DIRECT_PATHS = new Set(['/api/stripe/webhook'])
+
 export async function middleware(request: NextRequest) {
   // Keep one permanent public origin. The production Vercel hostname was
   // serving a full 200 copy of every page, while the former brand domains
@@ -20,7 +26,10 @@ export async function middleware(request: NextRequest) {
     .toLowerCase()
   const hostname = rawHost.split(':')[0]
 
-  if (LEGACY_PUBLIC_HOSTS.has(hostname)) {
+  if (
+    LEGACY_PUBLIC_HOSTS.has(hostname) &&
+    !LEGACY_HOST_DIRECT_PATHS.has(request.nextUrl.pathname)
+  ) {
     const canonicalUrl = request.nextUrl.clone()
     canonicalUrl.protocol = 'https:'
     canonicalUrl.host = 'www.usekineo.com'
