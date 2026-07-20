@@ -8,6 +8,28 @@ O funil obrigatório é:
 
 `impressão → visita atribuída → submit de tópico → cadastro → primeiro vídeo concluído → pricing → checkout → pagamento recorrente externo`
 
+## Meta comercial operacional
+
+A north star passa a ser **7 novas assinaturas recorrentes externas válidas por janela móvel de 7 dias**. Pagamentos são irregulares; não invente uma vitória ou derrota porque uma data isolada teve zero ou mais de um pagamento. Stripe `active` ou `trialing` continua sendo a verdade final.
+
+Use como meta diária inicial do self-serve, ainda a validar:
+
+`80 sessões qualificadas → 28 submits → 17 cadastros → 10 primeiros vídeos → 5 pricing views → 2 checkouts → média de 1 pagamento externo`
+
+Esses números são metas de operação, não resultados comprovados. Antes de buscar mais tráfego, corrija qualquer bloqueio técnico que impeça um visitante já interessado de concluir o primeiro vídeo. Conte sessões, atores únicos e pagamentos externos; nunca infle o placar com refresh, evento duplicado, conta interna ou QA.
+
+## Horário e ordem simples
+
+Todos os dias, a execução começa às **17:00 BRT**. O vídeo vem primeiro:
+
+1. Confirme rapidamente que ainda não existe um Short publicado na data.
+2. Escolha o melhor tema, crie o vídeo e faça somente o QA obrigatório.
+3. Publique imediatamente no YouTube com título, descrição, hashtags e UTM.
+4. Salve o MP4 e a legenda do TikTok na pasta diária.
+5. Somente depois faça medição, aquisição de alta intenção, SEO/ChatGPT e relatório.
+
+Não atrase a publicação do Short para executar tarefas secundárias. Se o vídeo já tiver sido publicado naquele dia, não duplique; faça apenas medição e aquisição.
+
 ## Autorizações permanentes deste workflow
 
 O owner autoriza, sem nova confirmação repetitiva:
@@ -16,7 +38,8 @@ O owner autoriza, sem nova confirmação repetitiva:
 2. Submissões gratuitas em diretórios legítimos e relevantes de IA, SaaS, creator tools e vídeo, usando somente informações públicas e canônicas da Kineo.
 3. Uma publicação diária no canal próprio do YouTube, com vídeo, título, descrição, hashtags, link UTM e comentário fixado.
 4. Download do MP4 final em `C:\Users\win\Downloads\kineo\output\daily-shorts\AAAA-MM-DD\` para o owner publicar manualmente no TikTok.
-5. Leitura de Stripe, Supabase, Search Console, YouTube Studio e métricas públicas para medir o funil.
+5. Manter o primeiro link do perfil do canal apontando para a landing canônica e rastreada da Kineo e adicionar um vídeo relacionado quando existir um destino adequado no próprio canal.
+6. Leitura de Stripe, Supabase, Search Console, YouTube Studio e métricas públicas para medir o funil.
 
 Não estão autorizados:
 
@@ -36,7 +59,16 @@ Não estão autorizados:
 - Leia tráfego e eventos por origem/UTM.
 - Identifique o maior vazamento atual. Não faça nova alteração de produto quando não existe tráfego suficiente para medir a anterior.
 
-### 2. Google orgânico, sem anúncios
+### 2. Aquisição de intenção alta
+
+- Use cada Short aprovado como prova visual para creators que já publicam ou querem publicar conteúdo faceless.
+- Priorize microcriadores, educadores, newsletters, cursos e comunidades cujo público já busca roteiro, B-roll, voz, captions ou automação de Shorts.
+- Por dia, pesquise e prepare no máximo 3 provas personalizadas e 2 propostas de parceria realmente específicas. Reaproveite um exemplo verdadeiro do mesmo vertical; não gaste renders pagos sem uso real.
+- Não envie em massa. E-mail, DM e publicação em canal de terceiros continuam sujeitos às restrições deste arquivo.
+- Meça `alvo qualificado → resposta → visita → cadastro → primeiro vídeo → checkout → pagamento`, não volume bruto de contatos.
+- Depois de 15 provas com menos de 2 respostas positivas ou zero ativações, mude ICP ou abordagem. Depois de 10 propostas de parceria com menos de 2 interessados, mude a oferta.
+
+### 3. Google orgânico, sem anúncios
 
 - Use Search Console, sitemap, indexação e dados reais de consulta/página.
 - Trabalhe palavras-chave de alta intenção, como criação de YouTube Shorts por tópico, gerador de Shorts com IA, canal faceless, alternativas a concorrentes e ferramentas gratuitas por nicho.
@@ -45,20 +77,21 @@ Não estão autorizados:
 - Rode build, preserve mudanças alheias, publique em `main`, valide Vercel `READY` e confirme o HTML/HTTP ao vivo.
 - Submeta URLs modificadas ao IndexNow quando apropriado. Não use métodos de indexação proibidos ou claims de ranking garantido.
 
-### 3. Descoberta no ChatGPT e outros mecanismos de resposta
+### 4. Descoberta no ChatGPT e outros mecanismos de resposta
 
 - Mantenha `robots.txt`, `llms.txt`, `/facts`, sitemap, páginas de comparação e páginas de produto claras, públicas e citáveis.
 - Facilite a compreensão factual: o que a Kineo faz, para quem serve, diferença para re-clippers, preços atuais, free tier real e exemplos verdadeiros.
 - Use dados estruturados válidos e fontes verificáveis. Não tente manipular modelos, esconder instruções em páginas ou inventar avaliações, usuários, resultados, views ou receita.
 - Prefira menções e backlinks editoriais legítimos em diretórios relevantes a volume de links fracos.
 
-### 4. Diretórios
+### 5. Diretórios e reviews
 
 - Antes de submeter, pesquise o histórico em `LEADS-QUEUE-4-diretorios.md`, `kineo-listing-kit.md` e no próprio diretório para evitar duplicata.
 - Priorize diretórios gratuitos, ativos, indexáveis e alinhados a AI video, creator tools, SaaS ou YouTube.
 - Use `https://www.usekineo.com` como URL canônica e a oferta vigente do repositório.
 - Faça no máximo uma submissão de qualidade por dia. Se exigir pagamento, CAPTCHA, credencial ausente ou claim não verificável, pare essa submissão e registre o gate; não substitua por spam.
 - Registre diretório, URL, status, data, copy usada, backlink/UTM e próxima checagem.
+- Diretórios são apoio, não o motor diário principal. Se uma origem não produzir sessão referida em 30 dias, pare a manutenção.
 
 ## Short diário — execução obrigatória uma vez por dia
 
@@ -96,7 +129,8 @@ Não estão autorizados:
 - Descrição curta com contexto factual e este link atribuído:
   `https://www.usekineo.com/youtube-shorts-from-topic?utm_source=youtube&utm_medium=organic&utm_campaign=daily_short_AAAAMMDD&utm_content=SLUG_DO_TEMA`
 - Use 3–5 hashtags relevantes, incluindo `#shorts`.
-- Fixe um comentário que faça uma pergunta real e inclua um segundo link UTM com `_comment` no `utm_content`.
+- URLs em descrições e comentários de Shorts não são clicáveis. Não conte esses URLs como cliques. O CTA falado e visual deve dizer `Create yours — first link in profile`, e o primeiro link do perfil deve levar à landing rastreada da Kineo.
+- Quando houver um vídeo relacionado adequado no canal, associe-o ao Short como caminho clicável. Fixe um comentário que faça uma pergunta real; o URL com `_comment` pode permanecer para quem copiar, mas não é o mecanismo principal de aquisição.
 - Depois de publicar, registre URL, video ID, horário, título, tema e UTM.
 
 ### TikTok — não publicar

@@ -975,6 +975,28 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     ;(async () => {
       try {
         const supabase = createClient()
+
+        // A brand-new visitor normally has no render snapshot to restore. In
+        // that case there is nothing that can race a first generation, so
+        // release the UI gate immediately instead of making the first-video
+        // click wait on a remote auth round-trip. We still resolve the user in
+        // the background so any new render can persist a user-bound recovery
+        // snapshot. When a snapshot does exist, the verified-user checks below
+        // remain mandatory before it is resumed.
+        const raw = skipRestore ? null : localStorage.getItem(activeRenderStorageKey())
+        if (skipRestore) {
+          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
+        }
+        if (!raw) {
+          activeRenderRestoreCheckedRef.current = true
+          activeRenderRestoreResolvedRef.current = true
+          setActiveRenderRestoreResolved(true)
+
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!cancelled && user) currentUserIdRef.current = user.id
+          return
+        }
+
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (cancelled) return
         // A transient auth/network failure must not destroy the only pointer to
@@ -993,13 +1015,6 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
           return
         }
         currentUserIdRef.current = user.id
-        if (skipRestore) {
-          try { localStorage.removeItem(activeRenderStorageKey()) } catch { /* ignore */ }
-          return
-        }
-
-        const raw = localStorage.getItem(activeRenderStorageKey())
-        if (!raw) return
         let stored: Partial<ActiveRenderSnapshot>
         try {
           stored = JSON.parse(raw) as Partial<ActiveRenderSnapshot>

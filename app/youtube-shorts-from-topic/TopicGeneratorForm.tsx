@@ -46,6 +46,7 @@ export default function TopicGeneratorForm({
       id={formId}
       style={{
         marginTop: 30,
+        scrollMarginTop: 24,
         border: '1px solid rgba(41,151,255,0.35)',
         borderRadius: 18,
         background: 'linear-gradient(145deg, rgba(41,151,255,0.10), rgba(255,255,255,0.025))',

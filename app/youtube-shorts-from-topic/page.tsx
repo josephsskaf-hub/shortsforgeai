@@ -52,7 +52,6 @@ const FAQ: { q: string; a: string }[] = [
 ]
 
 export default function YouTubeShortsFromTopicPage() {
-  const signupUrl = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_topic'
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -101,7 +100,7 @@ export default function YouTubeShortsFromTopicPage() {
           Type one topic — or paste a script — and Kineo generates the whole faceless Short for you: the hook and script, an AI voiceover, footage matched to every line, and captions. A ready-to-post 9:16 video in about 60 seconds. No camera, no editing, no timeline to learn.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
-          <OrganicCtaLink href={signupUrl} source="push22_topic" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>
+          <OrganicCtaLink href="#try-a-topic" source="push43_topic_form" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>
           <Link href="/pricing" style={{ border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 700, padding: '14px 22px', borderRadius: 980, textDecoration: 'none' }}>See pricing</Link>
         </div>
         <p style={{ fontSize: 13, color: '#2997ff', fontWeight: 700, margin: '12px 0 0' }}>
@@ -175,7 +174,7 @@ export default function YouTubeShortsFromTopicPage() {
         <div style={{ marginTop: 44, textAlign: 'center', background: 'radial-gradient(circle at 50% 0%, rgba(41,151,255,0.14), #0c0c0e 70%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 18, padding: '34px 22px' }}>
           <div style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900 }}>Type a topic. Get a finished Short.</div>
           <p style={{ color: '#86868b', margin: '8px 0 18px' }}>Try up to 3 watermarked Fast videos every 24h — no card.</p>
-          <OrganicCtaLink href={signupUrl} source="push22_topic" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
+          <OrganicCtaLink href="#try-a-topic" source="push43_topic_form" placement="final" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}>Make my Fast video →</OrganicCtaLink>
         </div>
       </div>
       <StickyFreeShortCTA />
