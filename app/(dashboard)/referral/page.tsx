@@ -38,8 +38,8 @@ export default function ReferralPage() {
         </h1>
 
         <p className="text-sm" style={{ color: 'var(--muted2)', maxWidth: 520, lineHeight: 1.55 }}>
-          Share your link — you and every friend each get free credits when they create their first
-          video. No limit on how many friends you can invite.
+          Share your link — you and each of your first 20 qualifying friends get free credits when
+          they create their first video. Friends invited after that still receive their bonus.
         </p>
       </header>
 

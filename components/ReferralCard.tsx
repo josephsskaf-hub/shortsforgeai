@@ -123,7 +123,7 @@ export default function ReferralCard() {
           </div>
           <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
             You and your friend each get {referral.rewardCredits} free credits when they create their
-            first video.
+            first video. Your account earns this reward on up to 20 qualifying referrals.
           </div>
         </div>
       </div>

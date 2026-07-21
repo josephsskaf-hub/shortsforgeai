@@ -4057,10 +4057,9 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   }, [phase, finalVideoUrl, playerFailed])
 
 
-  // Push #084 — Fast/Creator Mode cost. Push #449 — Fast is FREE (0 credits)
-  // since #434 made it free+unlimited; the label was stale at 1 ("Generate · 1
-  // credit" on the button, though the server already charged 0). Cinematic Mode
-  // uses the per-quality cost from QUALITY_OPTIONS.
+  // Push #084 — Fast/Creator Mode cost. Free accounts see 0 credits here;
+  // /api/compose separately enforces up to 3 watermarked Fast previews per
+  // rolling 24h. Cinematic Mode uses the per-quality cost from QUALITY_OPTIONS.
   // KINEO-PRICING-V3C-2026-07-10 — Fast costs 1 credit for PAYING accounts
   // (mirrors creditCostFor('fast', isPaidUser) server-side). Free users keep
   // seeing Free/0 — their render stays downloadable and shareable with a watermark.

@@ -40,7 +40,7 @@ export default function ReferralPromoBanner() {
       <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎁</span>
       <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 700, color: '#f5f5f7', lineHeight: 1.4 }}>
         Invite a friend — you <span style={{ color: 'var(--blue, #2997ff)' }}>both get 30 free credits</span> when they
-        make their first video. No limit.
+        make their first video. Earn referral rewards for up to 20 friends.
       </span>
       <Link
         href="/referral"

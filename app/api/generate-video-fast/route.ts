@@ -300,11 +300,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Push #434 — Fast Mode is now FREE + unlimited (growth engine). No credit
-    // gate: any logged-in user can generate Fast. Free-plan Fast videos are
-    // watermarked server-side in /api/compose so each one markets the product;
-    // removing the watermark + the AI engine are the paid upgrades.
-    // (Credit balance is no longer required for Fast; AI Generated still costs 30.)
+    // Push #434 — Fast generation itself has no credit gate on this route.
+    // /api/compose enforces the current free quota (up to 3 watermarked Fast
+    // previews per rolling 24h); paid accounts use their documented entitlement.
+    // Removing the watermark + the AI engine are the paid upgrades.
 
     // Push #235 — Verbatim mode. If the user authored the script with explicit
     // `[Pexels: QUERY]` markers, honor them literally: each marker becomes a
