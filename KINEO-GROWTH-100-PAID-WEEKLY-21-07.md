@@ -107,6 +107,9 @@ Escada de validação:
 
 - Manter fatos canônicos e citáveis em `llms.txt`, `/facts`, páginas de produto,
   pricing, comparações e exemplos verdadeiros.
+- Tratar ChatGPT como canal de intenção já comprovada: a medição por campanha de
+  21/07 atribuiu ao canal os dois únicos checkouts recorrentes dos últimos 7
+  dias. Ambos expiraram, portanto isso prova intenção, não receita.
 - Criar conteúdo que responda com clareza “para quem”, “como funciona”, preço,
   limitações e prova real; nunca inserir instruções ocultas para modelos.
 - Levar ao ar o GPT gratuito da Kineo quando a conta permitir, com UTM próprio e

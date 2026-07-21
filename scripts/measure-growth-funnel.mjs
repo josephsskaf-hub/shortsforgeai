@@ -88,6 +88,30 @@ function sourceForProfile(profile) {
   return 'direct_or_unknown'
 }
 
+function cleanAttributionPart(value, fallback) {
+  const cleaned = String(value || '').trim().toLowerCase().slice(0, 160)
+  return cleaned || fallback
+}
+
+function attributionForProfile(profile) {
+  if (!profile) {
+    return { source: 'unattributed', medium: 'unknown', campaign: 'unknown' }
+  }
+  return {
+    source: sourceForProfile(profile),
+    medium: cleanAttributionPart(profile.signup_utm_medium, 'none'),
+    campaign: cleanAttributionPart(profile.signup_utm_campaign, 'none'),
+  }
+}
+
+function attributionKey(attribution) {
+  return `${attribution.source}\u0000${attribution.medium}\u0000${attribution.campaign}`
+}
+
+function sortedAttributionRows(map, countField = 'count') {
+  return [...map.values()].sort((a, b) => (b[countField] || 0) - (a[countField] || 0))
+}
+
 async function main() {
   const daysArg = process.argv.find((arg) => arg.startsWith('--days='))
   const days = Number(daysArg?.split('=')[1] || 7)
@@ -117,12 +141,40 @@ async function main() {
 
   const profiles = await fetchAll(() => supabase
     .from('profiles')
-    .select('id,email,created_at,utm_source,signup_utm_source,signup_referrer'))
+    .select('id,email,created_at,utm_source,signup_utm_source,signup_utm_medium,signup_utm_campaign,signup_referrer,stripe_customer_id,stripe_subscription_id'))
   const internalIds = new Set()
   for (const user of authUsers) if (isInternalEmail(user.email)) internalIds.add(user.id)
   for (const profile of profiles) if (isInternalEmail(profile.email)) internalIds.add(profile.id)
 
   const externalProfiles = profiles.filter((profile) => !internalIds.has(profile.id))
+  const profilesById = new Map(externalProfiles.map((profile) => [profile.id, profile]))
+  const profilesByEmail = new Map(
+    externalProfiles
+      .filter((profile) => profile.email)
+      .map((profile) => [String(profile.email).trim().toLowerCase(), profile]),
+  )
+  const profilesByStripeCustomer = new Map(
+    externalProfiles
+      .filter((profile) => profile.stripe_customer_id)
+      .map((profile) => [profile.stripe_customer_id, profile]),
+  )
+  const profilesByStripeSubscription = new Map(
+    externalProfiles
+      .filter((profile) => profile.stripe_subscription_id)
+      .map((profile) => [profile.stripe_subscription_id, profile]),
+  )
+
+  function resolveExternalProfile({ userId, customerId, subscriptionId, email }) {
+    if (userId && profilesById.has(userId)) return profilesById.get(userId)
+    if (subscriptionId && profilesByStripeSubscription.has(subscriptionId)) {
+      return profilesByStripeSubscription.get(subscriptionId)
+    }
+    if (customerId && profilesByStripeCustomer.has(customerId)) {
+      return profilesByStripeCustomer.get(customerId)
+    }
+    const normalizedEmail = String(email || '').trim().toLowerCase()
+    return normalizedEmail ? (profilesByEmail.get(normalizedEmail) || null) : null
+  }
   const signupCohort = externalProfiles.filter((profile) =>
     new Date(profile.created_at || 0).getTime() >= cutoffMs
   )
@@ -178,7 +230,13 @@ async function main() {
       ? await stripe.customers.retrieve(subscription.customer)
       : subscription.customer
     if (!customer || customer.deleted || isInternalEmail(customer.email)) continue
-    newActiveSubscriptions.push(subscription)
+    const profile = resolveExternalProfile({
+      userId,
+      customerId: customer.id,
+      subscriptionId: subscription.id,
+      email: customer.email,
+    })
+    newActiveSubscriptions.push({ subscription, profile })
   }
 
   const landingRows = externalEvents.filter((row) => row.name === 'landing_session_started')
@@ -189,9 +247,58 @@ async function main() {
   }
 
   const signupSources = {}
+  const signupCampaignMap = new Map()
   for (const profile of signupCohort) {
     const source = sourceForProfile(profile)
     signupSources[source] = (signupSources[source] || 0) + 1
+    const attribution = attributionForProfile(profile)
+    const key = attributionKey(attribution)
+    const row = signupCampaignMap.get(key) || { ...attribution, signups: 0 }
+    row.signups += 1
+    signupCampaignMap.set(key, row)
+  }
+
+  const stripeSessionCampaignMap = new Map()
+  for (const session of recurringSessions) {
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    const attribution = attributionForProfile(profile)
+    const key = attributionKey(attribution)
+    const row = stripeSessionCampaignMap.get(key) || {
+      ...attribution,
+      sessions: 0,
+      open: 0,
+      complete: 0,
+      expired: 0,
+      paid: 0,
+    }
+    row.sessions += 1
+    if (session.status === 'open') row.open += 1
+    if (session.status === 'complete') row.complete += 1
+    if (session.status === 'expired') row.expired += 1
+    if (session.payment_status === 'paid') row.paid += 1
+    stripeSessionCampaignMap.set(key, row)
+  }
+
+  const subscriptionCampaignMap = new Map()
+  for (const { subscription, profile } of newActiveSubscriptions) {
+    const attribution = attributionForProfile(profile)
+    const key = attributionKey(attribution)
+    const row = subscriptionCampaignMap.get(key) || {
+      ...attribution,
+      activeOrTrialingSubscriptions: 0,
+      active: 0,
+      trialing: 0,
+    }
+    row.activeOrTrialingSubscriptions += 1
+    if (subscription.status === 'active') row.active += 1
+    if (subscription.status === 'trialing') row.trialing += 1
+    subscriptionCampaignMap.set(key, row)
   }
 
   const checkoutAttempted = stage(externalEvents, 'checkout_attempted')
@@ -242,6 +349,12 @@ async function main() {
     },
     acquisition: {
       signupSources,
+      signupCampaigns: sortedAttributionRows(signupCampaignMap, 'signups'),
+      recurringStripeSessionsByCampaign: sortedAttributionRows(stripeSessionCampaignMap, 'sessions'),
+      newSubscriptionsByCampaign: sortedAttributionRows(
+        subscriptionCampaignMap,
+        'activeOrTrialingSubscriptions',
+      ),
       topLandingPaths: Object.entries(landingPaths)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20)

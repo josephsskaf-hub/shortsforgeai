@@ -27,17 +27,18 @@ import NicheOnboarding from '@/components/NicheOnboarding'
 // That modal only sold the retired avatar_credits packs (?pack=avatar*). Avatar
 // videos now cost 120 universal credits; the avatar 402 already routes to the
 // universal upgrade modal. The component file is left in place but unused.
-import ReferralMiniCard from '@/components/ReferralMiniCard'
 // KINEO-TAAFT-REVIEW-2026-07-14 — post-render TAAFT review ask. Fully
 // self-contained (source gate via /api/me/plan, once-per-browser localStorage
-// flag, analytics) and degrades to null on any failure, mirroring
-// ReferralMiniCard so it can never break the success screen.
+// flag, analytics) and degrades to null on any failure so it can never break
+// the success screen.
 import TaaftReviewAsk from '@/components/TaaftReviewAsk'
 // KINEO-OFFER290-2026-07-07 — first-purchase $2.90 urgency banner. Self-gated on
 // OFFER_290_ENABLED (renders null while the flag is off — build-only for now).
 import Offer290Banner from './Offer290Banner'
 // KINEO-LOWCREDITS-UPSELL import removed 09/07 — banner retired (see note at
 // the old render site; 0 credits is the normal free state now).
+
+const POST_RENDER_SHARE_VARIANT = 'whatsapp_first_30_30_v1'
 
 interface TaskHandle {
   id: string
@@ -730,9 +731,9 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   // #465 — the saved video's DB id, for the public /v/[id] share link on the
   // done screen (share at peak delight → growth loop).
   const [publicVideoId, setPublicVideoId] = useState<string | null>(null)
-  const [sharedPublic, setSharedPublic] = useState<'shared' | 'copied' | 'ready' | null>(null)
+  const [sharedPublic, setSharedPublic] = useState<'copied' | 'ready' | null>(null)
   const [shareReferralCode, setShareReferralCode] = useState<string | null>(null)
-  const sharePromptRef = useRef<HTMLButtonElement | null>(null)
+  const sharePromptRef = useRef<HTMLDivElement | null>(null)
   const sharePromptTrackedKeyRef = useRef<string | null>(null)
 
   // KINEO-WM-CHECKOUT-2026-07-07 — "watermark moment" inline checkout.
@@ -1232,7 +1233,7 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   // Clipboard require a live click gesture; awaiting a network request inside
   // handleSharePublic can consume that gesture and make both APIs fail.
   useEffect(() => {
-    if (phase !== 'composing' || shareReferralCode) return
+    if ((phase !== 'composing' && phase !== 'done') || shareReferralCode) return
     let cancelled = false
     fetch('/api/referral', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : null))
@@ -1247,9 +1248,9 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     return () => { cancelled = true }
   }, [phase, shareReferralCode])
 
-  // PUSH #29 — a finished render is not a share impression. The action sits
-  // below a tall 9:16 player and the export choice, so count it only after the
-  // button is actually visible.
+  // Count a post-render referral card only when it is genuinely visible. Keep
+  // the legacy prompt event for the existing funnel and emit a granular event
+  // for this WhatsApp-first experiment alongside it.
   useEffect(() => {
     const element = sharePromptRef.current
     const key = publicVideoId
@@ -1258,12 +1259,18 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return
       sharePromptTrackedKeyRef.current = key
-      void trackEvent('video_share_prompt_viewed', {
+      const metadata = {
         version: PUBLIC_VIDEO_SHARE_VERSION,
+        variant: POST_RENDER_SHARE_VARIANT,
         video_id: key,
         where: 'done_screen',
+        surface: 'post_render_referral_card',
         referral_attached: !!shareReferralCode,
-      })
+        incentive_available: !!shareReferralCode,
+        incentive_credits_each: shareReferralCode ? 30 : null,
+      }
+      void trackEvent('video_share_prompt_viewed', metadata)
+      void trackEvent('video_share_card_impression', metadata)
       observer.disconnect()
     }, { threshold: [0.5] })
     observer.observe(element)
@@ -3515,9 +3522,13 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   function publicShareMetadata(channel: string) {
     return {
       version: PUBLIC_VIDEO_SHARE_VERSION,
+      variant: POST_RENDER_SHARE_VARIANT,
       video_id: publicVideoId,
       where: 'done_screen',
+      surface: 'post_render_referral_card',
       referral_attached: !!shareReferralCode,
+      incentive_available: !!shareReferralCode,
+      incentive_credits_each: shareReferralCode ? 30 : null,
       channel,
     }
   }
@@ -3525,46 +3536,19 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   async function handleSharePublic() {
     const url = buildPublicShareUrl()
     if (!url) return
-    const commonMetadata = publicShareMetadata('copy_primary')
+    const commonMetadata = publicShareMetadata('copy_secondary')
     trackEvent('video_share_clicked', commonMetadata)
     try {
       await navigator.clipboard.writeText(url)
       setSharedPublic('copied')
       trackEvent('video_shared', { ...commonMetadata, method: 'clipboard' })
+      trackEvent('video_share_copy_success', { ...commonMetadata, method: 'clipboard' })
     } catch {
       try { window.prompt('Copy this link:', url) } catch {}
       setSharedPublic('ready')
       trackEvent('video_share_manual_copy_shown', commonMetadata)
     }
     setTimeout(() => setSharedPublic(null), 2000)
-  }
-
-  // Native share stays available as an explicit secondary option. The primary
-  // action now copies the watch page deterministically: the first real PUSH #23
-  // user opened this sheet and cancelled it two seconds later.
-  async function handleNativeSharePublic() {
-    const url = buildPublicShareUrl()
-    if (!url) return
-    if (typeof navigator.share !== 'function') {
-      await handleSharePublic()
-      return
-    }
-    const metadata = publicShareMetadata('native_more')
-    trackEvent('video_share_clicked', metadata)
-    try {
-      await navigator.share({
-        title: 'My Kineo Short',
-        text: 'Watch my Short and tell me what you think:',
-        url,
-      })
-      setSharedPublic('shared')
-      setTimeout(() => setSharedPublic(null), 2000)
-      trackEvent('video_shared', { ...metadata, method: 'native_share' })
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        trackEvent('video_share_cancelled', { ...metadata, method: 'native_share' })
-      }
-    }
   }
 
   function handlePublicShareChannel(channel: 'whatsapp' | 'x') {
@@ -3577,6 +3561,9 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
       : `https://twitter.com/intent/tweet?text=${encodeURIComponent('I made this YouTube Short with Kineo. Create up to 3 Fast videos every 24h with no card.')}&url=${encodeURIComponent(url)}`
     window.open(destination, '_blank', 'noopener,noreferrer')
     trackEvent('video_share_channel_opened', metadata)
+    if (channel === 'whatsapp') {
+      trackEvent('video_share_whatsapp_open', metadata)
+    }
   }
 
   function handleContinueSeries(
@@ -5649,92 +5636,98 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
                   </a>
                 )}
 
-                {publicVideoId ? (
-                  <button
-                    ref={sharePromptRef}
-                    type="button"
-                    onClick={handleSharePublic}
-                    className="flex w-full flex-col items-center justify-center rounded-2xl px-5 py-4 text-center font-black"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(41,151,255,.22), rgba(139,92,246,.18))',
-                      border: '1px solid rgba(41,151,255,.55)',
-                      color: '#eaf4ff',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 28px rgba(41,151,255,.16)',
-                    }}
-                  >
-                    <span style={{ fontSize: '1rem' }}>
-                      {sharedPublic === 'shared'
-                        ? '✓ Shared!'
-                        : sharedPublic === 'copied'
-                          ? '✓ Watch page copied — paste it in any chat'
-                          : sharedPublic === 'ready'
-                            ? 'Your public link is ready to copy'
-                            : '📋 Copy your public watch page'}
-                    </span>
-                    <span style={{ marginTop: 4, fontSize: '0.72rem', fontWeight: 650, color: '#a9c9ec' }}>
-                      Send it for feedback. Friends can watch it and make one like it.
-                    </span>
-                  </button>
-                ) : (
-                  <div
-                    className="w-full rounded-xl px-4 py-3 text-center text-xs font-bold"
-                    style={{ color: 'var(--muted2)', border: '1px solid var(--border)', background: 'rgba(255,255,255,.04)' }}
-                  >
-                    Preparing your public share link…
+                {/* Keep the revenue/export decision first. Free users see this
+                    after the clean-vs-watermarked choice; paid users see it after
+                    their primary download. Sharing stays opt-in and uses the
+                    canonical /v page, with referral when available. */}
+                <div
+                  ref={sharePromptRef}
+                  className="w-full rounded-2xl px-5 py-5"
+                  style={{
+                    background: 'linear-gradient(145deg, rgba(37,211,102,.14), rgba(41,151,255,.10))',
+                    border: '1px solid rgba(37,211,102,.42)',
+                    boxShadow: '0 10px 32px rgba(37,211,102,.10)',
+                  }}
+                >
+                  <div className="text-center">
+                    <div
+                      className="text-[10px] font-black uppercase tracking-[.18em]"
+                      style={{ color: '#4ade80' }}
+                    >
+                      {shareReferralCode
+                        ? 'Give 30 credits · Get 30 credits'
+                        : 'Share your finished video'}
+                    </div>
+                    <h3
+                      className="mt-1.5 font-black tracking-tight"
+                      style={{ color: 'var(--text)', fontSize: '1.12rem', lineHeight: 1.25 }}
+                    >
+                      Send this video to 1 friend for feedback
+                    </h3>
+                    <p
+                      id="post-render-referral-description"
+                      className="mt-2 text-xs"
+                      style={{ color: 'var(--muted2)', lineHeight: 1.5 }}
+                    >
+                      {shareReferralCode
+                        ? 'If they make their first video, you both get 30 credits.'
+                        : 'Send your public watch page and ask what they think.'}
+                    </p>
                   </div>
-                )}
 
-                {/* Secondary row: preview + tracked public-share channels. */}
-                {/* The current asset is intentionally shareable. For free users
-                    it is the watermarked growth-loop asset; this UI never exposes
-                    a separate clean URL. */}
-                <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                  <a
-                    href={publicSharePath() ?? finalVideoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    style={{
-                      background: 'rgba(255,255,255,.06)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => handlePublicShareChannel('whatsapp')}
+                      disabled={!publicVideoId}
+                      aria-describedby="post-render-referral-description"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-black text-white"
+                      style={{
+                        background: publicVideoId
+                          ? 'linear-gradient(135deg, #25D366, #128C4A)'
+                          : 'rgba(255,255,255,.08)',
+                        border: '1px solid rgba(37,211,102,.45)',
+                        cursor: publicVideoId ? 'pointer' : 'not-allowed',
+                        opacity: publicVideoId ? 1 : 0.65,
+                        boxShadow: publicVideoId ? '0 8px 24px rgba(37,211,102,.24)' : 'none',
+                      }}
+                    >
+                      <span aria-hidden>↗</span>
+                      Send on WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSharePublic}
+                      disabled={!publicVideoId}
+                      aria-describedby="post-render-referral-description"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold"
+                      style={{
+                        background: 'rgba(255,255,255,.06)',
+                        border: '1px solid var(--border2)',
+                        color: publicVideoId ? 'var(--text)' : 'var(--muted)',
+                        cursor: publicVideoId ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      <span aria-hidden>{sharedPublic === 'copied' ? '✓' : '⧉'}</span>
+                      {sharedPublic === 'copied'
+                        ? 'Link copied'
+                        : sharedPublic === 'ready'
+                          ? 'Copy the link shown'
+                          : 'Copy link'}
+                    </button>
+                  </div>
+
+                  <p
+                    className="mt-2.5 text-center"
+                    aria-live="polite"
+                    style={{ color: 'var(--muted2)', fontSize: '0.68rem', lineHeight: 1.4 }}
                   >
-                    ▶ Watch page
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => handlePublicShareChannel('whatsapp')}
-                    disabled={!publicVideoId}
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    style={{
-                      background: 'rgba(37,211,102,.10)',
-                      border: '1px solid rgba(37,211,102,.35)',
-                      color: publicVideoId ? '#25D366' : 'var(--muted)',
-                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    📲 WhatsApp
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNativeSharePublic}
-                    disabled={!publicVideoId}
-                    className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    style={{
-                      background: 'rgba(255,255,255,.06)',
-                      border: '1px solid var(--border)',
-                      color: publicVideoId ? 'var(--text)' : 'var(--muted)',
-                      cursor: publicVideoId ? 'pointer' : 'not-allowed',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    ⋯ More
-                  </button>
+                    {!publicVideoId
+                      ? 'Preparing your public share link…'
+                      : shareReferralCode
+                        ? 'You choose who receives it. Nothing is sent automatically.'
+                        : 'Referral rewards are unavailable right now. Your public watch link still works.'}
+                  </p>
                 </div>
 
                 <button
@@ -5989,11 +5982,6 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
                   </button>
                 </div>
               )}
-
-              {/* Referral loop — compact "Give X, get X" invite card at the
-                  win moment. Fetches the user's real link from /api/referral;
-                  renders nothing if the loop is unavailable. */}
-              <ReferralMiniCard />
 
               {/* KINEO-SPRINT-OFFER-2026-07-14 — <TaaftReviewAsk/> used to sit
                   here, directly under the upgrade block (same viewport as the
