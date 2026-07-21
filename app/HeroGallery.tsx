@@ -26,7 +26,6 @@ export default function HeroGallery() {
             playsInline
             preload="metadata"
           />
-          <span className="lab">REAL OUTPUT PREVIEW · FULL SHORT {example.outputDurationSeconds}s</span>
           <div className="vt">{example.shortTitle}</div>
         </Link>
       ))}

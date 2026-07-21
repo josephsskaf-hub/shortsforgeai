@@ -65,7 +65,6 @@ const KLP_CSS = `
 .klp .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .klp .vcard{aspect-ratio:9/16;border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#26262a,#0c0c0e 72%);border:1px solid var(--line);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:15px;transition:.2s}
 .klp .vcard:hover{border-color:var(--line2);transform:translateY(-4px)}
-.klp .vcard .lab{position:absolute;top:12px;left:12px;font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.08);padding:3px 8px;border-radius:7px}
 .klp .vcard .vt{font-size:14px;font-weight:700;line-height:1.25;color:#fff}
 .klp .cmp{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow-x:auto}
 .klp .cmp table{width:100%;min-width:560px;border-collapse:collapse;font-size:14.5px}
@@ -131,7 +130,6 @@ const KLP_CSS = `
 .klp .hero-gallery{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:820px;margin:52px auto 0}
 .klp .hero-gallery .vcard{aspect-ratio:9/16;padding:13px}
 .klp .hero-gallery .vcard .vt{font-size:12.5px}
-.klp .hero-gallery .lab{z-index:2;background:rgba(0,0,0,.88);color:#f5f5f7;letter-spacing:.035em}
 .klp .gallery-cap{position:relative;z-index:1;margin-top:20px;text-align:center;font-size:13.5px;color:var(--muted2)}
 @media(max-width:900px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:420px}}
 @media(max-width:560px){.klp .hero-gallery{grid-template-columns:repeat(2,1fr);max-width:380px}}
