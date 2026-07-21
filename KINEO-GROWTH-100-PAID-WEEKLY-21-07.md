@@ -52,10 +52,28 @@ por semana. Cada taxa deve ser substituída pela taxa real assim que houver volu
 suficiente.
 
 `pricing_view` é um sinal, mas não uma etapa obrigatória: existem CTAs que entram
-direto no checkout. O placar deve separar pricing de intenção de compra e também
-mostrar `checkout_attempted → checkout_auth_required → checkout_started`. No
-baseline atual esse caminho é 40 → 38 → 2 e precisa ser investigado antes de
-escalar tráfego.
+direto no checkout. A auditoria de 21/07 provou que o bruto
+`41 checkout_attempted → 39 checkout_auth_required → 2 checkout_started` não é
+uma coorte sequencial: 37 requisições não tinham `user_id` nem `session_id` e
+vieram em rajadas Starter/Creator/Studio, padrão de crawler/link checker/QA.
+Somente uma sessão humana chegou à tela de cadastro (duas tentativas, nenhum
+método escolhido). As duas tentativas autenticadas viraram 2/2 sessões Stripe,
+ambas expiradas. Taxas de conversão devem contar atores identificáveis; o ruído
+sem identidade aparece separado e nunca como comprador perdido.
+
+## Experimento prioritário — prova do produto no canal próprio
+
+O YouTube é o único alcance próprio imediato já comprovado: o canal tem audiência
+existente e trouxe sessões, mas ainda não gerou envio de tópico. O próximo Short
+buyer-intent deve mostrar, sem founder, a transformação real
+“uma frase → um vídeo Kineo”, usando um exemplo público legítimo e uma legenda por
+vez. CTA: “Make up to 3 watermarked Fast videos every 24h. No card. Link in
+profile.” Destino rastreado:
+`/youtube-shorts-from-topic?utm_source=youtube&utm_medium=organic&utm_campaign=buyer_intent_proof_01&utm_content=sentinel_before_after`.
+
+Gate de 72 horas: visitas → `organic_topic_submitted` → cadastro → primeiro vídeo
+concluído → checkout Stripe → assinatura. Se houver 30 visitas e zero submit, o
+formato/copy muda antes de repetir; views isoladas não contam como resultado.
 
 Escada de validação:
 

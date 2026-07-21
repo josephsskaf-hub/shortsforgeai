@@ -3757,33 +3757,6 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     window.location.href = '/api/stripe/checkout?tier=starter&intro=1&return=wm'
   }
 
-  async function handleUpgradeNow(
-    tier: 'starter' | 'basic' | 'pro' = 'basic',
-    currency: 'usd' | 'brl' = 'usd',
-  ) {
-    trackCheckoutClick(tier)
-    setUpgradeLoading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier, currency }),
-      })
-      const data = await res.json().catch(() => null)
-      if (data?.url) {
-        window.location.href = data.url
-        return
-      }
-      // Fallback — server returned an error, just send the user to /pricing
-      // so the upgrade intent isn't lost.
-      router.push('/pricing')
-    } catch {
-      router.push('/pricing')
-    } finally {
-      setUpgradeLoading(false)
-    }
-  }
-
   // Push #317 — upload the finished video directly to YouTube.
   async function handleYouTubeUpload() {
     if (!finalVideoUrl) return
@@ -4284,9 +4257,9 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
 
       {/* Push #109 — urgency variant with countdown for free users at 0. */}
       {/* KINEO-SPRINT-OFFER-2026-07-14 — CTA now goes through the GET checkout
-          with the intro month (tier=basic&intro=1). The old handleUpgradeNow
-          POSTed to /api/stripe/checkout, which has no POST handler — every
-          click silently landed on /pricing. The BRL button was dropped with it
+          with the intro month (tier=basic&intro=1). The obsolete POST upgrade
+          path was removed; every live upgrade surface uses the GET checkout.
+          The BRL button was dropped with it
           (stale "R$ 59,90" price; the server picks BRL by IP automatically). */}
       {showUrgencyModal && (
         <UrgencyModal
@@ -6173,9 +6146,8 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
             planTier === 'free' && (hasPaid || !lastFastRenderRef.current) ? (
               // KINEO-SPRINT-OFFER-2026-07-14 — BUG FIX: the button said
               // "Upgrade to Creator — $24.90/mo" but passed tier 'pro'
-              // (Studio $37.90) to handleUpgradeNow — and handleUpgradeNow
-              // POSTs to a route with no POST handler, dumping every click on
-              // /pricing. Now: GET checkout, Creator, intro month — the same
+              // (Studio $37.90) to the obsolete POST checkout path, dumping
+              // every click on /pricing. Now: GET checkout, Creator, intro month — the same
               // single offer as every other surface on this screen.
               <UpsellSection
                 onAnother={handleReset}

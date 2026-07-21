@@ -432,6 +432,48 @@ export default function FunnelClient({ data: initialData, viewerEmail, denied }:
         />
       </Section>
 
+      <Section title={`Checkout intent truth · ${days === 'all' ? 'all time' : `${days}d`}`}>
+        <Card
+          label="Qualified intent actors"
+          value={fmt(data.counts.checkout_attempted ?? 0)}
+          hint={`${fmt(data.counts.checkout_attempted_raw ?? 0)} raw API requests`}
+          accent="#22d3ee"
+        />
+        <Card
+          label="Auth wall actors"
+          value={fmt(data.counts.checkout_auth_required ?? 0)}
+          hint={`${fmt(data.counts.checkout_auth_page_view ?? 0)} reached signup screen`}
+          accent="#a78bfa"
+        />
+        <Card
+          label="Auth method selected"
+          value={fmt(data.counts.checkout_auth_method_selected ?? 0)}
+          hint={`${fmt(data.counts.checkout_auth_confirmation_required ?? 0)} awaiting confirmation`}
+          accent="#a78bfa"
+        />
+        <Card
+          label="Checkout auth completed"
+          value={fmt(Math.max(
+            data.counts.checkout_auth_completed ?? 0,
+            data.counts.checkout_auth_callback_completed ?? 0,
+          ))}
+          hint="client completion or checkout callback"
+          accent="#22d3ee"
+        />
+        <Card
+          label="Authenticated attempts"
+          value={fmt(data.counts.checkout_authenticated_attempted ?? 0)}
+          hint={`${fmt(data.counts.checkout_started ?? 0)} created Stripe session`}
+          accent="#22d3ee"
+        />
+        <Card
+          label="Unidentified probes"
+          value={fmt(data.counts.checkout_unidentified_requests ?? 0)}
+          hint="excluded from buyer conversion rates"
+          accent={(data.counts.checkout_unidentified_requests ?? 0) > 0 ? '#fbbf24' : '#22d3ee'}
+        />
+      </Section>
+
       <Section title={`First-video handoff · PUSH #27 · ${days === 'all' ? 'all time' : `${days}d`}`}>
         <Card
           label="Compact handoff viewed"

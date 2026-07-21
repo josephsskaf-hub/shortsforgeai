@@ -77,6 +77,16 @@ export interface FunnelData {
     pro_checkout_clicked: number
     starter_checkout_clicked?: number
     checkout_attempted?: number
+    checkout_attempted_raw?: number
+    checkout_authenticated_attempted?: number
+    checkout_auth_required?: number
+    checkout_auth_required_raw?: number
+    checkout_auth_page_view?: number
+    checkout_auth_method_selected?: number
+    checkout_auth_confirmation_required?: number
+    checkout_auth_completed?: number
+    checkout_auth_callback_completed?: number
+    checkout_unidentified_requests?: number
     checkout_started?: number
     payment_success: number
     checkout_cancelled: number
@@ -437,13 +447,20 @@ export async function GET(req: Request) {
       'generate_failed', 'video_generation_failed',
       'pricing_view', 'basic_checkout_clicked', 'checkout_basic_click',
       'pro_checkout_clicked', 'checkout_pro_click', 'starter_checkout_clicked',
-      'starter_pack_checkout_clicked', 'checkout_attempted', 'checkout_started',
+      'starter_pack_checkout_clicked', 'checkout_attempted', 'checkout_auth_required',
+      'checkout_auth_page_view', 'checkout_auth_method_selected',
+      'checkout_auth_confirmation_required', 'checkout_auth_completed',
+      'checkout_started',
       'payment_success', 'checkout_cancelled', 'checkout_canceled',
     ]
     const identityEventNames = [
       'basic_checkout_clicked', 'checkout_basic_click', 'pro_checkout_clicked',
       'checkout_pro_click', 'starter_checkout_clicked', 'starter_pack_checkout_clicked',
-      'checkout_attempted', 'checkout_started', 'payment_success',
+      'checkout_attempted', 'checkout_auth_required',
+      'checkout_auth_page_view', 'checkout_auth_method_selected',
+      'checkout_auth_confirmation_required', 'checkout_auth_completed',
+      'auth_callback_completed', 'auth_callback_failed',
+      'checkout_started', 'payment_success',
     ]
     let eventsAvailable = false
     let eventRows: EventRow[] = []
@@ -546,6 +563,36 @@ export async function GET(req: Request) {
     } catch {
       eventsAvailable = false
     }
+
+    // Checkout requests made without either an authenticated user or the
+    // browser event-session cookie cannot be tied to a visitor. Public link
+    // checkers and QA probes routinely hit every plan URL, so raw row counts
+    // are useful as diagnostics but must never be presented as buyer actors.
+    const checkoutActorKey = (event: EventRow): string | null => {
+      if (event.user_id) return `user:${event.user_id}`
+      if (event.session_id) return `session:${event.session_id}`
+      return null
+    }
+    const uniqueCheckoutActors = (
+      name: string,
+      predicate?: (event: EventRow) => boolean,
+    ): number => new Set(
+      eventRows
+        .filter((event) => event.name === name && (!predicate || predicate(event)))
+        .map(checkoutActorKey)
+        .filter((actor): actor is string => actor !== null)
+    ).size
+    const checkoutUnidentifiedRequests = eventRows.filter((event) =>
+      event.name === 'checkout_auth_required' && checkoutActorKey(event) === null
+    ).length
+    const checkoutAuthCallbackCompleted = new Set(
+      eventRows
+        .filter((event) =>
+          event.name === 'auth_callback_completed' && event.metadata?.is_checkout_destination === true
+        )
+        .map(checkoutActorKey)
+        .filter((actor): actor is string => actor !== null)
+    ).size
 
     const profileById = new Map(allProfiles.map((p) => [p.id, p]))
     const profileBySubscriptionId = new Map(
@@ -684,8 +731,15 @@ export async function GET(req: Request) {
     }
     const clickUserSet = new Set<string>()
     for (const c of allClicks) if (c.user_id && cohortIds.has(c.user_id)) clickUserSet.add(c.user_id)
+    const checkoutIntentEvents = new Set([
+      'basic_checkout_clicked', 'checkout_basic_click', 'pro_checkout_clicked',
+      'checkout_pro_click', 'starter_checkout_clicked', 'starter_pack_checkout_clicked',
+      'checkout_attempted', 'checkout_auth_required', 'checkout_auth_page_view',
+      'checkout_auth_method_selected', 'checkout_auth_confirmation_required',
+      'checkout_auth_completed', 'checkout_started',
+    ])
     for (const event of eventRows) {
-      if (event.name === 'payment_success') continue
+      if (!checkoutIntentEvents.has(event.name)) continue
       if (event.user_id && cohortIds.has(event.user_id)) clickUserSet.add(event.user_id)
     }
     const abandonedUserSet = new Set<string>()
@@ -1198,8 +1252,24 @@ export async function GET(req: Request) {
         basic_checkout_clicked: (eventCounts.get('basic_checkout_clicked') ?? 0) + (eventCounts.get('checkout_basic_click') ?? 0),
         pro_checkout_clicked: (eventCounts.get('pro_checkout_clicked') ?? 0) + (eventCounts.get('checkout_pro_click') ?? 0),
         starter_checkout_clicked: (eventCounts.get('starter_checkout_clicked') ?? 0) + (eventCounts.get('starter_pack_checkout_clicked') ?? 0),
-        checkout_attempted: eventCounts.get('checkout_attempted') ?? 0,
-        checkout_started: eventCounts.get('checkout_started') ?? 0,
+        // Buyer-intent stages are unique identifiable actors. Keep raw totals
+        // alongside them so crawler/QA pressure remains visible but cannot be
+        // mistaken for human checkout abandonment.
+        checkout_attempted: uniqueCheckoutActors('checkout_attempted'),
+        checkout_attempted_raw: eventCounts.get('checkout_attempted') ?? 0,
+        checkout_authenticated_attempted: uniqueCheckoutActors(
+          'checkout_attempted',
+          (event) => Boolean(event.user_id),
+        ),
+        checkout_auth_required: uniqueCheckoutActors('checkout_auth_required'),
+        checkout_auth_required_raw: eventCounts.get('checkout_auth_required') ?? 0,
+        checkout_auth_page_view: uniqueCheckoutActors('checkout_auth_page_view'),
+        checkout_auth_method_selected: uniqueCheckoutActors('checkout_auth_method_selected'),
+        checkout_auth_confirmation_required: uniqueCheckoutActors('checkout_auth_confirmation_required'),
+        checkout_auth_completed: uniqueCheckoutActors('checkout_auth_completed'),
+        checkout_auth_callback_completed: checkoutAuthCallbackCompleted,
+        checkout_unidentified_requests: checkoutUnidentifiedRequests,
+        checkout_started: uniqueCheckoutActors('checkout_started'),
         payment_success: stripeSessionsAvailable ? checkoutCompleted : (eventCounts.get('payment_success') ?? 0),
         checkout_cancelled: (eventCounts.get('checkout_cancelled') ?? 0) + (eventCounts.get('checkout_canceled') ?? 0),
       },
