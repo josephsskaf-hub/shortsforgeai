@@ -6,6 +6,12 @@ const PUSH50_FACELESS_CAMPAIGN = 'push50_faceless_decision_guide'
 const PUSH50_LAUNCHED_AT_MS = Date.parse('2026-07-22T01:30:00.000Z')
 const PUSH52_QUSO_CAMPAIGN = 'push52_vidyo_quso_pricing_decision'
 const PUSH52_LAUNCHED_AT_MS = Date.parse('2026-07-22T03:00:00.000Z')
+const PUSH53_HOME_CAMPAIGN = 'push53_home_prompt_first'
+// Deliberate post-deploy measurement boundary. The unique event/campaign names
+// cannot exist before PUSH #53, and the 00:15 BRT boundary avoids counting any
+// deployment or smoke-test traffic in the experiment cohort.
+const PUSH53_LAUNCHED_AT_MS = Date.parse('2026-07-22T03:15:00.000Z')
+const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
   const values = {}
@@ -129,9 +135,16 @@ async function main() {
     throw new Error('Missing Supabase or Stripe credentials in .env.local')
   }
 
-  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
+  const nowMs = Date.now()
+  const cutoffMs = nowMs - days * 24 * 60 * 60 * 1000
   const cutoff = new Date(cutoffMs).toISOString()
-  const push52CohortCutoffMs = Math.max(cutoffMs, PUSH52_LAUNCHED_AT_MS)
+  const activeExperimentCutoffs = [
+    PUSH50_LAUNCHED_AT_MS,
+    PUSH52_LAUNCHED_AT_MS,
+    PUSH53_LAUNCHED_AT_MS,
+  ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
+  const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
+  const dataCutoff = new Date(dataCutoffMs).toISOString()
   const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -189,16 +202,22 @@ async function main() {
   const events = await fetchAll(() => supabase
     .from('events')
     .select('name,user_id,session_id,created_at,path,metadata')
-    .gte('created_at', cutoff)
+    .gte('created_at', dataCutoff)
     .order('created_at', { ascending: true }))
-  const externalEvents = events.filter((row) => !row.user_id || !internalIds.has(row.user_id))
+  const experimentEvents = events.filter((row) => !row.user_id || !internalIds.has(row.user_id))
+  const externalEvents = experimentEvents.filter(
+    (row) => new Date(row.created_at || 0).getTime() >= cutoffMs,
+  )
 
   const videos = await fetchAll(() => supabase
     .from('videos')
     .select('user_id,status,created_at')
-    .gte('created_at', cutoff)
+    .gte('created_at', dataCutoff)
     .order('created_at', { ascending: true }))
-  const externalVideos = videos.filter((video) => video.user_id && !internalIds.has(video.user_id))
+  const experimentVideos = videos.filter((video) => video.user_id && !internalIds.has(video.user_id))
+  const externalVideos = experimentVideos.filter(
+    (video) => new Date(video.created_at || 0).getTime() >= cutoffMs,
+  )
   const completedVideoUsers = new Set(
     externalVideos.filter((video) => video.status === 'completed').map((video) => video.user_id)
   )
@@ -209,25 +228,28 @@ async function main() {
   )
 
   const stripeSessions = await stripeListAll((startingAfter) => stripe.checkout.sessions.list({
-    created: { gte: Math.floor(cutoffMs / 1000) },
+    created: { gte: Math.floor(dataCutoffMs / 1000) },
     limit: 100,
     ...(startingAfter ? { starting_after: startingAfter } : {}),
   }))
-  const recurringSessions = stripeSessions.filter((session) => {
+  const experimentRecurringSessions = stripeSessions.filter((session) => {
     if (session.mode !== 'subscription') return false
     const userId = session.metadata?.supabase_user_id
     const email = session.customer_details?.email || session.customer_email || session.metadata?.email
     if (userId && internalIds.has(userId)) return false
     return !isInternalEmail(email)
   })
+  const recurringSessions = experimentRecurringSessions.filter(
+    (session) => (session.created || 0) * 1000 >= cutoffMs,
+  )
 
   const subscriptions = await stripeListAll((startingAfter) => stripe.subscriptions.list({
     status: 'all',
-    created: { gte: Math.floor(cutoffMs / 1000) },
+    created: { gte: Math.floor(dataCutoffMs / 1000) },
     limit: 100,
     ...(startingAfter ? { starting_after: startingAfter } : {}),
   }))
-  const newActiveSubscriptions = []
+  const experimentActiveSubscriptions = []
   for (const subscription of subscriptions) {
     if (!['active', 'trialing'].includes(subscription.status)) continue
     const userId = subscription.metadata?.supabase_user_id
@@ -242,8 +264,11 @@ async function main() {
       subscriptionId: subscription.id,
       email: customer.email,
     })
-    newActiveSubscriptions.push({ subscription, profile })
+    experimentActiveSubscriptions.push({ subscription, profile })
   }
+  const newActiveSubscriptions = experimentActiveSubscriptions.filter(
+    ({ subscription }) => (subscription.created || 0) * 1000 >= cutoffMs,
+  )
 
   const landingRows = externalEvents.filter((row) => row.name === 'landing_session_started')
   const landingPaths = {}
@@ -335,38 +360,38 @@ async function main() {
     (row) => row.metadata?.checkout_recovery === true || row.metadata?.checkout_recovery === '1',
   )
   const push50HomeNoCameraClicked = stage(
-    externalEvents,
+    experimentEvents,
     'organic_cta_clicked',
     (row) => row.metadata?.source === 'push50_home_no_camera',
   )
   const push50HomeAlternativesClicked = stage(
-    externalEvents,
+    experimentEvents,
     'organic_cta_clicked',
     (row) => row.metadata?.source === 'push50_home_alternatives',
   )
   const push50FacelessCtaClicked = stage(
-    externalEvents,
+    experimentEvents,
     'organic_cta_clicked',
     (row) => row.metadata?.source === 'push50_faceless_decision_guide',
   )
   const push50FacelessTopicSubmitted = stage(
-    externalEvents,
+    experimentEvents,
     'organic_topic_submitted',
     (row) => row.metadata?.source === PUSH50_FACELESS_CAMPAIGN,
   )
   const push50FacelessPricingViewed = stage(
-    externalEvents,
+    experimentEvents,
     'pricing_view',
     (row) => row.metadata?.source === PUSH50_FACELESS_CAMPAIGN,
   )
   const push50FacelessLandingSessions = stage(
-    externalEvents,
+    experimentEvents,
     'landing_session_started',
     (row) => row.path === '/faceless-channel-ideas' &&
       new Date(row.created_at || 0).getTime() >= PUSH50_LAUNCHED_AT_MS,
   )
   const push50IntentUserIds = new Set(
-    externalEvents
+    experimentEvents
       .filter((row) => row.user_id && (
         row.metadata?.campaign === PUSH50_FACELESS_CAMPAIGN ||
         row.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
@@ -374,17 +399,22 @@ async function main() {
       ))
       .map((row) => row.user_id),
   )
-  const push50SignupProfiles = signupCohort.filter(
-    (profile) => attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
-      push50IntentUserIds.has(profile.id),
+  const push50SignupProfiles = externalProfiles.filter(
+    (profile) => new Date(profile.created_at || 0).getTime() >= PUSH50_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
+      push50IntentUserIds.has(profile.id)
+    ),
   )
   const push50SignupIds = new Set(push50SignupProfiles.map((profile) => profile.id))
   const push50CompletedVideoUsers = new Set(
-    externalVideos
-      .filter((video) => video.status === 'completed' && push50SignupIds.has(video.user_id))
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push50SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH50_LAUNCHED_AT_MS)
       .map((video) => video.user_id),
   )
-  const push50RecurringSessions = recurringSessions.filter((session) => {
+  const push50RecurringSessions = experimentRecurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH50_LAUNCHED_AT_MS) return false
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
     const profile = resolveExternalProfile({
       userId: session.metadata?.supabase_user_id,
@@ -397,38 +427,40 @@ async function main() {
       attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
       (Boolean(userId) && push50IntentUserIds.has(userId))
   })
-  const push50ActiveSubscriptions = newActiveSubscriptions.filter(
-    ({ subscription, profile }) => subscription.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
+  const push50ActiveSubscriptions = experimentActiveSubscriptions.filter(
+    ({ subscription, profile }) => (subscription.created || 0) * 1000 >= PUSH50_LAUNCHED_AT_MS && (
+      subscription.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
       attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
       (Boolean(subscription.metadata?.supabase_user_id) &&
-        push50IntentUserIds.has(subscription.metadata.supabase_user_id)),
+        push50IntentUserIds.has(subscription.metadata.supabase_user_id))
+    ),
   )
   const push52QusoLandingSessions = stage(
-    externalEvents,
+    experimentEvents,
     'landing_session_started',
     (row) => row.path === '/alternatives/quso' &&
       new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
   )
   const push52QusoCtaClicked = stage(
-    externalEvents,
+    experimentEvents,
     'organic_cta_clicked',
     (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
       new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
   )
   const push52QusoTopicSubmitted = stage(
-    externalEvents,
+    experimentEvents,
     'organic_topic_submitted',
     (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
       new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
   )
   const push52QusoPricingViewed = stage(
-    externalEvents,
+    experimentEvents,
     'pricing_view',
     (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
       new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
   )
   const push52IntentUserIds = new Set(
-    externalEvents
+    experimentEvents
       .filter((row) => row.user_id &&
         ['email_signup_completed', 'auth_callback_completed'].includes(row.name) &&
         new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS && (
@@ -439,20 +471,20 @@ async function main() {
       .map((row) => row.user_id),
   )
   const push52SignupProfiles = externalProfiles.filter((profile) =>
-    new Date(profile.created_at || 0).getTime() >= push52CohortCutoffMs && (
+    new Date(profile.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS && (
       attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
       push52IntentUserIds.has(profile.id)
     ),
   )
   const push52SignupIds = new Set(push52SignupProfiles.map((profile) => profile.id))
   const push52CompletedVideoUsers = new Set(
-    externalVideos
+    experimentVideos
       .filter((video) => video.status === 'completed' &&
         push52SignupIds.has(video.user_id) &&
         new Date(video.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS)
       .map((video) => video.user_id),
   )
-  const push52RecurringSessions = recurringSessions.filter((session) => {
+  const push52RecurringSessions = experimentRecurringSessions.filter((session) => {
     if ((session.created || 0) * 1000 < PUSH52_LAUNCHED_AT_MS) return false
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
     const profile = resolveExternalProfile({
@@ -467,7 +499,7 @@ async function main() {
     return attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
       (Boolean(userId) && push52SignupIds.has(userId))
   })
-  const push52ActiveSubscriptions = newActiveSubscriptions.filter(({ subscription, profile }) => {
+  const push52ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription, profile }) => {
     if ((subscription.created || 0) * 1000 < PUSH52_LAUNCHED_AT_MS) return false
     const explicitIntent = subscription.metadata?.intent_campaign
     if (explicitIntent) return explicitIntent === PUSH52_QUSO_CAMPAIGN
@@ -475,10 +507,206 @@ async function main() {
     return attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
       (Boolean(userId) && push52SignupIds.has(userId))
   })
+  const push53HomeViewed = stage(
+    experimentEvents,
+    'home_prompt_first_viewed',
+    (row) => row.metadata?.source === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53SignedOutViewed = stage(
+    experimentEvents,
+    'home_prompt_first_viewed',
+    (row) => row.metadata?.source === PUSH53_HOME_CAMPAIGN &&
+      row.metadata?.signed_in === false &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53SignedOutTopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH53_HOME_CAMPAIGN &&
+      row.metadata?.signed_in === false &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53AllIntentActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53AllIntentActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53AllIntentActivationSkipped = stage(
+    experimentEvents,
+    'activation_autostart_skipped',
+    (row) => row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53AuthUserIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        ['email_signup_completed', 'auth_callback_completed'].includes(row.name) &&
+        new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS && (
+          row.metadata?.campaign === PUSH53_HOME_CAMPAIGN ||
+          row.metadata?.intent_campaign === PUSH53_HOME_CAMPAIGN ||
+          row.metadata?.source === PUSH53_HOME_CAMPAIGN
+        ))
+      .map((row) => row.user_id),
+  )
+  const push53SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH53_HOME_CAMPAIGN ||
+      push53AuthUserIds.has(profile.id)
+    ),
+  )
+  const push53SignupIds = new Set(push53SignupProfiles.map((profile) => profile.id))
+  const push53ActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53ActivationSkipped = stage(
+    experimentEvents,
+    'activation_autostart_skipped',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH53_HOME_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53GenerateStarted = stage(
+    experimentEvents,
+    'generate_started',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push53SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push53CheckpointSaved = stage(
+    experimentEvents,
+    'generation_checkpoint_saved',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53RenderResumed = stage(
+    experimentEvents,
+    'generation_render_resumed',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => Boolean(row.user_id) && push53SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH53_LAUNCHED_AT_MS,
+  )
+  const push53AllIntentRecurringSessions = experimentRecurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH53_LAUNCHED_AT_MS) return false
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    const explicitIntent = session.metadata?.intent_campaign
+    if (explicitIntent) return explicitIntent === PUSH53_HOME_CAMPAIGN
+    const userId = session.metadata?.supabase_user_id
+    return attributionForProfile(profile).campaign === PUSH53_HOME_CAMPAIGN ||
+      (Boolean(userId) && push53SignupIds.has(userId))
+  })
+  const push53AllIntentActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription, profile }) => {
+    if ((subscription.created || 0) * 1000 < PUSH53_LAUNCHED_AT_MS) return false
+    const explicitIntent = subscription.metadata?.intent_campaign
+    if (explicitIntent) return explicitIntent === PUSH53_HOME_CAMPAIGN
+    const userId = subscription.metadata?.supabase_user_id
+    return attributionForProfile(profile).campaign === PUSH53_HOME_CAMPAIGN ||
+      (Boolean(userId) && push53SignupIds.has(userId))
+  })
+  const push53RecurringSessions = push53AllIntentRecurringSessions.filter((session) => {
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    return push53SignupIds.has(session.metadata?.supabase_user_id) ||
+      (Boolean(profile?.id) && push53SignupIds.has(profile.id))
+  })
+  const push53ActiveSubscriptions = push53AllIntentActiveSubscriptions.filter(({ subscription, profile }) =>
+    push53SignupIds.has(subscription.metadata?.supabase_user_id) ||
+      (Boolean(profile?.id) && push53SignupIds.has(profile.id)),
+  )
+  const push53ActiveSubscriptionIds = new Set(
+    push53ActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push53PaidRecurringCustomers = new Set(
+    push53RecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push53ActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
+  const push53AllIntentActiveSubscriptionIds = new Set(
+    push53AllIntentActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push53AllIntentPaidRecurringCustomers = new Set(
+    push53AllIntentRecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push53AllIntentActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
 
   const report = {
     generatedAt: new Date().toISOString(),
-    window: { days, cutoff },
+    window: { days, cutoff, experimentDataCutoff: dataCutoff },
     funnel: {
       qualifiedVisitors: new Set(landingRows.map(actorKey).filter(Boolean)).size,
       landingEvents: landingRows.length,
@@ -550,6 +778,51 @@ async function main() {
           paid: push52RecurringSessions.filter((session) => session.payment_status === 'paid').length,
         },
         activeOrTrialingSubscriptions: push52ActiveSubscriptions.length,
+      },
+      push53HomePromptFirst: {
+        measurementStartsAt: new Date(PUSH53_LAUNCHED_AT_MS).toISOString(),
+        viewed: push53HomeViewed,
+        signedOutViewed: push53SignedOutViewed,
+        topicSubmitted: push53TopicSubmitted,
+        signedOutTopicSubmitted: push53SignedOutTopicSubmitted,
+        activationAutostart: {
+          eligible: push53ActivationEligible,
+          dispatched: push53ActivationDispatched,
+          skipped: push53ActivationSkipped,
+        },
+        allIntentActivationAutostart: {
+          eligible: push53AllIntentActivationEligible,
+          dispatched: push53AllIntentActivationDispatched,
+          skipped: push53AllIntentActivationSkipped,
+        },
+        signups: push53SignupProfiles.length,
+        generateStarted: push53GenerateStarted,
+        signupCohortWithCompletedVideo: push53CompletedVideoUsers.size,
+        renderRecovery: {
+          checkpointSaved: push53CheckpointSaved,
+          renderResumed: push53RenderResumed,
+        },
+        pricingViewed: push53PricingViewed,
+        checkoutAttempted: push53CheckoutAttempted,
+        recurringStripeSessions: {
+          total: push53RecurringSessions.length,
+          open: push53RecurringSessions.filter((session) => session.status === 'open').length,
+          complete: push53RecurringSessions.filter((session) => session.status === 'complete').length,
+          expired: push53RecurringSessions.filter((session) => session.status === 'expired').length,
+          paid: push53RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+        },
+        activeSubscriptions: push53ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+        trialingSubscriptions: push53ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+        paidRecurringCustomers: push53PaidRecurringCustomers.size,
+        allIntentMonetization: {
+          recurringStripeSessions: {
+            total: push53AllIntentRecurringSessions.length,
+            paid: push53AllIntentRecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push53AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push53AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+          paidRecurringCustomers: push53AllIntentPaidRecurringCustomers.size,
+        },
       },
     },
     acquisition: {

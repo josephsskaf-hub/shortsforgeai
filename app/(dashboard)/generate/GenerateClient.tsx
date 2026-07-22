@@ -340,7 +340,13 @@ function removeCreateIntentFromCurrentUrl(): void {
   }
 }
 
-export default function GenerateClient({ initialViralPrompt = '' }: { initialViralPrompt?: string }) {
+export default function GenerateClient({
+  initialViralPrompt = '',
+  initialUserId,
+}: {
+  initialViralPrompt?: string
+  initialUserId: string
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   // KINEO-RECOVERY-2026-07-15 — accept the legacy `topic` key as a safety
@@ -671,7 +677,10 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   const composingPollErrorsRef = useRef(0)
   const activeRenderRestoreCheckedRef = useRef(false)
   const activeRenderRestoreResolvedRef = useRef(false)
-  const currentUserIdRef = useRef<string | null>(null)
+  // The server page has already authenticated this user. Seed the owner ref
+  // synchronously so the first Fast response can be checkpointed before any
+  // client auth round-trip or React effect runs.
+  const currentUserIdRef = useRef<string | null>(initialUserId)
   const resumedRenderRef = useRef(false)
   const [activeRenderRestoreResolved, setActiveRenderRestoreResolved] = useState(false)
   const [activeRenderRestoreRetry, setActiveRenderRestoreRetry] = useState(0)
@@ -1158,7 +1167,7 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
               redirectToLoginPreservingPrompt()
               return
             }
-            if ((res.status === 409 && data?.pending === true) || res.status === 503) {
+            if ((res.status === 409 || res.status === 503) && data?.pending === true) {
               reconnectAttempt += 1
               const retryAfter = typeof data?.retry_after_ms === 'number'
                 ? Math.max(1000, Math.min(10000, data.retry_after_ms))
@@ -3578,19 +3587,104 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
           setPhase('failed')
           return
         }
+        const fastGenerationId = typeof data.generationId === 'string' ? data.generationId.trim() : ''
+        const fastScenes = Array.isArray(data.scenes)
+          ? data.scenes.filter((scene: unknown): scene is string => typeof scene === 'string')
+          : []
+        const fastClipUrls = Array.isArray(data.clip_urls)
+          ? data.clip_urls.filter((url: unknown): url is string => typeof url === 'string' && url.length > 0 && url.length <= 2048)
+          : []
+        if (!/^[A-Za-z0-9_-]{8,100}$/.test(fastGenerationId) || fastClipUrls.length === 0) {
+          setError('We could not safely resume this Fast video. Please try again.')
+          setPhase('failed')
+          return
+        }
+
+        const responseVoiceover = data.verbatim && typeof data.voiceover_script === 'string'
+          ? data.voiceover_script
+          : null
+        const responseCaptions = data.verbatim && Array.isArray(data.scene_captions)
+          ? data.scene_captions.filter((caption: unknown): caption is string => typeof caption === 'string')
+          : null
+        const responseSpeed = data.verbatim && typeof data.speed === 'number' ? data.speed : null
+
+        // PUSH #53 — persist the complete Fast→Compose handoff immediately,
+        // before any setState/effect boundary. A reload, navigation or auth hop
+        // after the expensive B-roll response can now replay /api/compose with
+        // the same generationId; the server's deterministic claim converges on
+        // one render and prevents duplicate quota/credit consumption.
+        const checkpointBuiltVoiceover = responseVoiceover && responseVoiceover.trim().length > 0
+          ? responseVoiceover
+          : buildVoiceoverScript(prompt, analysis)
+        const checkpointVoiceover = checkpointBuiltVoiceover.trim().length > 0
+          ? checkpointBuiltVoiceover
+          : prompt.trim()
+        const checkpointCaptions = responseCaptions && responseCaptions.length > 0
+          ? responseCaptions
+          : buildSceneCaptions(analysis, fastScenes, duration)
+        const checkpointUnlockInputs: FastRenderInputs = {
+          clip_urls: fastClipUrls,
+          voiceover_script: checkpointVoiceover,
+          scene_captions: checkpointCaptions,
+          duration,
+          topic: prompt,
+          language,
+          vertical: analysis?.niche ?? undefined,
+          speed: responseSpeed ?? undefined,
+        }
+        const checkpointComposePayload: Record<string, unknown> = {
+          generationId: fastGenerationId,
+          clip_urls: fastClipUrls,
+          voiceover_script: checkpointVoiceover,
+          scene_captions: checkpointCaptions,
+          duration,
+          topic: prompt,
+          quality: 'fast',
+          language,
+          vertical: analysis?.niche ?? undefined,
+          ...(responseSpeed != null ? { speed: responseSpeed } : {}),
+          ...(myVoiceUrl ? { user_voiceover_url: myVoiceUrl } : useClonedVoice ? { use_cloned_voice: true } : {}),
+        }
+        const checkpointAttemptId = generationAttemptRef.current ?? fastGenerationId
+        generationAttemptRef.current = checkpointAttemptId
+        lastFastRenderRef.current = checkpointUnlockInputs
+        if (currentUserIdRef.current) {
+          try {
+            const checkpoint: ActiveRenderSnapshot = {
+              stage: 'submitting',
+              userId: currentUserIdRef.current,
+              quality: 'fast',
+              mode,
+              duration,
+              prompt: prompt.slice(0, 1000),
+              attemptId: checkpointAttemptId,
+              startedAt: Date.now(),
+              composePayload: checkpointComposePayload,
+              unlockInputs: checkpointUnlockInputs,
+            }
+            localStorage.setItem(activeRenderStorageKey(), JSON.stringify(checkpoint))
+            void trackEvent('generation_checkpoint_saved', {
+              attempt_id: checkpointAttemptId,
+              generation_id: fastGenerationId,
+              stage: 'fast_response',
+              quality: 'fast',
+            })
+          } catch {
+            // In-tab compose remains available when storage is blocked.
+          }
+        }
+
         // Quality is pinned to 'fast' so compose/status charges 1 credit.
         setQuality('fast')
-        setGenerationId(typeof data.generationId === 'string' ? data.generationId : null)
-        setScenes(Array.isArray(data.scenes) ? data.scenes : [])
-        setClipUrls(Array.isArray(data.clip_urls) ? data.clip_urls : [])
+        setGenerationId(fastGenerationId)
+        setScenes(fastScenes)
+        setClipUrls(fastClipUrls)
         // Push #235 — verbatim mode: keep the user's narration/captions/speed so
         // compose narrates exactly what they wrote at the speed they asked for.
         if (data.verbatim) {
-          setFastVoiceover(
-            typeof data.voiceover_script === 'string' ? data.voiceover_script : null,
-          )
-          setFastCaptions(Array.isArray(data.scene_captions) ? data.scene_captions : null)
-          setTtsSpeed(typeof data.speed === 'number' ? data.speed : null)
+          setFastVoiceover(responseVoiceover)
+          setFastCaptions(responseCaptions)
+          setTtsSpeed(responseSpeed)
         } else {
           setFastVoiceover(null)
           setFastCaptions(null)

@@ -8,6 +8,7 @@ import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import LiveStatsBadge from '@/components/LiveStatsBadge'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
 import Footer from '@/components/Footer'
+import HomeTopicForm from './HomeTopicForm'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -41,6 +42,7 @@ const KLP_CSS = `
 .klp .hl h1{font-size:clamp(2.4rem,5.2vw,4rem);font-weight:600;line-height:1.04;letter-spacing:-.035em;margin:16px 0 0;max-width:13ch}
 .klp .hl .sub,.klp .hero-center .sub{font-size:clamp(1.05rem,2.1vw,1.28rem);color:var(--muted);max-width:480px;margin:20px 0 0;line-height:1.45}
 .klp .composer{display:flex;flex-direction:column;gap:14px;margin-top:30px;background:var(--card);border:1px solid var(--line2);border-radius:22px;padding:22px;width:100%;max-width:730px;min-height:300px;box-shadow:0 20px 50px -24px rgba(0,0,0,.9)}
+.klp #try-kineo{scroll-margin-top:82px}
 .klp .composer .ci{flex:1;width:100%;min-height:170px;resize:none;background:transparent;border:none;outline:none;color:var(--txt);font-size:17px;line-height:1.5;font-family:inherit;padding:6px 2px}
 .klp .composer .ci::placeholder{color:var(--muted2)}
 .klp .composer .cbtn{align-self:flex-end;white-space:nowrap;padding:14px 28px;font-size:15.5px;border-radius:13px}
@@ -177,7 +179,7 @@ export default function KineoLanding({ initialUser }: Props) {
         <div className="nav-links"><Link href="/generate">Video Generation</Link><Link href="/avatar">AI Avatar</Link><Link href="/examples">Examples</Link><a href="#pricing">Pricing</a></div>
         {initialUser
           ? <div className="nav-cta"><NavCreditsBadge /><Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/generate">Dashboard</Link></div>
-          : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="/signup">Start free</Link>}
+          : <Link className="btn btn-w" style={{ padding: '9px 20px', fontSize: '14px' }} href="#try-kineo">Start free</Link>}
       </div></nav>
 
       <header className="hero">
@@ -192,12 +194,7 @@ export default function KineoLanding({ initialUser }: Props) {
                 line at the clamp's 5.8rem max inside the 760px container. */}
             <h1 className="gtxt">Launch your<br />AI Shorts show.</h1>
             <p className="sub">Same face, same voice, same style — every episode. Script, voice, captions and scenes in ~60 seconds.</p>
-            <form className="composer" action={initialUser ? '/generate' : '/signup'} method="get">
-              <textarea className="ci" name="prompt" rows={3} required minLength={3} maxLength={1000} placeholder="Type a topic — e.g. the island too dangerous to visit" />
-              <input type="hidden" name="create_intent" value="fast" />
-              {!initialUser && <input type="hidden" name="utm_source" value="homepage" />}
-              <button className="btn btn-w cbtn" type="submit">Generate →</button>
-            </form>
+            <HomeTopicForm isSignedIn={isSignedIn} />
             {/* PROVA-SOCIAL-REAL-2026-07-02 — real DB counts; renders nothing if numbers are low/unavailable */}
             <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center' }}>
               <LiveStatsBadge />
@@ -369,7 +366,7 @@ export default function KineoLanding({ initialUser }: Props) {
             <div style={{ position: 'relative', zIndex: 1 }}>
               <h2 className="gtxt">Type a topic. Get a finished Short.</h2>
               <p>Create, watch, download and share up to 3 watermarked Fast videos every 24h — no card.</p>
-              <div className="fcta"><Link className="btn btn-w" href="/signup">Make my Fast video — free</Link></div>
+              <div className="fcta"><Link className="btn btn-w" href="#try-kineo">Choose my topic — free</Link></div>
             </div>
           </div>
         </div>

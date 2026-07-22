@@ -84,7 +84,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
 
   return (
     <Suspense fallback={null}>
-      <GenerateClient initialViralPrompt={viralTopic?.prompt ?? ''} />
+      <GenerateClient initialViralPrompt={viralTopic?.prompt ?? ''} initialUserId={user.id} />
     </Suspense>
   )
 }
