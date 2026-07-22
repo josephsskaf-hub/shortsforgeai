@@ -50,6 +50,10 @@ export async function GET(req: Request) {
     // 'free' plan but get clean Fast output). Read best-effort alongside the avatar
     // add-on so a missing column on a stale env never breaks the balance response.
     let hasPaid = false
+    // Auto-start and other entitlement-sensitive clients may only trust the
+    // paid/free verdict when this secondary query completed successfully.
+    // A transient/RLS/schema failure must never turn a pack buyer into "free".
+    let entitlementsResolved = false
     // KINEO-OFFER290-2026-07-07 — surface offer290_used so the first-purchase
     // banner can enforce its 1-per-account gate on the client. Best-effort:
     // defaults false if the column isn't deployed yet.
@@ -73,6 +77,7 @@ export async function GET(req: Request) {
         // balance, default the avatar add-on to 0.
         console.error('[credits] avatar_credits fetch failed (degrading avatar to 0):', avErr.message)
       } else {
+        entitlementsResolved = true
         avatarCredits = (avData as { avatar_credits?: number } | null)?.avatar_credits ?? 0
         // Face-app wave 1 — saved face for the "Use my saved face" one-click flow.
         const face = (avData as { avatar_face_url?: string | null } | null)?.avatar_face_url
@@ -108,7 +113,15 @@ export async function GET(req: Request) {
       }
       // No row found (new user before profiles row exists) — 0 credits until paid.
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ credits: 0 })
+        return NextResponse.json({
+          credits: 0,
+          entitlementsResolved: true,
+          hasPaid: false,
+          plan: 'free',
+          isStarter: false,
+          isCreator: false,
+          isStudio: false,
+        })
       }
       // Don't fall back to DEFAULT_CREDITS on an unknown error — that would hide a
       // real DB failure and let users start a generation they can't actually pay for.
@@ -138,6 +151,7 @@ export async function GET(req: Request) {
       // KINEO-WM-CHECKOUT-2026-07-07 — true once the user has paid (pack or plan);
       // drives hiding the post-render "remove watermark" upsell.
       hasPaid,
+      entitlementsResolved,
       // KINEO-OFFER290-2026-07-07 — first-purchase urgency offer inputs. The
       // <Offer290Banner/> uses offer290Enabled + firstVideoAt + hasPaid +
       // offer290Used to decide whether to show (and to run the 24h countdown).

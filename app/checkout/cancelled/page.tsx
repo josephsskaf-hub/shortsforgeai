@@ -36,7 +36,10 @@ function CheckoutCancelledContent() {
   const rawPromo = (searchParams.get('promo') ?? '').trim()
   const promo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : null
   const privatePackPromo = Boolean(promo?.toUpperCase().startsWith('KINEO5-')) && billing === 'monthly' && tier === 'basic'
-  const checkoutCurrency = searchParams.get('currency') === 'inr' ? 'inr' : 'usd'
+  const introEligible = intro && billing === 'monthly' && (tier === 'starter' || tier === 'basic')
+  const rawCurrency = searchParams.get('currency')
+  const checkoutCurrency: 'usd' | 'brl' | 'inr' =
+    rawCurrency === 'brl' || rawCurrency === 'inr' ? rawCurrency : 'usd'
   const returnToWatermark = searchParams.get('return') === 'wm'
   const retryParams = new URLSearchParams({ tier, billing })
   if (intro) retryParams.set('intro', '1')
@@ -44,24 +47,50 @@ function CheckoutCancelledContent() {
   if (returnToWatermark) retryParams.set('return', 'wm')
   const retryHref = `/api/stripe/checkout?${retryParams.toString()}`
   const planName = tier === 'starter' ? 'Starter' : tier === 'pro' ? 'Studio' : 'Creator'
+  const displayedPrices = {
+    usd: {
+      monthly: { starter: '$9.90', basic: '$24.90', pro: '$37.90' },
+      annual: { starter: '$99', basic: '$199', pro: '$379' },
+      intro: { starter: '$4.90', basic: '$9.90' },
+      privateFirst: 'US$5',
+    },
+    brl: {
+      monthly: { starter: 'R$49,90', basic: 'R$99,90', pro: 'R$189,90' },
+      annual: { starter: 'R$499', basic: 'R$999', pro: 'R$1.899' },
+      intro: { starter: 'R$24,90', basic: 'R$49,90' },
+      // KINEO5 is currently validated only for its supported Stripe currencies;
+      // this label is defensive for a hand-edited cancelled-page URL.
+      privateFirst: 'the verified private price',
+    },
+    inr: {
+      monthly: { starter: '₹799', basic: '₹1,599', pro: '₹2,999' },
+      annual: { starter: '₹7,990', basic: '₹15,990', pro: '₹29,990' },
+      intro: { starter: '₹399', basic: '₹799' },
+      privateFirst: '₹405',
+    },
+  } as const
+  const prices = displayedPrices[checkoutCurrency]
+  const monthlyPrice = prices.monthly[tier]
+  const annualPrice = prices.annual[tier]
+  const introPrice = tier === 'starter'
+    ? prices.intro.starter
+    : tier === 'basic'
+      ? prices.intro.basic
+      : null
   const todayPrice = billing === 'annual'
-    ? tier === 'starter' ? '$99/year' : tier === 'pro' ? '$379/year' : '$199/year'
+    ? `${annualPrice}/year`
     : privatePackPromo
-      ? checkoutCurrency === 'inr' ? '₹405 today' : 'US$5 today'
-      : intro
-        ? tier === 'starter' ? '$4.90 today' : '$9.90 today'
-        : tier === 'starter' ? '$9.90/month' : tier === 'pro' ? '$37.90/month' : '$24.90/month'
+      ? `${prices.privateFirst} today`
+      : introEligible && introPrice
+        ? `${introPrice} today`
+        : `${monthlyPrice}/month`
   const renewalCopy = privatePackPromo
-    ? checkoutCurrency === 'inr'
-      ? 'Renews at ₹1,599/month in 30 days. Cancel anytime.'
-      : 'Renews at US$24.90/month in 30 days. Cancel anytime.'
-    : intro
-    ? tier === 'starter'
-      ? 'Renews at $9.90/month in 30 days. Cancel anytime.'
-      : 'Renews at $24.90/month in 30 days. Cancel anytime.'
+    ? `Renews at ${prices.monthly.basic}/month in 30 days. Cancel anytime.`
+    : introEligible
+    ? `Renews at ${monthlyPrice}/month in 30 days. Cancel anytime.`
     : billing === 'annual'
-      ? 'Billed once per year. Your annual billing choice will be preserved.'
-      : 'Your saved plan and monthly billing period will be preserved.'
+      ? `Renews at ${annualPrice}/year. Your annual billing choice will be preserved.`
+      : `Renews at ${monthlyPrice}/month in 30 days. Cancel anytime.`
 
   useEffect(() => {
     trackEvent('checkout_cancelled', {

@@ -26,6 +26,17 @@ function activationRedirectFromSearch(search: string): string {
   const activationParams = new URLSearchParams({ welcome: '1' })
   const prompt = (params.get('prompt') ?? '').trim().slice(0, 1000)
   if (prompt) activationParams.set('prompt', prompt)
+  // Only an explicit generate-form submission may auto-start a render after
+  // auth. A bare prompt remains a prefill and keeps the normal manual flow.
+  if (prompt && params.get('create_intent') === 'fast') {
+    activationParams.set('create_intent', 'fast')
+  }
+  // Keep bounded organic attribution attached to the activation event after
+  // email signup or OAuth without forwarding arbitrary query parameters.
+  for (const key of ['intent_campaign', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) {
+    const value = (params.get(key) ?? '').trim()
+    if (/^[A-Za-z0-9._~-]{1,100}$/.test(value)) activationParams.set(key, value)
+  }
   const language = params.get('language')
   if (language === 'en' || language === 'pt' || language === 'es') {
     activationParams.set('language', language)

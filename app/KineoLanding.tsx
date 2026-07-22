@@ -192,7 +192,8 @@ export default function KineoLanding({ initialUser }: Props) {
             <h1 className="gtxt">Launch your<br />AI Shorts show.</h1>
             <p className="sub">Same face, same voice, same style — every episode. Script, voice, captions and scenes in ~60 seconds.</p>
             <form className="composer" action={initialUser ? '/generate' : '/signup'} method="get">
-              <textarea className="ci" name="prompt" rows={3} placeholder="Type a topic — e.g. the island too dangerous to visit" />
+              <textarea className="ci" name="prompt" rows={3} required minLength={3} maxLength={1000} placeholder="Type a topic — e.g. the island too dangerous to visit" />
+              <input type="hidden" name="create_intent" value="fast" />
               {!initialUser && <input type="hidden" name="utm_source" value="homepage" />}
               <button className="btn btn-w cbtn" type="submit">Generate →</button>
             </form>

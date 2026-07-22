@@ -317,6 +317,17 @@ async function main() {
     (row) => Boolean(row.user_id),
   )
   const checkoutStarted = stage(externalEvents, 'checkout_started')
+  const activationAutostartEligible = stage(externalEvents, 'activation_autostart_eligible')
+  const activationAutostartDispatched = stage(externalEvents, 'activation_autostart_dispatched')
+  const activationAutostartSkipped = stage(externalEvents, 'activation_autostart_skipped')
+  const checkoutResumeViewed = stage(externalEvents, 'checkout_resume_banner_viewed')
+  const checkoutResumeClicked = stage(externalEvents, 'checkout_resume_banner_clicked')
+  const checkoutResumeDismissed = stage(externalEvents, 'checkout_resume_banner_dismissed')
+  const checkoutRecoveryStarted = stage(
+    externalEvents,
+    'checkout_started',
+    (row) => row.metadata?.checkout_recovery === true || row.metadata?.checkout_recovery === '1',
+  )
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -346,6 +357,19 @@ async function main() {
         paid: recurringSessions.filter((session) => session.payment_status === 'paid').length,
       },
       newActiveOrTrialingSubscriptions: newActiveSubscriptions.length,
+    },
+    experiments: {
+      activationAutostartFastV1: {
+        eligible: activationAutostartEligible,
+        dispatched: activationAutostartDispatched,
+        skipped: activationAutostartSkipped,
+      },
+      checkoutResumeV1: {
+        bannerViewed: checkoutResumeViewed,
+        bannerClicked: checkoutResumeClicked,
+        bannerDismissed: checkoutResumeDismissed,
+        recoveryCheckoutStarted: checkoutRecoveryStarted,
+      },
     },
     acquisition: {
       signupSources,

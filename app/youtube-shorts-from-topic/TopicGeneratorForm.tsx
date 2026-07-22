@@ -95,6 +95,7 @@ export default function TopicGeneratorForm({
             outline: 'none',
           }}
         />
+        <input type="hidden" name="create_intent" value="fast" />
         <input type="hidden" name="intent_campaign" value={campaign} />
         {language && <input type="hidden" name="language" value={language} />}
         <button

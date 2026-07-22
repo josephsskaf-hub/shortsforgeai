@@ -15,6 +15,35 @@ export const dynamic = 'force-dynamic'
 type Tier = 'starter' | 'basic' | 'pro'
 type Currency = 'usd' | 'brl' | 'inr'
 
+const CHECKOUT_RESUME_SESSION_COOKIE = 'kineo_checkout_session'
+const CHECKOUT_RESUME_DISMISSED_COOKIE = 'kineo_checkout_resume_dismissed'
+const CHECKOUT_RESUME_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+
+function rememberRecurringCheckout(response: NextResponse, sessionId: string): NextResponse {
+  // Store only Stripe's opaque Session id. All ownership, price and plan data
+  // are reloaded from Stripe by the authenticated resume endpoint.
+  response.cookies.set({
+    name: CHECKOUT_RESUME_SESSION_COOKIE,
+    value: sessionId,
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: CHECKOUT_RESUME_MAX_AGE_SECONDS,
+  })
+  // A newly created purchase intent supersedes a previous dismissal.
+  response.cookies.set({
+    name: CHECKOUT_RESUME_DISMISSED_COOKIE,
+    value: '',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  })
+  return response
+}
+
 function isPrivatePackPromotion(raw: string): boolean {
   return raw.toUpperCase().startsWith('KINEO5-')
 }
@@ -297,6 +326,7 @@ async function buildAndRedirect(
   const unitAmount = isAnnual ? ANNUAL_PRICES[tier][currency] : TIER_PRICES[tier][currency]
   const interval: 'month' | 'year' = isAnnual ? 'year' : 'month'
   const returnToWatermark = req.nextUrl.searchParams.get('return') === 'wm'
+  const checkoutRecovery = req.nextUrl.searchParams.get('recovery') === '1'
   const checkoutMetadata = {
     tier,
     billing,
@@ -305,6 +335,7 @@ async function buildAndRedirect(
     offer_requested: privatePackPromo ? 'kineo5_pack_upgrade' : null,
     return_to: returnToWatermark ? 'watermark_moment' : 'checkout_success',
     checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
+    checkout_recovery: checkoutRecovery,
   }
 
   const supabase = createClient()
@@ -600,6 +631,9 @@ async function buildAndRedirect(
       },
     ],
     mode: 'subscription',
+    after_expiration: {
+      recovery: { enabled: true },
+    },
     success_url: `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}&currency=${currency}${intro ? '&intro=1' : ''}${requestedPromo ? `&promo=${encodeURIComponent(requestedPromo)}` : ''}${returnToWatermark ? '&return=wm' : ''}`,
     metadata: {
@@ -608,6 +642,7 @@ async function buildAndRedirect(
       billing,
       plan_credits: String(plan.credits),
       checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
+      checkout_recovery: checkoutRecovery ? '1' : '0',
     },
     subscription_data: {
       metadata: {
@@ -615,6 +650,7 @@ async function buildAndRedirect(
         tier,
         plan_credits: String(plan.credits),
         checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
+        checkout_recovery: checkoutRecovery ? '1' : '0',
       },
     },
   }
@@ -763,6 +799,20 @@ async function buildAndRedirect(
     )
   }
 
+  // A recovery banner displays the exact price saved on the abandoned
+  // Session. If an intro or supplied promotion can no longer be reproduced,
+  // fail closed instead of opening a full-price Checkout behind that promise.
+  if (checkoutRecovery && (intro || requestedPromo) && !discountApplied) {
+    await recordCheckoutEvent(
+      'checkout_failed',
+      user.id,
+      { ...checkoutMetadata, failure_stage: 'checkout_recovery', failure_reason: 'saved_discount_unavailable' },
+      browserSessionId ?? undefined,
+    )
+    const message = 'We could not restore the exact saved price. You have not been charged. Please choose a current offer on the pricing page.'
+    return isGet ? redirectError(message) : jsonError(message, 409)
+  }
+
   // KINEO-PROMO-FIELD-2026-07-08 — manual promo field for loose campaigns.
   // When we did NOT auto-apply a discount via ?promo=, turn on Stripe's built-in
   // "Add promotion code" field so someone can type a code (e.g. KINEO20) by hand —
@@ -771,6 +821,16 @@ async function buildAndRedirect(
   // it ONLY when no discount was applied above (never both on the same session).
   if (!discountApplied) {
     sessionParams.allow_promotion_codes = true
+  }
+
+  // A recovered Session is an exact Stripe-side copy of this protected
+  // purchase intent. Keep the manual promotion field only for undiscounted
+  // checkouts; an already-applied intro/private offer must not accept stacking.
+  sessionParams.after_expiration = {
+    recovery: {
+      enabled: true,
+      allow_promotion_codes: !discountApplied,
+    },
   }
 
   // The payment page may need its normal amount copy, but a successful
@@ -796,7 +856,7 @@ async function buildAndRedirect(
   const checkoutWindow = Math.floor(Date.now() / (5 * 60 * 1000))
   const checkoutIdempotencyKeyFor = (finalCustomerId: string): string => {
     const checkoutSignature = JSON.stringify({
-      version: 4,
+      version: 5,
       user_id: user.id,
       customer_id: finalCustomerId,
       tier,
@@ -812,9 +872,11 @@ async function buildAndRedirect(
       cancel_url: sessionParams.cancel_url,
       client_reference_id: sessionParams.client_reference_id ?? null,
       checkout_origin: sessionParams.metadata?.checkout_origin ?? 'standard',
+      checkout_recovery: sessionParams.metadata?.checkout_recovery ?? '0',
+      after_expiration: sessionParams.after_expiration,
       window: checkoutWindow,
     })
-    return `kineo-sub-v3:${createHash('sha256').update(checkoutSignature).digest('hex')}`
+    return `kineo-sub-v4:${createHash('sha256').update(checkoutSignature).digest('hex')}`
   }
   const createCheckoutSessionFor = (finalCustomerId: string) => {
     sessionParams.customer = finalCustomerId
@@ -886,9 +948,10 @@ async function buildAndRedirect(
     browserSessionId ?? undefined,
   )
 
-  return isGet
+  const response = isGet
     ? NextResponse.redirect(session.url!)
     : NextResponse.json({ url: session.url })
+  return rememberRecurringCheckout(response, session.id)
 }
 
 // ─── One-time Starter Pack checkout (mode: 'payment') ────────────────────────

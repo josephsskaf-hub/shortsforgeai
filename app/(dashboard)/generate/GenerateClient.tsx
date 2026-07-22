@@ -308,6 +308,37 @@ const VIRAL_STARTER_TOPICS = [
   'the Roman city of Pompeii, buried by a volcano in a single day',
 ]
 const PUSH27_ONBOARDING_RENDER_SESSION_KEY = 'kineo_push27_onboarding_render_dispatched'
+const ACTIVATION_AUTOSTART_VARIANT = 'activation_autostart_fast_v1'
+const ACTIVATION_AUTOSTART_SESSION_PREFIX = 'kineo_activation_autostart_fast_v1'
+
+type ActivationAccountStatus = 'loading' | 'free' | 'paid' | 'unavailable'
+
+function activationAutostartSessionKey(prompt: string): string {
+  // Keep the prompt itself out of storage while still allowing a later,
+  // genuinely different form submission in the same tab to auto-start.
+  let hash = 2166136261
+  for (let index = 0; index < prompt.length; index += 1) {
+    hash ^= prompt.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `${ACTIVATION_AUTOSTART_SESSION_PREFIX}:${(hash >>> 0).toString(36)}:${prompt.length}`
+}
+
+function removeCreateIntentFromCurrentUrl(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('create_intent')
+    // Preserve prompt, UTMs, signup/welcome and every unrelated parameter.
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    )
+  } catch {
+    // A storage/history restriction must never block the normal manual flow.
+  }
+}
 
 export default function GenerateClient({ initialViralPrompt = '' }: { initialViralPrompt?: string }) {
   const router = useRouter()
@@ -355,6 +386,12 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   const onboardingAutoGenerateRef = useRef(false)
   const onboardingGenerationDispatchedRef = useRef(false)
   const inlineFirstVideoViewedRef = useRef(false)
+  const activationAutostartDecisionRef = useRef(false)
+  const activationAutoGenerateRef = useRef(false)
+  const activationAutostartSawProcessingRef = useRef(false)
+  const activationAutostartPromptRef = useRef<string | null>(null)
+  const activationAutostartContextRef = useRef<Record<string, unknown> | null>(null)
+  const [activationAutostartArmed, setActivationAutostartArmed] = useState(false)
   useEffect(() => {
     try {
       onboardingGenerationDispatchedRef.current =
@@ -773,6 +810,7 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
   const [showFirstShortNudge, setShowFirstShortNudge] = useState(false) // #379 — new-user onboarding nudge
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
+  const [activationAccountStatus, setActivationAccountStatus] = useState<ActivationAccountStatus>('loading')
   const [loaderTick, setLoaderTick] = useState(0)
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
   // Push #087 — user plan tier ('free' | 'basic' | 'pro'). Drives the
@@ -1399,7 +1437,10 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
       try {
         const res = await fetch('/api/credits', { cache: 'no-store' })
         if (res.status === 401) {
-          if (!cancelled) setCredits(null)
+          if (!cancelled) {
+            setCredits(null)
+            setActivationAccountStatus('unavailable')
+          }
           return
         }
         // BUGFIX 05/07 (KINEO-CREDITS-FALSE-ZERO) — on a 500/503 (e.g. a transient
@@ -1409,11 +1450,33 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
         // balance as UNKNOWN (null), never zero: outOfCredits() ignores null, and
         // the realtime sub + next fetch fill in the true value.
         if (!res.ok) {
-          if (!cancelled) setCredits(null)
+          if (!cancelled) {
+            setCredits(null)
+            setActivationAccountStatus('unavailable')
+          }
           return
         }
         const data = await res.json()
         if (!cancelled) {
+          const normalizedPlan = typeof data.plan === 'string' ? data.plan.toLowerCase() : null
+          const hasEntitlementFields =
+            data.entitlementsResolved === true &&
+            (typeof data.hasPaid === 'boolean' ||
+              typeof data.isStarter === 'boolean' ||
+              typeof data.isCreator === 'boolean' ||
+              typeof data.isStudio === 'boolean' ||
+              normalizedPlan !== null)
+          const paidAccount =
+            data.hasPaid === true ||
+            data.isStarter === true ||
+            data.isCreator === true ||
+            data.isStudio === true ||
+            (normalizedPlan !== null && normalizedPlan !== 'free')
+          if (hasEntitlementFields) {
+            setActivationAccountStatus(paidAccount ? 'paid' : 'free')
+          } else {
+            setActivationAccountStatus('unavailable')
+          }
           setCredits(typeof data.credits === 'number' ? data.credits : null)
           // KINEO-AVATAR-PACKS-RETIRED-2026-07-06 — avatarCredits no longer read
           // into state (paywall retired). The endpoint still returns it for any
@@ -1443,7 +1506,10 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
           }
         }
       } catch {
-        if (!cancelled) setCredits(null)
+        if (!cancelled) {
+          setCredits(null)
+          setActivationAccountStatus('unavailable')
+        }
       } finally {
         if (!cancelled) setCreditsLoading(false)
       }
@@ -1526,6 +1592,182 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
       window.removeEventListener('creditsChanged', fetchPlan)
     }
   }, [])
+
+  // A prompt in the URL is normally just a prefill. Auto-start is reserved for
+  // the public forms that explicitly submit create_intent=fast. Wait for both
+  // entitlement checks and active-render restoration before consuming it.
+  useEffect(() => {
+    if (activationAutostartDecisionRef.current) return
+    if (searchParams.get('create_intent') !== 'fast') return
+
+    const explicitPrompt = (searchParams.get('prompt') ?? '').trim().slice(0, 1000)
+    const metadata: Record<string, unknown> = {
+      variant: ACTIVATION_AUTOSTART_VARIANT,
+      engine: 'fast',
+      prompt_length: explicitPrompt.length,
+      activation_entry:
+        searchParams.get('signup') === '1'
+          ? 'oauth_signup'
+          : searchParams.get('welcome') === '1'
+            ? 'email_signup'
+            : 'direct',
+      source: (searchParams.get('utm_source') ?? 'unknown').slice(0, 64),
+      campaign: (
+        searchParams.get('intent_campaign') ??
+        searchParams.get('utm_campaign') ??
+        'unknown'
+      ).slice(0, 64),
+    }
+
+    const consumeAndSkip = (reason: string) => {
+      activationAutostartDecisionRef.current = true
+      try {
+        sessionStorage.setItem(activationAutostartSessionKey(explicitPrompt), `skipped:${reason}`)
+      } catch {}
+      removeCreateIntentFromCurrentUrl()
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason })
+    }
+
+    if (!explicitPrompt) {
+      consumeAndSkip('empty_prompt')
+      return
+    }
+
+    // Resolve restoration first. If this arrival resumed (or raced) a render,
+    // consume the intent immediately instead of letting it fire after that job
+    // happens to finish while entitlement requests are still loading.
+    if (!activeRenderRestoreResolved) return
+    if (resumedRenderRef.current) {
+      consumeAndSkip('active_render_restored')
+      return
+    }
+    if (generationInFlightRef.current || isProcessingPhase(phase)) {
+      consumeAndSkip('generation_in_progress')
+      return
+    }
+
+    // Safety wins over speculative generation while ownership/entitlements are
+    // unresolved.
+    if (creditsLoading || planTier === null) return
+    if (activationAccountStatus === 'loading') return
+
+    const storageKey = activationAutostartSessionKey(explicitPrompt)
+    let alreadyConsumed = false
+    try { alreadyConsumed = sessionStorage.getItem(storageKey) !== null } catch {}
+    activationAutostartDecisionRef.current = true
+    // Remove only create_intent; prompt, UTMs, signup/welcome and all unrelated
+    // query parameters stay intact.
+    removeCreateIntentFromCurrentUrl()
+
+    if (alreadyConsumed) {
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'already_consumed' })
+      return
+    }
+    // Persist idempotency before analysis or render dispatch.
+    try { sessionStorage.setItem(storageKey, 'eligible') } catch {}
+
+    if (searchParams.get('wm_unlock') === '1') {
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'watermark_unlock_active' })
+      return
+    }
+    if (activationAccountStatus === 'unavailable') {
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'account_status_unavailable' })
+      return
+    }
+    if (
+      activationAccountStatus === 'paid' ||
+      hasPaid ||
+      planTier !== 'free' ||
+      isStarter ||
+      isCreator ||
+      isStudio
+    ) {
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'paid_account' })
+      return
+    }
+    void trackEvent('activation_autostart_eligible', metadata)
+    activationAutostartContextRef.current = metadata
+    activationAutostartPromptRef.current = explicitPrompt
+    activationAutoGenerateRef.current = true
+    activationAutostartSawProcessingRef.current = false
+    onboardingAutoGenerateRef.current = false
+    structuredScriptRef.current = null
+    setPrompt(explicitPrompt)
+    setMode('fast')
+    setQuality('fast')
+    setShowNicheOnboarding(false)
+    setActivationAutostartArmed(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchParams,
+    activeRenderRestoreResolved,
+    creditsLoading,
+    activationAccountStatus,
+    planTier,
+    hasPaid,
+    isStarter,
+    isCreator,
+    isStudio,
+    phase,
+  ])
+
+  // Commit Fast mode before analysis so a prior dashboard engine selection can
+  // never leak into this free activation path.
+  useEffect(() => {
+    if (!activationAutostartArmed || mode !== 'fast') return
+    setActivationAutostartArmed(false)
+
+    const metadata = activationAutostartContextRef.current ?? {
+      variant: ACTIVATION_AUTOSTART_VARIANT,
+      engine: 'fast',
+    }
+    const topic = activationAutostartPromptRef.current?.trim() ?? ''
+    const skipBeforeAnalysis = (reason: string) => {
+      activationAutoGenerateRef.current = false
+      activationAutostartSawProcessingRef.current = false
+      activationAutostartPromptRef.current = null
+      activationAutostartContextRef.current = null
+      void trackEvent('activation_autostart_skipped', { ...metadata, reason })
+    }
+
+    if (!topic) {
+      skipBeforeAnalysis('prompt_missing_before_analysis')
+      return
+    }
+    if (
+      activationAccountStatus !== 'free' ||
+      hasPaid ||
+      planTier !== 'free' ||
+      isStarter ||
+      isCreator ||
+      isStudio
+    ) {
+      skipBeforeAnalysis('paid_or_unknown_before_analysis')
+      return
+    }
+    if (
+      !activeRenderRestoreResolvedRef.current ||
+      resumedRenderRef.current ||
+      generationInFlightRef.current ||
+      isProcessingPhase(phase)
+    ) {
+      skipBeforeAnalysis('render_state_changed_before_analysis')
+      return
+    }
+
+    void handleAnalyze(topic, { fromTopic: true, skipPreview: true, structureFirst: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activationAutostartArmed,
+    mode,
+    activationAccountStatus,
+    hasPaid,
+    planTier,
+    isStarter,
+    isCreator,
+    isStudio,
+    phase,
+  ])
 
   // Push #087 — Force Fast Mode for non-Pro users. If the user had already
   // selected Cinematic before the plan loaded (or downgraded mid-session),
@@ -3430,16 +3672,70 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     }
   }
 
-  // The onboarding CTA promises a generated Short, so complete the Fast path
-  // automatically after its analysis is ready. Other entry points still stop
-  // at the options screen and require their normal explicit Generate click.
+  // Explicit public create intent and the onboarding CTA both promise a
+  // generated Short, so complete their Fast path after analysis is ready.
+  // Every unmarked prompt still stops at options for an explicit Generate click.
   useEffect(() => {
-    if (!onboardingAutoGenerateRef.current) return
+    const activationPending = activationAutoGenerateRef.current
+    const onboardingPending = onboardingAutoGenerateRef.current
+    if (!activationPending && !onboardingPending) return
+
+    if (activationPending && (phase === 'scripting' || phase === 'analyzing')) {
+      activationAutostartSawProcessingRef.current = true
+    }
+
+    const clearActivation = (reason?: string) => {
+      const metadata = activationAutostartContextRef.current ?? {
+        variant: ACTIVATION_AUTOSTART_VARIANT,
+        engine: 'fast',
+      }
+      activationAutoGenerateRef.current = false
+      activationAutostartSawProcessingRef.current = false
+      activationAutostartPromptRef.current = null
+      activationAutostartContextRef.current = null
+      if (reason) {
+        void trackEvent('activation_autostart_skipped', { ...metadata, reason })
+      }
+      return metadata
+    }
+
+    if (
+      activationPending &&
+      (phase === 'failed' || (phase === 'idle' && activationAutostartSawProcessingRef.current))
+    ) {
+      clearActivation('analysis_failed_before_dispatch')
+    }
     if (phase === 'failed') {
       onboardingAutoGenerateRef.current = false
       return
     }
-    if (phase !== 'options' || !analysis || mode !== 'fast') return
+    if (phase !== 'options' || !analysis) return
+
+    if (activationPending) {
+      if (
+        mode !== 'fast' ||
+        activationAccountStatus !== 'free' ||
+        hasPaid ||
+        planTier !== 'free' ||
+        isStarter ||
+        isCreator ||
+        isStudio ||
+        resumedRenderRef.current ||
+        generationInFlightRef.current
+      ) {
+        clearActivation('render_state_changed_before_dispatch')
+        return
+      }
+      const metadata = clearActivation()
+      void trackEvent('activation_autostart_dispatched', {
+        ...metadata,
+        attempt_id: generationAttemptRef.current,
+      })
+      void handleGenerate()
+      return
+    }
+
+    if (!onboardingPending || mode !== 'fast') return
     onboardingAutoGenerateRef.current = false
     onboardingGenerationDispatchedRef.current = true
     try { sessionStorage.setItem(PUSH27_ONBOARDING_RENDER_SESSION_KEY, '1') } catch {}
@@ -3450,7 +3746,17 @@ export default function GenerateClient({ initialViralPrompt = '' }: { initialVir
     })
     void handleGenerate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, analysis, mode])
+  }, [
+    phase,
+    analysis,
+    mode,
+    activationAccountStatus,
+    hasPaid,
+    planTier,
+    isStarter,
+    isCreator,
+    isStudio,
+  ])
 
   useEffect(() => {
     if (phase !== 'failed' || !onboardingGenerationDispatchedRef.current) return
