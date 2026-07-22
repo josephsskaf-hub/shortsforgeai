@@ -15,6 +15,11 @@ interface CharacterChip {
 const FREE_DAILY_LIMIT = 2
 const STORAGE_KEY = 'sfai_thumb_daily'
 
+interface ThumbnailGeneratorClientProps {
+  /** Server-derived account override. Never read from query params or localStorage. */
+  dailyLimit?: number
+}
+
 const STYLES = [
   { id: 'mrbeast',     label: 'MrBeast',      emoji: '🤯', desc: 'Extreme reaction, bold colors',       sample: 'Extreme challenge reveal, winner takes $100,000 prize' },
   { id: 'mystery',     label: 'Mystery/Dark',  emoji: '🌑', desc: 'Eerie, shadowy atmosphere',           sample: 'Ancient secret hidden for 3,000 years finally exposed' },
@@ -264,7 +269,9 @@ function YouTubeFeedPreview({ url }: { url: string }) {
 }
 
 // ─── Main component ────────────────────────────────────────────────────────
-export default function ThumbnailGeneratorClient() {
+export default function ThumbnailGeneratorClient({
+  dailyLimit = FREE_DAILY_LIMIT,
+}: ThumbnailGeneratorClientProps) {
   const [prompt, setPrompt] = useState('')
   const [selectedStyle, setSelectedStyle] = useState('cinematic')
   const [generateCount, setGenerateCount] = useState<1 | 3>(1)
@@ -341,7 +348,10 @@ export default function ThumbnailGeneratorClient() {
     }
   }
 
-  const remainingFree = Math.max(FREE_DAILY_LIMIT - dailyUsed, 0)
+  const effectiveDailyLimit = Number.isFinite(dailyLimit)
+    ? Math.max(FREE_DAILY_LIMIT, Math.floor(dailyLimit))
+    : FREE_DAILY_LIMIT
+  const remainingFree = Math.max(effectiveDailyLimit - dailyUsed, 0)
   // KINEO-THUMB-PAID-UNLIMITED — pagante nunca bate no limite diário.
   const isLimitReached = !isPaidUser && remainingFree <= 0
 
