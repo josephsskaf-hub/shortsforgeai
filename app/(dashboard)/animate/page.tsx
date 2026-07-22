@@ -7,5 +7,5 @@ export const metadata = { title: 'Animate a Photo — Kineo' }
 export default async function AnimatePage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  return <AnimateClient isLoggedIn={!!user} />
+  return <AnimateClient isLoggedIn={!!user} userId={user?.id ?? null} />
 }

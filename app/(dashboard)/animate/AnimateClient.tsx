@@ -25,8 +25,53 @@ const MOTION_PRESETS: Array<{ label: string; prompt: string }> = [
   { label: '🌊 Scenery flows', prompt: 'water flows, clouds drift, leaves sway in the wind, living landscape' },
 ]
 
-export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+const SUBMISSION_STORAGE_PREFIX = 'kineo:animate:submission:v1'
+
+type StoredSubmission = {
+  userId: string
+  fingerprint: string
+  key: string
+  sourceType: 'upload' | 'url'
+  source: string
+  prompt: string
+  duration: '5' | '10'
+  requestId?: string
+  imageUrl?: string
+}
+
+function submissionStorageKey(userId: string): string {
+  return `${SUBMISSION_STORAGE_PREFIX}:${userId}`
+}
+
+function readStoredSubmission(userId: string): StoredSubmission | null {
+  try {
+    const raw = localStorage.getItem(submissionStorageKey(userId))
+    if (!raw) return null
+    const value = JSON.parse(raw) as Partial<StoredSubmission>
+    if (
+      typeof value.userId !== 'string' || typeof value.fingerprint !== 'string' || typeof value.key !== 'string' ||
+      (value.sourceType !== 'upload' && value.sourceType !== 'url') ||
+      typeof value.source !== 'string' || typeof value.prompt !== 'string' ||
+      (value.duration !== '5' && value.duration !== '10')
+    ) return null
+    return value as StoredSubmission
+  } catch {
+    return null
+  }
+}
+
+function writeStoredSubmission(value: StoredSubmission) {
+  try { localStorage.setItem(submissionStorageKey(value.userId), JSON.stringify(value)) } catch {}
+}
+
+function clearStoredSubmission(userId: string | null | undefined) {
+  if (!userId) return
+  try { localStorage.removeItem(submissionStorageKey(userId)) } catch {}
+}
+
+export default function AnimateClient({ isLoggedIn, userId }: { isLoggedIn: boolean; userId: string | null }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [remoteImageUrl, setRemoteImageUrl] = useState('')
   const [prompt, setPrompt] = useState(MOTION_PRESETS[0].prompt)
   const [duration, setDuration] = useState<'5' | '10'>('5')
   const [credits, setCredits] = useState<number | null>(null)
@@ -35,18 +80,65 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const cancelledRef = useRef(false)
+  const submitGuardRef = useRef(false)
+  const submissionRef = useRef<{ fingerprint: string; key: string } | null>(null)
+  const retryTimerRef = useRef<number | null>(null)
+  const pollTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!isLoggedIn) return
-    fetch('/api/credits', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setCredits(typeof d?.credits === 'number' ? d.credits : 0))
-      .catch(() => {})
-    return () => { cancelledRef.current = true }
-  }, [isLoggedIn])
+    cancelledRef.current = false
+    if (!isLoggedIn || !userId) return
+    void refreshCredits(false)
+
+    // Survive reload/navigation while the provider is working. This also
+    // preserves the same idempotency key after a lost POST response.
+    const stored = readStoredSubmission(userId)
+    if (stored && stored.userId !== userId) {
+      clearStoredSubmission(userId)
+    } else if (stored) {
+      submissionRef.current = { fingerprint: stored.fingerprint, key: stored.key }
+      setPrompt(stored.prompt)
+      setDuration(stored.duration)
+      if (stored.requestId) {
+        if (stored.imageUrl || stored.sourceType === 'upload') {
+          setPhotoUrl(stored.imageUrl ?? stored.source)
+          setRemoteImageUrl('')
+        } else {
+          setRemoteImageUrl(stored.source)
+        }
+        setPhase('animating')
+        void poll(stored.requestId)
+      } else if (stored.sourceType === 'upload') {
+        setPhotoUrl(stored.source)
+        setRemoteImageUrl('')
+      } else {
+        setPhotoUrl(null)
+        setRemoteImageUrl(stored.source)
+      }
+      if (!stored.requestId) {
+        setPhase(stored.sourceType === 'url' ? 'uploading' : 'submitting')
+        retryTimerRef.current = window.setTimeout(() => void submitStoredSubmission(stored), 500)
+      }
+    }
+    return () => {
+      cancelledRef.current = true
+      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current)
+      if (pollTimerRef.current !== null) window.clearTimeout(pollTimerRef.current)
+    }
+  }, [isLoggedIn, userId])
 
   const busy = phase === 'uploading' || phase === 'submitting' || phase === 'animating'
-  const canGenerate = isLoggedIn && !!photoUrl && !busy
+  const hasImageSource = !!photoUrl || remoteImageUrl.trim().length > 0
+  const canGenerate = isLoggedIn && hasImageSource && !busy
+
+  async function refreshCredits(announce = true) {
+    try {
+      const res = await fetch('/api/credits', { cache: 'no-store' })
+      const data = await res.json()
+      if (typeof data?.credits === 'number') setCredits(data.credits)
+      if (announce) window.dispatchEvent(new Event('creditsChanged'))
+    } catch {}
+  }
 
   async function compressPhoto(file: File): Promise<File> {
     if (file.size < 2 * 1024 * 1024) return file
@@ -69,6 +161,9 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   async function handleFile(raw: File | null) {
     if (!raw) return
+    clearStoredSubmission(userId)
+    submissionRef.current = null
+    setRemoteImageUrl('')
     setError(null)
     setResultUrl(null)
     setPhase('uploading')
@@ -93,36 +188,143 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
     }
   }
 
-  async function handleGenerate() {
-    if (!canGenerate || !photoUrl) return
-    setError(null)
+  function handleRemoteImageUrl(value: string) {
+    clearStoredSubmission(userId)
+    submissionRef.current = null
+    setRemoteImageUrl(value)
+    if (value.trim()) setPhotoUrl(null)
     setResultUrl(null)
-    setPhase('submitting')
+    setError(null)
+    if (phase === 'done' || phase === 'failed') setPhase('idle')
+  }
+
+  function scheduleSubmissionRetry(stored: StoredSubmission, delayMs: number) {
+    if (cancelledRef.current) return
+    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current)
+    setPhase(stored.sourceType === 'url' ? 'uploading' : 'submitting')
+    setError('Connection interrupted. Recovering this same request automatically — no second charge.')
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null
+      void submitStoredSubmission(stored)
+    }, Math.max(1000, delayMs))
+  }
+
+  async function submitStoredSubmission(stored: StoredSubmission) {
+    if (submitGuardRef.current || cancelledRef.current) return
+    submitGuardRef.current = true
+    setResultUrl(null)
+    setPhase(stored.sourceType === 'url' ? 'uploading' : 'submitting')
     try {
-      const res = await fetch('/api/animate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: photoUrl, prompt: prompt.trim(), duration }),
+      const res = stored.sourceType === 'url'
+        ? await fetch('/api/animate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': stored.key },
+            body: JSON.stringify({
+              image_url: stored.source,
+              motion_prompt: stored.prompt,
+              duration: stored.duration,
+              idempotency_key: stored.key,
+            }),
+          })
+        : await fetch('/api/animate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': stored.key },
+            body: JSON.stringify({
+              imageUrl: stored.source,
+              prompt: stored.prompt,
+              duration: stored.duration,
+              idempotencyKey: stored.key,
+            }),
+          })
+      let responseParsed = true
+      const data = await res.json().catch(() => {
+        responseParsed = false
+        return {} as Record<string, unknown>
       })
-      const data = await res.json()
+      if (data?.use_new_idempotency_key === true) {
+        submissionRef.current = null
+        clearStoredSubmission(stored.userId)
+      }
       if (res.status === 402) {
+        submissionRef.current = null
+        clearStoredSubmission(stored.userId)
         setError(typeof data?.error === 'string' ? data.error : 'Not enough credits.')
         setPhase('failed')
         return
       }
       if (!res.ok || typeof data?.request_id !== 'string') {
+        const acceptedBodyWasLost = res.ok && typeof data?.request_id !== 'string'
+        const ambiguousConflict = res.status === 409 && !responseParsed
+        const ambiguousResponse = (acceptedBodyWasLost || ambiguousConflict || res.status === 408 || res.status === 425 || res.status >= 500) &&
+          data?.use_new_idempotency_key !== true
+        if (data?.pending === true || ambiguousResponse) {
+          const retryHeader = res.headers.get('Retry-After')
+          const retrySeconds = retryHeader === null ? Number.NaN : Number(retryHeader)
+          scheduleSubmissionRetry(stored, Number.isFinite(retrySeconds) && retrySeconds > 0 ? retrySeconds * 1000 : 5000)
+          return
+        }
+        if (res.status === 401) {
+          setError('Your session expired. Sign in again, then return here to recover this same request safely.')
+          setPhase(stored.sourceType === 'url' ? 'uploading' : 'submitting')
+          window.location.assign('/login?redirect=/animate')
+          return
+        }
+        if (res.status !== 401) {
+          submissionRef.current = null
+          clearStoredSubmission(stored.userId)
+        }
         setError(typeof data?.error === 'string' ? data.error : 'Could not start. Please try again.')
         setPhase('failed')
         return
       }
+
+      setError(null)
       if (typeof data.balance === 'number') setCredits(data.balance)
+      if (typeof data.image_url === 'string') {
+        setPhotoUrl(data.image_url)
+        setRemoteImageUrl('')
+      }
+      writeStoredSubmission({
+        ...stored,
+        requestId: data.request_id,
+        imageUrl: typeof data.image_url === 'string' ? data.image_url : undefined,
+      })
       try { window.dispatchEvent(new Event('creditsChanged')) } catch {}
       setPhase('animating')
       void poll(data.request_id)
     } catch {
-      setError('Could not start. Please try again.')
-      setPhase('failed')
+      // The server may have accepted and charged this POST before the network
+      // broke. Keep the controls locked and recover with the exact same key.
+      scheduleSubmissionRetry(stored, 5000)
+    } finally {
+      submitGuardRef.current = false
     }
+  }
+
+  function handleGenerate() {
+    if (!canGenerate || submitGuardRef.current || !userId) return
+    setError(null)
+    setResultUrl(null)
+    const source = photoUrl ?? remoteImageUrl.trim()
+    const fingerprint = JSON.stringify({ source, prompt: prompt.trim(), duration })
+    if (!submissionRef.current || submissionRef.current.fingerprint !== fingerprint) {
+      submissionRef.current = {
+        fingerprint,
+        key: globalThis.crypto?.randomUUID?.() ??
+          `animate-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      }
+    }
+    const stored: StoredSubmission = {
+      userId,
+      fingerprint,
+      key: submissionRef.current.key,
+      sourceType: photoUrl ? 'upload' : 'url',
+      source,
+      prompt: prompt.trim(),
+      duration,
+    }
+    writeStoredSubmission(stored)
+    void submitStoredSubmission(stored)
   }
 
   async function poll(requestId: string) {
@@ -130,19 +332,41 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
       const res = await fetch(`/api/avatar-status?request_id=${encodeURIComponent(requestId)}&engine=animate`, { cache: 'no-store' })
       const data = await res.json()
       if (cancelledRef.current) return
+      if (res.status === 401) {
+        setError('Your session expired. Sign in again to resume this animation safely.')
+        setPhase('animating')
+        window.location.assign('/login?redirect=/animate')
+        return
+      }
+      if (res.status === 404) {
+        submissionRef.current = null
+        clearStoredSubmission(userId)
+        setError('This animation could not be found for the current account.')
+        setPhase('failed')
+        return
+      }
       if (data.status === 'done' && typeof data.video_url === 'string') {
+        submissionRef.current = null
+        clearStoredSubmission(userId)
         setResultUrl(data.video_url)
         setPhase('done')
         return
       }
       if (data.status === 'failed') {
-        setError('Animation failed. Email support@usekineo.com and we will restore your credits.')
+        submissionRef.current = null
+        clearStoredSubmission(userId)
+        setError(typeof data?.error === 'string' ? data.error : 'Animation failed. Your credits were automatically restored.')
         setPhase('failed')
+        void refreshCredits()
         return
       }
-      setTimeout(() => poll(requestId), 5000)
+      if (!cancelledRef.current) {
+        pollTimerRef.current = window.setTimeout(() => void poll(requestId), 5000)
+      }
     } catch {
-      setTimeout(() => poll(requestId), 7000)
+      if (!cancelledRef.current) {
+        pollTimerRef.current = window.setTimeout(() => void poll(requestId), 7000)
+      }
     }
   }
 
@@ -156,7 +380,7 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           One photo. <span className="grad-text">Suddenly alive.</span>
         </h1>
         <p className="text-sm mt-1.5" style={{ color: 'var(--muted2)' }}>
-          People, pets, products, old family pictures — upload a photo and watch it move.
+          People, pets, products, old family pictures — upload a photo or paste a public image link and watch it move.
         </p>
       </div>
 
@@ -164,17 +388,30 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         <div className="flex flex-col gap-5">
           <section className="neon-card p-5">
             <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--muted2)' }}>1 · The photo</h2>
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={busy}
-              className="rounded-xl px-4 py-2.5 text-sm font-bold"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: busy ? 'not-allowed' : 'pointer' }}
-            >
-              {photoUrl ? '🖼️ Choose a different photo' : '🖼️ Upload a photo'}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy}
+                className="rounded-xl px-4 py-2.5 text-sm font-bold sm:flex-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border2)', color: 'var(--text2)', cursor: busy ? 'not-allowed' : 'pointer' }}
+              >
+                {photoUrl ? '🖼️ Choose a different photo' : '🖼️ Upload a photo'}
+              </button>
+              <input
+                type="url"
+                value={remoteImageUrl}
+                onChange={(event) => handleRemoteImageUrl(event.target.value)}
+                disabled={busy}
+                maxLength={2048}
+                placeholder="or paste a public image link (.jpg or .png)"
+                aria-label="Public image URL"
+                className="min-w-0 flex-1 rounded-xl px-3.5 py-2.5 text-sm"
+                style={{ background: 'rgba(0,0,0,.3)', border: '1px solid var(--border2)', color: 'var(--text)', outline: 'none' }}
+              />
+            </div>
             <input ref={inputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
-            <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>Any photo works — sharp and well-lit animates best. JPG/PNG.</p>
+            <p className="text-[11px] mt-2" style={{ color: 'var(--muted)' }}>JPG/PNG up to 8 MB. Public links are downloaded and validated securely on our server.</p>
             {error && <p className="text-xs mt-3 font-semibold rounded-lg px-3 py-2" style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }} role="alert">⚠️ {error}</p>}
           </section>
 
@@ -254,7 +491,7 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           </section>
         </div>
 
-        <div className="hidden lg:flex flex-col items-center gap-4 sticky top-20">
+        <div className="flex flex-col items-center gap-4 lg:sticky lg:top-20">
           <div
             style={{
               width: 280, height: 420, borderRadius: 24, overflow: 'hidden', position: 'relative',
@@ -267,6 +504,12 @@ export default function AnimateClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             ) : photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoUrl} alt="Your photo" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: busy ? 0.45 : 1 }} />
+            ) : remoteImageUrl.trim() ? (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center" style={{ color: 'var(--muted2)' }}>
+                <span style={{ fontSize: 38 }}>🔗</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text2)' }}>Image link ready</span>
+                <span className="text-[11px] leading-relaxed">Kineo will fetch and validate it on the server when you animate.</span>
+              </div>
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2" style={{ color: 'var(--muted)' }}>
                 <span style={{ fontSize: 40 }}>✨</span>

@@ -3,6 +3,7 @@
 // admin client + idempotent public-bucket bootstrap + upload returning the
 // public URL (Creatomate/fal must reach the file with no auth headers).
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
 
 export const AVATARS_BUCKET = 'avatars'
 
@@ -82,7 +83,7 @@ export async function uploadAvatarPhoto(
     : contentType === 'video/quicktime' ? 'mov'
     : 'jpg'
   const prefix = contentType.startsWith('video/') ? 'source-video' : 'face'
-  const filePath = `${userId}/${prefix}-${Date.now()}.${ext}`
+  const filePath = `${userId}/${prefix}-${Date.now()}-${randomUUID()}.${ext}`
   const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
 
   const { error: uploadError } = await admin.storage
@@ -101,6 +102,32 @@ export async function uploadAvatarPhoto(
   if (!pub?.publicUrl) throw new Error('Avatar upload succeeded but no public URL was returned.')
   console.log(`[avatar/storage] photo stored: ${pub.publicUrl}`)
   return pub.publicUrl
+}
+
+/** Best-effort cleanup for a server-imported photo whose paid job never
+ * started. Exact origin + user namespace checks prevent cross-user deletes. */
+export async function deleteOwnedAvatarPhoto(userId: string, publicUrl: string): Promise<boolean> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl) return false
+    const parsed = new URL(publicUrl)
+    if (parsed.origin !== new URL(supabaseUrl).origin) return false
+    const prefix = `/storage/v1/object/public/${AVATARS_BUCKET}/${userId}/`
+    if (!parsed.pathname.startsWith(prefix)) return false
+    const relativeName = decodeURIComponent(parsed.pathname.slice(prefix.length))
+    if (!relativeName || relativeName.includes('/') || relativeName.includes('\\')) return false
+    const { error } = await getAdminClient().storage
+      .from(AVATARS_BUCKET)
+      .remove([`${userId}/${relativeName}`])
+    if (error) {
+      console.warn('[avatar/storage] cleanup failed:', error.message)
+      return false
+    }
+    return true
+  } catch (error) {
+    console.warn('[avatar/storage] cleanup threw:', error instanceof Error ? error.message : String(error))
+    return false
+  }
 }
 
 /** Upload a short voice sample and return its public URL (for voice cloning). */

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sweepStuckRenderDebits } from '@/lib/credits/refund'
+import { sweepStaleAnimateClaims } from '@/lib/animate/service'
 
 // Cron route: fires daily via Vercel Cron (see vercel.json).
 // Finds users who signed up 20–28 hours ago and have no paid plan,
@@ -43,6 +44,8 @@ export async function GET(req: NextRequest) {
   try {
     const sweep = await sweepStuckRenderDebits()
     console.log('[send-reminders] stuck-render refund sweep:', JSON.stringify(sweep))
+    const animateSweep = await sweepStaleAnimateClaims()
+    console.log('[send-reminders] stale-animate refund sweep:', JSON.stringify(animateSweep))
   } catch (e) {
     console.error('[send-reminders] refund sweep failed:', e instanceof Error ? e.message : String(e))
   }

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { checkAvatarJob, type AvatarEngine } from '@/lib/avatar/veed'
-import { refundRenderCredits } from '@/lib/credits/refund'
+import { AnimateServiceError, getAnimateJobStatus } from '@/lib/animate/service'
 import {
   bindAvatarCompletedVideo,
   confirmAvatarBirthDebit,
@@ -41,10 +41,37 @@ export async function GET(req: NextRequest) {
       : engineParam === 'presenter' ? 'presenter'
       : 'fabric'
 
+    // Animate now has a signed provider-request -> debit mapping and confirmed
+    // auto-refunds. Keep both the UI poller and /api/animate on one authority.
+    if (engine === 'animate') {
+      try {
+        const state = await getAnimateJobStatus({ userId: user.id, requestId })
+        if (state.status === 'failed') {
+          const creditsRefunded = state.creditsRefunded ?? 0
+          return NextResponse.json({
+            status: 'failed',
+            video_url: null,
+            creditsRefunded,
+            error: creditsRefunded > 0
+              ? `Generation failed. Your ${creditsRefunded} credits were automatically refunded - please try again.`
+              : 'Animation generation failed. You were not charged - please try again.',
+          })
+        }
+        return NextResponse.json({ status: state.status, video_url: state.videoUrl })
+      } catch (error) {
+        if (error instanceof AnimateServiceError) {
+          return NextResponse.json(
+            { error: error.message, ...(error.details ?? {}) },
+            { status: error.status },
+          )
+        }
+        throw error
+      }
+    }
+
     // Provider request ids are capabilities, not browser authority. Every poll
-    // must prove the authenticated owner before querying FAL. Modern avatar
-    // jobs use avatar_jobs plus a signed-claim fallback; legacy Animate uses
-    // its debit ledger (and optionally avatar_jobs) as the ownership record.
+    // must prove the authenticated owner before querying FAL. Avatar jobs use
+    // avatar_jobs plus a signed-claim authority.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
     if (!supabaseUrl || !serviceRoleKey) {
@@ -53,50 +80,27 @@ export async function GET(req: NextRequest) {
     const admin = createAdminClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    if (engine === 'animate') {
-      const [{ data: job, error: jobError }, { data: debit, error: debitError }] = await Promise.all([
-        admin
-          .from('avatar_jobs')
-          .select('request_id,user_id,engine')
-          .eq('request_id', requestId)
-          .maybeSingle(),
-        admin
-          .from('credit_debits')
-          .select('render_id,user_id')
-          .eq('render_id', `animate-${requestId}`)
-          .maybeSingle(),
-      ])
-      if (jobError || debitError) {
-        console.error('[avatar-status] animate owner lookup failed:', jobError?.message ?? debitError?.message)
-        return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
-      }
-      const owned =
-        (job?.user_id === user.id && job?.engine === 'animate') ||
-        debit?.user_id === user.id
-      if (!owned) return NextResponse.json({ error: 'Avatar job not found.' }, { status: 404 })
-    } else {
-      const { data: job, error: jobError } = await admin
-        .from('avatar_jobs')
-        .select('request_id,user_id,engine')
-        .eq('request_id', requestId)
-        .maybeSingle()
-      if (jobError) {
-        console.error('[avatar-status] owner lookup failed:', jobError.message)
-        return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
-      }
+    const { data: job, error: jobError } = await admin
+      .from('avatar_jobs')
+      .select('request_id,user_id,engine')
+      .eq('request_id', requestId)
+      .maybeSingle()
+    if (jobError) {
+      console.error('[avatar-status] owner lookup failed:', jobError.message)
+      return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
+    }
 
-      // avatar_jobs is only a rate-limit/lookup aid. Authorization comes from
-      // the server-signed birth claim, so a permissive or accidentally changed
-      // RLS policy on the auxiliary table can never grant provider polling.
-      const verified = await loadVerifiedAvatarClaimForRequest({ userId: user.id, requestId })
-      if (!verified.ok) {
-        console.error('[avatar-status] signed owner verification failed:', verified.error)
-        return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
-      }
-      const jobConflicts = Boolean(job && (job.user_id !== user.id || job.engine !== engine))
-      if (!verified.claim || verified.claim.engine !== engine || jobConflicts) {
-        return NextResponse.json({ error: 'Avatar job not found.' }, { status: 404 })
-      }
+    // avatar_jobs is only a rate-limit/lookup aid. Authorization comes from
+    // the server-signed birth claim, so a permissive or accidentally changed
+    // RLS policy on the auxiliary table can never grant provider polling.
+    const verified = await loadVerifiedAvatarClaimForRequest({ userId: user.id, requestId })
+    if (!verified.ok) {
+      console.error('[avatar-status] signed owner verification failed:', verified.error)
+      return NextResponse.json({ error: 'Status safety check is temporarily unavailable.' }, { status: 503 })
+    }
+    const jobConflicts = Boolean(job && (job.user_id !== user.id || job.engine !== engine))
+    if (!verified.claim || verified.claim.engine !== engine || jobConflicts) {
+      return NextResponse.json({ error: 'Avatar job not found.' }, { status: 404 })
     }
 
     const state = await checkAvatarJob(requestId, engine)
@@ -105,20 +109,15 @@ export async function GET(req: NextRequest) {
       // Protection rule: all paid avatar providers debit before submission and
       // refund their exact deterministic ledger key on terminal failure.
       // Idempotent refund RPCs ensure repeated polls can never double-refund.
-      let creditsRefunded = 0
-      if (engine === 'animate') {
-        creditsRefunded = await refundRenderCredits(`animate-${requestId}`)
-      } else {
-        const refunded = await refundAvatarBirthDebitForFailedRequest({ userId: user.id, requestId })
-        if (!refunded.ok) {
-          console.warn(`[avatar-hold] failed provider refund could not be settled request=${requestId}: ${refunded.error}`)
-          return NextResponse.json(
-            { error: 'Finalizing your automatic avatar refund. Please retry this status check.' },
-            { status: 503 },
-          )
-        }
-        creditsRefunded = refunded.credits
+      const refunded = await refundAvatarBirthDebitForFailedRequest({ userId: user.id, requestId })
+      if (!refunded.ok) {
+        console.warn(`[avatar-hold] failed provider refund could not be settled request=${requestId}: ${refunded.error}`)
+        return NextResponse.json(
+          { error: 'Finalizing your automatic avatar refund. Please retry this status check.' },
+          { status: 503 },
+        )
       }
+      const creditsRefunded = refunded.credits
       return NextResponse.json({
         status: 'failed',
         video_url: null,
@@ -130,7 +129,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    if (state.status === 'done' && state.videoUrl && engine !== 'animate') {
+    if (state.status === 'done' && state.videoUrl) {
       // Bind the exact Fal URL into the signed birth claim and confirm the
       // deterministic upfront debit before any raw paid MP4 leaves the server.
       const bound = await bindAvatarCompletedVideo({

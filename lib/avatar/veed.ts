@@ -124,7 +124,9 @@ export async function submitAnimateJob(args: {
   // otherwise selects a typed overload that rejects Record<string, unknown>.
   const model: string = ANIMATE_MODEL
   try {
-    return await submitQueueOnce(model, input)
+    // Bound the serverless request without retrying the paid POST. A timeout is
+    // intentionally treated as ambiguous because FAL may have accepted it.
+    return await submitQueueOnce(model, input, 15_000)
   } catch (err) {
     const e = err as { status?: number; message?: string }
     console.error('[animate] single queue submit failed:', JSON.stringify({
@@ -244,7 +246,11 @@ export class AvatarSubmitError extends Error {
  * have been accepted. Send one raw queue POST and let the durable caller claim
  * decide whether an explicit rejection may be retried.
  */
-async function submitQueueOnce(model: string, input: Record<string, unknown>): Promise<string> {
+async function submitQueueOnce(
+  model: string,
+  input: Record<string, unknown>,
+  timeoutMs?: number,
+): Promise<string> {
   const key = process.env.FAL_KEY
   if (!key) {
     throw new AvatarSubmitError('FAL_KEY is not configured', { ambiguous: false })
@@ -261,6 +267,7 @@ async function submitQueueOnce(model: string, input: Record<string, unknown>): P
       },
       body: JSON.stringify(input),
       cache: 'no-store',
+      ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
     })
   } catch (error) {
     throw new AvatarSubmitError('Avatar provider submit transport failed', {

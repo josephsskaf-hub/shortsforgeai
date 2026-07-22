@@ -1,7 +1,9 @@
-// Browser submit endpoint for photos already stored in this user's avatars
-// folder. It shares the durable claim + deterministic credit reservation used
-// by /api/animate, so retries cannot submit or charge a second paid job.
+// Automation-friendly Animate API.
+// POST imports a public image on the server, submits the same 5-credit Kling
+// job used by /animate, and returns 202 + a status URL. GET returns clip_url
+// when the asynchronous provider job is complete.
 import { NextRequest, NextResponse } from 'next/server'
+import { deleteOwnedAvatarPhoto, uploadAvatarPhoto } from '@/lib/avatar/storage'
 import {
   acquireAnimateClaim,
   admitAnimateAttempt,
@@ -19,9 +21,8 @@ import { authenticateAnimateRequest } from '@/lib/animate/requestAuth'
 import {
   ANIMATE_COST,
   AnimateServiceError,
-  assertOwnedAnimateImageUrl,
   getAnimateBalance,
-  normalizeAnimateDuration,
+  getAnimateJobStatus,
   normalizeAnimatePrompt,
   reconcileAnimateCreditRefund,
   reserveAnimateCredits,
@@ -36,34 +37,38 @@ export const runtime = 'nodejs'
 const PENDING_RECONCILE_MS = 90_000
 const MAX_RISKY_ATTEMPTS_PER_WINDOW = 10
 
-function jobResponse(response: AnimateClaimResponse, extra?: Record<string, unknown>) {
+function statusUrl(req: NextRequest, requestId: string): string {
+  const url = new URL('/api/animate', req.nextUrl.origin)
+  url.searchParams.set('request_id', requestId)
+  return url.toString()
+}
+
+function acceptedResponse(req: NextRequest, response: AnimateClaimResponse, extra?: Record<string, unknown>) {
   return NextResponse.json(
     {
       status: 'processing',
       ...response,
-      engine: 'animate',
+      status_url: statusUrl(req, response.request_id),
+      clip_url: null,
+      poll_after_ms: 5000,
       ...extra,
     },
-    { headers: { 'Cache-Control': 'no-store' } },
+    {
+      status: 202,
+      headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' },
+    },
   )
 }
 
-function closedClaimResponse(args: {
-  released: boolean
-  releasedMessage: string
-  pendingMessage: string
-}) {
+function serviceError(error: AnimateServiceError | RemoteImageError, extra?: Record<string, unknown>) {
+  const pending = error instanceof AnimateServiceError && error.details?.pending === true
   return NextResponse.json(
+    { error: error.message, ...(error instanceof AnimateServiceError ? error.details ?? {} : {}), ...extra },
     {
-      error: args.released ? args.releasedMessage : args.pendingMessage,
-      use_new_idempotency_key: args.released,
-      pending: !args.released,
-    },
-    {
-      status: args.released ? 409 : 503,
+      status: error.status,
       headers: {
         'Cache-Control': 'no-store',
-        ...(!args.released ? { 'Retry-After': '5' } : {}),
+        ...(pending ? { 'Retry-After': '5' } : {}),
       },
     },
   )
@@ -73,18 +78,15 @@ export async function POST(req: NextRequest) {
   let claim: VerifiedAnimateClaim | null = null
   let creditsReserved = false
   let providerStageStarted = false
-
+  let importedImageUrl = ''
   try {
     const auth = await authenticateAnimateRequest(req)
-    if (!auth) {
-      return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
-    }
+    if (!auth) return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
 
     let body: {
-      imageUrl?: unknown
-      prompt?: unknown
+      image_url?: unknown
+      motion_prompt?: unknown
       duration?: unknown
-      idempotencyKey?: unknown
       idempotency_key?: unknown
     }
     try {
@@ -93,34 +95,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
     }
 
-    const imageUrl = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''
-    const prompt = normalizeAnimatePrompt(body.prompt)
-    const duration = normalizeAnimateDuration(body.duration)
+    const remoteUrl = typeof body.image_url === 'string' ? body.image_url.trim() : ''
+    if (!remoteUrl) {
+      return NextResponse.json({ error: 'image_url must be a public JPG or PNG URL.' }, { status: 400 })
+    }
+    const rawDuration = String(body.duration ?? '5')
+    if (rawDuration !== '5' && rawDuration !== '10') {
+      return NextResponse.json({ error: 'duration must be 5 or 10 seconds.' }, { status: 400 })
+    }
+    const duration = rawDuration as '5' | '10'
+    const prompt = normalizeAnimatePrompt(body.motion_prompt)
     const headerKey = req.headers.get('idempotency-key')?.trim() ?? ''
-    const camelKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : ''
-    const snakeKey = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : ''
-    const idempotencyKey = headerKey || camelKey || snakeKey
+    const bodyKey = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : ''
+    const idempotencyKey = headerKey || bodyKey
     if (!validAnimateIdempotencyKey(idempotencyKey)) {
       return NextResponse.json(
-        { error: 'A valid Animate submission key is required. Please try again.' },
+        { error: 'Send an Idempotency-Key header (8-100 letters, numbers, dot, colon, dash or underscore).' },
         { status: 400 },
       )
     }
 
-    const fingerprint = animateValueHash({
-      source: 'owned-upload',
-      image_url: imageUrl,
-      motion_prompt: prompt,
-      duration,
-    })
+    const fingerprint = animateValueHash({ image_url: remoteUrl, motion_prompt: prompt, duration })
     const acquired = await acquireAnimateClaim({
       userId: auth.user.id,
       idempotencyKey,
       fingerprint,
     })
-
     if (acquired.kind === 'error') {
-      console.error('[animate-image] claim acquire failed:', acquired.error)
+      console.error('[api/animate] claim acquire failed:', acquired.error)
       return NextResponse.json(
         { error: 'Animate submission safety is temporarily unavailable. Nothing was submitted.' },
         { status: 503, headers: { 'Retry-After': '5' } },
@@ -130,29 +132,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: acquired.error }, { status: 409 })
     }
     if (acquired.kind === 'replay') {
-      return jobResponse(acquired.response, { idempotent_replay: true })
+      return acceptedResponse(req, acquired.response, { idempotent_replay: true })
     }
     if (acquired.kind === 'released') {
       return NextResponse.json(
         {
-          error: 'This Animate attempt was closed after a confirmed refund. Please try again.',
+          error: 'This Animate attempt was closed after a confirmed refund. Start again with a new Idempotency-Key.',
           use_new_idempotency_key: true,
         },
         { status: 409, headers: { 'Cache-Control': 'no-store' } },
       )
     }
-
     if (acquired.kind === 'pending') {
-      // Recover a job whose signed mapping committed just before the original
-      // invocation ended, without ever sending the paid POST again.
+      // The provider mapping is published before the claim response. If the
+      // original serverless invocation ended between those writes, recover
+      // the exact signed response instead of leaving the key stuck or
+      // submitting a duplicate paid job.
       const recovered = await loadVerifiedAnimateJobByBilling({
         userId: auth.user.id,
         billingReference: acquired.claim.billingReference,
       })
-      if (!recovered.ok) {
-        console.error('[animate-image] pending claim recovery failed:', recovered.error)
+      if (recovered.ok === false) {
+        console.error('[api/animate] pending claim recovery failed:', recovered.error)
         return NextResponse.json(
-          { error: 'This Animate request is safe while it is reconciled.', pending: true },
+          { error: 'This Animate request is safe while its idempotency record is reconciled.', pending: true, retry_after_ms: 5000 },
           { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } },
         )
       }
@@ -169,10 +172,10 @@ export async function POST(req: NextRequest) {
           idempotencyKey,
           response,
         })
-        return jobResponse(response, {
+        return acceptedResponse(req, response, {
           idempotent_replay: true,
-          recovered: true,
           idempotency_saved: saved,
+          recovered: true,
         })
       }
 
@@ -186,20 +189,27 @@ export async function POST(req: NextRequest) {
           claim: acquired.claim,
           reason: 'refund_confirmed_before_job_publication',
         })
-        return closedClaimResponse({
-          released,
-          releasedMessage: 'The previous Animate attempt was refunded. Please try again.',
-          pendingMessage: 'The previous refund is confirmed while its request is being closed.',
-        })
+        return NextResponse.json(
+          {
+            error: released
+              ? 'The previous Animate attempt was refunded and closed. Start again with a new Idempotency-Key.'
+              : 'The previous refund is confirmed while its idempotency record is being closed.',
+            use_new_idempotency_key: released,
+            pending: !released,
+          },
+          {
+            status: released ? 409 : 503,
+            headers: { 'Cache-Control': 'no-store', ...(released ? {} : { 'Retry-After': '5' }) },
+          },
+        )
       }
       if (!debit.ok && debit.reason !== 'missing') {
-        console.error('[animate-image] pending debit reconciliation failed:', debit.error)
+        console.error('[api/animate] pending debit reconciliation failed:', debit.error)
         return NextResponse.json(
-          { error: 'This Animate request is safe while its credit reservation is reconciled.', pending: true },
+          { error: 'This Animate request is safe while its credit reservation is reconciled.', pending: true, retry_after_ms: 5000 },
           { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } },
         )
       }
-
       if (Number.isFinite(ageMs) && ageMs >= PENDING_RECONCILE_MS) {
         let closeMode: 'delete' | 'release' | null = debit.ok ? 'release' : 'delete'
         if (debit.ok) {
@@ -213,7 +223,7 @@ export async function POST(req: NextRequest) {
         }
         if (!closeMode) {
           return NextResponse.json(
-            { error: 'The stale Animate attempt is being refunded. Please retry shortly.', pending: true },
+            { error: 'The stale Animate attempt is being refunded. Retry this same key shortly.', pending: true, retry_after_ms: 5000 },
             { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } },
           )
         }
@@ -224,8 +234,8 @@ export async function POST(req: NextRequest) {
           {
             error: closed
               ? closeMode === 'release'
-                ? 'The stale Animate attempt was refunded. Please try again.'
-                : 'The stale pre-charge attempt was closed. Please try again.'
+                ? 'The stale Animate attempt was refunded and closed. Start again with a new Idempotency-Key.'
+                : 'The stale pre-charge attempt was closed. Retry now with the same Idempotency-Key.'
               : 'The stale Animate attempt is still being reconciled.',
             use_new_idempotency_key: closed && closeMode === 'release',
             retry_same_idempotency_key: closed && closeMode === 'delete',
@@ -237,18 +247,19 @@ export async function POST(req: NextRequest) {
           },
         )
       }
-
       return NextResponse.json(
-        { error: 'This Animate request is already being submitted. Please retry shortly.', pending: true },
+        {
+          status: 'pending',
+          pending: true,
+          error: 'This Animate request is already being submitted. Retry with the same Idempotency-Key shortly.',
+          retry_after_ms: 3000,
+        },
         { status: 409, headers: { 'Cache-Control': 'no-store', 'Retry-After': '3' } },
       )
     }
-
     claim = acquired.claim
-    // Do not trust a public storage URL merely because it is under this user's
-    // folder. Verify the stored bytes are still a real JPG/PNG within 8 MB.
-    const ownedImageUrl = assertOwnedAnimateImageUrl(imageUrl, auth.user.id)
 
+    // Avoid remote egress/storage when this account cannot start the job.
     const balance = await getAnimateBalance(auth.supabase, auth.user.id)
     if (balance < ANIMATE_COST) {
       await deletePendingAnimateClaim(claim)
@@ -259,12 +270,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Reserve before touching the remote host or public storage. Besides
+    // closing the provider billing race, this prevents the API from becoming
+    // a free authenticated image proxy under parallel requests.
     const reservedBalance = await reserveAnimateCredits({
       supabase: auth.supabase,
       userId: auth.user.id,
       billingReference: claim.billingReference,
     })
     creditsReserved = true
+
     const admission = await admitAnimateAttempt({
       userId: auth.user.id,
       billingReference: claim.billingReference,
@@ -313,12 +328,15 @@ export async function POST(req: NextRequest) {
         },
       )
     }
-    await downloadPublicAnimateImage(ownedImageUrl)
+
+    const remote = await downloadPublicAnimateImage(remoteUrl)
+    const imageUrl = await uploadAvatarPhoto(auth.user.id, remote.buffer, remote.contentType)
+    importedImageUrl = imageUrl
     providerStageStarted = true
     const result = await startAnimateJob({
       supabase: auth.supabase,
       userId: auth.user.id,
-      imageUrl: ownedImageUrl,
+      imageUrl,
       prompt,
       duration,
       billingReference: claim.billingReference,
@@ -333,9 +351,9 @@ export async function POST(req: NextRequest) {
     }
     const idempotencySaved = await completeAnimateClaim({ claim, idempotencyKey, response })
     if (!idempotencySaved) {
-      console.error(`[animate-image] job started but claim completion needs recovery request=${result.requestId}`)
+      console.error(`[api/animate] job started but claim completion needs recovery request=${result.requestId}`)
     }
-    return jobResponse(response, { idempotency_saved: idempotencySaved })
+    return acceptedResponse(req, response, { idempotency_saved: idempotencySaved })
   } catch (error) {
     const retrySafe = error instanceof AnimateServiceError && error.details?.retrySafe === true
     const canReleaseClaim = !providerStageStarted || retrySafe
@@ -346,8 +364,10 @@ export async function POST(req: NextRequest) {
     const debitMayExist = knownDebit || debitUnknown || debitRefunded
     let lifecycleReconciliationFailed = false
     let claimReleased = false
-
     if (claim && canReleaseClaim) {
+      if (importedImageUrl) {
+        await deleteOwnedAvatarPhoto(claim.userId, importedImageUrl)
+      }
       if (debitMayExist) {
         const refund = await reconcileAnimateCreditRefund({
           userId: claim.userId,
@@ -367,48 +387,69 @@ export async function POST(req: NextRequest) {
         lifecycleReconciliationFailed = !deleted
       }
     }
-
     if (lifecycleReconciliationFailed) {
       return NextResponse.json(
         {
-          error: 'Your image was not submitted while we reconcile its credit reservation. Please retry in 90 seconds.',
+          error: 'Your image was not submitted while we reconcile its credit reservation. Retry this same Idempotency-Key in 90 seconds.',
           pending: true,
+          retry_after_ms: PENDING_RECONCILE_MS,
         },
         { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '90' } },
       )
     }
-    if (error instanceof AnimateServiceError) {
-      return NextResponse.json(
-        {
-          error: error.message,
-          ...(error.details ?? {}),
-          ...(claimReleased ? { use_new_idempotency_key: true } : {}),
-        },
-        {
-          status: error.status,
-          headers: {
-            'Cache-Control': 'no-store',
-            ...(error.details?.pending === true ? { 'Retry-After': '5' } : {}),
-          },
-        },
-      )
+    if (error instanceof AnimateServiceError || error instanceof RemoteImageError) {
+      return serviceError(error, claimReleased ? { use_new_idempotency_key: true } : undefined)
     }
-    if (error instanceof RemoteImageError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status, headers: { 'Cache-Control': 'no-store' } },
-      )
-    }
-    console.error('[animate-image] unexpected error:', error instanceof Error ? error.message : String(error))
+    console.error('[api/animate] unexpected POST error:', error instanceof Error ? error.message : String(error))
     if (claim && providerStageStarted) {
       return NextResponse.json(
         {
-          error: 'This Animate submission is being reconciled. Please keep this request open.',
+          error: 'This Animate submission is being reconciled. Retry the same Idempotency-Key shortly.',
           pending: true,
+          retry_after_ms: 5000,
         },
         { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } },
       )
     }
-    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not start the animation. Please try again.' }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = await authenticateAnimateRequest(req)
+    if (!auth) return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })
+
+    const requestId = (req.nextUrl.searchParams.get('request_id') ?? '').trim()
+    const state = await getAnimateJobStatus({ userId: auth.user.id, requestId })
+    if (state.status === 'done' && state.videoUrl) {
+      return NextResponse.json(
+        { status: 'done', request_id: requestId, clip_url: state.videoUrl, video_url: state.videoUrl },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+    if (state.status === 'failed') {
+      const refunded = state.creditsRefunded ?? 0
+      return NextResponse.json(
+        {
+          status: 'failed',
+          request_id: requestId,
+          clip_url: null,
+          credits_refunded: refunded,
+          error: refunded > 0
+            ? `Generation failed. Your ${refunded} credits were automatically refunded.`
+            : 'Animation generation failed. You were not charged.',
+        },
+        { status: 502, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+    return NextResponse.json(
+      { status: state.status, request_id: requestId, clip_url: null, poll_after_ms: 5000 },
+      { status: 202, headers: { 'Cache-Control': 'no-store', 'Retry-After': '5' } },
+    )
+  } catch (error) {
+    if (error instanceof AnimateServiceError) return serviceError(error)
+    console.error('[api/animate] unexpected GET error:', error instanceof Error ? error.message : String(error))
+    return NextResponse.json({ error: 'Could not check the animation status.' }, { status: 500 })
   }
 }
