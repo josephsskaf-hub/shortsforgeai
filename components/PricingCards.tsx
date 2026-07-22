@@ -58,7 +58,11 @@ const PRO_FEATURES = [
   'My Videos history',
 ]
 
-export default function PricingCards() {
+export default function PricingCards({
+  intentCampaign,
+}: {
+  intentCampaign?: string | null
+}) {
   const [purchasing, setPurchasing] = useState<'starter' | 'basic' | 'pro' | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Push #171 — show a clear "already subscribed" banner instead of
@@ -80,7 +84,10 @@ export default function PricingCards() {
     // KINEO-INTRO-MONTH-2026-07-13 — Starter/Creator levam o 1º mês com
     // desconto ($4.90/$9.90); o servidor valida elegibilidade (1 por conta).
     const introParam = tier === 'starter' || tier === 'basic' ? '&intro=1' : ''
-    window.location.href = `/api/stripe/checkout?tier=${tier}${introParam}`
+    const campaignParam = intentCampaign
+      ? `&intent_campaign=${encodeURIComponent(intentCampaign)}`
+      : ''
+    window.location.href = `/api/stripe/checkout?tier=${tier}${introParam}${campaignParam}`
   }
 
   return (

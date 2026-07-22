@@ -349,6 +349,21 @@ export default function GenerateClient({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // PUSH #55 — keep the organic intent campaign attached to every recurring
+  // checkout path reached from this screen. New signups are attributable from
+  // their profile, but an existing free user arriving from YouTube also needs
+  // the explicit campaign on the Stripe Session to prove the channel produced
+  // a new paying customer. Only the same bounded campaign alphabet accepted by
+  // signup, pricing and the checkout route is forwarded.
+  const intentCampaign = useMemo(() => {
+    const value = (searchParams.get('intent_campaign') ?? '').trim()
+    return /^[A-Za-z0-9._~-]{1,100}$/.test(value) ? value : null
+  }, [searchParams])
+  function withIntentCampaign(path: string): string {
+    if (!intentCampaign) return path
+    const separator = path.includes('?') ? '&' : '?'
+    return `${path}${separator}intent_campaign=${encodeURIComponent(intentCampaign)}`
+  }
   // KINEO-RECOVERY-2026-07-15 — accept the legacy `topic` key as a safety
   // net, but standardise every current entry point on `prompt`. The homepage
   // previously submitted `topic` while this screen read only `prompt`, so the
@@ -2320,12 +2335,13 @@ export default function GenerateClient({
       trackEvent('post_video_offer_viewed', {
         source: 'result_export_choice',
         offer: 'starter_intro_month',
+        ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
       })
       observer.disconnect()
     }, { threshold: [0.5] })
     observer.observe(element)
     return () => observer.disconnect()
-  }, [phase, finalVideoUrl, publicVideoId, planTier, hasPaid, wmUnlocking])
+  }, [phase, finalVideoUrl, publicVideoId, planTier, hasPaid, wmUnlocking, intentCampaign])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
@@ -4134,14 +4150,16 @@ export default function GenerateClient({
       source: 'post_video_result',
       offer: 'intro_month',
       return_to: 'watermark_unlock',
+      ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
     })
     trackEvent('post_video_clean_export_clicked', {
       source: 'result_export_choice',
       offer: 'starter_intro_month',
       watermarked_downloaded: watermarkedDownloadConfirmed,
+      ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
     })
     trackCheckoutClick('starter')
-    window.location.href = '/api/stripe/checkout?tier=starter&intro=1&return=wm'
+    window.location.href = withIntentCampaign('/api/stripe/checkout?tier=starter&intro=1&return=wm')
   }
 
   // Push #317 — upload the finished video directly to YouTube.
@@ -4582,6 +4600,7 @@ export default function GenerateClient({
             credits={credits}
             loading={creditsLoading}
             freeFastPreview={mode === 'fast' && !isPaidAccount}
+            pricingHref={withIntentCampaign('/pricing')}
           />
         </div>
       </div>
@@ -4636,7 +4655,7 @@ export default function GenerateClient({
             } catch { /* non-blocking */ }
             setUpgradeLoading(true)
             const introParam = tier === 'starter' || tier === 'basic' ? '&intro=1' : ''
-            window.location.href = `/api/stripe/checkout?tier=${tier}${introParam}`
+            window.location.href = withIntentCampaign(`/api/stripe/checkout?tier=${tier}${introParam}`)
           }}
           onClose={() => setShowUpgradeModal(false)}
         />
@@ -4655,7 +4674,7 @@ export default function GenerateClient({
           onUpgrade={() => {
             trackCheckoutClick('basic')
             setUpgradeLoading(true)
-            window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+            window.location.href = withIntentCampaign('/api/stripe/checkout?tier=basic&intro=1')
           }}
           onClose={() => setShowUrgencyModal(false)}
         />
@@ -4745,7 +4764,7 @@ export default function GenerateClient({
               AI Presenter and 1 Hollywood film included, every month.
             </p>
             <a
-              href="/api/stripe/checkout?tier=basic&intro=1"
+              href={withIntentCampaign('/api/stripe/checkout?tier=basic&intro=1')}
               onClick={() => trackCheckoutClick('basic')}
               style={{
                 display: 'block',
@@ -5255,12 +5274,12 @@ export default function GenerateClient({
               {/* KINEO-ZERO-SIGNUP-2026-07-09 — never shown on Fast (it's free). */}
               {credits !== null && (credits === 0 && mode !== 'fast' && !(mode === 'cinematic' && cinematicTokens > 0) && mode !== 'cinematic_ai') && (
                 <p className="text-xs mt-1" style={{ color: '#f87171', fontWeight: 700 }}>
-                  Out of credits. <a href="/pricing" style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
+                  Out of credits. <a href={withIntentCampaign('/pricing')} style={{ color: '#f87171', textDecoration: 'underline' }}>Get more →</a>
                 </p>
               )}
               {credits !== null && credits > 0 && credits < 5 && (
                 <p className="text-xs mt-1" style={{ color: '#fbbf24', fontWeight: 700 }}>
-                  Only {credits} left. <a href="/pricing" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Top up →</a>
+                  Only {credits} left. <a href={withIntentCampaign('/pricing')} style={{ color: '#fbbf24', textDecoration: 'underline' }}>Top up →</a>
                 </p>
               )}
             </div>
@@ -5309,7 +5328,7 @@ export default function GenerateClient({
           right next to where the user is about to spend credits. Hidden once
           they leave Step 1 (analyzing / options / render phases) to keep the
           subsequent screens focused on the active generation. */}
-      {showStep1 && <PricingCards />}
+      {showStep1 && <PricingCards intentCampaign={intentCampaign} />}
 
       {phase === 'scripting' && (
         <section
@@ -6342,7 +6361,7 @@ export default function GenerateClient({
                     type="button"
                     onClick={() => {
                       trackCheckoutClick('basic')
-                      window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+                      window.location.href = withIntentCampaign('/api/stripe/checkout?tier=basic&intro=1')
                     }}
                     className="flex flex-col items-center justify-center w-full rounded-xl mt-4 py-3 text-sm font-black text-center text-white"
                     style={{
@@ -6361,7 +6380,7 @@ export default function GenerateClient({
                     type="button"
                     onClick={() => {
                       trackCheckoutClick('starter')
-                      window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
+                      window.location.href = withIntentCampaign('/api/stripe/checkout?tier=starter&intro=1')
                     }}
                     className="block w-full rounded-xl mt-2.5 px-4 py-3 text-center"
                     style={{
@@ -6541,13 +6560,13 @@ export default function GenerateClient({
                 onAnother={handleReset}
                 onUpgrade={() => {
                   trackCheckoutClick('basic')
-                  window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+                  window.location.href = withIntentCampaign('/api/stripe/checkout?tier=basic&intro=1')
                 }}
                 upgradeLoading={upgradeLoading}
                 creditsLeft={credits ?? 0}
               />
             ) : planTier !== 'free' ? (
-              <NextActionSection onAnother={handleReset} onUpgrade={() => router.push('/pricing')} />
+              <NextActionSection onAnother={handleReset} onUpgrade={() => router.push(withIntentCampaign('/pricing'))} />
             ) : null
           ) : (
             <>
@@ -7159,10 +7178,12 @@ function CreditsChip({
   credits,
   loading,
   freeFastPreview,
+  pricingHref,
 }: {
   credits: number | null
   loading: boolean
   freeFastPreview: boolean
+  pricingHref: string
 }) {
   if (loading) {
     return (
@@ -7237,7 +7258,7 @@ function CreditsChip({
       </div>
       {low && (
         <p className="text-[11px] mt-1.5" style={{ color: '#2997ff', fontWeight: 600 }}>
-          Running low. <a href="/pricing" style={{ color: '#2997ff', textDecoration: 'underline' }}>Upgrade to keep creating.</a>
+          Running low. <a href={pricingHref} style={{ color: '#2997ff', textDecoration: 'underline' }}>Upgrade to keep creating.</a>
         </p>
       )}
     </div>
@@ -8185,13 +8206,14 @@ function ModeSelector({
                 </li>
               ))}
             </ul>
-            <a
-              href="/pricing"
+            <button
+              type="button"
+              onClick={onUpgrade}
               className="inline-flex items-center gap-1 text-xs font-bold"
-              style={{ color: '#5cb3ff', textDecoration: 'none' }}
+              style={{ color: '#5cb3ff', border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
             >
               Unlock with Pro →
-            </a>
+            </button>
           </div>
         ))}
       </div>
