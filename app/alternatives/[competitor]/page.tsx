@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import Footer from '@/components/Footer'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
+import QusoDecisionSections, { QUSO_INTENT_CAMPAIGN } from './QusoDecisionSections'
 
 export const dynamic = 'force-static'
 export const dynamicParams = false
@@ -306,27 +307,28 @@ export const COMPETITORS: Record<string, Competitor> = {
     ],
   },
   quso: {
-    name: 'Quso',
-    h1: 'The Quso Alternative Built to Generate Shorts, Not Just Repurpose Them',
+    name: 'Quso.ai',
+    h1: 'Vidyo.ai Pricing in 2026: What Quso.ai Costs—and When Kineo Fits Better',
     intro:
-      'Quso (formerly Vidyo.ai) repurposes long videos into clips and schedules them. Kineo is for creators who start with nothing but a topic: it writes the hook-driven script, records the AI voiceover, finds matching footage and captions it into a ready-to-post 9:16 Short in about 60 seconds, starting at $9.90/mo.',
-    theyDo: 'Quso repurposes and schedules clips from long-form videos you already have.',
+      'Vidyo.ai became Quso.ai in January 2025. Quso now combines long-video clipping, text-to-video generation, editing, repurposing, scheduling and analytics. Kineo is a narrower workflow for turning one topic into a finished faceless 9:16 Short. This dated comparison shows the current monthly prices and the cases where each product is the more sensible choice.',
+    theyDo: 'Quso.ai combines clipping, video generation, editing, repurposing, social scheduling, planning and analytics; availability varies by plan.',
     pickThem:
-      'Pick Quso if you already have long videos to clip and schedule. Pick Kineo if you want a finished faceless Short generated from a single idea.',
+      'Pick Quso if you need a broader workspace for clipping long videos, editing, scheduling and analytics. Pick Kineo if your main job is turning a topic into a complete faceless Short without filming or working in a timeline.',
     rows: [
-      { feature: 'Creates the full video from just an idea', sfa: true, them: false },
-      { feature: 'Needs you to upload existing footage', sfa: 'No', them: 'Yes' },
-      { feature: 'Writes the script for you', sfa: true, them: false },
-      { feature: 'Viral hook structure baked into the script', sfa: true, them: false },
-      { feature: 'AI voiceover included', sfa: true, them: 'Limited' },
-      { feature: 'Fully faceless — no source video needed', sfa: true, them: 'Needs your video' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
-      { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
+      { feature: 'Can create a video from a topic or prompt', sfa: true, them: true },
+      { feature: 'Can start without existing footage', sfa: true, them: true },
+      { feature: 'Long-video clipping and repurposing', sfa: 'Not the core workflow', them: true },
+      { feature: 'AI voiceover and captions', sfa: true, them: true },
+      { feature: 'Social scheduling and analytics', sfa: false, them: true },
+      { feature: 'Opinionated topic-to-faceless-Short workflow', sfa: true, them: 'One tool among a broader suite' },
+      { feature: 'Monthly paid entry', sfa: '$4.90 first month · then $9.90/mo', them: '$29/mo (Lite)' },
+      { feature: 'Free access', sfa: 'Up to 3 watermarked Fast videos / 24h', them: '$0 plan · 75 credits' },
     ],
     faq: [
-      { q: 'What is a good Quso (Vidyo.ai) alternative for faceless Shorts?', a: 'Kineo is purpose-built for faceless short-form: it writes a hook-driven script, voices it, finds footage and renders a 9:16 Short from one idea in about 60 seconds, from $9.90/month.' },
-      { q: 'Does it work without uploading a video?', a: 'Yes. You type a topic and get a finished vertical Short — no source footage, no camera.' },
-      { q: 'Can I use Kineo without paying?', a: 'Yes. A new account can create up to 3 watermarked Fast videos every 24 hours with no card, and paid plans include a 7-day money-back guarantee.' },
+      { q: 'Is Vidyo.ai now Quso.ai?', a: 'Yes. Quso says the Vidyo.ai rebrand went live in January 2025. Existing accounts, projects, plans and subscriptions carried over to Quso.ai.' },
+      { q: 'How much does Vidyo.ai, now Quso.ai, cost in 2026?', a: 'As checked on July 21, 2026, Quso.ai lists Free at $0, Lite at $29/month, Essential at $39/month and Growth at $49/month. Prices and limits can change, so verify the official pricing page before buying.' },
+      { q: 'Can Quso.ai generate a video without an upload?', a: 'Yes. Quso.ai currently advertises an AI Video Generator that can start from text, an idea or a script. Its product also retains the long-video clipping and repurposing workflow inherited from Vidyo.ai.' },
+      { q: 'Should I choose Quso.ai or Kineo?', a: 'Choose Quso for a broader clipping, editing, scheduling and analytics workspace. Choose Kineo for a focused topic-to-faceless-Short workflow with Starter at $4.90 for the first month and then $9.90/month.' },
     ],
   },
   capcut: {
@@ -743,8 +745,13 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { competitor: string } }): Metadata {
   const c = COMPETITORS[params.competitor]
   if (!c) return {}
-  const title = `${c.name} Alternative for Faceless Creators — Kineo`
-  const description = `Looking for a ${c.name} alternative? Kineo turns one idea into a finished faceless YouTube Short. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.`
+  const isQuso = params.competitor === 'quso'
+  const title = isQuso
+    ? 'Vidyo.ai Pricing (Now Quso.ai) vs Kineo — 2026'
+    : `${c.name} Alternative for Faceless Creators — Kineo`
+  const description = isQuso
+    ? 'Vidyo.ai is now Quso.ai. See Quso’s current Free, Lite, Essential and Growth prices, credits and an honest workflow comparison with Kineo.'
+    : `Looking for a ${c.name} alternative? Kineo turns one idea into a finished faceless YouTube Short. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.`
   const url = `https://www.usekineo.com/alternatives/${params.competitor}`
   return {
     metadataBase: new URL('https://www.usekineo.com'),
@@ -770,10 +777,10 @@ function currentKineoOffer(value: string): string {
     .replace(/Kineo starts at \$9\.90\/mo/gi, 'Kineo Starter is $4.90 for the first month, then $9.90/month')
     .replaceAll('starts lower at $9.90/mo', 'starts with Starter at $4.90 for the first month')
     .replaceAll('From $9.90/mo', 'Starter $4.90 first month')
-    .replaceAll('from $9.90/mo', 'with Starter at $4.90 for the first month')
-    .replaceAll('for $9.90/mo', 'with Starter at $4.90 for the first month')
     .replaceAll('from $9.90/month', 'with Starter at $4.90 for the first month')
     .replaceAll('for $9.90/month', 'with Starter at $4.90 for the first month')
+    .replaceAll('from $9.90/mo', 'with Starter at $4.90 for the first month')
+    .replaceAll('for $9.90/mo', 'with Starter at $4.90 for the first month')
     .replaceAll('first Short free', 'up to 3 watermarked Fast videos every 24h, no card')
     .replaceAll('first one is free', 'up to 3 watermarked Fast videos every 24h are free')
     .replaceAll('first one free', 'up to 3 watermarked Fast videos every 24h, no card')
@@ -789,8 +796,12 @@ export default function AlternativePage({ params }: { params: { competitor: stri
   const c = COMPETITORS[params.competitor]
   if (!c) notFound()
 
-  const campaign = `push22_alternative_${params.competitor}`
-  const signupUrl = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}`
+  const isQuso = params.competitor === 'quso'
+  const campaign = isQuso ? QUSO_INTENT_CAMPAIGN : `push22_alternative_${params.competitor}`
+  const signupUrl = isQuso
+    ? `/signup?intent_campaign=${encodeURIComponent(campaign)}&create_intent=fast`
+    : `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}`
+  const heroCtaUrl = isQuso ? '#try-quso-alternative-topic' : signupUrl
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -801,19 +812,39 @@ export default function AlternativePage({ params }: { params: { competitor: stri
       acceptedAnswer: { '@type': 'Answer', text: currentKineoOffer(f.a) },
     })),
   }
+  const breadcrumbJsonLd = isQuso ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Kineo', item: 'https://www.usekineo.com/' },
+      { '@type': 'ListItem', position: 2, name: 'Alternatives', item: 'https://www.usekineo.com/alternatives' },
+      { '@type': 'ListItem', position: 3, name: 'Vidyo.ai / Quso.ai pricing', item: 'https://www.usekineo.com/alternatives/quso' },
+    ],
+  } : null
 
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {breadcrumbJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') }} />}
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 18px 64px' }}>
-        <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>
-          ⚡ Kineo
-        </Link>
+        {isQuso ? (
+          <nav aria-label="Breadcrumb" style={{ color: '#86868b', fontSize: 13 }}>
+            <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none' }}>Kineo</Link>
+            <span aria-hidden> / </span>
+            <Link href="/alternatives" style={{ color: '#a1a1a6', textDecoration: 'none' }}>Alternatives</Link>
+            <span aria-hidden> / </span>
+            <span>Vidyo.ai / Quso.ai</span>
+          </nav>
+        ) : (
+          <Link href="/" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '1.05rem' }}>
+            ⚡ Kineo
+          </Link>
+        )}
 
         {/* Hero */}
         <section style={{ marginTop: 36, textAlign: 'center' }}>
           <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.1)', borderRadius: 999, padding: '6px 14px' }}>
-            {c.name} alternative
+            {isQuso ? 'Vidyo.ai pricing · checked July 2026' : `${c.name} alternative`}
           </div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.15, margin: '16px 0 0' }}>
             {c.h1}
@@ -821,18 +852,32 @@ export default function AlternativePage({ params }: { params: { competitor: stri
           <p style={{ fontSize: '1.02rem', color: '#86868b', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 660 }}>
             {currentKineoOffer(c.intro)}
           </p>
-          <OrganicCtaLink
-            href={signupUrl}
-            source={campaign}
-            placement="hero"
-            style={{ display: 'inline-block', marginTop: 22, background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}
-          >
-            Try Kineo free →
-          </OrganicCtaLink>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 22 }}>
+            <OrganicCtaLink
+              href={heroCtaUrl}
+              source={campaign}
+              placement="hero"
+              style={{ display: 'inline-block', background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.05rem' }}
+            >
+              {isQuso ? 'Test one topic in Kineo →' : 'Try Kineo free →'}
+            </OrganicCtaLink>
+            {isQuso && (
+              <OrganicCtaLink
+                href={`/pricing?intent_campaign=${encodeURIComponent(campaign)}`}
+                source={campaign}
+                placement="hero_pricing"
+                style={{ display: 'inline-block', border: '1px solid #48484a', color: '#f5f5f7', fontWeight: 800, padding: '14px 24px', borderRadius: 980, textDecoration: 'none' }}
+              >
+                See Kineo pricing
+              </OrganicCtaLink>
+            )}
+          </div>
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
             Up to 3 watermarked Fast videos / 24h · no card · Starter <b style={{ color: '#2997ff' }}>$4.90 first month</b>
           </p>
         </section>
+
+        {isQuso && <QusoDecisionSections />}
 
         {/* Comparison table */}
         <section style={{ marginTop: 48 }}>

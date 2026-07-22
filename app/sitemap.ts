@@ -51,7 +51,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // #482 — comparison / "X alternative" SEO pages (/alternatives/[competitor]).
   const altEntries = COMPETITOR_SLUGS.map((slug) => ({
     url: `${BASE}/alternatives/${slug}`,
-    lastModified: LAST_MODIFIED,
+    lastModified: slug === 'quso' ? '2026-07-21' : LAST_MODIFIED,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))

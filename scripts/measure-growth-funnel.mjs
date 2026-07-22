@@ -4,6 +4,8 @@ import Stripe from 'stripe'
 
 const PUSH50_FACELESS_CAMPAIGN = 'push50_faceless_decision_guide'
 const PUSH50_LAUNCHED_AT_MS = Date.parse('2026-07-22T01:30:00.000Z')
+const PUSH52_QUSO_CAMPAIGN = 'push52_vidyo_quso_pricing_decision'
+const PUSH52_LAUNCHED_AT_MS = Date.parse('2026-07-22T03:00:00.000Z')
 
 function loadEnv(path) {
   const values = {}
@@ -129,6 +131,7 @@ async function main() {
 
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
   const cutoff = new Date(cutoffMs).toISOString()
+  const push52CohortCutoffMs = Math.max(cutoffMs, PUSH52_LAUNCHED_AT_MS)
   const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -400,6 +403,78 @@ async function main() {
       (Boolean(subscription.metadata?.supabase_user_id) &&
         push50IntentUserIds.has(subscription.metadata.supabase_user_id)),
   )
+  const push52QusoLandingSessions = stage(
+    externalEvents,
+    'landing_session_started',
+    (row) => row.path === '/alternatives/quso' &&
+      new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
+  )
+  const push52QusoCtaClicked = stage(
+    externalEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
+  )
+  const push52QusoTopicSubmitted = stage(
+    externalEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
+  )
+  const push52QusoPricingViewed = stage(
+    externalEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH52_QUSO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS,
+  )
+  const push52IntentUserIds = new Set(
+    externalEvents
+      .filter((row) => row.user_id &&
+        ['email_signup_completed', 'auth_callback_completed'].includes(row.name) &&
+        new Date(row.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS && (
+          row.metadata?.campaign === PUSH52_QUSO_CAMPAIGN ||
+          row.metadata?.intent_campaign === PUSH52_QUSO_CAMPAIGN ||
+          row.metadata?.source === PUSH52_QUSO_CAMPAIGN
+        ))
+      .map((row) => row.user_id),
+  )
+  const push52SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= push52CohortCutoffMs && (
+      attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
+      push52IntentUserIds.has(profile.id)
+    ),
+  )
+  const push52SignupIds = new Set(push52SignupProfiles.map((profile) => profile.id))
+  const push52CompletedVideoUsers = new Set(
+    externalVideos
+      .filter((video) => video.status === 'completed' &&
+        push52SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH52_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push52RecurringSessions = recurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH52_LAUNCHED_AT_MS) return false
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    const explicitIntent = session.metadata?.intent_campaign
+    if (explicitIntent) return explicitIntent === PUSH52_QUSO_CAMPAIGN
+    const userId = session.metadata?.supabase_user_id
+    return attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
+      (Boolean(userId) && push52SignupIds.has(userId))
+  })
+  const push52ActiveSubscriptions = newActiveSubscriptions.filter(({ subscription, profile }) => {
+    if ((subscription.created || 0) * 1000 < PUSH52_LAUNCHED_AT_MS) return false
+    const explicitIntent = subscription.metadata?.intent_campaign
+    if (explicitIntent) return explicitIntent === PUSH52_QUSO_CAMPAIGN
+    const userId = subscription.metadata?.supabase_user_id
+    return attributionForProfile(profile).campaign === PUSH52_QUSO_CAMPAIGN ||
+      (Boolean(userId) && push52SignupIds.has(userId))
+  })
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -459,6 +534,22 @@ async function main() {
           paid: push50RecurringSessions.filter((session) => session.payment_status === 'paid').length,
         },
         activeOrTrialingSubscriptions: push50ActiveSubscriptions.length,
+      },
+      push52VidyoQusoPricingDecision: {
+        landingSessions: push52QusoLandingSessions,
+        ctaClicked: push52QusoCtaClicked,
+        topicSubmitted: push52QusoTopicSubmitted,
+        pricingViewed: push52QusoPricingViewed,
+        signups: push52SignupProfiles.length,
+        signupCohortWithCompletedVideo: push52CompletedVideoUsers.size,
+        recurringStripeSessions: {
+          total: push52RecurringSessions.length,
+          open: push52RecurringSessions.filter((session) => session.status === 'open').length,
+          complete: push52RecurringSessions.filter((session) => session.status === 'complete').length,
+          expired: push52RecurringSessions.filter((session) => session.status === 'expired').length,
+          paid: push52RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+        },
+        activeOrTrialingSubscriptions: push52ActiveSubscriptions.length,
       },
     },
     acquisition: {

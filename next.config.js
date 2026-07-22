@@ -46,6 +46,10 @@ const nextConfig = {
       // Compatibility for the plural path observed in production. This was a
       // real 404, not an entitlement or credit failure.
       { source: '/thumbnails', destination: '/thumbnail-generator', permanent: true },
+      // Vidyo.ai became Quso.ai. Keep the established Quso comparison as the
+      // single canonical instead of creating duplicate legacy-name pages.
+      { source: '/alternatives/vidyo', destination: '/alternatives/quso', permanent: true },
+      { source: '/alternatives/vidyo-ai', destination: '/alternatives/quso', permanent: true },
     ]
   },
 }

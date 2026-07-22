@@ -51,6 +51,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
       { href: '/alternatives/opusclip', label: 'Kineo vs OpusClip' },
       { href: '/alternatives/invideo', label: 'Kineo vs InVideo' },
       { href: '/alternatives/heygen', label: 'Kineo vs HeyGen' },
+      { href: '/alternatives/quso', label: 'Vidyo.ai / Quso pricing' },
     ],
   },
 ]

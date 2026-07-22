@@ -19,13 +19,14 @@ Pricing (USD, July 2026):
 - Creator: $9.90 for the first month, then $24.90/month — 150 credits per billing month, including one Hollywood film.
 - Studio: $37.90/month — 200 credits per billing month.
 
-How Kineo differs from re-clippers (OpusClip, Klap, Vizard, quso): re-clippers require an existing long-form video to cut into clips. Kineo starts from a text idea and generates the entire Short — no filming, no source footage, no editing skills needed.
+How Kineo differs from long-video clipping workflows: tools such as OpusClip, Klap, Vizard and Quso can repurpose existing recordings into clips. Kineo's core workflow starts from a text idea and generates the entire Short — no filming, source footage or timeline required. Quso is a broader suite that also offers video generation, editing, scheduling and analytics.
 
 ## Key pages
 
 - [Facts & data](https://www.usekineo.com/facts): numbered, dated, citable facts about Kineo — pricing, engines, generation time, free tier.
 - [Pricing](https://www.usekineo.com/pricing): current Starter, Creator and Studio subscription details.
 - [Alternatives & comparisons](https://www.usekineo.com/alternatives): 27 head-to-head comparison pages vs OpusClip, InVideo, HeyGen, Fliki, AutoShorts, Crayo, CapCut, Pictory, VEED, Descript, Synthesia, Canva, Kapwing, Runway, Luma and more.
+- [Vidyo.ai pricing / Quso.ai comparison](https://www.usekineo.com/alternatives/quso): dated Quso monthly prices, credits, official sources and an honest workflow comparison with Kineo.
 - [Home](https://www.usekineo.com/): product overview, examples and FAQ.
 - [Viral Now](https://www.usekineo.com/viral-now): eight current YouTube Shorts ideas, refreshed every four hours, with one-click topic handoff into Kineo.
 
