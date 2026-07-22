@@ -43,6 +43,9 @@ const nextConfig = {
       // sidebar + footer + every internal link uses /thumbnail-generator,
       // but a few external pings still hit /thumbnail.
       { source: '/thumbnail', destination: '/thumbnail-generator', permanent: true },
+      // Compatibility for the plural path observed in production. This was a
+      // real 404, not an entitlement or credit failure.
+      { source: '/thumbnails', destination: '/thumbnail-generator', permanent: true },
     ]
   },
 }

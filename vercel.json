@@ -9,10 +9,6 @@
       "schedule": "0 10 * * *"
     },
     {
-      "path": "/api/cron/refresh-viral-now",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/cron/refresh-niche-trends",
       "schedule": "0 12 * * *"
     }
