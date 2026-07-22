@@ -54,6 +54,14 @@ function trackEvent(name: string): void {
   void trackAnalyticsEvent(name)
 }
 
+function checkoutIntentParam(): string {
+  if (typeof window === 'undefined') return ''
+  const raw = (new URLSearchParams(window.location.search).get('intent_campaign') ?? '').trim()
+  return /^[A-Za-z0-9._~-]{1,100}$/.test(raw)
+    ? `&intent_campaign=${encodeURIComponent(raw)}`
+    : ''
+}
+
 export default function ExitIntentOffer() {
   const [open, setOpen] = useState(false)
   // KINEO-SPRINT-OFFER-2026-07-14 — 'pack' removed from the union with the
@@ -184,7 +192,7 @@ export default function ExitIntentOffer() {
     setBuying('starter')
     trackEvent('starter_checkout_clicked')
     trackEvent('exit_intent_intro_starter_clicked')
-    window.location.href = '/api/stripe/checkout?tier=starter&intro=1'
+    window.location.href = `/api/stripe/checkout?tier=starter&intro=1${checkoutIntentParam()}`
   }
 
   function handleIntroCreator() {
@@ -192,7 +200,7 @@ export default function ExitIntentOffer() {
     setBuying('creator')
     trackEvent('basic_checkout_clicked')
     trackEvent('exit_intent_intro_creator_clicked')
-    window.location.href = '/api/stripe/checkout?tier=basic&intro=1'
+    window.location.href = `/api/stripe/checkout?tier=basic&intro=1${checkoutIntentParam()}`
   }
 
   if (!open) return null

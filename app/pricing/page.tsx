@@ -12,7 +12,7 @@
 import Link from 'next/link'
 import React, { useEffect, useRef, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
-import { trackEvent } from '@/lib/analytics'
+import { rememberSignupCampaign, trackEvent } from '@/lib/analytics'
 import ExitIntentOffer from '@/components/ExitIntentOffer'
 
 // PAYPAL-DISABLED-2026-07-06 — PayPal checkout is hidden on pricing until it's
@@ -195,7 +195,9 @@ export default function PricingPage() {
   // KINEO-PRICING-VIEW-2026-07-15 — admin/funnel and admin/metrics already
   // query this event; the pricing page simply never emitted it before.
   useEffect(() => {
-    trackPricingEvent('pricing_view')
+    const intentCampaign = new URLSearchParams(window.location.search).get('intent_campaign')
+    if (intentCampaign) rememberSignupCampaign(intentCampaign)
+    void trackEvent('pricing_view', intentCampaign ? { source: intentCampaign } : undefined)
   }, [])
 
   // Push #173 — iOS Safari blocks window.location.href inside async/await
@@ -217,13 +219,17 @@ export default function PricingPage() {
     const billingParam = billing === 'annual' ? '&billing=annual' : ''
     // #453 — forward a ?promo= code (e.g. /pricing?promo=FOUNDING50 from the
     // win-back emails) into checkout so the discount auto-applies on plan click.
-    const promo = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('promo') : null
+    const pricingParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const promo = pricingParams?.get('promo') ?? null
     const promoParam = promo ? `&promo=${encodeURIComponent(promo)}` : ''
+    const rawIntentCampaign = (pricingParams?.get('intent_campaign') ?? '').trim()
+    const intentCampaign = /^[A-Za-z0-9._~-]{1,100}$/.test(rawIntentCampaign) ? rawIntentCampaign : null
+    const intentParam = intentCampaign ? `&intent_campaign=${encodeURIComponent(intentCampaign)}` : ''
     // KINEO-INTRO-MONTH-2026-07-13 — Starter/Creator monthly levam o 1º mês
     // com desconto ($4.90/$9.90). O servidor valida elegibilidade (1 por
     // cliente) e ignora o param em annual/pro — aqui só pedimos.
     const introParam = billing === 'monthly' && (tier === 'starter' || tier === 'basic') ? '&intro=1' : ''
-    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}${promoParam}${introParam}`
+    window.location.href = `/api/stripe/checkout?tier=${tier}${billingParam}${promoParam}${introParam}${intentParam}`
   }
 
   // Push #173 — read checkout_error / already_subscribed from URL params

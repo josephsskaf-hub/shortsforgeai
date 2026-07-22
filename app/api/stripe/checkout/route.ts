@@ -300,9 +300,16 @@ async function buildAndRedirect(
   const browserSessionId = /^[A-Za-z0-9_-]{8,64}$/.test(browserSessionCookie)
     ? browserSessionCookie
     : null
+  const rawIntentCampaign = (req.nextUrl.searchParams.get('intent_campaign') ?? '').trim()
+  const intentCampaign = /^[A-Za-z0-9._~-]{1,100}$/.test(rawIntentCampaign)
+    ? rawIntentCampaign
+    : undefined
+  const intentCampaignParam = intentCampaign
+    ? `&intent_campaign=${encodeURIComponent(intentCampaign)}`
+    : ''
 
   function redirectError(msg: string) {
-    return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}`)
+    return NextResponse.redirect(`${appUrl}/pricing?checkout_error=${encodeURIComponent(msg)}${intentCampaignParam}`)
   }
   function jsonError(msg: string, status: number) {
     return NextResponse.json({ error: msg }, { status })
@@ -336,6 +343,7 @@ async function buildAndRedirect(
     return_to: returnToWatermark ? 'watermark_moment' : 'checkout_success',
     checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
     checkout_recovery: checkoutRecovery,
+    intent_campaign: intentCampaign ?? null,
   }
 
   const supabase = createClient()
@@ -635,7 +643,7 @@ async function buildAndRedirect(
       recovery: { enabled: true },
     },
     success_url: `${appUrl}/checkout/success?success=true&currency=${currency}&amount=${unitAmount}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}&currency=${currency}${intro ? '&intro=1' : ''}${requestedPromo ? `&promo=${encodeURIComponent(requestedPromo)}` : ''}${returnToWatermark ? '&return=wm' : ''}`,
+    cancel_url: `${appUrl}/checkout/cancelled?tier=${tier}&billing=${billing}&currency=${currency}${intro ? '&intro=1' : ''}${requestedPromo ? `&promo=${encodeURIComponent(requestedPromo)}` : ''}${returnToWatermark ? '&return=wm' : ''}${intentCampaignParam}`,
     metadata: {
       supabase_user_id: user.id,
       tier,
@@ -643,6 +651,7 @@ async function buildAndRedirect(
       plan_credits: String(plan.credits),
       checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
       checkout_recovery: checkoutRecovery ? '1' : '0',
+      ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
     },
     subscription_data: {
       metadata: {
@@ -651,6 +660,7 @@ async function buildAndRedirect(
         plan_credits: String(plan.credits),
         checkout_origin: returnToWatermark ? 'post_video_clean_export' : 'standard',
         checkout_recovery: checkoutRecovery ? '1' : '0',
+        ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
       },
     },
   }
@@ -873,6 +883,7 @@ async function buildAndRedirect(
       client_reference_id: sessionParams.client_reference_id ?? null,
       checkout_origin: sessionParams.metadata?.checkout_origin ?? 'standard',
       checkout_recovery: sessionParams.metadata?.checkout_recovery ?? '0',
+      intent_campaign: sessionParams.metadata?.intent_campaign ?? null,
       after_expiration: sessionParams.after_expiration,
       window: checkoutWindow,
     })

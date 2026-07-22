@@ -2,6 +2,9 @@ import fs from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
+const PUSH50_FACELESS_CAMPAIGN = 'push50_faceless_decision_guide'
+const PUSH50_LAUNCHED_AT_MS = Date.parse('2026-07-22T01:30:00.000Z')
+
 function loadEnv(path) {
   const values = {}
   for (const line of fs.readFileSync(path, 'utf8').split(/\r?\n/)) {
@@ -328,6 +331,75 @@ async function main() {
     'checkout_started',
     (row) => row.metadata?.checkout_recovery === true || row.metadata?.checkout_recovery === '1',
   )
+  const push50HomeNoCameraClicked = stage(
+    externalEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === 'push50_home_no_camera',
+  )
+  const push50HomeAlternativesClicked = stage(
+    externalEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === 'push50_home_alternatives',
+  )
+  const push50FacelessCtaClicked = stage(
+    externalEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === 'push50_faceless_decision_guide',
+  )
+  const push50FacelessTopicSubmitted = stage(
+    externalEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH50_FACELESS_CAMPAIGN,
+  )
+  const push50FacelessPricingViewed = stage(
+    externalEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH50_FACELESS_CAMPAIGN,
+  )
+  const push50FacelessLandingSessions = stage(
+    externalEvents,
+    'landing_session_started',
+    (row) => row.path === '/faceless-channel-ideas' &&
+      new Date(row.created_at || 0).getTime() >= PUSH50_LAUNCHED_AT_MS,
+  )
+  const push50IntentUserIds = new Set(
+    externalEvents
+      .filter((row) => row.user_id && (
+        row.metadata?.campaign === PUSH50_FACELESS_CAMPAIGN ||
+        row.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
+        row.metadata?.source === PUSH50_FACELESS_CAMPAIGN
+      ))
+      .map((row) => row.user_id),
+  )
+  const push50SignupProfiles = signupCohort.filter(
+    (profile) => attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
+      push50IntentUserIds.has(profile.id),
+  )
+  const push50SignupIds = new Set(push50SignupProfiles.map((profile) => profile.id))
+  const push50CompletedVideoUsers = new Set(
+    externalVideos
+      .filter((video) => video.status === 'completed' && push50SignupIds.has(video.user_id))
+      .map((video) => video.user_id),
+  )
+  const push50RecurringSessions = recurringSessions.filter((session) => {
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    const userId = session.metadata?.supabase_user_id
+    return session.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
+      attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
+      (Boolean(userId) && push50IntentUserIds.has(userId))
+  })
+  const push50ActiveSubscriptions = newActiveSubscriptions.filter(
+    ({ subscription, profile }) => subscription.metadata?.intent_campaign === PUSH50_FACELESS_CAMPAIGN ||
+      attributionForProfile(profile).campaign === PUSH50_FACELESS_CAMPAIGN ||
+      (Boolean(subscription.metadata?.supabase_user_id) &&
+        push50IntentUserIds.has(subscription.metadata.supabase_user_id)),
+  )
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -369,6 +441,24 @@ async function main() {
         bannerClicked: checkoutResumeClicked,
         bannerDismissed: checkoutResumeDismissed,
         recoveryCheckoutStarted: checkoutRecoveryStarted,
+      },
+      push50OrganicDecisionGuide: {
+        homeNoCameraClicked: push50HomeNoCameraClicked,
+        homeAlternativesClicked: push50HomeAlternativesClicked,
+        facelessGuideLandingSessions: push50FacelessLandingSessions,
+        facelessGuideCtaClicked: push50FacelessCtaClicked,
+        facelessGuideTopicSubmitted: push50FacelessTopicSubmitted,
+        facelessGuidePricingViewed: push50FacelessPricingViewed,
+        signups: push50SignupProfiles.length,
+        signupCohortWithCompletedVideo: push50CompletedVideoUsers.size,
+        recurringStripeSessions: {
+          total: push50RecurringSessions.length,
+          open: push50RecurringSessions.filter((session) => session.status === 'open').length,
+          complete: push50RecurringSessions.filter((session) => session.status === 'complete').length,
+          expired: push50RecurringSessions.filter((session) => session.status === 'expired').length,
+          paid: push50RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+        },
+        activeOrTrialingSubscriptions: push50ActiveSubscriptions.length,
       },
     },
     acquisition: {

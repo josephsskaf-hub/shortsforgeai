@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
       typeof body?.destination === 'string' ? body.destination : null,
     ) ?? '/generate'
     const destinationUrl = new URL(destination, 'https://www.usekineo.com')
+    const rawIntentCampaign = (destinationUrl.searchParams.get('intent_campaign') ?? '').trim()
+    const intentCampaign = /^[A-Za-z0-9._~-]{1,100}$/.test(rawIntentCampaign)
+      ? rawIntentCampaign
+      : null
     const createdAt = Date.parse(user.created_at ?? '')
     const isRecentSignup = Number.isFinite(createdAt)
       && Date.now() - createdAt >= 0
@@ -33,6 +37,7 @@ export async function POST(req: NextRequest) {
         destination_path: destinationUrl.pathname.slice(0, 128),
         has_prompt: destinationUrl.searchParams.has('prompt'),
         is_recent_signup: isRecentSignup,
+        intent_campaign: intentCampaign,
       },
     })
     return NextResponse.json({ ok: true, stored })

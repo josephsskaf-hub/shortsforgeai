@@ -6,6 +6,7 @@ import NavCreditsBadge from '@/components/NavCreditsBadge'
 import HeroGallery from './HeroGallery'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import LiveStatsBadge from '@/components/LiveStatsBadge'
+import OrganicCtaLink from '@/components/OrganicCtaLink'
 import Footer from '@/components/Footer'
 
 type Props = {
@@ -210,7 +211,20 @@ export default function KineoLanding({ initialUser }: Props) {
 
       <section id="compare">
         <div className="wrap">
-          <div className="sec-h"><h2>One idea in. A finished Short out.</h2><p>Most tools re-clip a long video you already filmed. Kineo builds it from scratch.</p></div>
+          <div className="sec-h">
+            <h2>One idea in. A finished Short out.</h2>
+            <p>
+              Most tools re-clip a long video you already filmed. Kineo builds it from scratch.{' '}
+              <OrganicCtaLink
+                href="/ai-shorts-without-filming"
+                source="push50_home_no_camera"
+                placement="compare"
+                className="link"
+              >
+                See how to make Shorts without filming →
+              </OrganicCtaLink>
+            </p>
+          </div>
           <div className="cmp"><table>
             <thead><tr><th></th><th className="us">Kineo</th><th>OpusClip</th><th>HeyGen</th><th>Submagic</th></tr></thead>
             <tbody>
@@ -222,6 +236,16 @@ export default function KineoLanding({ initialUser }: Props) {
               <tr><td>Starting price</td><td className="us">$4.90 first month</td><td>$15/mo</td><td>$29/mo</td><td>$19/mo</td></tr>
             </tbody>
           </table></div>
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <OrganicCtaLink
+              href="/alternatives"
+              source="push50_home_alternatives"
+              placement="compare_table"
+              className="link"
+            >
+              Compare Kineo with 27 AI video tools →
+            </OrganicCtaLink>
+          </div>
         </div>
       </section>
 

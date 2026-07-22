@@ -177,6 +177,10 @@ function internalRetryUrl(req: NextRequest, session: Stripe.Checkout.Session): s
   params.set('recovery', '1')
   if (session.metadata?.intro === '1') params.set('intro', '1')
   if (promo) params.set('promo', promo)
+  const intentCampaign = (session.metadata?.intent_campaign ?? '').trim()
+  if (/^[A-Za-z0-9._~-]{1,100}$/.test(intentCampaign)) {
+    params.set('intent_campaign', intentCampaign)
+  }
   if (session.metadata?.checkout_origin === 'post_video_clean_export') {
     params.set('return', 'wm')
   }

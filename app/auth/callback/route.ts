@@ -47,6 +47,11 @@ export async function GET(request: Request) {
         destination.searchParams.set('signup', '1')
         destinationPath = `${destination.pathname}${destination.search}`
       }
+      const destinationUrl = new URL(destinationPath, origin)
+      const rawIntentCampaign = (destinationUrl.searchParams.get('intent_campaign') ?? '').trim()
+      const intentCampaign = /^[A-Za-z0-9._~-]{1,100}$/.test(rawIntentCampaign)
+        ? rawIntentCampaign
+        : null
       // PUSH #21 — client events can disappear when a user closes the tab
       // during the OAuth return. Persist the completed callback before the
       // redirect so signup -> destination is now an authoritative server fact.
@@ -57,8 +62,9 @@ export async function GET(request: Request) {
         metadata: {
           is_new_user: isNewUser,
           is_checkout_destination: isCheckoutNext,
-          destination_path: new URL(destinationPath, origin).pathname.slice(0, 128),
-          has_prompt: new URL(destinationPath, origin).searchParams.has('prompt'),
+          destination_path: destinationUrl.pathname.slice(0, 128),
+          has_prompt: destinationUrl.searchParams.has('prompt'),
+          intent_campaign: intentCampaign,
           provider: typeof data.user?.app_metadata?.provider === 'string'
             ? data.user.app_metadata.provider.slice(0, 32)
             : 'unknown',

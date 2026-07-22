@@ -41,10 +41,15 @@ function CheckoutCancelledContent() {
   const checkoutCurrency: 'usd' | 'brl' | 'inr' =
     rawCurrency === 'brl' || rawCurrency === 'inr' ? rawCurrency : 'usd'
   const returnToWatermark = searchParams.get('return') === 'wm'
+  const rawIntentCampaign = (searchParams.get('intent_campaign') ?? '').trim()
+  const intentCampaign = /^[A-Za-z0-9._~-]{1,100}$/.test(rawIntentCampaign)
+    ? rawIntentCampaign
+    : null
   const retryParams = new URLSearchParams({ tier, billing })
   if (intro) retryParams.set('intro', '1')
   if (promo) retryParams.set('promo', promo)
   if (returnToWatermark) retryParams.set('return', 'wm')
+  if (intentCampaign) retryParams.set('intent_campaign', intentCampaign)
   const retryHref = `/api/stripe/checkout?${retryParams.toString()}`
   const planName = tier === 'starter' ? 'Starter' : tier === 'pro' ? 'Studio' : 'Creator'
   const displayedPrices = {
@@ -99,8 +104,9 @@ function CheckoutCancelledContent() {
       intro,
       private_offer: privatePackPromo,
       return_to_watermark: returnToWatermark,
+      intent_campaign: intentCampaign,
     })
-  }, [tier, billing, intro, privatePackPromo, returnToWatermark])
+  }, [tier, billing, intro, privatePackPromo, returnToWatermark, intentCampaign])
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
@@ -122,6 +128,7 @@ function CheckoutCancelledContent() {
                 intro,
                 private_offer: privatePackPromo,
                 return_to_watermark: returnToWatermark,
+                intent_campaign: intentCampaign,
               })
               trackCheckoutClick(tier)
             }}
@@ -131,7 +138,7 @@ function CheckoutCancelledContent() {
           </a>
         </div>
         <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: '0.85rem' }}>
-          <Link href="/pricing" style={{ color: '#2997ff', textDecoration: 'none', fontWeight: 700 }}>← Go back to pricing</Link>
+          <Link href={intentCampaign ? `/pricing?intent_campaign=${encodeURIComponent(intentCampaign)}` : '/pricing'} style={{ color: '#2997ff', textDecoration: 'none', fontWeight: 700 }}>← Go back to pricing</Link>
           <a href="mailto:support@usekineo.com" style={{ color: 'var(--muted2)', textDecoration: 'none', fontWeight: 600 }}>Contact support</a>
         </div>
       </div>
