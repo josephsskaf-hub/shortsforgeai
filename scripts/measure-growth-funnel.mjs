@@ -39,6 +39,10 @@ const PUSH69_HOME_STARTERS_CAMPAIGN = 'push69_home_one_click_starters'
 const PUSH69_LAUNCHED_AT_MS = Date.parse('2026-07-23T15:10:00.000Z')
 const PUSH70_YOUTUBE_TOPIC_CAMPAIGN = 'push70_youtube_topic_one_click'
 const PUSH70_LAUNCHED_AT_MS = Date.parse('2026-07-23T15:20:00.000Z')
+const PUSH77_COST_CALCULATOR_CAMPAIGN = 'push77_short_cost_calculator'
+// Starts after the deploy and production smoke so internal calculator changes
+// and clicks do not enter the acquisition cohort.
+const PUSH77_LAUNCHED_AT_MS = Date.parse('2026-07-23T17:00:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -178,6 +182,7 @@ async function main() {
     PUSH66_LAUNCHED_AT_MS,
     PUSH69_LAUNCHED_AT_MS,
     PUSH70_LAUNCHED_AT_MS,
+    PUSH77_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -1689,6 +1694,100 @@ async function main() {
     ),
   )
 
+  const push77LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/cheapest-ai-shorts-maker' &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77CalculatorViewed = stage(
+    experimentEvents,
+    'short_cost_calculator_viewed',
+    (row) => row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77CalculatorChanged = stage(
+    experimentEvents,
+    'short_cost_calculator_changed',
+    (row) => row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77CalculatorCtaClicked = stage(
+    experimentEvents,
+    'short_cost_calculator_cta_clicked',
+    (row) => row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push77SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH77_COST_CALCULATOR_CAMPAIGN ||
+      push77AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push77SignupIds = new Set(push77SignupProfiles.map((profile) => profile.id))
+  const push77CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push77SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push77PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => (row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN ||
+      (Boolean(row.user_id) && push77SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => (row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN ||
+      (Boolean(row.user_id) && push77SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => (row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN ||
+      (Boolean(row.user_id) && push77SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77RecurringSessions = experimentRecurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH77_LAUNCHED_AT_MS) return false
+    if (session.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN) return true
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    return Boolean(profile?.id) && push77SignupIds.has(profile.id)
+  })
+  const push77ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription, profile }) =>
+    (subscription.created || 0) * 1000 >= PUSH77_LAUNCHED_AT_MS && (
+      subscription.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN ||
+      (Boolean(profile?.id) && push77SignupIds.has(profile.id))
+    ),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -2058,6 +2157,25 @@ async function main() {
         },
         activeSubscriptions: push70ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
         trialingSubscriptions: push70ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+      },
+      push77ShortCostCalculator: {
+        measurementStartsAt: new Date(PUSH77_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push77LandingSessions,
+        calculatorViewed: push77CalculatorViewed,
+        calculatorChanged: push77CalculatorChanged,
+        calculatorCtaClicked: push77CalculatorCtaClicked,
+        topicSubmitted: push77TopicSubmitted,
+        signups: push77SignupProfiles.length,
+        completedFirstVideoUsers: push77CompletedVideoUsers.size,
+        pricingViewed: push77PricingViewed,
+        checkoutAttempted: push77CheckoutAttempted,
+        checkoutStarted: push77CheckoutStarted,
+        recurringStripeSessions: {
+          total: push77RecurringSessions.length,
+          paid: push77RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+        },
+        activeSubscriptions: push77ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+        trialingSubscriptions: push77ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
       },
     },
     acquisition: {

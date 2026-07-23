@@ -72,6 +72,7 @@ The earlier sprint established and reported the following production baseline:
 - **#74** removes the last verified currency surprise from the embedded pricing cards inside `/generate`. Their monthly, first-month, and renewal amounts now come from the same BRL/USD/INR source as Stripe, and the source funnel measures local-price exposure through plan click and recurring subscription.
 - **#75** removes the residual hardcoded USD amount from the inline Starter CTA found during the PUSH #74 production smoke, leaving the entire card currency-consistent before Checkout.
 - **#76** aligns the full public acquisition and answer-engine cluster with measured Fast timing. Twenty-four surfaces no longer promise 60-second generation; `llms.txt` and `/facts` now publish the verified seven-day sample of 12 completed Fast renders, 2.30-minute median, and 3.50-minute p90.
+- **#77** turns the existing commercial-intent cheapest-maker page into a local-currency cost-per-Short calculator. Visitors can model Fast, Seedance, or Kling volume against real plan credits and prices, then carry a topic through signup to the first-video flow. The complete calculator-to-subscription cohort is measurable.
 
 ### Product and conversion support
 
@@ -131,6 +132,8 @@ The current Stripe route itself passed a no-payment live smoke: it showed the St
 Source-level measurement then isolated the next conversion leak. TAAFT supplied 17 of 23 seven-day signups, but only nine started generation, three completed a video, three saw the post-video offer, none clicked the clean-export CTA, and none opened recurring Checkout. ChatGPT supplied only four signups, but two completed videos and both opened recurring Checkout. Four historical TAAFT Fast jobs were mature without a completed video and predated the repaired Fast path. PUSH #73 now measures every source through subscription and makes the post-video offer use the same local-currency price source as Stripe.
 
 The most recent activation failure was timestamped before PUSH #57. A later controlled production render passed the repaired Fast-to-Compose path, so no second activation hotfix was justified without new post-fix evidence. The next acquisition decision therefore follows the best observed source quality: ChatGPT supplied two recurring Checkout Sessions from four signups. PUSH #76 improves the consistency and citability of the public facts used by search and answer engines, removing obsolete 60-second claims that contradicted measured production timing.
+
+PUSH #77 adds pre-signup utility to the already indexed commercial-intent page instead of publishing another duplicate keyword page. It calculates required credits, minimum covering plan, local first-month and renewal amounts, and cost per planned Short, then routes the visitor through a topic form into the recoverable first-video funnel. Its commercial gate is a verified paid recurring subscription, not calculator interactions alone.
 
 The same production pass found one remaining inconsistent surface: the embedded pricing cards in `/generate` still showed USD in Brazil. PUSH #74 localizes those cards from the shared server-aligned price table, avoids an incorrect USD flash while geo resolves, and measures currency exposure and plan clicks by source. Stripe remains server-authoritative; the browser does not supply the Checkout currency.
 
