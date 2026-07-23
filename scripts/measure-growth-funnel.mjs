@@ -31,6 +31,8 @@ const PUSH65_SAASHUB_CAMPAIGN = 'push65_saashub_directory_bridge'
 // will use /from-saashub, so internal release traffic before this boundary is
 // excluded from the acquisition cohort.
 const PUSH65_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:20:00.000Z')
+const PUSH66_FACELESS_GENERATOR_CAMPAIGN = 'push66_faceless_video_generator'
+const PUSH66_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:30:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -167,6 +169,7 @@ async function main() {
     PUSH60_LAUNCHED_AT_MS,
     PUSH63_LAUNCHED_AT_MS,
     PUSH65_LAUNCHED_AT_MS,
+    PUSH66_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -1400,6 +1403,114 @@ async function main() {
       }),
   )
 
+  const push66LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/faceless-video-generator' &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66CtaClicked = stage(
+    experimentEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push66SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN ||
+      push66AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push66SignupIds = new Set(push66SignupProfiles.map((profile) => profile.id))
+  const push66ActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => Boolean(row.user_id) && push66SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => Boolean(row.user_id) && push66SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66GenerateStarted = stage(
+    experimentEvents,
+    'generate_started',
+    (row) => Boolean(row.user_id) && push66SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push66SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push66PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => row.metadata?.intent_campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => row.metadata?.intent_campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH66_LAUNCHED_AT_MS,
+  )
+  const push66RecurringSessions = experimentRecurringSessions.filter((session) =>
+    (session.created || 0) * 1000 >= PUSH66_LAUNCHED_AT_MS &&
+      session.metadata?.intent_campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN,
+  )
+  const push66ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription }) =>
+    (subscription.created || 0) * 1000 >= PUSH66_LAUNCHED_AT_MS &&
+      subscription.metadata?.intent_campaign === PUSH66_FACELESS_GENERATOR_CAMPAIGN,
+  )
+  const push66ActiveSubscriptionIds = new Set(
+    push66ActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push66PaidRecurringCustomers = new Set(
+    push66RecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push66ActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -1698,6 +1809,36 @@ async function main() {
           activeSubscriptions: push65ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
           trialingSubscriptions: push65ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
           paidRecurringCustomers: push65PaidRecurringCustomers.size,
+        },
+      },
+      push66FacelessVideoGenerator: {
+        measurementStartsAt: new Date(PUSH66_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push66LandingSessions,
+        ctaClicked: push66CtaClicked,
+        topicSubmitted: push66TopicSubmitted,
+        newSignupCohort: {
+          signups: push66SignupProfiles.length,
+          activationAutostart: {
+            eligible: push66ActivationEligible,
+            dispatched: push66ActivationDispatched,
+          },
+          generateStarted: push66GenerateStarted,
+          completedFirstVideoUsers: push66CompletedVideoUsers.size,
+        },
+        monetization: {
+          pricingViewed: push66PricingViewed,
+          checkoutAttempted: push66CheckoutAttempted,
+          checkoutStarted: push66CheckoutStarted,
+          recurringStripeSessions: {
+            total: push66RecurringSessions.length,
+            open: push66RecurringSessions.filter((session) => session.status === 'open').length,
+            complete: push66RecurringSessions.filter((session) => session.status === 'complete').length,
+            expired: push66RecurringSessions.filter((session) => session.status === 'expired').length,
+            paid: push66RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push66ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push66ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+          paidRecurringCustomers: push66PaidRecurringCustomers.size,
         },
       },
     },

@@ -170,7 +170,7 @@ export default function FreeAiShortsGeneratorPage() {
           A script generator gives you text. A clipper needs footage you already recorded. Kineo creates the whole Short from an idea, so the free test shows the actual workflow: prompt, voice, visuals, captions, and export.
         </p>
         <p style={p}>
-          Want a more specific path? See <Link href="/text-to-video-shorts" style={{ color: '#2997ff' }}>text to video Shorts</Link>, <Link href="/youtube-shorts-from-topic" style={{ color: '#2997ff' }}>YouTube Shorts from a topic</Link>, or <Link href="/free-ai-shorts" style={{ color: '#2997ff' }}>free AI Shorts by niche</Link>.
+          Want a more specific path? See the <Link href="/faceless-video-generator" style={{ color: '#2997ff' }}>faceless video generator</Link>, <Link href="/text-to-video-shorts" style={{ color: '#2997ff' }}>text to video Shorts</Link>, <Link href="/youtube-shorts-from-topic" style={{ color: '#2997ff' }}>YouTube Shorts from a topic</Link>, or <Link href="/free-ai-shorts" style={{ color: '#2997ff' }}>free AI Shorts by niche</Link>.
         </p>
 
         <h2 style={h2}>Frequently asked questions</h2>
