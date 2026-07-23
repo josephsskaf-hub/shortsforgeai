@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Kineo — AI YouTube Shorts Generator',
     short_name: 'Kineo',
     description:
-      'Turn any topic into a viral YouTube Short in 60 seconds. AI writes the script, finds footage, adds voiceover & captions.',
+      'Turn any topic into a finished YouTube Short, usually in 2–4 minutes. AI writes the script, finds footage, adds voiceover & captions.',
     id: '/',
     start_url: '/generate',
     scope: '/',

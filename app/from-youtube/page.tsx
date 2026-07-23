@@ -54,7 +54,7 @@ export default async function FromYouTubePage() {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
             Type one idea. Kineo builds the script, AI voiceover, matched footage and
-            captions into a vertical video — typically in about 60 seconds.
+            captions into a vertical video — usually in 2–4 minutes.
           </p>
         </div>
 

@@ -19,7 +19,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Money & Finance',
     h1: 'Free AI Money & Finance Shorts Generator',
     intro:
-      'Turn any money or finance idea into a ready-to-post YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, no face on camera.',
+      'Turn any money or finance idea into a ready-to-post YouTube Short usually in 2–4 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, no face on camera.',
     ideas: [
       '$200 a month makes you a millionaire — here’s the exact math',
       'The money habit 90% of millionaires share',
@@ -32,7 +32,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Mystery & Unsolved',
     h1: 'Free AI Mystery Shorts Generator',
     intro:
-      'Turn any unsolved case or eerie mystery into a binge-worthy YouTube Short in about 60 seconds. The AI writes the script, voices it, adds captions and footage — fully faceless.',
+      'Turn any unsolved case or eerie mystery into a binge-worthy YouTube Short usually in 2–4 minutes. The AI writes the script, voices it, adds captions and footage — fully faceless.',
     ideas: [
       'The disappearance nobody solved in 70 years',
       'The signal from space scientists still can’t explain',
@@ -45,7 +45,7 @@ const NICHES: Record<string, Niche> = {
     label: 'History',
     h1: 'Free AI History Shorts Generator',
     intro:
-      'Turn any historical event into a gripping YouTube Short in about 60 seconds — script, voiceover, captions and footage generated automatically. No editing skills needed.',
+      'Turn any historical event into a gripping YouTube Short usually in 2–4 minutes — script, voiceover, captions and footage generated automatically. No editing skills needed.',
     ideas: [
       'Why ancient Rome collapsed in 5 steps',
       'The empire that fell in a single day',
@@ -58,7 +58,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Motivation & Mindset',
     h1: 'Free AI Motivation Shorts Generator',
     intro:
-      'Turn any mindset or discipline idea into a punchy, shareable YouTube Short in about 60 seconds. The AI handles the script, voiceover, captions and visuals — you just pick the idea.',
+      'Turn any mindset or discipline idea into a punchy, shareable YouTube Short usually in 2–4 minutes. The AI handles the script, voiceover, captions and visuals — you just pick the idea.',
     ideas: [
       'The 5am habit that rewires your brain',
       'Why discipline beats motivation every time',
@@ -71,7 +71,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Mind-Blowing Facts',
     h1: 'Free AI Facts Shorts Generator',
     intro:
-      'Turn any surprising fact into a scroll-stopping YouTube Short in about 60 seconds. The AI writes, voices, captions and sources the footage automatically — completely faceless.',
+      'Turn any surprising fact into a scroll-stopping YouTube Short usually in 2–4 minutes. The AI writes, voices, captions and sources the footage automatically — completely faceless.',
     ideas: [
       'The everyday object that’s secretly 1,000 years old',
       'Your body does this 100,000 times a day without you noticing',
@@ -84,7 +84,7 @@ const NICHES: Record<string, Niche> = {
     label: 'AI & Tech',
     h1: 'Free AI Tech Shorts Generator',
     intro:
-      'Turn any AI or tech topic into a timely YouTube Short in about 60 seconds. Script, voiceover, captions and footage are generated for you — post daily without touching an editor.',
+      'Turn any AI or tech topic into a timely YouTube Short usually in 2–4 minutes. Script, voiceover, captions and footage are generated for you — post daily without touching an editor.',
     ideas: [
       'The AI tool replacing 10 jobs right now',
       '5 AI tools that feel illegal to know',
@@ -97,7 +97,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Countries & Places',
     h1: 'Free AI Geography Shorts Generator',
     intro:
-      'Turn any country, city or place into a fascinating YouTube Short in about 60 seconds. The AI writes the script, adds the voiceover, captions and footage — no filming required.',
+      'Turn any country, city or place into a fascinating YouTube Short usually in 2–4 minutes. The AI writes the script, adds the voiceover, captions and footage — no filming required.',
     ideas: [
       'The country where it’s illegal to die',
       'The city built on top of another city',
@@ -110,7 +110,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Space',
     h1: 'Free AI Space Shorts Generator',
     intro:
-      'Turn any space topic into a mind-bending YouTube Short in about 60 seconds. The AI writes, voices, captions and finds the footage — fully faceless, ready to post.',
+      'Turn any space topic into a mind-bending YouTube Short usually in 2–4 minutes. The AI writes, voices, captions and finds the footage — fully faceless, ready to post.',
     ideas: [
       'What NASA found on Mars they never announced',
       'The sound a black hole actually makes',
@@ -123,7 +123,7 @@ const NICHES: Record<string, Niche> = {
     label: 'True Crime',
     h1: 'Free AI True Crime Shorts Generator',
     intro:
-      'Turn any unsolved case or cold case into a gripping, binge-worthy YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
+      'Turn any unsolved case or cold case into a gripping, binge-worthy YouTube Short usually in 2–4 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
     ideas: [
       'The cold case solved by a single typo',
       'The killer who mailed the police his own confession',
@@ -136,7 +136,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Psychology Facts',
     h1: 'Free AI Psychology Shorts Generator',
     intro:
-      'Turn any mind trick or behavior insight into a scroll-stopping YouTube Short in about 60 seconds. The AI writes the script, voices it, adds captions and footage automatically — fully faceless.',
+      'Turn any mind trick or behavior insight into a scroll-stopping YouTube Short usually in 2–4 minutes. The AI writes the script, voices it, adds captions and footage automatically — fully faceless.',
     ideas: [
       'Say this one sentence and people instantly trust you',
       'The reason your brain remembers embarrassment forever',
@@ -149,7 +149,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Sports Legends',
     h1: 'Free AI Sports Legends Shorts Generator',
     intro:
-      'Turn any iconic moment or legendary athlete into an electric YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and footage — no editing skills needed, completely faceless.',
+      'Turn any iconic moment or legendary athlete into an electric YouTube Short usually in 2–4 minutes. The AI writes the script, records the voiceover, adds captions and footage — no editing skills needed, completely faceless.',
     ideas: [
       'The shot that ended a career in one second',
       'The athlete who was told he’d never walk again',
@@ -162,7 +162,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Science Facts',
     h1: 'Free AI Science Shorts Generator',
     intro:
-      'Turn any mind-blowing science fact into a jaw-dropping YouTube Short in about 60 seconds. The AI writes, voices, captions and sources the footage automatically — no filming required.',
+      'Turn any mind-blowing science fact into a jaw-dropping YouTube Short usually in 2–4 minutes. The AI writes, voices, captions and sources the footage automatically — no filming required.',
     ideas: [
       'There’s enough gold in the ocean to make everyone rich — here’s the catch',
       'A teaspoon of a neutron star weighs 6 billion tons',
@@ -175,7 +175,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Conspiracies & Cover-ups',
     h1: 'Free AI Conspiracy Shorts Generator',
     intro:
-      'Turn any conspiracy or alleged cover-up into a suspenseful YouTube Short in about 60 seconds. The AI writes the script, voices it, adds captions and footage — fully faceless, ready to post.',
+      'Turn any conspiracy or alleged cover-up into a suspenseful YouTube Short usually in 2–4 minutes. The AI writes the script, voices it, adds captions and footage — fully faceless, ready to post.',
     ideas: [
       'The “accident” that destroyed the evidence days before the trial',
       'The document declassified 50 years too late',
@@ -188,7 +188,7 @@ const NICHES: Record<string, Niche> = {
     label: 'Luxury & Billionaire',
     h1: 'Free AI Luxury & Billionaire Shorts Generator',
     intro:
-      'Turn any luxury or billionaire topic into an aspirational, scroll-stopping YouTube Short in about 60 seconds. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
+      'Turn any luxury or billionaire topic into an aspirational, scroll-stopping YouTube Short usually in 2–4 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage — no filming, no editing, completely faceless.',
     ideas: [
       'What a $500 million yacht actually costs to run per day',
       'The hotel room that costs more per night than a house',

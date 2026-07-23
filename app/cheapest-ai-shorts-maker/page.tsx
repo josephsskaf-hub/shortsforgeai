@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '1', t: 'Type one idea or topic', d: 'No source footage, no long video to re-clip. One line is enough — "the island too dangerous to visit", "how compound interest works".' },
   { n: '2', t: 'Pick the cheapest AI engine', d: 'AI Gen (Seedance) is the lowest-cost AI tier at 20 credits per video — real generated scenes, not a premium engine you don’t need yet.' },
-  { n: '3', t: 'Download a ready-to-post Short', d: 'A finished 9:16 video — script, AI voiceover, footage matched to each line and captions — in about 60 seconds. No editor, no timeline.' },
+  { n: '3', t: 'Download a ready-to-post Short', d: 'A finished 9:16 video — script, AI voiceover, footage matched to each line and captions — usually in 2–4 minutes. No editor, no timeline.' },
 ]
 
 const WHY_CHEAPER: { t: string; d: string }[] = [
@@ -41,7 +41,7 @@ const WHY_CHEAPER: { t: string; d: string }[] = [
 
 const FAQ: { q: string; a: string }[] = [
   { q: 'What is the cheapest AI shorts maker?', a: 'Kineo is built only for faceless short-form. A new account can create, download and share up to 3 watermarked Fast videos every 24 hours with no card. Starter is $4.90 for the first month, then $9.90/month. See current plans on the pricing page.' },
-  { q: 'How do I make AI YouTube Shorts cheap?', a: 'Type a single idea, choose the AI Gen (Seedance) engine — the cheapest AI tier at 20 credits per video — and download a finished 9:16 Short with script, AI voiceover, footage and captions in about 60 seconds. No camera and no editing app to pay for separately.' },
+  { q: 'How do I make AI YouTube Shorts cheap?', a: 'Type a single idea, choose Fast Mode for the lowest-cost workflow, and download a finished 9:16 Short with script, AI voiceover, matched footage and captions, usually in 2–4 minutes. No camera and no editing app to pay for separately.' },
   { q: 'Is there an affordable faceless shorts AI that builds the video from just a topic?', a: 'Yes. Kineo generates the entire video from one topic — it writes the script, records the AI voiceover, matches footage to each line and adds captions. It’s made for faceless creators who start with nothing but an idea, so you never film anything.' },
   { q: 'Why is the cheapest AI YouTube Shorts generator not just a clip cutter?', a: 'Clip cutters like OpusClip or Submagic re-clip a long video you already filmed — useless if you’re faceless and starting from scratch. Kineo creates the video from an idea, so the low price gets you a finished Short, not chopped-up footage.' },
   { q: 'Do I have to use the most expensive AI engine?', a: 'No. You pick the engine per video. AI Gen (Seedance) is the cheapest AI engine at 20 credits per video and is the default for most creators; premium engines cost more credits and are optional.' },

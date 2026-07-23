@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     'short form video AI',
   ],
   openGraph: {
-    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
+    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 2–4 Min',
     description:
       'Launch a repeatable AI Shorts show with the same face, voice and style. Try up to 3 watermarked Fast videos every 24h, no card; paid plans unlock clean MP4s.',
     url: 'https://www.usekineo.com',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 60s',
+    title: 'AI YouTube Shorts Generator — Script, Footage & Voice in 2–4 Min',
     description:
       'Launch a repeatable AI Shorts show with the same face, voice and style. Up to 3 watermarked Fast videos every 24h, no card; paid plans unlock clean MP4s.',
     images: ['https://www.usekineo.com/og-image.png'],

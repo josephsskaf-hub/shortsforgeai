@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
           from: FROM_EMAIL,
           to: [email],
           reply_to: 'hello@usekineo.com',
-          subject: 'Your first Fast video is one minute away',
+          subject: 'Your first Fast video is a few minutes away',
           text,
           html,
         }),

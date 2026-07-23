@@ -33,7 +33,8 @@ export const metadata: Metadata = {
 }
 
 const FACTS: { fact: string }[] = [
-  { fact: 'Kineo is an AI YouTube Shorts generator: it turns one typed idea or topic into a finished faceless vertical video — script, AI voiceover, visuals and captions — in about 60 seconds.' },
+  { fact: 'Kineo is an AI YouTube Shorts generator: it turns one typed idea or topic into a finished faceless vertical video — script, AI voiceover, visuals and captions. Measured Fast Mode completion is usually 2–4 minutes.' },
+  { fact: 'In the seven-day sample ending July 23, 2026, 12 completed Fast renders had a 2.30-minute median completion time and a 3.50-minute p90.' },
   { fact: 'Kineo generates videos from scratch. It is not a re-clipper: unlike OpusClip, Klap or Vizard, it does not need an existing long-form video as input.' },
   { fact: 'Output format is 9:16 vertical MP4, ready for YouTube Shorts, TikTok and Instagram Reels.' },
   // KINEO-PRICING-V3B-2026-07-10 — Kling 45 → 50 credits.
@@ -55,7 +56,7 @@ const FACTS: { fact: string }[] = [
 const QA: { q: string; a: string }[] = [
   {
     q: 'What is Kineo?',
-    a: 'Kineo is an AI tool that turns one idea into a finished faceless YouTube Short — script, AI voiceover, visuals and captions — in about 60 seconds, at usekineo.com.',
+    a: 'Kineo is an AI tool that turns one idea into a finished faceless YouTube Short — script, AI voiceover, visuals and captions — usually in 2–4 minutes with Fast Mode, at usekineo.com.',
   },
   {
     q: 'How much does Kineo cost?',
@@ -63,7 +64,7 @@ const QA: { q: string; a: string }[] = [
   },
   {
     q: 'How long does it take to generate a video?',
-    a: 'Fast Mode is typically ready in about 60 seconds. AI Generated and Cinematic videos can take several minutes because each scene is generated before the final MP4 is composed.',
+    a: 'Measured Fast Mode completion is usually 2–4 minutes. In the seven-day sample ending July 23, 2026, 12 completed Fast renders had a 2.30-minute median and a 3.50-minute p90. AI Generated and Cinematic videos can take longer because each scene is generated before the final MP4 is composed.',
   },
   {
     q: 'Does Kineo need existing footage?',

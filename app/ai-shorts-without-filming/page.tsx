@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '1', t: 'Type one idea — never open a camera', d: 'No footage to upload, nothing to record, no face on screen. One line is enough — "the island too dangerous to visit", "the money habit that quietly makes you broke".' },
   { n: '2', t: 'AI builds every layer for you', d: 'It writes the hook and script, generates an AI voiceover so your own voice stays private, matches footage to each line and burns in captions — all without you filming a single frame.' },
-  { n: '3', t: 'Download a ready-to-post Short', d: 'Fast Mode is typically ready in about 60 seconds. Download the finished 9:16 video for YouTube, TikTok or Reels — no editor, timeline or recording session required.' },
+  { n: '3', t: 'Download a ready-to-post Short', d: 'Fast Mode is usually ready in 2–4 minutes. Download the finished 9:16 video for YouTube, TikTok or Reels — no editor, timeline or recording session required.' },
 ]
 
 const NO_NEED: { t: string; d: string }[] = [
@@ -63,7 +63,7 @@ const NO_NEED: { t: string; d: string }[] = [
 
 const FAQ: { q: string; a: string }[] = [
   { q: 'Can I make YouTube Shorts without filming anything?', a: 'Yes. Kineo builds the entire Short from a single idea — it writes the script, generates an AI voiceover, matches footage to each line and adds captions. You never open a camera, upload footage or record your voice, and a new account can create up to 3 watermarked Fast videos every 24 hours with no card.' },
-  { q: 'How do I make faceless Shorts with no camera?', a: 'Type one topic, let the AI create the script and voiceover, select or generate visuals, and add captions, then download a finished 9:16 video. Fast Mode is typically ready in about 60 seconds, and there is nothing to film.' },
+  { q: 'How do I make faceless Shorts with no camera?', a: 'Type one topic, let the AI create the script and voiceover, select or generate visuals, and add captions, then download a finished 9:16 video. Fast Mode is usually ready in 2–4 minutes, and there is nothing to film.' },
   { q: 'Will my face or voice ever be shown?', a: 'No. The channel format is faceless by design — you never appear on screen, and the narration is an AI voiceover, so your own voice stays private. It is made for anonymous creators who want a channel without being on camera.' },
   { q: 'Is this just a clip cutter like OpusClip or Submagic?', a: 'No. Clip cutters re-clip a long video you already filmed — which still requires you to record footage first. Kineo works the other way around: it creates the video from an idea, so you start with nothing but a topic and never film at all.' },
   { q: 'Do I need editing skills to make a Short without filming?', a: 'No. There is no timeline and no clips to arrange. The script, AI voiceover, footage and captions are generated and assembled automatically, so you get a ready-to-post Short without touching an editor.' },
@@ -81,7 +81,7 @@ export default function AiShortsWithoutFilmingPage() {
     '@type': 'HowTo',
     name: 'How to make a faceless YouTube Short without filming',
     description: 'Turn one topic into a scripted, voiced and captioned 9:16 Short without using a camera.',
-    totalTime: 'PT1M',
+    totalTime: 'PT4M',
     step: STEPS.map((step) => ({
       '@type': 'HowToStep',
       position: Number(step.n),
@@ -116,7 +116,7 @@ export default function AiShortsWithoutFilmingPage() {
           Make YouTube Shorts Without Filming a Single Frame
         </h1>
         <p style={{ fontSize: '1.08rem', color: '#86868b', lineHeight: 1.6, margin: '16px 0 0' }}>
-          Kineo turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. Fast Mode is typically ready in about 60 seconds. Create up to 3 watermarked Fast videos every 24 hours with no card.
+          Kineo turns one idea into a finished faceless Short — the hook and script, an AI voiceover, footage matched to every line, and captions. No camera, no face on screen, no recording your voice. Fast Mode is usually ready in 2–4 minutes. Create up to 3 watermarked Fast videos every 24 hours with no card.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
           <OrganicCtaLink href={FORM_ANCHOR} source={INTENT_CAMPAIGN} placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Try your idea free →</OrganicCtaLink>

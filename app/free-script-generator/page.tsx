@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
   title: 'Free YouTube Short Script Generator (AI, No Signup) — Kineo',
   description:
-    'Generate a viral, hook-driven YouTube Short script free with AI — no signup. Type a topic, get a 45-60s faceless script (hook, facts, payoff) instantly. Then turn it into a finished video in 60s.',
+    'Generate a viral, hook-driven YouTube Short script free with AI — no signup. Type a topic, get a 45-60s faceless script (hook, facts, payoff) instantly. Then turn it into a finished video, usually in 2–4 minutes.',
   alternates: { canonical: 'https://www.usekineo.com/free-script-generator' },
   openGraph: {
     title: 'Free AI YouTube Short Script Generator — No Signup',
     description:
-      'Type a topic, get a viral faceless Short script (hook → facts → payoff) free, instantly. Then make it a finished video in 60s.',
+      'Type a topic, get a viral faceless Short script (hook → facts → payoff) free, instantly. Then make it a finished video, usually in 2–4 minutes.',
     url: 'https://www.usekineo.com/free-script-generator',
     type: 'website',
   },

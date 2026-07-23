@@ -6,7 +6,7 @@ Key facts (verified July 2026):
 
 - Input: a single topic or idea typed in plain text; or paste your own script and choose "Use my script as is" for word-for-word narration.
 - Output: a finished 9:16 vertical Short (MP4) with script, AI voiceover, visuals and captions, ready to post on YouTube Shorts, TikTok or Instagram Reels.
-- Generation time: Fast Mode is typically ready in about 60 seconds; AI Generated and Cinematic videos can take several minutes.
+- Generation time: measured Fast Mode completion is usually 2–4 minutes; in the seven-day sample ending July 23, 2026, 12 completed Fast renders had a 2.30-minute median and 3.50-minute p90. AI Generated and Cinematic videos can take longer because their scenes are generated before final composition.
 - Three engines: Fast Mode (curated stock footage, 1 credit/video), AI Generated (Seedance text-to-video scenes, 20 credits/video), Cinematic (Kling premium engine, 50 credits/video).
 - Free access: create, watch, download and share up to 3 watermarked Fast videos every 24 hours, with no credit card. Paid exports are watermark-free.
 - Users own every video they generate, including monetization rights.

@@ -201,12 +201,12 @@ export default function LoginPage() {
                 Turn ideas into viral Shorts.
               </h2>
               <p className="text-sm mb-8" style={{ color: 'var(--muted2)' }}>
-                AI script, footage, voiceover — done in 60 seconds.
+                AI script, footage, voiceover — usually done in 2–4 minutes.
               </p>
 
               <ul className="flex flex-col gap-4">
                 {[
-                  'AI writes the script in 60 seconds',
+                  'AI writes the script for you',
                   'Stock footage + voiceover included',
                   'New free accounts: 3 watermarked Fast videos / 24h',
                 ].map((line) => (

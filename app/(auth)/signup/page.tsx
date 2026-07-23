@@ -347,7 +347,7 @@ export default function SignupPage() {
 
               <ul className="flex flex-col gap-4">
                 {[
-                  'AI writes the script in 60 seconds',
+                  'AI writes the script for you',
                   'Stock footage + voiceover included',
                   'Create, download & share 3 watermarked Fast videos / 24h',
                 ].map((line) => (

@@ -185,7 +185,7 @@ function HeroDemoPhone({ clips = [] }: { clips?: (string | undefined)[] }) {
       </div>
       {/* floating proof badges */}
       <div className="hp-badge hp-badge-views">▶ 1.2M views</div>
-      <div className="hp-badge hp-badge-speed">⚡ rendered in 60s</div>
+      <div className="hp-badge hp-badge-speed">⚡ usually 2–4 min</div>
       <style jsx>{`
         .hp-wrap { position: relative; width: 280px; }
         .hp-frame {
@@ -1269,7 +1269,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
           <h2 className="font-display text-balance text-3xl font-bold tracking-tight sm:text-4xl text-[var(--text)] mb-3">
             This is what your AI{' '}
             <span style={{ background: 'linear-gradient(135deg,#22D3EE,#8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              generates in 60s.
+              usually generates in 2–4 minutes.
             </span>
           </h2>
           <p className="mx-auto max-w-lg text-[14px] text-[#94A3B8] leading-relaxed">

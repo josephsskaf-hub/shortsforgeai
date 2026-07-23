@@ -147,7 +147,7 @@ RULES:
       ])
       const isFreePlan = !PAID_PLANS.has(((planRow?.plan ?? 'free') as string).toLowerCase())
       if (isFreePlan) {
-        finalDescription = `${description}\n\n⚡ Made with Kineo — create Shorts like this in 1 minute: https://www.usekineo.com?utm_source=video_desc`
+        finalDescription = `${description}\n\n⚡ Made with Kineo — create Shorts like this, usually in 2–4 minutes: https://www.usekineo.com?utm_source=video_desc`
       }
     } catch {
       // best-effort: on any failure ship the clean description

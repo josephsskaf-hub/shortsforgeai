@@ -83,7 +83,7 @@ export default function FacelessVideoGeneratorPage() {
     '@type': 'HowTo',
     name: 'How to create a faceless video from a prompt',
     description: 'Create a finished vertical faceless Short from one topic with Kineo.',
-    totalTime: 'PT1M',
+    totalTime: 'PT4M',
     step: STEPS.map(([number, title, description]) => ({
       '@type': 'HowToStep',
       position: Number(number),

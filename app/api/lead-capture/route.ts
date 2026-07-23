@@ -34,7 +34,7 @@ async function sendLeadMagnet(email: string): Promise<void> {
   const list = VIRAL_IDEAS.map((idea, i) => `${i + 1}. ${idea}`).join('\n')
   const text = `Hey,
 
-Here are your 10 viral Short ideas — pick any one and you have a video in 60 seconds:
+Here are your 10 viral Short ideas — pick any one and you can have a video in 2–4 minutes:
 
 ${list}
 
@@ -52,7 +52,7 @@ usekineo.com`
   const html = `
 <div style="font-family:Arial,sans-serif;color:#111;">
   <p style="font-size:15px;">Hey,</p>
-  <p style="font-size:15px;">Here are your <b>10 viral Short ideas</b> — pick any one and you have a video in 60 seconds:</p>
+  <p style="font-size:15px;">Here are your <b>10 viral Short ideas</b> — pick any one and you can have a video in 2–4 minutes:</p>
   ${ideasHtml}
   <p style="font-size:15px;margin-top:16px;">Want to turn one into a real Short right now? Type it into Kineo — the AI writes the script, voiceover, captions and finds the footage. <b>Create up to 3 watermarked Fast videos every 24 hours, no card needed.</b></p>
   <p style="margin:20px 0;">

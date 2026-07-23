@@ -71,6 +71,7 @@ The earlier sprint established and reported the following production baseline:
 - **#73** added a privacy-safe source-to-subscription funnel and found TAAFT supplied 17 of 23 seven-day signups but only three completed videos and zero checkout sessions. It then removed the same currency surprise from the highest-intent post-video clean-export CTA and centralized Stripe, pricing, geo, and post-video amounts in one shared price source.
 - **#74** removes the last verified currency surprise from the embedded pricing cards inside `/generate`. Their monthly, first-month, and renewal amounts now come from the same BRL/USD/INR source as Stripe, and the source funnel measures local-price exposure through plan click and recurring subscription.
 - **#75** removes the residual hardcoded USD amount from the inline Starter CTA found during the PUSH #74 production smoke, leaving the entire card currency-consistent before Checkout.
+- **#76** aligns the full public acquisition and answer-engine cluster with measured Fast timing. Twenty-four surfaces no longer promise 60-second generation; `llms.txt` and `/facts` now publish the verified seven-day sample of 12 completed Fast renders, 2.30-minute median, and 3.50-minute p90.
 
 ### Product and conversion support
 
@@ -87,7 +88,7 @@ The earlier sprint established and reported the following production baseline:
 - Faceless video generator: `https://www.usekineo.com/faceless-video-generator`
 - Affiliate program: `https://www.usekineo.com/partners`
 - SaaSHub bridge: `https://www.usekineo.com/from-saashub`
-- Latest verified application commit before PUSH #74: `8bb49e8` (PUSH #73).
+- Latest verified application commit before PUSH #76: `5b48796` (PUSH #75).
 - Latest Vercel deployment inspected as **READY**.
 - `HEAD` equals `origin/main`.
 - Local production build passed; known dynamic-cookie warnings remain non-blocking.
@@ -128,6 +129,8 @@ The first post-hotfix live Fast test completed successfully, but it took 6.22 mi
 The current Stripe route itself passed a no-payment live smoke: it showed the Starter first-month discount, the correct renewal, Link/card checkout, and expiration recovery. The isolated trust defect was the transition into Stripe: a Brazilian visitor saw USD on `/pricing` and BRL only after clicking. PUSH #72 makes BRL, INR, and USD display prices match the server-authoritative checkout table and adds daily abandonment measurement. No payment was entered during the smoke test.
 
 Source-level measurement then isolated the next conversion leak. TAAFT supplied 17 of 23 seven-day signups, but only nine started generation, three completed a video, three saw the post-video offer, none clicked the clean-export CTA, and none opened recurring Checkout. ChatGPT supplied only four signups, but two completed videos and both opened recurring Checkout. Four historical TAAFT Fast jobs were mature without a completed video and predated the repaired Fast path. PUSH #73 now measures every source through subscription and makes the post-video offer use the same local-currency price source as Stripe.
+
+The most recent activation failure was timestamped before PUSH #57. A later controlled production render passed the repaired Fast-to-Compose path, so no second activation hotfix was justified without new post-fix evidence. The next acquisition decision therefore follows the best observed source quality: ChatGPT supplied two recurring Checkout Sessions from four signups. PUSH #76 improves the consistency and citability of the public facts used by search and answer engines, removing obsolete 60-second claims that contradicted measured production timing.
 
 The same production pass found one remaining inconsistent surface: the embedded pricing cards in `/generate` still showed USD in Brazil. PUSH #74 localizes those cards from the shared server-aligned price table, avoids an incorrect USD flash while geo resolves, and measures currency exposure and plan clicks by source. Stripe remains server-authoritative; the browser does not supply the Checkout currency.
 

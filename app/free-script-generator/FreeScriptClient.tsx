@@ -176,7 +176,7 @@ export default function FreeScriptClient() {
         </p>
           <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>From script to finished Short</h2>
           <p style={{ margin: 0 }}>
-            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16) in about 60 seconds. <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', placement: 'explainer', autoanalyze: lines.length > 0 }); void trackEvent('organic_cta_clicked', { source: 'push22_script_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>Create this Short →</Link>
+            A script is step one. Inside Kineo, the same idea becomes a finished, ready-to-post video — AI voiceover, matched footage and captions, rendered vertical (9:16), usually in 2–4 minutes. <Link href={createShortHref} onClick={() => { void trackEvent('free_script_to_signup_clicked', { destination: 'generate', placement: 'explainer', autoanalyze: lines.length > 0 }); void trackEvent('organic_cta_clicked', { source: 'push22_script_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>Create this Short →</Link>
           </p>
         </section>
       </div>

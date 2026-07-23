@@ -266,7 +266,7 @@ export default function MyVideosClient({ videos }: { videos: VideoRow[] }) {
             No videos yet — let&apos;s make your first Short!
           </h2>
           <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
-            Generate your first AI Short in 60 seconds. It&apos;s free.
+            Generate your first AI Short, usually in 2–4 minutes. It&apos;s free.
           </p>
           <Link
             href="/generate"

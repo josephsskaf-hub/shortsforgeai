@@ -87,7 +87,7 @@ export default function TextToVideoShortsPage() {
     '@type': 'HowTo',
     name: 'How to turn text into a YouTube Short',
     description: 'Use Kineo to turn a topic, prompt, or script into a finished 9:16 Short.',
-    totalTime: 'PT1M',
+    totalTime: 'PT4M',
     step: STEPS.map((step) => ({
       '@type': 'HowToStep',
       position: Number(step.n),

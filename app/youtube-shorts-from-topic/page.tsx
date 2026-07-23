@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     'Type a topic and get a finished faceless YouTube Short — script, AI voiceover, footage and captions. Try up to 3 watermarked Fast videos every 24h; Starter is $4.90 for the first month.',
   alternates: { canonical: 'https://www.usekineo.com/youtube-shorts-from-topic' },
   openGraph: {
-    title: 'Make a YouTube Short From a Topic — generated in 60 seconds',
+    title: 'Make a YouTube Short From a Topic — usually ready in 2–4 minutes',
     description:
       'One topic in, a ready-to-post 9:16 Short out: script, voiceover, footage and captions. Try Fast free; Starter is $4.90 for the first month.',
     url: 'https://www.usekineo.com/youtube-shorts-from-topic',
@@ -40,11 +40,11 @@ export const metadata: Metadata = {
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '1', t: 'Type a topic (or paste a script)', d: 'One sentence is enough — "the island too dangerous to visit", "how compound interest works". Or paste your own script and it narrates it word-for-word.' },
   { n: '2', t: 'AI builds the whole video', d: 'It writes a hook-first script, generates the voiceover, finds footage matched to each line, and burns in captions — automatically.' },
-  { n: '3', t: 'Download a ready-to-post Short', d: 'A finished 9:16 video for YouTube Shorts, TikTok and Reels in about 60 seconds. No editor, no timeline.' },
+  { n: '3', t: 'Download a ready-to-post Short', d: 'A finished 9:16 video for YouTube Shorts, TikTok and Reels, usually ready in 2–4 minutes. No editor, no timeline.' },
 ]
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'Is there an AI that makes a YouTube Short from just a topic?', a: 'Yes. Kineo turns a single topic into a finished faceless Short — it writes the script, records the AI voiceover, finds matching footage and adds captions, then renders a ready-to-post 9:16 video in about 60 seconds. You never film anything.' },
+  { q: 'Is there an AI that makes a YouTube Short from just a topic?', a: 'Yes. Kineo turns a single topic into a finished faceless Short — it writes the script, records the AI voiceover, finds matching footage and adds captions, then renders a ready-to-post 9:16 video, usually in 2–4 minutes. You never film anything.' },
   { q: 'Can I make a YouTube Short from a script, narrated word-for-word?', a: 'Yes. Paste your own script and Kineo narrates it verbatim, matches footage to each line and captions it — no editing or timeline required.' },
   { q: 'What is the cheapest AI to make YouTube Shorts from an idea?', a: 'Kineo lets a new account create, download and share up to 3 watermarked Fast videos every 24 hours without a card. Starter costs $4.90 for the first month, then $9.90/month, with a 7-day money-back guarantee.' },
   { q: 'How is this different from OpusClip or Submagic?', a: 'OpusClip and Submagic re-clip or caption a long video you already filmed. Kineo generates the entire video from a topic — ideal for faceless creators who start with nothing but an idea.' },
@@ -62,7 +62,7 @@ export default function YouTubeShortsFromTopicPage() {
     '@type': 'HowTo',
     name: 'How to make a YouTube Short from a topic',
     description: 'Turn one topic into a scripted, voiced, captioned 9:16 Short with Kineo.',
-    totalTime: 'PT1M',
+    totalTime: 'PT4M',
     step: STEPS.map((step) => ({
       '@type': 'HowToStep',
       position: Number(step.n),
@@ -97,7 +97,7 @@ export default function YouTubeShortsFromTopicPage() {
           Turn Any Topic Into a Finished YouTube Short
         </h1>
         <p style={{ fontSize: '1.08rem', color: '#86868b', lineHeight: 1.6, margin: '16px 0 0' }}>
-          Type one topic — or paste a script — and Kineo generates the whole faceless Short for you: the hook and script, an AI voiceover, footage matched to every line, and captions. A ready-to-post 9:16 video in about 60 seconds. No camera, no editing, no timeline to learn.
+          Type one topic — or paste a script — and Kineo generates the whole faceless Short for you: the hook and script, an AI voiceover, footage matched to every line, and captions. A ready-to-post 9:16 video, usually in 2–4 minutes. No camera, no editing, no timeline to learn.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '26px 0 0' }}>
           <OrganicCtaLink href="#try-a-topic" source="push43_topic_form" placement="hero" style={{ background: '#f5f5f7', color: '#000', fontWeight: 800, padding: '14px 26px', borderRadius: 980, textDecoration: 'none' }}>Make a Fast video free →</OrganicCtaLink>
