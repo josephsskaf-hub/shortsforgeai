@@ -33,6 +33,10 @@ const PUSH65_SAASHUB_CAMPAIGN = 'push65_saashub_directory_bridge'
 const PUSH65_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:20:00.000Z')
 const PUSH66_FACELESS_GENERATOR_CAMPAIGN = 'push66_faceless_video_generator'
 const PUSH66_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:30:00.000Z')
+const PUSH69_HOME_STARTERS_CAMPAIGN = 'push69_home_one_click_starters'
+// Starts after the production deployment and smoke test. This isolates the new
+// one-click topic starters from the prior prompt-only homepage cohort.
+const PUSH69_LAUNCHED_AT_MS = Date.parse('2026-07-23T15:10:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -170,6 +174,7 @@ async function main() {
     PUSH63_LAUNCHED_AT_MS,
     PUSH65_LAUNCHED_AT_MS,
     PUSH66_LAUNCHED_AT_MS,
+    PUSH69_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -1511,6 +1516,94 @@ async function main() {
       }),
   )
 
+  const push69HomeViewed = stage(
+    experimentEvents,
+    'home_prompt_first_viewed',
+    (row) => row.metadata?.source === PUSH69_HOME_STARTERS_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69StarterClicked = stage(
+    experimentEvents,
+    'home_topic_starter_clicked',
+    (row) => row.metadata?.source === PUSH69_HOME_STARTERS_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH69_HOME_STARTERS_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH69_HOME_STARTERS_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push69SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH69_HOME_STARTERS_CAMPAIGN ||
+      push69AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push69SignupIds = new Set(push69SignupProfiles.map((profile) => profile.id))
+  const push69ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => row.metadata?.campaign === PUSH69_HOME_STARTERS_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push69SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push69PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => (row.metadata?.source === PUSH69_HOME_STARTERS_CAMPAIGN ||
+      (Boolean(row.user_id) && push69SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => (row.metadata?.intent_campaign === PUSH69_HOME_STARTERS_CAMPAIGN ||
+      (Boolean(row.user_id) && push69SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => (row.metadata?.intent_campaign === PUSH69_HOME_STARTERS_CAMPAIGN ||
+      (Boolean(row.user_id) && push69SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH69_LAUNCHED_AT_MS,
+  )
+  const push69RecurringSessions = experimentRecurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH69_LAUNCHED_AT_MS) return false
+    if (session.metadata?.intent_campaign === PUSH69_HOME_STARTERS_CAMPAIGN) return true
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    return Boolean(profile?.id) && push69SignupIds.has(profile.id)
+  })
+  const push69ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription, profile }) =>
+    (subscription.created || 0) * 1000 >= PUSH69_LAUNCHED_AT_MS && (
+      subscription.metadata?.intent_campaign === PUSH69_HOME_STARTERS_CAMPAIGN ||
+      (Boolean(profile?.id) && push69SignupIds.has(profile.id))
+    ),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -1839,6 +1932,29 @@ async function main() {
           activeSubscriptions: push66ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
           trialingSubscriptions: push66ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
           paidRecurringCustomers: push66PaidRecurringCustomers.size,
+        },
+      },
+      push69HomeOneClickStarters: {
+        measurementStartsAt: new Date(PUSH69_LAUNCHED_AT_MS).toISOString(),
+        viewed: push69HomeViewed,
+        starterClicked: push69StarterClicked,
+        topicSubmitted: push69TopicSubmitted,
+        signups: push69SignupProfiles.length,
+        activationAutostartDispatched: push69ActivationDispatched,
+        completedFirstVideoUsers: push69CompletedVideoUsers.size,
+        monetization: {
+          pricingViewed: push69PricingViewed,
+          checkoutAttempted: push69CheckoutAttempted,
+          checkoutStarted: push69CheckoutStarted,
+          recurringStripeSessions: {
+            total: push69RecurringSessions.length,
+            open: push69RecurringSessions.filter((session) => session.status === 'open').length,
+            complete: push69RecurringSessions.filter((session) => session.status === 'complete').length,
+            expired: push69RecurringSessions.filter((session) => session.status === 'expired').length,
+            paid: push69RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push69ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push69ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
         },
       },
     },

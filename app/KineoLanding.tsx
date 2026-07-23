@@ -46,6 +46,14 @@ const KLP_CSS = `
 .klp .composer .ci{flex:1;width:100%;min-height:170px;resize:none;background:transparent;border:none;outline:none;color:var(--txt);font-size:17px;line-height:1.5;font-family:inherit;padding:6px 2px}
 .klp .composer .ci::placeholder{color:var(--muted2)}
 .klp .composer .cbtn{align-self:flex-end;white-space:nowrap;padding:14px 28px;font-size:15.5px;border-radius:13px}
+.klp .composer-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.klp .composer-head label{font-size:14px;font-weight:700;color:var(--txt)}
+.klp .composer-head span{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
+.klp .topic-starters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted2);font-size:12px}
+.klp .topic-starters>div{display:flex;gap:8px;flex-wrap:wrap}
+.klp .topic-starters button{border:1px solid var(--line2);background:#111113;color:#d2d2d7;border-radius:999px;padding:7px 11px;font:inherit;font-weight:650;cursor:pointer;transition:.18s}
+.klp .topic-starters button:hover,.klp .topic-starters button:focus-visible{border-color:var(--blue);color:#fff;outline:none;background:rgba(41,151,255,.1)}
+.klp .composer-proof{font-size:12px;line-height:1.45;color:var(--muted2);text-align:right}
 .klp .hl .trust{margin-top:15px;font-size:13.5px;color:var(--muted2)}
 .klp .hl .trust b{color:var(--txt);font-weight:600}
 .klp .hr{display:flex;justify-content:center}
@@ -123,7 +131,7 @@ const KLP_CSS = `
 @media(max-width:880px){.klp .hero-grid{grid-template-columns:1fr;gap:44px;text-align:center}.klp .hl h1{margin-left:auto;margin-right:auto}.klp .hl .sub{margin-left:auto;margin-right:auto}.klp .composer{margin-left:auto;margin-right:auto}.klp .price{grid-template-columns:1fr;max-width:400px;margin:0 auto}}
 @media(max-width:820px){.klp .grid4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:780px){.klp .steps{grid-template-columns:1fr}.klp .nav-links{display:none}}
-@media(max-width:520px){.klp .composer{flex-direction:column;align-items:stretch;padding:14px;gap:12px}}
+@media(max-width:520px){.klp .composer{flex-direction:column;align-items:stretch;padding:14px;gap:12px}.klp .composer .cbtn{align-self:stretch;justify-content:center}.klp .composer-proof{text-align:center}.klp .topic-starters{align-items:flex-start;flex-direction:column}}
 .klp .hero-center{position:relative;z-index:1;text-align:center;max-width:760px;margin:0 auto}
 .klp .hero-center h1{margin:0 auto;font-size:clamp(3rem,7.4vw,5.8rem);font-weight:600;line-height:1.03;letter-spacing:-.04em}
 .klp .hero-center .sub{margin-left:auto;margin-right:auto}
