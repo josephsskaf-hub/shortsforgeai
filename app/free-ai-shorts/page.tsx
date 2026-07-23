@@ -7,7 +7,7 @@ import { NICHE_SLUGS } from './[niche]/page'
 export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
-  title: 'Free AI Shorts Generator by Niche — 14 Faceless Formats | Kineo',
+  title: 'Free AI Shorts Generator by Niche — 22 Faceless Formats | Kineo',
   description:
     'Pick a niche and turn one idea into a complete faceless Short with script, voice, footage and captions. Create up to 3 watermarked Fast videos every 24h, no card.',
   alternates: { canonical: 'https://www.usekineo.com/free-ai-shorts' },
@@ -39,6 +39,14 @@ const NICHE_CARDS: Record<string, { label: string; title: string; example: strin
   science: { label: 'Science', title: 'Science Shorts', example: 'The experiment that changed what we know' },
   conspiracy: { label: 'Conspiracy & Secrets', title: 'Conspiracy Shorts', example: 'The document that stayed classified for decades' },
   luxury: { label: 'Luxury & Billionaires', title: 'Luxury Shorts', example: 'What a superyacht really costs every day' },
+  stoicism: { label: 'Stoicism & Philosophy', title: 'Stoicism Shorts', example: 'The Stoic rule that kills anxiety in seconds' },
+  crypto: { label: 'Crypto & Investing', title: 'Crypto Shorts', example: 'The investing mistake that wipes out beginners' },
+  business: { label: 'Business & Startups', title: 'Business Shorts', example: 'Why most startups die in the first year' },
+  fitness: { label: 'Fitness & Gym', title: 'Fitness Shorts', example: 'The 20-minute habit that changes your body' },
+  relationships: { label: 'Relationships & Dating', title: 'Relationship Shorts', example: 'The one text that changes how they see you' },
+  horror: { label: 'Scary Stories & Horror', title: 'Horror Shorts', example: 'The 3am rule you should never break' },
+  celebrity: { label: 'Celebrity & Fame', title: 'Celebrity Shorts', example: 'The clause that ended a career overnight' },
+  animals: { label: 'Animals & Nature', title: 'Animal Shorts', example: 'The creature that can survive being frozen' },
 }
 
 const FAQ = [
@@ -103,7 +111,7 @@ export default function FreeAiShortsHubPage() {
             14 formats with ideas ready to generate
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
-            {NICHE_SLUGS.map((slug) => {
+            {NICHE_SLUGS.filter((slug) => NICHE_CARDS[slug]).map((slug) => {
               const niche = NICHE_CARDS[slug]
               return (
                 <Link key={slug} href={`/free-ai-shorts/${slug}`} style={{ ...CARD, display: 'block', borderRadius: 16, padding: '18px 20px', textDecoration: 'none', color: 'inherit' }}>
