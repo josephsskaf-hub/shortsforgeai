@@ -19,7 +19,9 @@ export const metadata: Metadata = {
   },
 }
 
-const SIGNUP_URL = '/signup?utm_source=seo&utm_medium=organic&utm_campaign=push22_niche_hub'
+const HUB_CAMPAIGN = 'push63_niche_activation_hub'
+const HUB_STARTER_PROMPT = 'The island nobody is allowed to visit'
+const SIGNUP_URL = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${HUB_CAMPAIGN}&intent_campaign=${HUB_CAMPAIGN}&create_intent=fast&prompt=${encodeURIComponent(HUB_STARTER_PROMPT)}`
 const CARD = { background: '#161618', border: '1px solid #2a2a2d' }
 
 const NICHE_CARDS: Record<string, { label: string; title: string; example: string }> = {
@@ -85,7 +87,7 @@ export default function FreeAiShortsHubPage() {
           </p>
           <OrganicCtaLink
             href={SIGNUP_URL}
-            source="push22_niche_hub"
+            source={HUB_CAMPAIGN}
             placement="hero"
             style={{ display: 'inline-block', marginTop: 24, background: '#f5f5f7', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 980, textDecoration: 'none', fontSize: '1.02rem' }}
           >
@@ -136,7 +138,7 @@ export default function FreeAiShortsHubPage() {
           <p style={{ color: '#86868b', margin: '9px 0 18px' }}>Try Fast free. Upgrade only when you want a clean export or premium AI scenes.</p>
           <OrganicCtaLink
             href={SIGNUP_URL}
-            source="push22_niche_hub"
+            source={HUB_CAMPAIGN}
             placement="final"
             style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 980, textDecoration: 'none' }}
           >

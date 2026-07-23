@@ -227,9 +227,10 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
   const n = NICHES[params.niche]
   if (!n) notFound()
 
-  const campaign = `push22_niche_${params.niche}`
-  const signupUrl = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}`
+  const campaign = `push63_niche_${params.niche}`
+  const signupUrl = `/signup?utm_source=seo&utm_medium=organic&utm_campaign=${campaign}&intent_campaign=${campaign}&create_intent=fast`
   const signupUrlForIdea = (idea: string) => `${signupUrl}&prompt=${encodeURIComponent(idea)}`
+  const primaryIdea = n.ideas[0]
 
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#f5f5f7', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -250,7 +251,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
             Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#2997ff' }}>up to 3 watermarked Fast videos / 24h</b>, no card
           </p>
           <OrganicCtaLink
-            href={signupUrl}
+            href={signupUrlForIdea(primaryIdea)}
             source={campaign}
             placement="hero"
             style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}
@@ -297,7 +298,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
           <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0 }}>Make a {n.label} Fast video free</h2>
           <p style={{ color: '#CBD5E1', margin: '8px 0 18px', fontSize: '0.95rem' }}>Up to 3 watermarked Fast videos every 24h. No card. Starter is $4.90 for the first month when you want clean exports.</p>
           <OrganicCtaLink
-            href={signupUrl}
+            href={signupUrlForIdea(primaryIdea)}
             source={campaign}
             placement="final"
             style={{ display: 'inline-block', background: '#2997ff', color: '#000', fontWeight: 900, padding: '14px 30px', borderRadius: 12, textDecoration: 'none', fontSize: '1.02rem' }}
