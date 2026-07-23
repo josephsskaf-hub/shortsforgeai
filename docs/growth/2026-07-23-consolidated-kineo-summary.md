@@ -70,6 +70,7 @@ The earlier sprint established and reported the following production baseline:
 - **#72** audited recurring Stripe Checkout abandonment, found 39 of 39 external sessions expired and unpaid in 30 days, and removed a verified currency surprise: Brazilian visitors saw USD on `/pricing` before Stripe correctly switched to BRL. Pricing now mirrors the server-authoritative BRL/USD/INR table without accepting client currency overrides, and the daily operating system gains a privacy-safe checkout report.
 - **#73** added a privacy-safe source-to-subscription funnel and found TAAFT supplied 17 of 23 seven-day signups but only three completed videos and zero checkout sessions. It then removed the same currency surprise from the highest-intent post-video clean-export CTA and centralized Stripe, pricing, geo, and post-video amounts in one shared price source.
 - **#74** removes the last verified currency surprise from the embedded pricing cards inside `/generate`. Their monthly, first-month, and renewal amounts now come from the same BRL/USD/INR source as Stripe, and the source funnel measures local-price exposure through plan click and recurring subscription.
+- **#75** removes the residual hardcoded USD amount from the inline Starter CTA found during the PUSH #74 production smoke, leaving the entire card currency-consistent before Checkout.
 
 ### Product and conversion support
 

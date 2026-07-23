@@ -14,6 +14,7 @@ This recreated the trust break fixed on `/pricing`: the displayed amount changed
 - Brazil sees BRL, India sees INR, and all other countries see USD.
 - Until the display-only lookup resolves, the cards show a neutral loading state instead of flashing USD.
 - Monthly, first-month, and renewal amounts come from `lib/checkoutPricing.ts`, the same shared source used by Stripe Checkout.
+- CTA labels are currency-neutral, so an unselected Starter card cannot retain a stale USD amount while the card itself displays BRL or INR.
 - The browser never chooses or sends a currency to Checkout. The server remains authoritative and resolves it again from the request country.
 - The cards explicitly state which currency is displayed and that Stripe uses the same currency.
 
@@ -35,4 +36,3 @@ This creates the measurable sequence:
 - `npm.cmd run build`: passed.
 - Known dynamic-cookie/static-generation warnings remained non-blocking.
 - Production validation must confirm BRL inside `/generate` and the matching BRL amount in Stripe without entering payment details.
-

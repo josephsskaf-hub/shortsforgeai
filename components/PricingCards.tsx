@@ -243,9 +243,7 @@ export default function PricingCards({
             label:
               purchasing === 'starter'
                 ? 'Loading…'
-                : selectedPlan === 'starter'
-                  ? 'Continue with Starter'
-                  : PLANS.starter.cta,
+                : 'Continue with Starter',
             onClick: () => handleBuy('starter'),
             loading: purchasing === 'starter',
           }}
