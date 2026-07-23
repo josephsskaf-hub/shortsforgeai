@@ -201,7 +201,7 @@ export default function KineoLanding({ initialUser }: Props) {
             </div>
           </div>
           <HeroGallery />
-          <p className="gallery-cap">Real Kineo exports, not mockups. Each started with one topic — script, voice, footage and captions, automatically. <Link href="/youtube-shorts-from-topic">See the topic-to-Short workflow →</Link></p>
+          <p className="gallery-cap">Real Kineo exports, not mockups. Each started with one topic — script, voice, footage and captions, automatically. <Link href="/free-ai-shorts-generator">Try the free AI Shorts generator →</Link> · <Link href="/text-to-video-shorts">Text-to-video workflow →</Link></p>
           <div className="platforms">Built for <b>YouTube Shorts</b> · <b>TikTok</b> · <b>Reels</b></div>
         </div>
       </header>
@@ -294,11 +294,11 @@ export default function KineoLanding({ initialUser }: Props) {
               <p>Today&apos;s trending topics, ready to turn into a Short with one click.</p>
               <span className="tlink">See what&apos;s trending →</span>
             </Link>
-            <Link href="/channel" className="tcard">
-              <span className="ti">📺</span>
-              <h3>Channel Builder</h3>
-              <p>Pick a winning niche with real RPM, growth and competition data.</p>
-              <span className="tlink">Find your niche →</span>
+            <Link href="/free-ai-shorts-generator" className="tcard">
+              <span className="ti">⚡</span>
+              <h3>Free AI Shorts</h3>
+              <p>Type one idea and test the full Fast workflow with no card.</p>
+              <span className="tlink">Generate free →</span>
             </Link>
           </div>
         </div>

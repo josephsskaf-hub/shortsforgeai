@@ -27,7 +27,9 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
     title: 'Product',
     links: [
       { href: '/viral-now', label: 'Trending Shorts ideas today' },
+      { href: '/free-ai-shorts-generator', label: 'Free AI Shorts generator' },
       { href: '/youtube-shorts-from-topic', label: 'YouTube Shorts from a topic' },
+      { href: '/text-to-video-shorts', label: 'Text to video Shorts' },
       { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },
       { href: '/ai-shorts-without-filming', label: 'Shorts without filming' },
       { href: '/faceless-channel-ideas', label: 'Faceless channel ideas (2026)' },
@@ -38,6 +40,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
   {
     title: 'Free tools',
     links: [
+      { href: '/free-ai-shorts-generator', label: 'Free AI Shorts generator' },
       { href: '/free-ai-shorts', label: 'Free AI Shorts by niche' },
       { href: '/free-script-generator', label: 'Free script generator' },
       { href: '/free-hook-generator', label: 'Free hook generator' },

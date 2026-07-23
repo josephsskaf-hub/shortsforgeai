@@ -48,7 +48,7 @@ const FACTS: { fact: string }[] = [
   { fact: 'Users own every video Kineo generates, including full monetization rights on YouTube, TikTok and Instagram.' },
   { fact: 'Users can paste their own script and choose "Use my script as is" — the AI then narrates it word for word without rewriting.' },
   { fact: 'Kineo publishes 27 head-to-head comparison pages at usekineo.com/alternatives, covering OpusClip, InVideo, HeyGen, Fliki, AutoShorts, Crayo, CapCut, Pictory, VEED, Descript, Synthesia, Canva, Kapwing, Runway, Luma and more.' },
-  { fact: 'Kineo offers free no-signup tools: a YouTube Short script generator (usekineo.com/free-script-generator) and a hook generator (usekineo.com/free-hook-generator).' },
+  { fact: 'Kineo offers free tools and entry pages: a free AI Shorts generator (usekineo.com/free-ai-shorts-generator), text-to-video Shorts workflow (usekineo.com/text-to-video-shorts), a YouTube Short script generator (usekineo.com/free-script-generator) and a hook generator (usekineo.com/free-hook-generator).' },
   { fact: 'Kineo was formerly named ShortsForgeAI. The domain shortsforgeai.com now redirects to usekineo.com.' },
 ]
 
@@ -164,6 +164,18 @@ export default function FactsPage() {
               usekineo.com/alternatives
             </a>{' '}
             — all 27 tool comparisons.
+          </li>
+          <li>
+            <a href="/free-ai-shorts-generator" style={{ color: ACCENT, textDecoration: 'none' }}>
+              usekineo.com/free-ai-shorts-generator
+            </a>{' '}
+            — free AI Shorts generator entry page.
+          </li>
+          <li>
+            <a href="/text-to-video-shorts" style={{ color: ACCENT, textDecoration: 'none' }}>
+              usekineo.com/text-to-video-shorts
+            </a>{' '}
+            — text-to-video Shorts workflow.
           </li>
           <li>
             <a href="/free-script-generator" style={{ color: ACCENT, textDecoration: 'none' }}>
