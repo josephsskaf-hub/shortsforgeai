@@ -14,8 +14,17 @@
 // component is only rendered for signed-in users (inside /generate), so a
 // 401 just means the session expired — we fall back to /login.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PLANS } from '@/lib/pricing'
+import {
+  CURRENCY_DISPLAY,
+  INTRO_PRICES,
+  TIER_PRICES,
+  formatCheckoutMoney,
+  type CheckoutCurrency,
+  type CheckoutTier,
+} from '@/lib/checkoutPricing'
+import { trackEvent } from '@/lib/analytics'
 
 // Push #078 — feature copy now derives from lib/pricing.ts so credit
 // counts can't drift between the homepage, /pricing, and this in-flow
@@ -64,6 +73,7 @@ export default function PricingCards({
   intentCampaign?: string | null
 }) {
   const [purchasing, setPurchasing] = useState<'starter' | 'basic' | 'pro' | null>(null)
+  const [displayCurrency, setDisplayCurrency] = useState<CheckoutCurrency | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Push #171 — show a clear "already subscribed" banner instead of
   // silently redirecting to /generate on duplicate purchase attempts.
@@ -75,11 +85,41 @@ export default function PricingCards({
   // the one primary plan everywhere).
   const [selectedPlan, setSelectedPlan] = useState<'starter' | 'basic' | 'pro' | null>('basic')
 
+  // PUSH #74 — display the same server-selected currency the customer will
+  // see in Stripe. Checkout still resolves currency independently and never
+  // trusts the browser. Keeping this null until /api/geo responds prevents a
+  // misleading USD flash for Brazilian and Indian visitors.
+  useEffect(() => {
+    let cancelled = false
+
+    void fetch('/api/geo', { cache: 'no-store', credentials: 'same-origin' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('geo_lookup_failed')
+        const data = await response.json() as { currency?: string }
+        const currency: CheckoutCurrency =
+          data.currency === 'brl' || data.currency === 'inr' ? data.currency : 'usd'
+        if (cancelled) return
+        setDisplayCurrency(currency)
+        void trackEvent('inline_pricing_currency_resolved', {
+          display_currency: currency,
+          currency_label: CURRENCY_DISPLAY[currency].label,
+          pricing_surface: 'generate_step_1',
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayCurrency('usd')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Push #173 — use direct GET navigation to bypass iOS Safari async block.
   // The server-side GET handler creates the Stripe session and issues a 302
   // redirect, so no fetch/await is needed here and the user gesture is
   // preserved across all browsers including mobile Safari.
-  function handleBuy(tier: 'starter' | 'basic' | 'pro') {
+  function handleBuy(tier: CheckoutTier) {
     setPurchasing(tier)
     // KINEO-INTRO-MONTH-2026-07-13 — Starter/Creator levam o 1º mês com
     // desconto ($4.90/$9.90); o servidor valida elegibilidade (1 por conta).
@@ -87,7 +127,31 @@ export default function PricingCards({
     const campaignParam = intentCampaign
       ? `&intent_campaign=${encodeURIComponent(intentCampaign)}`
       : ''
+    void trackEvent('inline_pricing_checkout_clicked', {
+      tier,
+      display_currency: displayCurrency ?? 'resolving',
+      displayed_price_minor: displayCurrency ? TIER_PRICES[tier][displayCurrency] : null,
+      displayed_intro_price_minor:
+        displayCurrency && (tier === 'starter' || tier === 'basic')
+          ? INTRO_PRICES[tier][displayCurrency]
+          : null,
+      intro: tier === 'starter' || tier === 'basic',
+      pricing_surface: 'generate_step_1',
+    })
     window.location.href = `/api/stripe/checkout?tier=${tier}${introParam}${campaignParam}`
+  }
+
+  function priceFor(tier: CheckoutTier): string {
+    return displayCurrency
+      ? formatCheckoutMoney(displayCurrency, TIER_PRICES[tier][displayCurrency])
+      : '—'
+  }
+
+  function introNoteFor(tier: 'starter' | 'basic'): string {
+    if (!displayCurrency) return 'Checking your local first-month price…'
+    const intro = formatCheckoutMoney(displayCurrency, INTRO_PRICES[tier][displayCurrency])
+    const renewal = formatCheckoutMoney(displayCurrency, TIER_PRICES[tier][displayCurrency])
+    return `First month ${intro} — renews at ${renewal}/mo in 30 days, cancel anytime`
   }
 
   return (
@@ -105,6 +169,11 @@ export default function PricingCards({
         >
           Choose your plan
         </h2>
+        <p className="mt-2 text-xs" style={{ color: 'var(--muted)' }}>
+          {displayCurrency
+            ? `Prices shown in ${CURRENCY_DISPLAY[displayCurrency].label}. Stripe checkout uses the same currency.`
+            : 'Checking your local price…'}
+        </p>
       </div>
 
       {error && (
@@ -163,9 +232,9 @@ export default function PricingCards({
         <PlanCard
           tier="starter"
           name={PLANS.starter.name}
-          price={PLANS.starter.priceLabel}
+          price={priceFor('starter')}
           period="/ month"
-          renewNote="First month $4.90 — renews at $9.90/mo in 30 days, cancel anytime"
+          renewNote={introNoteFor('starter')}
           tagline="25 credits/month — up to 25 Fast videos from smart stock footage + AI voiceover."
           features={STARTER_FEATURES}
           selected={selectedPlan === 'starter'}
@@ -188,9 +257,9 @@ export default function PricingCards({
         <PlanCard
           tier="basic"
           name={PLANS.basic.name}
-          price={PLANS.basic.priceLabel}
+          price={priceFor('basic')}
           period="/ month"
-          renewNote="First month $9.90 — renews at $24.90/mo in 30 days, cancel anytime"
+          renewNote={introNoteFor('basic')}
           tagline="150 credits/month — 1 Hollywood film every month included."
           features={BASIC_FEATURES}
           badge="Most Popular"
@@ -214,7 +283,7 @@ export default function PricingCards({
         <PlanCard
           tier="pro"
           name={PLANS.pro.name}
-          price={PLANS.pro.priceLabel}
+          price={priceFor('pro')}
           period="/ month"
           tagline="Premium Kling engine + 200 credits — up to 10 AI or ~4 cinematic Shorts/month."
           features={PRO_FEATURES}

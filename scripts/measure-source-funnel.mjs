@@ -181,6 +181,12 @@ const sourceRows = sources.map((source) => {
   const postVideoCleanExportUsers = new Set(memberEvents
     .filter((event) => event.name === 'post_video_clean_export_clicked')
     .map((event) => event.user_id))
+  const inlinePricingCurrencyUsers = new Set(memberEvents
+    .filter((event) => event.name === 'inline_pricing_currency_resolved')
+    .map((event) => event.user_id))
+  const inlinePricingCheckoutUsers = new Set(memberEvents
+    .filter((event) => event.name === 'inline_pricing_checkout_clicked')
+    .map((event) => event.user_id))
   const failedUsers = new Set(memberEvents
     .filter((event) => event.name === 'video_generation_failed')
     .map((event) => event.user_id))
@@ -233,6 +239,8 @@ const sourceRows = sources.map((source) => {
     postVideoOfferViewed: postVideoOfferUsers.size,
     postVideoCurrencyResolved: postVideoCurrencyUsers.size,
     postVideoCleanExportClicked: postVideoCleanExportUsers.size,
+    inlinePricingCurrencyResolved: inlinePricingCurrencyUsers.size,
+    inlinePricingCheckoutClicked: inlinePricingCheckoutUsers.size,
     pricing: pricingUsers.size,
     checkoutAttempted: checkoutAttemptUsers.size,
     recurringSessions: sourceSessions.length,
@@ -245,6 +253,7 @@ const sourceRows = sources.map((source) => {
       signupToCompletedVideo: percentage(completedVideoUsers.size, members.length),
       completedVideoToOfferViewed: percentage(postVideoOfferUsers.size, completedVideoUsers.size),
       offerViewedToCleanExportClick: percentage(postVideoCleanExportUsers.size, postVideoOfferUsers.size),
+      inlinePricingToCheckoutClick: percentage(inlinePricingCheckoutUsers.size, inlinePricingCurrencyUsers.size),
       signupToPricing: percentage(pricingUsers.size, members.length),
       signupToRecurringSession: percentage(sourceSessions.length, members.length),
       signupToPaidSubscription: percentage(sourceSubscriptions.length, members.length),
