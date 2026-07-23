@@ -10,8 +10,6 @@ import type { Scene } from '@/lib/runway'
 import { getPixabayClipsForScene } from '@/lib/pixabay'
 // KINEO-FAST-V4 — self-building clip library: search it before any external API.
 import { searchVault } from '@/lib/clipVault'
-// KINEO-FAST-V4 — AI hook (Seedance) for each account's FIRST video only.
-import { buildHookPrompt, submitAiHook, awaitAiHook, type AiHookHandle } from '@/lib/fastAiHook'
 import { pickLibraryClips, type LibraryClip } from '@/lib/stockLibrary'
 // Push #351 — ensureAccessibleUrl removed (was only used for Pexels CDN proxying; Pexels now OFF).
 // import { ensureAccessibleUrl } from '@/lib/videoCache'
@@ -363,28 +361,6 @@ export async function POST(req: NextRequest) {
           { error: 'Failed to plan scenes. Please try a different prompt.' },
           { status: 500 }
         )
-      }
-    }
-
-    // KINEO-FAST-V4 — AI HOOK (first video of the account only). Submitted NOW
-    // so Seedance renders IN PARALLEL with the stock clip loop below; we await
-    // it (capped) after the loop. On any failure/timeout the stock hook stands.
-    let aiHookHandle: AiHookHandle | null = null
-    if (!verbatim && process.env.FAST_AI_HOOK !== 'false') {
-      try {
-        const { count: priorVideos } = await supabase
-          .from('videos')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-        if ((priorVideos ?? 0) === 0) {
-          const hookPrompt = buildHookPrompt(scenes[0]?.description ?? '', prompt.slice(0, 120))
-          aiHookHandle = await submitAiHook(hookPrompt)
-          if (aiHookHandle) {
-            console.log(`[generate-fast] FIRST VIDEO for user ${user.id.slice(0, 8)} — AI hook submitted (renders in parallel)`)
-          }
-        }
-      } catch (e) {
-        console.warn('[generate-fast] AI hook gate check failed (non-blocking):', e instanceof Error ? e.message : String(e))
       }
     }
 
@@ -741,20 +717,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // KINEO-FAST-V4 — collect the AI hook (submitted before the clip loop, so
-    // most of its render time overlapped the stock sourcing above). Budget: 55s
-    // inside our 120s route allowance. Success → the AI clip LEADS the video
-    // (first frames = Seedance); timeout/failure → stock hook stands untouched.
-    if (aiHookHandle) {
-      const hookUrl = await awaitAiHook(aiHookHandle, 55_000, scenes[0]?.stockSearchQuery ?? prompt.slice(0, 80))
-      if (hookUrl) {
-        clipUrls.unshift(hookUrl)
-        clipSources.unshift('pixabay') // metrics bucket (source detail is in logs)
-        console.log('[generate-fast] AI hook LEADS the timeline 🎬')
-      }
-    }
-
-    const filtered = clipUrls.filter((u) => typeof u === 'string' && u.length > 0)
+    // Fast is the free stock-footage path. AI-generated FAL media requires a
+    // signed premium generation claim in /api/compose, so it must never leave
+    // this route as Fast footage. A legacy first-video Seedance hook violated
+    // that contract and caused valid activation renders to fail at Compose.
+    // Keep the Compose guard and fail closed here too.
+    const filtered = clipUrls.filter(
+      (u) =>
+        typeof u === 'string' &&
+        u.length > 0 &&
+        !/^https:\/\/([a-z0-9-]+\.)*fal\.(media|run|ai)\//i.test(u),
+    )
     if (filtered.length === 0) {
       return NextResponse.json(
         { error: 'No stock footage could be sourced. Please try a different topic.' },
