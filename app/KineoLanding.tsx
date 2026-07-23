@@ -201,7 +201,7 @@ export default function KineoLanding({ initialUser }: Props) {
                 Line lengths kept ≤ ~15 chars so the h1 never wraps to a 3rd
                 line at the clamp's 5.8rem max inside the 760px container. */}
             <h1 className="gtxt">Launch your<br />AI Shorts show.</h1>
-            <p className="sub">Same face, same voice, same style — every episode. Script, voice, captions and scenes in ~60 seconds.</p>
+            <p className="sub">Same face, same voice, same style — every episode. Script, voice, captions and scenes in a few minutes.</p>
             <HomeTopicForm isSignedIn={isSignedIn} />
             {/* PROVA-SOCIAL-REAL-2026-07-02 — real DB counts; renders nothing if numbers are low/unavailable */}
             <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center' }}>

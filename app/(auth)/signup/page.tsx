@@ -324,7 +324,7 @@ export default function SignupPage() {
                 Start creating Shorts with AI
               </h2>
               <p className="text-sm mb-8" style={{ color: 'var(--muted2)' }}>
-                Script, footage, voiceover, captions — done in ~60s.
+                Script, footage, voiceover, captions — done in a few minutes.
               </p>
 
               <div

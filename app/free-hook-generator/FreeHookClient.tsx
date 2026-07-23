@@ -106,7 +106,7 @@ export default function FreeHookClient() {
 
         <section style={{ marginTop: 30, color: '#86868b', fontSize: '0.92rem', lineHeight: 1.65 }}>
           <h2 style={{ color: '#f5f5f7', fontSize: '1.15rem', fontWeight: 900, margin: '0 0 8px' }}>Why the hook decides everything</h2>
-          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} onClick={() => { void trackEvent('organic_cta_clicked', { source: 'push22_hook_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in ~60s →</Link></p>
+          <p style={{ margin: 0 }}>On YouTube Shorts and TikTok, the first 1-2 seconds decide whether your video gets watched or skipped. This free tool writes 5 pattern-interrupt hooks for any topic — the same hook logic that powers Kineo. Pick one, then <Link href={SIGNUP} onClick={() => { void trackEvent('organic_cta_clicked', { source: 'push22_hook_generator', placement: 'explainer' }) }} style={{ color: '#2997ff' }}>turn it into a finished faceless Short in a few minutes →</Link></p>
         </section>
       </div>
       <StickyFreeShortCTA />

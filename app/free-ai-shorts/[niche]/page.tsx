@@ -248,7 +248,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
             {n.intro}
           </p>
           <p style={{ fontSize: '0.85rem', color: '#86868b', margin: '10px 0 0' }}>
-            Script • Voiceover • Captions • Footage • Ready in ~60s · <b style={{ color: '#2997ff' }}>up to 3 watermarked Fast videos / 24h</b>, no card
+            Script • Voiceover • Captions • Footage • Ready in a few minutes · <b style={{ color: '#2997ff' }}>up to 3 watermarked Fast videos / 24h</b>, no card
           </p>
           <OrganicCtaLink
             href={signupUrlForIdea(primaryIdea)}
@@ -267,7 +267,7 @@ export default function NicheLandingPage({ params }: { params: { niche: string }
             {[
               { n: '1', t: 'Pick an idea', d: `Type any ${n.label.toLowerCase()} topic — or use one of the ready-made viral ideas below.` },
               { n: '2', t: 'AI builds the video', d: 'The script, voiceover, on-screen captions and footage are generated automatically.' },
-              { n: '3', t: 'Download & post', d: 'Get a vertical 9:16 MP4 in about a minute, ready for YouTube Shorts, TikTok or Reels.' },
+              { n: '3', t: 'Download & post', d: 'Get a vertical 9:16 MP4 in a few minutes, ready for YouTube Shorts, TikTok or Reels.' },
             ].map((s) => (
               <div key={s.n} style={{ ...CARD, borderRadius: 14, padding: 16 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{s.n}</div>

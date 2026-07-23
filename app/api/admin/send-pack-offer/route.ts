@@ -76,7 +76,7 @@ function emailHtml(): string {
   return `
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1e293b;line-height:1.6">
   <p>Hey — thanks for trying <b>Kineo</b> 🎬</p>
-  <p>You can turn any idea into a finished, faceless YouTube Short in about a minute — footage, voiceover, captions and music, done for you.</p>
+  <p>You can turn any idea into a finished, faceless YouTube Short in a few minutes — footage, voiceover, captions and music, done for you.</p>
   <p>Here's a founder deal to keep the momentum going:</p>
   <p style="font-size:18px;margin:18px 0"><b>10 videos for a one-time $4.90.</b></p>
   <ul>

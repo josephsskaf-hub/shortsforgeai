@@ -165,7 +165,7 @@ export default async function PublicVideoPage({ params }: { params: { id: string
             textAlign: 'center',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Made in ~60 seconds with AI 🤯</p>
+          <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Made in a few minutes with AI 🤯</p>
           <p style={{ margin: '6px 0 14px', color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.5 }}>
             Use this idea as your starting point. Create, share and download up to 3 watermarked Fast videos every 24 hours — upgrade only when you want a clean export.
           </p>

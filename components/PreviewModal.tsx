@@ -132,7 +132,7 @@ export default function PreviewModal({ niche, onConfirm, onClose }: PreviewModal
                 color: '#f5f5f7',
               }}
             >
-              <span aria-hidden="true">⚡</span> Videos in ~60 seconds
+              <span aria-hidden="true">⚡</span> Videos in a few minutes
             </div>
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"

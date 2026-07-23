@@ -54,7 +54,7 @@ export default async function OgImage({ params }: { params: { id: string } }) {
           {title}
         </div>
         <div style={{ display: 'flex', color: '#86868b', fontSize: 32, fontWeight: 600 }}>
-          Made in ~60 seconds with AI — make your own free
+          Made in a few minutes with AI — make your own free
         </div>
       </div>
     ),

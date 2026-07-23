@@ -130,7 +130,7 @@ export default function ViralScoreClient() {
             )}
           </div>
           <div className="vs-cta">
-            <p>You&apos;ve got the idea. <b>Kineo turns it into a finished, faceless Short in ~60 seconds</b> — AI scenes, voiceover, captions and music, done for you.</p>
+            <p>You&apos;ve got the idea. <b>Kineo turns it into a finished, faceless Short in a few minutes</b> — AI scenes, voiceover, captions and music, done for you.</p>
             <a href={ctaHref} onClick={() => { void trackEvent('organic_cta_clicked', { source: 'push22_viral_score', placement: 'result' }) }}>Make a Fast video from this idea →</a>
           </div>
         </div>

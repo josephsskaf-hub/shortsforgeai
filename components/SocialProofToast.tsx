@@ -9,7 +9,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 
 const MESSAGES = [
-  { emoji: '⚡', text: 'Script, voiceover, footage & captions in ~60s' },
+  { emoji: '⚡', text: 'Script, voiceover, footage & captions in a few minutes' },
   { emoji: '🎬', text: 'Faceless YouTube Shorts — no camera, no editing' },
   { emoji: '🚀', text: 'Up to 3 Fast previews every 24h — no card' },
   { emoji: '💎', text: 'AI voiceover + auto captions on every Short' },

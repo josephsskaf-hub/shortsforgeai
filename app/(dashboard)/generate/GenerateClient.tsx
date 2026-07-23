@@ -252,17 +252,6 @@ const QUALITY_OPTIONS: {
 
 const GENERIC_ERROR = 'Video generation failed. Please try again.'
 
-// Push #047 — staged pipeline copy shown during the long generate/compose
-// phases. They rotate on a timer (purely cosmetic — real progress comes
-// from the API state machine) so the wait feels intentional, not empty.
-const LOADER_MESSAGES = [
-  'Structuring your viral script…',
-  'Writing scroll-stopping hook…',
-  'Building cinematic script…',
-  'Creating cinematic scene prompts…',
-  'Optimizing captions and hashtags…',
-]
-
 // Threshold at which we show the "Low credits" upsell line below the
 // credits chip. With 1 credit = 1 Fast Mode video, this triggers when the
 // user is down to their last handful of videos for the month.
@@ -825,9 +814,6 @@ export default function GenerateClient({
   //     at the sidebar to see what they have left. Same /api/credits source
   //     and `creditsChanged` event the sidebar uses, so the two stay in
   //     lockstep.
-  //   loaderTick: 0..LOADER_MESSAGES.length-1, bumped on a timer while we
-  //     are in the long-running generate/compose phases so the message
-  //     rotates through the staged pipeline copy.
   //   copiedSection: which output-card copy button just flashed "Copied!"
   //     ('package' is the top-level one).
   const [fromHome, setFromHome] = useState(false)
@@ -835,7 +821,6 @@ export default function GenerateClient({
   const [credits, setCredits] = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [activationAccountStatus, setActivationAccountStatus] = useState<ActivationAccountStatus>('loading')
-  const [loaderTick, setLoaderTick] = useState(0)
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
   // Push #087 — user plan tier ('free' | 'basic' | 'pro'). Drives the
   // Cinematic-mode lock UI; null while we're loading the value.
@@ -1940,23 +1925,6 @@ export default function GenerateClient({
     trackEvent('activation_generate_firstrun', {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentVideos, fromHome])
-
-  // Push #047 — rotate the staged-pipeline message every ~2.4s while we're
-  // in a long-running phase. This is purely cosmetic — the actual progress
-  // bar still tracks real API state. We reset the tick to 0 whenever we
-  // leave a loading phase so the next run starts at message 0.
-  useEffect(() => {
-    const inLoadingPhase =
-      phase === 'generating' || phase === 'fal_polling' || phase === 'avatar_polling' || phase === 'clips_ready' || phase === 'composing'
-    if (!inLoadingPhase) {
-      setLoaderTick(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setLoaderTick((t) => t + 1)
-    }, 2400)
-    return () => clearInterval(interval)
-  }, [phase])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: generating  →  poll /api/generate-video/status
@@ -4650,7 +4618,7 @@ export default function GenerateClient({
               {showStep1 ? 'Create your Short' : showScriptPreview ? '✍️ Your Script is Ready' : showBrollPlanning ? '🎬 Planning Visuals…' : showVisualDirector ? '🎬 Visual Director' : '🎬 Generate a Real AI Short'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--muted2)' }}>
-              {showStep1 && 'One idea in. A ready-to-post Short out — in about a minute.'}
+              {showStep1 && 'One idea in. A ready-to-post Short out — usually in 2–4 minutes.'}
               {showScriptPreview && 'Review your script before we generate the video. Edit anything you want.'}
               {showBrollPlanning && 'AI Visual Director is planning your scenes…'}
               {showVisualDirector && 'Review and direct every scene before rendering.'}
@@ -5315,20 +5283,20 @@ export default function GenerateClient({
             <div>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
                 {mode === 'creator'
-                  ? `🎬 Creator Mode • review scenes first, then 1 credit • ~60 seconds.`
+                  ? `🎬 Creator Mode • review scenes first, then 1 credit • usually 2–4 min.`
                   : mode === 'fast'
-                  ? `⚡ ${selectedCost === 0 ? 'Free' : `${selectedCost} credit`} • Fast Mode • ready in ~60 seconds.`
+                  ? `⚡ ${selectedCost === 0 ? 'Free' : `${selectedCost} credit`} • Fast Mode • usually ready in 2–4 min.`
                   : mode === 'cinematic_ai'
                   ? `🤖 ${selectedCost} credits • AI Generated • ~3-5 min render.`
                   : `🎬 1 Cinematic token • Runway AI • 5-10 min render (Pro plan).`}
               </p>
               {mode === 'fast' && !isPaidAccount ? (
                 <p className="text-xs mt-1" style={{ color: '#5cb3ff', fontWeight: 700 }}>
-                  Free preview · watermark · ~60s
+                  Free preview · watermark · usually 2–4 min
                 </p>
               ) : credits !== null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--muted2)', fontWeight: 700 }}>
-                  {credits} credit{credits === 1 ? '' : 's'} left · ~60s
+                  {credits} credit{credits === 1 ? '' : 's'} left · usually 2–4 min
                 </p>
               )}
               {/* Push #087 — credit-balance awareness right under the CTA.
@@ -5740,13 +5708,11 @@ export default function GenerateClient({
               className="gv-card rounded-2xl p-5 sm:p-6 mb-6"
               style={{ background: '#131316', border: '1px solid var(--border)' }}
             >
-              {/* Push #047 — staged-pipeline message. The rotating copy lives
-                  in `LOADER_MESSAGES` and is driven by `loaderTick`; the
-                  small grey caption underneath keeps the truthful API
-                  status so power users still see what's actually happening. */}
+              {/* PUSH #71 — show the real API phase instead of rotating
+                  cosmetic steps after that work has already finished. */}
               <RenderHeader
                 progress={headlineProgress}
-                message={LOADER_MESSAGES[loaderTick % LOADER_MESSAGES.length]}
+                message={statusMessage}
               />
 
 
@@ -5781,7 +5747,12 @@ export default function GenerateClient({
                 <div>
                   Your Short is being built in multiple AI stages. Credits are only charged on successful delivery.
                 </div>
-                <div className="mt-1">Safe to keep this tab open — we&apos;ll notify you when it&apos;s ready.</div>
+                <div className="mt-1">
+                  {(mode === 'fast' || mode === 'creator')
+                    ? 'Fast renders usually finish in 2–4 minutes; busy queues can take longer.'
+                    : 'AI renders can take several minutes depending on the selected engine.'}
+                </div>
+                <div className="mt-1">Keep this tab open for the fastest delivery. If you leave, open Generate again to reconnect.</div>
               </div>
 
               {/* The per-clip tile grid was removed in push #031 — the final
@@ -8001,7 +7972,7 @@ function ModeSelector({
   hasPaid: boolean
   onUpgrade: () => void
 }) {
-  const fastFeatures = ['Smart stock footage (matched per scene)', 'Natural AI voice', 'Ready in ~60 seconds']
+  const fastFeatures = ['Smart stock footage (matched per scene)', 'Natural AI voice', 'Usually ready in 2–4 minutes']
   const aiFeatures = ['Every scene generated by AI', 'Great-quality AI visuals (Seedance)', 'Cinematic feel']
   const cinematicFeatures_kling = ['Top-tier cinematic motion', 'Premium one-of-a-kind scenes', 'Our highest quality (Kling)']
 

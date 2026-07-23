@@ -46,7 +46,7 @@ const TRUST_SIGNALS: TrustSignal[] = [
     id: 'spec',
     icon: '✅',
     title: 'Ready to post, per topic',
-    sub: '9:16 · ~60s · English · AI voice + B-roll',
+    sub: '9:16 · a few minutes · English · AI voice + B-roll',
     accent: '#86868b',
   },
 ]

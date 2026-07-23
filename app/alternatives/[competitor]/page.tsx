@@ -45,7 +45,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: false },
       { feature: 'Finds & matches the footage automatically', sfa: true, them: false },
       { feature: 'Fully faceless — no camera needed', sfa: true, them: 'Needs your video' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -78,7 +78,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: true },
       { feature: 'Finds & matches the footage automatically', sfa: true, them: true },
       { feature: 'One-tap, no timeline to learn', sfa: true, them: 'Editor-style' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -111,7 +111,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Finds & matches the footage automatically', sfa: true, them: false },
       { feature: 'Auto-captions included', sfa: true, them: true },
       { feature: 'Fully faceless — no source video needed', sfa: true, them: 'Needs your video' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -180,7 +180,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: false },
       { feature: 'Generates short cinematic AI clips', sfa: true, them: true },
       { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Short clips only' },
-      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Finished video in a few minutes', sfa: true, them: 'Clips, then you edit' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -203,7 +203,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: true },
       { feature: 'Huge multilingual voice library (80+ languages)', sfa: 'English-focused', them: true },
-      { feature: 'Finished Short in ~60 seconds, no editor', sfa: true, them: 'Edit in timeline' },
+      { feature: 'Finished Short in a few minutes, no editor', sfa: true, them: 'Edit in timeline' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -226,7 +226,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Matching footage / B-roll', sfa: true, them: true },
       { feature: 'Fully faceless output', sfa: true, them: true },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Longer per video' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'Longer per video' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -249,7 +249,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Matching footage / B-roll', sfa: true, them: 'Template-driven' },
       { feature: 'Reddit-story / fake-text / split-screen templates', sfa: false, them: true },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: true },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -273,7 +273,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: true },
       { feature: 'Auto-captions included', sfa: true, them: true },
       { feature: 'Fully faceless — no footage needed', sfa: true, them: true },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -297,7 +297,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: false },
       { feature: 'Finds & matches the footage automatically', sfa: true, them: false },
       { feature: 'Fully faceless — no camera needed', sfa: true, them: 'Needs your video' },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -345,7 +345,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: false },
       { feature: 'No timeline editing required', sfa: true, them: false },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'You edit it' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -369,7 +369,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: true },
       { feature: 'Repurposes blog posts & long videos', sfa: false, them: true },
-      { feature: 'Finished Short in ~60 seconds, no editor', sfa: true, them: 'Edit in timeline' },
+      { feature: 'Finished Short in a few minutes, no editor', sfa: true, them: 'Edit in timeline' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -394,7 +394,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: false },
       { feature: 'No timeline editing required', sfa: true, them: false },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'You edit it' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -419,7 +419,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Finds & matches footage automatically', sfa: true, them: 'Clips your video' },
       { feature: 'Fully faceless — no camera needed', sfa: true, them: 'Needs your video' },
       { feature: 'Auto-captions included', sfa: true, them: true },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -444,7 +444,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Pulls matching footage automatically', sfa: true, them: false },
       { feature: 'Fully faceless — no camera or mic', sfa: true, them: 'Needs your recording' },
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'You edit it' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -495,7 +495,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: 'You pick assets' },
       { feature: 'No template or canvas to edit', sfa: true, them: false },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You design it' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'You design it' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -519,7 +519,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: false },
       { feature: 'No timeline editing required', sfa: true, them: false },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'You edit it' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'You edit it' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Free + paid plans' },
     ],
     faq: [
@@ -545,7 +545,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: false },
       { feature: 'Generates high-fidelity AI video clips', sfa: 'Stock + AI footage', them: true },
       { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Clips only' },
-      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Finished video in a few minutes', sfa: true, them: 'Clips, then you edit' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'Paid plans' },
     ],
     faq: [
@@ -623,7 +623,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: true },
       { feature: 'Pulls matching footage automatically', sfa: true, them: 'Repurposed clips' },
       { feature: 'Needs a long video or YouTube link to start', sfa: 'No', them: 'For repurposing mode' },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: true },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'From ~$19/mo' },
     ],
     faq: [
@@ -647,7 +647,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Auto-captions / subtitles', sfa: true, them: false },
       { feature: 'Generates photorealistic AI video clips', sfa: 'Stock + AI footage', them: true },
       { feature: 'Built for vertical YouTube Shorts output', sfa: true, them: 'Clips only' },
-      { feature: 'Finished video in ~60 seconds', sfa: true, them: 'Clips, then you edit' },
+      { feature: 'Finished video in a few minutes', sfa: true, them: 'Clips, then you edit' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'From $9.99/mo' },
     ],
     faq: [
@@ -676,7 +676,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: true },
       { feature: 'Auto-captions included', sfa: true, them: true },
       { feature: 'Auto-publishes to your channels on a schedule', sfa: false, them: true },
-      { feature: 'Ready-to-post 9:16 in ~60s', sfa: true, them: true },
+      { feature: 'Ready-to-post 9:16 in a few minutes', sfa: true, them: true },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'From $19/mo (12 videos)' },
     ],
     faq: [
@@ -701,7 +701,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'Veo 3.1 AI-generated visuals', sfa: 'Stock + AI footage', them: true },
       { feature: 'Auto-schedules series across multiple platforms', sfa: false, them: true },
       { feature: 'Turns Reddit threads / blogs into videos', sfa: false, them: true },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Runs on a schedule' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'Runs on a schedule' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'From ~$20/mo' },
     ],
     faq: [
@@ -725,7 +725,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { feature: 'AI voiceover included', sfa: true, them: true },
       { feature: 'Auto-captions included', sfa: true, them: true },
       { feature: 'Auto-posts to your accounts on a schedule', sfa: false, them: true },
-      { feature: 'Finished Short in ~60 seconds', sfa: true, them: 'Runs on a schedule' },
+      { feature: 'Finished Short in a few minutes', sfa: true, them: 'Runs on a schedule' },
       { feature: 'Starting price', sfa: 'From $9.90/mo', them: 'From $15/mo per series' },
     ],
     faq: [
@@ -922,7 +922,7 @@ export default function AlternativePage({ params }: { params: { competitor: stri
             {[
               { n: '1', t: 'Type one idea', d: 'A topic, a fact, a hook — one sentence is enough.' },
               { n: '2', t: 'AI builds the Short', d: 'Script, AI voiceover, captions and matched footage, assembled automatically.' },
-              { n: '3', t: 'Download & post', d: 'A vertical 9:16 MP4 in ~60s, ready for YouTube Shorts, TikTok and Reels.' },
+              { n: '3', t: 'Download & post', d: 'A vertical 9:16 MP4 in a few minutes, ready for YouTube Shorts, TikTok and Reels.' },
             ].map((s) => (
               <div key={s.n} style={{ ...CARD, borderRadius: 14, padding: 16 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(41,151,255,0.12)', color: '#2997ff', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{s.n}</div>

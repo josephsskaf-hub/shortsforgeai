@@ -11,7 +11,8 @@
     "seo:indexnow:submit": "node scripts/submit-indexnow.mjs --submit",
     "growth:measure": "node scripts/measure-growth-funnel.mjs",
     "growth:affiliate": "node scripts/measure-affiliate-funnel.mjs",
-    "growth:activation": "node scripts/inspect-activation-failures.mjs"
+    "growth:activation": "node scripts/inspect-activation-failures.mjs",
+    "growth:latency": "node scripts/measure-render-latency.mjs"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",

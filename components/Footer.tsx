@@ -84,7 +84,7 @@ export default function Footer({ showStats = true }: { showStats?: boolean }) {
         </Link>
         <p style={{ margin: '6px auto 0', maxWidth: 460, color: '#86868b' }}>
           Turn one idea into a ready-to-post faceless YouTube Short — script,
-          AI voiceover, footage &amp; captions in ~60s. Create, download and share
+          AI voiceover, footage &amp; captions in a few minutes. Create, download and share
           up to 3 watermarked Fast videos every 24h, no card. Paid plans unlock clean MP4s.
         </p>
       </div>

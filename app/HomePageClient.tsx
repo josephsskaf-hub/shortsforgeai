@@ -988,7 +988,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
               out.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-[15px] sm:text-base text-[#9D96B8]">
-              Not a long-video re-clipper. Type one topic and ShortsForgeAI builds a finished faceless Short deliberately for that idea — hook, script, AI voice, captions and B-roll, 9:16 · ~60s · English — then you download and post to YouTube, TikTok &amp; Reels.
+              Not a long-video re-clipper. Type one topic and ShortsForgeAI builds a finished faceless Short deliberately for that idea — hook, script, AI voice, captions and B-roll, 9:16 · a few minutes · English — then you download and post to YouTube, TikTok &amp; Reels.
             </p>
             {/* ROBO-FOUNDING-50 — honest founding urgency (mirrors /founding's
                 10 seats, 50% off for life) now links to the dedicated /founding
@@ -1015,7 +1015,7 @@ export default function HomePageClient({ initialUser }: HomePageClientProps) {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="rounded-lg bg-[#8B5CF6] px-4 py-2 text-[13px] font-bold text-white transition group-hover:brightness-110">Generate a Fast video →</span>
                   <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">AI voice + B-roll</span>
-                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">~60s</span>
+                  <span className="rounded-lg border border-white/15 px-3 py-1.5 text-[11px] text-[#E8E8EC]">A few minutes</span>
                   <span className="rounded-lg border border-[rgba(34,211,238,0.4)] px-3 py-1.5 text-[11px] text-[#22D3EE]">No card</span>
                 </div>
               </div>

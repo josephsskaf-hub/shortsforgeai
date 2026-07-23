@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Crie vídeos para canal dark com IA — em português',
     description:
-      'Uma ideia vira um Short faceless pronto em ~60s. Roteiro, voz, imagens e legendas no automático. Primeiro vídeo grátis.',
+      'Uma ideia vira um Short faceless pronto em poucos minutos. Roteiro, voz, imagens e legendas no automático. Primeiro vídeo grátis.',
     url: 'https://www.usekineo.com/pt',
     type: 'website',
   },
@@ -109,7 +109,7 @@ export default function PtLandingPage() {
             {[
               { n: '1', t: 'Digite a ideia', d: 'Um tema, um fato, uma curiosidade. Uma frase já basta.' },
               { n: '2', t: 'A IA monta o vídeo', d: 'Roteiro, narração com voz de IA, imagens e legendas — tudo no automático.' },
-              { n: '3', t: 'Baixe e poste', d: 'Um MP4 vertical 9:16 em ~60s, pronto para YouTube Shorts, TikTok e Reels.' },
+              { n: '3', t: 'Baixe e poste', d: 'Um MP4 vertical 9:16 em poucos minutos, pronto para YouTube Shorts, TikTok e Reels.' },
             ].map((s) => (
               <div key={s.n} style={{ ...CARD, borderRadius: 20, padding: 16 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(41,151,255,0.14)', color: '#2997ff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{s.n}</div>

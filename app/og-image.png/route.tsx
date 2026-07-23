@@ -57,7 +57,7 @@ export async function GET() {
             Type an idea. Get a finished Short.
           </div>
           <div style={{ display: 'flex', color: '#94a3b8', fontSize: 34, fontWeight: 600 }}>
-            AI script · locked AI host · voiceover · captions — in ~60 seconds
+            AI script · locked AI host · voiceover · captions — in a few minutes
           </div>
         </div>
         <div style={{ display: 'flex', color: '#86868b', fontSize: 30, fontWeight: 600 }}>
