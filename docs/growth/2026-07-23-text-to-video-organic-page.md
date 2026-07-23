@@ -26,10 +26,12 @@ Previous funnel evidence showed traffic from ChatGPT and directories can produce
 
 - `npm.cmd run build` completed successfully.
 - Build output includes `/text-to-video-shorts` as a static route.
+- PUSH #58 committed and pushed to `main`: `07236de`.
+- Production URL verified with GET 200: `https://www.usekineo.com/text-to-video-shorts`.
+- Production `sitemap.xml` contains `https://www.usekineo.com/text-to-video-shorts`.
+- Production `llms.txt` contains `/text-to-video-shorts`.
+- IndexNow submission completed with HTTP 200 for 68 URLs at `2026-07-23T13:29:45.212Z`.
 
 ## Next gates
 
-- Deploy PUSH #58.
-- After Vercel is ready, verify `https://www.usekineo.com/text-to-video-shorts` returns 200.
-- Submit updated production sitemap through the existing IndexNow script.
 - Track campaign `push58_text_to_video_shorts` for: page visits, organic CTA clicks, topic submits, signups, first completed video, pricing views, checkout started, payment success.
