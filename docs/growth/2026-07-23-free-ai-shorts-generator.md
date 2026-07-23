@@ -35,10 +35,12 @@ Current traffic is too low for the 100 paid customers/week goal. This page targe
 - `npm.cmd run growth:measure -- --days=1` completed and includes the new PUSH #58 and PUSH #60 experiment blocks.
 - `npm.cmd run build` completed successfully.
 - Build output includes `/free-ai-shorts-generator` as a static route.
+- PUSH #60 committed and pushed to `main`: `1b521c0`.
+- Production URL verified with GET 200: `https://www.usekineo.com/free-ai-shorts-generator`.
+- Production `sitemap.xml` contains `https://www.usekineo.com/free-ai-shorts-generator`.
+- Production `llms.txt` contains `/free-ai-shorts-generator`.
+- IndexNow submission completed with HTTP 200 for 69 URLs at `2026-07-23T13:37:37.071Z`.
 
 ## Post-deploy gates
 
-- Verify `https://www.usekineo.com/free-ai-shorts-generator` returns 200.
-- Verify production `sitemap.xml` and `llms.txt` include `/free-ai-shorts-generator`.
-- Submit updated sitemap with IndexNow.
 - Track campaign `push60_free_ai_shorts_generator` for landing sessions, CTA clicks, topic submits, signups, activation, completed video, pricing view, checkout, and payment success.
