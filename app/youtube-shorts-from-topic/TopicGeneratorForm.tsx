@@ -25,8 +25,8 @@ type TopicGeneratorFormProps = {
 }
 
 export default function TopicGeneratorForm({
-  campaign = 'push32_topic_intent',
-  source = 'push32_topic',
+  campaign = 'push70_youtube_topic_one_click',
+  source = 'push70_youtube_topic_one_click',
   examples = TOPIC_EXAMPLES,
   formId = 'try-a-topic',
   language,
@@ -40,6 +40,26 @@ export default function TopicGeneratorForm({
 }: TopicGeneratorFormProps = {}) {
   const [topic, setTopic] = useState('')
   const inputId = `${formId}-input`
+
+  function startWithExample(example: string, exampleIndex: number) {
+    rememberSignupCampaign(campaign)
+    const metadata = {
+      source,
+      placement: 'topic_example_one_click',
+      example_index: exampleIndex,
+      topic_length: example.length,
+      ...(language ? { language } : {}),
+    }
+    void trackEvent('organic_topic_example_started', metadata)
+    void trackEvent('organic_topic_submitted', metadata)
+    const params = new URLSearchParams({
+      prompt: example,
+      create_intent: 'fast',
+      intent_campaign: campaign,
+    })
+    if (language) params.set('language', language)
+    window.location.assign(`/signup?${params.toString()}`)
+  }
 
   return (
     <div
@@ -119,11 +139,11 @@ export default function TopicGeneratorForm({
       </form>
 
       <div aria-label={copy.examplesLabel} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 13 }}>
-        {examples.map((example) => (
+        {examples.map((example, exampleIndex) => (
           <button
             key={example}
             type="button"
-            onClick={() => setTopic(example)}
+            onClick={() => startWithExample(example, exampleIndex)}
             style={{
               border: '1px solid #343438',
               borderRadius: 999,
@@ -134,7 +154,7 @@ export default function TopicGeneratorForm({
               cursor: 'pointer',
             }}
           >
-            {example}
+            {example} →
           </button>
         ))}
       </div>

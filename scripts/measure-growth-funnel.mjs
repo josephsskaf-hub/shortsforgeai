@@ -37,6 +37,8 @@ const PUSH69_HOME_STARTERS_CAMPAIGN = 'push69_home_one_click_starters'
 // Starts after the production deployment and smoke test. This isolates the new
 // one-click topic starters from the prior prompt-only homepage cohort.
 const PUSH69_LAUNCHED_AT_MS = Date.parse('2026-07-23T15:10:00.000Z')
+const PUSH70_YOUTUBE_TOPIC_CAMPAIGN = 'push70_youtube_topic_one_click'
+const PUSH70_LAUNCHED_AT_MS = Date.parse('2026-07-23T15:20:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -175,6 +177,7 @@ async function main() {
     PUSH65_LAUNCHED_AT_MS,
     PUSH66_LAUNCHED_AT_MS,
     PUSH69_LAUNCHED_AT_MS,
+    PUSH70_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -1604,6 +1607,88 @@ async function main() {
     ),
   )
 
+  const push70LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/youtube-shorts-from-topic' &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70ExampleStarted = stage(
+    experimentEvents,
+    'organic_topic_example_started',
+    (row) => row.metadata?.source === PUSH70_YOUTUBE_TOPIC_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH70_YOUTUBE_TOPIC_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push70SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN ||
+      push70AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push70SignupIds = new Set(push70SignupProfiles.map((profile) => profile.id))
+  const push70CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push70SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push70PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => (row.metadata?.source === PUSH70_YOUTUBE_TOPIC_CAMPAIGN ||
+      (Boolean(row.user_id) && push70SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => (row.metadata?.intent_campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN ||
+      (Boolean(row.user_id) && push70SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => (row.metadata?.intent_campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN ||
+      (Boolean(row.user_id) && push70SignupIds.has(row.user_id))) &&
+      new Date(row.created_at || 0).getTime() >= PUSH70_LAUNCHED_AT_MS,
+  )
+  const push70RecurringSessions = experimentRecurringSessions.filter((session) => {
+    if ((session.created || 0) * 1000 < PUSH70_LAUNCHED_AT_MS) return false
+    if (session.metadata?.intent_campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN) return true
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+    const profile = resolveExternalProfile({
+      userId: session.metadata?.supabase_user_id,
+      customerId,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+      email: session.customer_details?.email || session.customer_email || session.metadata?.email,
+    })
+    return Boolean(profile?.id) && push70SignupIds.has(profile.id)
+  })
+  const push70ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription, profile }) =>
+    (subscription.created || 0) * 1000 >= PUSH70_LAUNCHED_AT_MS && (
+      subscription.metadata?.intent_campaign === PUSH70_YOUTUBE_TOPIC_CAMPAIGN ||
+      (Boolean(profile?.id) && push70SignupIds.has(profile.id))
+    ),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -1956,6 +2041,23 @@ async function main() {
           activeSubscriptions: push69ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
           trialingSubscriptions: push69ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
         },
+      },
+      push70YouTubeTopicOneClick: {
+        measurementStartsAt: new Date(PUSH70_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push70LandingSessions,
+        exampleStarted: push70ExampleStarted,
+        topicSubmitted: push70TopicSubmitted,
+        signups: push70SignupProfiles.length,
+        completedFirstVideoUsers: push70CompletedVideoUsers.size,
+        pricingViewed: push70PricingViewed,
+        checkoutAttempted: push70CheckoutAttempted,
+        checkoutStarted: push70CheckoutStarted,
+        recurringStripeSessions: {
+          total: push70RecurringSessions.length,
+          paid: push70RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+        },
+        activeSubscriptions: push70ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+        trialingSubscriptions: push70ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
       },
     },
     acquisition: {
