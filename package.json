@@ -12,7 +12,8 @@
     "growth:measure": "node scripts/measure-growth-funnel.mjs",
     "growth:affiliate": "node scripts/measure-affiliate-funnel.mjs",
     "growth:activation": "node scripts/inspect-activation-failures.mjs",
-    "growth:latency": "node scripts/measure-render-latency.mjs"
+    "growth:latency": "node scripts/measure-render-latency.mjs",
+    "growth:checkout": "node scripts/inspect-checkout-abandonment.mjs"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",

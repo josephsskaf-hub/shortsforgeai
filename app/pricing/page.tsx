@@ -21,6 +21,51 @@ import ExitIntentOffer from '@/components/ExitIntentOffer'
 // re-enable everywhere at once. Stripe checkout is unaffected.
 const PAYPAL_ENABLED = false
 
+type DisplayCurrency = 'usd' | 'brl' | 'inr'
+type PaidTier = 'starter' | 'basic' | 'pro'
+
+// These display prices mirror the integer amounts in /api/stripe/checkout.
+// They are never sent back to checkout: the server remains authoritative and
+// independently resolves currency from Vercel's country header.
+const LOCAL_PRICES: Record<DisplayCurrency, {
+  locale: string
+  currencyCode: string
+  label: string
+  monthly: Record<PaidTier, number>
+  intro: Pick<Record<PaidTier, number>, 'starter' | 'basic'>
+  annual: Record<PaidTier, number>
+}> = {
+  usd: {
+    locale: 'en-US', currencyCode: 'USD', label: 'USD',
+    monthly: { starter: 990, basic: 2490, pro: 3790 },
+    intro: { starter: 490, basic: 990 },
+    annual: { starter: 9900, basic: 19900, pro: 37900 },
+  },
+  brl: {
+    locale: 'pt-BR', currencyCode: 'BRL', label: 'BRL',
+    monthly: { starter: 4990, basic: 9990, pro: 18990 },
+    intro: { starter: 2490, basic: 4990 },
+    annual: { starter: 49900, basic: 99900, pro: 189900 },
+  },
+  inr: {
+    locale: 'en-IN', currencyCode: 'INR', label: 'INR',
+    monthly: { starter: 79900, basic: 159900, pro: 299900 },
+    intro: { starter: 39900, basic: 79900 },
+    annual: { starter: 799000, basic: 1599000, pro: 2999000 },
+  },
+}
+
+function formatMoney(currency: DisplayCurrency, amountMinor: number): string {
+  const config = LOCAL_PRICES[currency]
+  const fractionDigits = currency === 'inr' ? 0 : 2
+  return new Intl.NumberFormat(config.locale, {
+    style: 'currency',
+    currency: config.currencyCode,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(amountMinor / 100).replace(/\u00a0/g, ' ')
+}
+
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
 const FAQS: { q: string; a: string }[] = [
@@ -33,7 +78,7 @@ const FAQS: { q: string; a: string }[] = [
     // mention: the pack has no public CTA anymore (single-offer cleanup),
     // so naming it here would advertise a product the page doesn't sell.
     q: 'Do I need a credit card to start?',
-    a: 'No. A new free account can create, watch, download and share up to 3 Fast videos with a watermark every 24 hours, with no card. Free access grants no credits and no premium AI Generated videos. Subscribe only when you want a clean, watermark-free MP4: Starter is $4.90 for the first month then $9.90/month, Creator is $9.90 for the first month then $24.90/month, and Studio is $37.90/month.',
+    a: 'No. A new free account can create, watch, download and share up to 3 Fast videos with a watermark every 24 hours, with no card. Free access grants no credits and no premium AI Generated videos. Subscribe only when you want a clean, watermark-free MP4. Your first-month and renewal prices are shown in your local checkout currency above.',
   },
   {
     q: 'How fast are videos generated?',
@@ -68,13 +113,13 @@ const FAQS: { q: string; a: string }[] = [
 // Free tier still exists for new signups via /signup, but is not shown here
 // to avoid users exploiting the $0 entry point.
 // Push #339 — added Starter plan at $2.90/mo (15 credits).
-function buildPricing() {
+function buildPricing(currency: DisplayCurrency) {
   // Push #404 — 3 plans: Starter (Fast) · Creator (Seedance, popular) · Studio (Kling).
   return [
     {
       tier: 'starter',
       name: 'Starter',
-      price: '$9.90',
+      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.starter),
       priceSub: '/ month',
       // KINEO-REBASE-2026-07-10 — 50 → 25 credits (2:1 rebase, USD unchanged).
       // KINEO-SHOWCASE-2026-07-10 — V3C wording: Fast = 1 credit per video for
@@ -93,7 +138,7 @@ function buildPricing() {
     {
       tier: 'basic',
       name: 'Creator',
-      price: '$24.90',
+      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.basic),
       priceSub: '/ month',
       // KINEO-PRICING-V3B-2026-07-10 — $24.90/150cr: 1 Hollywood film every
       // month included (150 cr), or ~7 AI-generated videos (20 cr each).
@@ -116,7 +161,7 @@ function buildPricing() {
     {
       tier: 'pro',
       name: 'Studio',
-      price: '$37.90',
+      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.pro),
       priceSub: '/ month',
       // KINEO-STUDIO-400-2026-07-06 — Studio's extra value: more credits, Kling
       // at 1080p, priority render queue, and premium voices.
@@ -161,6 +206,8 @@ export default function PricingPage() {
   // Push #171 — show a friendly "already subscribed" info banner instead of
   // silently redirecting to /generate when the API blocks a duplicate purchase.
   const [alreadySubscribed, setAlreadySubscribed] = useState(false)
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency | null>(null)
+  const currencyTrackedRef = useRef(false)
 
   // Browsers may restore this page from the back-forward cache after the user
   // leaves Stripe. React state and refs are restored too, so release the click
@@ -182,11 +229,16 @@ export default function PricingPage() {
 
   // #381 — monthly vs annual billing toggle. Annual ≈ 2 months free.
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
-  const ANNUAL: Record<string, { total: string; perMonth: string }> = {
-    starter: { total: '$99', perMonth: '$8.25' },
-    basic: { total: '$199', perMonth: '$16.58' },
-    pro: { total: '$379', perMonth: '$31.58' },
-  }
+  const resolvedCurrency = displayCurrency ?? 'usd'
+  const currencyConfig = LOCAL_PRICES[resolvedCurrency]
+  const annualPrices = (Object.keys(currencyConfig.annual) as PaidTier[]).reduce((result, tier) => {
+    const totalMinor = currencyConfig.annual[tier]
+    result[tier] = {
+      total: formatMoney(resolvedCurrency, totalMinor),
+      perMonth: formatMoney(resolvedCurrency, totalMinor / 12),
+    }
+    return result
+  }, {} as Record<PaidTier, { total: string; perMonth: string }>)
 
   // Conversion — exit-intent modal extracted to <ExitIntentOffer />
   // (components/ExitIntentOffer.tsx): Starter Pack rescue offer, once per
@@ -198,6 +250,36 @@ export default function PricingPage() {
     const intentCampaign = new URLSearchParams(window.location.search).get('intent_campaign')
     if (intentCampaign) rememberSignupCampaign(intentCampaign)
     void trackEvent('pricing_view', intentCampaign ? { source: intentCampaign } : undefined)
+  }, [])
+
+  // Resolve only the display currency. Checkout repeats the lookup on the
+  // server and never accepts a currency override from the browser.
+  useEffect(() => {
+    let cancelled = false
+
+    void fetch('/api/geo', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('geo lookup failed')
+        return response.json() as Promise<{ country?: string; currency?: string }>
+      })
+      .then(({ country, currency }) => {
+        if (cancelled) return
+        const safeCurrency: DisplayCurrency =
+          currency === 'brl' || currency === 'inr' || currency === 'usd' ? currency : 'usd'
+        setDisplayCurrency(safeCurrency)
+        if (!currencyTrackedRef.current) {
+          currencyTrackedRef.current = true
+          void trackEvent('pricing_currency_resolved', {
+            currency: safeCurrency,
+            country: String(country || 'unknown').slice(0, 2).toUpperCase(),
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayCurrency('usd')
+      })
+
+    return () => { cancelled = true }
   }, [])
 
   // Push #173 — iOS Safari blocks window.location.href inside async/await
@@ -304,7 +386,9 @@ export default function PricingPage() {
             Pricing
           </div>
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
-            Start for $4.90. Keep creating for $9.90/mo.
+            {displayCurrency
+              ? `Start for ${formatMoney(resolvedCurrency, currencyConfig.intro.starter)}. Keep creating for ${formatMoney(resolvedCurrency, currencyConfig.monthly.starter)}/mo.`
+              : 'Your first month is discounted. Cancel anytime.'}
           </h1>
           {/* KINEO-SHOWCASE-2026-07-10 — Joseph: parágrafo comparativo removido
               ("texto sujo") — os CARDS de preço são a estrela do hero. */}
@@ -362,6 +446,11 @@ export default function PricingPage() {
             </button>
           </div>
         </div>
+        <p className="-mt-4 mb-7 text-center text-[11.5px] font-semibold text-[#86868b]">
+          {displayCurrency
+            ? `Prices shown in ${currencyConfig.label}. Secure checkout uses the same currency.`
+            : 'Loading your local checkout currency…'}
+        </p>
 
         {/* KINEO-SPRINT-OFFER-2026-07-14 — SINGLE OFFER cleanup. Three stacked
             competing offers used to sit here (FOUNDING50 "50% for life" banner,
@@ -381,7 +470,7 @@ export default function PricingPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">
-          {buildPricing().map((p) => {
+          {buildPricing(resolvedCurrency).map((p) => {
             const isPaid = p.tier === 'starter' || p.tier === 'basic' || p.tier === 'pro'
             // KINEO-2026-07-06 — cleaner pricing UI: same blue CTA on every card,
             // labeled with the plan name ("Choose Starter/Creator/Studio") so the
@@ -422,12 +511,16 @@ export default function PricingPage() {
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-[2.4rem] font-black leading-none tracking-tight text-[#f5f5f7]">
-                    {billing === 'annual' && ANNUAL[p.tier] ? ANNUAL[p.tier].perMonth : p.price}
+                    {!displayCurrency
+                      ? '—'
+                      : billing === 'annual'
+                        ? annualPrices[p.tier as PaidTier].perMonth
+                        : p.price}
                   </span>
                 </div>
                 <div className="mt-1 text-[12.5px] font-semibold text-[#2997ff]">
-                  {billing === 'annual' && ANNUAL[p.tier]
-                    ? `/ month · billed annually (${ANNUAL[p.tier].total}/yr)`
+                  {billing === 'annual'
+                    ? `/ month · billed annually (${displayCurrency ? annualPrices[p.tier as PaidTier].total : '—'}/yr)`
                     : p.priceSub}
                 </div>
                 {/* KINEO-INTRO-MONTH-2026-07-13 — badge do 1º mês com desconto
@@ -442,10 +535,15 @@ export default function PricingPage() {
                       className="inline-block rounded-full px-2.5 py-1 text-[11px] font-black"
                       style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}
                     >
-                      🎁 First month {p.tier === 'starter' ? '$4.90' : '$9.90'} — applied at checkout
+                      🎁 First month {displayCurrency
+                        ? formatMoney(
+                            resolvedCurrency,
+                            currencyConfig.intro[p.tier as 'starter' | 'basic'],
+                          )
+                        : 'discount'} — applied at checkout
                     </div>
                     <p className="mt-1.5 text-[11px] font-semibold text-[#86868b]">
-                      Renews at {p.price}/mo in 30 days — cancel anytime.
+                      Renews at {displayCurrency ? p.price : 'the local price shown at checkout'}/mo in 30 days — cancel anytime.
                     </p>
                   </div>
                 )}
@@ -692,8 +790,8 @@ export default function PricingPage() {
                   },
                   {
                     label: 'Render time',
-                    free: '~60 sec (Fast)',
-                    starter: '~60 sec',
+                    free: 'Usually 2–4 min (Fast)',
+                    starter: 'Usually 2–4 min',
                     basic: '~3-5 min',
                     pro: '~3-5 min',
                   },
@@ -876,7 +974,9 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'starter' ? 'Loading…' : 'Starter $4.90'}
+            {purchasing === 'starter'
+              ? 'Loading…'
+              : `Starter ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.intro.starter) : ''}`}
           </button>
           <button
             type="button"
@@ -896,7 +996,9 @@ export default function PricingPage() {
               boxShadow: '0 8px 22px rgba(41,151,255,.35)',
             }}
           >
-            {purchasing === 'basic' ? 'Loading…' : 'Creator $9.90 🔥'}
+            {purchasing === 'basic'
+              ? 'Loading…'
+              : `Creator ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.intro.basic) : ''} 🔥`}
           </button>
           <button
             type="button"
@@ -915,7 +1017,9 @@ export default function PricingPage() {
               minHeight: 48,
             }}
           >
-            {purchasing === 'pro' ? 'Loading…' : 'Studio $37.90'}
+            {purchasing === 'pro'
+              ? 'Loading…'
+              : `Studio ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.monthly.pro) : ''}`}
           </button>
         </div>
       )}

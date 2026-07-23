@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Push #165 — lightweight geo endpoint.
-// Reads the Vercel edge header x-vercel-ip-country and returns the
-// detected country + the currency we'll use for that user:
-//   BR  → brl  (R$49.90 / R$99.90 per month)
-//   all others → usd  ($9.90 / $24.90 per month — KINEO-PRICING-V3B-2026-07-10)
+// Display-only geo lookup, kept aligned with /api/stripe/checkout:
+// BR → BRL, IN → INR, all other countries → USD. Checkout repeats the
+// resolution server-side and never trusts a currency supplied by the browser.
 export async function GET(req: NextRequest) {
-  const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: 'usd' | 'brl' = country === 'BR' ? 'brl' : 'usd'
-  return NextResponse.json({ country, currency })
+  const country = (req.headers.get('x-vercel-ip-country') ?? 'US').toUpperCase()
+  const currency: 'usd' | 'brl' | 'inr' =
+    country === 'BR' ? 'brl' : country === 'IN' ? 'inr' : 'usd'
+
+  return NextResponse.json(
+    { country, currency },
+    { headers: { 'Cache-Control': 'private, no-store, max-age=0' } },
+  )
 }
