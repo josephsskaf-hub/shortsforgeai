@@ -35,6 +35,7 @@ How Kineo differs from long-video clipping workflows: tools such as OpusClip, Kl
 - [Free YouTube Short script generator](https://www.usekineo.com/free-script-generator): AI script (hook, facts, payoff) from any topic, no signup.
 - [Free hook generator](https://www.usekineo.com/free-hook-generator): viral opening lines for Shorts, no signup.
 - [YouTube Shorts from a topic](https://www.usekineo.com/youtube-shorts-from-topic): how topic-to-video generation works.
+- [Text to video Shorts generator](https://www.usekineo.com/text-to-video-shorts): turn a topic, prompt or script into a faceless vertical video with AI voiceover, visuals, captions and MP4 export.
 - [Faceless channel decision guide](https://www.usekineo.com/faceless-channel-ideas): ten channel formats and 50 episode ideas compared by research load, visual availability, repeatability and factual or policy risk, with a real Kineo output.
 - [Free AI Shorts by niche](https://www.usekineo.com/free-ai-shorts): topic starters and workflows organized by niche.
 - [AI Shorts without filming](https://www.usekineo.com/ai-shorts-without-filming): guide to faceless video creation.
