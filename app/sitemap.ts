@@ -28,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/cheapest-ai-shorts-maker', priority: 0.8, freq: 'weekly' },
     { path: '/ai-shorts-without-filming', priority: 0.8, freq: 'weekly' },
     { path: '/faceless-channel-ideas', priority: 0.8, freq: 'weekly' },
+    { path: '/free-ai-shorts-generator', priority: 0.9, freq: 'weekly' },
     { path: '/free-ai-shorts', priority: 0.8, freq: 'weekly' },
     { path: '/alternatives', priority: 0.8, freq: 'weekly' },
     { path: '/examples', priority: 0.8, freq: 'weekly' },

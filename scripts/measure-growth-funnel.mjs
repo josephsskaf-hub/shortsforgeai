@@ -17,6 +17,13 @@ const PUSH55_YOUTUBE_CAMPAIGN = 'push55_youtube_related_bridge'
 // campaign clock starts with the scheduled public video at 17:00 BRT on
 // 22 July 2026. Landing smoke tests before then stay outside the cohort.
 const PUSH55_LAUNCHED_AT_MS = Date.parse('2026-07-22T20:00:00.000Z')
+const PUSH58_TEXT_TO_VIDEO_CAMPAIGN = 'push58_text_to_video_shorts'
+// PUSH #58 was deployed and smoke-tested before this boundary. Start after the
+// production URL, sitemap, llms.txt, and IndexNow verification to keep internal
+// release traffic out of the acquisition cohort.
+const PUSH58_LAUNCHED_AT_MS = Date.parse('2026-07-23T13:30:00.000Z')
+const PUSH60_FREE_GENERATOR_CAMPAIGN = 'push60_free_ai_shorts_generator'
+const PUSH60_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:00:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -149,6 +156,8 @@ async function main() {
     PUSH52_LAUNCHED_AT_MS,
     PUSH53_LAUNCHED_AT_MS,
     PUSH55_LAUNCHED_AT_MS,
+    PUSH58_LAUNCHED_AT_MS,
+    PUSH60_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -934,6 +943,232 @@ async function main() {
       }),
   )
 
+  const push58LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/text-to-video-shorts' &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58CtaClicked = stage(
+    experimentEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58IntentUserIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS && (
+          row.metadata?.campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN ||
+          row.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN ||
+          row.metadata?.source === PUSH58_TEXT_TO_VIDEO_CAMPAIGN
+        ))
+      .map((row) => row.user_id),
+  )
+  const push58AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push58SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN ||
+      push58AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push58SignupIds = new Set(push58SignupProfiles.map((profile) => profile.id))
+  const push58ActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => Boolean(row.user_id) && push58SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => Boolean(row.user_id) && push58SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58GenerateStarted = stage(
+    experimentEvents,
+    'generate_started',
+    (row) => Boolean(row.user_id) && push58SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push58SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push58PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => row.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => row.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH58_LAUNCHED_AT_MS,
+  )
+  const push58AllIntentRecurringSessions = experimentRecurringSessions.filter((session) =>
+    (session.created || 0) * 1000 >= PUSH58_LAUNCHED_AT_MS &&
+      session.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN,
+  )
+  const push58AllIntentActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription }) =>
+    (subscription.created || 0) * 1000 >= PUSH58_LAUNCHED_AT_MS &&
+      subscription.metadata?.intent_campaign === PUSH58_TEXT_TO_VIDEO_CAMPAIGN,
+  )
+  const push58AllIntentActiveSubscriptionIds = new Set(
+    push58AllIntentActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push58AllIntentPaidRecurringCustomers = new Set(
+    push58AllIntentRecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push58AllIntentActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
+
+  const push60LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/free-ai-shorts-generator' &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60CtaClicked = stage(
+    experimentEvents,
+    'organic_cta_clicked',
+    (row) => row.metadata?.source === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push60SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH60_FREE_GENERATOR_CAMPAIGN ||
+      push60AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push60SignupIds = new Set(push60SignupProfiles.map((profile) => profile.id))
+  const push60ActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => Boolean(row.user_id) && push60SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => Boolean(row.user_id) && push60SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60GenerateStarted = stage(
+    experimentEvents,
+    'generate_started',
+    (row) => Boolean(row.user_id) && push60SignupIds.has(row.user_id) &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push60SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push60PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => row.metadata?.intent_campaign === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => row.metadata?.intent_campaign === PUSH60_FREE_GENERATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH60_LAUNCHED_AT_MS,
+  )
+  const push60AllIntentRecurringSessions = experimentRecurringSessions.filter((session) =>
+    (session.created || 0) * 1000 >= PUSH60_LAUNCHED_AT_MS &&
+      session.metadata?.intent_campaign === PUSH60_FREE_GENERATOR_CAMPAIGN,
+  )
+  const push60AllIntentActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription }) =>
+    (subscription.created || 0) * 1000 >= PUSH60_LAUNCHED_AT_MS &&
+      subscription.metadata?.intent_campaign === PUSH60_FREE_GENERATOR_CAMPAIGN,
+  )
+  const push60AllIntentActiveSubscriptionIds = new Set(
+    push60AllIntentActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push60AllIntentPaidRecurringCustomers = new Set(
+    push60AllIntentRecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push60AllIntentActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -1108,6 +1343,66 @@ async function main() {
           activeSubscriptions: push55AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
           trialingSubscriptions: push55AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
           paidRecurringCustomers: push55AllIntentPaidRecurringCustomers.size,
+        },
+      },
+      push58TextToVideoShorts: {
+        measurementStartsAt: new Date(PUSH58_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push58LandingSessions,
+        ctaClicked: push58CtaClicked,
+        topicSubmitted: push58TopicSubmitted,
+        newSignupCohort: {
+          signups: push58SignupProfiles.length,
+          activationAutostart: {
+            eligible: push58ActivationEligible,
+            dispatched: push58ActivationDispatched,
+          },
+          generateStarted: push58GenerateStarted,
+          completedFirstVideoUsers: push58CompletedVideoUsers.size,
+        },
+        monetization: {
+          pricingViewed: push58PricingViewed,
+          checkoutAttempted: push58CheckoutAttempted,
+          checkoutStarted: push58CheckoutStarted,
+          recurringStripeSessions: {
+            total: push58AllIntentRecurringSessions.length,
+            open: push58AllIntentRecurringSessions.filter((session) => session.status === 'open').length,
+            complete: push58AllIntentRecurringSessions.filter((session) => session.status === 'complete').length,
+            expired: push58AllIntentRecurringSessions.filter((session) => session.status === 'expired').length,
+            paid: push58AllIntentRecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push58AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push58AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+          paidRecurringCustomers: push58AllIntentPaidRecurringCustomers.size,
+        },
+      },
+      push60FreeAiShortsGenerator: {
+        measurementStartsAt: new Date(PUSH60_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push60LandingSessions,
+        ctaClicked: push60CtaClicked,
+        topicSubmitted: push60TopicSubmitted,
+        newSignupCohort: {
+          signups: push60SignupProfiles.length,
+          activationAutostart: {
+            eligible: push60ActivationEligible,
+            dispatched: push60ActivationDispatched,
+          },
+          generateStarted: push60GenerateStarted,
+          completedFirstVideoUsers: push60CompletedVideoUsers.size,
+        },
+        monetization: {
+          pricingViewed: push60PricingViewed,
+          checkoutAttempted: push60CheckoutAttempted,
+          checkoutStarted: push60CheckoutStarted,
+          recurringStripeSessions: {
+            total: push60AllIntentRecurringSessions.length,
+            open: push60AllIntentRecurringSessions.filter((session) => session.status === 'open').length,
+            complete: push60AllIntentRecurringSessions.filter((session) => session.status === 'complete').length,
+            expired: push60AllIntentRecurringSessions.filter((session) => session.status === 'expired').length,
+            paid: push60AllIntentRecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push60AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push60AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+          paidRecurringCustomers: push60AllIntentPaidRecurringCustomers.size,
         },
       },
     },
