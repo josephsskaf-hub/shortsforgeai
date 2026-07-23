@@ -370,6 +370,21 @@ async function main() {
   const activationAutostartEligible = stage(externalEvents, 'activation_autostart_eligible')
   const activationAutostartDispatched = stage(externalEvents, 'activation_autostart_dispatched')
   const activationAutostartSkipped = stage(externalEvents, 'activation_autostart_skipped')
+  const activationAutostartRecoveryEligible = stage(externalEvents, 'activation_autostart_recovery_eligible')
+  const activationAutostartRecoveryDispatched = stage(externalEvents, 'activation_autostart_recovery_dispatched')
+  const activationAutostartCheckpointed = stage(externalEvents, 'activation_autostart_checkpointed')
+  const activationAutostartAttemptIds = new Set(
+    externalEvents
+      .filter((row) => row.name === 'activation_autostart_dispatched')
+      .map((row) => row.metadata?.attempt_id)
+      .filter((attemptId) => typeof attemptId === 'string' && attemptId.length > 0),
+  )
+  const activationAutostartFailed = stage(
+    externalEvents,
+    'video_generation_failed',
+    (row) => typeof row.metadata?.attempt_id === 'string' &&
+      activationAutostartAttemptIds.has(row.metadata.attempt_id),
+  )
   const checkoutResumeViewed = stage(externalEvents, 'checkout_resume_banner_viewed')
   const checkoutResumeClicked = stage(externalEvents, 'checkout_resume_banner_clicked')
   const checkoutResumeDismissed = stage(externalEvents, 'checkout_resume_banner_dismissed')
@@ -1309,7 +1324,13 @@ async function main() {
       activationAutostartFastV1: {
         eligible: activationAutostartEligible,
         dispatched: activationAutostartDispatched,
+        checkpointed: activationAutostartCheckpointed,
+        failed: activationAutostartFailed,
         skipped: activationAutostartSkipped,
+        recovery: {
+          eligible: activationAutostartRecoveryEligible,
+          dispatched: activationAutostartRecoveryDispatched,
+        },
       },
       checkoutResumeV1: {
         bannerViewed: checkoutResumeViewed,

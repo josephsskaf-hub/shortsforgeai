@@ -1676,26 +1676,49 @@ export default function GenerateClient({
     if (activationAccountStatus === 'loading') return
 
     const storageKey = activationAutostartSessionKey(explicitPrompt)
-    let alreadyConsumed = false
-    try { alreadyConsumed = sessionStorage.getItem(storageKey) !== null } catch {}
-    activationAutostartDecisionRef.current = true
-    // Remove only create_intent; prompt, UTMs, signup/welcome and all unrelated
-    // query parameters stay intact.
-    removeCreateIntentFromCurrentUrl()
+    let consumedState: string | null = null
+    try { consumedState = sessionStorage.getItem(storageKey) } catch {}
 
-    if (alreadyConsumed) {
-      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'already_consumed' })
+    // PUSH #64 — the Fast endpoint does real work before the durable Compose
+    // checkpoint exists. If somebody refreshes, closes the tab or navigates
+    // away during that window, the old flow permanently consumed create_intent
+    // and their next visit showed only a prefilled prompt. Recover that exact
+    // first-video intent once, but only after confirming the account still has
+    // zero videos. A second interrupted recovery falls back to the manual flow.
+    if (consumedState !== null && recentVideos === null) return
+    const recoveryEligible =
+      recentVideos?.length === 0 &&
+      (consumedState === 'eligible' || consumedState?.startsWith('dispatched:') === true)
+
+    if (consumedState !== null && !recoveryEligible) {
+      consumeAndSkip('already_consumed')
       return
     }
-    // Persist idempotency before analysis or render dispatch.
-    try { sessionStorage.setItem(storageKey, 'eligible') } catch {}
+
+    activationAutostartDecisionRef.current = true
+    if (recoveryEligible) {
+      metadata.recovery = true
+      metadata.recovery_reason = 'abandoned_before_checkpoint'
+      void trackEvent('activation_autostart_recovery_eligible', metadata)
+    }
+    // Keep create_intent in the URL until the durable Fast→Compose checkpoint
+    // exists. That URL is the recovery handle if the browser leaves early.
+    try {
+      sessionStorage.setItem(storageKey, recoveryEligible ? 'recovery_eligible' : 'eligible')
+    } catch {}
 
     if (searchParams.get('wm_unlock') === '1') {
-      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'watermark_unlock_active' })
+      consumeAndSkip('watermark_unlock_active')
       return
     }
     if (activationAccountStatus === 'unavailable') {
-      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'account_status_unavailable' })
+      // Entitlement lookup can fail transiently. Keep the URL recovery handle
+      // and eligible storage state so a refresh can retry once the API recovers.
+      void trackEvent('activation_autostart_skipped', {
+        ...metadata,
+        reason: 'account_status_unavailable',
+        retryable: true,
+      })
       return
     }
     if (
@@ -1706,7 +1729,7 @@ export default function GenerateClient({
       isCreator ||
       isStudio
     ) {
-      void trackEvent('activation_autostart_skipped', { ...metadata, reason: 'paid_account' })
+      consumeAndSkip('paid_account')
       return
     }
     void trackEvent('activation_autostart_eligible', metadata)
@@ -1733,6 +1756,7 @@ export default function GenerateClient({
     isCreator,
     isStudio,
     phase,
+    recentVideos,
   ])
 
   // Commit Fast mode before analysis so a prior dashboard engine selection can
@@ -3664,6 +3688,7 @@ export default function GenerateClient({
         const checkpointAttemptId = generationAttemptRef.current ?? fastGenerationId
         generationAttemptRef.current = checkpointAttemptId
         lastFastRenderRef.current = checkpointUnlockInputs
+        let checkpointPersisted = false
         if (currentUserIdRef.current) {
           try {
             const checkpoint: ActiveRenderSnapshot = {
@@ -3679,6 +3704,7 @@ export default function GenerateClient({
               unlockInputs: checkpointUnlockInputs,
             }
             localStorage.setItem(activeRenderStorageKey(), JSON.stringify(checkpoint))
+            checkpointPersisted = true
             void trackEvent('generation_checkpoint_saved', {
               attempt_id: checkpointAttemptId,
               generation_id: fastGenerationId,
@@ -3688,6 +3714,28 @@ export default function GenerateClient({
           } catch {
             // In-tab compose remains available when storage is blocked.
           }
+        }
+
+        // Retire the URL recovery handle only after the full Compose payload is
+        // durable. If local storage is unavailable, keep the intent so a later
+        // return can still use the bounded recovery path.
+        const explicitIntentPrompt = (searchParams.get('prompt') ?? '').trim().slice(0, 1000)
+        if (
+          checkpointPersisted &&
+          searchParams.get('create_intent') === 'fast' &&
+          explicitIntentPrompt
+        ) {
+          try {
+            sessionStorage.setItem(
+              activationAutostartSessionKey(explicitIntentPrompt),
+              `checkpointed:${Date.now()}`,
+            )
+          } catch {}
+          void trackEvent('activation_autostart_checkpointed', {
+            attempt_id: checkpointAttemptId,
+            generation_id: fastGenerationId,
+          })
+          removeCreateIntentFromCurrentUrl()
         }
 
         // Quality is pinned to 'fast' so compose/status charges 1 credit.
@@ -3836,11 +3884,25 @@ export default function GenerateClient({
         clearActivation('render_state_changed_before_dispatch')
         return
       }
+      const activationTopic = activationAutostartPromptRef.current?.trim() || prompt.trim()
       const metadata = clearActivation()
+      const recoveryDispatch = metadata.recovery === true
+      try {
+        sessionStorage.setItem(
+          activationAutostartSessionKey(activationTopic),
+          `${recoveryDispatch ? 'recovery_dispatched' : 'dispatched'}:${Date.now()}`,
+        )
+      } catch {}
       void trackEvent('activation_autostart_dispatched', {
         ...metadata,
         attempt_id: generationAttemptRef.current,
       })
+      if (recoveryDispatch) {
+        void trackEvent('activation_autostart_recovery_dispatched', {
+          ...metadata,
+          attempt_id: generationAttemptRef.current,
+        })
+      }
       void handleGenerate()
       return
     }
