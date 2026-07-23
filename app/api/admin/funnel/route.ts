@@ -264,6 +264,7 @@ const ORGANIC_EXACT_PATHS = new Set([
   '/viral-now',
   '/ai-avatar',
   '/facts',
+  '/partners',
   '/pt',
 ])
 

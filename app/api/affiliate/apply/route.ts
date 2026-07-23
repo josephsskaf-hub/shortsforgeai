@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
+import { writeServerEvent } from '@/lib/serverEvents'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -60,6 +61,12 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (existing) {
+      await writeServerEvent({
+        name: 'affiliate_application_submitted',
+        userId: user.id,
+        path: '/api/affiliate/apply',
+        metadata: { created: false, status: existing.status },
+      })
       return NextResponse.json({ ok: true, status: existing.status, code: existing.code })
     }
 
@@ -80,6 +87,12 @@ export async function POST(req: Request) {
         .single()
 
       if (!error && created) {
+        await writeServerEvent({
+          name: 'affiliate_application_submitted',
+          userId: user.id,
+          path: '/api/affiliate/apply',
+          metadata: { created: true, status: created.status },
+        })
         return NextResponse.json({ ok: true, status: created.status, code: created.code })
       }
 

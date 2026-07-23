@@ -4,17 +4,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
+import Footer from '@/components/Footer'
 
 export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.usekineo.com'),
-  title: 'Affiliate Program — Earn 40% Recurring | Kineo',
+  title: 'AI Video Affiliate Program - Earn 40% Recurring | Kineo',
   description:
     'Promote Kineo and earn 40% on recurring payments from referred subscribers. First-touch tracking lasts 90 days and every approved partner gets a dashboard.',
   alternates: { canonical: 'https://www.usekineo.com/partners' },
   openGraph: {
-    title: 'Earn 40% recurring promoting Kineo',
+    title: 'AI Video Affiliate Program - Earn 40% Recurring | Kineo',
     description: 'Send creators a topic-to-Short workflow and earn 40% on recurring payments while they remain subscribed.',
     url: 'https://www.usekineo.com/partners',
     type: 'website',
@@ -44,11 +45,16 @@ export default function PartnersPage() {
 
         <section style={{ marginTop: 36, textAlign: 'center' }}>
           <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.1)', borderRadius: 999, padding: '6px 14px' }}>Affiliate program</div>
-          <h1 style={{ fontSize: 'clamp(1.9rem, 5.5vw, 2.7rem)', fontWeight: 900, lineHeight: 1.12, margin: '16px 0 0' }}>Earn 40% on recurring payments</h1>
+          <h1 style={{ fontSize: 'clamp(1.9rem, 5.5vw, 2.7rem)', fontWeight: 900, lineHeight: 1.12, margin: '16px 0 0' }}>AI Video Affiliate Program: Earn 40% Recurring</h1>
           <p style={{ fontSize: '1.05rem', color: '#CBD5E1', lineHeight: 1.6, margin: '16px auto 0', maxWidth: 600 }}>
             Send creators a tool that turns one topic into a scripted, voiced and captioned 9:16 Short — and earn <b style={{ color: '#fff' }}>40% of eligible payments</b> while referred customers stay subscribed. 90-day first-touch tracking.
           </p>
           <OrganicCtaLink href={APPLY} source="partners" placement="hero" style={{ display: 'inline-block', marginTop: 22, background: 'linear-gradient(135deg,#2997ff,#2997ff)', color: '#000', fontWeight: 900, padding: '15px 32px', borderRadius: 14, textDecoration: 'none', fontSize: '1.05rem' }}>Apply in Kineo →</OrganicCtaLink>
+          <div style={{ marginTop: 14 }}>
+            <OrganicCtaLink href="/faceless-video-generator" source="partners" placement="product_demo" style={{ color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '0.9rem' }}>
+              Test the product your audience will see →
+            </OrganicCtaLink>
+          </div>
           <div style={{ marginTop: 12, fontSize: '0.8rem', color: '#86868b' }}>Application is reviewed before a link becomes active.</div>
         </section>
 
@@ -109,6 +115,7 @@ export default function PartnersPage() {
           <div style={{ marginTop: 12, fontSize: '0.78rem' }}><a href={SUPPORT} style={{ color: '#86868b' }}>Questions before applying? Email us.</a></div>
         </section>
       </div>
+      <Footer showStats={false} />
     </main>
   )
 }

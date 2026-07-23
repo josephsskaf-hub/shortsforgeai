@@ -371,7 +371,7 @@ async function buildAndRedirect(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('email, stripe_customer_id, is_pro, plan, stripe_subscription_id, paypal_subscription_id')
+    .select('email, stripe_customer_id, is_pro, plan, stripe_subscription_id, paypal_subscription_id, affiliate_id')
     .eq('id', user.id)
     .single()
 
@@ -855,7 +855,15 @@ async function buildAndRedirect(
   // as client_reference_id so Rewardful attributes the subscription to the affiliate.
   // Only when present — Stripe Checkout errors on a blank client_reference_id.
   const rwReferral = req.cookies.get('rewardful_referral')?.value
-  if (rwReferral) sessionParams.client_reference_id = rwReferral
+  // PUSH #68: only one commission system may own a subscription. Permanent
+  // custom first-touch attribution wins; otherwise Rewardful can receive the
+  // Checkout reference. Store the choice on the Subscription for renewals.
+  const affiliateSystem = profile.affiliate_id ? 'custom' : rwReferral ? 'rewardful' : 'none'
+  sessionParams.metadata!.affiliate_system = affiliateSystem
+  sessionParams.subscription_data!.metadata!.affiliate_system = affiliateSystem
+  if (affiliateSystem === 'rewardful' && rwReferral) {
+    sessionParams.client_reference_id = rwReferral
+  }
 
   // KINEO-CHECKOUT-IDEMPOTENCY-2026-07-15 — 19 of 37 historical expired
   // subscription sessions were repeats; one account created eight sessions in
@@ -881,6 +889,7 @@ async function buildAndRedirect(
       success_url: sessionParams.success_url,
       cancel_url: sessionParams.cancel_url,
       client_reference_id: sessionParams.client_reference_id ?? null,
+      affiliate_system: sessionParams.metadata?.affiliate_system ?? 'none',
       checkout_origin: sessionParams.metadata?.checkout_origin ?? 'standard',
       checkout_recovery: sessionParams.metadata?.checkout_recovery ?? '0',
       intent_campaign: sessionParams.metadata?.intent_campaign ?? null,
