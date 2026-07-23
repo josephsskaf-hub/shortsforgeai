@@ -9,6 +9,7 @@ import LiveStatsBadge from '@/components/LiveStatsBadge'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
 import Footer from '@/components/Footer'
 import HomeTopicForm from './HomeTopicForm'
+import CostCalculatorLink from '@/components/CostCalculatorLink'
 
 type Props = {
   initialUser?: { id: string } | null
@@ -346,7 +347,10 @@ export default function KineoLanding({ initialUser }: Props) {
               note is gone (single-offer cleanup; ?pack=starter stays alive for
               the watermark unlock only). The intro month is the entry path. */}
           <div className="snote">Try it first: <b>create, watch, download and share up to 3 Fast videos every 24h</b> — no card, watermark included.</div>
-          <div className="pricing-more"><Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link></div>
+          <div className="pricing-more" style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
+            <Link className="link" href="/pricing">Full pricing, FAQ &amp; plan comparison →</Link>
+            <CostCalculatorLink className="link" placement="home_pricing" >Calculate your cost per Short →</CostCalculatorLink>
+          </div>
         </div>
       </section>
 

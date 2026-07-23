@@ -14,6 +14,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { rememberSignupCampaign, trackEvent } from '@/lib/analytics'
 import ExitIntentOffer from '@/components/ExitIntentOffer'
+import CostCalculatorLink from '@/components/CostCalculatorLink'
 import {
   ANNUAL_PRICES,
   CURRENCY_DISPLAY,
@@ -431,6 +432,12 @@ export default function PricingPage() {
           <p className="text-[12.5px] font-semibold text-[#86868b]">
             Not sure yet? <Link href="/signup" className="font-bold text-[#2997ff] hover:text-[#2997ff]">Create up to 3 Fast videos free every 24h</Link> — no card; download and share with a watermark.
           </p>
+          <CostCalculatorLink
+            placement="pricing_pre_cards"
+            className="mt-2 inline-block text-[12.5px] font-extrabold text-[#2997ff] hover:underline"
+          >
+            Calculate the exact monthly cost for your output →
+          </CostCalculatorLink>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3 max-w-5xl mx-auto">

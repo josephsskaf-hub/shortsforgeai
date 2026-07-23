@@ -53,6 +53,12 @@ function clampVideos(value: number): number {
   return Math.max(1, Math.min(200, Math.round(value)))
 }
 
+function currentInternalSource(): string {
+  if (typeof window === 'undefined') return 'direct'
+  const raw = new URLSearchParams(window.location.search).get('internal_source')
+  return (raw || 'direct').slice(0, 160)
+}
+
 export default function ShortCostCalculator() {
   const [engineKey, setEngineKey] = useState<EngineKey>('fast')
   const [videos, setVideos] = useState(12)
@@ -82,6 +88,7 @@ export default function ShortCostCalculator() {
           display_currency: resolved,
           default_engine: 'fast',
           default_videos: 12,
+          internal_source: currentInternalSource(),
           intent_campaign: 'push77_short_cost_calculator',
         })
       })
@@ -102,6 +109,7 @@ export default function ShortCostCalculator() {
       required_credits: nextRequired,
       minimum_plan: nextPlan?.tier ?? 'above_studio',
       display_currency: currency ?? 'resolving',
+      internal_source: currentInternalSource(),
       intent_campaign: 'push77_short_cost_calculator',
     })
   }
@@ -250,6 +258,7 @@ export default function ShortCostCalculator() {
               required_credits: requiredCredits,
               recommended_plan: recommendation?.tier ?? 'above_studio',
               display_currency: currency ?? 'resolving',
+              internal_source: currentInternalSource(),
               intent_campaign: 'push77_short_cost_calculator',
             })
           }}
@@ -267,6 +276,7 @@ export default function ShortCostCalculator() {
               required_credits: requiredCredits,
               recommended_plan: recommendation?.tier ?? 'above_studio',
               display_currency: currency ?? 'resolving',
+              internal_source: currentInternalSource(),
               intent_campaign: 'push77_short_cost_calculator',
             })
           }}

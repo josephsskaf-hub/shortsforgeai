@@ -12,6 +12,7 @@ import Link from 'next/link'
 import StickyFreeShortCTA from '@/components/StickyFreeShortCTA'
 import Footer from '@/components/Footer'
 import OrganicCtaLink from '@/components/OrganicCtaLink'
+import CostCalculatorLink from '@/components/CostCalculatorLink'
 import { COMPETITORS, COMPETITOR_SLUGS } from './[competitor]/page'
 
 export const dynamic = 'force-static'
@@ -63,6 +64,12 @@ export default function AlternativesIndexPage() {
           <p style={{ fontSize: '0.82rem', color: '#86868b', margin: '10px 0 0' }}>
             Up to 3 watermarked Fast videos / 24h · no card · Starter <b style={{ color: '#2997ff' }}>$4.90 first month</b>
           </p>
+          <CostCalculatorLink
+            placement="alternatives_hero"
+            style={{ display: 'inline-block', marginTop: 12, color: '#2997ff', fontWeight: 800, textDecoration: 'none', fontSize: '0.9rem' }}
+          >
+            Calculate your real cost per Short →
+          </CostCalculatorLink>
         </section>
 
         {/* Grid of comparison cards */}

@@ -73,6 +73,7 @@ The earlier sprint established and reported the following production baseline:
 - **#75** removes the residual hardcoded USD amount from the inline Starter CTA found during the PUSH #74 production smoke, leaving the entire card currency-consistent before Checkout.
 - **#76** aligns the full public acquisition and answer-engine cluster with measured Fast timing. Twenty-four surfaces no longer promise 60-second generation; `llms.txt` and `/facts` now publish the verified seven-day sample of 12 completed Fast renders, 2.30-minute median, and 3.50-minute p90.
 - **#77** turns the existing commercial-intent cheapest-maker page into a local-currency cost-per-Short calculator. Visitors can model Fast, Seedance, or Kling volume against real plan credits and prices, then carry a topic through signup to the first-video flow. The complete calculator-to-subscription cohort is measurable.
+- **#78** distributes that calculator through the homepage pricing section, `/pricing`, `/alternatives`, and the global public footer. Every route records its placement and preserves the internal source through calculator view, interaction, CTA, signup, checkout, and recurring subscription measurement.
 
 ### Product and conversion support
 
@@ -134,6 +135,8 @@ Source-level measurement then isolated the next conversion leak. TAAFT supplied 
 The most recent activation failure was timestamped before PUSH #57. A later controlled production render passed the repaired Fast-to-Compose path, so no second activation hotfix was justified without new post-fix evidence. The next acquisition decision therefore follows the best observed source quality: ChatGPT supplied two recurring Checkout Sessions from four signups. PUSH #76 improves the consistency and citability of the public facts used by search and answer engines, removing obsolete 60-second claims that contradicted measured production timing.
 
 PUSH #77 adds pre-signup utility to the already indexed commercial-intent page instead of publishing another duplicate keyword page. It calculates required credits, minimum covering plan, local first-month and renewal amounts, and cost per planned Short, then routes the visitor through a topic form into the recoverable first-video funnel. Its commercial gate is a verified paid recurring subscription, not calculator interactions alone.
+
+PUSH #78 fixes the calculator's distribution problem without publishing another page. It adds secondary attributed paths from the current homepage, pricing, comparison hub, and global footer. The daily funnel can now distinguish `/`, `/pricing`, `/alternatives`, and other public surfaces before judging whether the calculator moves visitors toward a topic, signup, first video, Checkout, and payment.
 
 The same production pass found one remaining inconsistent surface: the embedded pricing cards in `/generate` still showed USD in Brazil. PUSH #74 localizes those cards from the shared server-aligned price table, avoids an incorrect USD flash while geo resolves, and measures currency exposure and plan clicks by source. Stripe remains server-authoritative; the browser does not supply the Checkout currency.
 

@@ -12,6 +12,7 @@
 // kept inline to match the rest of the marketing chrome.
 
 import Link from 'next/link'
+import CostCalculatorLink from '@/components/CostCalculatorLink'
 // PROVA-SOCIAL-REAL-2026-07-02 — client badge with real DB counts; self-hides
 // when the numbers are low or the stats API fails, so the footer stays honest.
 import LiveStatsBadge from '@/components/LiveStatsBadge'
@@ -22,7 +23,7 @@ const linkStyle: React.CSSProperties = {
 }
 
 // Internal navigation grouped for crawl depth + human wayfinding.
-const navGroups: { title: string; links: { href: string; label: string }[] }[] = [
+const navGroups: { title: string; links: { href: string; label: string; costCalculator?: boolean }[] }[] = [
   {
     title: 'Product',
     links: [
@@ -31,7 +32,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
       { href: '/faceless-video-generator', label: 'Faceless video generator' },
       { href: '/youtube-shorts-from-topic', label: 'YouTube Shorts from a topic' },
       { href: '/text-to-video-shorts', label: 'Text to video Shorts' },
-      { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },
+      { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker', costCalculator: true },
       { href: '/ai-shorts-without-filming', label: 'Shorts without filming' },
       { href: '/faceless-channel-ideas', label: 'Faceless channel ideas (2026)' },
       { href: '/partners', label: 'Affiliate program - 40% recurring' },
@@ -119,9 +120,15 @@ export default function Footer({ showStats = true }: { showStats?: boolean }) {
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {group.links.map((link) => (
                 <li key={link.href} style={{ marginBottom: 7 }}>
-                  <Link href={link.href} style={linkStyle}>
-                    {link.label}
-                  </Link>
+                  {link.costCalculator ? (
+                    <CostCalculatorLink placement="global_footer" style={linkStyle}>
+                      {link.label}
+                    </CostCalculatorLink>
+                  ) : (
+                    <Link href={link.href} style={linkStyle}>
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

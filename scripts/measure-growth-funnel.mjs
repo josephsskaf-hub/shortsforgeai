@@ -1700,6 +1700,21 @@ async function main() {
     (row) => row.path === '/cheapest-ai-shorts-maker' &&
       new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
   )
+  const push77InternalLinkClicked = stage(
+    experimentEvents,
+    'cost_calculator_internal_clicked',
+    (row) => row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS,
+  )
+  const push77InternalSourceViews = experimentEvents
+    .filter((row) => row.name === 'short_cost_calculator_viewed' &&
+      row.metadata?.intent_campaign === PUSH77_COST_CALCULATOR_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH77_LAUNCHED_AT_MS)
+    .reduce((counts, row) => {
+      const source = cleanAttributionPart(row.metadata?.internal_source, 'direct')
+      counts[source] = (counts[source] || 0) + 1
+      return counts
+    }, {})
   const push77CalculatorViewed = stage(
     experimentEvents,
     'short_cost_calculator_viewed',
@@ -2161,6 +2176,10 @@ async function main() {
       push77ShortCostCalculator: {
         measurementStartsAt: new Date(PUSH77_LAUNCHED_AT_MS).toISOString(),
         landingSessions: push77LandingSessions,
+        internalLinkClicked: push77InternalLinkClicked,
+        calculatorViewsByInternalSource: Object.entries(push77InternalSourceViews)
+          .sort((a, b) => b[1] - a[1])
+          .map(([source, views]) => ({ source, views })),
         calculatorViewed: push77CalculatorViewed,
         calculatorChanged: push77CalculatorChanged,
         calculatorCtaClicked: push77CalculatorCtaClicked,
