@@ -254,6 +254,7 @@ const ORGANIC_EXACT_PATHS = new Set([
   '/faceless-channel-ideas',
   '/free-ai-shorts-generator',
   '/text-to-video-shorts',
+  '/from-saashub',
   '/free-ai-shorts',
   '/alternatives',
   '/free-script-generator',

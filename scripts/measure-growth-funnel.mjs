@@ -26,6 +26,11 @@ const PUSH60_FREE_GENERATOR_CAMPAIGN = 'push60_free_ai_shorts_generator'
 const PUSH60_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:00:00.000Z')
 const PUSH63_NICHE_CAMPAIGN_PREFIX = 'push63_niche_'
 const PUSH63_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:10:00.000Z')
+const PUSH65_SAASHUB_CAMPAIGN = 'push65_saashub_directory_bridge'
+// Start after the production deploy and smoke test. The public SaaSHub listing
+// will use /from-saashub, so internal release traffic before this boundary is
+// excluded from the acquisition cohort.
+const PUSH65_LAUNCHED_AT_MS = Date.parse('2026-07-23T14:20:00.000Z')
 const EXPERIMENT_RETENTION_MS = 21 * 24 * 60 * 60 * 1000
 
 function loadEnv(path) {
@@ -161,6 +166,7 @@ async function main() {
     PUSH58_LAUNCHED_AT_MS,
     PUSH60_LAUNCHED_AT_MS,
     PUSH63_LAUNCHED_AT_MS,
+    PUSH65_LAUNCHED_AT_MS,
   ].filter((launchedAt) => nowMs - launchedAt <= EXPERIMENT_RETENTION_MS)
   const dataCutoffMs = Math.min(cutoffMs, ...activeExperimentCutoffs)
   const dataCutoff = new Date(dataCutoffMs).toISOString()
@@ -1291,6 +1297,109 @@ async function main() {
       }),
   )
 
+  const push65LandingSessions = stage(
+    experimentEvents,
+    'landing_session_started',
+    (row) => row.path === '/from-saashub' &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65BridgeViewed = stage(
+    experimentEvents,
+    'directory_bridge_viewed',
+    (row) => row.path === '/from-saashub' &&
+      row.metadata?.source === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65TopicSubmitted = stage(
+    experimentEvents,
+    'organic_topic_submitted',
+    (row) => row.metadata?.source === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65AuthoritativeSignupIds = new Set(
+    experimentEvents
+      .filter((row) => row.user_id &&
+        row.metadata?.intent_campaign === PUSH65_SAASHUB_CAMPAIGN &&
+        new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS && (
+          (row.name === 'email_signup_completed' && row.metadata?.is_recent_signup === true) ||
+          (row.name === 'auth_callback_completed' && row.metadata?.is_new_user === true)
+        ))
+      .map((row) => row.user_id),
+  )
+  const push65SignupProfiles = externalProfiles.filter((profile) =>
+    new Date(profile.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS && (
+      attributionForProfile(profile).campaign === PUSH65_SAASHUB_CAMPAIGN ||
+      push65AuthoritativeSignupIds.has(profile.id)
+    ),
+  )
+  const push65SignupIds = new Set(push65SignupProfiles.map((profile) => profile.id))
+  const push65ActivationEligible = stage(
+    experimentEvents,
+    'activation_autostart_eligible',
+    (row) => Boolean(row.user_id) && push65SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65ActivationDispatched = stage(
+    experimentEvents,
+    'activation_autostart_dispatched',
+    (row) => Boolean(row.user_id) && push65SignupIds.has(row.user_id) &&
+      row.metadata?.campaign === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65CompletedVideoUsers = new Set(
+    experimentVideos
+      .filter((video) => video.status === 'completed' &&
+        push65SignupIds.has(video.user_id) &&
+        new Date(video.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS)
+      .map((video) => video.user_id),
+  )
+  const push65PricingViewed = stage(
+    experimentEvents,
+    'pricing_view',
+    (row) => row.metadata?.source === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65CheckoutAttempted = stage(
+    experimentEvents,
+    'checkout_attempted',
+    (row) => row.metadata?.intent_campaign === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65CheckoutStarted = stage(
+    experimentEvents,
+    'checkout_started',
+    (row) => row.metadata?.intent_campaign === PUSH65_SAASHUB_CAMPAIGN &&
+      new Date(row.created_at || 0).getTime() >= PUSH65_LAUNCHED_AT_MS,
+  )
+  const push65RecurringSessions = experimentRecurringSessions.filter((session) =>
+    (session.created || 0) * 1000 >= PUSH65_LAUNCHED_AT_MS &&
+      session.metadata?.intent_campaign === PUSH65_SAASHUB_CAMPAIGN,
+  )
+  const push65ActiveSubscriptions = experimentActiveSubscriptions.filter(({ subscription }) =>
+    (subscription.created || 0) * 1000 >= PUSH65_LAUNCHED_AT_MS &&
+      subscription.metadata?.intent_campaign === PUSH65_SAASHUB_CAMPAIGN,
+  )
+  const push65ActiveSubscriptionIds = new Set(
+    push65ActiveSubscriptions.map(({ subscription }) => subscription.id),
+  )
+  const push65PaidRecurringCustomers = new Set(
+    push65RecurringSessions
+      .filter((session) => {
+        const subscriptionId = typeof session.subscription === 'string'
+          ? session.subscription
+          : session.subscription?.id
+        return session.status === 'complete' &&
+          session.payment_status === 'paid' &&
+          Boolean(subscriptionId) &&
+          push65ActiveSubscriptionIds.has(subscriptionId)
+      })
+      .map((session) => {
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+        return session.metadata?.supabase_user_id || customerId || session.customer_details?.email || session.id
+      }),
+  )
+
   const report = {
     generatedAt: new Date().toISOString(),
     window: { days, cutoff, experimentDataCutoff: dataCutoff },
@@ -1560,6 +1669,35 @@ async function main() {
           activeSubscriptions: push63AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
           trialingSubscriptions: push63AllIntentActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
           paidRecurringCustomers: push63AllIntentPaidRecurringCustomers.size,
+        },
+      },
+      push65SaaSHubDirectoryBridge: {
+        measurementStartsAt: new Date(PUSH65_LAUNCHED_AT_MS).toISOString(),
+        landingSessions: push65LandingSessions,
+        bridgeViewed: push65BridgeViewed,
+        topicSubmitted: push65TopicSubmitted,
+        newSignupCohort: {
+          signups: push65SignupProfiles.length,
+          activationAutostart: {
+            eligible: push65ActivationEligible,
+            dispatched: push65ActivationDispatched,
+          },
+          completedFirstVideoUsers: push65CompletedVideoUsers.size,
+        },
+        monetization: {
+          pricingViewed: push65PricingViewed,
+          checkoutAttempted: push65CheckoutAttempted,
+          checkoutStarted: push65CheckoutStarted,
+          recurringStripeSessions: {
+            total: push65RecurringSessions.length,
+            open: push65RecurringSessions.filter((session) => session.status === 'open').length,
+            complete: push65RecurringSessions.filter((session) => session.status === 'complete').length,
+            expired: push65RecurringSessions.filter((session) => session.status === 'expired').length,
+            paid: push65RecurringSessions.filter((session) => session.payment_status === 'paid').length,
+          },
+          activeSubscriptions: push65ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'active').length,
+          trialingSubscriptions: push65ActiveSubscriptions.filter(({ subscription }) => subscription.status === 'trialing').length,
+          paidRecurringCustomers: push65PaidRecurringCustomers.size,
         },
       },
     },
