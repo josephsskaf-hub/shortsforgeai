@@ -301,6 +301,84 @@ const NICHES: Record<string, Niche> = {
       'The bird smarter than a 7-year-old child',
     ],
   },
+  health: {
+    label: 'Health & Longevity',
+    h1: 'Free AI Health Shorts Generator',
+    intro:
+      'Turn any health or longevity tip into a clean, credible YouTube Short usually in 2\u20134 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage \u2014 no filming, no editing, completely faceless.',
+    ideas: [
+      'The 30-second habit that adds years to your life',
+      'What happens to your body when you walk daily',
+      'The nutrient 90% of people are quietly missing',
+      'Why your sleep matters more than your diet',
+      'The morning routine backed by longevity science',
+    ],
+  },
+  cars: {
+    label: 'Cars & Supercars',
+    h1: 'Free AI Car Shorts Generator',
+    intro:
+      'Turn any car or supercar topic into a high-octane YouTube Short usually in 2\u20134 minutes. The AI writes, voices, captions and sources the footage automatically \u2014 fully faceless, ready to post.',
+    ideas: [
+      'The $3 million car only 10 people can buy',
+      'Why this engine should be illegal',
+      'The car that depreciates faster than anything',
+      'What the fastest car on Earth actually costs to own',
+      'The hidden feature supercar owners never use',
+    ],
+  },
+  gaming: {
+    label: 'Gaming',
+    h1: 'Free AI Gaming Shorts Generator',
+    intro:
+      'Turn any gaming story or fact into a fast-paced YouTube Short usually in 2\u20134 minutes. The AI writes the script, adds the voiceover, captions and footage \u2014 no editing skills needed.',
+    ideas: [
+      'The game that was never supposed to exist',
+      'The speedrun record thought to be impossible',
+      'The easter egg hidden for 15 years',
+      'Why this game bankrupted its studio',
+      'The glitch that became a feature',
+    ],
+  },
+  movies: {
+    label: 'Movie & Film Facts',
+    h1: 'Free AI Movie Shorts Generator',
+    intro:
+      'Turn any movie fact or behind-the-scenes story into a scroll-stopping YouTube Short usually in 2\u20134 minutes. The AI writes, voices, captions and sources the footage automatically \u2014 completely faceless.',
+    ideas: [
+      'The movie scene that was completely unscripted',
+      'The role that was recast at the last minute',
+      'Why this blockbuster almost never got made',
+      'The hidden detail nobody noticed for years',
+      'The ending that was secretly changed',
+    ],
+  },
+  food: {
+    label: 'Food & Cooking Facts',
+    h1: 'Free AI Food Shorts Generator',
+    intro:
+      'Turn any food fact or cooking secret into a mouth-watering YouTube Short usually in 2\u20134 minutes. The AI writes the script, records the voiceover, adds captions and footage \u2014 fully faceless.',
+    ideas: [
+      'The food that never actually expires',
+      'Why restaurants add this one secret ingredient',
+      'The dish that started as a mistake',
+      'What your favorite snack is really made of',
+      'The cooking myth almost everyone believes',
+    ],
+  },
+  travel: {
+    label: 'Travel & Places',
+    h1: 'Free AI Travel Shorts Generator',
+    intro:
+      'Turn any travel destination or hidden place into a wanderlust-inducing YouTube Short usually in 2\u20134 minutes. The AI writes, voices, captions and finds the footage automatically \u2014 no filming required.',
+    ideas: [
+      'The place tourists are banned from entering',
+      'The town that only exists for one month a year',
+      'The hidden beach locals keep secret',
+      'The country you can visit for almost nothing',
+      'The most isolated place humans still live',
+    ],
+  },
 }
 
 export const NICHE_SLUGS = Object.keys(NICHES)

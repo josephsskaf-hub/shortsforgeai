@@ -7,7 +7,7 @@ import { NICHE_SLUGS } from './[niche]/page'
 export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
-  title: 'Free AI Shorts Generator by Niche — 22 Faceless Formats | Kineo',
+  title: 'Free AI Shorts Generator by Niche — 28 Faceless Formats | Kineo',
   description:
     'Pick a niche and turn one idea into a complete faceless Short with script, voice, footage and captions. Create up to 3 watermarked Fast videos every 24h, no card.',
   alternates: { canonical: 'https://www.usekineo.com/free-ai-shorts' },
@@ -47,6 +47,12 @@ const NICHE_CARDS: Record<string, { label: string; title: string; example: strin
   horror: { label: 'Scary Stories & Horror', title: 'Horror Shorts', example: 'The 3am rule you should never break' },
   celebrity: { label: 'Celebrity & Fame', title: 'Celebrity Shorts', example: 'The clause that ended a career overnight' },
   animals: { label: 'Animals & Nature', title: 'Animal Shorts', example: 'The creature that can survive being frozen' },
+  health: { label: 'Health & Longevity', title: 'Health Shorts', example: 'The 30-second habit that adds years to your life' },
+  cars: { label: 'Cars & Supercars', title: 'Car Shorts', example: 'The $3 million car only 10 people can buy' },
+  gaming: { label: 'Gaming', title: 'Gaming Shorts', example: 'The speedrun record thought to be impossible' },
+  movies: { label: 'Movie & Film Facts', title: 'Movie Shorts', example: 'The movie scene that was completely unscripted' },
+  food: { label: 'Food & Cooking Facts', title: 'Food Shorts', example: 'The food that never actually expires' },
+  travel: { label: 'Travel & Places', title: 'Travel Shorts', example: 'The place tourists are banned from entering' },
 }
 
 const FAQ = [
