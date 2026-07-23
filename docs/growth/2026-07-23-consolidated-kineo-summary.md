@@ -30,7 +30,7 @@ The earlier sprint established and reported the following production baseline:
 - A suspicious `is_pro`/credit grant was investigated; the security fix was reported as published before acquisition resumed.
 - The first four real pack buyers received a controlled upgrade test. That email tactic is historical and is not part of the current no-email acquisition model.
 
-## Current growth system: PUSH #40 to #72
+## Current growth system: PUSH #40 to #73
 
 ### Measurement, truth, and checkout
 
@@ -68,6 +68,7 @@ The earlier sprint established and reported the following production baseline:
 - **#70** made the shared organic topic examples true one-click activation entries across nine intent pages. A click now carries the selected topic directly into signup, preserves each page's campaign attribution, and is measured through first video, pricing, checkout, Stripe session, and recurring subscription. The change was motivated by a verified seven-day baseline of 14 visits and zero topic submissions on `/youtube-shorts-from-topic`.
 - **#71** validated the repaired Fast→Compose path with a real production render, replaced unsupported ~60-second promises with evidence-based timing, stopped showing rotating fake pipeline steps, and added a privacy-safe render-latency report to the daily operating system.
 - **#72** audited recurring Stripe Checkout abandonment, found 39 of 39 external sessions expired and unpaid in 30 days, and removed a verified currency surprise: Brazilian visitors saw USD on `/pricing` before Stripe correctly switched to BRL. Pricing now mirrors the server-authoritative BRL/USD/INR table without accepting client currency overrides, and the daily operating system gains a privacy-safe checkout report.
+- **#73** added a privacy-safe source-to-subscription funnel and found TAAFT supplied 17 of 23 seven-day signups but only three completed videos and zero checkout sessions. It then removed the same currency surprise from the highest-intent post-video clean-export CTA and centralized Stripe, pricing, geo, and post-video amounts in one shared price source.
 
 ### Product and conversion support
 
@@ -123,6 +124,8 @@ PUSH #70 tests an adjacent bottleneck on existing intent pages: visitors could s
 The first post-hotfix live Fast test completed successfully, but it took 6.22 minutes. The seven-day render baseline contains 20 jobs, with 15 of 19 mature jobs completed (78.9%). Among 12 completed Fast renders, median latency was 2.30 minutes, p90 was 3.50 minutes, and the observed range was 1.77–6.22 minutes. PUSH #71 now tells visitors `usually 2–4 minutes`, shows the real render phase, and explains how to reconnect if they leave. New external signup cohorts still need to prove that this improves first-video completion.
 
 The current Stripe route itself passed a no-payment live smoke: it showed the Starter first-month discount, the correct renewal, Link/card checkout, and expiration recovery. The isolated trust defect was the transition into Stripe: a Brazilian visitor saw USD on `/pricing` and BRL only after clicking. PUSH #72 makes BRL, INR, and USD display prices match the server-authoritative checkout table and adds daily abandonment measurement. No payment was entered during the smoke test.
+
+Source-level measurement then isolated the next conversion leak. TAAFT supplied 17 of 23 seven-day signups, but only nine started generation, three completed a video, three saw the post-video offer, none clicked the clean-export CTA, and none opened recurring Checkout. ChatGPT supplied only four signups, but two completed videos and both opened recurring Checkout. Four historical TAAFT Fast jobs were mature without a completed video and predated the repaired Fast path. PUSH #73 now measures every source through subscription and makes the post-video offer use the same local-currency price source as Stripe.
 
 The newly measured affiliate channel also starts from a verified 30-day baseline of zero partner visits, applications, affiliates, referral clicks, paid referrals, and custom commissions. It is now discoverable and measurable, but it has not yet produced commercial evidence.
 

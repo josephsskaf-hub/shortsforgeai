@@ -6,14 +6,20 @@ import { OFFER_290_ENABLED } from '@/lib/flags'
 import Stripe from 'stripe'
 import { createHash } from 'node:crypto'
 import { paypalFetch } from '@/lib/paypal'
+import {
+  ANNUAL_PRICES,
+  INTRO_PRICES,
+  TIER_PRICES,
+  resolveCheckoutCurrency,
+  type CheckoutCurrency as Currency,
+  type CheckoutIntroTier as IntroTier,
+  type CheckoutTier as Tier,
+} from '@/lib/checkoutPricing'
 
 // Push #175 — force-dynamic so Next.js never tries to statically cache this
 // route. Without this, the GET handler could be pre-rendered at build time
 // and fail to read Supabase auth cookies on every request.
 export const dynamic = 'force-dynamic'
-
-type Tier = 'starter' | 'basic' | 'pro'
-type Currency = 'usd' | 'brl' | 'inr'
 
 const CHECKOUT_RESUME_SESSION_COOKIE = 'kineo_checkout_session'
 const CHECKOUT_RESUME_DISMISSED_COOKIE = 'kineo_checkout_resume_dismissed'
@@ -149,20 +155,8 @@ const TIERS: Record<Tier, { name: string; description: string; credits: number }
 // credits, 1 Hollywood film/month included). BRL/INR and annual left as-is
 // pending founder decision on the local-currency ladder. Existing subscribers
 // are NOT affected (Stripe keeps the price on active subscriptions).
-const TIER_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 990,  brl: 4990,  inr: 79900  },
-  basic:   { usd: 2490, brl: 9990,  inr: 159900 },
-  pro:     { usd: 3790, brl: 18990, inr: 299900 },
-}
-
 // #381 — Annual prices = 10× the monthly price (≈2 months free). Smallest unit.
 // KINEO-PRICE-2026-07-06 — annual = 10× the new monthly (2 months free).
-const ANNUAL_PRICES: Record<Tier, Record<Currency, number>> = {
-  starter: { usd: 9900,  brl: 49900,  inr: 799000  },
-  basic:   { usd: 19900, brl: 99900,  inr: 1599000 },
-  pro:     { usd: 37900, brl: 189900, inr: 2999000 },
-}
-
 type Billing = 'monthly' | 'annual'
 
 // KINEO-INTRO-MONTH-2026-07-13 — ROTA DE RECORRÊNCIA. O pack one-time $4.90
@@ -178,12 +172,6 @@ type Billing = 'monthly' | 'annual'
 // cupom segue o checkout a preço cheio (nunca bloqueia venda).
 // Anti-abuso: 1 intro por cliente — recusa se o customer já teve QUALQUER
 // assinatura com metadata.intro='1' (cancelar/reassinar não repete o desconto).
-type IntroTier = 'starter' | 'basic'
-const INTRO_PRICES: Record<IntroTier, Record<Currency, number>> = {
-  starter: { usd: 490, brl: 2490, inr: 39900 },  // = PACK_PRICES (o antigo one-time)
-  basic:   { usd: 990, brl: 4990, inr: 79900 },  // = TIER_PRICES.starter (degrau de baixo)
-}
-
 async function ensureIntroCoupon(
   tier: IntroTier,
   currency: Currency,
@@ -219,12 +207,6 @@ async function ensureIntroCoupon(
 
 // Map Vercel IP-country header → billing currency.
 // Everyone not explicitly mapped gets USD.
-function resolveCurrency(country: string): Currency {
-  if (country === 'BR') return 'brl'
-  if (country === 'IN') return 'inr'
-  return 'usd'
-}
-
 // #473 — Starter Pack: a one-time, low-commitment entry point (10 videos).
 // Breaks first-purchase hesitation for users who won't commit to a monthly
 // subscription — they make the (hardest) first payment, then upsell to a plan
@@ -323,7 +305,7 @@ async function buildAndRedirect(
   }
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: Currency = resolveCurrency(country)
+  const currency: Currency = resolveCheckoutCurrency(country)
   const rawPromo = (promo ?? '').trim()
   const requestedPromo = /^[A-Za-z0-9_-]{1,64}$/.test(rawPromo) ? rawPromo : undefined
   const privatePackPromo = isPrivatePackPromotion(rawPromo)
@@ -995,7 +977,7 @@ async function buildPackAndRedirect(req: NextRequest, isGet: boolean): Promise<N
   }
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: Currency = resolveCurrency(country)
+  const currency: Currency = resolveCheckoutCurrency(country)
   const unitAmount = PACK_PRICES[currency]
 
   const supabase = createClient()
@@ -1108,7 +1090,7 @@ async function buildStarter290AndRedirect(req: NextRequest, isGet: boolean): Pro
   }
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: Currency = resolveCurrency(country)
+  const currency: Currency = resolveCheckoutCurrency(country)
   const unitAmount = PACK290_PRICES[currency]
 
   const supabase = createClient()
@@ -1204,7 +1186,7 @@ async function buildTopupAndRedirect(req: NextRequest, topupId: TopupId, isGet: 
   }
 
   const country = req.headers.get('x-vercel-ip-country') ?? 'US'
-  const currency: Currency = resolveCurrency(country)
+  const currency: Currency = resolveCheckoutCurrency(country)
   const topup = CREDIT_TOPUPS[topupId]
   const unitAmount = topup.prices[currency]
 

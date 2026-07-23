@@ -16,6 +16,13 @@ import type { BrollPlan } from '@/lib/broll/types'
 import { randomTopic } from '@/lib/curatedTopics'
 import { PLAN_LIST } from '@/lib/pricing'
 import {
+  CURRENCY_DISPLAY,
+  INTRO_PRICES,
+  TIER_PRICES,
+  formatCheckoutMoney,
+  type CheckoutCurrency,
+} from '@/lib/checkoutPricing'
+import {
   buildSeriesContinuationHref,
   buildSeriesContinuationPrompt,
   type SeriesContinuationSource,
@@ -338,6 +345,8 @@ export default function GenerateClient({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [postVideoCurrency, setPostVideoCurrency] = useState<CheckoutCurrency | null>(null)
+  const postVideoCurrencyTrackedRef = useRef(false)
   // PUSH #55 — keep the organic intent campaign attached to every recurring
   // checkout path reached from this screen. New signups are attributable from
   // their profile, but an existing free user arriving from YouTube also needs
@@ -2310,13 +2319,48 @@ export default function GenerateClient({
     }
   }, [phase, finalVideoUrl])
 
+  // Resolve currency only when a free user reaches the clean-export decision.
+  // Checkout repeats the country lookup server-side and never accepts a
+  // currency override from the browser.
+  useEffect(() => {
+    const eligible = phase === 'done' && Boolean(finalVideoUrl) && planTier === 'free' &&
+      !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current)
+    if (!eligible || postVideoCurrency) return
+    let cancelled = false
+
+    void fetch('/api/geo', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('geo lookup failed')
+        return response.json() as Promise<{ country?: string; currency?: string }>
+      })
+      .then(({ country, currency }) => {
+        if (cancelled) return
+        const safeCurrency: CheckoutCurrency =
+          currency === 'brl' || currency === 'inr' || currency === 'usd' ? currency : 'usd'
+        setPostVideoCurrency(safeCurrency)
+        if (!postVideoCurrencyTrackedRef.current) {
+          postVideoCurrencyTrackedRef.current = true
+          void trackEvent('post_video_currency_resolved', {
+            currency: safeCurrency,
+            country: String(country || 'unknown').slice(0, 2).toUpperCase(),
+            ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPostVideoCurrency('usd')
+      })
+
+    return () => { cancelled = true }
+  }, [phase, finalVideoUrl, planTier, hasPaid, wmUnlocking, postVideoCurrency, intentCampaign])
+
   // PUSH #25 — measure a real offer impression, not merely an eligible render.
   // The result player is tall on mobile, so the clean-export card can exist
   // below the fold without ever being seen. Count it only after at least half
   // of the card enters the viewport, once per finished asset.
   useEffect(() => {
     const eligible = phase === 'done' && Boolean(finalVideoUrl) && planTier === 'free' &&
-      !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current)
+      !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current) && Boolean(postVideoCurrency)
     const element = postVideoOfferRef.current
     const offerKey = publicVideoId || finalVideoUrl
     if (!eligible || !element || !offerKey || postVideoOfferTrackedKeyRef.current === offerKey) return
@@ -2327,13 +2371,14 @@ export default function GenerateClient({
       trackEvent('post_video_offer_viewed', {
         source: 'result_export_choice',
         offer: 'starter_intro_month',
+        ...(postVideoCurrency ? { display_currency: postVideoCurrency } : {}),
         ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
       })
       observer.disconnect()
     }, { threshold: [0.5] })
     observer.observe(element)
     return () => observer.disconnect()
-  }, [phase, finalVideoUrl, publicVideoId, planTier, hasPaid, wmUnlocking, intentCampaign])
+  }, [phase, finalVideoUrl, publicVideoId, planTier, hasPaid, wmUnlocking, intentCampaign, postVideoCurrency])
 
   // ────────────────────────────────────────────────────────────────────────
   // PHASE: clips_ready  →  fire /api/compose once, then transition to composing
@@ -4180,12 +4225,14 @@ export default function GenerateClient({
       source: 'post_video_result',
       offer: 'intro_month',
       return_to: 'watermark_unlock',
+      ...(postVideoCurrency ? { display_currency: postVideoCurrency } : {}),
       ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
     })
     trackEvent('post_video_clean_export_clicked', {
       source: 'result_export_choice',
       offer: 'starter_intro_month',
       watermarked_downloaded: watermarkedDownloadConfirmed,
+      ...(postVideoCurrency ? { display_currency: postVideoCurrency } : {}),
       ...(intentCampaign ? { intent_campaign: intentCampaign } : {}),
     })
     trackCheckoutClick('starter')
@@ -4501,6 +4548,12 @@ export default function GenerateClient({
     analysis?.youtubeDescription?.trim() || analysis?.title?.trim() || ''
   const showPostVideoExportChoice = phase === 'done' && planTier === 'free' &&
     !hasPaid && !wmUnlocking && Boolean(lastFastRenderRef.current)
+  const postVideoIntroPrice = postVideoCurrency
+    ? formatCheckoutMoney(postVideoCurrency, INTRO_PRICES.starter[postVideoCurrency])
+    : null
+  const postVideoRenewalPrice = postVideoCurrency
+    ? formatCheckoutMoney(postVideoCurrency, TIER_PRICES.starter[postVideoCurrency])
+    : null
 
   const showStep1 = phase === 'idle' || phase === 'analyzing' || phase === 'scripting'
   const showScriptPreview = phase === 'script_preview'
@@ -6002,7 +6055,9 @@ export default function GenerateClient({
                         : 'Start Starter and we rebuild this exact video clean. You also get 25 credits for clean Fast Shorts this month.'}
                     </p>
                     <p className="text-xs mt-2 font-bold" style={{ color: '#5cb3ff', lineHeight: 1.45 }}>
-                      $4.90 today · then $9.90/month in 30 days · cancel anytime
+                      {postVideoIntroPrice && postVideoRenewalPrice
+                        ? `${postVideoIntroPrice} today · then ${postVideoRenewalPrice}/month in 30 days · cancel anytime`
+                        : 'Your first month is discounted · local price loads before checkout'}
                     </p>
                   </div>
                   <button
@@ -6016,7 +6071,9 @@ export default function GenerateClient({
                       boxShadow: '0 8px 24px rgba(41,151,255,.34)',
                     }}
                   >
-                    <span>Download clean + Start Starter — $4.90 →</span>
+                    <span>
+                      Download clean + Start Starter{postVideoIntroPrice ? ` — ${postVideoIntroPrice}` : ''} →
+                    </span>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.92, marginTop: 3 }}>
                       This exact video clean · 25 credits included
                     </span>
@@ -6047,6 +6104,7 @@ export default function GenerateClient({
                   </a>
                   <p className="text-center mt-2" style={{ color: 'var(--muted2)', fontSize: '0.7rem', lineHeight: 1.45 }}>
                     Free export stays available · secure checkout · no hidden fees
+                    {postVideoCurrency ? ` · prices in ${CURRENCY_DISPLAY[postVideoCurrency].label}` : ''}
                   </p>
                 </div>
               )}

@@ -14,57 +14,21 @@ import React, { useEffect, useRef, useState } from 'react'
 import { trackCheckoutClick } from '@/lib/trackClick'
 import { rememberSignupCampaign, trackEvent } from '@/lib/analytics'
 import ExitIntentOffer from '@/components/ExitIntentOffer'
+import {
+  ANNUAL_PRICES,
+  CURRENCY_DISPLAY,
+  INTRO_PRICES,
+  TIER_PRICES,
+  formatCheckoutMoney,
+  type CheckoutCurrency as DisplayCurrency,
+  type CheckoutTier as PaidTier,
+} from '@/lib/checkoutPricing'
 
 // PAYPAL-DISABLED-2026-07-06 — PayPal checkout is hidden on pricing until it's
 // verified working end-to-end (business account still needs verification). All
 // "pay with PayPal" buttons are gated behind this flag. Flip to `true` to
 // re-enable everywhere at once. Stripe checkout is unaffected.
 const PAYPAL_ENABLED = false
-
-type DisplayCurrency = 'usd' | 'brl' | 'inr'
-type PaidTier = 'starter' | 'basic' | 'pro'
-
-// These display prices mirror the integer amounts in /api/stripe/checkout.
-// They are never sent back to checkout: the server remains authoritative and
-// independently resolves currency from Vercel's country header.
-const LOCAL_PRICES: Record<DisplayCurrency, {
-  locale: string
-  currencyCode: string
-  label: string
-  monthly: Record<PaidTier, number>
-  intro: Pick<Record<PaidTier, number>, 'starter' | 'basic'>
-  annual: Record<PaidTier, number>
-}> = {
-  usd: {
-    locale: 'en-US', currencyCode: 'USD', label: 'USD',
-    monthly: { starter: 990, basic: 2490, pro: 3790 },
-    intro: { starter: 490, basic: 990 },
-    annual: { starter: 9900, basic: 19900, pro: 37900 },
-  },
-  brl: {
-    locale: 'pt-BR', currencyCode: 'BRL', label: 'BRL',
-    monthly: { starter: 4990, basic: 9990, pro: 18990 },
-    intro: { starter: 2490, basic: 4990 },
-    annual: { starter: 49900, basic: 99900, pro: 189900 },
-  },
-  inr: {
-    locale: 'en-IN', currencyCode: 'INR', label: 'INR',
-    monthly: { starter: 79900, basic: 159900, pro: 299900 },
-    intro: { starter: 39900, basic: 79900 },
-    annual: { starter: 799000, basic: 1599000, pro: 2999000 },
-  },
-}
-
-function formatMoney(currency: DisplayCurrency, amountMinor: number): string {
-  const config = LOCAL_PRICES[currency]
-  const fractionDigits = currency === 'inr' ? 0 : 2
-  return new Intl.NumberFormat(config.locale, {
-    style: 'currency',
-    currency: config.currencyCode,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(amountMinor / 100).replace(/\u00a0/g, ' ')
-}
 
 // Push #099 — FAQ entries shown below the pricing comparison table. Pure
 // content array so the accordion renders from one source of truth.
@@ -119,7 +83,7 @@ function buildPricing(currency: DisplayCurrency) {
     {
       tier: 'starter',
       name: 'Starter',
-      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.starter),
+      price: formatCheckoutMoney(currency, TIER_PRICES.starter[currency]),
       priceSub: '/ month',
       // KINEO-REBASE-2026-07-10 — 50 → 25 credits (2:1 rebase, USD unchanged).
       // KINEO-SHOWCASE-2026-07-10 — V3C wording: Fast = 1 credit per video for
@@ -138,7 +102,7 @@ function buildPricing(currency: DisplayCurrency) {
     {
       tier: 'basic',
       name: 'Creator',
-      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.basic),
+      price: formatCheckoutMoney(currency, TIER_PRICES.basic[currency]),
       priceSub: '/ month',
       // KINEO-PRICING-V3B-2026-07-10 — $24.90/150cr: 1 Hollywood film every
       // month included (150 cr), or ~7 AI-generated videos (20 cr each).
@@ -161,7 +125,7 @@ function buildPricing(currency: DisplayCurrency) {
     {
       tier: 'pro',
       name: 'Studio',
-      price: formatMoney(currency, LOCAL_PRICES[currency].monthly.pro),
+      price: formatCheckoutMoney(currency, TIER_PRICES.pro[currency]),
       priceSub: '/ month',
       // KINEO-STUDIO-400-2026-07-06 — Studio's extra value: more credits, Kling
       // at 1080p, priority render queue, and premium voices.
@@ -230,12 +194,12 @@ export default function PricingPage() {
   // #381 — monthly vs annual billing toggle. Annual ≈ 2 months free.
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const resolvedCurrency = displayCurrency ?? 'usd'
-  const currencyConfig = LOCAL_PRICES[resolvedCurrency]
-  const annualPrices = (Object.keys(currencyConfig.annual) as PaidTier[]).reduce((result, tier) => {
-    const totalMinor = currencyConfig.annual[tier]
+  const currencyConfig = CURRENCY_DISPLAY[resolvedCurrency]
+  const annualPrices = (['starter', 'basic', 'pro'] as PaidTier[]).reduce((result, tier) => {
+    const totalMinor = ANNUAL_PRICES[tier][resolvedCurrency]
     result[tier] = {
-      total: formatMoney(resolvedCurrency, totalMinor),
-      perMonth: formatMoney(resolvedCurrency, totalMinor / 12),
+      total: formatCheckoutMoney(resolvedCurrency, totalMinor),
+      perMonth: formatCheckoutMoney(resolvedCurrency, totalMinor / 12),
     }
     return result
   }, {} as Record<PaidTier, { total: string; perMonth: string }>)
@@ -387,7 +351,7 @@ export default function PricingPage() {
           </div>
           <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl text-[#f5f5f7]">
             {displayCurrency
-              ? `Start for ${formatMoney(resolvedCurrency, currencyConfig.intro.starter)}. Keep creating for ${formatMoney(resolvedCurrency, currencyConfig.monthly.starter)}/mo.`
+              ? `Start for ${formatCheckoutMoney(resolvedCurrency, INTRO_PRICES.starter[resolvedCurrency])}. Keep creating for ${formatCheckoutMoney(resolvedCurrency, TIER_PRICES.starter[resolvedCurrency])}/mo.`
               : 'Your first month is discounted. Cancel anytime.'}
           </h1>
           {/* KINEO-SHOWCASE-2026-07-10 — Joseph: parágrafo comparativo removido
@@ -536,9 +500,9 @@ export default function PricingPage() {
                       style={{ background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.4)', color: '#2997ff' }}
                     >
                       🎁 First month {displayCurrency
-                        ? formatMoney(
+                        ? formatCheckoutMoney(
                             resolvedCurrency,
-                            currencyConfig.intro[p.tier as 'starter' | 'basic'],
+                            INTRO_PRICES[p.tier as 'starter' | 'basic'][resolvedCurrency],
                           )
                         : 'discount'} — applied at checkout
                     </div>
@@ -976,7 +940,7 @@ export default function PricingPage() {
           >
             {purchasing === 'starter'
               ? 'Loading…'
-              : `Starter ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.intro.starter) : ''}`}
+              : `Starter ${displayCurrency ? formatCheckoutMoney(resolvedCurrency, INTRO_PRICES.starter[resolvedCurrency]) : ''}`}
           </button>
           <button
             type="button"
@@ -998,7 +962,7 @@ export default function PricingPage() {
           >
             {purchasing === 'basic'
               ? 'Loading…'
-              : `Creator ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.intro.basic) : ''} 🔥`}
+              : `Creator ${displayCurrency ? formatCheckoutMoney(resolvedCurrency, INTRO_PRICES.basic[resolvedCurrency]) : ''} 🔥`}
           </button>
           <button
             type="button"
@@ -1019,7 +983,7 @@ export default function PricingPage() {
           >
             {purchasing === 'pro'
               ? 'Loading…'
-              : `Studio ${displayCurrency ? formatMoney(resolvedCurrency, currencyConfig.monthly.pro) : ''}`}
+              : `Studio ${displayCurrency ? formatCheckoutMoney(resolvedCurrency, TIER_PRICES.pro[resolvedCurrency]) : ''}`}
           </button>
         </div>
       )}
