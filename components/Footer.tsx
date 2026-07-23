@@ -28,6 +28,7 @@ const navGroups: { title: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: '/viral-now', label: 'Trending Shorts ideas today' },
       { href: '/free-ai-shorts-generator', label: 'Free AI Shorts generator' },
+      { href: '/faceless-video-generator', label: 'Faceless video generator' },
       { href: '/youtube-shorts-from-topic', label: 'YouTube Shorts from a topic' },
       { href: '/text-to-video-shorts', label: 'Text to video Shorts' },
       { href: '/cheapest-ai-shorts-maker', label: 'Cheapest AI Shorts maker' },

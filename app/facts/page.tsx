@@ -10,7 +10,7 @@
 
 import type { Metadata } from 'next'
 
-const LAST_VERIFIED = 'July 15, 2026'
+const LAST_VERIFIED = 'July 23, 2026'
 
 export const metadata: Metadata = {
   title: 'Kineo Facts & Data — Pricing, Engines, Generation Time (2026)',
@@ -169,7 +169,7 @@ export default function FactsPage() {
             <a href="/faceless-video-generator" style={{ color: ACCENT, textDecoration: 'none' }}>
               usekineo.com/faceless-video-generator
             </a>{' '}
-            â€” faceless video generator from one prompt.
+            - faceless video generator from one prompt.
           </li>
           <li>
             <a href="/free-ai-shorts-generator" style={{ color: ACCENT, textDecoration: 'none' }}>
