@@ -197,6 +197,110 @@ const NICHES: Record<string, Niche> = {
       'Inside the $2 billion home nobody is allowed to enter',
     ],
   },
+  stoicism: {
+    label: 'Stoicism & Philosophy',
+    h1: 'Free AI Stoicism Shorts Generator',
+    intro:
+      'Turn any Stoic idea or life lesson into a calm, powerful YouTube Short usually in 2\u20134 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage \u2014 no filming, no editing, completely faceless.',
+    ideas: [
+      'The Stoic rule that kills anxiety in 10 seconds',
+      'Marcus Aurelius\u2019 morning routine that still works today',
+      'Why caring less makes people respect you more',
+      'The one question Stoics ask before reacting',
+      'How to stay calm when everything falls apart',
+    ],
+  },
+  crypto: {
+    label: 'Crypto & Investing',
+    h1: 'Free AI Crypto Shorts Generator',
+    intro:
+      'Turn any crypto or investing topic into a timely, scroll-stopping YouTube Short usually in 2\u20134 minutes. The AI writes the script, voices it, adds captions and footage \u2014 fully faceless, ready to post daily.',
+    ideas: [
+      'The $100 Bitcoin bet that turned into a fortune',
+      'Why most people buy crypto at exactly the wrong time',
+      'The investing mistake that quietly wipes out beginners',
+      '3 assets that quietly beat Bitcoin last year',
+      'What the rich understand about money that you don\u2019t',
+    ],
+  },
+  business: {
+    label: 'Business & Entrepreneurship',
+    h1: 'Free AI Business Shorts Generator',
+    intro:
+      'Turn any business or startup lesson into a sharp YouTube Short usually in 2\u20134 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage \u2014 no editing skills needed.',
+    ideas: [
+      'The business that made millions with almost no employees',
+      'Why 90% of startups die in the first year',
+      'The pricing trick that doubled their revenue overnight',
+      'How this founder turned $500 into a 7-figure brand',
+      'The one skill that separates rich founders from broke ones',
+    ],
+  },
+  fitness: {
+    label: 'Fitness & Gym Motivation',
+    h1: 'Free AI Fitness Shorts Generator',
+    intro:
+      'Turn any fitness or discipline idea into a high-energy YouTube Short usually in 2\u20134 minutes. The AI writes, voices, captions and sources the footage automatically \u2014 completely faceless.',
+    ideas: [
+      'The 20-minute habit that changes your body in 30 days',
+      'Why most people never see gym results \u2014 and the fix',
+      'The mindset shift that makes discipline automatic',
+      '3 mistakes quietly killing your gains',
+      'What your body does after 100 days of training',
+    ],
+  },
+  relationships: {
+    label: 'Relationships & Dating',
+    h1: 'Free AI Relationship Shorts Generator',
+    intro:
+      'Turn any relationship or dating insight into a scroll-stopping YouTube Short usually in 2\u20134 minutes. The AI writes the script, voices it, adds captions and footage \u2014 fully faceless.',
+    ideas: [
+      'The one text that instantly changes how they see you',
+      'Why the person who cares less holds the power',
+      'The green flag almost everyone ignores',
+      'What silence tells you about how someone really feels',
+      'The psychology trick that builds instant attraction',
+    ],
+  },
+  horror: {
+    label: 'Scary Stories & Horror',
+    h1: 'Free AI Horror Shorts Generator',
+    intro:
+      'Turn any scary story or creepy legend into a binge-worthy YouTube Short usually in 2\u20134 minutes. The AI writes the script, records the voiceover, adds captions and finds the footage \u2014 completely faceless.',
+    ideas: [
+      'The 3am rule you should never break',
+      'The last text she sent before she vanished',
+      'The house that no delivery driver will return to',
+      'The voicemail that played 20 years after he died',
+      'The urban legend that turned out to be real',
+    ],
+  },
+  celebrity: {
+    label: 'Celebrity & Fame',
+    h1: 'Free AI Celebrity Shorts Generator',
+    intro:
+      'Turn any celebrity story or fame topic into a scroll-stopping YouTube Short usually in 2\u20134 minutes. The AI writes, voices, captions and sources the footage automatically \u2014 no filming required.',
+    ideas: [
+      'The star who went from broke to a billion dollars',
+      'The contract clause that ended a career overnight',
+      'The role that was secretly turned down 7 times',
+      'What fame does to the brain that nobody talks about',
+      'The celebrity feud that was fake the whole time',
+    ],
+  },
+  animals: {
+    label: 'Animals & Nature',
+    h1: 'Free AI Animal Shorts Generator',
+    intro:
+      'Turn any animal or nature fact into a jaw-dropping YouTube Short usually in 2\u20134 minutes. The AI writes the script, adds the voiceover, captions and footage \u2014 fully faceless, ready to post.',
+    ideas: [
+      'The animal that can survive being frozen solid',
+      'Why octopuses might be the closest thing to aliens',
+      'The tiny creature that could outlive the sun',
+      'The predator that hunts using electricity',
+      'The bird smarter than a 7-year-old child',
+    ],
+  },
 }
 
 export const NICHE_SLUGS = Object.keys(NICHES)
