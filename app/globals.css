@@ -530,3 +530,23 @@ html {
 }
 /* end ROBO5-PERF-2026-06-29 */
 
+
+/* ── KINEO-HOVER-PRESELECT-2026-07-23 — "quadro azul" de pré-seleção ──────────
+   Additive block (edits no rule above). On pointer devices, hovering any
+   card-like container (rounded + bordered) pre-selects it with a blue ring,
+   giving a clear "you're about to pick this" affordance site-wide (pricing
+   cards, plan cards, viral cards, option tiles, etc.). Reversible: delete
+   this block to remove entirely. Uses the brand blue #2997ff. */
+@media (hover: hover) and (pointer: fine) {
+  [class*="rounded-2xl"][class*="border"]:hover,
+  [class*="rounded-xl"][class*="border"]:hover,
+  [class*="rounded-lg"][class*="border"]:hover,
+  .neon-card:hover,
+  .glass-card:hover {
+    border-color: #2997ff !important;
+    box-shadow: 0 0 0 2px rgba(41,151,255,0.65), 0 10px 30px rgba(41,151,255,0.18) !important;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+}
+/* end KINEO-HOVER-PRESELECT-2026-07-23 */

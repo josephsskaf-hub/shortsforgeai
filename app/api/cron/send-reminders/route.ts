@@ -81,6 +81,26 @@ export async function GET(req: NextRequest) {
     console.error('[send-reminders] abandon-recovery call failed:', e instanceof Error ? e.message : String(e))
   }
 
+  // KINEO-FREE-UPSELL-2026-07-23 — same daily server-to-server hop for the
+  // free-trier upsell: users who USED the free generator but never paid AND
+  // never clicked checkout (so abandon-recovery never reaches them). Idempotent
+  // via profiles.free_upsell_emailed, so only NEW qualifying users are emailed.
+  try {
+    const cronSecret = process.env.CRON_SECRET
+    if (cronSecret) {
+      const res = await fetch(
+        `${APP_URL}/api/admin/send-free-upsell?confirm=SEND&limit=40`,
+        { headers: { authorization: `Bearer ${cronSecret}` }, cache: 'no-store' },
+      )
+      const body = await res.json().catch(() => null)
+      console.log('[send-reminders] free-upsell daily batch:', res.status, JSON.stringify(body))
+    } else {
+      console.warn('[send-reminders] CRON_SECRET not set — free-upsell batch skipped')
+    }
+  } catch (e) {
+    console.error('[send-reminders] free-upsell call failed:', e instanceof Error ? e.message : String(e))
+  }
+
   if (!RESEND_API_KEY) {
     console.error('[send-reminders] RESEND_API_KEY not set')
     return NextResponse.json({ error: 'Email service not configured' }, { status: 500 })

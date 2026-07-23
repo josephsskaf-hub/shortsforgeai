@@ -100,6 +100,28 @@ export default function SignupPage() {
     }
   }, [])
 
+  // KINEO-CHECKOUT-NOLOGIN-2026-07-23 — "sem login": when a logged-out buyer lands
+  // here from a plan click (?reason=checkout), auto-start Google one-click so paying
+  // feels login-free — they never see this form unless Google is unavailable. Reuses
+  // the exact proven OAuth -> /auth/callback?next=<checkout> -> resume path. Fires once
+  // per browser session (guard) so a Google cancel/return never loops; ?noauto=1 or the
+  // email form below remain as fallbacks.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('reason') !== 'checkout') return
+    if (p.get('noauto') === '1') return
+    try { if (sessionStorage.getItem('kineo_checkout_google_autostart') === '1') return } catch { /* ignore */ }
+    const nextDestination = activationRedirectFromSearch(window.location.search)
+    const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDestination)}`
+    try { sessionStorage.setItem('kineo_checkout_google_autostart', '1') } catch { /* ignore */ }
+    try { trackCheckoutAuthStep('method_selected', 'signup_page', nextDestination, 'google') } catch { /* ignore */ }
+    void supabase.auth
+      .signInWithOAuth({ provider: 'google', options: { redirectTo: callback } })
+      .catch(() => { /* stay on the form as a fallback */ })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const strength = scorePassword(password)
   const isCheckoutResume = new URLSearchParams(authSearch).get('reason') === 'checkout'
   const loginParams = new URLSearchParams({ redirect: activationRedirect })
